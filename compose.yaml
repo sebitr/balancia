@@ -54,6 +54,10 @@ x-app-environment: &app-environment
   # Opt-in, and needs `pnpm semantic:install` plus a relaxed CSP. Off here means
   # the deterministic rules do the categorising, which is the default anyway.
   SEMANTIC_CATEGORIZATION: ${SEMANTIC_CATEGORIZATION:-false}
+  # Opt-in, and needs `pnpm ocr:install` plus the same relaxed CSP. Forwarding
+  # it is not enough on its own: the models have to be inside the container
+  # too. See the commented-out volume on the app service below.
+  RECEIPT_SCANNING: ${RECEIPT_SCANNING:-false}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
   # This stack runs a dedicated worker container, so the web process must not
@@ -102,6 +106,11 @@ services:
       <<: *app-environment
     volumes:
       - uploads:/data/uploads
+      # On-device receipt scanning (RECEIPT_SCANNING=1). Run
+      # `pnpm ocr:install --yes` on the host, then uncomment this so the ~47 MB
+      # of models is mounted rather than baked into the image — otherwise they
+      # are rebuilt away and have to be reinstalled before every `up --build`.
+      # - ./public/models:/app/public/models:ro
     ports:
       - "${APP_PORT:-3000}:3000"
     healthcheck:
