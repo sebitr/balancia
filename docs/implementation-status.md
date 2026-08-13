@@ -29,6 +29,7 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 19  | CI and final verification                               | ✅     |
 | 20  | Exchange-rate provider (opt-in)                         | ✅     |
 | 21  | Group export (JSON, CSV, XLSX)                          | ✅     |
+| 22  | Automatic expense categorization (EN/FR)                | ✅     |
 
 ## Verification
 

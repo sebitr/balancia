@@ -41,6 +41,9 @@ yarn-error.log*
 public/sw.js
 public/sw.js.map
 
+# optional embedding model, installed by scripts/fetch-semantic-model.ts
+public/models
+
 # build output for worker/migrator bundles
 /dist
 

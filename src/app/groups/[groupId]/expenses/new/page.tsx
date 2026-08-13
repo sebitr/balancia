@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireGroupAccess } from "@/lib/actions";
+import { isSemanticCategorizationEnabled } from "@/lib/env";
 import { listParticipants } from "@/modules/groups/service";
+import { loadMappings } from "@/modules/categorization/service";
 import { Users } from "lucide-react";
 
 export default async function NewExpensePage({
@@ -13,7 +15,12 @@ export default async function NewExpensePage({
 }: PageProps<"/groups/[groupId]/expenses/new">) {
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
-  const participants = await listParticipants(access.groupId);
+  // Handed to the form in one go, so classification stays instant while
+  // typing instead of a round trip per keystroke.
+  const [participants, categoryMappings] = await Promise.all([
+    listParticipants(access.groupId),
+    loadMappings(access),
+  ]);
   const t = await getTranslations("expensePages");
   const tCommon = await getTranslations("common");
 
@@ -55,6 +62,8 @@ export default async function NewExpensePage({
         currencyMode={access.group.currencyMode}
         baseCurrency={access.group.baseCurrency}
         defaultCurrency={access.group.baseCurrency ?? "EUR"}
+        categoryMappings={categoryMappings}
+        semanticCategorization={isSemanticCategorizationEnabled()}
       />
     </div>
   );

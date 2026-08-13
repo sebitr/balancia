@@ -15,10 +15,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrencySelect } from "@/components/money/currency-select";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { ReceiptUploader } from "@/components/expenses/receipt-uploader";
+import { CategoryField } from "@/components/expenses/category-field";
+import { useCategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import {
   createExpenseAction,
   updateExpenseAction,
 } from "@/modules/expenses/actions";
+import type { LearnedMerchantMapping } from "@/modules/categorization";
 import {
   formatMinorUnits,
   parseAmountToMinor,
@@ -57,6 +60,12 @@ export interface ExpenseFormInitialValues {
   readonly splitEntries: readonly { participantId: string; value?: string }[];
 }
 
+/**
+ * Stable identity for the default, so the classification memo and its effect
+ * are not invalidated on every render of a form that was given no mappings.
+ */
+const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
+
 /** Tab order is fixed; the label and hint are looked up per locale. */
 const SPLIT_TABS: readonly SplitMethod[] = [
   "equal",
@@ -72,6 +81,8 @@ export function ExpenseForm({
   baseCurrency,
   defaultCurrency,
   initial,
+  categoryMappings = NO_MAPPINGS,
+  semanticCategorization = false,
 }: {
   groupId: string;
   participants: readonly ExpenseFormParticipant[];
@@ -79,6 +90,10 @@ export function ExpenseForm({
   baseCurrency: string | null;
   defaultCurrency: string;
   initial?: ExpenseFormInitialValues;
+  /** What this group and user have already taught the classifier. */
+  categoryMappings?: readonly LearnedMerchantMapping[];
+  /** Whether the operator installed the optional embedding model. */
+  semanticCategorization?: boolean;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
@@ -94,6 +109,13 @@ export function ExpenseForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
+  /**
+   * Once someone picks a category themselves, the classifier stops filling
+   * the field — including on an expense that already had one when it opened.
+   */
+  const [categoryChosen, setCategoryChosen] = useState(
+    Boolean(initial?.category),
+  );
   const [amountText, setAmountText] = useState(initial?.amount ?? "");
   const [currency, setCurrency] = useState(
     initial?.currency ?? defaultCurrency,
@@ -142,6 +164,22 @@ export function ExpenseForm({
   const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  const suggestion = useCategorySuggestion({
+    description,
+    notes,
+    mappings: categoryMappings,
+    semanticEnabled: semanticCategorization,
+  });
+
+  // Derived rather than stored: an auto-detected category is a *view* of the
+  // current description, so editing the description re-decides it, and one
+  // manual choice takes the field over for good.
+  const detectedCategory =
+    !categoryChosen && suggestion?.decision === "auto_assigned"
+      ? (suggestion.category ?? "")
+      : "";
+  const effectiveCategory = categoryChosen ? category : detectedCategory;
 
   const needsExchangeRate =
     currencyMode === "converted" &&
@@ -255,7 +293,7 @@ export function ExpenseForm({
     const payload = {
       description,
       notes,
-      category,
+      category: effectiveCategory,
       amount: totalMinor.value.toString(),
       currency,
       exchangeRate: needsExchangeRate ? exchangeRate.trim() : "",
@@ -496,21 +534,15 @@ export function ExpenseForm({
         )}
       </fieldset>
 
-      <div className="space-y-2">
-        <Label htmlFor="category">
-          {t("category")}{" "}
-          <span className="font-normal text-muted-foreground">
-            ({tCommon("optional")})
-          </span>
-        </Label>
-        <Input
-          id="category"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          maxLength={60}
-          placeholder={t("categoryPlaceholder")}
-        />
-      </div>
+      <CategoryField
+        value={effectiveCategory}
+        onChange={(value) => {
+          setCategoryChosen(true);
+          setCategory(value);
+        }}
+        suggestion={suggestion}
+        detected={detectedCategory !== ""}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="notes">

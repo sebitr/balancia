@@ -261,6 +261,44 @@ use each weekday at 15:45 UTC, shortly after the ECB publishes.
 
 ---
 
+## Expense categorization
+
+Categories are suggested as an expense is typed, by rules that ship with
+Balancia and by what your groups have corrected. That needs no configuration
+and makes no outbound requests.
+
+### `SEMANTIC_CATEGORIZATION`
+
+`0` (default) | `1`.
+
+Adds a semantic fallback for descriptions the rules do not cover — `Souper
+chez Léa` rather than `MIGROS 1234`. Inference runs in the _browser_, against
+model files served by your instance, so no transaction text leaves the device
+and there is still no AI service involved.
+
+It is off by default for two reasons that have nothing to do with privacy:
+
+- it needs `'wasm-unsafe-eval'` in the Content-Security-Policy, which
+  WebAssembly compilation requires and which is otherwise deliberately absent.
+  Setting this variable to `1` is what adds it. It permits WASM compilation
+  and nothing else — it is not `unsafe-eval`.
+- it needs ~150 MB of model files under `public/models`, installed with an
+  explicit command:
+
+```bash
+pnpm semantic:install --yes
+SEMANTIC_CATEGORIZATION=1
+```
+
+With the variable set but the files missing, the browser makes one `HEAD`
+request, finds nothing, and categorization stays on its rules. Nothing breaks
+and nothing needs switching off.
+
+In Docker the files live inside the image, so mount them to survive a rebuild.
+See [Categorization](categorization.md) for the whole design.
+
+---
+
 ## Logging and operations
 
 ### `LOG_LEVEL`
