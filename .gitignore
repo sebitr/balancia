@@ -32,6 +32,21 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local data (receipt uploads, dev database)
+/data
+
+# generated service worker
+public/sw.js
+public/sw.js.map
+
+# build output for worker/migrator bundles
+/dist
+
+# playwright
+/playwright-report
+/test-results
 
 # vercel
 .vercel

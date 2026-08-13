@@ -1,0 +1,210 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  static:
+    name: Lint, types and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Route types must exist before tsc sees the app.
+      - run: pnpm next typegen
+
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm format:check
+
+  unit:
+    name: Unit and property tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: balancia
+          POSTGRES_PASSWORD: balancia
+          POSTGRES_DB: balancia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U balancia"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgres://balancia:balancia@localhost:5432/balancia
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      APP_URL: http://localhost:3000
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # These run the committed migrations, so migrations are under test too.
+      - run: pnpm test:integration
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    env:
+      # The build only needs these to satisfy the environment schema; real
+      # values are supplied at runtime.
+      APP_URL: http://localhost:3000
+      DATABASE_URL: postgres://build:build@localhost:5432/build
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Check the service worker was produced
+        run: test -f public/sw.js
+
+  e2e:
+    name: Playwright journeys
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: balancia
+          POSTGRES_PASSWORD: balancia
+          POSTGRES_DB: balancia_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U balancia"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      E2E_DATABASE_URL: postgres://balancia:balancia@localhost:5432/balancia_e2e
+      DATABASE_URL: postgres://balancia:balancia@localhost:5432/balancia_e2e
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      APP_URL: http://localhost:3100
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm db:migrate
+      - run: pnpm build
+
+      - run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build only — nothing is pushed anywhere from CI.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: balancia:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test the image
+        run: |
+          # The migrator should run and report a missing database cleanly
+          # rather than crashing on a malformed bundle.
+          docker run --rm --entrypoint node balancia:ci -e "
+            const fs = require('fs');
+            for (const f of ['server.js', 'dist/worker.js', 'dist/migrate.js']) {
+              if (!fs.existsSync(f)) { console.error('missing ' + f); process.exit(1); }
+            }
+            console.log('image contains web, worker and migrator entrypoints');
+          "
+
+      - name: Confirm the app runs as a non-root user
+        run: |
+          test "$(docker run --rm --entrypoint id balancia:ci -u)" != "0"
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Fails on a high or critical advisory in a production dependency.
+      - run: pnpm audit --prod --audit-level high

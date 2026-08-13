@@ -1,0 +1,116 @@
+import "server-only";
+import { sql } from "drizzle-orm";
+import { getDb } from "@/lib/db/client";
+import { rateLimits } from "@/lib/db/schema";
+import { getEnv } from "@/lib/env";
+
+/**
+ * Fixed-window rate limiting backed by PostgreSQL.
+ *
+ * Balancia has no Redis by design, and a self-hosted instance rarely needs
+ * more than this: one upsert per attempt, counted inside a window truncated to
+ * a fixed boundary. Slightly more permissive than a sliding window at window
+ * edges, which is an acceptable trade for having no extra moving part.
+ */
+
+export interface RateLimitPolicy {
+  /** Maximum attempts allowed within the window. */
+  readonly limit: number;
+  /** Window length in seconds. */
+  readonly windowSeconds: number;
+}
+
+export type RateLimitBucket =
+  "signIn" | "signUp" | "guestRedeem" | "passwordReset" | "upload";
+
+/**
+ * Default policies.
+ *
+ * The credential buckets are deliberately tight: they are what makes password
+ * guessing and account enumeration expensive. `AUTH_RATE_LIMIT_MAX` raises the
+ * credential limits for the one legitimate case where many attempts share an
+ * address — an automated test suite against a private instance.
+ */
+function policies(): Record<RateLimitBucket, RateLimitPolicy> {
+  const authMax = getEnv().AUTH_RATE_LIMIT_MAX;
+  return {
+    signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
+    signUp: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    passwordReset: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    guestRedeem: { limit: 20, windowSeconds: 600 },
+    upload: { limit: 60, windowSeconds: 600 },
+  };
+}
+
+export interface RateLimitResult {
+  readonly allowed: boolean;
+  readonly remaining: number;
+  readonly retryAfterSeconds: number;
+}
+
+function windowStart(policy: RateLimitPolicy, now: Date): Date {
+  const windowMs = policy.windowSeconds * 1000;
+  return new Date(Math.floor(now.getTime() / windowMs) * windowMs);
+}
+
+/**
+ * Records an attempt and reports whether it is allowed.
+ *
+ * `key` should identify the actor as narrowly as is safe — usually the client
+ * IP, or the IP plus a token prefix. Never pass a raw token: this value is
+ * stored.
+ */
+export async function consumeRateLimit(
+  bucketName: RateLimitBucket,
+  key: string,
+  options: { now?: Date } = {},
+): Promise<RateLimitResult> {
+  const policy = policies()[bucketName];
+  const now = options.now ?? new Date();
+  const start = windowStart(policy, now);
+  const bucket = `${bucketName}:${key}`;
+
+  const db = getDb();
+  const [row] = await db
+    .insert(rateLimits)
+    .values({ bucket, windowStart: start, count: 1, updatedAt: now })
+    .onConflictDoUpdate({
+      target: [rateLimits.bucket, rateLimits.windowStart],
+      set: {
+        count: sql`${rateLimits.count} + 1`,
+        updatedAt: now,
+      },
+    })
+    .returning({ count: rateLimits.count });
+
+  const count = row?.count ?? 1;
+  const allowed = count <= policy.limit;
+  const windowEnd = start.getTime() + policy.windowSeconds * 1000;
+  const retryAfterSeconds = Math.max(
+    1,
+    Math.ceil((windowEnd - now.getTime()) / 1000),
+  );
+
+  return {
+    allowed,
+    remaining: Math.max(0, policy.limit - count),
+    retryAfterSeconds: allowed ? 0 : retryAfterSeconds,
+  };
+}
+
+/** Deletes windows that can no longer be hit. Called by a scheduled job. */
+export async function pruneRateLimits(olderThan: Date): Promise<number> {
+  const db = getDb();
+  const result = await db
+    .delete(rateLimits)
+    .where(sql`${rateLimits.windowStart} < ${olderThan}`)
+    .returning({ id: rateLimits.id });
+  return result.length;
+}
+
+export class RateLimitedError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super("Too many attempts. Please try again later.");
+    this.name = "RateLimitedError";
+  }
+}

@@ -1,0 +1,86 @@
+import { z } from "zod";
+import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
+import { CURRENCY_MODES } from "@/modules/currencies/conversion";
+
+/**
+ * Input validation for group and participant operations.
+ *
+ * These schemas are the boundary between untrusted input and domain services:
+ * every Server Action and route handler parses with one of them first.
+ */
+
+const currencyCode = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .refine(
+    (value) => SUPPORTED_CURRENCY_CODES.includes(value),
+    "Choose a supported ISO 4217 currency",
+  );
+
+/** Validates against the runtime's own timezone database rather than a list. */
+const timezone = z
+  .string()
+  .trim()
+  .min(1, "Choose a timezone")
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: value });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Not a recognised IANA timezone");
+
+export const createGroupSchema = z
+  .object({
+    name: z.string().trim().min(1, "Give the group a name").max(120),
+    description: z.string().trim().max(2000).optional().or(z.literal("")),
+    currencyMode: z.enum(CURRENCY_MODES),
+    baseCurrency: currencyCode.optional(),
+    timezone,
+    /** The creator's own display name inside this group. */
+    ownerDisplayName: z.string().trim().min(1, "Enter your name").max(120),
+  })
+  .refine(
+    (value) =>
+      value.currencyMode !== "converted" || Boolean(value.baseCurrency),
+    {
+      path: ["baseCurrency"],
+      message: "A converted group needs a base currency",
+    },
+  );
+
+export type CreateGroupInput = z.infer<typeof createGroupSchema>;
+
+export const updateGroupSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(2000).optional().or(z.literal("")),
+  timezone,
+});
+
+export type UpdateGroupInput = z.infer<typeof updateGroupSchema>;
+
+export const addParticipantSchema = z.object({
+  displayName: z.string().trim().min(1, "Enter a name").max(120),
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
+
+export const updateParticipantSchema = addParticipantSchema.extend({
+  participantId: z.uuid(),
+});
+
+export const createInvitationSchema = z.object({
+  participantId: z.uuid(),
+  /** Optional expiry, in days from now. */
+  expiresInDays: z.coerce.number().int().min(1).max(365).optional(),
+});
+
+export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
