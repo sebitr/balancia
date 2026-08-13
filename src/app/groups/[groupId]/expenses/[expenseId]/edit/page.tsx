@@ -5,8 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { requireGroupAccess } from "@/lib/actions";
+import { isSemanticCategorizationEnabled } from "@/lib/env";
 import { getExpense } from "@/modules/expenses/service";
 import { listParticipants } from "@/modules/groups/service";
+import { loadMappings } from "@/modules/categorization/service";
 import { toMajorString, money } from "@/modules/currencies/money";
 
 export default async function EditExpensePage({
@@ -15,9 +17,10 @@ export default async function EditExpensePage({
   const { groupId, expenseId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [expense, participants] = await Promise.all([
+  const [expense, participants, categoryMappings] = await Promise.all([
     getExpense(access.groupId, expenseId),
     listParticipants(access.groupId),
+    loadMappings(access),
   ]);
 
   if (!expense) {
@@ -59,6 +62,8 @@ export default async function EditExpensePage({
         currencyMode={access.group.currencyMode}
         baseCurrency={access.group.baseCurrency}
         defaultCurrency={expense.currency}
+        categoryMappings={categoryMappings}
+        semanticCategorization={isSemanticCategorizationEnabled()}
         initial={{
           id: expense.id,
           description: expense.description,

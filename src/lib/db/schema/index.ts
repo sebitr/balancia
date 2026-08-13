@@ -11,3 +11,4 @@ export * from "./activity";
 export * from "./recurring";
 export * from "./imports";
 export * from "./rates";
+export * from "./categorization";

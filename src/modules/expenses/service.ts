@@ -14,6 +14,7 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import { recordCategoryChoice } from "@/modules/categorization/service";
 import {
   resolveConversion,
   type ExchangeRateSource,
@@ -299,6 +300,14 @@ export async function createExpense(
       },
     });
 
+    // Whatever category was settled on teaches the classifier, in the same
+    // transaction as the expense that taught it.
+    await recordCategoryChoice(
+      access,
+      { merchant: input.description, category: input.category ?? null },
+      { db: tx },
+    );
+
     return expense.id;
   });
 }
@@ -414,6 +423,12 @@ export async function updateExpense(
         splitMethod: input.splitMethod,
       },
     });
+
+    await recordCategoryChoice(
+      access,
+      { merchant: input.description, category: input.category ?? null },
+      { db: tx },
+    );
   });
 }
 

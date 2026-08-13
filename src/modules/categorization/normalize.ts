@@ -1,0 +1,305 @@
+/**
+ * Merchant normalization.
+ *
+ * Bank and card descriptors are noisy: `CB CARREFOUR MARKET PARIS 12/05 CARTE
+ * 1234`. Matching against that directly is hopeless, so every rule and every
+ * input is put through this one pipeline and compared in normalized space.
+ * The original text is never modified — `rawMerchant` is what the user sees,
+ * `normalizedMerchant` is only ever used for matching.
+ *
+ * Two deliberate limits:
+ *
+ *  - Digit groups are *kept*, not stripped. `MICROSOFT 365` and `INIT7` mean
+ *    the digits, while `MIGROS 1234` does not; the matcher decides which is
+ *    which (see `isNoiseToken`) instead of the normalizer guessing.
+ *  - Only structured noise is removed — dates, card masks, authorization
+ *    codes, long identifiers — because those cannot be part of a name.
+ */
+
+/** Case, accents and whitespace folded away; punctuation kept for now. */
+export function foldText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Folded text split into alphanumeric tokens.
+ *
+ * Tokens are the unit every matcher works in, so `netflix.com`, `NETFLIX COM`
+ * and `Netflix.com/bill` all reduce to comparable sequences and a rule can
+ * never match half a word (`rent` inside `rental`).
+ */
+export function tokenize(value: string): string[] {
+  const folded = foldText(value);
+  const tokens = folded.match(/[a-z0-9]+/g);
+  return tokens ?? [];
+}
+
+/** Payment processors that front for the merchant who actually got paid. */
+const PROCESSOR_PATTERN =
+  /\b(paypal|sq|sumup|stripe|sq \*|zettle|izettle)\s*\*\s*/;
+
+const PROCESSOR_NAMES = new Set([
+  "paypal",
+  "sq",
+  "square",
+  "sumup",
+  "stripe",
+  "zettle",
+  "izettle",
+]);
+
+/** Card-network and payment-instrument words that precede the real name. */
+const LEADING_PREFIXES = new Set([
+  "cb",
+  "carte",
+  "card",
+  "debit",
+  "credit",
+  "visa",
+  "mastercard",
+  "maestro",
+  "pos",
+  "purchase",
+  "paiement",
+  "achat",
+  "payment",
+  "vpay",
+  "ec",
+]);
+
+/**
+ * Structured noise: nothing here can be part of a merchant name, and none of
+ * it should reach a log, a model or an embedding.
+ *
+ * Case-insensitive so the same list serves both the folded text used for
+ * matching and the original text used for semantic input.
+ */
+const NOISE_PATTERNS: readonly RegExp[] = [
+  // Dates: 12/05/2024, 2024-05-12, 12.05.24, 12-05
+  /\b\d{4}-\d{2}-\d{2}\b/gi,
+  /\b\d{1,2}[./-]\d{1,2}([./-]\d{2,4})?\b/gi,
+  // Times: 14:32, 14h32
+  /\b\d{1,2}[:h]\d{2}\b/gi,
+  // Masked card numbers: xxxx1234, ****1234, x-1234
+  /\b[x*]{2,}[\s-]?\d{2,4}\b/gi,
+  // UUIDs, which are ours and never the user's words.
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+  // Explicitly labelled identifiers.
+  /\b(auth|autorisation|authorization|approval|ref|reference|trn|txn|tran|id|no|nr|num|numero|terminal|term|tid|mid)\.?[\s:#-]*[a-z0-9]{3,}\b/gi,
+  // Long identifiers: 6+ digits, or 8+ mixed alphanumerics containing a digit.
+  /\b\d{6,}\b/gi,
+  /\b(?=[a-z0-9]*\d)[a-z0-9]{8,}\b/gi,
+  // Card-holder trailing four, e.g. "carte 1234" once the word is gone.
+  /\b(kaart|carte|card)\s*\d{2,4}\b/gi,
+];
+
+/**
+ * Removes identifiers without touching the words around them.
+ *
+ * Used for the semantic input, which must keep its accents and its case: a
+ * multilingual sentence model is precisely the thing that knows `dîner` and
+ * `dinner` are the same idea, and folding the accent away throws that help
+ * back in its face.
+ */
+export function stripStructuredNoise(value: string): string {
+  let text = value;
+  for (const pattern of NOISE_PATTERNS) {
+    text = text.replace(pattern, " ");
+  }
+  return text.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * City and country tokens that trail an acquirer's descriptor. Stripped only
+ * from the end, and never down to nothing — `SIG GENEVE` and the seed rule
+ * `sig geneve` both reduce to `sig`, so consistency comes for free.
+ *
+ * Country *names* are deliberately absent: `swiss airlines` and `aldi suisse`
+ * are merchant names, not locations.
+ */
+const TRAILING_PLACES = new Set([
+  "geneve",
+  "geneva",
+  "genf",
+  "lausanne",
+  "zurich",
+  "zuerich",
+  "bern",
+  "berne",
+  "basel",
+  "bale",
+  "lugano",
+  "sion",
+  "fribourg",
+  "neuchatel",
+  "vevey",
+  "montreux",
+  "nyon",
+  "morges",
+  "yverdon",
+  "carouge",
+  "meyrin",
+  "versoix",
+  "paris",
+  "lyon",
+  "marseille",
+  "toulouse",
+  "bordeaux",
+  "lille",
+  "nantes",
+  "strasbourg",
+  "montpellier",
+  "nice",
+  "rennes",
+  "grenoble",
+  "annecy",
+  "chamonix",
+  "london",
+  "milano",
+  "roma",
+  "berlin",
+  "madrid",
+  "barcelona",
+  "amsterdam",
+  "bruxelles",
+  "brussels",
+  "che",
+  "fra",
+  "gbr",
+  "usa",
+  "deu",
+  "ita",
+  "esp",
+  "bel",
+  "nld",
+]);
+
+export interface NormalizedMerchant {
+  /** Exactly what the caller passed, untouched. */
+  readonly rawMerchant: string;
+  /** Folded, de-noised, prefix-free text used for every comparison. */
+  readonly normalizedMerchant: string;
+  /** The processor that fronted the payment, when one was recognised. */
+  readonly processor: string | null;
+  /** True when the text was *only* a processor, with no merchant behind it. */
+  readonly processorOnly: boolean;
+}
+
+/**
+ * Reduces a descriptor to the merchant behind it.
+ *
+ * `PAYPAL *SPOTIFY` becomes `spotify` with `processor: "paypal"`: the
+ * processor is remembered so it can be reported, but it is never itself a
+ * category signal.
+ */
+export function normalizeMerchant(
+  raw: string | null | undefined,
+): NormalizedMerchant {
+  const rawMerchant = raw ?? "";
+  let text = foldText(rawMerchant);
+  let processor: string | null = null;
+
+  const processorMatch = PROCESSOR_PATTERN.exec(text);
+  if (processorMatch) {
+    processor = processorMatch[1] === "sq" ? "square" : processorMatch[1];
+    text = text.slice(processorMatch.index + processorMatch[0].length).trim();
+  }
+
+  for (const pattern of NOISE_PATTERNS) {
+    text = text.replace(pattern, " ");
+  }
+
+  let tokens = tokenize(text);
+
+  // Leading payment words, however many are stacked ("paiement cb visa").
+  let start = 0;
+  while (start < tokens.length && LEADING_PREFIXES.has(tokens[start])) {
+    start += 1;
+  }
+  tokens = tokens.slice(start);
+
+  // A processor named without a separator ("paypal europe") is still just the
+  // processor: strip it, and remember that nothing identifiable is left.
+  while (tokens.length > 0 && PROCESSOR_NAMES.has(tokens[0])) {
+    processor ??= tokens[0] === "sq" ? "square" : tokens[0];
+    tokens = tokens.slice(1);
+  }
+
+  while (tokens.length > 1 && TRAILING_PLACES.has(tokens[tokens.length - 1])) {
+    tokens = tokens.slice(0, -1);
+  }
+
+  const normalizedMerchant = tokens.join(" ");
+  return {
+    rawMerchant,
+    normalizedMerchant,
+    processor,
+    processorOnly: processor !== null && normalizedMerchant === "",
+  };
+}
+
+/**
+ * Tokens that carry no identity: store numbers, two-letter legal forms,
+ * leftover place names. They are what lets `migros 1234` and `uber bv` still
+ * match the single-word rules `migros` and `uber`.
+ */
+export function isNoiseToken(token: string): boolean {
+  return /^\d+$/.test(token) || token.length <= 3 || TRAILING_PLACES.has(token);
+}
+
+/**
+ * The key a merchant is *learned* under.
+ *
+ * Store numbers change between visits — `MIGROS 1234` and `MIGROS 5678` are
+ * the same shop — so what is remembered is the identity left once the noise
+ * is dropped. A descriptor that is nothing but noise keeps its whole
+ * normalized form rather than becoming an empty key.
+ */
+export function merchantKey(normalizedMerchant: string): string {
+  const tokens = tokenize(normalizedMerchant);
+  const identifying = tokens.filter((token) => !isNoiseToken(token));
+  return (identifying.length > 0 ? identifying : tokens).join(" ");
+}
+
+/** True when `needle` appears as a run of whole tokens inside `haystack`. */
+export function containsTokenRun(
+  haystack: readonly string[],
+  needle: readonly string[],
+): boolean {
+  return indexOfTokenRun(haystack, needle) !== -1;
+}
+
+/** Position of `needle` inside `haystack`, in tokens, or -1. */
+export function indexOfTokenRun(
+  haystack: readonly string[],
+  needle: readonly string[],
+): number {
+  if (needle.length === 0 || needle.length > haystack.length) return -1;
+  outer: for (let i = 0; i <= haystack.length - needle.length; i += 1) {
+    for (let j = 0; j < needle.length; j += 1) {
+      if (haystack[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+/**
+ * True when `needle` opens `haystack` and everything after it is noise.
+ *
+ * This is the test that makes single-word merchant rules safe. `migros 1234`
+ * is Migros; `max s birthday dinner` is not the streaming service, because
+ * `birthday` and `dinner` are real words that the rule does not explain.
+ */
+export function isIdentifyingPrefix(
+  haystack: readonly string[],
+  needle: readonly string[],
+): boolean {
+  if (indexOfTokenRun(haystack, needle) !== 0) return false;
+  return haystack.slice(needle.length).every(isNoiseToken);
+}

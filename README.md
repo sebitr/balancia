@@ -44,6 +44,11 @@ and starts the web app and a background worker.
 - **Splitwise import.** Upload a CSV export or JSON backup, preview exactly what
   will happen, map the people, then import. Re-importing the same file never
   duplicates anything.
+- **Categories that fill themselves in.** A card descriptor like `MIGROS 1234`
+  is groceries, `SNCF CONNECT` is transport, `LOYER AOÛT` is housing — in
+  English and French, from rules that run on your own instance with no AI
+  service anywhere. When it is not sure it says so and offers a shortlist, and
+  it remembers what you pick.
 - **Export, in three formats.** Any group downloads as JSON (the complete
   record, amounts exactly as stored), CSV, or an Excel workbook. Leaving is as
   easy as arriving.
@@ -200,6 +205,7 @@ pnpm dev
 | [Environment reference](docs/environment.md)           | Every configuration variable              |
 | [Backup and restore](docs/backup-and-restore.md)       | Database, receipts, secrets               |
 | [Data migration](docs/data-migration.md)               | Importing from Splitwise                  |
+| [Categorization](docs/categorization.md)               | How categories are guessed, and extended  |
 | [Security](SECURITY.md)                                | Reporting a vulnerability, security model |
 | [Contributing](CONTRIBUTING.md)                        | How to propose a change                   |
 | [Implementation status](docs/implementation-status.md) | What is built, what is not                |

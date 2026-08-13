@@ -9,9 +9,11 @@ import { z } from "zod";
  * must match the public URL's host) that are checked here.
  */
 
+const TRUTHY = ["1", "true", "yes", "on"];
+
 const booleanish = z.union([z.boolean(), z.string()]).transform((value) => {
   if (typeof value === "boolean") return value;
-  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+  return TRUTHY.includes(value.trim().toLowerCase());
 });
 
 const optionalString = z
@@ -143,6 +145,21 @@ const envSchema = z
       .string()
       .url("EXCHANGE_RATE_API_URL must be an absolute URL")
       .default("https://api.frankfurter.dev/v1"),
+
+    /**
+     * Semantic fallback for expense categorization.
+     *
+     * Off by default. Not because it costs privacy — inference runs in the
+     * browser against model files this instance serves, and no text leaves
+     * the device — but because it needs `'wasm-unsafe-eval'` in the
+     * Content-Security-Policy and a few hundred megabytes of model files
+     * under `public/models`. Relaxing the CSP is the operator's call.
+     *
+     * Categorization works fully without it: the deterministic rules are the
+     * classifier, and this only adds a fallback for text they do not cover.
+     * See docs/categorization.md.
+     */
+    SEMANTIC_CATEGORIZATION: booleanish.default(false),
 
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
@@ -286,4 +303,18 @@ export function parseEnv(source: NodeJS.ProcessEnv): AppEnv {
 /** Test hook: forget the cached environment. */
 export function resetEnvCache(): void {
   cached = undefined;
+}
+
+/**
+ * Whether the semantic categorization layer is switched on.
+ *
+ * Read without validating the whole environment, because `proxy.ts` needs it
+ * on every request and must not depend on the full schema parsing cleanly.
+ */
+export function isSemanticCategorizationEnabled(
+  source: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return TRUTHY.includes(
+    (source.SEMANTIC_CATEGORIZATION ?? "").trim().toLowerCase(),
+  );
 }

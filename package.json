@@ -30,7 +30,8 @@
     "audit:prod": "pnpm audit --prod",
     "design-system": "node design-system/build.mjs",
     "build:next": "next build",
-    "icons": "tsx scripts/generate-icons.ts"
+    "icons": "tsx scripts/generate-icons.ts",
+    "semantic:install": "tsx scripts/fetch-semantic-model.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",

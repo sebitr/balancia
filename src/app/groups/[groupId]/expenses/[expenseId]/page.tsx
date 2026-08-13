@@ -11,6 +11,7 @@ import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button
 import { requireGroupAccess } from "@/lib/actions";
 import { getExpense } from "@/modules/expenses/service";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
+import { isExpenseCategory } from "@/modules/categorization";
 
 /** Split method → catalogue key, so the badge follows the reader's language. */
 const SPLIT_LABEL_KEYS = {
@@ -38,7 +39,16 @@ export default async function ExpenseDetailPage({
 
   const t = await getTranslations("expenseDetail");
   const tCommon = await getTranslations("common");
+  const tCategories = await getTranslations("expenses.categories");
   const format = await getFormatter();
+
+  // Canonical categories are translated; anything else came from an import
+  // and is shown exactly as it was imported.
+  const categoryLabel = !expense.category
+    ? null
+    : isExpenseCategory(expense.category)
+      ? tCategories(expense.category)
+      : expense.category;
   const splitLabelKey =
     SPLIT_LABEL_KEYS[expense.splitMethod as keyof typeof SPLIT_LABEL_KEYS];
 
@@ -62,7 +72,7 @@ export default async function ExpenseDetailPage({
                 parsePlainDate(expense.expenseDate),
                 PLAIN_DATE_FORMAT,
               )}
-              {expense.category && ` · ${expense.category}`}
+              {categoryLabel && ` · ${categoryLabel}`}
             </p>
           </div>
           <Amount

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isSemanticCategorizationEnabled } from "@/lib/env";
 
 /**
  * Security headers and origin validation.
@@ -18,6 +19,11 @@ import { NextResponse, type NextRequest } from "next/server";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function buildCsp(nonce: string, isDevelopment: boolean): string {
+  // Compiling WebAssembly needs its own token. Added only where the operator
+  // asked for the local embedding model, so the default policy stays strict.
+  // It permits WASM compilation and nothing else — it is not `unsafe-eval`.
+  const semantic = isSemanticCategorizationEnabled();
+
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     // 'strict-dynamic' lets Next's own bootstrap load its chunks; the nonce is
@@ -26,6 +32,7 @@ function buildCsp(nonce: string, isDevelopment: boolean): string {
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
+      ...(semantic ? ["'wasm-unsafe-eval'"] : []),
       ...(isDevelopment ? ["'unsafe-eval'"] : []),
     ],
     // Next injects inline <style> for its CSS; a nonce cannot cover all of it.
