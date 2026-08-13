@@ -130,8 +130,8 @@ Moving between servers is a backup and a restore, not a migration. See
 
 Two things to watch:
 
-- **Restore the secrets volume**, or the new instance cannot open the database
-  it was given.
+- **Copy the old `.env` across** rather than generating a new one, or the new
+  instance cannot open the database it was given.
 - **If the domain changes, every passkey stops working.** Credentials are bound
   to the relying-party ID by the authenticator. Passwords are unaffected; users
   register a new passkey on the new domain. To avoid this, set `WEBAUTHN_RP_ID`

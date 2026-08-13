@@ -172,7 +172,8 @@ Not conventionally "security", but it is what the application is for:
   to start with a non-localhost HTTP `APP_URL`.
 - **Make sure your proxy sets `X-Forwarded-For`.** Without it, rate limiting
   sees every request as one client.
-- **Back up the secrets volume** along with the database and receipts.
+- **Back up `.env`** along with the database and receipts. It holds the only
+  copy of `AUTH_SECRET` and `POSTGRES_PASSWORD`.
 - **Keep `ALLOW_REGISTRATION=false`** on a private instance.
 - **Do not raise `AUTH_RATE_LIMIT_MAX`** on a public deployment.
 - **Update regularly**; run `pnpm audit:prod` if you build your own images.

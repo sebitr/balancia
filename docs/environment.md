@@ -6,13 +6,27 @@ Configuration is validated with zod at startup. A bad value stops the process
 with a message naming the variable and what to fix, rather than letting the app
 half-work until someone hits the broken path.
 
-Under Docker Compose, **every variable is optional** — the defaults plus
-generated secrets produce a working localhost install. Set them in `.env` next
-to `compose.yaml`. For local development without Docker, use `.env.local`.
+Under Docker Compose, **only `AUTH_SECRET` and `POSTGRES_PASSWORD` are
+required**, and `./scripts/bootstrap.sh` writes both into `.env` for you.
+Everything else defaults to a working localhost install. Set overrides in that
+same `.env`, next to `compose.yaml`. For local development without Docker, use
+`.env.local`.
 
 ---
 
-## Required outside Docker
+## Required
+
+### `POSTGRES_PASSWORD`
+
+**Compose only.** The password for the `balancia` database role. Written by
+`scripts/bootstrap.sh`; used both to initialise the database and to assemble
+`DATABASE_URL`. Any characters are fine — the container percent-encodes it
+before building the URL.
+
+It is applied **only when the cluster is first created.** Changing it later
+edits the connection string without changing the password PostgreSQL actually
+expects, and the app stops being able to connect. To rotate it, `ALTER ROLE
+balancia WITH PASSWORD '…'` and update `.env` to match.
 
 ### `DATABASE_URL`
 
@@ -22,8 +36,15 @@ PostgreSQL connection string. Must start with `postgres://` or `postgresql://`.
 DATABASE_URL=postgres://balancia:password@localhost:5432/balancia
 ```
 
-Under Compose this is assembled from the generated password; do not set it
-there.
+Under Compose the entrypoint assembles this from `POSTGRES_PASSWORD`,
+percent-encoding the password. Set it explicitly only to point the app at a
+database outside the Compose project; an explicit value always wins.
+
+When you do set it by hand and the password contains `/`, `#` or `?`,
+percent-encode it yourself. Those characters end the URL's authority section,
+so what follows is no longer read as a host and port and the string fails to
+parse. Startup names that cause rather than passing a bare "Invalid URL"
+through from the driver. (`@` and `%` need no encoding.)
 
 ### `AUTH_SECRET`
 
@@ -33,11 +54,11 @@ Instance secret, at least 32 characters of randomness.
 AUTH_SECRET=$(openssl rand -base64 48)
 ```
 
-Generated and persisted automatically under Compose. Changing it invalidates
-nothing stored (session tokens are random and stored hashed), but it is treated
-as instance-identifying material — keep it in your backups. In production,
-values that look like placeholders (`changeme`, `password`, …) are rejected at
-startup.
+Written into `.env` by `scripts/bootstrap.sh` on first run. Changing it
+invalidates nothing stored (session tokens are random and stored hashed), but it
+is treated as instance-identifying material — keep it in your backups. In
+production, values that look like placeholders (`changeme`, `password`, …) are
+rejected at startup.
 
 ---
 
@@ -260,6 +281,20 @@ Seeding refuses to run when this is `production`.
 ### `APP_PORT`
 
 Compose only. Host port the app is published on. Default `3000`.
+
+### `RUN_MIGRATIONS`
+
+Docker image only. Default `true`: the entrypoint applies pending migrations
+before starting the web or worker process. Both containers doing this at once
+is safe — the runner holds a PostgreSQL advisory lock, so the second waits and
+then finds the schema current.
+
+Set to `false` to take that over yourself, e.g. to apply migrations once and
+confirm before rolling the app:
+
+```bash
+docker compose run --rm --entrypoint "node dist/migrate.js" app
+```
 
 ---
 

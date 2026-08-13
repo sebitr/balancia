@@ -2,9 +2,10 @@
 
 # Balancia production image.
 #
-# One image serves all three roles — web, worker and migrate — selected by the
-# container command. Multi-stage so the runtime layer carries no build
-# toolchain, no dev dependencies and no source beyond what is executed.
+# One image serves both roles — web and worker — selected by the container
+# command. Either way the entrypoint applies pending migrations first. Multi-
+# stage so the runtime layer carries no build toolchain, no dev dependencies
+# and no source beyond what is executed.
 #
 # Builds for linux/amd64 and linux/arm64: nothing here is architecture-specific
 # and native modules (sharp is a dev dependency only) are avoided at runtime.
@@ -87,6 +88,9 @@ COPY --from=builder --chown=balancia:balancia /app/drizzle ./drizzle
 # node_modules for the bundles' external dependencies (pg, pg-boss, pino …).
 COPY --from=deps --chown=balancia:balancia /app/node_modules ./node_modules
 
+# Applies pending migrations before handing over to the command below.
+COPY --chmod=755 scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+
 RUN mkdir -p /data/uploads && chown -R balancia:balancia /data
 
 USER balancia
@@ -94,7 +98,9 @@ EXPOSE 3000
 VOLUME ["/data"]
 
 # tini reaps zombies and forwards SIGTERM, so graceful shutdown actually works.
-ENTRYPOINT ["/sbin/tini", "--"]
+# The entrypoint script `exec`s the command, so the real process stays tini's
+# direct child and still receives that signal.
+ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS http://127.0.0.1:3000/api/health/live || exit 1

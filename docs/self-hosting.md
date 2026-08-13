@@ -9,50 +9,70 @@ container, and PostgreSQL. No Redis, no message broker, no external services.
 ```bash
 git clone https://github.com/your-org/balancia.git
 cd balancia
+./scripts/bootstrap.sh
 docker compose up -d --build
 ```
 
 Open <http://localhost:3000> and create the first account.
 
-### What that command sets up
+### What those commands set up
 
-| Service        | Role                                                                                                                         |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `init-secrets` | Generates the database password and instance secret on first run, into a named volume. Idempotent — later starts reuse them. |
-| `db`           | PostgreSQL 18. **Not published to the host**; reachable only on the internal Compose network.                                |
-| `migrate`      | Applies committed SQL migrations, then exits. App and worker wait for it to finish.                                          |
-| `app`          | The web application. Published on `${APP_PORT:-3000}`.                                                                       |
-| `worker`       | Background jobs: recurring expenses, import commits, housekeeping.                                                           |
+`bootstrap.sh` writes a `.env` holding this instance's own secrets. It needs
+only a POSIX shell and `/dev/urandom`, and it never overwrites a value that is
+already set — so re-running it is a no-op, and `./scripts/bootstrap.sh &&
+docker compose up -d` is a safe habit.
 
-Three named volumes hold everything that matters:
+Compose then starts three services:
 
-| Volume             | Contents                                            |
-| ------------------ | --------------------------------------------------- |
-| `balancia-db-data` | The PostgreSQL database                             |
-| `balancia-uploads` | Receipt files                                       |
-| `balancia-secrets` | The generated database password and instance secret |
+| Service  | Role                                                                                         |
+| -------- | -------------------------------------------------------------------------------------------- |
+| `db`     | PostgreSQL 18. **Not published to the host**; reachable only on the internal Compose network. |
+| `app`    | The web application. Published on `${APP_PORT:-3000}`.                                        |
+| `worker` | Background jobs: recurring expenses, import commits, housekeeping.                            |
+
+Migrations are not a separate service. The image's entrypoint applies any
+pending ones before `app` and `worker` start, on every boot. Both doing it at
+once is safe — the runner takes a PostgreSQL advisory lock, so the second waits
+and then finds the schema already current. To take that over yourself, set
+`RUN_MIGRATIONS=false` and run them explicitly:
+
+```bash
+docker compose run --rm --entrypoint "node dist/migrate.js" app
+```
+
+Two named volumes hold everything that matters:
+
+| Volume             | Contents                |
+| ------------------ | ----------------------- |
+| `balancia-db-data` | The PostgreSQL database |
+| `balancia-uploads` | Receipt files           |
 
 ### About the generated secrets
 
-Nothing in this repository contains a usable production secret. On first run,
-`init-secrets` writes two random values into the `balancia-secrets` volume:
+Nothing in this repository contains a usable production secret. `bootstrap.sh`
+writes two random values into `.env`, both alphanumeric:
 
-- `auth_secret` — 48 random bytes, base64
-- `postgres_password` — 40 random alphanumeric characters
+- `AUTH_SECRET` — 64 characters (~381 bits)
+- `POSTGRES_PASSWORD` — 40 characters (~238 bits)
 
-They persist across restarts and upgrades, so sessions survive. **Back up that
-volume**: losing `auth_secret` signs everyone out; losing
-`postgres_password` locks you out of your own database.
+**Back up `.env`**: losing `AUTH_SECRET` signs everyone out, and losing
+`POSTGRES_PASSWORD` locks you out of your own database.
 
-To manage them yourself instead, put them in `.env`:
+To manage them yourself instead, just write them into `.env` before running
+bootstrap — it will leave them alone:
 
 ```bash
 AUTH_SECRET=$(openssl rand -base64 48)
 POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 40)
 ```
 
-Values in `.env` win; the bootstrap writes them into the volume and stops
-generating its own.
+`POSTGRES_PASSWORD` may contain any characters. The container percent-encodes
+it before building the connection URL, so a `/` or `#` in a password you pasted
+from a password manager will not break startup.
+
+Note that `POSTGRES_PASSWORD` is applied only when the database cluster is
+first created. Changing it later does not change the password PostgreSQL
+actually expects, and the app will fail to connect; use `ALTER ROLE` for that.
 
 ---
 
@@ -207,10 +227,12 @@ docker compose up -d --build
 What happens, in order:
 
 1. New images build.
-2. `migrate` runs to completion, applying any new SQL migrations inside a
-   transaction each, guarded by a PostgreSQL advisory lock so concurrent
+2. `app` and `worker` restart. Each applies any new SQL migrations first — one
+   transaction per migration, guarded by a PostgreSQL advisory lock so the two
    containers cannot race.
-3. `app` and `worker` start only after migrations succeed.
+3. Neither serves anything until its migrations succeed. If they fail, the
+   container exits with the error and Compose restarts it; `docker compose logs
+   app` shows what went wrong.
 
 **Migrations are forward-only and never destructive without warning.** Applied
 migrations are recorded with a checksum; if a file that has already run is
@@ -258,9 +280,9 @@ docker compose exec -T db \
 # 2. Take a full backup as well, before destroying anything.
 ./balancia-backup.sh /var/backups/balancia
 
-# 3. Stop the stack and delete ONLY the database volume. Note this is
-#    `down` without `-v`: the uploads and secrets volumes must survive, since
-#    the new database initialises with the password held in the secrets volume.
+# 3. Stop the stack and delete ONLY the database volume. Note this is `down`
+#    without `-v`: the uploads volume must survive. Leave .env alone too — the
+#    new cluster initialises with the POSTGRES_PASSWORD held in it.
 docker compose down
 docker volume rm balancia-db-data
 
@@ -278,8 +300,8 @@ docker compose up -d --build
 
 If `docker volume rm` reports the volume is still in use, a container is still
 attached — `docker compose down --remove-orphans` and retry. Do not reach for
-`docker compose down -v` to force it: that deletes the receipts and secrets
-along with the database.
+`docker compose down -v` to force it: that deletes the receipts along with the
+database.
 
 Then verify as described in
 [backup-and-restore.md](backup-and-restore.md#verifying-the-restore) — at
