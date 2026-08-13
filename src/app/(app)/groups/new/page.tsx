@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { CreateGroupForm } from "@/components/groups/create-group-form";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/security/actor";
+import { POP } from "@/components/motion/transitions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("newGroupPage");
@@ -20,7 +21,7 @@ export default async function NewGroupPage() {
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/dashboard">
+          <Link href="/dashboard" transitionTypes={POP}>
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>

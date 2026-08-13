@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/security/actor";
 import { countUnread } from "@/modules/notifications/service";
 import { cn } from "@/lib/utils";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * The unread indicator in the header.
@@ -24,6 +25,7 @@ export async function NotificationBell() {
   return (
     <Link
       href="/notifications"
+      transitionTypes={PUSH}
       aria-label={unread > 0 ? t("bellUnread", { count: unread }) : t("bell")}
       className={cn(
         "relative inline-flex size-9 items-center justify-center rounded-md",

@@ -20,6 +20,7 @@ const SPLIT_LABEL_KEYS = {
   percentage: "splitPercentage",
   shares: "splitShares",
 } as const;
+import { POP, PUSH } from "@/components/motion/transitions";
 
 export default async function ExpenseDetailPage({
   params,
@@ -56,7 +57,7 @@ export default async function ExpenseDetailPage({
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}/expenses`}>
+          <Link href={`/groups/${groupId}/expenses`} transitionTypes={POP}>
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>
@@ -194,7 +195,10 @@ export default async function ExpenseDetailPage({
 
       <div className="flex gap-3">
         <Button asChild variant="outline" className="flex-1">
-          <Link href={`/groups/${groupId}/expenses/${expenseId}/edit`}>
+          <Link
+            href={`/groups/${groupId}/expenses/${expenseId}/edit`}
+            transitionTypes={PUSH}
+          >
             <Pencil aria-hidden="true" />
             {t("edit")}
           </Link>

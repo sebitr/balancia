@@ -6,6 +6,7 @@ import { BalanceAmount } from "@/components/money/amount";
 import { MemberStack } from "./member-stack";
 import { RelativeTime } from "./relative-time";
 import { cn } from "@/lib/utils";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * The triaged body of the home screen.
@@ -91,6 +92,7 @@ export function NeedsYouCard({
           {/* The whole card is the link; the buttons below sit above it. */}
           <Link
             href={`/groups/${group.id}`}
+            transitionTypes={PUSH}
             className="truncate text-base font-medium tracking-[-0.01em] before:absolute before:inset-0 before:rounded-[17px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {group.name}
@@ -131,7 +133,9 @@ export function NeedsYouCard({
           variant={urgent ? "default" : "outline"}
           className="h-8 rounded-xl px-[13px] text-[0.8125rem]"
         >
-          <Link href={`/groups/${group.id}/balances`}>{t("settleUp")}</Link>
+          <Link href={`/groups/${group.id}/balances`} transitionTypes={PUSH}>
+            {t("settleUp")}
+          </Link>
         </Button>
         <Button
           asChild
@@ -139,7 +143,10 @@ export function NeedsYouCard({
           variant="outline"
           className="h-8 rounded-xl px-[13px] text-[0.8125rem]"
         >
-          <Link href={`/groups/${group.id}/expenses/new`}>
+          <Link
+            href={`/groups/${group.id}/expenses/new`}
+            transitionTypes={PUSH}
+          >
             {t("addExpense")}
           </Link>
         </Button>
@@ -164,6 +171,7 @@ export function OwedCard({
         <li key={group.id} className="border-t first:border-t-0">
           <Link
             href={`/groups/${group.id}`}
+            transitionTypes={PUSH}
             className="flex min-h-11 items-center justify-between gap-3 px-4 py-[13px] transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_60%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
           >
             <span className="flex min-w-0 flex-col gap-0.5">
@@ -208,6 +216,7 @@ export function RecentlyActiveCard({
         <li key={group.id} className="border-t first:border-t-0">
           <Link
             href={`/groups/${group.id}`}
+            transitionTypes={PUSH}
             className="flex min-h-11 items-center justify-between gap-3 px-4 py-[13px] transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_60%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
           >
             <span className="truncate text-[0.9375rem] font-medium">

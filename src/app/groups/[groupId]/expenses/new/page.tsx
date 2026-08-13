@@ -12,6 +12,7 @@ import {
 import { listParticipants } from "@/modules/groups/service";
 import { loadMappings } from "@/modules/categorization/service";
 import { Users } from "lucide-react";
+import { POP, PUSH } from "@/components/motion/transitions";
 
 export default async function NewExpensePage({
   params,
@@ -35,7 +36,9 @@ export default async function NewExpensePage({
         description={t("noPeopleDescription")}
         action={
           <Button asChild>
-            <Link href={`/groups/${groupId}/members`}>{t("managePeople")}</Link>
+            <Link href={`/groups/${groupId}/members`} transitionTypes={PUSH}>
+              {t("managePeople")}
+            </Link>
           </Button>
         }
       />
@@ -46,7 +49,7 @@ export default async function NewExpensePage({
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}/expenses`}>
+          <Link href={`/groups/${groupId}/expenses`} transitionTypes={POP}>
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>
