@@ -1,9 +1,12 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Balancia wordmark: two counterweighted dots on a beam — shared expenses,
- * fairly balanced. Deliberately simple; a real brand mark is not this
- * version's job.
+ * Balancia mark: splitting a bill is division. A dot for what was spent, a
+ * rule to divide it, a pan below that catches everyone's share.
+ *
+ * Two colours and no more — `currentColor` for the rule and pan, `--primary`
+ * for the dot. See `design-system/dist/foundations/brand.html` for clear
+ * space, minimum sizes and misuse.
  */
 export function BalanciaMark({ className }: { className?: string }) {
   return (
@@ -13,20 +16,46 @@ export function BalanciaMark({ className }: { className?: string }) {
       aria-hidden="true"
       className={cn("size-7", className)}
     >
-      <path
-        d="M16 5v22"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M6 11h20"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <circle cx="7" cy="18" r="4.5" fill="currentColor" opacity="0.9" />
-      <circle cx="25" cy="18" r="4.5" fill="currentColor" opacity="0.55" />
+      <g transform="translate(2.4 2.6) scale(0.85)">
+        <circle cx="16" cy="4.5" r="4.4" className="fill-primary" />
+        <rect
+          x="0"
+          y="14.75"
+          width="32"
+          height="4.5"
+          rx="2.25"
+          fill="currentColor"
+        />
+        <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Single-colour mark for stamps, favicons and anywhere the coral dot cannot
+ * reproduce. Below 20px the pan and rule merge — prefer this at those sizes.
+ */
+export function BalanciaMarkMono({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      className={cn("size-7", className)}
+    >
+      <g transform="translate(2.4 2.6) scale(0.85)">
+        <circle cx="16" cy="4.5" r="4.4" fill="currentColor" />
+        <rect
+          x="0"
+          y="14.75"
+          width="32"
+          height="4.5"
+          rx="2.25"
+          fill="currentColor"
+        />
+        <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
+      </g>
     </svg>
   );
 }
@@ -40,7 +69,7 @@ export function Wordmark({
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <BalanciaMark className={cn("text-primary", markClassName)} />
+      <BalanciaMark className={markClassName} />
       <span className="font-heading text-lg font-semibold tracking-tight">
         Balancia
       </span>

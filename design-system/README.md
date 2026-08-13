@@ -18,9 +18,11 @@ design-system/
   dist/              generated standalone pages — this is what gets uploaded
 ```
 
-Each page in `dist/` is fully self-contained: `kit.css` is inlined and there are
-no external requests. The Design System pane renders each page in isolation, so
-nothing may reference a sibling file.
+Each page in `dist/` stands alone: `kit.css` is inlined and the only external
+requests are Instrument Sans and Instrument Serif from Google Fonts. The Design
+System pane renders each page in isolation, so nothing may reference a sibling
+file. The app self-hosts the same faces through `next/font` — these pages link
+out only because the pane has no bundler.
 
 ## Building
 

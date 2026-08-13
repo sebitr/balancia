@@ -1,0 +1,532 @@
+<!-- @dsCard group="Foundations" name="Brand" subtitle="The mark, its lockups, clear space and misuse" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Foundations</div>
+    <h1>Brand</h1>
+    <p class="lede">
+      Splitting a bill is division. A dot for what was spent, a rule to divide
+      it, a pan below that catches everyone's share. Three parts, one width,
+      nothing decorative. Ships as
+      <code>src/components/brand/wordmark.tsx</code>; the rule and pan take
+      <code>currentColor</code>, the dot is always <code>--primary</code>.
+    </p>
+  </header>
+
+  <section>
+    <h2>Lockups</h2>
+    <div class="grid-2">
+      <div class="spec" style="background: #fbf7f1; border-color: #ede3d6">
+        <div class="spec-label" style="color: #7a4a85">
+          Horizontal · on cream
+        </div>
+        <span class="wordmark" style="color: #2a0e31; gap: 0.625rem"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.25rem; height: 2.25rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="#F97361" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="#2A0E31"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="#2A0E31" /></svg
+          ><span class="wordmark-text" style="font-size: 1.5rem"
+            >Balancia</span
+          ></span
+        >
+      </div>
+      <div class="spec" style="background: #2a0e31; border-color: #4b2154">
+        <div class="spec-label" style="color: #b99bc0">
+          Horizontal · reversed on plum
+        </div>
+        <span class="wordmark" style="color: #fbf7f1; gap: 0.625rem"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.25rem; height: 2.25rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="#F97361" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="#FBF7F1"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="#FBF7F1" /></svg
+          ><span class="wordmark-text" style="font-size: 1.5rem"
+            >Balancia</span
+          ></span
+        >
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top: 0.75rem">
+      <div class="spec" style="background: #fbf7f1; border-color: #ede3d6">
+        <div class="spec-label" style="color: #7a4a85">Stacked</div>
+        <span
+          class="wordmark"
+          style="color: #2a0e31; flex-direction: column; gap: 0.5rem"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.5rem; height: 2.5rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="#F97361" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="#2A0E31"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="#2A0E31" /></svg
+          ><span class="wordmark-text">Balancia</span></span
+        >
+      </div>
+      <div class="spec" style="background: #fbf7f1; border-color: #ede3d6">
+        <div class="spec-label" style="color: #7a4a85">Mark only</div>
+        <span class="wordmark" style="color: #2a0e31"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 3rem; height: 3rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="#F97361" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="#2A0E31"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="#2A0E31" /></svg
+        ></span>
+      </div>
+      <div class="spec" style="background: #fbf7f1; border-color: #ede3d6">
+        <div class="spec-label" style="color: #7a4a85">Mono</div>
+        <span class="wordmark" style="color: #2a0e31"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 3rem; height: 3rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="#2A0E31" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="#2A0E31"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="#2A0E31" /></svg
+        ></span>
+        <div class="swatch-val" style="color: #7a4a85; margin-top: 0.75rem">
+          BalanciaMarkMono
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The horizontal lockup is the default. Stacked is for square spaces, mark
+      only where the name already appears beside it, and
+      <code>BalanciaMarkMono</code> for single-colour reproduction — stamps,
+      favicons, embroidery.
+    </p>
+  </section>
+
+  <section>
+    <h2>Icon tiles</h2>
+    <div class="row" style="gap: 1.5rem">
+      <div>
+        <svg
+          viewBox="0 0 64 64"
+          fill="none"
+          aria-hidden="true"
+          style="width: 64px; height: 64px"
+        >
+          <rect width="64" height="64" rx="14" fill="#2A0E31" />
+          <rect
+            x="1"
+            y="1"
+            width="62"
+            height="62"
+            rx="13.2"
+            fill="none"
+            stroke="#FBF7F1"
+            stroke-opacity="0.12"
+            stroke-width="1.05"
+          />
+          <circle cx="32" cy="20.5" r="4" fill="#F97361" />
+          <rect
+            x="18"
+            y="29.9"
+            width="28"
+            height="4.1"
+            rx="2.05"
+            fill="#FBF7F1"
+          />
+          <path d="M25.5 39.5a6.5 6.5 0 0 0 13 0Z" fill="#FBF7F1" />
+        </svg>
+        <div
+          class="swatch-val"
+          style="color: var(--muted-foreground); margin-top: 0.75rem"
+        >
+          App icon · plum ground
+        </div>
+      </div>
+      <div>
+        <svg
+          viewBox="0 0 64 64"
+          fill="none"
+          aria-hidden="true"
+          style="width: 64px; height: 64px"
+        >
+          <rect width="64" height="64" rx="14" fill="#E4573F" />
+          <path
+            d="M0 32h64v18a14 14 0 0 1-14 14H14A14 14 0 0 1 0 50Z"
+            fill="#FBF7F1"
+          />
+          <rect
+            x="1"
+            y="1"
+            width="62"
+            height="62"
+            rx="13.2"
+            fill="none"
+            stroke="#2A0E31"
+            stroke-opacity="0.12"
+            stroke-width="1.05"
+          />
+          <circle cx="32" cy="20.5" r="4" fill="#FBF7F1" />
+          <rect
+            x="18"
+            y="29.9"
+            width="28"
+            height="4.1"
+            rx="2.05"
+            fill="#2A0E31"
+          />
+          <path d="M25.5 39.5a6.5 6.5 0 0 0 13 0Z" fill="#2A0E31" />
+        </svg>
+        <div
+          class="swatch-val"
+          style="color: var(--muted-foreground); margin-top: 0.75rem"
+        >
+          Split tile · store, campaign
+        </div>
+      </div>
+      <div>
+        <svg
+          viewBox="0 0 64 64"
+          fill="none"
+          aria-hidden="true"
+          style="width: 64px; height: 64px"
+        >
+          <rect width="64" height="64" rx="14" fill="#FBF7F1" />
+          <rect
+            x="1"
+            y="1"
+            width="62"
+            height="62"
+            rx="13.2"
+            fill="none"
+            stroke="#2A0E31"
+            stroke-opacity="0.12"
+            stroke-width="1.05"
+          />
+          <circle cx="32" cy="20.5" r="4" fill="#F97361" />
+          <rect
+            x="18"
+            y="29.9"
+            width="28"
+            height="4.1"
+            rx="2.05"
+            fill="#2A0E31"
+          />
+          <path d="M25.5 39.5a6.5 6.5 0 0 0 13 0Z" fill="#2A0E31" />
+        </svg>
+        <div
+          class="swatch-val"
+          style="color: var(--muted-foreground); margin-top: 0.75rem"
+        >
+          Light tile
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      A 22% rounded square with a 1px keyline at 12% ink, so the tile keeps an
+      edge on a light home screen. PNGs are generated by
+      <code>scripts/generate-icons.ts</code> — never exported by hand.
+    </p>
+  </section>
+
+  <section>
+    <h2>Clear space &amp; minimum size</h2>
+    <div class="grid-2">
+      <div class="spec">
+        <div class="spec-label">Clear space · 1×</div>
+        <div
+          style="
+            display: inline-block;
+            border: 1px dashed
+              color-mix(in oklch, var(--primary) 55%, transparent);
+            padding: 26.4px;
+          "
+        >
+          <span class="wordmark" style="color: var(--foreground)"
+            ><svg
+              viewBox="8 7 32 32"
+              fill="none"
+              aria-hidden="true"
+              style="width: 96px; height: 96px"
+            >
+              <circle cx="24" cy="11.5" r="4.4" fill="var(--primary)" />
+              <rect
+                x="8"
+                y="21.75"
+                width="32"
+                height="4.5"
+                rx="2.25"
+                fill="currentColor"
+              />
+              <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="currentColor" /></svg
+          ></span>
+        </div>
+        <div
+          class="swatch-val"
+          style="color: var(--muted-foreground); margin-top: 0.75rem"
+        >
+          1× = the diameter of the dot
+        </div>
+      </div>
+      <div class="spec">
+        <div class="spec-label">Minimum size</div>
+        <div class="row" style="gap: 1.5rem; align-items: flex-end">
+          <div>
+            <span class="wordmark" style="color: var(--foreground)"
+              ><svg
+                viewBox="8 7 32 32"
+                fill="none"
+                aria-hidden="true"
+                style="width: 20px; height: 20px"
+              >
+                <circle cx="24" cy="11.5" r="4.4" fill="var(--primary)" />
+                <rect
+                  x="8"
+                  y="21.75"
+                  width="32"
+                  height="4.5"
+                  rx="2.25"
+                  fill="currentColor"
+                />
+                <path
+                  d="M17.5 32a6.5 6.5 0 0 0 13 0Z"
+                  fill="currentColor"
+                /></svg
+            ></span>
+            <div
+              class="swatch-val"
+              style="color: var(--muted-foreground); margin-top: 0.75rem"
+            >
+              20px · mark
+            </div>
+          </div>
+          <div>
+            <span
+              class="wordmark"
+              style="color: var(--foreground); gap: 0.3rem; width: 88px"
+              ><svg
+                viewBox="8 7 32 32"
+                fill="none"
+                aria-hidden="true"
+                style="width: 20px; height: 20px"
+              >
+                <circle cx="24" cy="11.5" r="4.4" fill="var(--primary)" />
+                <rect
+                  x="8"
+                  y="21.75"
+                  width="32"
+                  height="4.5"
+                  rx="2.25"
+                  fill="currentColor"
+                />
+                <path
+                  d="M17.5 32a6.5 6.5 0 0 0 13 0Z"
+                  fill="currentColor"
+                /></svg
+              ><span class="wordmark-text" style="font-size: 0.8125rem"
+                >Balancia</span
+              ></span
+            >
+            <div
+              class="swatch-val"
+              style="color: var(--muted-foreground); margin-top: 0.75rem"
+            >
+              88px · lockup
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Clear space on every side is 1×, the diameter of the dot. Below 20px the
+      pan and the rule merge into one shape — use the mono mark at those sizes
+      and let the dot carry the colour.
+    </p>
+  </section>
+
+  <section>
+    <h2>Misuse</h2>
+    <div
+      style="
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      "
+    >
+      <div
+        class="dont"
+        style="
+          border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+          border-left: 3px solid var(--destructive);
+          border-radius: var(--radius-lg);
+          padding: 0.9rem 1rem;
+        "
+      >
+        <strong>Never rotate</strong>
+        <span
+          class="wordmark"
+          style="color: var(--foreground); transform: rotate(-14deg)"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.75rem; height: 2.75rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="var(--primary)" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="currentColor"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="currentColor" /></svg
+        ></span>
+      </div>
+      <div
+        class="dont"
+        style="
+          border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+          border-left: 3px solid var(--destructive);
+          border-radius: var(--radius-lg);
+          padding: 0.9rem 1rem;
+        "
+      >
+        <strong>Never stretch</strong>
+        <span
+          class="wordmark"
+          style="color: var(--foreground); transform: scaleX(1.6)"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.75rem; height: 2.75rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="var(--primary)" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="currentColor"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="currentColor" /></svg
+        ></span>
+      </div>
+      <div
+        class="dont"
+        style="
+          border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+          border-left: 3px solid var(--destructive);
+          border-radius: var(--radius-lg);
+          padding: 0.9rem 1rem;
+        "
+      >
+        <strong>Never recolour</strong>
+        <span class="wordmark"
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.75rem; height: 2.75rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="#17A97F" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="#17A97F"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="#17A97F" /></svg
+        ></span>
+      </div>
+      <div
+        class="dont"
+        style="
+          border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+          border-left: 3px solid var(--destructive);
+          border-radius: var(--radius-lg);
+          padding: 0.9rem 1rem;
+        "
+      >
+        <strong>Never add effects</strong>
+        <span
+          class="wordmark"
+          style="
+            color: var(--foreground);
+            filter: drop-shadow(0 3px 4px oklch(0.226 0.072 319 / 0.55));
+          "
+          ><svg
+            viewBox="8 7 32 32"
+            fill="none"
+            aria-hidden="true"
+            style="width: 2.75rem; height: 2.75rem"
+          >
+            <circle cx="24" cy="11.5" r="4.4" fill="var(--primary)" />
+            <rect
+              x="8"
+              y="21.75"
+              width="32"
+              height="4.5"
+              rx="2.25"
+              fill="currentColor"
+            />
+            <path d="M17.5 32a6.5 6.5 0 0 0 13 0Z" fill="currentColor" /></svg
+        ></span>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The mark takes two colours and no more: <code>currentColor</code> for the
+      rule and pan, <code>--primary</code> for the dot. No gradients, no
+      shadows, no outlines, no third colour.
+    </p>
+  </section>
+</div>
