@@ -150,10 +150,21 @@ export function validateReceipt(
       }
     }
 
-    // Items alone exceeding the total is its own finding: it means a discount
-    // or a correction line was missed, and splitting by item would over-charge
-    // the table rather than merely mis-attribute it.
-    if (hasItems && items - receipt.total > tolerance) {
+    /*
+     * Items alone exceeding the total is its own finding: it means a discount
+     * or a correction line was missed, and splitting by item would over-charge
+     * the table rather than merely mis-attribute it.
+     *
+     * Only said when the subtotal has not already said it, though. A receipt
+     * whose items overshoot its own subtotal usually overshoots its total by
+     * the same amount, and stacking two banners for one discrepancy reads as
+     * two problems — which makes the screen look like the scan went badly when
+     * what actually happened is that the paper does not add up.
+     */
+    const alreadyReported = issues.some(
+      (issue) => issue.code === "itemsMissingSubtotal",
+    );
+    if (!alreadyReported && hasItems && items - receipt.total > tolerance) {
       issues.push({
         code: "itemsExceedTotal",
         severity: "warning",

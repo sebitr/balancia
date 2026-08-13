@@ -44,6 +44,19 @@ describe("validateReceipt", () => {
     expect(codes(receipt)).toContain("itemsExceedTotal");
   });
 
+  it("says one thing, not two, when the items are simply too high", () => {
+    // A real generated receipt: items 59.50 against a printed subtotal of
+    // 47.50 and a total of 51.30. That is one discrepancy, and two banners
+    // make a correctly-read receipt look like a failed scan.
+    const receipt: ParsedReceipt = {
+      items: [item(2400n), item(2200n), item(750n), item(600n)],
+      subtotal: 4750n,
+      tax: 380n,
+      total: 5130n,
+    };
+    expect(codes(receipt)).toEqual(["itemsMissingSubtotal"]);
+  });
+
   it("accepts a service charge that is already inside the subtotal", () => {
     // A Milanese till: items 254.00, coperto 10.00, `Totale parziale` 264.00
     // — the cover charge is counted in the subtotal, not added after it. Both

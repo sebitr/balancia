@@ -79,6 +79,18 @@ function looksLikePrice(
 
 const QUANTITY_PREFIX = /^\s*(\d{1,3})\s*(?:[x×*@]|st(?:k|ck)?\.?)\s+/i;
 const QUANTITY_PREFIX_TIGHT = /^\s*(\d{1,3})[x×](?=\p{L})/iu;
+
+/**
+ * `2X/CAESAR SALAD` — a times sign followed by punctuation instead of a space.
+ *
+ * Straight off a real scan: the recognizer read the gap between `2X` and the
+ * name as a slash. The count then stayed welded to the name and the quantity
+ * stayed at one, so two salads arrived as a single line that cannot be handed
+ * to two people — which is what "the items are missing" looks like from the
+ * review screen.
+ */
+const QUANTITY_PREFIX_PUNCTUATED =
+  /^\s*(\d{1,3})\s*[x×*@][/\-–.:,]+\s*(?=\p{L})/iu;
 const QUANTITY_SUFFIX = /\s+[x×]\s*(\d{1,3})\s*$/i;
 
 /**
@@ -98,6 +110,7 @@ function extractQuantity(description: string): {
 } {
   for (const pattern of [
     QUANTITY_PREFIX,
+    QUANTITY_PREFIX_PUNCTUATED,
     QUANTITY_PREFIX_TIGHT,
     QUANTITY_PREFIX_BARE,
   ]) {
@@ -202,11 +215,32 @@ export function parseReceipt(
 
   /* ---------------------------------------------------------------- items */
 
-  // Items stop where the summary starts. Without a summary row, every line is
-  // a candidate — a receipt whose total was not read still yields its items.
-  const summaryIndex = [subtotalRow, taxRow, tipRow, serviceRow, totalRow]
-    .filter((row): row is Labelled => row !== null)
-    .reduce((lowest, row) => Math.min(lowest, row.index), lines.length);
+  /*
+   * Where the items stop.
+   *
+   * This used to be the *first* summary row anywhere on the receipt, which is
+   * a trap: one summary word printed above the items — `TIP IS NOT INCLUDED`,
+   * `Service compris`, a VAT line above the order — moved the boundary to the
+   * top of the page and silently dropped every item. Nothing looked broken;
+   * the list was simply empty.
+   *
+   * The grand total is the reliable anchor, because it is always below the
+   * items and there is only ever one of it. Rows that carry a label are
+   * skipped by `roles` regardless, so the boundary's only remaining job is to
+   * keep the payment lines and the barcode below the total out of the list.
+   *
+   * With no total read, the *last* summary row is the boundary rather than the
+   * first, for the same reason: a stray label near the top must not truncate
+   * the receipt.
+   */
+  const summaryRows = [subtotalRow, taxRow, tipRow, serviceRow].filter(
+    (row): row is Labelled => row !== null,
+  );
+  const summaryIndex =
+    totalRow?.index ??
+    (summaryRows.length > 0
+      ? summaryRows.reduce((latest, row) => Math.max(latest, row.index), 0)
+      : lines.length);
 
   const items: ReceiptItem[] = [];
   for (const [index, line] of lines.entries()) {
