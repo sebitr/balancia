@@ -821,5 +821,83 @@
     "muted": "Muted",
     "noGroups": "You are not part of any group yet.",
     "testBody": "Push notifications are working on this device."
+  },
+  "receiptScanner": {
+    "scanReceipt": "Scan receipt",
+    "title": "Scan a receipt",
+    "onDevice": "Recognition happens on this device. The photo is not sent anywhere to be read.",
+    "takePhoto": "Take a photo",
+    "choosePhoto": "Choose a photo",
+    "tips": "Lay the receipt flat, keep it all in frame, and shoot straight on. You can also drop an image here.",
+    "anotherPhoto": "Try another photo",
+    "continue": "Continue",
+    "back": "Back",
+    "useReceipt": "Use this receipt",
+    "keepImage": "Also keep the photo with this expense",
+    "keepImageOn": "The image will be uploaded and stored with the expense on this server, like any other attachment.",
+    "keepImageOff": "The image stays on this device. Only the amounts you confirm are saved.",
+    "progress": {
+      "preparing": "Preparing the scanner",
+      "downloading": "Downloading the receipt models",
+      "detecting": "Finding the text",
+      "reading": "Reading the receipt",
+      "analyzing": "Working out the totals",
+      "firstRun": "One-off download of about {size} MB. Later scans reuse it, including offline."
+    },
+    "errors": {
+      "nothingFound": "No receipt text was found in that photo. Try again with the whole receipt in frame, on a flat surface, in better light.",
+      "unsupported": "This browser cannot run the scanner. You can still enter the expense by hand.",
+      "modelDownload": "The receipt models could not be downloaded. Check your connection and try again.",
+      "runtime": "The receipt could not be read. You can try another photo, or enter the expense by hand.",
+      "image": "That image could not be opened. Try a JPEG or PNG.",
+      "timeout": "Reading the receipt took too long and was stopped. A smaller photo usually helps.",
+      "attachFailed": "The expense is ready, but the photo could not be uploaded."
+    },
+    "review": {
+      "merchant": "Merchant",
+      "merchantPlaceholder": "Where was this?",
+      "date": "Date",
+      "currency": "Currency",
+      "items": "Items",
+      "noItems": "No items were read. Add them below, or just use the total.",
+      "itemPlaceholder": "Item",
+      "itemName": "Name of item {index}",
+      "itemQuantity": "Quantity of item {index}",
+      "itemAmount": "Amount for item {index}",
+      "removeItem": "Remove {name}",
+      "addItem": "Add an item",
+      "uncertain": "This one was hard to read — worth checking.",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "service": "Service",
+      "tip": "Tip",
+      "total": "Total",
+      "totalMissing": "No total was read. The items and charges above come to {amount}.",
+      "useSuggested": "Use that",
+      "showPhoto": "Show the photo",
+      "photoAlt": "The receipt you scanned",
+      "issues": {
+        "noTotal": "No total was found on this receipt. Enter it below — it is what everyone's share is worked out from.",
+        "noItems": "No line items were found. You can still split the total the usual way.",
+        "itemsMissingSubtotal": "The items add up to {items}, but the receipt says the subtotal is {subtotal}. Difference: {difference}.",
+        "partsMissingTotal": "The subtotal and charges come to {parts}, but the total says {total}. Difference: {difference}.",
+        "itemsExceedTotal": "The items add up to {items}, which is more than the total of {total}. A discount may have been missed.",
+        "negativeTotal": "The total was read as a negative amount ({total}). Check it before continuing."
+      }
+    },
+    "assign": {
+      "whoHadWhat": "Who had what?",
+      "noItems": "No items to assign. Everyone's share comes from the total.",
+      "untitledItem": "Item",
+      "everyone": "Everyone",
+      "splitBetween": "Split equally between {count} people",
+      "sharedCharges": "Shared charges: {amount}",
+      "sharedExplanation": "Tax, service and anything else not tied to one item — including the total's difference from the items.",
+      "proportional": "Split in proportion to what each person had",
+      "equal": "Split equally",
+      "eachPerson": "Each person pays",
+      "breakdown": "{items} of items + {shared} shared",
+      "unassigned": "{count, plural, one {# item has} other {# items have}} nobody assigned; the cost is shared."
+    }
   }
 }

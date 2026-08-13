@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isSemanticCategorizationEnabled } from "@/lib/env";
+import { isWebAssemblyInferenceEnabled } from "@/lib/env";
 
 /**
  * Security headers and origin validation.
@@ -20,9 +20,10 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function buildCsp(nonce: string, isDevelopment: boolean): string {
   // Compiling WebAssembly needs its own token. Added only where the operator
-  // asked for the local embedding model, so the default policy stays strict.
-  // It permits WASM compilation and nothing else — it is not `unsafe-eval`.
-  const semantic = isSemanticCategorizationEnabled();
+  // asked for a local-inference feature — the embedding model, receipt
+  // scanning, or both — so the default policy stays strict. It permits WASM
+  // compilation and nothing else; it is not `unsafe-eval`.
+  const localInference = isWebAssemblyInferenceEnabled();
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
@@ -32,7 +33,7 @@ function buildCsp(nonce: string, isDevelopment: boolean): string {
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
-      ...(semantic ? ["'wasm-unsafe-eval'"] : []),
+      ...(localInference ? ["'wasm-unsafe-eval'"] : []),
       ...(isDevelopment ? ["'unsafe-eval'"] : []),
     ],
     // Next injects inline <style> for its CSS; a nonce cannot cover all of it.

@@ -32,7 +32,8 @@
     "build:next": "next build",
     "icons": "tsx scripts/generate-icons.ts",
     "push:keys": "tsx scripts/generate-push-keys.ts",
-    "semantic:install": "tsx scripts/fetch-semantic-model.ts"
+    "semantic:install": "tsx scripts/fetch-semantic-model.ts",
+    "ocr:install": "tsx scripts/fetch-ocr-model.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",

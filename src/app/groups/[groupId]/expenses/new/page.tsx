@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireGroupAccess } from "@/lib/actions";
-import { isSemanticCategorizationEnabled } from "@/lib/env";
+import {
+  isReceiptScanningEnabled,
+  isSemanticCategorizationEnabled,
+} from "@/lib/env";
 import { listParticipants } from "@/modules/groups/service";
 import { loadMappings } from "@/modules/categorization/service";
 import { Users } from "lucide-react";
@@ -64,6 +67,7 @@ export default async function NewExpensePage({
         defaultCurrency={access.group.baseCurrency ?? "EUR"}
         categoryMappings={categoryMappings}
         semanticCategorization={isSemanticCategorizationEnabled()}
+        receiptScanning={isReceiptScanningEnabled()}
       />
     </div>
   );

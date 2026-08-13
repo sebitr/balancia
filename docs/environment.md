@@ -344,6 +344,43 @@ See [Categorization](categorization.md) for the whole design.
 
 ---
 
+## Receipt scanning
+
+### `RECEIPT_SCANNING`
+
+`0` (default) | `1`.
+
+Reads a photographed receipt into an expense — merchant, date, line items and
+total — which you then correct and assign to people. Recognition runs in the
+_browser_, against model files served by your instance: the image is never
+uploaded to be read, and no third-party OCR service is involved.
+
+Off by default for the same two reasons as the semantic model, and neither of
+them is privacy:
+
+- it needs `'wasm-unsafe-eval'` in the Content-Security-Policy. Setting either
+  this or `SEMANTIC_CATEGORIZATION` to `1` adds it, once.
+- it needs ~47 MB of model files under `public/models`:
+
+```bash
+pnpm ocr:install --yes
+RECEIPT_SCANNING=1
+```
+
+With the variable set but the files missing, the browser makes one `HEAD`
+request, finds nothing, and no scan button is rendered. The expense form is
+unchanged.
+
+Note that this and `SEMANTIC_CATEGORIZATION` install _different_ onnxruntime
+WebAssembly binaries, which are not interchangeable; enabling both costs about
+25 MB more on disk and nothing at runtime.
+
+Attaching the receipt image to the expense afterwards is a separate, explicit
+choice, and stores the image on this server exactly as the paperclip button
+always has. See [Receipt scanning](receipt-scanning.md) for the whole design.
+
+---
+
 ## Logging and operations
 
 ### `LOG_LEVEL`

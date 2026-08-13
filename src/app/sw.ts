@@ -33,6 +33,14 @@ declare const self: ServiceWorkerGlobalScope;
 
 const OFFLINE_URL = "/offline";
 
+/**
+ * Cache holding the optional model files. Bump the suffix when the models
+ * installed under `public/models` change incompatibly, so browsers that
+ * already cached the old ones fetch the new ones instead of serving a model
+ * the current worker cannot use.
+ */
+const MODEL_CACHE = "balancia-models-v1";
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
@@ -61,6 +69,24 @@ const serwist = new Serwist({
       handler: new CacheFirst({
         cacheName: "balancia-static",
       }),
+    },
+    {
+      /*
+       * Optional local-inference assets: the OCR models, the embedding model
+       * and the onnxruntime WebAssembly binary.
+       *
+       * CacheFirst, and deliberately *not* precached. Together these are tens
+       * of megabytes, and precaching them would download the lot on every
+       * install — including for the majority of people who never scan a
+       * receipt. Cached on first use instead, which also means the second scan
+       * needs no network at all.
+       *
+       * The cache name carries a version because these files are served from
+       * stable paths: an operator who reinstalls a newer model bumps
+       * MODEL_CACHE, and the old bytes are dropped rather than served forever.
+       */
+      matcher: ({ url }) => url.pathname.startsWith("/models/"),
+      handler: new CacheFirst({ cacheName: MODEL_CACHE }),
     },
     {
       // Manifest icons, plus the app icons Next.js links into <head>. Those
