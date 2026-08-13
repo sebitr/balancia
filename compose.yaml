@@ -41,6 +41,10 @@ x-app-environment: &app-environment
   SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   SMTP_SECURE: ${SMTP_SECURE:-false}
   SMTP_FROM: ${SMTP_FROM:-}
+  # Nothing forwards a variable this file does not name: an operator who sets
+  # EXCHANGE_RATE_PROVIDER in .env gets it interpolated here or not at all.
+  EXCHANGE_RATE_PROVIDER: ${EXCHANGE_RATE_PROVIDER:-none}
+  EXCHANGE_RATE_API_URL: ${EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v1}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
