@@ -65,6 +65,14 @@ services:
           head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40 > /secrets/postgres_password
           echo "Generated a new PostgreSQL password."
         fi
+        # The umask above creates these 0600 root:root, so they are never
+        # briefly world-readable. Hand them to uid 1001 now they exist: app,
+        # worker and migrate run as the non-root `balancia` user the Dockerfile
+        # creates with that uid, and cannot read root-owned 0600 files. The db
+        # container reads the password as root, which bypasses the mode, so it
+        # is unaffected. Keep this uid in step with the Dockerfile.
+        chown 1001:1001 /secrets/auth_secret /secrets/postgres_password
+        chmod 0400 /secrets/auth_secret /secrets/postgres_password
         echo "Secrets ready."
     restart: "no"
 
@@ -81,7 +89,11 @@ services:
       # Deterministic collation so ordering does not shift under a locale change.
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # The parent directory, not .../data. From 18 on, these images keep the
+      # cluster in a version-specific subdirectory (/var/lib/postgresql/18/docker)
+      # so that pg_upgrade can run without crossing a mount boundary, and they
+      # refuse to start at all if anything is mounted at the old .../data path.
+      - db-data:/var/lib/postgresql
       - secrets:/run/secrets:ro
     # No `ports:` — PostgreSQL is reachable only on the internal network.
     healthcheck:
@@ -177,6 +189,11 @@ services:
         export DATABASE_URL="postgres://balancia:$$(cat /run/secrets/postgres_password)@db:5432/balancia"
         export AUTH_SECRET="$$(cat /run/secrets/auth_secret)"
         exec /sbin/tini -- node dist/worker.js
+    # The image's HEALTHCHECK curls the web server, which this container does
+    # not run — inheriting it would leave the worker permanently "unhealthy"
+    # however well it is working. Liveness here is simply the process running.
+    healthcheck:
+      disable: true
     restart: unless-stopped
     # The worker finishes in-flight jobs on SIGTERM before exiting.
     stop_grace_period: 40s

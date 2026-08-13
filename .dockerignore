@@ -25,6 +25,13 @@ pnpm-debug.log*
 # Docs and tests are not needed to build or run the image.
 docs
 tests
+# Tests co-located next to the code they cover must be excluded by name as
+# well. They are not shipped, but `next build` type checks everything in the
+# context — and the import that registers their matcher types lives in
+# tests/setup/, which the line above already excludes. Leaving them in fails
+# the production build while a local `pnpm typecheck` still passes.
+**/*.test.ts
+**/*.test.tsx
 *.md
 !README.md
 

@@ -220,6 +220,72 @@ edited, startup fails loudly rather than applying a changed migration silently.
 [backup-and-restore.md](backup-and-restore.md) — it takes seconds and it is the
 difference between a bad upgrade being an inconvenience and a disaster.
 
+### The database volume moved (one-time change)
+
+`compose.yaml` used to mount the `balancia-db-data` volume at
+`/var/lib/postgresql/data`. It now mounts it one level up, at
+`/var/lib/postgresql`, and PostgreSQL keeps the cluster in a version-specific
+subdirectory beneath it (`/var/lib/postgresql/18/docker`).
+
+This was not a preference. From PostgreSQL 18 on, the official images refuse to
+start when anything is mounted at the old path, exiting with
+`there appears to be PostgreSQL data in: /var/lib/postgresql/data (unused
+mount/volume)`. They do this even when the volume is completely empty, so the
+old configuration could not start a database at all.
+
+**Almost certainly, you have nothing to do.** Every version of `compose.yaml`
+that shipped with the old mount path also specified PostgreSQL 18, so
+`docker compose up` failed before the database ever initialised. If that is what
+you hit, just pull and start it — there is no data in the volume to preserve:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+**If you worked around the failure by pinning an older PostgreSQL** (editing
+`db.image` to `postgres:17-alpine` or similar), you have a real cluster, and it
+sits at the root of the volume where the new mount does not look for it. Moving
+the directory is not sufficient — PostgreSQL 18 cannot open a version 17 data
+directory in place; a major-version change needs `pg_upgrade` or a dump and
+restore. Dump and restore is the shorter path here:
+
+```bash
+# 1. With your stack still on the OLD image and OLD mount path, dump the data.
+docker compose exec -T db \
+  pg_dump -U balancia -d balancia --format=custom --no-owner > balancia.dump
+
+# 2. Take a full backup as well, before destroying anything.
+./balancia-backup.sh /var/backups/balancia
+
+# 3. Stop the stack and delete ONLY the database volume. Note this is
+#    `down` without `-v`: the uploads and secrets volumes must survive, since
+#    the new database initialises with the password held in the secrets volume.
+docker compose down
+docker volume rm balancia-db-data
+
+# 4. Take the new configuration and bring up the database on its own. It
+#    initialises an empty cluster at the new path.
+git pull
+docker compose up -d db
+until docker compose exec -T db pg_isready -U balancia -d balancia; do sleep 2; done
+
+# 5. Load the dump, then start everything.
+docker compose exec -T db \
+  pg_restore -U balancia -d balancia --clean --if-exists --no-owner < balancia.dump
+docker compose up -d --build
+```
+
+If `docker volume rm` reports the volume is still in use, a container is still
+attached — `docker compose down --remove-orphans` and retry. Do not reach for
+`docker compose down -v` to force it: that deletes the receipts and secrets
+along with the database.
+
+Then verify as described in
+[backup-and-restore.md](backup-and-restore.md#verifying-the-restore) — at
+minimum, `curl -fsS http://localhost:3000/api/health/ready` and a row count.
+Keep `balancia.dump` until you have confirmed the data is there.
+
 ### Rolling back
 
 Balancia does not ship down-migrations: for financial data, a scripted rollback
