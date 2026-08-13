@@ -196,3 +196,27 @@ export const POORLY_DETECTED: readonly FixtureLine[] = [
   ["", "9.50"],
   "Tsch",
 ];
+
+/**
+ * A till that prints the count in front of the name with no `x`, a VAT
+ * registration number in the header, and a bottle size in a description.
+ * Every one of those misled the parser on a real scan.
+ */
+export const ITALIAN_BARE_QUANTITY: readonly FixtureLine[] = [
+  "RISTORANTE DA LUIGI",
+  "Via Garibaldi 47, 20121 Milano",
+  "P.IVA 03918270965",
+  "14/08/2026 21:47 Tav. 12",
+  "",
+  ["2 Bruschetta miste", "9,00"],
+  ["3 Tagliatelle ragu", "42,00"],
+  ["2 Vino rosso cl.75", "36,00"],
+  ["1 Acqua nat. 1L", "3,00"],
+  "",
+  ["Coperto 4 x 2,50", "10,00"],
+  ["Totale parziale", "90,00"],
+  ["IVA 10%", "9,00"],
+  ["TOTALE EUR", "109,00"],
+  ["Contanti", "120,00"],
+  ["Resto", "11,00"],
+];

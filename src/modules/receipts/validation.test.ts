@@ -44,6 +44,44 @@ describe("validateReceipt", () => {
     expect(codes(receipt)).toContain("itemsExceedTotal");
   });
 
+  it("accepts a service charge that is already inside the subtotal", () => {
+    // A Milanese till: items 254.00, coperto 10.00, `Totale parziale` 264.00
+    // — the cover charge is counted in the subtotal, not added after it. Both
+    // layouts are common, and warning on a receipt that was read perfectly is
+    // how people learn to dismiss warnings.
+    const receipt: ParsedReceipt = {
+      items: [item(25400n)],
+      service: 1000n,
+      subtotal: 26400n,
+      tax: 2640n,
+      total: 29040n,
+    };
+    expect(validateReceipt(receipt)).toEqual([]);
+  });
+
+  it("still accepts a service charge added after the subtotal", () => {
+    const receipt: ParsedReceipt = {
+      items: [item(25400n)],
+      service: 1000n,
+      subtotal: 25400n,
+      tax: 2640n,
+      total: 29040n,
+    };
+    expect(validateReceipt(receipt)).toEqual([]);
+  });
+
+  it("still catches a receipt that reconciles under neither reading", () => {
+    // A real generated receipt whose own arithmetic is wrong: the items come
+    // to 59.50 against a printed subtotal of 47.50.
+    const receipt: ParsedReceipt = {
+      items: [item(2400n), item(2200n), item(750n), item(600n)],
+      subtotal: 4750n,
+      tax: 380n,
+      total: 5130n,
+    };
+    expect(codes(receipt)).toContain("itemsMissingSubtotal");
+  });
+
   it("reports a missing total", () => {
     expect(codes({ items: [item(1900n)] })).toContain("noTotal");
   });

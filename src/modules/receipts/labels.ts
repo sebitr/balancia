@@ -213,6 +213,8 @@ const NOISE_WORDS = [
   "tendered",
   "cambio",
   "vuelto",
+  "contanti",
+  "resto",
   // Identifiers, which are digits that are not money.
   "vat no",
   "vat reg",
@@ -264,15 +266,16 @@ export function classifyLabel(text: string): AmountLabel | "noise" | null {
 
   // Tax lines routinely embed a rate and a base (`MwSt 7.7% 5.10`), and some
   // print `Total MwSt` — which is a tax row, not the bill total.
+  // Noise before everything else that carries a number. Two reasons, and both
+  // have bitten: `P.IVA 03918270965` is a VAT *registration number* and
+  // contains the word for tax, and `Cash amount 100.00` contains the word for
+  // a grand total. Read either as what it resembles and the bill comes out
+  // wrong by whatever the customer happened to hand over.
+  if (containsWord(folded, NOISE_WORDS)) return "noise";
+
   if (containsWord(folded, TAX_WORDS)) return "tax";
   if (containsWord(folded, TIP_WORDS)) return "tip";
   if (containsWord(folded, SERVICE_WORDS)) return "service";
-
-  // Noise before total, not after: the words for a grand total are generic
-  // enough (`amount`, `sum`, `total`) that `Cash amount 100.00` would
-  // otherwise be read as the bill — and the bill would come out wrong by
-  // whatever the customer happened to hand over.
-  if (containsWord(folded, NOISE_WORDS)) return "noise";
   if (containsWord(folded, TOTAL_WORDS)) return "total";
   return null;
 }
