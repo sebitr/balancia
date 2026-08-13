@@ -1,0 +1,76 @@
+name: Bug report
+description: Something behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If this is a **security** problem, please close
+        this and report it privately instead — see SECURITY.md.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a group in converted mode with base EUR
+        2. Add an expense of 10.00 USD with rate 0.92
+        3. Open Balances
+        4. …
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: A release tag or commit SHA.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it is installed
+      options:
+        - Docker Compose (the documented setup)
+        - Docker, custom compose or orchestrator
+        - Node directly, no container
+        - Local development
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Relevant configuration
+      description: >
+        Storage driver, reverse proxy, SMTP on or off, anything non-default.
+        **Do not paste secrets** — no AUTH_SECRET, no passwords, no tokens.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >
+        `docker compose logs app` around the failure. Balancia redacts secrets,
+        but please check before pasting.
+      render: shell
+
+  - type: checkboxes
+    id: money
+    attributes:
+      label: Does this involve amounts being wrong?
+      description: >
+        Incorrect balances, splits that do not add up, or a wrong conversion get
+        priority. If so, please include the exact amounts and currencies.
+      options:
+        - label: Yes — an amount, balance or split is incorrect

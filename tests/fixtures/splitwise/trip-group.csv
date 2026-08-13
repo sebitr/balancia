@@ -1,0 +1,7 @@
+Date,Description,Category,Cost,Currency,Ada,Blaise,Grace
+2026-03-01,Groceries,Food and drink,60.00,EUR,40.00,-20.00,-20.00
+2026-03-02,Taxi,Transportation,30.00,EUR,-10.00,20.00,-10.00
+2026-03-03,Museum tickets,Entertainment,45.00,EUR,-15.00,-15.00,30.00
+2026-03-04,Dinner,Food and drink,100.00,EUR,66.67,-33.33,-33.34
+2026-03-05,Payment,Payment,0.00,EUR,-25.00,25.00,0.00
+Total balance,,,,EUR,56.67,-23.33,-33.34

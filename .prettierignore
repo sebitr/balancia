@@ -1,0 +1,12 @@
+node_modules
+.next
+.next-profiles
+coverage
+playwright-report
+test-results
+public/sw.js
+public/sw.js.map
+pnpm-lock.yaml
+drizzle/meta
+dist
+LICENSE

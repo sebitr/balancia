@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest something Balancia should do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What are you trying to do that is awkward or impossible today? Describe
+        the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: Optional. How you imagine it working.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: Workarounds, or how another tool handles it.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This would change how money is calculated or stored
+        - label: This would need a database change
+        - label: This would need a new dependency
+        - label: I would be willing to work on it

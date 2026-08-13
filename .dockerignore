@@ -1,0 +1,33 @@
+node_modules
+.next
+.next-profiles
+dist
+coverage
+playwright-report
+test-results
+
+# Never send local secrets or data into the build context.
+.env
+.env.*
+!.env.example
+data
+
+.git
+.github
+.vscode
+.idea
+.DS_Store
+
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Docs and tests are not needed to build or run the image.
+docs
+tests
+*.md
+!README.md
+
+Dockerfile
+compose.yaml
+.dockerignore
