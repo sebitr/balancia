@@ -4,6 +4,18 @@
     "baseRef": "fresh"
   },
   "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/worktree-install.sh",
+            "timeout": 30,
+            "statusMessage": "Installing dependencies"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

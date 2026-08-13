@@ -61,3 +61,4 @@ next-env.d.ts
 # agent session worktrees — whole checkouts of this repository, which would
 # otherwise show up as untracked files in the checkout that contains them
 .claude/worktrees/
+.worktree-install.log
