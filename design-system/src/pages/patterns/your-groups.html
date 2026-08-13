@@ -1,0 +1,187 @@
+<!-- @dsCard group="Patterns" name="Your groups" subtitle="The first screen after signing in, and where you stand in each group" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Your groups</h1>
+    <p class="lede">
+      The screen people land on, and usually the only one they need. It answers
+      the question they opened the app for — <em>am I owed anything?</em> —
+      without making them pick a group first and find out.
+    </p>
+  </header>
+
+  <section>
+    <h2>On a phone</h2>
+    <div class="spec" style="display: flex; justify-content: center">
+      <div class="frame frame--phone" style="width: 100%">
+        <div style="padding: 1rem">
+          <div class="card" style="margin-bottom: 0.75rem">
+            <div class="card-content">
+              <div
+                style="
+                  display: flex;
+                  align-items: flex-start;
+                  justify-content: space-between;
+                  gap: 1rem;
+                "
+              >
+                <div style="min-width: 0">
+                  <p style="margin: 0; font-weight: 500">Flat share</p>
+                  <p class="card-desc" style="margin: 0.25rem 0 0">
+                    2 people · Separate currencies
+                  </p>
+                </div>
+                <span class="badge badge--secondary">Owner</span>
+              </div>
+              <div
+                style="
+                  margin-top: 0.75rem;
+                  padding-top: 0.75rem;
+                  border-top: 1px solid var(--border);
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 0.375rem 1rem;
+                "
+              >
+                <span class="balance balance--positive">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M17 7 7 17" />
+                    <path d="M17 17H7V7" />
+                  </svg>
+                  €642.00 <span class="balance-label">gets back</span>
+                </span>
+                <span class="balance balance--negative">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M7 17 17 7" />
+                    <path d="M7 7h10v10" />
+                  </svg>
+                  ¥4,500 <span class="balance-label">owes</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-content">
+              <div
+                style="
+                  display: flex;
+                  align-items: flex-start;
+                  justify-content: space-between;
+                  gap: 1rem;
+                "
+              >
+                <div style="min-width: 0">
+                  <p style="margin: 0; font-weight: 500">Lisbon trip</p>
+                  <p class="card-desc" style="margin: 0.25rem 0 0">
+                    3 people · Converted to EUR
+                  </p>
+                </div>
+                <span class="badge badge--secondary">Owner</span>
+              </div>
+              <div
+                style="
+                  margin-top: 0.75rem;
+                  padding-top: 0.75rem;
+                  border-top: 1px solid var(--border);
+                "
+              >
+                <span class="balance balance--neutral">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  >
+                    <path d="M5 12h14" />
+                  </svg>
+                  Settled up
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The balance sits <em>below</em> the group name, behind a rule, not beside
+      it. Beside it, a long group name and a figure compete for one narrow row
+      and one of them loses — usually the name, to an ellipsis, which is the
+      half a person needs to tell two trips apart.
+    </p>
+  </section>
+
+  <section>
+    <h2>One row per currency</h2>
+    <p class="note">
+      A group that spans currencies shows each one. Summing them would require
+      an exchange rate nobody chose, and the first card above is exactly the
+      case that makes it obvious why: being owed €642 and owing ¥4,500 is not a
+      single number, and pretending otherwise would be the one place in Balancia
+      where a figure was invented.
+    </p>
+    <div class="spec">
+      <dl class="dl">
+        <dt>Outstanding in any currency</dt>
+        <dd>Each non-zero balance, with its own word, icon and colour.</dd>
+        <dt>Square in every currency</dt>
+        <dd>
+          A single "Settled up" — never a row of zeroes, and never
+          <code>€0.00</code>.
+        </dd>
+        <dt>No expenses yet</dt>
+        <dd>
+          Nothing at all below the rule. There is no position to report, and an
+          empty band would read as a loading failure.
+        </dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the figures come from</h2>
+    <p class="note">
+      The same balance engine the group overview uses, called once per active
+      group. That is more queries than a single aggregate would cost, and it is
+      the right trade: the guarantee that every balance set sums to zero lives
+      in one place, and a second implementation written for this screen would
+      drift from it. Archived groups are not loaded — they are listed by name
+      only.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Lead with money. Head counts and currency modes are context; what
+          somebody owes is the reason the app was opened.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Roll several currencies into one total, or colour a balance without
+          also wording it. Both trade a true answer for a tidy one.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
