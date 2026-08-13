@@ -105,6 +105,21 @@ const envSchema = z
       .max(1_000_000)
       .default(0),
 
+    /**
+     * Exchange-rate provider used to *suggest* rates in the forms.
+     *
+     * Off by default: enabling it makes the instance talk to a third party,
+     * which is a decision for whoever runs it, not a default. Nothing depends
+     * on it — rates can always be typed, and recorded rates are frozen.
+     */
+    EXCHANGE_RATE_PROVIDER: z.enum(["none", "frankfurter"]).default("none"),
+
+    /** Provider base URL. Point it at your own Frankfurter instance if you run one. */
+    EXCHANGE_RATE_API_URL: z
+      .string()
+      .url("EXCHANGE_RATE_API_URL must be an absolute URL")
+      .default("https://api.frankfurter.dev/v1"),
+
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),

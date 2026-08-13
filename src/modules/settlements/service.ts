@@ -10,6 +10,7 @@ import {
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import { resolveConversion } from "@/modules/currencies/conversion";
 import { money } from "@/modules/currencies/money";
+import { classifyRateSource } from "@/modules/currencies/rates";
 import type { SettlementInput } from "@/modules/expenses/schemas";
 
 /**
@@ -66,6 +67,14 @@ export async function createSettlement(
   requirePermission(access, "addSettlement");
   const db = options.db ?? getDb();
 
+  const rateSource = await classifyRateSource({
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+    currency: input.currency,
+    rate: input.exchangeRate,
+    on: input.settledOn,
+  });
+
   return db.transaction(async (tx) => {
     await assertParticipants(tx, access.groupId, [
       input.fromParticipantId,
@@ -77,6 +86,7 @@ export async function createSettlement(
       baseCurrency: access.group.baseCurrency,
       amount: money(BigInt(input.amount), input.currency),
       rate: input.exchangeRate ? input.exchangeRate : undefined,
+      source: rateSource,
       capturedAt: options.now,
     });
 
@@ -131,6 +141,14 @@ export async function updateSettlement(
   requirePermission(access, "addSettlement");
   const db = options.db ?? getDb();
 
+  const rateSource = await classifyRateSource({
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+    currency: input.currency,
+    rate: input.exchangeRate,
+    on: input.settledOn,
+  });
+
   await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: settlements.id })
@@ -159,6 +177,7 @@ export async function updateSettlement(
       baseCurrency: access.group.baseCurrency,
       amount: money(BigInt(input.amount), input.currency),
       rate: input.exchangeRate ? input.exchangeRate : undefined,
+      source: rateSource,
       capturedAt: options.now,
     });
 

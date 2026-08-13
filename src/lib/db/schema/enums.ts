@@ -25,6 +25,7 @@ export const splitMethodEnum = pgEnum("split_method", [
 export const exchangeRateSourceEnum = pgEnum("exchange_rate_source", [
   "manual",
   "import",
+  "api",
 ]);
 
 export const actorTypeEnum = pgEnum("actor_type", ["user", "guest", "system"]);

@@ -27,6 +27,7 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 17  | Docker Compose                                          | ✅     |
 | 18  | Documentation                                           | ✅     |
 | 19  | CI and final verification                               | ✅     |
+| 20  | Exchange-rate provider (opt-in)                         | ✅     |
 
 ## Verification
 
@@ -38,10 +39,13 @@ Last full run on macOS with Node 24.19, pnpm 11.20 and PostgreSQL 18.4:
 | `pnpm lint`         | Clean                                         |
 | `pnpm typecheck`    | Clean                                         |
 | `pnpm format:check` | Clean                                         |
-| `pnpm test:all`     | **251 passed**, 15 files (unit + integration) |
+| `pnpm test:all`     | **278 passed**, 19 files (unit + integration) |
 | `pnpm test:e2e`     | **26 passed** (desktop + mobile projects)     |
-| `pnpm build`        | Succeeds; service worker precaches 40 URLs    |
+| `pnpm build`        | Succeeds; service worker precaches 44 URLs    |
 | `pnpm audit --prod` | No known vulnerabilities                      |
+
+`test:e2e` and `audit --prod` are from the previous full run; the rest were
+re-run with the exchange-rate provider in place.
 
 ## Notable design decisions made during implementation
 
@@ -58,6 +62,12 @@ would be a security liability rather than an independence win.
 webpack-only, and Next.js 16 builds with Turbopack. `pnpm build` therefore runs
 `next build` followed by `serwist build`, which produces the same service worker
 without opting the whole app out of Turbopack.
+
+**Rate provenance is decided server-side.** The form can suggest a rate, but it
+does not get to say where the saved rate came from. On write, the service asks
+the rate cache whether the submitted rate is the one this instance actually
+fetched for that pair and day, and labels the row `api` only then — so
+`exchange_rate_source` stays a fact rather than a claim by the client.
 
 **`server-only` is aliased away in non-Next contexts.** It is a bundler-time
 guard that throws under plain Node, so the worker and migrator bundles alias it
@@ -103,7 +113,4 @@ These are deliberate omissions for this version, not oversights:
 3. **Expense list pagination and filtering.** The list currently loads up to 200
    entries; groups with years of history need cursor pagination, plus filters by
    participant, category and date.
-4. **Exchange-rate provider (opt-in).** The `exchange_rate_source` column
-   already distinguishes `manual` from other sources; a provider would fill
-   rates automatically while keeping them frozen per expense.
-5. **CSV/JSON export**, closing the loop on data portability.
+4. **CSV/JSON export**, closing the loop on data portability.

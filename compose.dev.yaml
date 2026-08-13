@@ -45,6 +45,11 @@ x-dev-environment: &dev-environment
   SMTP_SECURE: false
   SMTP_FROM: balancia@localhost
   ALLOW_REGISTRATION: true
+  # Off by default, as in production: switching it on makes real requests to a
+  # third party. Set DEV_EXCHANGE_RATE_PROVIDER=frankfurter to exercise rate
+  # suggestions, or point DEV_EXCHANGE_RATE_API_URL at a local stub.
+  EXCHANGE_RATE_PROVIDER: ${DEV_EXCHANGE_RATE_PROVIDER:-none}
+  EXCHANGE_RATE_API_URL: ${DEV_EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v1}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

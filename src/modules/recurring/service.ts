@@ -18,6 +18,8 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import type { ExchangeRateSource } from "@/modules/currencies/conversion";
+import { classifyRateSource } from "@/modules/currencies/rates";
 import { prepareExpense } from "@/modules/expenses/service";
 import {
   currencyCodeSchema,
@@ -149,6 +151,16 @@ export async function createRecurringExpense(
   };
   const first = firstOccurrence(rule);
 
+  // A template's rate is entered once and reused, so its provenance is decided
+  // once too — against the day the template starts.
+  const rateSource = await classifyRateSource({
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+    currency: input.currency,
+    rate: input.exchangeRate,
+    on: input.startDate,
+  });
+
   return db.transaction(async (tx) => {
     const [template] = await tx
       .insert(recurringExpenses)
@@ -160,7 +172,7 @@ export async function createRecurringExpense(
         amount: BigInt(input.amount),
         currency: input.currency,
         exchangeRate: input.exchangeRate || null,
-        exchangeRateSource: input.exchangeRate ? "manual" : null,
+        exchangeRateSource: input.exchangeRate ? rateSource : null,
         payers: input.payers,
         splitMethod: input.splitMethod,
         splitInput: input.splitEntries,
@@ -336,6 +348,7 @@ export async function generateDueOccurrences(
       amount: recurringExpenses.amount,
       currency: recurringExpenses.currency,
       exchangeRate: recurringExpenses.exchangeRate,
+      exchangeRateSource: recurringExpenses.exchangeRateSource,
       payers: recurringExpenses.payers,
       splitMethod: recurringExpenses.splitMethod,
       splitInput: recurringExpenses.splitInput,
@@ -439,6 +452,7 @@ interface TemplateRow {
   amount: bigint;
   currency: string;
   exchangeRate: string | null;
+  exchangeRateSource: ExchangeRateSource | null;
   payers: unknown;
   splitMethod: SplitInput["method"];
   splitInput: unknown;
@@ -544,7 +558,9 @@ async function generateSingleOccurrence(
           splitMethod: template.splitMethod,
           splitEntries,
         },
-        { rateSource: "manual" },
+        // The occurrence inherits the template's frozen rate, so it inherits
+        // where that rate came from too — this is not a fresh lookup.
+        { rateSource: template.exchangeRateSource ?? "manual" },
       );
 
       const [expense] = await tx

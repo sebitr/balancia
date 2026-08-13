@@ -25,6 +25,7 @@ const DOMAIN_TABLES = [
   "guest_sessions",
   "guest_invitations",
   "rate_limits",
+  "exchange_rate_quotes",
   "group_members",
   "participants",
   "groups",

@@ -21,7 +21,12 @@ export interface RateLimitPolicy {
 }
 
 export type RateLimitBucket =
-  "signIn" | "signUp" | "guestRedeem" | "passwordReset" | "upload";
+  | "signIn"
+  | "signUp"
+  | "guestRedeem"
+  | "passwordReset"
+  | "upload"
+  | "rateLookup";
 
 /**
  * Default policies.
@@ -39,6 +44,9 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     passwordReset: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     guestRedeem: { limit: 20, windowSeconds: 600 },
     upload: { limit: 60, windowSeconds: 600 },
+    // Generous: a form re-asks whenever the currency or date changes, and the
+    // answers are cached, so this only has to stop outright abuse.
+    rateLookup: { limit: 240, windowSeconds: 600 },
   };
 }
 

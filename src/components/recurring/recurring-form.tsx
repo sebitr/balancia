@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CurrencySelect } from "@/components/money/currency-select";
+import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { createRecurringAction } from "@/modules/recurring/actions";
 import {
   parseAmountToMinor,
@@ -191,21 +192,15 @@ export function RecurringForm({
       </div>
 
       {needsRate && (
-        <div className="space-y-2">
-          <Label htmlFor="recurring-rate">
-            Exchange rate — 1 {currency} in {baseCurrency}
-          </Label>
-          <Input
-            id="recurring-rate"
-            inputMode="decimal"
-            value={exchangeRate}
-            onChange={(event) => setExchangeRate(event.target.value)}
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Reused for each generated occurrence.
-          </p>
-        </div>
+        <ExchangeRateField
+          id="recurring-rate"
+          from={currency}
+          to={baseCurrency!}
+          on={startDate}
+          value={exchangeRate}
+          onChange={setExchangeRate}
+          hint="Reused for each generated occurrence."
+        />
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">

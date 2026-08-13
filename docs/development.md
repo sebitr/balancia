@@ -43,6 +43,13 @@ with the `DATABASE_URL` already in `.env.local`.
 Overridable ports: `DEV_APP_PORT`, `DEV_DB_PORT`, `DEV_MAILPIT_UI_PORT`,
 `DEV_MAILPIT_SMTP_PORT`. Log level: `DEV_LOG_LEVEL`.
 
+Exchange-rate suggestions are off in the dev stack too, for the same reason
+they are off in production — they reach a third party. To work on them:
+
+```bash
+DEV_EXCHANGE_RATE_PROVIDER=frankfurter pnpm dev:docker
+```
+
 **Stop any host-side server on 3000 first.** If a `pnpm dev` or `pnpm start` is
 already listening there, Docker will still report the port as published — it
 binds the IPv4 address while the Node process holds the IPv6 one — and

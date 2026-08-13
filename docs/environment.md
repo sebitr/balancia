@@ -177,13 +177,14 @@ set it back.
 
 Default `0`, meaning the built-in protective limits apply:
 
-| Action                 | Limit                    |
-| ---------------------- | ------------------------ |
-| Sign in                | 10 per IP per 5 minutes  |
-| Register               | 5 per IP per hour        |
-| Password reset request | 5 per IP per hour        |
-| Guest link redemption  | 20 per IP per 10 minutes |
-| Receipt upload         | 60 per IP per 10 minutes |
+| Action                 | Limit                     |
+| ---------------------- | ------------------------- |
+| Sign in                | 10 per IP per 5 minutes   |
+| Register               | 5 per IP per hour         |
+| Password reset request | 5 per IP per hour         |
+| Guest link redemption  | 20 per IP per 10 minutes  |
+| Receipt upload         | 60 per IP per 10 minutes  |
+| Exchange-rate lookup   | 240 per IP per 10 minutes |
 
 A non-zero value raises the three credential limits. **Only do this where many
 legitimate attempts genuinely share one address** — an automated test suite
@@ -193,6 +194,49 @@ password guessing and account enumeration expensive.
 Rate limiting keys on the client IP, taken from `X-Forwarded-For` or
 `X-Real-IP`. If your proxy does not set those, every request looks like one
 client and the limits apply to everyone collectively.
+
+---
+
+## Exchange rates (optional)
+
+Both settings only affect _suggestions_. A rate can always be typed, whatever
+they are set to, and a rate already recorded on an expense is never revisited.
+
+### `EXCHANGE_RATE_PROVIDER`
+
+`none` (default) | `frankfurter`.
+
+Left at `none`, Balancia makes no outbound requests and the exchange-rate field
+in the expense, settlement and recurring forms is filled in by hand — the
+behaviour of every version before this setting existed.
+
+Set to `frankfurter`, converted-currency groups get the rate for the day filled
+in automatically, and the person entering the expense can still overwrite it.
+[Frankfurter](https://frankfurter.dev) republishes the European Central Bank's
+daily reference rates: no API key, no account, no per-request identity, roughly
+30 currencies. Rates are cached in your own database, so a currency pair costs
+at most one outbound request per day.
+
+```bash
+EXCHANGE_RATE_PROVIDER=frankfurter
+```
+
+What enabling this reveals to the provider: the IP of your _server_ (not your
+users), and which currencies your groups use. Nothing about amounts, people or
+groups leaves the instance.
+
+### `EXCHANGE_RATE_API_URL`
+
+Default `https://api.frankfurter.dev/v1`. Point it at your own Frankfurter
+instance to keep rate traffic inside your network:
+
+```bash
+EXCHANGE_RATE_API_URL=https://rates.internal.example.com/v1
+```
+
+Rates the instance has already fetched keep working during an outage — a stale
+quote is served rather than none — and the worker refreshes the pairs in active
+use each weekday at 15:45 UTC, shortly after the ECB publishes.
 
 ---
 
