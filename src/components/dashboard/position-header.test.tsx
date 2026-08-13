@@ -4,12 +4,13 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
 import { PositionHeader, type PositionHeaderProps } from "./position-header";
 
 /**
- * The headline figure, and the two ways it can be absent: nothing owed in
- * either direction, and no rate to convert with. Neither may render as "0.00"
- * or as a number that quietly drops a currency.
+ * The headline figure, and the three ways it can be absent: square everywhere,
+ * no rate to convert with, and an account holding no balance at all. Only the
+ * first is good news, and none of them may render as "0.00".
  */
 
 const TODAY = "2026-08-13";
+const NOW = "2026-08-13T12:00:00.000Z";
 
 function renderHeader(overrides: Partial<PositionHeaderProps> = {}) {
   return renderWithIntl(
@@ -23,7 +24,12 @@ function renderHeader(overrides: Partial<PositionHeaderProps> = {}) {
       displayCurrency="EUR"
       ratesAsOf={TODAY}
       today={TODAY}
+      now={NOW}
       converted
+      addExpenseHref="/groups/g1/expenses/new"
+      settleUpHref="/groups/g1/balances"
+      groupCount={11}
+      lastCleared={null}
       {...overrides}
     />,
   );
@@ -41,18 +47,17 @@ describe("PositionHeader", () => {
     expect(screen.getByText("in 2")).toBeVisible();
   });
 
-  it("words a zero net rather than printing 0.00", () => {
-    renderHeader({
-      net: { minorUnits: "0", currency: "EUR" },
-      owedToYou: { minorUnits: "0", currency: "EUR" },
-      youOwe: { minorUnits: "0", currency: "EUR" },
-      owedGroupCount: 0,
-      owingGroupCount: 0,
-      converted: false,
-    });
+  it("puts the primary action in the header, not a bottom bar", () => {
+    renderHeader();
 
-    expect(screen.getByText("Settled up")).toBeVisible();
-    expect(screen.queryByText("€0.00")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Add expense/ })).toHaveAttribute(
+      "href",
+      "/groups/g1/expenses/new",
+    );
+    expect(screen.getByRole("link", { name: "Settle up" })).toHaveAttribute(
+      "href",
+      "/groups/g1/balances",
+    );
   });
 
   it("says which way a negative net points", () => {
@@ -60,6 +65,57 @@ describe("PositionHeader", () => {
 
     expect(screen.getByText("€90.00")).toBeVisible();
     expect(screen.getByText("you owe")).toBeVisible();
+  });
+
+  it("words a zero net, drops the bar, and stops offering to settle", () => {
+    renderHeader({
+      net: { minorUnits: "0", currency: "EUR" },
+      owedToYou: { minorUnits: "0", currency: "EUR" },
+      youOwe: { minorUnits: "0", currency: "EUR" },
+      owedGroupCount: 0,
+      owingGroupCount: 0,
+      converted: false,
+      ratesAsOf: null,
+    });
+
+    expect(screen.getByText("Settled up")).toBeVisible();
+    expect(screen.queryByText("€0.00")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Settle up" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Nothing outstanding in 11 groups")).toBeVisible();
+  });
+
+  it("dates the calm when something has actually been cleared", () => {
+    renderHeader({
+      net: { minorUnits: "0", currency: "EUR" },
+      owedToYou: { minorUnits: "0", currency: "EUR" },
+      youOwe: { minorUnits: "0", currency: "EUR" },
+      converted: false,
+      ratesAsOf: null,
+      lastCleared: { at: "2026-08-10T12:00:00.000Z", groupName: "Chalet" },
+    });
+
+    expect(
+      screen.getByText(
+        "Nothing outstanding in 11 groups · last cleared 3 days ago in Chalet",
+      ),
+    ).toBeVisible();
+  });
+
+  it("treats an account with no balances at all as square, not as broken", () => {
+    renderHeader({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      currencyTotals: [],
+      displayCurrency: null,
+      converted: false,
+      ratesAsOf: null,
+    });
+
+    expect(screen.getByText("Settled up")).toBeVisible();
+    expect(screen.queryByText(/Rates unavailable/)).not.toBeInTheDocument();
   });
 
   it("falls back to per-currency totals, and says why, when rates are missing", () => {
@@ -78,7 +134,7 @@ describe("PositionHeader", () => {
       screen.getByText("Rates unavailable — showing each group's own currency"),
     ).toBeVisible();
     expect(screen.getByText("CHF 210.00")).toBeVisible();
-    expect(screen.getByText("€10.00")).toBeVisible();
+    expect(screen.queryByText("Settled up")).not.toBeInTheDocument();
   });
 
   it("dates the footnote when the fixing is not today's", () => {
@@ -87,11 +143,5 @@ describe("PositionHeader", () => {
     expect(
       screen.getByText("Converted to EUR at rates from 2026-08-11"),
     ).toBeVisible();
-  });
-
-  it("claims no conversion when every group already balanced in the total's currency", () => {
-    renderHeader({ converted: false, ratesAsOf: null });
-
-    expect(screen.queryByText(/Converted to/)).not.toBeInTheDocument();
   });
 });
