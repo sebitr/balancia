@@ -33,6 +33,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "settlement.deleted",
   "recurring.generated",
   "import.completed",
+  "reminder.received",
 ]);
 
 /**
@@ -45,6 +46,7 @@ export const notificationCategoryEnum = pgEnum("notification_category", [
   "settlements",
   "recurring",
   "imports",
+  "reminders",
 ]);
 
 /**
@@ -162,6 +164,7 @@ export const notificationPreferences = pgTable("notification_preferences", {
   settlementsEnabled: boolean("settlements_enabled").notNull().default(true),
   recurringEnabled: boolean("recurring_enabled").notNull().default(true),
   importsEnabled: boolean("imports_enabled").notNull().default(true),
+  remindersEnabled: boolean("reminders_enabled").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

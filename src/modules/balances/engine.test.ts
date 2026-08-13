@@ -4,9 +4,11 @@ import {
   BalanceError,
   balancesSumToZero,
   computeBalances,
+  contributionsOf,
   simplifyDebts,
   totalSpendByCurrency,
   type BalanceComputationInput,
+  type BalanceInputExpense,
   type ParticipantBalance,
 } from "./engine";
 
@@ -541,5 +543,77 @@ describe("simplifyDebts", () => {
       ),
       { numRuns: 400 },
     );
+  });
+});
+
+describe("contributionsOf", () => {
+  const expenses: BalanceInputExpense[] = [
+    {
+      id: "dinner",
+      currency: "EUR",
+      payers: [{ participantId: "a", amount: 9000n }],
+      shares: [
+        { participantId: "a", amount: 3000n },
+        { participantId: "b", amount: 3000n },
+        { participantId: "c", amount: 3000n },
+      ],
+    },
+    {
+      id: "taxi",
+      currency: "EUR",
+      payers: [{ participantId: "b", amount: 2000n }],
+      shares: [
+        { participantId: "a", amount: 1000n },
+        { participantId: "b", amount: 1000n },
+      ],
+    },
+    {
+      id: "ferry",
+      currency: "CHF",
+      payers: [{ participantId: "a", amount: 5000n }],
+      shares: [
+        { participantId: "a", amount: 2500n },
+        { participantId: "b", amount: 2500n },
+      ],
+    },
+  ];
+
+  it("separates what someone put in from what was theirs to carry", () => {
+    expect(contributionsOf(expenses, "a").get("EUR")).toEqual({
+      paid: 9000n,
+      share: 4000n,
+    });
+  });
+
+  /**
+   * The pair is what explains a balance: paid minus share *is* the position,
+   * and showing both is the difference between a number and a reason.
+   */
+  it("agrees with the balance the engine computes", () => {
+    const contribution = contributionsOf(expenses, "b").get("EUR");
+    const balance = balancesFor(
+      { participantIds: ["a", "b", "c"], expenses, settlements: [] },
+      "EUR",
+    ).find((row) => row.participantId === "b");
+
+    expect(contribution).toBeDefined();
+    expect(balance?.amount).toBe(contribution!.paid - contribution!.share);
+  });
+
+  it("keeps each currency apart", () => {
+    const totals = contributionsOf(expenses, "a");
+    expect(totals.get("CHF")).toEqual({ paid: 5000n, share: 2500n });
+    expect([...totals.keys()].sort()).toEqual(["CHF", "EUR"]);
+  });
+
+  it("reports nothing for someone with no part in any expense", () => {
+    expect(contributionsOf(expenses, "nobody").size).toBe(0);
+  });
+
+  it("counts a share without a payment", () => {
+    expect(contributionsOf(expenses, "c").get("EUR")).toEqual({
+      paid: 0n,
+      share: 3000n,
+    });
   });
 });

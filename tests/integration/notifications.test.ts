@@ -228,6 +228,7 @@ describe("preferences and mutes", () => {
       settlements: true,
       recurring: true,
       imports: true,
+      reminders: true,
     });
 
     await createExpense(fixture.group.access, expenseInput(fixture));
@@ -243,6 +244,7 @@ describe("preferences and mutes", () => {
       settlements: true,
       recurring: true,
       imports: true,
+      reminders: true,
     });
 
     await createSettlement(fixture.group.access, {

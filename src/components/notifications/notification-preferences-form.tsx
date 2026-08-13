@@ -9,7 +9,7 @@ import { savePreferencesAction } from "@/modules/notifications/actions";
 import type { NotificationPreferences } from "@/modules/notifications/types";
 
 /**
- * The four switches that decide what raises a notification at all.
+ * The switches that decide what raises a notification at all.
  *
  * They govern the inbox as well as push: turning one off means Balancia does
  * not tell you about that kind of event, rather than telling you quietly.
@@ -20,6 +20,7 @@ const CATEGORIES = [
   { key: "settlements", label: "settlements", help: "settlementsHelp" },
   { key: "recurring", label: "recurring", help: "recurringHelp" },
   { key: "imports", label: "imports", help: "importsHelp" },
+  { key: "reminders", label: "reminders", help: "remindersHelp" },
 ] as const;
 
 export function NotificationPreferencesForm({
