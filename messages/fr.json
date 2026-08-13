@@ -31,14 +31,18 @@
     "toDark": "Passer au thème sombre"
   },
   "pwa": {
-    "title": "Ajoutez Balancia à votre écran d'accueil",
-    "subtitle": "S'ouvre en plein écran, à portée de doigt — sans passer par un magasin d'applications.",
-    "showMeHow": "Montrez-moi comment",
-    "addToHomeScreen": "Ajouter à l'écran d'accueil",
-    "dismiss": "Masquer l'invitation à installer",
-    "iosIntro": "Safari installe les applications web depuis son menu de partage — deux touches et Balancia rejoint vos autres applications.",
-    "iosStepShare": "Touchez <b>Partager</b> dans la barre d'outils du navigateur.",
-    "iosStepAdd": "Choisissez <b>Sur l'écran d'accueil</b>."
+    "install": "Installer Balancia",
+    "installAction": "Installer",
+    "installDescription": "Ajoutez Balancia à votre écran d'accueil pour y accéder plus vite, comme une vraie application.",
+    "notNow": "Plus tard",
+    "gotIt": "J'ai compris",
+    "iosStepShare": "Touchez le bouton <b>Partager</b>.",
+    "iosStepAdd": "Choisissez <b>Sur l'écran d'accueil</b>.",
+    "iosStepConfirm": "Touchez <b>Ajouter</b>.",
+    "openInSafari": "Ouvrez Balancia dans <b>Safari</b>, puis ajoutez-le depuis le menu Partager.",
+    "openInSafariDescription": "Sur iPhone et iPad, seul Safari peut ajouter une application à l'écran d'accueil.",
+    "alreadyInstalled": "Balancia est déjà installé",
+    "alreadyInstalledDescription": "Ouvrez-le depuis votre écran d'accueil pour l'utiliser en plein écran."
   },
   "money": {
     "getsBack": "récupère",

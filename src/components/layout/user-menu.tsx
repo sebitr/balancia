@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageMenuItems } from "@/components/i18n/language-switcher";
+import { InstallMenuItem } from "@/components/pwa/install-menu-item";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,6 +88,8 @@ export function UserMenu({
             {t("security")}
           </Link>
         </DropdownMenuItem>
+        {/* Renders nothing where the app is installed or uninstallable. */}
+        <InstallMenuItem />
         <DropdownMenuSeparator />
         <LanguageMenuItems />
         <DropdownMenuSeparator />
