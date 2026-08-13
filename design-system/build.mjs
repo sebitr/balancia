@@ -6,6 +6,8 @@
  * `@dsCard` marker the Design System pane indexes on. This script wraps every
  * fragment in a standalone document with `src/kit.css` inlined — the pane
  * renders each page in isolation, so nothing may reference a sibling file.
+ * The only external requests are the brand faces from Google Fonts; the app
+ * itself self-hosts them through `next/font`.
  *
  *   node design-system/build.mjs
  */
@@ -24,6 +26,11 @@ const pagesDir = join(root, "src", "pages");
 const distDir = join(root, "dist");
 
 const kit = readFileSync(join(root, "src", "kit.css"), "utf8");
+
+/** Brand faces. Instrument Serif is editorial-only — see foundations/typography. */
+const fonts = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">`;
 
 /** Shared theme + demo-interaction script. Keep it dependency-free. */
 const script = `(function () {
@@ -103,6 +110,7 @@ for (const file of walk(pagesDir).sort()) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${fonts}
 <title>${escapeHtml(name)} — Balancia</title>
 <style>
 ${kit}</style>

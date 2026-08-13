@@ -1,10 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
 import "./globals.css";
+
+/** Interface, headings and amounts. */
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-instrument-sans",
+  display: "swap",
+});
+
+/** Editorial voice — marketing surfaces only, never inside the product. */
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -24,8 +39,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f7f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c2227" },
+    { media: "(prefers-color-scheme: light)", color: "#fbf7f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#2a0e31" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -39,7 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // The theme provider's pre-paint script sets `class` and `style` on this
       // element before React hydrates, which is a mismatch by construction.
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      className={`${instrumentSans.variable} ${instrumentSerif.variable} ${GeistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <SerwistRegister />

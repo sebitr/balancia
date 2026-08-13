@@ -18,8 +18,8 @@ export function GET() {
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#f8f7f2",
-    theme_color: "#2f6f74",
+    background_color: "#fbf7f1",
+    theme_color: "#2a0e31",
     categories: ["finance", "productivity", "utilities"],
     icons: [
       {
