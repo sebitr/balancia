@@ -150,6 +150,24 @@ describe("findAmounts", () => {
     expect(found.map((entry) => entry.amount)).toEqual([7210n]);
   });
 
+  it("does not weld a size onto the price that follows it", () => {
+    // From a real scan: `2 Vino rosso cl.75 36,00` came back as one amount of
+    // 7536.00, because a space was treated as a thousands separator without
+    // checking that three digits followed it.
+    const found = findAmounts("2 Vino rosso cl.75 36,00", "EUR");
+    expect(found.at(-1)?.amount).toBe(3600n);
+    expect(found.map((entry) => entry.amount)).not.toContain(753600n);
+  });
+
+  it("still reads a space as a thousands separator when it is one", () => {
+    expect(findAmounts("Total 1 234,50", "EUR").at(-1)?.amount).toBe(123450n);
+  });
+
+  it("keeps a phone number from becoming a price", () => {
+    const found = findAmounts("Tel. 02 8901 2345", "EUR");
+    expect(found.map((entry) => entry.amount)).not.toContain(289012345n);
+  });
+
   it("returns nothing for a line with no numbers", () => {
     expect(findAmounts("Thank you", "CHF")).toHaveLength(0);
   });

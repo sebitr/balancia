@@ -5,6 +5,7 @@ import {
   buildOcrResult,
   FRENCH_BISTRO,
   GERMAN_RESTAURANT,
+  ITALIAN_BARE_QUANTITY,
   ITALIAN_TRATTORIA,
   LARGE_AMOUNTS,
   POORLY_DETECTED,
@@ -221,6 +222,38 @@ describe("parseReceipt", () => {
 
     it("reports low confidence", () => {
       expect(receipt.confidence ?? 0).toBeLessThan(0.5);
+    });
+  });
+
+  describe("a till that prints the count with no times sign", () => {
+    const receipt = parse(ITALIAN_BARE_QUANTITY, "EUR");
+
+    it("reads the leading count as a quantity, not part of the name", () => {
+      expect(receipt.items.map((item) => [item.name, item.quantity])).toEqual([
+        ["Bruschetta miste", 2],
+        ["Tagliatelle ragu", 3],
+        ["Vino rosso cl.75", 2],
+        ["Acqua nat. 1L", 1],
+      ]);
+    });
+
+    it("does not weld a bottle size onto the price beside it", () => {
+      // `2 Vino rosso cl.75 36,00` once produced an item costing 7536.00.
+      const wine = receipt.items.find((item) => item.name.startsWith("Vino"));
+      expect(wine?.total).toBe(3600n);
+    });
+
+    it("does not read the VAT registration number as tax", () => {
+      // `P.IVA 03918270965` contains the word for tax and a very large number.
+      expect(receipt.tax).toBe(900n);
+    });
+
+    it("does not read the cash tendered as the total", () => {
+      expect(receipt.total).toBe(10900n);
+    });
+
+    it("reconciles", () => {
+      expect(validateReceipt(receipt)).toEqual([]);
     });
   });
 

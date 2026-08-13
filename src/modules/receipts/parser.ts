@@ -81,12 +81,26 @@ const QUANTITY_PREFIX = /^\s*(\d{1,3})\s*(?:[x×*@]|st(?:k|ck)?\.?)\s+/i;
 const QUANTITY_PREFIX_TIGHT = /^\s*(\d{1,3})[x×](?=\p{L})/iu;
 const QUANTITY_SUFFIX = /\s+[x×]\s*(\d{1,3})\s*$/i;
 
-/** Pulls `2 x`, `2x`, `2 @` or a trailing `x2` off a description. */
+/**
+ * A bare count in front of the name, with no `x` at all — `2 Bruschetta`,
+ * which is how most Italian and French tills print a quantity.
+ *
+ * Two digits at most, and a letter has to follow. That keeps a year, a table
+ * number or a weight (`500 g Pasta`) from being read as a count, at the price
+ * of missing an order of a hundred coffees.
+ */
+const QUANTITY_PREFIX_BARE = /^\s*(\d{1,2})\s+(?=\p{L})/u;
+
+/** Pulls `2 x`, `2x`, `2 @`, a bare `2 `, or a trailing `x2` off a description. */
 function extractQuantity(description: string): {
   name: string;
   quantity?: number;
 } {
-  for (const pattern of [QUANTITY_PREFIX, QUANTITY_PREFIX_TIGHT]) {
+  for (const pattern of [
+    QUANTITY_PREFIX,
+    QUANTITY_PREFIX_TIGHT,
+    QUANTITY_PREFIX_BARE,
+  ]) {
     const match = pattern.exec(description);
     if (match) {
       const quantity = Number(match[1]);
