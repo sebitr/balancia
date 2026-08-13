@@ -43,6 +43,7 @@
     "csv-parse": "^7.0.2",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "^0.45.2",
+    "fflate": "^0.8.3",
     "file-type": "^22.0.1",
     "geist": "^1.7.2",
     "lucide-react": "^1.31.0",

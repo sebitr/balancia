@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, RefreshCw } from "lucide-react";
+import { FileJson, RefreshCw, Sheet, Table, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GroupSettingsForm } from "@/components/groups/group-settings-form";
@@ -22,7 +22,7 @@ export default async function GroupSettingsPage({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Shortcuts</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+        <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button asChild variant="outline" size="sm">
             <Link href={`/groups/${groupId}/recurring`}>
               <RefreshCw aria-hidden="true" />
@@ -32,13 +32,57 @@ export default async function GroupSettingsPage({
           {access.permissions.importData && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/groups/${groupId}/import`}>
-                <Download aria-hidden="true" />
+                <Upload aria-hidden="true" />
                 Import from Splitwise
               </Link>
             </Button>
           )}
         </CardContent>
       </Card>
+
+      {access.permissions.exportData && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Export</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Your data, in a format you can open anywhere. The file is built on
+              this server and sent straight to you.
+            </p>
+            {/* Stacked on a phone, side by side once there is room. `download`
+                plus a plain anchor keeps this working without JavaScript. */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/groups/${groupId}/export?format=csv`} download>
+                  <Table aria-hidden="true" />
+                  CSV
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/groups/${groupId}/export?format=xlsx`} download>
+                  <Sheet aria-hidden="true" />
+                  Excel
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/groups/${groupId}/export?format=json`} download>
+                  <FileJson aria-hidden="true" />
+                  JSON
+                </a>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              CSV and Excel hold one row per person per expense, ready to sort
+              and total. JSON is the complete record — every amount exactly as
+              stored — and is the one to keep for an archive.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Receipts are not in these files — download them from each expense.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
