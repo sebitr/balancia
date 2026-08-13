@@ -1,0 +1,182 @@
+# Balancia — containerised development environment.
+#
+#   docker compose -f compose.dev.yaml up --build
+#
+# Everything a full development loop needs, with nothing installed on the host
+# but Docker: PostgreSQL 18, migrations, the Next.js dev server with hot
+# reload, the background worker in watch mode, and Mailpit to catch outgoing
+# email so verification and recovery flows are testable offline.
+#
+#   App          http://localhost:3000
+#   Mailpit UI   http://localhost:8025
+#   PostgreSQL   postgres://balancia:balancia@127.0.0.1:55432/balancia
+#
+# The database port is published so host tooling — drizzle-kit, the integration
+# suite, psql — works against the same instance; that connection string is
+# already what .env.local uses.
+#
+# Seed data (optional, after the stack is up):
+#   docker compose -f compose.dev.yaml run --rm seed
+#
+# This file is for development only. Production self-hosting is compose.yaml:
+# nothing here is hardened, the secrets are fixed and public, and the source
+# tree is mounted live into the containers.
+
+name: balancia-dev
+
+x-dev-image: &dev-image
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+  image: balancia-dev:local
+
+x-dev-environment: &dev-environment
+  NODE_ENV: development
+  APP_URL: http://localhost:${DEV_APP_PORT:-3000}
+  DATABASE_URL: postgres://balancia:balancia@db:5432/balancia
+  # Dev-only, deliberately not a secret: this stack is not reachable off-host
+  # and the value is committed. Compose generates a real one for production.
+  AUTH_SECRET: dev-only-insecure-secret-0123456789abcdef0123456789abcdef
+  STORAGE_DRIVER: local
+  STORAGE_LOCAL_PATH: /data/uploads
+  # Mailpit accepts anything and delivers nowhere, so no mail escapes the host.
+  SMTP_HOST: mailpit
+  SMTP_PORT: 1025
+  SMTP_SECURE: false
+  SMTP_FROM: balancia@localhost
+  ALLOW_REGISTRATION: true
+  LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
+  NEXT_TELEMETRY_DISABLED: 1
+
+x-dev-volumes:
+  &dev-volumes # The source tree, live. Edits on the host are what the container runs.
+  - .:/app
+  # node_modules and build output stay in volumes: the host's node_modules is
+  # built for darwin, and Next's dev output does not belong on a slow bind
+  # mount shared with a host-side `pnpm dev`.
+  - node-modules:/app/node_modules
+  - next-cache:/app/.next
+  - pnpm-store:/pnpm/store
+  - uploads:/data/uploads
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: balancia-dev-db
+    environment:
+      POSTGRES_USER: balancia
+      POSTGRES_PASSWORD: balancia
+      POSTGRES_DB: balancia
+      # Match production's deterministic collation so ordering behaves the same.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      # 55432, not 5432: never fight a PostgreSQL already running on the host.
+      - "127.0.0.1:${DEV_DB_PORT:-55432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U balancia -d balancia"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: balancia-dev-mailpit
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "127.0.0.1:${DEV_MAILPIT_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${DEV_MAILPIT_SMTP_PORT:-1025}:1025"
+
+  # Applies committed SQL migrations, then exits. App and worker wait for it.
+  migrate:
+    <<: *dev-image
+    container_name: balancia-dev-migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *dev-environment
+    volumes: *dev-volumes
+    command: ["pnpm", "db:migrate"]
+    restart: "no"
+
+  app:
+    <<: *dev-image
+    container_name: balancia-dev-app
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment: *dev-environment
+    volumes: *dev-volumes
+    ports:
+      - "${DEV_APP_PORT:-3000}:3000"
+    command:
+      ["pnpm", "exec", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      # A cold Turbopack compile of the first route can take a while.
+      start_period: 120s
+
+  worker:
+    <<: *dev-image
+    container_name: balancia-dev-worker
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment: *dev-environment
+    volumes: *dev-volumes
+    command: ["pnpm", "dev:worker"]
+    stop_grace_period: 20s
+
+  # Not started by `up`. Run on demand:
+  #   docker compose -f compose.dev.yaml run --rm seed
+  seed:
+    <<: *dev-image
+    container_name: balancia-dev-seed
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *dev-environment
+    volumes: *dev-volumes
+    command: ["pnpm", "db:seed"]
+    restart: "no"
+
+  # A shell in the app environment, for pnpm/drizzle-kit/vitest inside the
+  # container: docker compose -f compose.dev.yaml run --rm shell
+  shell:
+    <<: *dev-image
+    container_name: balancia-dev-shell
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *dev-environment
+    volumes: *dev-volumes
+    command: ["sh"]
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+volumes:
+  db-data:
+    name: balancia-dev-db-data
+  node-modules:
+    name: balancia-dev-node-modules
+  next-cache:
+    name: balancia-dev-next-cache
+  pnpm-store:
+    name: balancia-dev-pnpm-store
+  uploads:
+    name: balancia-dev-uploads

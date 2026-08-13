@@ -1,0 +1,241 @@
+<!-- @dsCard group="Components" name="Button" subtitle="Six variants, nine sizes, tinted destructive" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>Button</h1>
+    <p class="lede">
+      Compact by design — the default is 32px tall, not 40px. A group screen
+      carries a lot of small actions and full-size buttons would crowd every
+      row. One filled primary per screen; everything else is quieter.
+    </p>
+  </header>
+
+  <section>
+    <h2>Variants</h2>
+    <div class="spec">
+      <div class="row">
+        <button class="btn btn--default">Add expense</button>
+        <button class="btn btn--secondary">Change split</button>
+        <button class="btn btn--outline">Export</button>
+        <button class="btn btn--ghost">See all</button>
+        <button class="btn btn--destructive">Delete expense</button>
+        <button class="btn btn--link">Learn more</button>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>default</dt>
+      <dd>The one thing to do on this screen. Never two on the same view.</dd>
+      <dt>secondary</dt>
+      <dd>
+        A real alternative alongside the primary — "Save draft" next to "Save".
+      </dd>
+      <dt>outline</dt>
+      <dd>Standalone actions in a header or toolbar, and dropdown triggers.</dd>
+      <dt>ghost</dt>
+      <dd>
+        Navigation-ish actions inside a section heading: "See all", "Settle up".
+      </dd>
+      <dt>destructive</dt>
+      <dd>A 10% tint with destructive text — never a solid red fill.</dd>
+      <dt>link</dt>
+      <dd>
+        Inline in prose, where a button-shaped thing would break the sentence.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Sizes</h2>
+    <div class="spec">
+      <div class="row" style="align-items: flex-end">
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--default btn--xs">xs</button
+          ><span class="swatch-val">24px</span>
+        </div>
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--default btn--sm">sm</button
+          ><span class="swatch-val">28px</span>
+        </div>
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--default">default</button
+          ><span class="swatch-val">32px</span>
+        </div>
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--default btn--lg">lg</button
+          ><span class="swatch-val">36px</span>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 1.25rem; align-items: flex-end">
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--outline btn--icon-xs" aria-label="Add">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg></button
+          ><span class="swatch-val">icon-xs</span>
+        </div>
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--outline btn--icon-sm" aria-label="Add">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg></button
+          ><span class="swatch-val">icon-sm</span>
+        </div>
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--outline btn--icon" aria-label="Add">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg></button
+          ><span class="swatch-val">icon</span>
+        </div>
+        <div class="stack" style="gap: 0.35rem; align-items: center">
+          <button class="btn btn--outline btn--icon-lg" aria-label="Add">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg></button
+          ><span class="swatch-val">icon-lg</span>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Icon-only buttons always carry an <code>aria-label</code>. The
+      <code>xs</code> and <code>sm</code> sizes also step the radius down to
+      <code>--radius-md</code> so a short button doesn't turn into a lozenge.
+    </p>
+  </section>
+
+  <section>
+    <h2>With icons</h2>
+    <div class="spec">
+      <div class="row">
+        <button class="btn btn--default">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
+          </svg>
+          Add
+        </button>
+        <button class="btn btn--ghost btn--sm">
+          Settle up
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m16 3 4 4-4 4" />
+            <path d="M20 7H4" />
+            <path d="m8 21-4-4 4-4" />
+            <path d="M4 17h16" />
+          </svg>
+        </button>
+        <button class="btn btn--outline" aria-haspopup="menu">
+          EUR
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Icons are 16px lucide strokes (12px at <code>xs</code>, 14px at
+      <code>sm</code>), marked <code>aria-hidden</code>, and inherit colour. A
+      leading icon names the action; a trailing icon names the destination.
+    </p>
+  </section>
+
+  <section>
+    <h2>States</h2>
+    <div class="spec">
+      <div class="row">
+        <button class="btn btn--default">Default</button>
+        <button class="btn btn--default" disabled>Disabled</button>
+        <button class="btn btn--outline btn--invalid" aria-invalid="true">
+          Invalid
+        </button>
+        <button class="btn btn--default">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            class="skeleton"
+            style="border-radius: 9999px; background: transparent"
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          Saving…
+        </button>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      A submitting button keeps its label and adds a spinner. It never collapses
+      to a bare spinner — people lose track of what they pressed.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Wrap a <code>Link</code> with <code>asChild</code> when the action
+          navigates. It should be a real anchor: middle-click, long-press, and
+          "open in new tab" all have to work.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Put a second filled primary on the screen, or use
+          <code>destructive</code> for anything reversible. Archiving a group is
+          <code>outline</code>; deleting it is <code>destructive</code>.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

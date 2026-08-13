@@ -1,0 +1,180 @@
+<!-- @dsCard group="Foundations" name="Spacing, radius & elevation" subtitle="A 0.75rem radius root, hairline rings over shadows" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Foundations</div>
+    <h1>Spacing, radius &amp; elevation</h1>
+    <p class="lede">
+      One radius root drives the whole scale, and elevation is deliberately
+      almost absent — surfaces separate with a hairline, not a shadow. Shadows
+      are reserved for things that genuinely float above the page.
+    </p>
+  </header>
+
+  <section>
+    <h2>Radius</h2>
+    <p>
+      <code>--radius: 0.75rem</code>. Every other step is a multiplier, so
+      re-rounding the whole product is a one-line change.
+    </p>
+    <div class="swatches">
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--accent);
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">sm · 0.45rem</div>
+          <div class="swatch-val">×0.6 — checkbox, inline code</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--accent);
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">md · 0.6rem</div>
+          <div class="swatch-val">×0.8 — small buttons, skeletons</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--accent);
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">lg · 0.75rem</div>
+          <div class="swatch-val">×1 — buttons, inputs, lists</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--accent);
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">xl · 1.05rem</div>
+          <div class="swatch-val">×1.4 — cards, dialogs, empty states</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--accent);
+            border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">4xl · 1.95rem</div>
+          <div class="swatch-val">×2.6 — badges (reads as a pill)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Spacing</h2>
+    <div class="spec">
+      <dl class="dl">
+        <dt>0.75rem</dt>
+        <dd>
+          List row padding, gap between sibling controls, card gap at
+          <code>size="sm"</code>.
+        </dd>
+        <dt>1rem</dt>
+        <dd>
+          Card padding (<code>--card-spacing</code>), page gutter on mobile.
+        </dd>
+        <dt>1.25rem</dt>
+        <dd>Gap between fields in a form group.</dd>
+        <dt>1.5rem</dt>
+        <dd>
+          Gap between page sections — the largest vertical rhythm on a screen.
+        </dd>
+        <dt>max-w-3xl</dt>
+        <dd>
+          Content column cap in the app shell. Everything centres inside it.
+        </dd>
+        <dt>pb-28</dt>
+        <dd>
+          Main padding when a bottom nav is present, so the last row clears the
+          bar.
+        </dd>
+      </dl>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The bottom nav also carries <code>pb-[env(safe-area-inset-bottom)]</code>.
+      Anything fixed to the bottom edge does, or it sits under a phone's home
+      indicator.
+    </p>
+  </section>
+
+  <section>
+    <h2>Elevation</h2>
+    <div class="grid-2">
+      <div class="spec">
+        <div class="spec-label">Ring — the default</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Card</div></div>
+          <div class="card-content">
+            <span class="note">ring-1 ring-foreground/10, no shadow</span>
+          </div>
+        </div>
+        <p class="note" style="margin-top: 0.75rem">
+          Cards separate with a 1px ring at 10% foreground. In dark mode a
+          shadow would be invisible anyway; a ring works in both themes.
+        </p>
+      </div>
+      <div class="spec">
+        <div class="spec-label">Raised — floats only</div>
+        <div class="dialog" style="max-width: none">
+          <div>
+            <div class="dialog-title">Settle up</div>
+            <p class="dialog-desc">shadow-raised</p>
+          </div>
+        </div>
+        <p class="note" style="margin-top: 0.75rem">
+          <code>--shadow-raised</code> is for dialogs, popovers, dropdowns, and
+          toasts — surfaces that are genuinely above the page.
+          <code>--shadow-card</code> is lighter still and is used only on the
+          switch thumb.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Separate stacked content with a divider inside a bordered container
+          (<code>divide-y rounded-lg border</code>). It is quieter than a stack
+          of cards and scans faster.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Nest a card inside a card, or give a card a shadow to imply
+          importance. Importance comes from position on the page — your own
+          balance goes first.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

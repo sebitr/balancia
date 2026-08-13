@@ -7,6 +7,10 @@
   "scripts": {
     "dev": "next dev",
     "dev:worker": "tsx --conditions=react-server watch src/worker/index.ts",
+    "dev:docker": "docker compose -f compose.dev.yaml up --build",
+    "dev:docker:down": "docker compose -f compose.dev.yaml down",
+    "dev:docker:seed": "docker compose -f compose.dev.yaml run --rm seed",
+    "dev:docker:shell": "docker compose -f compose.dev.yaml run --rm shell",
     "build": "next build && serwist build serwist.config.mjs",
     "start": "next start",
     "start:worker": "tsx --conditions=react-server src/worker/index.ts",
@@ -24,6 +28,7 @@
     "db:migrate": "tsx --conditions=react-server scripts/migrate.ts",
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
     "audit:prod": "pnpm audit --prod",
+    "design-system": "node design-system/build.mjs",
     "build:next": "next build",
     "icons": "tsx scripts/generate-icons.ts"
   },

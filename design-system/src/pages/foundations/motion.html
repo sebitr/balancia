@@ -1,0 +1,117 @@
+<!-- @dsCard group="Foundations" name="Motion" subtitle="150ms, one press affordance, and a hard reduced-motion stop" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Foundations</div>
+    <h1>Motion</h1>
+    <p class="lede">
+      Motion here confirms that something was pressed or that a surface arrived.
+      It never decorates and it never delays. If an animation would make a
+      person wait to see a balance, it is wrong.
+    </p>
+  </header>
+
+  <section>
+    <h2>Durations</h2>
+    <div class="spec">
+      <dl class="dl">
+        <dt>150ms</dt>
+        <dd>
+          The default. Colour, border, and shadow transitions on every
+          interactive element.
+        </dd>
+        <dt>instant</dt>
+        <dd>
+          The 1px press translate — it must feel mechanical, not animated.
+        </dd>
+        <dt>200ms</dt>
+        <dd>
+          Dialog, sheet, and popover enter/exit (fade + small scale or slide).
+        </dd>
+        <dt>2s</dt>
+        <dd>
+          Skeleton pulse, looping. Slow enough to read as "loading", not as a
+          flicker.
+        </dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Press</h2>
+    <div class="spec">
+      <p>
+        Buttons translate down 1px while active. Menu triggers
+        (<code>aria-haspopup</code>) are excluded — the surface they open is the
+        feedback, and double motion reads as a glitch.
+      </p>
+      <div class="row">
+        <button class="btn btn--default">Press me</button>
+        <button class="btn btn--outline">And me</button>
+        <button class="btn btn--outline" aria-haspopup="menu">
+          Menu trigger — no shift
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Focus</h2>
+    <div class="spec">
+      <p>
+        One focus treatment everywhere: the border becomes
+        <code>--ring</code> and a 3px ring at 50% opacity sits outside it. Tab
+        into these.
+      </p>
+      <div class="row">
+        <button class="btn btn--default">Button</button>
+        <input class="input" style="width: 12rem" value="Input" />
+        <button class="btn btn--destructive">
+          Destructive uses its own ring
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Loading</h2>
+    <div class="spec">
+      <div class="stack" style="max-width: 26rem">
+        <div class="skeleton" style="height: 0.875rem; width: 60%"></div>
+        <div class="skeleton" style="height: 0.75rem; width: 35%"></div>
+        <div class="skeleton" style="height: 2rem; width: 100%"></div>
+      </div>
+      <p class="note" style="margin-top: 0.75rem">
+        Skeletons mirror the shape of what is arriving — a title line, a
+        metadata line, a row. A generic grey block tells nobody anything.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reduced motion</h2>
+    <div class="spec">
+      <p>
+        <code>prefers-reduced-motion: reduce</code> collapses every duration to
+        0.01ms and stops looping animations after one iteration. This is a
+        blanket rule, not a per-component opt-in — new components inherit it for
+        free.
+      </p>
+    </div>
+    <div class="do-dont" style="margin-top: 1rem">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Animate colour, opacity, and transform. They stay off the layout path
+          and stay at 60fps on a mid-range phone.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Animate height, width, or position of anything containing an amount. A
+          number that slides while you read it is worse than no animation.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

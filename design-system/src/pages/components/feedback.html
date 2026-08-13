@@ -1,0 +1,244 @@
+<!-- @dsCard group="Components" name="Feedback" subtitle="Empty states, skeletons, alerts, dialogs, toasts" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>Feedback</h1>
+    <p class="lede">
+      Four ways to tell somebody something, ranked by how much they have to
+      care: a toast they can ignore, an alert they should read, a dialog they
+      must answer, and an empty state that hands them the next step.
+    </p>
+  </header>
+
+  <section>
+    <h2>Empty state</h2>
+    <div class="spec">
+      <div class="empty">
+        <span class="empty-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+            />
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+            <path d="M12 17.5v-11" />
+          </svg>
+        </span>
+        <h4>No expenses yet</h4>
+        <p>
+          Add the first expense and Balancia will start working out who owes
+          whom.
+        </p>
+        <div style="margin-top: 0.5rem">
+          <button class="btn btn--default">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+            Add an expense
+          </button>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Three parts, all required: what is not here, why that is fine, and the
+      button that fixes it. A bare "No data" is never acceptable — the dashed
+      border is a placeholder for content, so it has to suggest what would fill
+      it.
+    </p>
+  </section>
+
+  <section>
+    <h2>Skeleton</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main" style="flex: 1">
+              <span
+                class="skeleton"
+                style="display: block; height: 0.875rem; width: 55%"
+              ></span>
+              <span
+                class="skeleton"
+                style="
+                  display: block;
+                  height: 0.6875rem;
+                  width: 30%;
+                  margin-top: 0.4rem;
+                "
+              ></span>
+            </span>
+            <span class="skeleton" style="height: 0.875rem; width: 4rem"></span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main" style="flex: 1">
+              <span
+                class="skeleton"
+                style="display: block; height: 0.875rem; width: 40%"
+              ></span>
+              <span
+                class="skeleton"
+                style="
+                  display: block;
+                  height: 0.6875rem;
+                  width: 24%;
+                  margin-top: 0.4rem;
+                "
+              ></span>
+            </span>
+            <span class="skeleton" style="height: 0.875rem; width: 4rem"></span>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      A skeleton takes the shape of the row it replaces, so the layout does not
+      jump when data lands. Never skeleton an amount into a shape wider than the
+      amounts that follow it.
+    </p>
+  </section>
+
+  <section>
+    <h2>Alert</h2>
+    <div class="stack">
+      <div class="alert">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4" />
+          <path d="M12 8h.01" />
+        </svg>
+        <div class="alert-title">Rates last updated 3 days ago</div>
+        <div class="alert-desc">
+          Converted totals use the rate stored when each expense was created.
+        </div>
+      </div>
+      <div class="alert alert--destructive">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+          />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </svg>
+        <div class="alert-title">4 of 62 rows could not be imported</div>
+        <div class="alert-desc">
+          Rows 12, 19, 44 and 58 have an amount Balancia could not parse.
+          Download the report to fix and retry.
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Alerts belong in the page flow, next to what they describe. They persist;
+      if it can be dismissed and forgotten, it was a toast.
+    </p>
+  </section>
+
+  <section>
+    <h2>Dialog</h2>
+    <div
+      class="spec"
+      style="display: flex; justify-content: center; background: var(--muted)"
+    >
+      <div class="dialog">
+        <div>
+          <h3 class="dialog-title" style="margin: 0">Delete this expense?</h3>
+          <p class="dialog-desc">
+            "Dinner at Trattoria Il Ponte" — €128.40 — will be removed and
+            everyone's balance recalculated. This cannot be undone.
+          </p>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn btn--outline">Cancel</button>
+          <button class="btn btn--destructive">Delete expense</button>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      A destructive confirmation names the thing and its amount. "Are you sure?"
+      gives nobody the information they need to be sure. Cancel is on the left
+      and is the safe default.
+    </p>
+  </section>
+
+  <section>
+    <h2>Toast</h2>
+    <div
+      class="spec"
+      style="display: flex; justify-content: flex-end; background: var(--muted)"
+    >
+      <div class="stack" style="align-items: flex-end">
+        <div class="toast">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--positive)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21.801 10A10 10 0 1 1 17 3.335" />
+            <path d="m9 11 3 3L22 4" />
+          </svg>
+          <div>
+            <div style="font-weight: 500">Expense added</div>
+            <div class="note">Dinner at Trattoria Il Ponte · €128.40</div>
+          </div>
+        </div>
+        <div class="toast">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--destructive)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m15 9-6 6" />
+            <path d="m9 9 6 6" />
+          </svg>
+          <div>
+            <div style="font-weight: 500">Couldn't save</div>
+            <div class="note">
+              You're offline — this will retry automatically.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Toasts confirm something that already happened. They never carry the only
+      copy of information somebody needs, and they never ask a question — an
+      action that needs an answer is a dialog.
+    </p>
+  </section>
+</div>

@@ -1,0 +1,212 @@
+<!-- @dsCard group="Patterns" name="Money" subtitle="Amount, BalanceAmount, and the three-cue rule" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Money</h1>
+    <p class="lede">
+      The most important pattern in the product, and the one with the least room
+      for interpretation. A balance always carries a word, an icon, and a colour
+      — three redundant cues, so the meaning survives greyscale, colour
+      blindness, and a screen reader.
+    </p>
+  </header>
+
+  <section>
+    <h2>Amount — a plain quantity</h2>
+    <div class="spec">
+      <div class="row" style="gap: 2rem">
+        <span class="tabular-nums" style="font-weight: 500">€128.40</span>
+        <span class="tabular-nums" style="font-weight: 500">CHF 31.20</span>
+        <span class="tabular-nums" style="font-weight: 500">1 240 SEK</span>
+        <span class="tabular-nums" style="font-weight: 500">¥18,400</span>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      <code>&lt;Amount&gt;</code> renders a quantity with no direction: the cost
+      of an expense, a total, a share. Minor units arrive as a decimal string
+      and go through <code>Intl.NumberFormat</code>, which is why the symbol
+      placement, separators, and decimal count differ above — yen has no minor
+      unit, and Swedish krona puts the code last. Never hand-assemble a currency
+      string.
+    </p>
+  </section>
+
+  <section>
+    <h2>BalanceAmount — a quantity with a direction</h2>
+    <div class="spec">
+      <div class="stack" style="gap: 1.25rem">
+        <div>
+          <div class="swatch-val" style="margin-bottom: 0.4rem">
+            large — your own position, one per currency
+          </div>
+          <span class="balance balance--positive balance--large">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M17 7 7 17" />
+              <path d="M17 17H7V7" />
+            </svg>
+            <span class="tabular-nums">€248.00</span>
+            <span class="balance-label">gets back</span>
+          </span>
+        </div>
+        <div>
+          <div class="swatch-val" style="margin-bottom: 0.4rem">default</div>
+          <span class="balance balance--negative">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M7 17 17 7" />
+              <path d="M7 7h10v10" />
+            </svg>
+            <span class="tabular-nums">€99.40</span>
+            <span class="balance-label">owes</span>
+          </span>
+        </div>
+        <div>
+          <div class="swatch-val" style="margin-bottom: 0.4rem">
+            small, label hidden — inside a list where the group heading already
+            says which side
+          </div>
+          <span class="balance balance--negative balance--small">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M7 17 17 7" />
+              <path d="M7 7h10v10" />
+            </svg>
+            <span class="tabular-nums">€148.60</span>
+            <span class="sr-only">owes</span>
+          </span>
+        </div>
+        <div>
+          <div class="swatch-val" style="margin-bottom: 0.4rem">
+            settled — phrased, never rendered as "0.00"
+          </div>
+          <span class="balance balance--neutral">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+            </svg>
+            Settled up
+          </span>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>positive</dt>
+      <dd>
+        ↙ arrow-down-left · "gets back" · <code>--positive</code> — money coming
+        to you.
+      </dd>
+      <dt>negative</dt>
+      <dd>
+        ↗ arrow-up-right · "owes" · <code>--negative</code> — money going out.
+      </dd>
+      <dt>neutral</dt>
+      <dd>
+        — minus · "settled up" · <code>--neutral-balance</code> — nothing to do.
+      </dd>
+    </dl>
+    <p class="note" style="margin-top: 0.75rem">
+      The magnitude is always rendered unsigned. Direction is the arrow and the
+      word; a minus sign on top of them is a third encoding of the same fact and
+      reads as a typo. When
+      <code>showLabel</code> is false the word moves to
+      <code>sr-only</code> rather than disappearing — it is never actually
+      removed.
+    </p>
+  </section>
+
+  <section>
+    <h2>Totals</h2>
+    <div class="spec">
+      <div class="row">
+        <span class="total-chip">€1,411.00</span>
+        <span class="total-chip">CHF 248.60</span>
+        <span class="total-chip">1 240 SEK</span>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Group spending is a set of chips, one per currency — never summed into a
+      single figure unless the group is in <em>converted</em> mode and has an
+      explicit base currency. Adding euros to francs invents a number nobody
+      agreed to.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <span class="balance balance--positive">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M17 7 7 17" />
+            <path d="M17 17H7V7" />
+          </svg>
+          <span class="tabular-nums">€248.00</span>
+          <span class="balance-label">gets back</span>
+        </span>
+        <p class="note" style="margin: 0.5rem 0 0">
+          Word, icon, colour. Unsigned magnitude.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <span
+          style="color: var(--positive); font-weight: 500"
+          class="tabular-nums"
+          >+€248.00</span
+        >
+        <p class="note" style="margin: 0.5rem 0 0">
+          Colour and a sign only. Illegible in greyscale, meaningless to a
+          screen reader, and "+" means different things to different people.
+        </p>
+      </div>
+    </div>
+    <div class="do-dont" style="margin-top: 0.75rem">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Keep amounts <code>tabular-nums</code> and right-aligned in any
+          vertical list, so the decimal points line up.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Round for display, or drop trailing zeros. €7.10 is not €7.1, and a
+          rounded total will not match the sum of its rows.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

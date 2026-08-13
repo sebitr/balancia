@@ -1,0 +1,162 @@
+<!-- @dsCard group="Patterns" name="Expense timeline" subtitle="Expenses and repayments in one chronological list" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Expense timeline</h1>
+    <p class="lede">
+      Expenses and settlements share a single chronological list, because that
+      is how people remember a trip — not as two separate ledgers. Settlements
+      stay visually distinct: they are repayments, not spending.
+    </p>
+  </header>
+
+  <section>
+    <h2>The list</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <a class="list-row" href="#">
+            <span class="list-main">
+              <span class="list-title">Dinner at Trattoria Il Ponte</span>
+              <span class="list-sub">2026-08-12 · Amélie · 2 receipts</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">€128.40</span>
+          </a>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">
+                Amélie paid Ravi
+                <span class="badge badge--outline">Payment</span>
+              </span>
+              <span class="list-sub">2026-08-11 · Settling the taxi</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">€120.00</span>
+          </div>
+        </li>
+        <li>
+          <a class="list-row" href="#">
+            <span class="list-main">
+              <span class="list-title">
+                Apartment cleaning
+                <span class="badge badge--secondary">Recurring</span>
+              </span>
+              <span class="list-sub">2026-08-09 · Ravi</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">€65.00</span>
+          </a>
+        </li>
+        <li>
+          <a class="list-row" href="#">
+            <span class="list-main">
+              <span class="list-title">Airport transfer</span>
+              <span class="list-sub">2026-08-08 · Jonas, Ravi · 1 receipt</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">CHF 96.00</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Row grammar</h2>
+    <dl class="dl">
+      <dt>title</dt>
+      <dd>
+        The expense description, or <em>"X paid Y"</em> for a settlement.
+        Truncates before the badges do.
+      </dd>
+      <dt>Payment badge</dt>
+      <dd>
+        <code>outline</code> — marks the row as a repayment rather than a cost.
+      </dd>
+      <dt>Recurring badge</dt>
+      <dd><code>secondary</code> — this row was generated from a rule.</dd>
+      <dt>metadata</dt>
+      <dd>
+        <code>date · payers · N receipts</code>, middle-dot separated, text-xs
+        muted. Receipts only appear when there are some.
+      </dd>
+      <dt>amount</dt>
+      <dd>
+        Right, tabular, font-medium. Plain <code>Amount</code> — a cost has no
+        direction, so it takes no balance tone.
+      </dd>
+      <dt>sort</dt>
+      <dd>
+        By expense date descending, then by creation time — so two things dated
+        the same day appear in the order they were entered.
+      </dd>
+    </dl>
+    <p class="note" style="margin-top: 0.75rem">
+      Multiple payers are joined with commas: an expense can be split across
+      people who paid, not just people who owe. Mixed currencies live in the
+      same list and each row shows its own — the list is a history, not a total.
+    </p>
+  </section>
+
+  <section>
+    <h2>Navigability</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Make expense rows anchors to the detail page — the whole row, so the
+          tap target is 44px-plus on a phone. Settlement rows are plain divs
+          with no hover: there is no detail page to reach.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Split the two into separate lists or separate tabs. "Did we pay that
+          back yet?" is answered by seeing the repayment sitting next to the
+          expense.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Empty</h2>
+    <div class="spec">
+      <div class="empty">
+        <span class="empty-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+            />
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+            <path d="M12 17.5v-11" />
+          </svg>
+        </span>
+        <h4>Nothing recorded yet</h4>
+        <p>Add your first expense to start tracking who paid for what.</p>
+        <div style="margin-top: 0.5rem">
+          <button class="btn btn--default">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+            Add an expense
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

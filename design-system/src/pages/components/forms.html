@@ -1,0 +1,257 @@
+<!-- @dsCard group="Components" name="Forms" subtitle="Field, input, select, choice cards, validation" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>Forms</h1>
+    <p class="lede">
+      Every control is 32px tall and shares one focus and one invalid treatment.
+      Labels sit above, descriptions under the label, errors under the control —
+      and errors are announced, not just coloured.
+    </p>
+  </header>
+
+  <section>
+    <h2>Field</h2>
+    <div class="spec">
+      <div class="field-group" style="max-width: 30rem">
+        <div class="field">
+          <label class="field-label" for="desc">Description</label>
+          <input class="input" id="desc" value="Dinner at Trattoria Il Ponte" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="amt">Amount</label>
+          <input
+            class="input tabular-nums"
+            id="amt"
+            value="128.40"
+            inputmode="decimal"
+          />
+          <p class="field-desc">
+            Entered in the expense's own currency; conversion happens on save.
+          </p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="cur">Currency</label>
+          <button class="select" id="cur" aria-haspopup="listbox">
+            EUR — Euro
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+        <div class="field">
+          <label class="field-label" for="note">Notes</label>
+          <textarea
+            class="textarea"
+            id="note"
+            placeholder="Optional"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Validation</h2>
+    <div class="spec">
+      <div class="field-group" style="max-width: 30rem">
+        <div class="field">
+          <label class="field-label" for="bad">Amount</label>
+          <input
+            class="input tabular-nums"
+            id="bad"
+            value="0"
+            aria-invalid="true"
+            aria-describedby="bad-err"
+          />
+          <div class="field-error" role="alert" id="bad-err">
+            Enter an amount greater than zero.
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="split">Custom split</label>
+          <input
+            class="input tabular-nums"
+            id="split"
+            value="60.00 / 60.00"
+            aria-invalid="true"
+            aria-describedby="split-err"
+          />
+          <div class="field-error" role="alert" id="split-err">
+            Shares total €120.00 but the expense is €128.40 — €8.40 is
+            unassigned.
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Errors say what is wrong <em>and</em> give the number needed to fix it.
+      "Invalid amount" is not an error message. <code>FieldError</code> carries
+      <code>role="alert"</code>, so it reaches a screen reader the moment it
+      appears.
+    </p>
+  </section>
+
+  <section>
+    <h2>Choices</h2>
+    <div class="spec">
+      <div class="field-group" style="max-width: 30rem">
+        <fieldset style="border: 0; padding: 0; margin: 0" data-radio-group>
+          <legend class="field-label" style="margin-bottom: 0.5rem">
+            Split method
+          </legend>
+          <div class="stack" style="gap: 0.5rem">
+            <label class="field-choice" data-checked>
+              <span class="radio" data-checked></span>
+              <span>
+                <span style="display: block; font-weight: 500">Equally</span>
+                <span class="field-desc"
+                  >Everyone selected pays the same share.</span
+                >
+              </span>
+            </label>
+            <label class="field-choice">
+              <span class="radio"></span>
+              <span>
+                <span style="display: block; font-weight: 500">By shares</span>
+                <span class="field-desc"
+                  >Weighted — a couple counts as two.</span
+                >
+              </span>
+            </label>
+            <label class="field-choice">
+              <span class="radio"></span>
+              <span>
+                <span style="display: block; font-weight: 500"
+                  >Exact amounts</span
+                >
+                <span class="field-desc"
+                  >Type each person's amount. Must total the expense.</span
+                >
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <span class="field-label">Participants</span>
+          <div class="stack" style="gap: 0.5rem">
+            <label class="field-choice" data-checked>
+              <span class="checkbox" data-checked>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <span style="display: flex; align-items: center; gap: 0.5rem"
+                ><span class="avatar">AM</span> Amélie</span
+              >
+            </label>
+            <label class="field-choice" data-checked>
+              <span class="checkbox" data-checked>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <span style="display: flex; align-items: center; gap: 0.5rem"
+                ><span class="avatar">RS</span> Ravi</span
+              >
+            </label>
+            <label class="field-choice">
+              <span class="checkbox"></span>
+              <span style="display: flex; align-items: center; gap: 0.5rem"
+                ><span class="avatar">JT</span> Jonas</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="field"
+          style="
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+          "
+        >
+          <span>
+            <span class="field-label">Repeat monthly</span>
+            <p class="field-desc" style="margin-top: 0.125rem">
+              Creates the expense on the same day each month.
+            </p>
+          </span>
+          <button class="switch" role="switch" aria-checked="false">
+            <span class="switch-thumb"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      A checked choice card tints to <code>primary/5</code> with a
+      <code>primary/30</code> border. The whole card is the hit target — on a
+      phone, a 16px checkbox alone is not.
+    </p>
+  </section>
+
+  <section>
+    <h2>States</h2>
+    <div class="spec">
+      <div class="row" style="align-items: flex-start">
+        <input class="input" style="width: 11rem" placeholder="Placeholder" />
+        <input class="input" style="width: 11rem" value="Filled" />
+        <input class="input" style="width: 11rem" value="Disabled" disabled />
+        <input
+          class="input"
+          style="width: 11rem"
+          value="Invalid"
+          aria-invalid="true"
+        />
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Inputs are <code>text-base</code> below the <code>md</code> breakpoint and
+      <code>text-sm</code> above it. That is deliberate: iOS Safari zooms the
+      viewport on focus for anything under 16px.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Set <code>inputmode="decimal"</code> on amounts, and keep the currency
+          next to the field it applies to.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Use placeholder text as the label. It disappears exactly when someone
+          is filling the field in.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

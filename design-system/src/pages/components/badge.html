@@ -1,0 +1,111 @@
+<!-- @dsCard group="Components" name="Badge" subtitle="Pills for group state and row markers" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>Badge</h1>
+    <p class="lede">
+      A 20px pill for state that qualifies something else — never for the thing
+      itself. Badges are labels, not controls: if it responds to a press, it is
+      a button.
+    </p>
+  </header>
+
+  <section>
+    <h2>Variants</h2>
+    <div class="spec">
+      <div class="row">
+        <span class="badge badge--default">Default</span>
+        <span class="badge badge--secondary">Secondary</span>
+        <span class="badge badge--outline">Outline</span>
+        <span class="badge badge--destructive">Destructive</span>
+        <span class="badge badge--ghost">Ghost</span>
+        <span class="badge badge--link">Link</span>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>secondary</dt>
+      <dd>
+        The default choice in practice — "Archived", "Recurring". Quiet
+        metadata.
+      </dd>
+      <dt>outline</dt>
+      <dd>
+        Classification that must not compete with the row: "Payment", "Guest".
+      </dd>
+      <dt>default</dt>
+      <dd>Filled primary. Rare — reserve it for something genuinely active.</dd>
+      <dt>destructive</dt>
+      <dd>A tint, matching the button. Failed imports, expired invites.</dd>
+      <dt>ghost / link</dt>
+      <dd>Inside dense surfaces where even an outline is too much.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>In context</h2>
+    <div class="spec">
+      <div class="stack" style="gap: 1rem">
+        <div class="row" style="gap: 0.5rem">
+          <span
+            style="font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em"
+            >Lisbon, March</span
+          >
+          <span class="badge badge--secondary">Archived</span>
+          <span class="badge badge--outline">Guest</span>
+        </div>
+        <ul class="list">
+          <li>
+            <a class="list-row" href="#">
+              <span class="list-main">
+                <span class="list-title">
+                  Amélie paid Ravi
+                  <span class="badge badge--outline">Payment</span>
+                </span>
+                <span class="list-sub">2026-08-11 · Repayment</span>
+              </span>
+              <span class="tabular-nums" style="font-weight: 500">€120.00</span>
+            </a>
+          </li>
+          <li>
+            <a class="list-row" href="#">
+              <span class="list-main">
+                <span class="list-title">
+                  Apartment cleaning
+                  <span class="badge badge--secondary">Recurring</span>
+                </span>
+                <span class="list-sub">2026-08-09 · Ravi · 1 receipt</span>
+              </span>
+              <span class="tabular-nums" style="font-weight: 500">€65.00</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Badges in a row sit next to the title, before the metadata line, and are
+      <code>shrink-0</code> so a long description truncates instead of squeezing
+      them.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Keep the text to one or two words, sentence case. A badge that wraps
+          has become a description.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Use a badge for a balance. Money uses the tone system with its icon
+          and its word — see
+          <em>Patterns → Money</em>.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,204 @@
+<!-- @dsCard group="Patterns" name="Settle up" subtitle="Suggested transfers, and confirming a repayment" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Settle up</h1>
+    <p class="lede">
+      The end of the story. Balancia proposes the fewest transfers that clear
+      the group, phrased as sentences a person can act on — "Jonas pays Amélie
+      €148.60" — not as a matrix anyone has to decode.
+    </p>
+  </header>
+
+  <section>
+    <h2>Suggested transfers</h2>
+    <div class="spec">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">EUR</div>
+          <div class="card-desc">Two payments clear this currency.</div>
+        </div>
+        <div class="card-content">
+          <ul class="list">
+            <li>
+              <div class="list-row">
+                <span
+                  class="list-main"
+                  style="display: flex; align-items: center; gap: 0.5rem"
+                >
+                  <span class="avatar">JT</span>
+                  <span>
+                    <span class="list-title">Jonas pays Amélie</span>
+                    <span class="list-sub">Clears Jonas entirely</span>
+                  </span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 0.75rem">
+                  <span class="tabular-nums" style="font-weight: 500"
+                    >€148.60</span
+                  >
+                  <button class="btn btn--outline btn--sm">Record</button>
+                </span>
+              </div>
+            </li>
+            <li>
+              <div class="list-row">
+                <span
+                  class="list-main"
+                  style="display: flex; align-items: center; gap: 0.5rem"
+                >
+                  <span class="avatar">RS</span>
+                  <span>
+                    <span class="list-title">Ravi pays Amélie</span>
+                    <span class="list-sub">Clears Ravi entirely</span>
+                  </span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 0.75rem">
+                  <span class="tabular-nums" style="font-weight: 500"
+                    >€99.40</span
+                  >
+                  <button class="btn btn--outline btn--sm">Record</button>
+                </span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      One card per currency — transfers never cross currencies unless the group
+      is in
+      <em>converted</em> mode. The subtitle says what each payment accomplishes,
+      so the suggestion is auditable rather than magic.
+    </p>
+  </section>
+
+  <section>
+    <h2>Recording a payment</h2>
+    <div
+      class="spec"
+      style="display: flex; justify-content: center; background: var(--muted)"
+    >
+      <div class="dialog" style="max-width: 24rem">
+        <div>
+          <h3 class="dialog-title" style="margin: 0">Record a payment</h3>
+          <p class="dialog-desc">
+            This adds a repayment to the timeline and updates both balances.
+          </p>
+        </div>
+        <div class="field-group">
+          <div class="field">
+            <span class="field-label">From</span>
+            <button class="select" style="width: 100%" aria-haspopup="listbox">
+              <span style="display: flex; align-items: center; gap: 0.5rem"
+                ><span class="avatar">JT</span> Jonas</span
+              >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+          <div class="field">
+            <span class="field-label">To</span>
+            <button class="select" style="width: 100%" aria-haspopup="listbox">
+              <span style="display: flex; align-items: center; gap: 0.5rem"
+                ><span class="avatar">AM</span> Amélie</span
+              >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+          <div class="field">
+            <label class="field-label" for="settle-amt">Amount</label>
+            <input
+              class="input tabular-nums"
+              id="settle-amt"
+              value="148.60"
+              inputmode="decimal"
+            />
+            <p class="field-desc">
+              Pre-filled with the suggested transfer. A partial payment is fine
+              — the remainder stays owed.
+            </p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="settle-note">Note</label>
+            <input class="input" id="settle-note" placeholder="Optional" />
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn btn--outline">Cancel</button>
+          <button class="btn btn--default">Record payment</button>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The amount is editable. People pay round numbers and pay in parts, and a
+      system that only accepts the exact suggested figure gets abandoned the
+      first time somebody hands over €150 for a €148.60 debt.
+    </p>
+  </section>
+
+  <section>
+    <h2>Done</h2>
+    <div class="spec">
+      <div class="card" style="max-width: 24rem">
+        <div class="card-header"><div class="card-title">EUR</div></div>
+        <div class="card-content">
+          <span class="balance balance--neutral">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+            </svg>
+            Settled up
+          </span>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      A cleared currency says "Settled up" — never "€0.00". Zero is a state, not
+      an amount, and phrasing it removes any doubt about whether the number
+      failed to load.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Write transfers as full sentences with both names. "Jonas → Amélie"
+          needs a key; "Jonas pays Amélie" does not.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Present the suggestion as the only option, or block a payment that
+          doesn't match it. Balancia records what people did; it does not
+          instruct them.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

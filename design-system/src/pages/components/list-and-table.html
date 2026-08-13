@@ -1,0 +1,167 @@
+<!-- @dsCard group="Components" name="List & table" subtitle="The divided row list, and when a table earns its place" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>List &amp; table</h1>
+    <p class="lede">
+      The divided list is the workhorse of this product — expenses, members,
+      recurring rules, and activity all use it. Tables appear only where a
+      genuine second dimension exists, and they still have to survive a 375px
+      screen.
+    </p>
+  </header>
+
+  <section>
+    <h2>Row list</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <a class="list-row" href="#">
+            <span class="list-main">
+              <span class="list-title">Dinner at Trattoria Il Ponte</span>
+              <span class="list-sub">2026-08-12 · Amélie · 2 receipts</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">€128.40</span>
+          </a>
+        </li>
+        <li>
+          <a class="list-row" href="#">
+            <span class="list-main">
+              <span class="list-title">
+                Apartment cleaning
+                <span class="badge badge--secondary">Recurring</span>
+              </span>
+              <span class="list-sub">2026-08-09 · Ravi</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">€65.00</span>
+          </a>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">
+                Amélie paid Ravi
+                <span class="badge badge--outline">Payment</span>
+              </span>
+              <span class="list-sub">2026-08-08 · Repayment</span>
+            </span>
+            <span class="tabular-nums" style="font-weight: 500">€120.00</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>container</dt>
+      <dd>
+        <code>divide-y rounded-lg border</code> — the border and dividers do all
+        the separating.
+      </dd>
+      <dt>row</dt>
+      <dd>
+        12px padding, <code>justify-between</code>, 12px gap. Title line, then
+        metadata line.
+      </dd>
+      <dt>title</dt>
+      <dd>
+        text-sm font-medium, truncates. Badges sit inline after it and never
+        shrink.
+      </dd>
+      <dt>metadata</dt>
+      <dd>text-xs muted, middle-dot separated: date · payer · receipts.</dd>
+      <dt>amount</dt>
+      <dd>
+        Right-aligned, <code>shrink-0</code>, tabular. It is the column the eye
+        scans.
+      </dd>
+    </dl>
+    <p class="note" style="margin-top: 0.75rem">
+      A navigable row is an <code>&lt;a&gt;</code> filling the whole row — hover
+      tints to <code>muted/60</code>, focus draws the ring. A row with nowhere
+      to go is a <code>&lt;div&gt;</code> with no hover at all: a hover state
+      that leads nowhere is a broken promise. Both are shown above; the
+      settlement row is the non-navigable one.
+    </p>
+  </section>
+
+  <section>
+    <h2>Table</h2>
+    <div class="spec">
+      <div class="scroll-x">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th scope="col">Participant</th>
+              <th scope="col" class="num">Paid</th>
+              <th scope="col" class="num">Share</th>
+              <th scope="col" class="num">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span style="display: flex; align-items: center; gap: 0.5rem"
+                  ><span class="avatar">AM</span> Amélie</span
+                >
+              </td>
+              <td class="num">€412.40</td>
+              <td class="num">€164.40</td>
+              <td class="num" style="color: var(--positive); font-weight: 500">
+                €248.00 gets back
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span style="display: flex; align-items: center; gap: 0.5rem"
+                  ><span class="avatar">RS</span> Ravi</span
+                >
+              </td>
+              <td class="num">€65.00</td>
+              <td class="num">€164.40</td>
+              <td class="num" style="color: var(--negative); font-weight: 500">
+                €99.40 owes
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span style="display: flex; align-items: center; gap: 0.5rem"
+                  ><span class="avatar">JT</span> Jonas</span
+                >
+              </td>
+              <td class="num">€16.00</td>
+              <td class="num">€164.40</td>
+              <td class="num" style="color: var(--negative); font-weight: 500">
+                €148.60 owes
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Numeric columns are right-aligned and tabular. The balance column still
+      carries its word — dropping the label because "it's a table" is the same
+      accessibility failure in a different shape. Wide tables scroll inside
+      their own container; the page body never scrolls sideways.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Default to the row list. It works at 375px without a single decision,
+          which a table never does.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Reach for a table to show one value per person. That is a list with a
+          right-hand amount.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
