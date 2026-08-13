@@ -52,6 +52,11 @@
     "commonCurrencies": "Courantes",
     "allCurrencies": "Toutes les devises"
   },
+  "timezoneSelect": {
+    "search": "Rechercher un fuseau horaire",
+    "list": "Fuseaux horaires",
+    "empty": "Aucun fuseau horaire ne correspond."
+  },
   "auth": {
     "signIn": {
       "title": "Ravi de vous revoir",
@@ -513,6 +518,7 @@
     "baseCurrency": "Devise de référence",
     "timezone": "Fuseau horaire du groupe",
     "timezoneHelp": "Sert à déterminer quand les dépenses récurrentes sont dues.",
+    "timezoneDetected": "Détecté depuis votre appareil. Sert à déterminer quand les dépenses récurrentes sont dues.",
     "submit": "Créer le groupe",
     "created": "Groupe créé",
     "failed": "Le groupe n'a pas pu être créé."

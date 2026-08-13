@@ -28,6 +28,9 @@ export function GroupSettingsForm({
   const t = useTranslations("groupSettings");
   const tCommon = useTranslations("common");
   const [pending, setPending] = useState(false);
+  // The group already has a zone, and it is nobody's device that decides it —
+  // no detection here, unlike group creation.
+  const [zone, setZone] = useState(timezone);
 
   const onSubmit = async (formData: FormData) => {
     setPending(true);
@@ -81,7 +84,8 @@ export function GroupSettingsForm({
             <TimezoneSelect
               id="group-timezone"
               name="timezone"
-              defaultValue={timezone}
+              value={zone}
+              onValueChange={setZone}
             />
             <p className="text-xs text-muted-foreground">{t("timezoneHelp")}</p>
           </div>

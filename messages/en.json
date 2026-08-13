@@ -52,6 +52,11 @@
     "commonCurrencies": "Common",
     "allCurrencies": "All currencies"
   },
+  "timezoneSelect": {
+    "search": "Search timezones",
+    "list": "Timezones",
+    "empty": "No timezone matches that."
+  },
   "auth": {
     "signIn": {
       "title": "Welcome back",
@@ -513,6 +518,7 @@
     "baseCurrency": "Base currency",
     "timezone": "Group timezone",
     "timezoneHelp": "Used to decide when recurring expenses are due.",
+    "timezoneDetected": "Detected from your device. Used to decide when recurring expenses are due.",
     "submit": "Create group",
     "created": "Group created",
     "failed": "The group could not be created."
