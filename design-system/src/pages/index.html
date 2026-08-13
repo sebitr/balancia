@@ -1,0 +1,104 @@
+<!-- @dsCard group="Overview" name="Balancia" subtitle="What the system is for and the rules that hold it together" -->
+<div class="page">
+  <header class="page-head">
+    <span class="wordmark">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path
+          d="M16 5v22"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+        />
+        <path
+          d="M6 11h20"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+        />
+        <circle cx="7" cy="18" r="4.5" fill="currentColor" opacity="0.9" />
+        <circle cx="25" cy="18" r="4.5" fill="currentColor" opacity="0.55" />
+      </svg>
+      <span class="wordmark-text">Balancia</span>
+    </span>
+    <h1>Design system</h1>
+    <p class="lede">
+      Balancia is self-hosted shared expense tracking. People open it to answer
+      one question —
+      <em>where do I stand?</em> — so the system optimises for a fast,
+      unambiguous, trustworthy answer on a phone, and for nothing else.
+    </p>
+  </header>
+
+  <section>
+    <h2>Principles</h2>
+    <div class="grid-2">
+      <div class="spec">
+        <div class="spec-label">01 — Money is never ambiguous</div>
+        <p>
+          Every balance carries three redundant cues: a word (<strong
+            >owes</strong
+          >
+          / <strong>gets back</strong> / <strong>settled up</strong>), an icon,
+          and a colour. The meaning survives greyscale, colour blindness, and a
+          screen reader. Colour alone is never the signal.
+        </p>
+      </div>
+      <div class="spec">
+        <div class="spec-label">02 — Calm, not financial</div>
+        <p>
+          A teal primary with warm sand backgrounds. Friendly and trustworthy
+          without reading as banking software — this is a trip with friends, not
+          a ledger review.
+        </p>
+      </div>
+      <div class="spec">
+        <div class="spec-label">03 — Phone first</div>
+        <p>
+          Content caps at <code>max-w-3xl</code>. Group pages get a fixed bottom
+          bar with <strong>Add</strong> centred and filled, because recording an
+          expense is the thing people came to do. Safe-area padding is not
+          optional.
+        </p>
+      </div>
+      <div class="spec">
+        <div class="spec-label">04 — Digits line up</div>
+        <p>
+          Tabular lining figures are on globally via
+          <code>font-feature-settings</code>. Amounts are formatted through
+          <code>Intl</code> from minor units as strings — never JavaScript
+          numbers.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Contents</h2>
+    <dl class="dl">
+      <dt>Foundations</dt>
+      <dd>
+        Colour and balance semantics, typography, spacing &amp; radius, motion.
+      </dd>
+      <dt>Components</dt>
+      <dd>
+        The shadcn/ui primitives as Balancia has them tuned — button, badge,
+        card, forms, lists, navigation, feedback.
+      </dd>
+      <dt>Patterns</dt>
+      <dd>
+        The domain compositions that only exist here — money display, the
+        expense timeline, the balance summary, settle up.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Where this lives</h2>
+    <p class="note">
+      Source of truth is the app: <code>src/app/globals.css</code> for tokens,
+      <code>src/components/ui/*</code> for primitives. These pages are
+      transcriptions built by <code>design-system/build.mjs</code>. Change the
+      app and rebuild — don't let the two drift.
+    </p>
+  </section>
+</div>

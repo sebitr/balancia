@@ -1,0 +1,250 @@
+<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header and the group bottom bar" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>Navigation</h1>
+    <p class="lede">
+      Two pieces only: a sticky header that carries identity, and a bottom bar
+      inside a group. There is no sidebar and no hamburger — a group has five
+      destinations and they all fit on a thumb's reach.
+    </p>
+  </header>
+
+  <section>
+    <h2>App shell</h2>
+    <div class="frame">
+      <div class="app-header">
+        <span class="wordmark">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path
+              d="M16 5v22"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+            <path
+              d="M6 11h20"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+            <circle cx="7" cy="18" r="4.5" fill="currentColor" opacity="0.9" />
+            <circle
+              cx="25"
+              cy="18"
+              r="4.5"
+              fill="currentColor"
+              opacity="0.55"
+            />
+          </svg>
+          <span class="wordmark-text">Balancia</span>
+        </span>
+        <button class="btn btn--ghost btn--sm" aria-haspopup="menu">
+          <span class="avatar">SE</span>
+          Séb
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+      <div style="padding: 1.5rem 1rem; color: var(--muted-foreground)">
+        Content column — <code>max-w-3xl</code>, 1rem gutters, 1.5rem top
+        padding.
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>position</dt>
+      <dd><code>sticky top-0 z-30</code> with a bottom border.</dd>
+      <dt>background</dt>
+      <dd>
+        <code>background/95</code>, dropping to <code>/80</code> where
+        backdrop-filter is supported.
+      </dd>
+      <dt>wordmark</dt>
+      <dd>
+        Links to the dashboard. For a guest it is inert —
+        <code>aria-disabled</code>, removed from the tab order.
+      </dd>
+      <dt>user menu</dt>
+      <dd>The only other control. Everything else belongs to the page.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Group bottom bar</h2>
+    <div class="frame frame--phone">
+      <div class="app-header" style="padding: 0.625rem 0.875rem">
+        <span style="font-weight: 600; letter-spacing: -0.01em"
+          >Lisbon, March</span
+        >
+        <span class="avatar-stack">
+          <span class="avatar">AM</span><span class="avatar">RS</span
+          ><span class="avatar">JT</span>
+        </span>
+      </div>
+      <div
+        style="
+          padding: 1rem 0.875rem 1.5rem;
+          color: var(--muted-foreground);
+          font-size: 0.8125rem;
+        "
+      >
+        Page content. Main gets <code>pb-28</code> so the last row clears the
+        bar.
+      </div>
+      <nav class="bottom-nav" aria-label="Group sections">
+        <ul>
+          <li>
+            <a href="#" aria-current="page">
+              <span class="nav-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+                  <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+                  <path d="M7 21h10" />
+                  <path d="M12 3v18" />
+                  <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
+                </svg>
+              </span>
+              Overview
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="nav-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+                  />
+                  <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                  <path d="M12 17.5v-11" />
+                </svg>
+              </span>
+              Expenses
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="nav-icon nav-icon--primary">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </span>
+              Add
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="nav-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </span>
+              People
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="nav-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                  />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
+              Settings
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>Add</dt>
+      <dd>
+        Centred and filled with <code>--primary</code>. It is the reason people
+        opened the app, so it is the only nav item that looks like an action.
+      </dd>
+      <dt>active</dt>
+      <dd>
+        <code>aria-current="page"</code> → primary text plus an accent circle
+        behind the icon. Two cues, not just colour.
+      </dd>
+      <dt>safe area</dt>
+      <dd>
+        <code>pb-[env(safe-area-inset-bottom)]</code>, so the bar clears the
+        home indicator.
+      </dd>
+      <dt>from sm up</dt>
+      <dd>
+        The bar leaves the fixed position and becomes a tab strip in the page
+        flow.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Keep the bar to five items with one-word labels. Icons alone would be
+          guesswork — "Overview" and "Expenses" are not visually distinct
+          concepts.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Add a sixth destination. Push it into Settings, or into a menu on the
+          page that owns it.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

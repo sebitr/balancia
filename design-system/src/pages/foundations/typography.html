@@ -1,0 +1,182 @@
+<!-- @dsCard group="Foundations" name="Typography" subtitle="Geist, a short heading scale, and tabular figures" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Foundations</div>
+    <h1>Typography</h1>
+    <p class="lede">
+      One family doing all the work. Geist Sans for everything, Geist Mono for
+      identifiers and tokens. <code>--font-heading</code> is aliased to the sans
+      stack today — it exists so a display face can be swapped in later without
+      touching a component.
+    </p>
+  </header>
+
+  <section>
+    <h2>Families</h2>
+    <div class="spec">
+      <div class="stack">
+        <div>
+          <div class="swatch-val">--font-sans · Geist Sans</div>
+          <div
+            style="font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em"
+          >
+            Dinner at Trattoria Il Ponte
+          </div>
+        </div>
+        <div>
+          <div class="swatch-val">--font-mono · Geist Mono</div>
+          <div class="mono" style="font-size: 1rem">
+            grp_8Kd2mQ · EUR · 4250
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      These previews fall back to the system sans where Geist isn't installed.
+      In the app both families load through <code>next/font</code>, so metrics
+      are stable and there is no layout shift.
+    </p>
+  </section>
+
+  <section>
+    <h2>Scale</h2>
+    <div class="spec">
+      <div class="stack" style="gap: 1rem">
+        <div>
+          <div
+            style="
+              font-size: 1.5rem;
+              font-weight: 600;
+              letter-spacing: -0.02em;
+              line-height: 1.2;
+            "
+          >
+            Page title
+          </div>
+          <div class="swatch-val">
+            text-2xl / font-semibold / tracking-tight — one per page, always an
+            h1
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 1.25rem; font-weight: 600">€248.00</div>
+          <div class="swatch-val">
+            text-xl / font-semibold — the large balance, and nothing else
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 1rem; font-weight: 500; line-height: 1.375">
+            Card title
+          </div>
+          <div class="swatch-val">text-base / font-medium / leading-snug</div>
+        </div>
+        <div>
+          <div style="font-size: 0.875rem">
+            Body and every control label. The default size.
+          </div>
+          <div class="swatch-val">text-sm — the workhorse</div>
+        </div>
+        <div>
+          <div
+            style="
+              font-size: 0.875rem;
+              font-weight: 500;
+              color: var(--muted-foreground);
+            "
+          >
+            Section heading
+          </div>
+          <div class="swatch-val">
+            text-sm / font-medium / muted — paired with a 16px lucide icon
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--muted-foreground)">
+            2026-08-13 · Amélie, Ravi
+          </div>
+          <div class="swatch-val">text-xs / muted — row metadata</div>
+        </div>
+        <div>
+          <div
+            style="
+              font-size: 0.75rem;
+              font-weight: 500;
+              letter-spacing: 0.05em;
+              text-transform: uppercase;
+              color: var(--muted-foreground);
+            "
+          >
+            Should receive
+          </div>
+          <div class="swatch-val">
+            text-xs / font-medium / uppercase / tracking-wide — sub-group labels
+            inside a card
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Numerals</h2>
+    <div class="spec">
+      <p>
+        Tabular lining figures are enabled globally on <code>html</code>, and
+        <code>.tabular-nums</code> restates it on amount columns. Digits must
+        align down a list or the eye can't scan it.
+      </p>
+      <div class="row" style="gap: 2rem; align-items: flex-start">
+        <div>
+          <div class="swatch-val" style="margin-bottom: 0.35rem">tabular</div>
+          <div class="tabular-nums" style="text-align: right; line-height: 1.7">
+            <div>€1,411.00</div>
+            <div>€94.25</div>
+            <div>€7.10</div>
+          </div>
+        </div>
+        <div>
+          <div class="swatch-val" style="margin-bottom: 0.35rem">
+            proportional — do not
+          </div>
+          <div
+            style="
+              text-align: right;
+              line-height: 1.7;
+              font-variant-numeric: proportional-nums;
+            "
+          >
+            <div>€1,411.00</div>
+            <div>€94.25</div>
+            <div>€7.10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Amounts arrive from Server Components as decimal strings of minor units
+      and are formatted through <code>Intl.NumberFormat</code>. Never a
+      JavaScript number, never a hand-written currency symbol — the separator,
+      symbol position, and decimal count are all locale decisions.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Use weight and colour to build hierarchy. Two weights (500, 600) and
+          two text colours cover almost every screen.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Add a size between the steps above, or set body copy below 14px. The
+          phone is the primary target.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

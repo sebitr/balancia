@@ -1,0 +1,183 @@
+<!-- @dsCard group="Components" name="Card" subtitle="Ringed surface with header, action, content, footer" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Components</div>
+    <h1>Card</h1>
+    <p class="lede">
+      A ringed surface for one coherent block of information. Padding comes from
+      a single
+      <code>--card-spacing</code> variable, so <code>size="sm"</code> tightens
+      header, content, and footer together rather than each being overridden by
+      hand.
+    </p>
+  </header>
+
+  <section>
+    <h2>Anatomy</h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">EUR</div>
+          <div class="card-desc">Four people, all settled since Tuesday</div>
+          <div class="card-action">
+            <button class="btn btn--ghost btn--icon-sm" aria-label="Options">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="card-content">
+          <span class="balance balance--neutral">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+            </svg>
+            Settled up
+          </span>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn--outline btn--sm">View ledger</button>
+        </div>
+      </div>
+      <div class="spec">
+        <dl class="dl">
+          <dt>Card</dt>
+          <dd>
+            rounded-xl, <code>ring-1 ring-foreground/10</code>, no shadow.
+          </dd>
+          <dt>CardHeader</dt>
+          <dd>
+            Grid; grows a second column automatically when a CardAction is
+            present.
+          </dd>
+          <dt>CardTitle</dt>
+          <dd>text-base font-medium — a label, not a page heading.</dd>
+          <dt>CardDescription</dt>
+          <dd>text-sm muted, directly under the title.</dd>
+          <dt>CardAction</dt>
+          <dd>Top-right. One control, usually icon-only.</dd>
+          <dt>CardContent</dt>
+          <dd>Horizontal padding only; the card owns the vertical rhythm.</dd>
+          <dt>CardFooter</dt>
+          <dd>Muted band with a top border, flush to the bottom edge.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sizes</h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Default — 1rem</div>
+        </div>
+        <div class="card-content">
+          <span class="note"
+            >Standing surfaces: a currency's balances, group settings.</span
+          >
+        </div>
+      </div>
+      <div class="card card--sm">
+        <div class="card-header">
+          <div class="card-title">Small — 0.75rem</div>
+        </div>
+        <div class="card-content">
+          <span class="note"
+            >Grids of small facts, where several cards sit side by side.</span
+          >
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>In context</h2>
+    <p class="note">
+      Your own position, first on the group overview — one card per currency.
+    </p>
+    <div class="grid-2">
+      <div class="card">
+        <div
+          class="card-content"
+          style="display: flex; flex-direction: column; gap: 0.25rem"
+        >
+          <p class="card-desc" style="margin: 0">You, in EUR</p>
+          <span class="balance balance--positive balance--large">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M17 7 7 17" />
+              <path d="M17 17H7V7" />
+            </svg>
+            <span class="tabular-nums">€248.00</span>
+            <span class="balance-label">gets back</span>
+          </span>
+        </div>
+      </div>
+      <div class="card">
+        <div
+          class="card-content"
+          style="display: flex; flex-direction: column; gap: 0.25rem"
+        >
+          <p class="card-desc" style="margin: 0">You, in CHF</p>
+          <span class="balance balance--negative balance--large">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M7 17 17 7" />
+              <path d="M7 7h10v10" />
+            </svg>
+            <span class="tabular-nums">CHF 31.20</span>
+            <span class="balance-label">owes</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Give a card one job. If it needs two headings inside it, it is two
+          cards — or it is a list.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Wrap a plain list of expenses in a card. Use
+          <code>divide-y rounded-lg border</code>: the ring plus the row borders
+          is one hairline too many.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

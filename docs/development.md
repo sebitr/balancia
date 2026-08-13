@@ -1,13 +1,60 @@
 # Development
 
-## Prerequisites
+Two ways to run Balancia while working on it. [In Docker](#setup-in-docker)
+needs nothing on your machine but a container runtime. [On the host](#setup-on-the-host)
+is faster and integrates better with editors and debuggers. Both end up at
+<http://localhost:3000>, and they share nothing, so you can switch freely.
+
+## Setup: in Docker
+
+```bash
+docker compose -f compose.dev.yaml up --build     # or: pnpm dev:docker
+```
+
+That builds the development image and starts PostgreSQL 18, the migrations, the
+Next.js dev server with hot reload, the background worker in watch mode, and
+Mailpit. First run takes a few minutes — mostly `pnpm install` inside the
+container; later starts are seconds.
+
+| Where                                                   | What                                                |
+| ------------------------------------------------------- | --------------------------------------------------- |
+| <http://localhost:3000>                                 | The app                                             |
+| <http://localhost:8025>                                 | Mailpit — every email the app sends, caught locally |
+| `postgres://balancia:balancia@127.0.0.1:55432/balancia` | PostgreSQL, published for host tooling              |
+
+Your working tree is mounted into the containers, so an edit on the host is
+what the dev server compiles. `node_modules` and `.next` deliberately are _not_
+shared with the host: the host's are built for macOS, the containers need Linux
+binaries. When the lockfile changes, the container reinstalls on next start —
+no rebuild needed.
+
+Seed data, a shell inside the app environment, and shutdown:
+
+```bash
+docker compose -f compose.dev.yaml run --rm seed      # or: pnpm dev:docker:seed
+docker compose -f compose.dev.yaml run --rm shell     # pnpm, drizzle-kit, vitest
+docker compose -f compose.dev.yaml down               # add -v to drop the database
+```
+
+Because PostgreSQL is published on 55432, host-side `pnpm db:generate`,
+`pnpm test:integration` and `psql` all work against the containerised database
+with the `DATABASE_URL` already in `.env.local`.
+
+Overridable ports: `DEV_APP_PORT`, `DEV_DB_PORT`, `DEV_MAILPIT_UI_PORT`,
+`DEV_MAILPIT_SMTP_PORT`. Log level: `DEV_LOG_LEVEL`.
+
+`compose.dev.yaml` is for development only — fixed public secrets, no
+hardening, source mounted live. Production self-hosting is `compose.yaml`, a
+different image built from `Dockerfile`.
+
+## Setup: on the host
+
+### Prerequisites
 
 - **Node.js 24 LTS**
 - **pnpm 11** — the version is pinned in `packageManager`; run `corepack enable`
   and it will use the right one
 - **PostgreSQL 18** — locally, or in Docker
-
-## Setup
 
 ```bash
 pnpm install

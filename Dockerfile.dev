@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1.7
+
+# Balancia development image.
+#
+# Not a smaller version of the production image — a different shape. It keeps
+# dev dependencies and the toolchain, installs nothing from the source tree
+# (the tree is bind-mounted at runtime so edits are picked up immediately) and
+# runs `next dev` / `tsx watch` rather than a compiled bundle.
+#
+# The production image lives in ./Dockerfile and is what self-hosters run.
+
+ARG NODE_VERSION=24-alpine
+
+FROM node:${NODE_VERSION}
+WORKDIR /app
+
+# libc6-compat: glibc-linked prebuilt binaries on musl.
+# curl: container healthchecks. git: some tools shell out to it.
+RUN apk add --no-cache libc6-compat curl git tini
+
+RUN corepack enable
+
+ENV NODE_ENV=development \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH \
+    # Bind mounts over virtiofs/9p do not always deliver inotify events to the
+    # guest. Polling is slower but is the difference between hot reload working
+    # and not working at all.
+    WATCHPACK_POLLING=true \
+    CHOKIDAR_USEPOLLING=true \
+    CHOKIDAR_INTERVAL=400
+
+# Warm the image with the dependency set from the lockfile. At runtime the
+# entrypoint re-checks it against the mounted lockfile and reinstalls only if
+# they have diverged, so a dependency change does not need an image rebuild.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm-dev,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile
+
+COPY scripts/docker-dev-entrypoint.sh /usr/local/bin/dev-entrypoint
+RUN chmod +x /usr/local/bin/dev-entrypoint
+
+# Runs as root on purpose: the bind-mounted tree is owned by the host user,
+# whose UID differs per machine, and dev containers write into it (Next's
+# generated types, drizzle-kit output). Production runs unprivileged.
+
+EXPOSE 3000
+
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/dev-entrypoint"]
+CMD ["pnpm", "exec", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000"]

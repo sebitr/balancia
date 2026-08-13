@@ -1,0 +1,281 @@
+<!-- @dsCard group="Foundations" name="Colour" subtitle="Teal + sand tokens, and the three balance tones" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Foundations</div>
+    <h1>Colour</h1>
+    <p class="lede">
+      Every colour is an OKLCH token defined in
+      <code>src/app/globals.css</code> and consumed through a semantic name —
+      never a raw value in a component. Light and dark are two sets of the same
+      names; toggle the theme to check both.
+    </p>
+  </header>
+
+  <section>
+    <h2>Balance semantics</h2>
+    <p>
+      Three tokens carry the only meaning that actually matters in this product.
+      They exist so a balance is legible before anyone reads a number.
+    </p>
+    <div class="swatches">
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="background: var(--positive); color: var(--positive-foreground)"
+        >
+          gets back
+        </div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--positive</div>
+          <div class="swatch-val">money owed to you</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="background: var(--negative); color: var(--negative-foreground)"
+        >
+          owes
+        </div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--negative</div>
+          <div class="swatch-val">money you owe</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="background: var(--neutral-balance); color: var(--background)"
+        >
+          settled up
+        </div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--neutral-balance</div>
+          <div class="swatch-val">zero — phrased, not "0.00"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="do-dont" style="margin-top: 1rem">
+      <div class="do">
+        <strong>Do</strong>
+        <span class="balance balance--negative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M7 17 17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
+          <span class="tabular-nums">€42.50</span>
+          <span class="balance-label">owes</span>
+        </span>
+        <p class="note" style="margin-top: 0.5rem">
+          Word, icon, and colour together.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <span
+          style="color: var(--negative); font-weight: 500"
+          class="tabular-nums"
+          >-€42.50</span
+        >
+        <p class="note" style="margin-top: 0.5rem">
+          A red minus sign is invisible to a screen reader and to roughly one in
+          twelve men.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Surfaces</h2>
+    <div class="swatches">
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--background);
+            box-shadow: inset 0 0 0 1px var(--border);
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--background</div>
+          <div class="swatch-val">warm off-white page</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--card);
+            box-shadow: inset 0 0 0 1px var(--border);
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--card</div>
+          <div class="swatch-val">pure white, lifts off page</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background: var(--muted)"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--muted</div>
+          <div class="swatch-val">hover, total chips</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background: var(--secondary)"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--secondary</div>
+          <div class="swatch-val">quiet fills</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="background: var(--accent); color: var(--accent-foreground)"
+        >
+          Aa
+        </div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--accent</div>
+          <div class="swatch-val">active nav, empty-state icon</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="
+            background: var(--sidebar);
+            box-shadow: inset 0 0 0 1px var(--border);
+          "
+        ></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--sidebar</div>
+          <div class="swatch-val">reserved</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Brand &amp; intent</h2>
+    <div class="swatches">
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="background: var(--primary); color: var(--primary-foreground)"
+        >
+          Aa
+        </div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--primary</div>
+          <div class="swatch-val">calm teal — one per screen</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div
+          class="swatch-chip"
+          style="background: var(--destructive); color: var(--background)"
+        >
+          Aa
+        </div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--destructive</div>
+          <div class="swatch-val">used as a 10% tint, not a fill</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background: var(--ring)"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--ring</div>
+          <div class="swatch-val">focus, at 50% over 3px</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background: var(--border)"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">--border</div>
+          <div class="swatch-val">hairlines and dividers</div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      <code>--destructive</code> never fills a button. Delete actions use a 10%
+      tint with destructive-coloured text so they read as serious without
+      shouting louder than the primary action on the same screen.
+    </p>
+  </section>
+
+  <section>
+    <h2>Text on surfaces</h2>
+    <div class="spec">
+      <div class="stack">
+        <div>
+          <span style="color: var(--foreground)">--foreground</span> &mdash;
+          body copy, amounts, titles
+        </div>
+        <div>
+          <span style="color: var(--muted-foreground)">--muted-foreground</span>
+          &mdash; section headings, metadata, descriptions
+        </div>
+        <div>
+          <span style="color: var(--primary)">--primary</span> &mdash; links and
+          the active nav item
+        </div>
+        <div>
+          <span style="color: var(--destructive)">--destructive</span> &mdash;
+          field errors and delete affordances
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      All pairings meet WCAG 2.2 AA on their intended background in both themes.
+      Re-check any new pairing before shipping it — the OKLCH lightness values
+      were chosen for this, not by eye.
+    </p>
+  </section>
+
+  <section>
+    <h2>Charts</h2>
+    <div class="row">
+      <span
+        class="badge"
+        style="background: var(--chart-1); color: var(--primary-foreground)"
+        >chart-1</span
+      >
+      <span
+        class="badge"
+        style="background: var(--chart-2); color: oklch(0.2 0.03 210)"
+        >chart-2</span
+      >
+      <span
+        class="badge"
+        style="background: var(--chart-3); color: var(--primary-foreground)"
+        >chart-3</span
+      >
+      <span
+        class="badge"
+        style="background: var(--chart-4); color: var(--primary-foreground)"
+        >chart-4</span
+      >
+      <span
+        class="badge"
+        style="background: var(--chart-5); color: var(--primary-foreground)"
+        >chart-5</span
+      >
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Categorical only, ordered by first use. Chart colours are not balance
+      colours: never reuse
+      <code>--chart-3</code> to mean "positive" or <code>--chart-5</code> to
+      mean "owes".
+    </p>
+  </section>
+</div>

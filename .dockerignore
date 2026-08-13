@@ -29,5 +29,7 @@ tests
 !README.md
 
 Dockerfile
+Dockerfile.dev
 compose.yaml
+compose.dev.yaml
 .dockerignore
