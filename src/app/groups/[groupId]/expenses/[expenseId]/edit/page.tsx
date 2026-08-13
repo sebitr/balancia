@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/expense-form";
@@ -23,6 +24,9 @@ export default async function EditExpensePage({
     notFound();
   }
 
+  const t = await getTranslations("expensePages");
+  const tCommon = await getTranslations("common");
+
   // The stored split input is what lets the form reopen with the original
   // method and values rather than a normalized "exact" split.
   const storedEntries =
@@ -38,11 +42,11 @@ export default async function EditExpensePage({
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/groups/${groupId}/expenses/${expenseId}`}>
             <ArrowLeft aria-hidden="true" />
-            Back
+            {tCommon("back")}
           </Link>
         </Button>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Edit expense
+          {t("editTitle")}
         </h1>
       </div>
 

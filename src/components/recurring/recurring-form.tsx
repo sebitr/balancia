@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,15 +18,25 @@ import {
   previewSplit,
 } from "@/components/expenses/expense-form-logic";
 
-const WEEKDAYS = [
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
-  { value: 7, label: "Sunday" },
-];
+/**
+ * ISO weekday numbers (1 = Monday) paired with the locale's own name for the
+ * day. Taken from `Intl` rather than the catalogue: weekday names are data
+ * every runtime already ships, and translating them by hand would be a list to
+ * keep in step for no benefit. 2024-01-01 was a Monday, so the offsets line up
+ * with the ISO numbering the scheduler stores.
+ */
+function useWeekdayOptions(locale: string) {
+  return useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      timeZone: "UTC",
+    });
+    return Array.from({ length: 7 }, (_, index) => ({
+      value: index + 1,
+      label: formatter.format(new Date(Date.UTC(2024, 0, 1 + index))),
+    }));
+  }, [locale]);
+}
 
 /**
  * Creates a recurring expense template.
@@ -49,6 +60,10 @@ export function RecurringForm({
   defaultCurrency: string;
 }) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("recurring");
+  const tSplit = useTranslations("expenses.split");
+  const weekdays = useWeekdayOptions(locale);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState(defaultCurrency);
@@ -88,8 +103,9 @@ export function RecurringForm({
         method: "equal",
         participantIds: selectedIds,
         values: {},
+        locale,
       }),
-    [totalMinor, currency, selectedIds],
+    [totalMinor, currency, selectedIds, locale],
   );
 
   const onSubmit = async (event: React.FormEvent) => {
@@ -97,15 +113,17 @@ export function RecurringForm({
     setError(null);
 
     if (!totalMinor.ok) {
-      setError(totalMinor.error);
+      setError(tSplit(totalMinor.error.key, totalMinor.error.params));
       return;
     }
     if (selectedIds.length === 0) {
-      setError("Choose who this is split between.");
+      setError(t("errors.chooseSplit"));
       return;
     }
     if (needsRate && exchangeRate.trim() === "") {
-      setError(`Enter the exchange rate: 1 ${currency} in ${baseCurrency}.`);
+      setError(
+        t("errors.enterRate", { from: currency, to: baseCurrency ?? "" }),
+      );
       return;
     }
 
@@ -130,10 +148,10 @@ export function RecurringForm({
       });
 
       if (!result.ok) {
-        setError(result.error ?? "The recurring expense could not be created.");
+        setError(result.error ?? t("errors.saveFailed"));
         return;
       }
-      toast.success("Recurring expense set up");
+      toast.success(t("created"));
       setDescription("");
       setAmount("");
       router.refresh();
@@ -148,7 +166,7 @@ export function RecurringForm({
       className="space-y-4 rounded-lg border p-4"
       noValidate
     >
-      <h2 className="font-medium">Set up a recurring expense</h2>
+      <h2 className="font-medium">{t("setUpTitle")}</h2>
 
       {error && (
         <Alert variant="destructive">
@@ -157,20 +175,20 @@ export function RecurringForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="recurring-description">Description</Label>
+        <Label htmlFor="recurring-description">{t("description")}</Label>
         <Input
           id="recurring-description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           required
           maxLength={200}
-          placeholder="Rent"
+          placeholder={t("descriptionPlaceholder")}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <div className="space-y-2">
-          <Label htmlFor="recurring-amount">Amount</Label>
+          <Label htmlFor="recurring-amount">{t("amount")}</Label>
           <Input
             id="recurring-amount"
             inputMode="decimal"
@@ -181,7 +199,7 @@ export function RecurringForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="recurring-currency">Currency</Label>
+          <Label htmlFor="recurring-currency">{t("currency")}</Label>
           <CurrencySelect
             id="recurring-currency"
             value={currency}
@@ -199,13 +217,13 @@ export function RecurringForm({
           on={startDate}
           value={exchangeRate}
           onChange={setExchangeRate}
-          hint="Reused for each generated occurrence."
+          hint={t("rateHint")}
         />
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="recurring-frequency">Repeats</Label>
+          <Label htmlFor="recurring-frequency">{t("repeats")}</Label>
           <select
             id="recurring-frequency"
             value={frequency}
@@ -214,13 +232,13 @@ export function RecurringForm({
             }
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
+            <option value="weekly">{t("weekly")}</option>
+            <option value="monthly">{t("monthly")}</option>
+            <option value="yearly">{t("yearly")}</option>
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="recurring-interval">Every</Label>
+          <Label htmlFor="recurring-interval">{t("every")}</Label>
           <Input
             id="recurring-interval"
             type="number"
@@ -234,14 +252,14 @@ export function RecurringForm({
 
       {frequency === "weekly" ? (
         <div className="space-y-2">
-          <Label htmlFor="recurring-weekday">On</Label>
+          <Label htmlFor="recurring-weekday">{t("on")}</Label>
           <select
             id="recurring-weekday"
             value={weekday}
             onChange={(event) => setWeekday(event.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            {WEEKDAYS.map((day) => (
+            {weekdays.map((day) => (
               <option key={day.value} value={day.value}>
                 {day.label}
               </option>
@@ -251,7 +269,7 @@ export function RecurringForm({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="recurring-day">Day of month</Label>
+            <Label htmlFor="recurring-day">{t("dayOfMonth")}</Label>
             <Input
               id="recurring-day"
               type="number"
@@ -260,13 +278,11 @@ export function RecurringForm({
               value={dayOfMonth}
               onChange={(event) => setDayOfMonth(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Short months use their last day.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("shortMonths")}</p>
           </div>
           {frequency === "yearly" && (
             <div className="space-y-2">
-              <Label htmlFor="recurring-month">Month</Label>
+              <Label htmlFor="recurring-month">{t("month")}</Label>
               <Input
                 id="recurring-month"
                 type="number"
@@ -281,7 +297,7 @@ export function RecurringForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="recurring-start">Starting</Label>
+        <Label htmlFor="recurring-start">{t("starting")}</Label>
         <Input
           id="recurring-start"
           type="date"
@@ -292,7 +308,7 @@ export function RecurringForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="recurring-payer">Paid by</Label>
+        <Label htmlFor="recurring-payer">{t("paidBy")}</Label>
         <select
           id="recurring-payer"
           value={payerId}
@@ -308,7 +324,9 @@ export function RecurringForm({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Split equally between</legend>
+        <legend className="text-sm font-medium">
+          {t("splitEquallyBetween")}
+        </legend>
         <ul className="divide-y rounded-lg border">
           {participants.map((participant) => {
             const checked = selectedIds.includes(participant.id);
@@ -353,7 +371,7 @@ export function RecurringForm({
         ) : (
           <Plus aria-hidden="true" />
         )}
-        Create recurring expense
+        {t("submit")}
       </Button>
     </form>
   );

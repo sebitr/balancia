@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { addParticipantAction } from "@/modules/groups/actions";
 
 export function AddParticipantForm({ groupId }: { groupId: string }) {
   const router = useRouter();
+  const t = useTranslations("members");
+  const tCommon = useTranslations("common");
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, setPending] = useState(false);
 
@@ -19,10 +22,10 @@ export function AddParticipantForm({ groupId }: { groupId: string }) {
     try {
       const result = await addParticipantAction(groupId, formData);
       if (!result.ok) {
-        toast.error(result.error ?? "That person could not be added.");
+        toast.error(result.error ?? t("addFailed"));
         return;
       }
-      toast.success("Added to the group");
+      toast.success(t("added"));
       formRef.current?.reset();
       router.refresh();
     } finally {
@@ -36,17 +39,17 @@ export function AddParticipantForm({ groupId }: { groupId: string }) {
       action={onSubmit}
       className="space-y-3 rounded-lg border p-4"
     >
-      <h2 className="font-medium">Add someone</h2>
+      <h2 className="font-medium">{t("addTitle")}</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="displayName">Name</Label>
+          <Label htmlFor="displayName">{t("name")}</Label>
           <Input id="displayName" name="displayName" required maxLength={120} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="participant-email">
-            Email{" "}
+            {t("email")}{" "}
             <span className="font-normal text-muted-foreground">
-              (optional)
+              ({tCommon("optional")})
             </span>
           </Label>
           <Input id="participant-email" name="email" type="email" />
@@ -58,12 +61,9 @@ export function AddParticipantForm({ groupId }: { groupId: string }) {
         ) : (
           <UserPlus aria-hidden="true" />
         )}
-        Add person
+        {t("addPerson")}
       </Button>
-      <p className="text-xs text-muted-foreground">
-        People added this way have no account. You can give them a guest link so
-        they can take part.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("addNote")}</p>
     </form>
   );
 }

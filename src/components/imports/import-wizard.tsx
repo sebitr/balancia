@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   ChevronRight,
@@ -32,6 +33,9 @@ const CREATE_PARTICIPANT = "__create__";
  */
 export function ImportWizard({ groupId }: { groupId: string }) {
   const router = useRouter();
+  const t = useTranslations("importWizard");
+  /** Bolds the figure inside a count message. */
+  const bold = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -45,7 +49,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
     try {
       const result = await stageImportAction(groupId, formData);
       if (!result.ok || !result.data) {
-        setError(result.error ?? "That file could not be read.");
+        setError(result.error ?? t("readFailed"));
         return;
       }
       setPreview(result.data);
@@ -72,11 +76,11 @@ export function ImportWizard({ groupId }: { groupId: string }) {
         mapping,
       );
       if (!result.ok || !result.data) {
-        setError(result.error ?? "The import could not be completed.");
+        setError(result.error ?? t("commitFailed"));
         return;
       }
       setReport(result.data);
-      toast.success("Import finished");
+      toast.success(t("finished"));
       router.refresh();
     } finally {
       setPending(false);
@@ -89,26 +93,24 @@ export function ImportWizard({ groupId }: { groupId: string }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CheckCircle2 aria-hidden="true" className="size-5 text-positive" />
-            Import complete
+            {t("completeTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <ul className="space-y-1">
-            <li>
-              <strong>{report.imported}</strong> imported
-            </li>
-            <li>
-              <strong>{report.skipped}</strong> skipped as already present
-            </li>
+            <li>{t.rich("imported", { b: () => bold(report.imported) })}</li>
+            <li>{t.rich("skipped", { b: () => bold(report.skipped) })}</li>
             {report.failed > 0 && (
               <li className="text-destructive">
-                <strong>{report.failed}</strong> could not be imported
+                {t.rich("failed", { b: () => bold(report.failed) })}
               </li>
             )}
             {report.participantsCreated > 0 && (
               <li>
-                <strong>{report.participantsCreated}</strong> new{" "}
-                {report.participantsCreated === 1 ? "person" : "people"} added
+                {t.rich("peopleAdded", {
+                  count: report.participantsCreated,
+                  b: () => bold(report.participantsCreated),
+                })}
               </li>
             )}
           </ul>
@@ -119,7 +121,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
               setReport(null);
             }}
           >
-            Import another file
+            {t("another")}
           </Button>
         </CardContent>
       </Card>
@@ -132,18 +134,20 @@ export function ImportWizard({ groupId }: { groupId: string }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Preview: {preview.fileName}
+              {t("previewTitle", { fileName: preview.fileName })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{preview.expenseCount} expenses</Badge>
               <Badge variant="secondary">
-                {preview.settlementCount} payments
+                {t("expenseCount", { count: preview.expenseCount })}
+              </Badge>
+              <Badge variant="secondary">
+                {t("settlementCount", { count: preview.settlementCount })}
               </Badge>
               {preview.duplicateCount > 0 && (
                 <Badge variant="outline">
-                  {preview.duplicateCount} already imported
+                  {t("duplicateCount", { count: preview.duplicateCount })}
                 </Badge>
               )}
               {preview.currencies.map((currency) => (
@@ -157,21 +161,22 @@ export function ImportWizard({ groupId }: { groupId: string }) {
               <Alert>
                 <TriangleAlert aria-hidden="true" />
                 <AlertTitle>
-                  {preview.warnings.length} row
-                  {preview.warnings.length === 1 ? "" : "s"} will be skipped
+                  {t("warningsTitle", { count: preview.warnings.length })}
                 </AlertTitle>
                 <AlertDescription>
                   <ul className="mt-2 space-y-1">
                     {preview.warnings.slice(0, 8).map((warning, index) => (
                       <li key={index} className="text-xs">
-                        {warning.rowNumber ? `Row ${warning.rowNumber}: ` : ""}
+                        {warning.rowNumber
+                          ? t("warningRow", { row: warning.rowNumber })
+                          : ""}
                         {warning.message}
                         {warning.detail && ` (${warning.detail})`}
                       </li>
                     ))}
                     {preview.warnings.length > 8 && (
                       <li className="text-xs">
-                        …and {preview.warnings.length - 8} more.
+                        {t("andMore", { count: preview.warnings.length - 8 })}
                       </li>
                     )}
                   </ul>
@@ -183,11 +188,8 @@ export function ImportWizard({ groupId }: { groupId: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Match the people</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Connect each name from the export to someone in this group, or add
-              them as a new person.
-            </p>
+            <CardTitle className="text-base">{t("matchTitle")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("matchHelp")}</p>
           </CardHeader>
           <CardContent>
             <ul className="divide-y">
@@ -210,9 +212,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
                     }
                     className="h-9 min-w-48 rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
-                    <option value={CREATE_PARTICIPANT}>
-                      Add as a new person
-                    </option>
+                    <option value={CREATE_PARTICIPANT}>{t("addAsNew")}</option>
                     {preview.groupParticipants.map((participant) => (
                       <option key={participant.id} value={participant.id}>
                         {participant.displayName}
@@ -234,14 +234,16 @@ export function ImportWizard({ groupId }: { groupId: string }) {
         <div className="flex gap-3">
           <Button onClick={() => void onCommit()} disabled={pending}>
             {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-            Import {preview.rowsTotal - preview.duplicateCount} rows
+            {t("importRows", {
+              count: preview.rowsTotal - preview.duplicateCount,
+            })}
           </Button>
           <Button
             variant="outline"
             onClick={() => setPreview(null)}
             disabled={pending}
           >
-            Choose a different file
+            {t("differentFile")}
           </Button>
         </div>
       </div>
@@ -258,7 +260,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="import-file">Splitwise export</Label>
+          <Label htmlFor="import-file">{t("fileLabel")}</Label>
           <input
             id="import-file"
             name="file"
@@ -267,10 +269,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
             required
             className="block w-full rounded-md border border-input text-sm file:mr-3 file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground"
           />
-          <p className="text-xs text-muted-foreground">
-            A group CSV export, or a JSON backup. The file is parsed on this
-            server and never sent anywhere else.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("fileHelp")}</p>
         </div>
 
         <Button type="submit" disabled={pending}>
@@ -279,7 +278,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
           ) : (
             <Upload aria-hidden="true" />
           )}
-          Read the file
+          {t("read")}
         </Button>
       </form>
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import messages from "../../messages/en.json";
 import { runAction } from "./actions";
 import { AllocationError } from "@/modules/expenses/allocation";
 import { AuthError } from "@/modules/auth/service";
@@ -7,6 +8,26 @@ import { InvalidAmountError } from "@/modules/currencies/money";
 
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+}));
+
+/**
+ * `getTranslations` needs a request context that a node unit test has no way
+ * to provide, so it is resolved against the shipped English catalogue here.
+ * The assertions below therefore still check the copy a user actually gets — a
+ * key removed from `messages/en.json` breaks this file rather than passing.
+ */
+vi.mock("next-intl/server", () => ({
+  getTranslations: async (namespace: keyof typeof messages) => {
+    const entries = messages[namespace] as Record<string, string>;
+    const translate = (key: string, params?: Record<string, string | number>) =>
+      Object.entries(params ?? {}).reduce(
+        (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+        entries[key] ?? key,
+      );
+    return Object.assign(translate, {
+      has: (key: string) => key in entries,
+    });
+  },
 }));
 
 /**
@@ -27,13 +48,29 @@ describe("runAction", () => {
 
   it.each([
     ["AllocationError", new AllocationError("Shares must sum to the total")],
-    ["AuthorizationError", new AuthorizationError("Not your group.")],
     ["InvalidAmountError", new InvalidAmountError("That is not an amount")],
   ])("surfaces a %s message verbatim", async (_name, error) => {
     const result = await runAction("test", async () => {
       throw error;
     });
     expect(result).toEqual({ ok: false, error: error.message });
+  });
+
+  /*
+   * An error carrying a stable reason code is answered from the catalogue in
+   * the reader's language, so the sentence it was constructed with is not what
+   * reaches them. Errors without a code keep falling back to their message,
+   * which is what the case above pins down.
+   */
+  it("translates a coded error rather than passing its message through", async () => {
+    const result = await runAction("test", async () => {
+      throw new AuthorizationError("Not your group.");
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: messages.serverErrors.noGroupAccess,
+    });
   });
 
   /*
@@ -56,7 +93,7 @@ describe("runAction", () => {
 
   it("flattens an unexpected error rather than leaking it", async () => {
     const result = await runAction("test", async () => {
-      throw new Error("relation \"users\" does not exist at line 3");
+      throw new Error('relation "users" does not exist at line 3');
     });
 
     expect(result.ok).toBe(false);

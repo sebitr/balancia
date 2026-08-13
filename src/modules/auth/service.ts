@@ -21,6 +21,7 @@ import {
   type CreatedSession,
 } from "./sessions";
 import { sendMail } from "./mailer";
+import { emailTranslator } from "@/i18n/emails";
 
 /**
  * Authentication service.
@@ -38,8 +39,30 @@ import { sendMail } from "./mailer";
  *    simply not offered.
  */
 
+/**
+ * Reasons authentication can refuse, as stable codes.
+ *
+ * The message stays English and developer-facing; `code` is what the action
+ * funnel translates before the text reaches a browser.
+ */
+export type AuthErrorCode =
+  | "registrationClosed"
+  | "nameRequired"
+  | "emailTaken"
+  | "emailUnverified"
+  | "mailNotConfigured"
+  | "noPassword"
+  | "wrongPassword"
+  | "invalidCredentials"
+  | "resetLinkInvalid"
+  | "confirmLinkInvalid"
+  | "signInRequired";
+
 export class AuthError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code?: AuthErrorCode,
+  ) {
     super(message);
     this.name = "AuthError";
   }
@@ -98,12 +121,20 @@ export interface RegisterResult {
 
 export async function registerUser(
   input: RegisterInput,
-  context: { userAgent?: string | null; ipAddress?: string | null } = {},
+  context: {
+    userAgent?: string | null;
+    ipAddress?: string | null;
+    /** Language the person was reading when they signed up. */
+    locale?: string | null;
+  } = {},
   options: { db?: Database } = {},
 ): Promise<RegisterResult> {
   const env = getEnv();
   if (!env.ALLOW_REGISTRATION) {
-    throw new AuthError("Registration is closed on this instance.");
+    throw new AuthError(
+      "Registration is closed on this instance.",
+      "registrationClosed",
+    );
   }
 
   const db = options.db ?? getDb();
@@ -111,7 +142,7 @@ export async function registerUser(
   const name = input.name.trim();
 
   if (name.length === 0) {
-    throw new AuthError("Enter your name.");
+    throw new AuthError("Enter your name.", "nameRequired");
   }
   assertPasswordPolicy(input.password);
 
@@ -130,6 +161,7 @@ export async function registerUser(
     if (isUniqueViolation(error)) {
       throw new AuthError(
         "That email address is already registered. Try signing in instead.",
+        "emailTaken",
       );
     }
     throw error;
@@ -143,7 +175,7 @@ export async function registerUser(
   };
 
   if (env.smtpEnabled) {
-    await sendVerificationEmail(userId, email, { db });
+    await sendVerificationEmail(userId, email, { db, locale: context.locale });
     return { user, session: null, verificationRequired: true };
   }
 
@@ -156,6 +188,8 @@ export async function registerUser(
 export interface SignInResult {
   readonly user: AuthenticatedUser;
   readonly session: CreatedSession;
+  /** The account's stored language, or null if they never chose one. */
+  readonly locale: string | null;
 }
 
 export async function signInWithPassword(
@@ -175,6 +209,7 @@ export async function signInWithPassword(
       passwordHash: users.passwordHash,
       emailVerifiedAt: users.emailVerifiedAt,
       disabledAt: users.disabledAt,
+      locale: users.locale,
     })
     .from(users)
     .where(eq(sql`lower(${users.email})`, email))
@@ -186,12 +221,13 @@ export async function signInWithPassword(
   const passwordMatches = await verifyPassword(input.password, hashToCheck);
 
   if (!row || !row.passwordHash || !passwordMatches || row.disabledAt) {
-    throw new AuthError(INVALID_CREDENTIALS);
+    throw new AuthError(INVALID_CREDENTIALS, "invalidCredentials");
   }
 
   if (env.smtpEnabled && row.emailVerifiedAt === null) {
     throw new AuthError(
       "Confirm your email address before signing in. Check your inbox for the link.",
+      "emailUnverified",
     );
   }
 
@@ -204,7 +240,60 @@ export async function signInWithPassword(
       emailVerified: row.emailVerifiedAt !== null,
     },
     session,
+    locale: row.locale,
   };
+}
+
+/**
+ * Stores the account's preferred interface language.
+ *
+ * Written alongside the cookie whenever someone uses the language switcher, so
+ * signing in elsewhere lands in the same language. The value is validated by
+ * the caller against the supported locales.
+ */
+export async function saveUserLocale(
+  userId: string,
+  locale: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(users)
+    .set({ locale, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * The currency the home screen totals every group into.
+ *
+ * Null means the account has never chosen one, which is not an error: the home
+ * screen then totals in whichever currency that user's own groups balance in
+ * most often.
+ */
+export async function getUserPreferredCurrency(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<string | null> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ preferredCurrency: users.preferredCurrency })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row?.preferredCurrency ?? null;
+}
+
+/** Stores it. `null` clears the choice and restores the derived default. */
+export async function saveUserPreferredCurrency(
+  userId: string,
+  preferredCurrency: string | null,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(users)
+    .set({ preferredCurrency, updatedAt: new Date() })
+    .where(eq(users.id, userId));
 }
 
 async function issueVerificationToken(
@@ -267,7 +356,7 @@ async function consumeVerificationToken(
 export async function sendVerificationEmail(
   userId: string,
   email: string,
-  options: { db?: Database } = {},
+  options: { db?: Database; locale?: string | null } = {},
 ): Promise<void> {
   const env = getEnv();
   if (!env.smtpEnabled) return;
@@ -279,14 +368,13 @@ export async function sendVerificationEmail(
     options,
   );
 
+  const t = emailTranslator(options.locale);
   await sendMail({
     to: email,
-    subject: "Confirm your Balancia email address",
-    text:
-      `Welcome to Balancia.\n\n` +
-      `Confirm this address to finish setting up your account:\n` +
-      `${env.appOrigin}/verify-email?token=${token}\n\n` +
-      `The link works for 24 hours.`,
+    subject: t("verifySubject"),
+    text: t("verifyBody", {
+      url: `${env.appOrigin}/verify-email?token=${token}`,
+    }),
   });
 }
 
@@ -323,6 +411,7 @@ export async function requestPasswordReset(
   if (!env.smtpEnabled) {
     throw new AuthError(
       "Password recovery needs email, which is not configured on this instance. Ask the administrator for help.",
+      "mailNotConfigured",
     );
   }
 
@@ -330,7 +419,7 @@ export async function requestPasswordReset(
   const normalized = normalizeEmail(email);
 
   const [row] = await db
-    .select({ id: users.id, email: users.email })
+    .select({ id: users.id, email: users.email, locale: users.locale })
     .from(users)
     .where(eq(sql`lower(${users.email})`, normalized))
     .limit(1);
@@ -350,14 +439,14 @@ export async function requestPasswordReset(
     { db },
   );
 
+  // The account's own language, so a reset mail reads the same as the app.
+  const t = emailTranslator(row.locale);
   await sendMail({
     to: row.email,
-    subject: "Reset your Balancia password",
-    text:
-      `Someone asked to reset the password for your Balancia account.\n\n` +
-      `Use this link within the next hour:\n` +
-      `${env.appOrigin}/reset-password?token=${token}\n\n` +
-      `If it wasn't you, you can ignore this message — nothing has changed.`,
+    subject: t("resetSubject"),
+    text: t("resetBody", {
+      url: `${env.appOrigin}/reset-password?token=${token}`,
+    }),
   });
 }
 
@@ -402,10 +491,16 @@ export async function changePassword(
     .limit(1);
 
   if (!row?.passwordHash) {
-    throw new AuthError("This account does not have a password set.");
+    throw new AuthError(
+      "This account does not have a password set.",
+      "noPassword",
+    );
   }
   if (!(await verifyPassword(currentPassword, row.passwordHash))) {
-    throw new AuthError("Your current password is not correct.");
+    throw new AuthError(
+      "Your current password is not correct.",
+      "wrongPassword",
+    );
   }
 
   await db

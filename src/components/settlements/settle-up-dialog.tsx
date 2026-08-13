@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ArrowRightLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,9 @@ export function SettleUpDialog({
   trigger?: React.ReactNode;
 }) {
   const router = useRouter();
+  const t = useTranslations("settlement");
+  const tSplit = useTranslations("expenses.split");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [fromId, setFromId] = useState(
     initialFromId ?? participants[0]?.id ?? "",
@@ -96,15 +100,17 @@ export function SettleUpDialog({
 
     const parsed = parseAmountToMinor(amount, currency);
     if (!parsed.ok) {
-      setError(parsed.error);
+      setError(tSplit(parsed.error.key, parsed.error.params));
       return;
     }
     if (fromId === toId) {
-      setError("Choose two different people.");
+      setError(t("errors.samePerson"));
       return;
     }
     if (needsRate && exchangeRate.trim() === "") {
-      setError(`Enter the exchange rate: 1 ${currency} in ${baseCurrency}.`);
+      setError(
+        t("errors.enterRate", { from: currency, to: baseCurrency ?? "" }),
+      );
       return;
     }
 
@@ -120,10 +126,10 @@ export function SettleUpDialog({
         notes,
       });
       if (!result.ok) {
-        setError(result.error ?? "The payment could not be recorded.");
+        setError(result.error ?? t("errors.saveFailed"));
         return;
       }
-      toast.success("Payment recorded");
+      toast.success(t("recorded"));
       setOpen(false);
       setAmount("");
       setNotes("");
@@ -143,17 +149,14 @@ export function SettleUpDialog({
         {trigger ?? (
           <Button size="sm">
             <ArrowRightLeft aria-hidden="true" />
-            Settle up
+            {t("settleUp")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Record a payment</DialogTitle>
-          <DialogDescription>
-            A payment moves balances between two people. It is not counted as
-            group spending.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -164,7 +167,7 @@ export function SettleUpDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="settle-from">Who paid</Label>
+            <Label htmlFor="settle-from">{t("whoPaid")}</Label>
             <select
               id="settle-from"
               value={fromId}
@@ -180,7 +183,7 @@ export function SettleUpDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="settle-to">Who received it</Label>
+            <Label htmlFor="settle-to">{t("whoReceived")}</Label>
             <select
               id="settle-to"
               value={toId}
@@ -197,7 +200,7 @@ export function SettleUpDialog({
 
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <div className="space-y-2">
-              <Label htmlFor="settle-amount">Amount</Label>
+              <Label htmlFor="settle-amount">{t("amount")}</Label>
               <Input
                 id="settle-amount"
                 inputMode="decimal"
@@ -208,7 +211,7 @@ export function SettleUpDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settle-currency">Currency</Label>
+              <Label htmlFor="settle-currency">{t("currency")}</Label>
               <CurrencySelect
                 id="settle-currency"
                 value={currency}
@@ -226,12 +229,12 @@ export function SettleUpDialog({
               on={settledOn}
               value={exchangeRate}
               onChange={setExchangeRate}
-              hint="Frozen with the repayment, like an expense's rate."
+              hint={t("rateHint")}
             />
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="settle-date">Date</Label>
+            <Label htmlFor="settle-date">{t("date")}</Label>
             <Input
               id="settle-date"
               type="date"
@@ -243,9 +246,9 @@ export function SettleUpDialog({
 
           <div className="space-y-2">
             <Label htmlFor="settle-notes">
-              Notes{" "}
+              {t("notes")}{" "}
               <span className="font-normal text-muted-foreground">
-                (optional)
+                ({tCommon("optional")})
               </span>
             </Label>
             <Textarea
@@ -262,7 +265,7 @@ export function SettleUpDialog({
               {pending && (
                 <Loader2 aria-hidden="true" className="animate-spin" />
               )}
-              Record payment
+              {t("submit")}
             </Button>
           </DialogFooter>
         </form>

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { ArrowRight, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,8 @@ export default async function BalancesPage({
     entry.balances.every((balance) => balance.amount === 0n),
   );
 
+  const t = await getTranslations("balancesPage");
+
   // Shared by the header dialog and every per-suggestion one.
   const participantOptions = participants.map((participant) => ({
     id: participant.id,
@@ -40,7 +43,7 @@ export default async function BalancesPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Balances
+          {t("title")}
         </h1>
         <SettleUpDialog
           groupId={access.groupId}
@@ -54,8 +57,8 @@ export default async function BalancesPage({
       {balances.currencies.length === 0 || everythingSettled ? (
         <EmptyState
           icon={Scale}
-          title="Everyone is settled up"
-          description="No outstanding balances in this group."
+          title={t("allSettledTitle")}
+          description={t("allSettledDescription")}
         />
       ) : (
         balances.currencies.map((entry) => {
@@ -74,7 +77,7 @@ export default async function BalancesPage({
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium">
-                    Who owes what
+                    {t("whoOwesWhat")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -112,11 +115,10 @@ export default async function BalancesPage({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium">
-                      Suggested repayments
+                      {t("suggestedRepayments")}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      The fewest transfers that clear these balances. Recording
-                      one adds a payment; nothing already recorded changes.
+                      {t("suggestedNote")}
                     </p>
                   </CardHeader>
                   <CardContent className="pt-0">

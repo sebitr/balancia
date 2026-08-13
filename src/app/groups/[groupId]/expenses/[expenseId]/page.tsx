@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { ArrowLeft, Paperclip, Pencil } from "lucide-react";
+import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,12 +12,13 @@ import { requireGroupAccess } from "@/lib/actions";
 import { getExpense } from "@/modules/expenses/service";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
 
-const SPLIT_LABEL: Record<string, string> = {
-  equal: "Split equally",
-  exact: "Exact amounts",
-  percentage: "Split by percentage",
-  shares: "Split by shares",
-};
+/** Split method → catalogue key, so the badge follows the reader's language. */
+const SPLIT_LABEL_KEYS = {
+  equal: "splitEqual",
+  exact: "splitExact",
+  percentage: "splitPercentage",
+  shares: "splitShares",
+} as const;
 
 export default async function ExpenseDetailPage({
   params,
@@ -33,13 +36,19 @@ export default async function ExpenseDetailPage({
     expenseId,
   );
 
+  const t = await getTranslations("expenseDetail");
+  const tCommon = await getTranslations("common");
+  const format = await getFormatter();
+  const splitLabelKey =
+    SPLIT_LABEL_KEYS[expense.splitMethod as keyof typeof SPLIT_LABEL_KEYS];
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/groups/${groupId}/expenses`}>
             <ArrowLeft aria-hidden="true" />
-            Back
+            {tCommon("back")}
           </Link>
         </Button>
 
@@ -49,7 +58,10 @@ export default async function ExpenseDetailPage({
               {expense.description}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {expense.expenseDate}
+              {format.dateTime(
+                parsePlainDate(expense.expenseDate),
+                PLAIN_DATE_FORMAT,
+              )}
               {expense.category && ` · ${expense.category}`}
             </p>
           </div>
@@ -62,13 +74,15 @@ export default async function ExpenseDetailPage({
 
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">
-            {SPLIT_LABEL[expense.splitMethod] ?? expense.splitMethod}
+            {splitLabelKey ? t(splitLabelKey) : expense.splitMethod}
           </Badge>
           {expense.recurringExpenseId && (
-            <Badge variant="outline">From a recurring expense</Badge>
+            <Badge variant="outline">{t("fromRecurring")}</Badge>
           )}
           {expense.convertedAmount !== null && (
-            <Badge variant="outline">Converted at {expense.exchangeRate}</Badge>
+            <Badge variant="outline">
+              {t("convertedAt", { rate: expense.exchangeRate ?? "" })}
+            </Badge>
           )}
         </div>
       </div>
@@ -76,21 +90,21 @@ export default async function ExpenseDetailPage({
       {expense.convertedAmount !== null && expense.convertedCurrency && (
         <Card>
           <CardContent className="space-y-1 p-4 text-sm">
-            <p className="text-muted-foreground">Recorded in group currency</p>
+            <p className="text-muted-foreground">{t("recordedIn")}</p>
             <Amount
               minorUnits={expense.convertedAmount.toString()}
               currency={expense.convertedCurrency}
               className="font-medium"
             />
-            <p className="text-xs text-muted-foreground">
-              Rate frozen when this expense was saved. It is not recalculated.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("rateFrozen")}</p>
           </CardContent>
         </Card>
       )}
 
       <section className="space-y-2">
-        <h2 className="text-sm font-medium text-muted-foreground">Paid by</h2>
+        <h2 className="text-sm font-medium text-muted-foreground">
+          {t("paidBy")}
+        </h2>
         <ul className="divide-y rounded-lg border">
           {expense.payers.map((payer) => (
             <li
@@ -110,7 +124,7 @@ export default async function ExpenseDetailPage({
 
       <section className="space-y-2">
         <h2 className="text-sm font-medium text-muted-foreground">
-          Split between
+          {t("splitBetween")}
         </h2>
         <ul className="divide-y rounded-lg border">
           {expense.shares.map((share) => (
@@ -130,7 +144,9 @@ export default async function ExpenseDetailPage({
 
       {expense.notes && (
         <section className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Notes</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            {t("notes")}
+          </h2>
           <p className="rounded-lg border p-3 text-sm whitespace-pre-wrap">
             {expense.notes}
           </p>
@@ -141,7 +157,7 @@ export default async function ExpenseDetailPage({
         <section className="space-y-2">
           <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Paperclip aria-hidden="true" className="size-4" />
-            Receipts
+            {t("receipts")}
           </h2>
           <ul className="divide-y rounded-lg border">
             {attachments.map((attachment) => (
@@ -154,7 +170,11 @@ export default async function ExpenseDetailPage({
                   {attachment.fileName}
                 </a>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {(Number(attachment.byteSize) / 1024).toFixed(0)} KB
+                  {t("kilobytes", {
+                    size: format.number(
+                      Math.round(Number(attachment.byteSize) / 1024),
+                    ),
+                  })}
                 </span>
               </li>
             ))}
@@ -166,7 +186,7 @@ export default async function ExpenseDetailPage({
         <Button asChild variant="outline" className="flex-1">
           <Link href={`/groups/${groupId}/expenses/${expenseId}/edit`}>
             <Pencil aria-hidden="true" />
-            Edit
+            {t("edit")}
           </Link>
         </Button>
         <DeleteExpenseButton

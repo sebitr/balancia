@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Share, SquarePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,10 +29,15 @@ import { useInstallPrompt } from "./use-install-prompt";
 export function InstallPrompt() {
   const { availability, dismissed, install, dismiss } = useInstallPrompt();
   const [showIosSteps, setShowIosSteps] = useState(false);
+  const t = useTranslations("pwa");
 
   if (availability === "unavailable" || dismissed) {
     return null;
   }
+
+  const bold = (chunks: React.ReactNode) => (
+    <strong className="font-medium">{chunks}</strong>
+  );
 
   return (
     <>
@@ -40,11 +46,9 @@ export function InstallPrompt() {
           <BalanciaMark className="size-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">
-            Add Balancia to your home screen
-          </p>
+          <p className="text-sm font-medium">{t("title")}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Opens full screen, one tap away — no app store needed.
+            {t("subtitle")}
           </p>
           <Button
             size="sm"
@@ -57,13 +61,13 @@ export function InstallPrompt() {
               }
             }}
           >
-            {availability === "manual" ? "Show me how" : "Add to home screen"}
+            {availability === "manual" ? t("showMeHow") : t("addToHomeScreen")}
           </Button>
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label="Dismiss install invitation"
+          aria-label={t("dismiss")}
           onClick={dismiss}
         >
           <X aria-hidden="true" />
@@ -73,26 +77,17 @@ export function InstallPrompt() {
       <Dialog open={showIosSteps} onOpenChange={setShowIosSteps}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Add Balancia to your home screen</DialogTitle>
-            <DialogDescription>
-              Safari installs web apps from its share menu — two taps and
-              Balancia sits beside your other apps.
-            </DialogDescription>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("iosIntro")}</DialogDescription>
           </DialogHeader>
           <ol className="space-y-3 text-sm">
             <li className="flex items-center gap-3">
               <Share aria-hidden="true" className="size-5 shrink-0" />
-              <span>
-                Tap <strong className="font-medium">Share</strong> in the
-                browser toolbar.
-              </span>
+              <span>{t.rich("iosStepShare", { b: bold })}</span>
             </li>
             <li className="flex items-center gap-3">
               <SquarePlus aria-hidden="true" className="size-5 shrink-0" />
-              <span>
-                Choose{" "}
-                <strong className="font-medium">Add to Home Screen</strong>.
-              </span>
+              <span>{t.rich("iosStepAdd", { b: bold })}</span>
             </li>
           </ol>
         </DialogContent>

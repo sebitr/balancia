@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ export function GroupSettingsForm({
   timezone: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("groupSettings");
+  const tCommon = useTranslations("common");
   const [pending, setPending] = useState(false);
 
   const onSubmit = async (formData: FormData) => {
@@ -31,10 +34,10 @@ export function GroupSettingsForm({
     try {
       const result = await updateGroupAction(groupId, formData);
       if (!result.ok) {
-        toast.error(result.error ?? "Those changes could not be saved.");
+        toast.error(result.error ?? t("failed"));
         return;
       }
-      toast.success("Settings saved");
+      toast.success(t("saved"));
       router.refresh();
     } finally {
       setPending(false);
@@ -44,12 +47,12 @@ export function GroupSettingsForm({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Details</CardTitle>
+        <CardTitle className="text-base">{t("details")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form action={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="group-name">Name</Label>
+            <Label htmlFor="group-name">{t("name")}</Label>
             <Input
               id="group-name"
               name="name"
@@ -60,9 +63,9 @@ export function GroupSettingsForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="group-description">
-              Description{" "}
+              {t("description")}{" "}
               <span className="font-normal text-muted-foreground">
-                (optional)
+                ({tCommon("optional")})
               </span>
             </Label>
             <Textarea
@@ -74,19 +77,17 @@ export function GroupSettingsForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="group-timezone">Timezone</Label>
+            <Label htmlFor="group-timezone">{t("timezone")}</Label>
             <TimezoneSelect
               id="group-timezone"
               name="timezone"
               defaultValue={timezone}
             />
-            <p className="text-xs text-muted-foreground">
-              Recurring expenses are generated according to this timezone.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("timezoneHelp")}</p>
           </div>
           <Button type="submit" disabled={pending}>
             {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-            Save changes
+            {t("save")}
           </Button>
         </form>
       </CardContent>

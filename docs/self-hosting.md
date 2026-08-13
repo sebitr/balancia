@@ -24,8 +24,8 @@ docker compose up -d` is a safe habit.
 
 Compose then starts three services:
 
-| Service  | Role                                                                                         |
-| -------- | -------------------------------------------------------------------------------------------- |
+| Service  | Role                                                                                          |
+| -------- | --------------------------------------------------------------------------------------------- |
 | `db`     | PostgreSQL 18. **Not published to the host**; reachable only on the internal Compose network. |
 | `app`    | The web application. Published on `${APP_PORT:-3000}`.                                        |
 | `worker` | Background jobs: recurring expenses, import commits, housekeeping.                            |
@@ -232,7 +232,7 @@ What happens, in order:
    containers cannot race.
 3. Neither serves anything until its migrations succeed. If they fail, the
    container exits with the error and Compose restarts it; `docker compose logs
-   app` shows what went wrong.
+app` shows what went wrong.
 
 **Migrations are forward-only and never destructive without warning.** Applied
 migrations are recorded with a checksum; if a file that has already run is

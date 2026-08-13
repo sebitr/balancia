@@ -30,13 +30,20 @@ describe("parseAmountToMinor", () => {
   it("reports a helpful error for too much precision", () => {
     const result = parseAmountToMinor("10.505", "EUR");
     expect(result.ok).toBe(false);
-    expect(result.ok === false && result.error).toMatch(/decimal place/);
+    expect(result.ok === false && result.error).toEqual({
+      key: "amountTooPrecise",
+      params: { currency: "EUR", places: 2 },
+    });
   });
 
-  it("rejects empty, negative and non-numeric input", () => {
-    expect(parseAmountToMinor("", "EUR").ok).toBe(false);
-    expect(parseAmountToMinor("-5", "EUR").ok).toBe(false);
-    expect(parseAmountToMinor("abc", "EUR").ok).toBe(false);
+  it("rejects empty, negative and non-numeric input with distinct reasons", () => {
+    const reasonFor = (input: string) => {
+      const result = parseAmountToMinor(input, "EUR");
+      return result.ok ? null : result.error.key;
+    };
+    expect(reasonFor("")).toBe("amountRequired");
+    expect(reasonFor("-5")).toBe("amountNegative");
+    expect(reasonFor("abc")).toBe("amountNotDecimal");
   });
 });
 
@@ -67,7 +74,10 @@ describe("previewSplit", () => {
       333n,
       333n,
     ]);
-    expect(preview.roundingNote).toMatch(/does not divide evenly/);
+    expect(preview.roundingNote).toEqual({
+      key: "roundingNote",
+      params: { count: 1, amount: expect.stringContaining("0.01") },
+    });
   });
 
   it("reports no rounding note when the split is exact", () => {
@@ -90,7 +100,7 @@ describe("previewSplit", () => {
       values: { a: "50", b: "49" },
     });
     expect(bad.ok).toBe(false);
-    expect(bad.ok === false && bad.error).toMatch(/100/);
+    expect(bad.ok === false && bad.error?.key).toBe("percentageSumMismatch");
 
     const good = previewSplit({
       totalMinor: 1000n,
@@ -150,7 +160,9 @@ describe("previewSplit", () => {
       values: {},
     });
     expect(preview.ok).toBe(false);
-    expect(preview.ok === false && preview.error).toMatch(/at least one/);
+    expect(preview.ok === false && preview.error?.key).toBe(
+      "participantsRequired",
+    );
   });
 
   it("stays quiet before an amount has been typed", () => {
@@ -162,18 +174,24 @@ describe("previewSplit", () => {
       values: {},
     });
     expect(preview.ok).toBe(false);
-    expect(preview.ok === false && preview.error).toBe("");
+    expect(preview.ok === false && preview.error).toBeNull();
   });
 
-  it("formats allocations in the expense currency", () => {
-    const preview = previewSplit({
+  it("formats allocations in the expense currency and the given locale", () => {
+    const input = {
       totalMinor: 3000n,
       currency: "JPY",
-      method: "equal",
+      method: "equal" as const,
       participantIds: ["a", "b"],
       values: {},
-    });
-    expect(preview.ok && preview.allocations[0].formatted).toContain("1,500");
+    };
+
+    const english = previewSplit({ ...input, locale: "en-US" });
+    expect(english.ok && english.allocations[0].formatted).toContain("1,500");
+
+    // French groups digits with a narrow no-break space and trails the symbol.
+    const french = previewSplit({ ...input, locale: "fr-FR" });
+    expect(french.ok && french.allocations[0].formatted).toMatch(/1\s500/u);
   });
 });
 

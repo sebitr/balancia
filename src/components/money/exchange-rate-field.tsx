@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
+import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -43,6 +45,8 @@ export function ExchangeRateField({
   onChange: (rate: string) => void;
   hint: React.ReactNode;
 }) {
+  const t = useTranslations("exchangeRate");
+  const format = useFormatter();
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,9 +101,7 @@ export function ExchangeRateField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>
-        Exchange rate — 1 {from} in {to}
-      </Label>
+      <Label htmlFor={id}>{t("label", { from, to })}</Label>
       <Input
         id={id}
         inputMode="decimal"
@@ -115,27 +117,40 @@ export function ExchangeRateField({
       {loading && (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Loader2 className="size-3 animate-spin" aria-hidden />
-          Looking up the rate for {on}…
+          {t("looking", {
+            date: format.dateTime(parsePlainDate(on), PLAIN_DATE_FORMAT),
+          })}
         </p>
       )}
 
       {!loading && suggestion && usingSuggestion && (
         <p className="text-xs text-muted-foreground">
-          Suggested by {suggestion.provider}, priced {suggestion.quotedOn}. Edit
-          it if you have a better rate, such as the one your bank charged.
+          {t("suggested", {
+            provider: suggestion.provider,
+            date: format.dateTime(
+              parsePlainDate(suggestion.quotedOn),
+              PLAIN_DATE_FORMAT,
+            ),
+          })}
         </p>
       )}
 
       {!loading && suggestion && !usingSuggestion && (
         <p className="text-xs text-muted-foreground">
-          {suggestion.provider} quotes {suggestion.rate} for{" "}
-          {suggestion.quotedOn}.{" "}
+          {t("quotes", {
+            provider: suggestion.provider,
+            rate: suggestion.rate,
+            date: format.dateTime(
+              parsePlainDate(suggestion.quotedOn),
+              PLAIN_DATE_FORMAT,
+            ),
+          })}{" "}
           <button
             type="button"
             className="underline underline-offset-2 hover:text-foreground"
             onClick={() => onChange(suggestion.rate)}
           >
-            Use that instead
+            {t("useThat")}
           </button>
         </p>
       )}

@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "preferred_currency" text;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_preferred_currency_format" CHECK ("users"."preferred_currency" IS NULL OR "users"."preferred_currency" ~ '^[A-Z]{3}$');

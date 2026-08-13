@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useModeAnimation } from "react-theme-switch-animation";
@@ -25,6 +26,7 @@ import { Button } from "@/components/ui/button";
 const subscribeToNothing = () => () => {};
 
 export function ThemeToggle({ className }: { className?: string }) {
+  const t = useTranslations("theme");
   const mounted = useSyncExternalStore(
     subscribeToNothing,
     () => true,
@@ -41,7 +43,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         variant="ghost"
         size="icon"
         className={className}
-        aria-label="Toggle theme"
+        aria-label={t("toggle")}
         disabled
       >
         <Sun aria-hidden="true" />
@@ -53,6 +55,7 @@ export function ThemeToggle({ className }: { className?: string }) {
 }
 
 function AnimatedThemeToggle({ className }: { className?: string }) {
+  const t = useTranslations("theme");
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
@@ -67,7 +70,7 @@ function AnimatedThemeToggle({ className }: { className?: string }) {
       variant="ghost"
       size="icon"
       className={className}
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={isDark ? t("toLight") : t("toDark")}
       onClick={() => void toggleSwitchTheme()}
     >
       {isDark ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}

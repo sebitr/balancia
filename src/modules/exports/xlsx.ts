@@ -42,7 +42,8 @@ export function xlsxNumber(literal: string): XlsxNumber {
   return { kind: "number", literal };
 }
 
-const XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+const XML_DECLARATION =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 
 /**
  * Escapes text for XML content and strips the control characters XML 1.0

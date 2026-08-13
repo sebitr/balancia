@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Loader2, Paperclip, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   formatMinorUnits,
   parseAmountToMinor,
   previewSplit,
+  type SplitMessage,
   type SplitPreview,
 } from "./expense-form-logic";
 import type { SplitMethod } from "@/modules/expenses/split";
@@ -55,23 +57,12 @@ export interface ExpenseFormInitialValues {
   readonly splitEntries: readonly { participantId: string; value?: string }[];
 }
 
-const SPLIT_TABS: { value: SplitMethod; label: string; hint: string }[] = [
-  {
-    value: "equal",
-    label: "Equally",
-    hint: "Split evenly between everyone selected.",
-  },
-  { value: "exact", label: "Exact", hint: "Enter each person's exact amount." },
-  {
-    value: "percentage",
-    label: "Percent",
-    hint: "Percentages must add up to 100.",
-  },
-  {
-    value: "shares",
-    label: "Shares",
-    hint: "Weights, e.g. 2 shares versus 1.",
-  },
+/** Tab order is fixed; the label and hint are looked up per locale. */
+const SPLIT_TABS: readonly SplitMethod[] = [
+  "equal",
+  "exact",
+  "percentage",
+  "shares",
 ];
 
 export function ExpenseForm({
@@ -91,6 +82,14 @@ export function ExpenseForm({
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
+  const locale = useLocale();
+  const t = useTranslations("expenses.form");
+  const tSplit = useTranslations("expenses.split");
+  const tCommon = useTranslations("common");
+
+  /** Renders a failure reported by the pure split logic. */
+  const splitText = (message: SplitMessage) =>
+    tSplit(message.key, message.params);
 
   const [description, setDescription] = useState(initial?.description ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -162,8 +161,9 @@ export function ExpenseForm({
         method: splitMethod,
         participantIds: selectedIds,
         values: splitValues,
+        locale,
       }),
-    [totalMinor, currency, splitMethod, selectedIds, splitValues],
+    [totalMinor, currency, splitMethod, selectedIds, splitValues, locale],
   );
 
   const payerTotal = useMemo(() => {
@@ -203,27 +203,29 @@ export function ExpenseForm({
     setError(null);
 
     if (!totalMinor.ok) {
-      setError(totalMinor.error);
+      setError(splitText(totalMinor.error));
       return;
     }
     if (payerIds.length === 0) {
-      setError("Choose who paid.");
+      setError(t("errors.choosePayer"));
       return;
     }
     if (selectedIds.length === 0) {
-      setError("Choose who this expense is split between.");
+      setError(t("errors.chooseSplit"));
       return;
     }
     if (!payersBalance) {
-      setError("What the payers put in must add up to the expense total.");
+      setError(t("errors.payersMustBalance"));
       return;
     }
     if (!preview.ok) {
-      setError(preview.error);
+      setError(preview.error ? splitText(preview.error) : null);
       return;
     }
     if (needsExchangeRate && exchangeRate.trim() === "") {
-      setError(`Enter the exchange rate: 1 ${currency} in ${baseCurrency}.`);
+      setError(
+        t("errors.enterRate", { from: currency, to: baseCurrency ?? "" }),
+      );
       return;
     }
 
@@ -271,10 +273,10 @@ export function ExpenseForm({
         : await createExpenseAction(groupId, payload);
 
       if (!result.ok) {
-        setError(result.error ?? "The expense could not be saved.");
+        setError(result.error ?? t("errors.saveFailed"));
         return;
       }
-      toast.success(isEdit ? "Expense updated" : "Expense added");
+      toast.success(isEdit ? t("updated") : t("added"));
       router.push(`/groups/${groupId}/expenses`);
       router.refresh();
     } finally {
@@ -282,7 +284,7 @@ export function ExpenseForm({
     }
   };
 
-  const activeHint = SPLIT_TABS.find((tab) => tab.value === splitMethod)?.hint;
+  const activeHint = t(`hints.${splitMethod}`);
 
   return (
     <form onSubmit={onSubmit} className="space-y-6" noValidate>
@@ -293,20 +295,20 @@ export function ExpenseForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t("description")}</Label>
         <Input
           id="description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           required
           maxLength={200}
-          placeholder="Dinner at the harbour"
+          placeholder={t("descriptionPlaceholder")}
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <div className="space-y-2">
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="amount">{t("amount")}</Label>
           <Input
             id="amount"
             inputMode="decimal"
@@ -321,12 +323,12 @@ export function ExpenseForm({
           />
           {amountText && !totalMinor.ok && (
             <p id="amount-error" className="text-sm text-destructive">
-              {totalMinor.error}
+              {splitText(totalMinor.error)}
             </p>
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="currency">Currency</Label>
+          <Label htmlFor="currency">{t("currency")}</Label>
           <CurrencySelect
             id="currency"
             value={currency}
@@ -344,12 +346,12 @@ export function ExpenseForm({
           on={expenseDate}
           value={exchangeRate}
           onChange={setExchangeRate}
-          hint="This rate is frozen with the expense. Changing rates later never rewrites what is already recorded."
+          hint={t("exchangeRateHint")}
         />
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="expenseDate">Date</Label>
+        <Label htmlFor="expenseDate">{t("date")}</Label>
         <Input
           id="expenseDate"
           type="date"
@@ -360,7 +362,7 @@ export function ExpenseForm({
       </div>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">Paid by</legend>
+        <legend className="text-sm font-medium">{t("paidBy")}</legend>
         <ul className="divide-y rounded-lg border">
           {participants.map((participant) => {
             const checked = payerIds.includes(participant.id);
@@ -379,7 +381,9 @@ export function ExpenseForm({
                 </Label>
                 {checked && payerIds.length > 1 && (
                   <Input
-                    aria-label={`Amount paid by ${participant.displayName}`}
+                    aria-label={t("amountPaidBy", {
+                      name: participant.displayName,
+                    })}
                     inputMode="decimal"
                     className="w-28"
                     placeholder="0.00"
@@ -399,21 +403,21 @@ export function ExpenseForm({
         {payerIds.length > 1 && totalMinor.ok && !payersBalance && (
           <p className="flex items-center gap-2 text-sm text-destructive">
             <TriangleAlert aria-hidden="true" className="size-4" />
-            The payers&apos; amounts must add up to the expense total.
+            {t("payersMustAddUp")}
           </p>
         )}
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">Split</legend>
+        <legend className="text-sm font-medium">{t("split")}</legend>
         <Tabs
           value={splitMethod}
           onValueChange={(value) => setSplitMethod(value as SplitMethod)}
         >
           <TabsList className="grid w-full grid-cols-4">
-            {SPLIT_TABS.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>
-                {tab.label}
+            {SPLIT_TABS.map((method) => (
+              <TabsTrigger key={method} value={method}>
+                {t(`tabs.${method}`)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -447,10 +451,12 @@ export function ExpenseForm({
                   <Input
                     aria-label={
                       splitMethod === "percentage"
-                        ? `Percentage for ${participant.displayName}`
+                        ? t("percentageFor", {
+                            name: participant.displayName,
+                          })
                         : splitMethod === "shares"
-                          ? `Shares for ${participant.displayName}`
-                          : `Amount for ${participant.displayName}`
+                          ? t("sharesFor", { name: participant.displayName })
+                          : t("amountFor", { name: participant.displayName })
                     }
                     inputMode="decimal"
                     className="w-24"
@@ -476,7 +482,7 @@ export function ExpenseForm({
         </ul>
 
         {!preview.ok && preview.error && selectedIds.length > 0 && (
-          <p className="text-sm text-destructive">{preview.error}</p>
+          <p className="text-sm text-destructive">{splitText(preview.error)}</p>
         )}
 
         {preview.ok && preview.roundingNote && (
@@ -485,29 +491,33 @@ export function ExpenseForm({
               aria-hidden="true"
               className="mt-0.5 size-3.5 shrink-0"
             />
-            {preview.roundingNote}
+            {splitText(preview.roundingNote)}
           </p>
         )}
       </fieldset>
 
       <div className="space-y-2">
         <Label htmlFor="category">
-          Category{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          {t("category")}{" "}
+          <span className="font-normal text-muted-foreground">
+            ({tCommon("optional")})
+          </span>
         </Label>
         <Input
           id="category"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
           maxLength={60}
-          placeholder="Food"
+          placeholder={t("categoryPlaceholder")}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="notes">
-          Notes{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          {t("notes")}{" "}
+          <span className="font-normal text-muted-foreground">
+            ({tCommon("optional")})
+          </span>
         </Label>
         <Textarea
           id="notes"
@@ -521,7 +531,7 @@ export function ExpenseForm({
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Paperclip aria-hidden="true" className="size-4" />
-          Receipts
+          {t("receipts")}
         </Label>
         <ReceiptUploader
           groupId={groupId}
@@ -532,7 +542,7 @@ export function ExpenseForm({
       <div className="flex gap-3">
         <Button type="submit" className="flex-1" disabled={pending}>
           {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-          {isEdit ? "Save changes" : "Add expense"}
+          {isEdit ? t("saveChanges") : t("addExpense")}
         </Button>
         <Button
           type="button"
@@ -540,7 +550,7 @@ export function ExpenseForm({
           onClick={() => router.back()}
           disabled={pending}
         >
-          Cancel
+          {tCommon("cancel")}
         </Button>
       </div>
     </form>
@@ -548,10 +558,11 @@ export function ExpenseForm({
 }
 
 export function RemoveButton({ onClick }: { onClick: () => void }) {
+  const t = useTranslations("common");
   return (
     <Button type="button" variant="ghost" size="icon" onClick={onClick}>
       <Trash2 aria-hidden="true" />
-      <span className="sr-only">Remove</span>
+      <span className="sr-only">{t("remove")}</span>
     </Button>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LanguageMenuItems } from "@/components/i18n/language-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,13 +29,18 @@ export function UserMenu({
   email?: string;
   isGuest: boolean;
 }) {
+  const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
+
   if (isGuest) {
     return (
       <span className="flex items-center gap-2 text-sm text-muted-foreground">
         <span className="flex size-8 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground">
           {initialsOf(label)}
         </span>
-        <span className="hidden sm:inline">{label} · guest</span>
+        <span className="hidden sm:inline">
+          {label} · {tCommon("guest")}
+        </span>
       </span>
     );
   }
@@ -50,7 +57,7 @@ export function UserMenu({
           variant="ghost"
           size="sm"
           className="gap-2"
-          aria-label="Account menu"
+          aria-label={t("accountMenu")}
         >
           <span className="flex size-7 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground">
             {initialsOf(label)}
@@ -71,19 +78,21 @@ export function UserMenu({
         <DropdownMenuItem asChild>
           <Link href="/profile">
             <User aria-hidden="true" />
-            Profile
+            {t("profile")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/profile/security">
             <ShieldCheck aria-hidden="true" />
-            Passkeys &amp; security
+            {t("security")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <LanguageMenuItems />
+        <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void onSignOut()}>
           <LogOut aria-hidden="true" />
-          Sign out
+          {t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

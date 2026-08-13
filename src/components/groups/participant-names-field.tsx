@@ -41,7 +41,9 @@ export function ParticipantNamesField({
 
   return (
     <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">Who else is in this group?</legend>
+      <legend className="text-sm font-medium">
+        Who else is in this group?
+      </legend>
 
       <ul className="divide-y rounded-lg border">
         <li className="flex items-center gap-3 p-3 text-sm">

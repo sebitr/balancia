@@ -53,7 +53,12 @@ describe("toCsv", () => {
   });
 
   it("separates rows with CRLF", () => {
-    expect(toCsv([["a", "b"], ["c", "d"]])).toBe("\uFEFFa,b\r\nc,d");
+    expect(
+      toCsv([
+        ["a", "b"],
+        ["c", "d"],
+      ]),
+    ).toBe("\uFEFFa,b\r\nc,d");
   });
 
   it("keeps accented and non-Latin names intact", () => {

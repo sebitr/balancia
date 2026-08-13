@@ -15,6 +15,20 @@
       "when": 1786624201801,
       "tag": "0001_pink_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786639672726,
+      "tag": "0002_nostalgic_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786639744991,
+      "tag": "0003_mysterious_bastion",
+      "breakpoints": true
     }
   ]
 }

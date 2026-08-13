@@ -101,9 +101,7 @@ describe("buildXlsx", () => {
     );
 
     expect(files["xl/worksheets/sheet3.xml"]).toBeDefined();
-    expect(files["[Content_Types].xml"]).toContain(
-      "/xl/worksheets/sheet3.xml",
-    );
+    expect(files["[Content_Types].xml"]).toContain("/xl/worksheets/sheet3.xml");
     expect(files["xl/_rels/workbook.xml.rels"]).toContain(
       'Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"',
     );
@@ -132,9 +130,7 @@ describe("buildXlsx", () => {
   it("carries a money literal through unrounded", () => {
     // The point of xlsxNumber: Number("9007199254740993.45") would lose digits.
     const sheet = unzip(
-      buildXlsx([
-        { name: "Big", rows: [[xlsxNumber("9007199254740993.45")]] },
-      ]),
+      buildXlsx([{ name: "Big", rows: [[xlsxNumber("9007199254740993.45")]] }]),
     )["xl/worksheets/sheet1.xml"];
 
     expect(sheet).toContain("<v>9007199254740993.45</v>");

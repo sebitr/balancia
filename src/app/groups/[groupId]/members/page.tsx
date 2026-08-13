@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { AddParticipantForm } from "@/components/members/add-participant-form";
 import { InvitationControls } from "@/components/members/invitation-controls";
@@ -14,16 +15,15 @@ export default async function MembersPage({
 
   const canManage = access.permissions.manageParticipants;
   const canInvite = access.permissions.manageInvitations;
+  const t = await getTranslations("membersPage");
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          People
+          {t("title")}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Everyone who shares expenses in this group.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("intro")}</p>
       </div>
 
       <ul className="divide-y rounded-lg border">
@@ -34,10 +34,10 @@ export default async function MembersPage({
                 <p className="flex flex-wrap items-center gap-2 font-medium">
                   <span className="truncate">{participant.displayName}</span>
                   {participant.role === "owner" && (
-                    <Badge variant="secondary">Owner</Badge>
+                    <Badge variant="secondary">{t("owner")}</Badge>
                   )}
                   {participant.role === "guest" && (
-                    <Badge variant="outline">No account</Badge>
+                    <Badge variant="outline">{t("noAccount")}</Badge>
                   )}
                 </p>
                 {participant.email && (

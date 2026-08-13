@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,25 +14,31 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerAction } from "@/modules/auth/actions";
 
+/**
+ * Field messages are catalogue keys rather than prose, translated at render
+ * time — see `sign-in-form.tsx` for the same pattern.
+ */
 const schema = z
   .object({
-    name: z.string().trim().min(1, "Enter your name").max(120),
-    email: z.email("Enter a valid email address"),
-    password: z
-      .string()
-      .min(10, "Use at least 10 characters")
-      .max(512, "That password is too long"),
+    name: z.string().trim().min(1, "name").max(120),
+    email: z.email("email"),
+    password: z.string().min(10, "passwordMin").max(512, "passwordMax"),
     confirmPassword: z.string(),
   })
   .refine((value) => value.password === value.confirmPassword, {
     path: ["confirmPassword"],
-    message: "The passwords do not match",
+    message: "mismatch",
   });
 
 type FormValues = z.infer<typeof schema>;
 
+type ValidationKey =
+  "name" | "email" | "passwordMin" | "passwordMax" | "mismatch";
+
 export function RegisterForm() {
   const router = useRouter();
+  const t = useTranslations("register");
+  const tValidation = useTranslations("register.validation");
   const [formError, setFormError] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
 
@@ -39,6 +46,11 @@ export function RegisterForm() {
     resolver: zodResolver(schema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
+
+  const fieldError = (field: keyof FormValues): string | null => {
+    const message = form.formState.errors[field]?.message;
+    return message ? tValidation(message as ValidationKey) : null;
+  };
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -49,7 +61,7 @@ export function RegisterForm() {
     });
 
     if (!result.ok) {
-      setFormError(result.error ?? "That account could not be created.");
+      setFormError(result.error ?? t("createFailed"));
       return;
     }
 
@@ -68,17 +80,19 @@ export function RegisterForm() {
     return (
       <div className="space-y-4">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Check your email
+          {t("checkEmailTitle")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          We sent a confirmation link to{" "}
-          <span className="font-medium text-foreground">
-            {form.getValues("email")}
-          </span>
-          . Open it to finish setting up your account.
+          {t.rich("checkEmailBody", {
+            email: () => (
+              <span className="font-medium text-foreground">
+                {form.getValues("email")}
+              </span>
+            ),
+          })}
         </p>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/sign-in">Back to sign in</Link>
+          <Link href="/sign-in">{t("backToSignIn")}</Link>
         </Button>
       </div>
     );
@@ -88,11 +102,9 @@ export function RegisterForm() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Create your account
+          {t("title")}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          You can add a passkey afterwards, from your account settings.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {formError && (
@@ -103,7 +115,7 @@ export function RegisterForm() {
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">{t("name")}</Label>
           <Input
             id="name"
             autoComplete="name"
@@ -113,15 +125,15 @@ export function RegisterForm() {
             }
             {...form.register("name")}
           />
-          {form.formState.errors.name && (
+          {fieldError("name") && (
             <p id="name-error" className="text-sm text-destructive">
-              {form.formState.errors.name.message}
+              {fieldError("name")}
             </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <Input
             id="email"
             type="email"
@@ -132,15 +144,15 @@ export function RegisterForm() {
             }
             {...form.register("email")}
           />
-          {form.formState.errors.email && (
+          {fieldError("email") && (
             <p id="email-error" className="text-sm text-destructive">
-              {form.formState.errors.email.message}
+              {fieldError("email")}
             </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("password")}</Label>
           <Input
             id="password"
             type="password"
@@ -150,17 +162,15 @@ export function RegisterForm() {
             {...form.register("password")}
           />
           <p id="password-hint" className="text-xs text-muted-foreground">
-            At least 10 characters.
+            {t("passwordHint")}
           </p>
-          {form.formState.errors.password && (
-            <p className="text-sm text-destructive">
-              {form.formState.errors.password.message}
-            </p>
+          {fieldError("password") && (
+            <p className="text-sm text-destructive">{fieldError("password")}</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
           <Input
             id="confirmPassword"
             type="password"
@@ -168,9 +178,9 @@ export function RegisterForm() {
             aria-invalid={Boolean(form.formState.errors.confirmPassword)}
             {...form.register("confirmPassword")}
           />
-          {form.formState.errors.confirmPassword && (
+          {fieldError("confirmPassword") && (
             <p className="text-sm text-destructive">
-              {form.formState.errors.confirmPassword.message}
+              {fieldError("confirmPassword")}
             </p>
           )}
         </div>
@@ -183,17 +193,17 @@ export function RegisterForm() {
           {form.formState.isSubmitting && (
             <Loader2 aria-hidden="true" className="animate-spin" />
           )}
-          Create account
+          {t("submit")}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {t("haveAccount")}{" "}
         <Link
           href="/sign-in"
           className="text-foreground underline underline-offset-4"
         >
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
     </div>

@@ -164,6 +164,7 @@ export async function updateSettlement(
     if (!existing) {
       throw new AuthorizationError(
         "That settlement is not part of this group.",
+        "notInGroup",
       );
     }
 
@@ -242,6 +243,7 @@ export async function deleteSettlement(
     if (deleted.length === 0) {
       throw new AuthorizationError(
         "That settlement is not part of this group.",
+        "notInGroup",
       );
     }
 

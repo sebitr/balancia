@@ -1,64 +1,43 @@
+import { useFormatter, useTranslations } from "next-intl";
 import type { ActivityEntry } from "@/modules/activity/service";
 
 /**
  * Activity history rendering.
  *
- * Events are stored as an action plus safe metadata, so the wording lives here
- * rather than in the database — a phrasing change does not require rewriting
- * history.
+ * Events are stored as an action plus safe metadata, so the wording lives in
+ * the message catalogue rather than in the database — a phrasing change, or a
+ * new language, does not require rewriting history.
+ *
+ * Action ids are dotted ("expense.created"), which is also how next-intl
+ * addresses nested keys, so an id maps straight onto `actions.expense.created`.
+ * An id with no entry falls back to the raw value: an event written by a newer
+ * version should still show something rather than break the page.
  */
-
-const ACTION_TEXT: Record<string, string> = {
-  "expense.created": "added an expense",
-  "expense.updated": "edited an expense",
-  "expense.deleted": "deleted an expense",
-  "settlement.created": "recorded a payment",
-  "settlement.updated": "edited a payment",
-  "settlement.deleted": "deleted a payment",
-  "member.added": "added a member",
-  "member.removed": "removed a member",
-  "member.role_changed": "changed a member's role",
-  "participant.created": "added someone to the group",
-  "participant.updated": "updated someone's details",
-  "participant.removed": "removed someone from the group",
-  "guest_link.created": "created a guest link",
-  "guest_link.revoked": "revoked a guest link",
-  "guest_link.redeemed": "joined through a guest link",
-  "recurring.created": "set up a recurring expense",
-  "recurring.updated": "changed a recurring expense",
-  "recurring.deleted": "removed a recurring expense",
-  "recurring.generated": "generated a recurring expense",
-  "import.completed": "completed an import",
-  "group.created": "created the group",
-  "group.updated": "updated the group",
-  "group.archived": "archived the group",
-};
-
-function describe(entry: ActivityEntry): string {
-  const base = ACTION_TEXT[entry.action] ?? entry.action;
-  const description = entry.metadata?.description;
-  if (typeof description === "string" && description.length > 0) {
-    return `${base}: ${description}`;
-  }
-  return base;
-}
-
-function formatWhen(value: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
-}
 
 export function ActivityFeed({
   entries,
 }: {
   entries: readonly ActivityEntry[];
 }) {
+  const t = useTranslations("activity");
+  const format = useFormatter();
+
+  const describe = (entry: ActivityEntry): string => {
+    // The id is runtime data, so the key cannot be checked at compile time;
+    // `t.has` is what makes reading it back safe.
+    const key = `actions.${entry.action}` as Parameters<typeof t.has>[0];
+    const base = t.has(key) ? t(key) : entry.action;
+    const description = entry.metadata?.description;
+    if (typeof description === "string" && description.length > 0) {
+      return t("withDescription", { action: base, description });
+    }
+    return base;
+  };
+
   if (entries.length === 0) {
     return (
       <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-        Nothing has happened in this group yet.
+        {t("empty")}
       </p>
     );
   }
@@ -75,7 +54,7 @@ export function ActivityFeed({
             <span className="block">
               <span className="font-medium">
                 {entry.actorLabel ??
-                  (entry.actorType === "system" ? "Balancia" : "Someone")}
+                  (entry.actorType === "system" ? "Balancia" : t("someone"))}
               </span>{" "}
               <span className="text-muted-foreground">{describe(entry)}</span>
             </span>
@@ -83,7 +62,10 @@ export function ActivityFeed({
               dateTime={entry.createdAt.toISOString()}
               className="text-xs text-muted-foreground"
             >
-              {formatWhen(entry.createdAt)}
+              {format.dateTime(entry.createdAt, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
             </time>
           </span>
         </li>

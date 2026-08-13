@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Plus,
   Receipt,
@@ -21,7 +22,8 @@ import { cn } from "@/lib/utils";
  */
 interface NavItem {
   readonly href: string;
-  readonly label: string;
+  /** Key in the `nav` namespace; resolved at render time. */
+  readonly labelKey: "overview" | "expenses" | "add" | "people" | "settings";
   readonly icon: LucideIcon;
   readonly exact: boolean;
   /** Rendered as a filled action button — the primary thing to do here. */
@@ -29,26 +31,27 @@ interface NavItem {
 }
 
 const ITEMS: readonly NavItem[] = [
-  { href: "", label: "Overview", icon: Scale, exact: true },
-  { href: "/expenses", label: "Expenses", icon: Receipt, exact: false },
+  { href: "", labelKey: "overview", icon: Scale, exact: true },
+  { href: "/expenses", labelKey: "expenses", icon: Receipt, exact: false },
   {
     href: "/expenses/new",
-    label: "Add",
+    labelKey: "add",
     icon: Plus,
     exact: true,
     primary: true,
   },
-  { href: "/members", label: "People", icon: Users, exact: false },
-  { href: "/settings", label: "Settings", icon: Settings, exact: false },
+  { href: "/members", labelKey: "people", icon: Users, exact: false },
+  { href: "/settings", labelKey: "settings", icon: Settings, exact: false },
 ];
 
 export function GroupNav({ groupId }: { groupId: string }) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   const base = `/groups/${groupId}`;
 
   return (
     <nav
-      aria-label="Group sections"
+      aria-label={t("groupSections")}
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/85"
     >
       <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-2">
@@ -59,7 +62,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
             : pathname.startsWith(href);
 
           return (
-            <li key={item.label} className="flex-1">
+            <li key={item.labelKey} className="flex-1">
               <Link
                 href={href}
                 aria-current={isActive ? "page" : undefined}
@@ -82,7 +85,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
                 >
                   <item.icon aria-hidden="true" className="size-4.5" />
                 </span>
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             </li>
           );

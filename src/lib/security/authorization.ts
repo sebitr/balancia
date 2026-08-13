@@ -75,13 +75,22 @@ export interface GroupAccess {
 }
 
 export class AuthorizationError extends Error {
-  constructor(message = "You do not have access to this group.") {
+  /** Translated by the Server Action funnel; see `lib/actions.ts`. */
+  readonly code: string;
+
+  constructor(
+    message = "You do not have access to this group.",
+    code = "noGroupAccess",
+  ) {
     super(message);
     this.name = "AuthorizationError";
+    this.code = code;
   }
 }
 
 export class AuthenticationRequiredError extends Error {
+  readonly code = "authRequired";
+
   constructor(message = "Sign in to continue.") {
     super(message);
     this.name = "AuthenticationRequiredError";

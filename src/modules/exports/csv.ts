@@ -33,7 +33,9 @@ export function neutralizeFormula(value: string): string {
 }
 
 /** Quotes a field if it contains a delimiter, quote or newline. */
-export function escapeCsvField(value: string | number | null | undefined): string {
+export function escapeCsvField(
+  value: string | number | null | undefined,
+): string {
   if (value === null || value === undefined) return "";
 
   // Numbers are ours, not user input: they need no formula neutralisation, and

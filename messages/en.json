@@ -1,0 +1,719 @@
+{
+  "meta": {
+    "description": "Privacy-focused, self-hosted shared expense tracking. Shared expenses. Fairly balanced."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "back": "Back",
+    "remove": "Remove",
+    "loading": "Loading…",
+    "or": "or",
+    "guest": "guest",
+    "optional": "optional",
+    "retry": "Try again"
+  },
+  "nav": {
+    "accountMenu": "Account menu",
+    "profile": "Profile",
+    "security": "Passkeys & security",
+    "signOut": "Sign out",
+    "language": "Language",
+    "overview": "Overview",
+    "expenses": "Expenses",
+    "settings": "Settings",
+    "add": "Add",
+    "people": "People",
+    "groupSections": "Group sections"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme"
+  },
+  "pwa": {
+    "title": "Add Balancia to your home screen",
+    "subtitle": "Opens full screen, one tap away — no app store needed.",
+    "showMeHow": "Show me how",
+    "addToHomeScreen": "Add to home screen",
+    "dismiss": "Dismiss install invitation",
+    "iosIntro": "Safari installs web apps from its share menu — two taps and Balancia sits beside your other apps.",
+    "iosStepShare": "Tap <b>Share</b> in the browser toolbar.",
+    "iosStepAdd": "Choose <b>Add to Home Screen</b>."
+  },
+  "money": {
+    "getsBack": "gets back",
+    "owes": "owes",
+    "settledUp": "settled up",
+    "settledUpBadge": "Settled up",
+    "commonCurrencies": "Common",
+    "allCurrencies": "All currencies"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to see your groups and balances.",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "withPasskey": "Sign in with a passkey",
+      "noAccount": "No account yet?",
+      "createOne": "Create one",
+      "metaTitle": "Sign in"
+    },
+    "validation": {
+      "email": "Enter a valid email address",
+      "password": "Enter your password"
+    },
+    "errors": {
+      "generic": "That did not work.",
+      "passkeyCancelled": "The passkey request was cancelled.",
+      "passkeyFailed": "Your browser could not complete the passkey request."
+    }
+  },
+  "expenses": {
+    "form": {
+      "description": "Description",
+      "descriptionPlaceholder": "Dinner at the harbour",
+      "amount": "Amount",
+      "currency": "Currency",
+      "date": "Date",
+      "paidBy": "Paid by",
+      "amountPaidBy": "Amount paid by {name}",
+      "payersMustAddUp": "The payers' amounts must add up to the expense total.",
+      "split": "Split",
+      "percentageFor": "Percentage for {name}",
+      "sharesFor": "Shares for {name}",
+      "amountFor": "Amount for {name}",
+      "category": "Category",
+      "categoryPlaceholder": "Food",
+      "notes": "Notes",
+      "receipts": "Receipts",
+      "saveChanges": "Save changes",
+      "addExpense": "Add expense",
+      "remove": "Remove",
+      "exchangeRateHint": "This rate is frozen with the expense. Changing rates later never rewrites what is already recorded.",
+      "tabs": {
+        "equal": "Equally",
+        "exact": "Exact",
+        "percentage": "Percent",
+        "shares": "Shares"
+      },
+      "hints": {
+        "equal": "Split evenly between everyone selected.",
+        "exact": "Enter each person's exact amount.",
+        "percentage": "Percentages must add up to 100.",
+        "shares": "Weights, e.g. 2 shares versus 1."
+      },
+      "errors": {
+        "choosePayer": "Choose who paid.",
+        "chooseSplit": "Choose who this expense is split between.",
+        "payersMustBalance": "What the payers put in must add up to the expense total.",
+        "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
+        "saveFailed": "The expense could not be saved."
+      },
+      "updated": "Expense updated",
+      "added": "Expense added"
+    },
+    "split": {
+      "amountRequired": "Enter an amount",
+      "amountNegative": "The amount cannot be negative",
+      "amountNotDecimal": "Enter a valid amount",
+      "amountTooPrecise": "{currency} supports at most {places, plural, one {# decimal place} other {# decimal places}}",
+      "amountInvalid": "Enter a valid amount",
+      "participantsRequired": "Choose at least one person",
+      "valueRequired": "Fill in a value for everyone in the split",
+      "valueNotDecimal": "Use a non-negative number",
+      "valueNotInteger": "Use a whole amount",
+      "exactSumMismatch": "The exact amounts must add up to the total",
+      "percentageNegative": "Percentages cannot be negative",
+      "percentageSumMismatch": "Percentages must add up to 100 — they currently total {received}",
+      "shareNegative": "Shares cannot be negative",
+      "sharesAllZero": "At least one share must be greater than zero",
+      "invalid": "That split is not valid",
+      "roundingNote": "This does not divide evenly. {count, plural, one {One person pays} other {# people pay}} {amount} more so the parts add up to the total exactly."
+    }
+  },
+  "dashboard": {
+    "metaTitle": "Your groups",
+    "title": "Your groups",
+    "newGroup": "New group",
+    "emptyTitle": "Create your first group",
+    "emptyDescription": "A group is a set of people sharing expenses — a trip, a flat, a project. Add expenses and Balancia works out who owes whom.",
+    "createGroup": "Create a group",
+    "peopleCount": "{count, plural, one {# person} other {# people}}",
+    "positionEyebrow": "Your position",
+    "owedToYou": "owed to you",
+    "youOweOverall": "you owe",
+    "inGroups": "{count, plural, one {in # group} other {in # groups}}",
+    "inCount": "in {count}",
+    "ratesUnavailable": "Rates unavailable — showing each group's own currency",
+    "convertedToday": "Converted to {currency} at today's rates",
+    "convertedOn": "Converted to {currency} at rates from {date}",
+    "members": "{names}",
+    "membersWithOthers": "{names} and {count, plural, one {# other} other {# others}}",
+    "searchLabel": "Search your groups",
+    "searchPlaceholder": "{count, plural, one {Search # group} other {Search # groups}}",
+    "noMatch": "No group matches “{query}”",
+    "sectionYouOwe": "You owe",
+    "sectionYouAreOwed": "You're owed",
+    "sectionSettled": "Settled up",
+    "sectionArchived": "Archived · {count}",
+    "addExpense": "Add expense",
+    "pickGroupTitle": "Add to which group?",
+    "pickGroupSubtitle": "Most recent first",
+    "allGroups": "{count, plural, one {All # group} other {All # groups}}"
+  },
+  "group": {
+    "archived": "Archived",
+    "guest": "Guest",
+    "convertedAll": "Everything converted to {currency}",
+    "separateCurrencies": "Each currency balanced separately",
+    "noExpensesTitle": "No expenses yet",
+    "noExpensesDescription": "Add the first expense and Balancia will start working out who owes whom.",
+    "addExpense": "Add an expense",
+    "yourPosition": "Your position",
+    "youIn": "You, in {currency}",
+    "totalSpending": "Total spending",
+    "balances": "Balances",
+    "settleUp": "Settle up",
+    "owesMoney": "Owes money",
+    "shouldReceive": "Should receive",
+    "recentExpenses": "Recent expenses",
+    "seeAll": "See all",
+    "recentActivity": "Recent activity",
+    "noExpensesDescriptionSolo": "Add the people sharing these costs, then record the first expense.",
+    "addPeople": "Add people",
+    "importFromSplitwise": "Import from Splitwise"
+  },
+  "expensesList": {
+    "title": "Expenses",
+    "add": "Add",
+    "emptyTitle": "Nothing recorded yet",
+    "emptyDescription": "Add your first expense to start tracking who paid for what.",
+    "addExpense": "Add an expense",
+    "paymentBadge": "Payment",
+    "recurringBadge": "Recurring",
+    "settlementTitle": "{from} paid {to}",
+    "repayment": "Repayment",
+    "receiptCount": "{count, plural, one {# receipt} other {# receipts}}",
+    "recurringLink": "Recurring"
+  },
+  "members": {
+    "addTitle": "Add someone",
+    "name": "Name",
+    "email": "Email",
+    "addPerson": "Add person",
+    "addNote": "People added this way have no account. You can give them a guest link so they can take part.",
+    "added": "Added to the group",
+    "addFailed": "That person could not be added.",
+    "removeLabel": "Remove {name} from the group",
+    "removeTitle": "Remove {name}?",
+    "removeBody": "Their past expenses and payments stay in the group so balances remain correct — they simply cannot be added to anything new. Any guest link they hold stops working.",
+    "remove": "Remove",
+    "removed": "{name} removed",
+    "removeFailed": "That person could not be removed."
+  },
+  "deleteExpense": {
+    "trigger": "Delete",
+    "title": "Delete this expense?",
+    "body": "“{description}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
+    "keep": "Keep it",
+    "confirm": "Delete expense",
+    "deleted": "Expense deleted",
+    "failed": "The expense could not be deleted."
+  },
+  "profile": {
+    "metaTitle": "Profile",
+    "title": "Profile",
+    "account": "Account",
+    "name": "Name",
+    "email": "Email",
+    "nameNote": "Your name inside a group is set per group, so you can appear differently to different sets of people.",
+    "security": "Security",
+    "securityNote": "Add a passkey to sign in with your device instead of a password.",
+    "managePasskeys": "Manage passkeys",
+    "currencyTitle": "Preferred currency",
+    "currencyLabel": "Show totals in",
+    "currencyHelp": "Your home screen totals every group into this currency. Each group keeps its own.",
+    "currencySaved": "Preferred currency saved",
+    "currencyFailed": "That preference could not be saved."
+  },
+  "activity": {
+    "empty": "Nothing has happened in this group yet.",
+    "someone": "Someone",
+    "withDescription": "{action}: {description}",
+    "actions": {
+      "expense": {
+        "created": "added an expense",
+        "updated": "edited an expense",
+        "deleted": "deleted an expense"
+      },
+      "settlement": {
+        "created": "recorded a payment",
+        "updated": "edited a payment",
+        "deleted": "deleted a payment"
+      },
+      "member": {
+        "added": "added a member",
+        "removed": "removed a member",
+        "role_changed": "changed a member's role"
+      },
+      "participant": {
+        "created": "added someone to the group",
+        "updated": "updated someone's details",
+        "removed": "removed someone from the group"
+      },
+      "guest_link": {
+        "created": "created a guest link",
+        "revoked": "revoked a guest link",
+        "redeemed": "joined through a guest link"
+      },
+      "recurring": {
+        "created": "set up a recurring expense",
+        "updated": "changed a recurring expense",
+        "deleted": "removed a recurring expense",
+        "generated": "generated a recurring expense"
+      },
+      "import": {
+        "completed": "completed an import"
+      },
+      "group": {
+        "created": "created the group",
+        "updated": "updated the group",
+        "archived": "archived the group"
+      }
+    }
+  },
+  "recurring": {
+    "setUpTitle": "Set up a recurring expense",
+    "description": "Description",
+    "descriptionPlaceholder": "Rent",
+    "amount": "Amount",
+    "currency": "Currency",
+    "rateHint": "Reused for each generated occurrence.",
+    "repeats": "Repeats",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "every": "Every",
+    "on": "On",
+    "dayOfMonth": "Day of month",
+    "shortMonths": "Short months use their last day.",
+    "month": "Month",
+    "starting": "Starting",
+    "paidBy": "Paid by",
+    "splitEquallyBetween": "Split equally between",
+    "submit": "Create recurring expense",
+    "created": "Recurring expense set up",
+    "errors": {
+      "chooseSplit": "Choose who this is split between.",
+      "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
+      "saveFailed": "The recurring expense could not be created."
+    }
+  },
+  "settlement": {
+    "settleUp": "Settle up",
+    "title": "Record a payment",
+    "description": "A payment moves balances between two people. It is not counted as group spending.",
+    "whoPaid": "Who paid",
+    "whoReceived": "Who received it",
+    "amount": "Amount",
+    "currency": "Currency",
+    "date": "Date",
+    "notes": "Notes",
+    "rateHint": "Frozen with the repayment, like an expense's rate.",
+    "submit": "Record payment",
+    "recorded": "Payment recorded",
+    "errors": {
+      "samePerson": "Choose two different people.",
+      "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
+      "saveFailed": "The payment could not be recorded."
+    }
+  },
+  "balancesPage": {
+    "title": "Balances",
+    "allSettledTitle": "Everyone is settled up",
+    "allSettledDescription": "No outstanding balances in this group.",
+    "whoOwesWhat": "Who owes what",
+    "suggestedRepayments": "Suggested repayments",
+    "suggestedNote": "The fewest transfers that clear these balances. Recording one adds a payment; nothing already recorded changes."
+  },
+  "landing": {
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "eyebrow": "Self-hosted shared expenses",
+    "title": "Shared expenses. Fairly balanced.",
+    "lead": "Balancia tracks what a group spends and works out who owes whom — on a server you control, with no third party in the middle of your money.",
+    "getStarted": "Get started",
+    "haveAccount": "I have an account",
+    "registrationClosed": "Registration is closed on this instance. Ask the administrator for an account, or use a guest invitation link if you have one.",
+    "whatItDoes": "What it does",
+    "features": {
+      "splits": {
+        "title": "Splits that always add up",
+        "body": "Equal, exact, percentage or share-based. Amounts are whole minor units, so allocations sum to the total exactly — every time."
+      },
+      "payers": {
+        "title": "Several payers, no workarounds",
+        "body": "When two people cover one bill, record it once. Balances follow who actually paid what."
+      },
+      "currency": {
+        "title": "Multi-currency, two ways",
+        "body": "Keep each currency balanced separately, or convert everything into one base currency at a rate frozen when you record it."
+      },
+      "passkeys": {
+        "title": "Passkeys and guest links",
+        "body": "Sign in with a passkey or a password. Invite people who do not want an account through a revocable link."
+      },
+      "receipts": {
+        "title": "Receipts kept private",
+        "body": "Attach photos or PDFs. They live in your own storage, behind authorization — never in a public folder."
+      },
+      "recurring": {
+        "title": "Recurring expenses",
+        "body": "Rent, subscriptions, the shared internet bill. Generated on schedule in your group's own timezone."
+      }
+    },
+    "selfHostTitle": "Your instance, your data",
+    "selfHostBody": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, sends nothing to third-party services, and includes no analytics or telemetry.",
+    "footerTagline": "Balancia — shared expenses, fairly balanced.",
+    "footerLicence": "AGPL-3.0-or-later. Modified network versions must offer source."
+  },
+  "notFound": {
+    "title": "Not found",
+    "body": "This page does not exist, or you do not have access to it.",
+    "goToGroups": "Go to your groups"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "body": "The page could not be displayed. Nothing you were doing has been saved.",
+    "reference": "Reference: {digest}",
+    "goToGroups": "Go to your groups"
+  },
+  "offline": {
+    "metaTitle": "Offline",
+    "title": "You are offline",
+    "body": "Balancia needs a connection to your server to show balances and record expenses. Nothing is lost — reconnect and everything will be where you left it.",
+    "note": "This version does not store expenses on your device while offline, so nothing entered here would be saved.",
+    "retry": "Try again"
+  },
+  "joinError": {
+    "metaTitle": "Invitation link",
+    "home": "Go to the home page",
+    "signIn": "Sign in",
+    "reasons": {
+      "invalid": {
+        "title": "This invitation link no longer works",
+        "body": "It may have been revoked, replaced with a new link, or it may have expired. Ask whoever invited you to send a fresh one."
+      },
+      "rateLimited": {
+        "title": "Too many attempts",
+        "body": "This instance limits how often invitation links can be opened from the same address. Wait a few minutes and try again."
+      },
+      "unavailable": {
+        "title": "Something went wrong",
+        "body": "The invitation could not be checked right now. Please try again in a moment."
+      }
+    }
+  },
+  "register": {
+    "metaTitle": "Create account",
+    "closedTitle": "Registration is closed",
+    "closedBody": "This Balancia instance does not accept new sign-ups. Ask the administrator for an account, or open a guest invitation link if someone shared one with you.",
+    "goToSignIn": "Go to sign in",
+    "title": "Create your account",
+    "subtitle": "You can add a passkey afterwards, from your account settings.",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "At least 10 characters.",
+    "confirmPassword": "Confirm password",
+    "submit": "Create account",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "checkEmailTitle": "Check your email",
+    "checkEmailBody": "We sent a confirmation link to <email></email>. Open it to finish setting up your account.",
+    "backToSignIn": "Back to sign in",
+    "validation": {
+      "name": "Enter your name",
+      "email": "Enter a valid email address",
+      "passwordMin": "Use at least 10 characters",
+      "passwordMax": "That password is too long",
+      "mismatch": "The passwords do not match"
+    },
+    "createFailed": "That account could not be created."
+  },
+  "exchangeRate": {
+    "label": "Exchange rate — 1 {from} in {to}",
+    "looking": "Looking up the rate for {date}…",
+    "suggested": "Suggested by {provider}, priced {date}. Edit it if you have a better rate, such as the one your bank charged.",
+    "quotes": "{provider} quotes {rate} for {date}.",
+    "useThat": "Use that instead"
+  },
+  "recurringActions": {
+    "actionsFor": "Actions for {description}",
+    "resume": "Resume",
+    "pause": "Pause",
+    "resumed": "Resumed",
+    "paused": "Paused",
+    "delete": "Delete",
+    "removeTitle": "Remove “{description}”?",
+    "removeBody": "No further expenses will be generated. Expenses it has already created stay in the group.",
+    "keep": "Keep it",
+    "remove": "Remove",
+    "removed": "Recurring expense removed",
+    "failed": "That did not work."
+  },
+  "groupForm": {
+    "name": "Group name",
+    "namePlaceholder": "Lisbon trip",
+    "description": "Description",
+    "descriptionPlaceholder": "Four days, three people, too much pastry.",
+    "yourName": "Your name in this group",
+    "yourNameHelp": "This is how you appear to everyone else in the group.",
+    "currencyLegend": "How to handle currencies",
+    "separateTitle": "Keep currencies separate",
+    "separateBody": "Each currency gets its own balance. Nothing is converted, so no exchange rate can ever distort what someone owes.",
+    "convertedTitle": "Convert to one base currency",
+    "convertedBody": "Foreign expenses are converted using a rate you enter, frozen at the moment you record them. One balance for the whole group.",
+    "baseCurrency": "Base currency",
+    "timezone": "Group timezone",
+    "timezoneHelp": "Used to decide when recurring expenses are due.",
+    "submit": "Create group",
+    "created": "Group created",
+    "failed": "The group could not be created."
+  },
+  "groupSettings": {
+    "details": "Details",
+    "name": "Name",
+    "description": "Description",
+    "timezone": "Timezone",
+    "timezoneHelp": "Recurring expenses are generated according to this timezone.",
+    "save": "Save changes",
+    "saved": "Settings saved",
+    "failed": "Those changes could not be saved."
+  },
+  "dangerZone": {
+    "title": "Danger zone",
+    "archiveTitle": "Archive this group",
+    "restoreTitle": "Restore this group",
+    "archiveBody": "Keeps everything, but stops new expenses being added.",
+    "restoreBody": "Make it editable again.",
+    "archive": "Archive",
+    "restore": "Restore",
+    "archived": "Group archived",
+    "restored": "Group restored",
+    "deleteTitle": "Delete this group",
+    "deleteBody": "Removes every expense, payment and receipt. Cannot be undone.",
+    "delete": "Delete",
+    "confirmTitle": "Delete “{name}”?",
+    "confirmBody": "Every expense, payment, receipt and invitation in this group is permanently removed. This cannot be undone.",
+    "typeToConfirm": "Type <name></name> to confirm",
+    "deletePermanently": "Delete permanently",
+    "deleteFailed": "The group could not be deleted.",
+    "failed": "That did not work."
+  },
+  "receipts": {
+    "attach": "Attach a receipt",
+    "removeFile": "Remove {name} from this expense",
+    "formats": "JPEG, PNG, WebP, GIF, HEIC or PDF. Stored on this server, visible only to this group.",
+    "uploadFailed": "That file could not be uploaded.",
+    "connectionFailed": "The upload failed. Check your connection and try again."
+  },
+  "invitations": {
+    "copyNow": "Copy this link now",
+    "copyWarning": "It is shown only once — Balancia stores only a hashed copy. Anyone who has this link can act as <name></name>: view the group, add and edit expenses, and record payments. Share it only with them, over a channel you trust.",
+    "linkFor": "Invitation link for {name}",
+    "copyLink": "Copy invitation link",
+    "copied": "I have copied it",
+    "active": "An invitation link is active",
+    "expiresOn": "Expires {date}.",
+    "neverExpires": "Does not expire.",
+    "lastUsed": "Last used {date}.",
+    "neverUsed": "Not used yet.",
+    "cannotShowAgain": "The link itself cannot be shown again.",
+    "replace": "Replace with a new link",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke {name}’s link?",
+    "revokeBody": "The link stops working immediately and anyone currently signed in through it is signed out. Expenses they already recorded stay in the group.",
+    "keep": "Keep it",
+    "revokeConfirm": "Revoke link",
+    "revoked": "Link revoked",
+    "noAccount": "{name} has no account. Create a link so they can take part without signing up.",
+    "expires": "Expires",
+    "never": "Never",
+    "inDays": "{count, plural, one {In # day} other {In # days}}",
+    "create": "Create invitation link",
+    "createFailed": "The link could not be created.",
+    "revokeFailed": "The link could not be revoked.",
+    "copyFailed": "Could not copy — select the link and copy it manually."
+  },
+  "passkeys": {
+    "unsupported": "This browser does not support passkeys. You can still sign in with your password.",
+    "addTitle": "Add a passkey",
+    "name": "Name",
+    "namePlaceholder": "Work laptop",
+    "registeredFor": "Registered for <domain></domain>. It will only work on this domain.",
+    "register": "Register a passkey",
+    "yourPasskeys": "Your passkeys",
+    "loadFailed": "Your passkeys could not be loaded. Refresh the page to try again.",
+    "emptyTitle": "No passkeys yet",
+    "emptyDescription": "Register one above to sign in without a password.",
+    "unnamed": "Unnamed passkey",
+    "added": "Added {date}",
+    "lastUsed": "last used {date}",
+    "synced": "synced",
+    "removeLabel": "Remove {name}",
+    "thisPasskey": "this passkey",
+    "removeTitle": "Remove this passkey?",
+    "removeBody": "You will no longer be able to sign in with it. Make sure you still have your password or another passkey.",
+    "keep": "Keep it",
+    "remove": "Remove",
+    "addedToast": "Passkey added",
+    "removedToast": "Passkey removed",
+    "cancelled": "The request was cancelled.",
+    "registerFailed": "That passkey could not be registered.",
+    "removeFailed": "That passkey could not be removed."
+  },
+  "importWizard": {
+    "fileLabel": "Splitwise export",
+    "fileHelp": "A group CSV export, or a JSON backup. The file is parsed on this server and never sent anywhere else.",
+    "read": "Read the file",
+    "readFailed": "That file could not be read.",
+    "commitFailed": "The import could not be completed.",
+    "finished": "Import finished",
+    "completeTitle": "Import complete",
+    "imported": "<b></b> imported",
+    "skipped": "<b></b> skipped as already present",
+    "failed": "<b></b> could not be imported",
+    "peopleAdded": "{count, plural, one {<b></b> new person added} other {<b></b> new people added}}",
+    "another": "Import another file",
+    "previewTitle": "Preview: {fileName}",
+    "expenseCount": "{count, plural, one {# expense} other {# expenses}}",
+    "settlementCount": "{count, plural, one {# payment} other {# payments}}",
+    "duplicateCount": "{count, plural, one {# already imported} other {# already imported}}",
+    "warningsTitle": "{count, plural, one {# row will be skipped} other {# rows will be skipped}}",
+    "warningRow": "Row {row}: ",
+    "andMore": "…and {count} more.",
+    "matchTitle": "Match the people",
+    "matchHelp": "Connect each name from the export to someone in this group, or add them as a new person.",
+    "addAsNew": "Add as a new person",
+    "importRows": "{count, plural, one {Import # row} other {Import # rows}}",
+    "differentFile": "Choose a different file"
+  },
+  "newGroupPage": {
+    "metaTitle": "New group",
+    "title": "Create a group"
+  },
+  "securityPage": {
+    "metaTitle": "Passkeys & security",
+    "title": "Passkeys & security",
+    "intro": "A passkey lets you sign in with your device's own unlock — fingerprint, face or PIN — instead of typing a password.",
+    "insecure": "Passkeys need HTTPS. This instance is served over plain HTTP from a non-localhost address, so your browser will refuse to create one. Put Balancia behind a TLS-terminating reverse proxy and set <code></code> to the https:// address."
+  },
+  "expensePages": {
+    "newTitle": "Add an expense",
+    "editTitle": "Edit expense",
+    "noPeopleTitle": "Add someone first",
+    "noPeopleDescription": "An expense needs at least one person to split it between.",
+    "managePeople": "Manage people"
+  },
+  "importPage": {
+    "title": "Import from Splitwise",
+    "intro": "Bring an existing group across. You will see a preview before anything is written, and importing the same file twice never creates duplicates.",
+    "previous": "Previous imports",
+    "runSummary": "{imported} imported, {skipped} skipped",
+    "runFailed": ", {failed} failed",
+    "status": {
+      "completed": "completed",
+      "pending": "pending",
+      "failed": "failed",
+      "staged": "staged"
+    }
+  },
+  "membersPage": {
+    "title": "People",
+    "intro": "Everyone who shares expenses in this group.",
+    "owner": "Owner",
+    "noAccount": "No account"
+  },
+  "recurringPage": {
+    "title": "Recurring expenses",
+    "intro": "Generated automatically in the group's timezone ({timezone}).",
+    "emptyTitle": "No recurring expenses",
+    "emptyDescription": "Set one up for rent, a subscription or any bill that arrives on a schedule.",
+    "pausedBadge": "Paused",
+    "next": "Next: {date}",
+    "pausedNote": "Paused — nothing will be generated",
+    "noFurther": "No further occurrences",
+    "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}",
+    "weekly": "{count, plural, one {Every week on {day}} other {Every # weeks on {day}}}",
+    "monthly": "{count, plural, one {Every month on day {day}} other {Every # months on day {day}}}",
+    "yearly": "{count, plural, one {Every year on {day}/{month}} other {Every # years on {day}/{month}}}"
+  },
+  "settingsPage": {
+    "title": "Group settings",
+    "shortcuts": "Shortcuts",
+    "recurring": "Recurring expenses",
+    "import": "Import from Splitwise",
+    "currencies": "Currencies",
+    "convertedNote": "Everything is converted into {currency} at the rate recorded with each expense.",
+    "separateNote": "Each currency keeps its own balance. Nothing is converted.",
+    "modeFixed": "The currency mode is fixed once a group exists — changing it would reinterpret every amount already recorded.",
+    "ownerOnly": "Only the group owner can change these settings."
+  },
+  "expenseDetail": {
+    "splitEqual": "Split equally",
+    "splitExact": "Exact amounts",
+    "splitPercentage": "Split by percentage",
+    "splitShares": "Split by shares",
+    "fromRecurring": "From a recurring expense",
+    "convertedAt": "Converted at {rate}",
+    "recordedIn": "Recorded in group currency",
+    "rateFrozen": "Rate frozen when this expense was saved. It is not recalculated.",
+    "paidBy": "Paid by",
+    "splitBetween": "Split between",
+    "notes": "Notes",
+    "receipts": "Receipts",
+    "kilobytes": "{size} KB",
+    "edit": "Edit"
+  },
+  "emails": {
+    "verifySubject": "Confirm your Balancia email address",
+    "verifyBody": "Welcome to Balancia.\n\nConfirm this address to finish setting up your account:\n{url}\n\nThe link works for 24 hours.",
+    "resetSubject": "Reset your Balancia password",
+    "resetBody": "Someone asked to reset the password for your Balancia account.\n\nUse this link within the next hour:\n{url}\n\nIf it wasn't you, you can ignore this message — nothing has changed."
+  },
+  "serverErrors": {
+    "generic": "Something went wrong on the server. Nothing was changed.",
+    "rateLimited": "Too many attempts. Please try again later.",
+    "registrationClosed": "Registration is closed on this instance.",
+    "nameRequired": "Enter your name.",
+    "emailTaken": "That email address is already registered. Try signing in instead.",
+    "emailUnverified": "Confirm your email address before signing in. Check your inbox for the link.",
+    "mailNotConfigured": "Password recovery needs email, which is not configured on this instance. Ask the administrator for help.",
+    "noPassword": "This account does not have a password set.",
+    "wrongPassword": "Your current password is not correct.",
+    "invalidCredentials": "That email and password combination did not work.",
+    "resetLinkInvalid": "That reset link is no longer valid. Ask for a new one.",
+    "confirmLinkInvalid": "That confirmation link is no longer valid. Sign in to request another.",
+    "signInRequired": "Sign in to change your password.",
+    "noGroupAccess": "You do not have access to this group.",
+    "notInGroup": "That item is not part of this group.",
+    "authRequired": "Sign in to continue.",
+    "fileEmpty": "That file is empty.",
+    "fileTooLarge": "That file is larger than the {limit} MB upload limit.",
+    "fileType": "Receipts must be a JPEG, PNG, WebP, GIF, HEIC image or a PDF.",
+    "signedInRequired": "You need to be signed in.",
+    "unknownCurrency": "That is not a currency Balancia knows."
+  },
+  "serverValidation": {
+    "checkForm": "Check the form.",
+    "name": "Enter your name",
+    "email": "Enter a valid email address",
+    "passwordMin": "Use at least 10 characters",
+    "password": "Enter your password",
+    "currentPassword": "Enter your current password"
+  }
+}

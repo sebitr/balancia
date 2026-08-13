@@ -1,196 +1,168 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Archive, Plus, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { BalanceAmount, SettledBadge } from "@/components/money/amount";
+import { AddExpenseBar } from "@/components/dashboard/add-expense-bar";
+import {
+  GroupList,
+  type GroupRowView,
+} from "@/components/dashboard/group-list";
+import { PositionHeader } from "@/components/dashboard/position-header";
 import { getCurrentUser } from "@/lib/security/actor";
-import { listGroupsForUser, type GroupSummary } from "@/modules/groups/service";
-import { loadGroupBalances } from "@/modules/balances/service";
-
-export const metadata: Metadata = { title: "Your groups" };
+import {
+  loadHomeOverview,
+  type GroupPosition,
+} from "@/modules/balances/overview";
+import { getUserPreferredCurrency } from "@/modules/auth/service";
+import { todayIso } from "@/modules/currencies/provider";
 
 /**
- * Where each group stands for the signed-in user, per currency.
+ * Home: where you stand, then which group needs you, then a way in.
  *
- * This deliberately calls the balance engine once per group rather than
- * computing a sum in SQL. Duplicating the arithmetic would put the invariant
- * that every balance set sums to zero — the property the rest of the product
- * rests on — in two places, and the second one would drift. Only active groups
- * are loaded, and they load in parallel.
+ * Everything is resolved here, on the server. The list is handed to a client
+ * component only so its search box can filter without a round trip, so the
+ * view models below are plain serialisable values — amounts as minor-unit
+ * strings, never as JS numbers.
  */
-interface Position {
-  readonly currency: string;
-  readonly amount: bigint;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("dashboard");
+  return { title: t("metaTitle") };
 }
 
-async function loadPositions(
-  groups: readonly GroupSummary[],
-): Promise<Map<string, Position[]>> {
-  const entries = await Promise.all(
-    groups.map(async (group) => {
-      const balances = await loadGroupBalances({
-        groupId: group.id,
-        group: {
-          id: group.id,
-          name: group.name,
-          currencyMode: group.currencyMode,
-          baseCurrency: group.baseCurrency,
-          timezone: group.timezone,
-          archivedAt: group.archivedAt,
-        },
-      });
+/**
+ * One row.
+ *
+ * A group's own currency is what its row shows — `CHF 210.00` stays CHF even
+ * where the header totals in EUR. The exception is a group holding balances in
+ * several currencies at once, which collapses to its converted net; without a
+ * rate to do that with, every figure is shown rather than one of them.
+ */
+function toRow(position: GroupPosition): GroupRowView {
+  const amounts =
+    position.amounts.length > 1 && position.net
+      ? [position.net]
+      : position.amounts;
 
-      const mine = balances.currencies.flatMap((entry) => {
-        const balance = entry.balances.find(
-          (candidate) => candidate.participantId === group.participantId,
-        );
-        return balance
-          ? [{ currency: entry.currency, amount: balance.amount }]
-          : [];
-      });
-
-      return [group.id, mine] as const;
-    }),
-  );
-
-  return new Map(entries);
+  return {
+    id: position.group.id,
+    name: position.group.name,
+    memberNames: [...position.group.memberNames],
+    participantCount: position.group.participantCount,
+    lastActivityAt: position.group.lastActivityAt.toISOString(),
+    amounts: amounts.map((amount) => ({
+      minorUnits: amount.amount.toString(),
+      currency: amount.currency,
+    })),
+  };
 }
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   // The layout has already redirected when there is no user.
-  const groups = user ? await listGroupsForUser(user.userId) : [];
+  if (!user) return null;
 
-  const active = groups.filter((group) => group.archivedAt === null);
-  const archived = groups.filter((group) => group.archivedAt !== null);
-  const positions = await loadPositions(active);
+  const t = await getTranslations("dashboard");
+  const preferredCurrency = await getUserPreferredCurrency(user.userId);
+  const now = new Date();
+  const overview = await loadHomeOverview(user.userId, {
+    preferredCurrency,
+    now,
+  });
+  const { buckets, netPosition } = overview;
+
+  if (overview.groupCount === 0) {
+    return (
+      <EmptyState
+        icon={Users}
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <Button asChild>
+            <Link href="/groups/new">
+              <Plus aria-hidden="true" />
+              {t("createGroup")}
+            </Link>
+          </Button>
+        }
+      />
+    );
+  }
+
+  // The picker is ordered by recency rather than by urgency: "which group am I
+  // in right now" is the question it answers. Archived groups are left out.
+  const pickable = [
+    ...buckets.youOwe,
+    ...buckets.youAreOwed,
+    ...buckets.settled,
+  ]
+    .sort(
+      (a, b) =>
+        b.group.lastActivityAt.getTime() - a.group.lastActivityAt.getTime(),
+    )
+    .map((position) => ({
+      id: position.group.id,
+      name: position.group.name,
+      lastActivityAt: position.group.lastActivityAt.toISOString(),
+    }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            Your groups
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {active.length === 0
-              ? "Nothing here yet."
-              : `${active.length} active ${active.length === 1 ? "group" : "groups"}`}
-          </p>
-        </div>
-        <Button asChild size="sm">
-          <Link href="/groups/new">
-            <Plus aria-hidden="true" />
-            New group
-          </Link>
-        </Button>
+    // The negative margins cancel the shell's own vertical padding so the
+    // position header and the action bar can reach the edges of the column.
+    <div className="-mt-6 -mb-6 flex min-h-[calc(100dvh-3.5rem)] flex-col">
+      <h1 className="sr-only">{t("title")}</h1>
+
+      <PositionHeader
+        net={
+          netPosition
+            ? {
+                minorUnits: netPosition.net.amount.toString(),
+                currency: netPosition.net.currency,
+              }
+            : null
+        }
+        owedToYou={
+          netPosition
+            ? {
+                minorUnits: netPosition.owedToYou.amount.toString(),
+                currency: netPosition.owedToYou.currency,
+              }
+            : null
+        }
+        youOwe={
+          netPosition
+            ? {
+                minorUnits: netPosition.youOwe.amount.toString(),
+                currency: netPosition.youOwe.currency,
+              }
+            : null
+        }
+        owedGroupCount={netPosition?.owedGroupCount ?? 0}
+        owingGroupCount={netPosition?.owingGroupCount ?? 0}
+        currencyTotals={overview.currencyTotals.map((total) => ({
+          currency: total.currency,
+          owedToYou: total.owedToYou.amount.toString(),
+          youOwe: total.youOwe.amount.toString(),
+        }))}
+        displayCurrency={overview.displayCurrency}
+        ratesAsOf={overview.ratesAsOf}
+        today={todayIso(now)}
+        converted={overview.converted}
+      />
+
+      <div className="flex-1 pt-4">
+        <GroupList
+          youOwe={buckets.youOwe.map(toRow)}
+          youAreOwed={buckets.youAreOwed.map(toRow)}
+          settled={buckets.settled.map(toRow)}
+          archived={buckets.archived.map(toRow)}
+          now={now.toISOString()}
+        />
       </div>
 
-      {active.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="Create your first group"
-          description="A group is a set of people sharing expenses — a trip, a flat, a project. Add expenses and Balancia works out who owes whom."
-          action={
-            <Button asChild>
-              <Link href="/groups/new">
-                <Plus aria-hidden="true" />
-                Create a group
-              </Link>
-            </Button>
-          }
-        />
-      ) : (
-        <ul className="space-y-3">
-          {active.map((group) => (
-            <li key={group.id}>
-              <Card className="transition-colors hover:border-primary/40">
-                <CardContent className="p-0">
-                  <Link
-                    href={`/groups/${group.id}`}
-                    className="block rounded-lg p-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{group.name}</p>
-                        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                          <span className="inline-flex items-center gap-1">
-                            <Users aria-hidden="true" className="size-3.5" />
-                            {group.participantCount}{" "}
-                            {group.participantCount === 1 ? "person" : "people"}
-                          </span>
-                          <span aria-hidden="true">·</span>
-                          <span>
-                            {group.currencyMode === "converted"
-                              ? `Converted to ${group.baseCurrency}`
-                              : "Separate currencies"}
-                          </span>
-                        </p>
-                      </div>
-                      {group.role === "owner" && (
-                        <Badge variant="secondary" className="shrink-0">
-                          Owner
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Where you stand — the reason most people open the app.
-                        Below the name rather than beside it, so a long group
-                        name and a balance never compete for one narrow row. */}
-                    {(() => {
-                      const mine = positions.get(group.id) ?? [];
-                      if (mine.length === 0) return null;
-                      const outstanding = mine.filter(
-                        (entry) => entry.amount !== 0n,
-                      );
-                      return (
-                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t pt-3">
-                          {outstanding.length === 0 ? (
-                            <SettledBadge />
-                          ) : (
-                            outstanding.map((entry) => (
-                              <BalanceAmount
-                                key={entry.currency}
-                                minorUnits={entry.amount.toString()}
-                                currency={entry.currency}
-                                size="small"
-                              />
-                            ))
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </Link>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {archived.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Archive aria-hidden="true" className="size-4" />
-            Archived
-          </h2>
-          <ul className="space-y-2">
-            {archived.map((group) => (
-              <li key={group.id}>
-                <Link
-                  href={`/groups/${group.id}`}
-                  className="block rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  <span className="text-muted-foreground">{group.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <AddExpenseBar groups={pickable} now={now.toISOString()} />
     </div>
   );
 }

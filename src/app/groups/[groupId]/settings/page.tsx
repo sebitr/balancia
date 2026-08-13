@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { FileJson, RefreshCw, Sheet, Table, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,29 +12,30 @@ export default async function GroupSettingsPage({
 }: PageProps<"/groups/[groupId]/settings">) {
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
+  const t = await getTranslations("settingsPage");
 
   return (
     <div className="space-y-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">
-        Group settings
+        {t("title")}
       </h1>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Shortcuts</CardTitle>
+          <CardTitle className="text-base">{t("shortcuts")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button asChild variant="outline" size="sm">
             <Link href={`/groups/${groupId}/recurring`}>
               <RefreshCw aria-hidden="true" />
-              Recurring expenses
+              {t("recurring")}
             </Link>
           </Button>
           {access.permissions.importData && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/groups/${groupId}/import`}>
                 <Upload aria-hidden="true" />
-                Import from Splitwise
+                {t("import")}
               </Link>
             </Button>
           )}
@@ -86,18 +88,17 @@ export default async function GroupSettingsPage({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Currencies</CardTitle>
+          <CardTitle className="text-base">{t("currencies")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
           <p>
             {access.group.currencyMode === "converted"
-              ? `Everything is converted into ${access.group.baseCurrency} at the rate recorded with each expense.`
-              : "Each currency keeps its own balance. Nothing is converted."}
+              ? t("convertedNote", {
+                  currency: access.group.baseCurrency ?? "",
+                })
+              : t("separateNote")}
           </p>
-          <p className="text-xs text-muted-foreground">
-            The currency mode is fixed once a group exists — changing it would
-            reinterpret every amount already recorded.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("modeFixed")}</p>
         </CardContent>
       </Card>
 
@@ -115,9 +116,7 @@ export default async function GroupSettingsPage({
           />
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          Only the group owner can change these settings.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("ownerOnly")}</p>
       )}
     </div>
   );

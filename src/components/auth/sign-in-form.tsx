@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,15 +24,26 @@ import { usePasskeySupport } from "./use-passkey-support";
  * on browsers without WebAuthn rather than offering a button that cannot work.
  */
 
+/**
+ * Field messages are catalogue keys rather than prose; `zodResolver` hands
+ * them to react-hook-form, which renders them through `t()` below. That keeps
+ * one schema working in every language.
+ */
 const schema = z.object({
-  email: z.email("Enter a valid email address"),
-  password: z.string().min(1, "Enter your password"),
+  email: z.email("email"),
+  password: z.string().min(1, "password"),
 });
 
 type FormValues = z.infer<typeof schema>;
 
+type ValidationKey = "email" | "password";
+
 export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
   const router = useRouter();
+  const t = useTranslations("auth.signIn");
+  const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.errors");
+  const tCommon = useTranslations("common");
   const [formError, setFormError] = useState<string | null>(null);
   const [passkeyPending, setPasskeyPending] = useState(false);
   const passkeysAvailable = usePasskeySupport();
@@ -41,11 +53,16 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
     defaultValues: { email: "", password: "" },
   });
 
+  const fieldError = (field: ValidationKey): string | null => {
+    const message = form.formState.errors[field]?.message;
+    return message ? tValidation(message as ValidationKey) : null;
+  };
+
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
     const result = await signInAction(values);
     if (!result.ok) {
-      setFormError(result.error ?? "That did not work.");
+      setFormError(result.error ?? tErrors("generic"));
       return;
     }
     router.push("/dashboard");
@@ -63,10 +80,10 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
       // A cancelled prompt is not an error worth shouting about.
       const message =
         error instanceof Error && error.name === "NotAllowedError"
-          ? "The passkey request was cancelled."
+          ? tErrors("passkeyCancelled")
           : error instanceof Error
             ? error.message
-            : "Your browser could not complete the passkey request.";
+            : tErrors("passkeyFailed");
       setFormError(message);
     } finally {
       setPasskeyPending(false);
@@ -77,11 +94,9 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Welcome back
+          {t("title")}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Sign in to see your groups and balances.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {formError && (
@@ -92,7 +107,7 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <Input
             id="email"
             type="email"
@@ -103,22 +118,22 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
             }
             {...form.register("email")}
           />
-          {form.formState.errors.email && (
+          {fieldError("email") && (
             <p id="email-error" className="text-sm text-destructive">
-              {form.formState.errors.email.message}
+              {fieldError("email")}
             </p>
           )}
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             {mailEnabled && (
               <Link
                 href="/forgot-password"
                 className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                Forgot password?
+                {t("forgotPassword")}
               </Link>
             )}
           </div>
@@ -132,9 +147,9 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
             }
             {...form.register("password")}
           />
-          {form.formState.errors.password && (
+          {fieldError("password") && (
             <p id="password-error" className="text-sm text-destructive">
-              {form.formState.errors.password.message}
+              {fieldError("password")}
             </p>
           )}
         </div>
@@ -147,7 +162,7 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
           {form.formState.isSubmitting && (
             <Loader2 aria-hidden="true" className="animate-spin" />
           )}
-          Sign in
+          {t("submit")}
         </Button>
       </form>
 
@@ -155,7 +170,9 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
         <>
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground uppercase">or</span>
+            <span className="text-xs text-muted-foreground uppercase">
+              {tCommon("or")}
+            </span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
@@ -171,18 +188,18 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
             ) : (
               <KeyRound aria-hidden="true" />
             )}
-            Sign in with a passkey
+            {t("withPasskey")}
           </Button>
         </>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
-        No account yet?{" "}
+        {t("noAccount")}{" "}
         <Link
           href="/register"
           className="text-foreground underline underline-offset-4"
         >
-          Create one
+          {t("createOne")}
         </Link>
       </p>
     </div>

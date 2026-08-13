@@ -1,33 +1,35 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { LinkSlash } from "@/components/icons/link-slash";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/brand/wordmark";
 
-export const metadata: Metadata = { title: "Invitation link" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("joinError");
+  return { title: t("metaTitle") };
+}
 
-const REASONS: Record<string, { title: string; body: string }> = {
-  invalid: {
-    title: "This invitation link no longer works",
-    body: "It may have been revoked, replaced with a new link, or it may have expired. Ask whoever invited you to send a fresh one.",
-  },
-  "rate-limited": {
-    title: "Too many attempts",
-    body: "This instance limits how often invitation links can be opened from the same address. Wait a few minutes and try again.",
-  },
-  unavailable: {
-    title: "Something went wrong",
-    body: "The invitation could not be checked right now. Please try again in a moment.",
-  },
-};
+/** Query values map onto catalogue keys; anything else falls back to invalid. */
+const REASON_KEYS = {
+  invalid: "invalid",
+  "rate-limited": "rateLimited",
+  unavailable: "unavailable",
+} as const;
+
+type ReasonKey = (typeof REASON_KEYS)[keyof typeof REASON_KEYS];
 
 export default async function JoinErrorPage({
   searchParams,
 }: PageProps<"/join/error">) {
   const params = await searchParams;
   const reasonParam = params.reason;
-  const reason = typeof reasonParam === "string" ? reasonParam : "invalid";
-  const content = REASONS[reason] ?? REASONS.invalid;
+  const reason =
+    typeof reasonParam === "string" && reasonParam in REASON_KEYS
+      ? REASON_KEYS[reasonParam as keyof typeof REASON_KEYS]
+      : ("invalid" satisfies ReasonKey);
+
+  const t = await getTranslations("joinError");
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -42,15 +44,17 @@ export default async function JoinErrorPage({
             <LinkSlash className="size-6" />
           </span>
           <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            {content.title}
+            {t(`reasons.${reason}.title`)}
           </h1>
-          <p className="text-pretty text-muted-foreground">{content.body}</p>
+          <p className="text-pretty text-muted-foreground">
+            {t(`reasons.${reason}.body`)}
+          </p>
           <div className="flex justify-center gap-3 pt-2">
             <Button asChild variant="outline">
-              <Link href="/">Go to the home page</Link>
+              <Link href="/">{t("home")}</Link>
             </Button>
             <Button asChild>
-              <Link href="/sign-in">Sign in</Link>
+              <Link href="/sign-in">{t("signIn")}</Link>
             </Button>
           </div>
         </div>

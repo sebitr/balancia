@@ -18,10 +18,40 @@ import { InvalidAmountError } from "@/modules/currencies/money";
  * expense re-rendered tomorrow splits its rounding pennies the same way.
  */
 
+/**
+ * Machine-readable reasons a split can be rejected.
+ *
+ * The `message` on an `AllocationError` stays English and developer-facing;
+ * `code` is what the UI translates. Everything a user can actually trigger by
+ * typing into the expense form has its own code — `internal` covers the
+ * defensive invariants, which are bugs rather than input problems.
+ */
+export type AllocationErrorCode =
+  | "internal"
+  | "participantsRequired"
+  | "valueRequired"
+  | "valueNotDecimal"
+  | "valueNotInteger"
+  | "exactSumMismatch"
+  | "percentageNegative"
+  | "percentageSumMismatch"
+  | "shareNegative"
+  | "sharesAllZero";
+
 export class AllocationError extends Error {
-  constructor(message: string) {
+  readonly code: AllocationErrorCode;
+  /** Values the translated message interpolates, e.g. the received total. */
+  readonly params: Readonly<Record<string, string | number>>;
+
+  constructor(
+    message: string,
+    code: AllocationErrorCode = "internal",
+    params: Readonly<Record<string, string | number>> = {},
+  ) {
     super(message);
     this.name = "AllocationError";
+    this.code = code;
+    this.params = params;
   }
 }
 
@@ -178,6 +208,8 @@ export function validateExactAllocation(
   if (sum !== total) {
     throw new AllocationError(
       `Exact amounts must sum to the expense total. Expected ${total}, received ${sum}.`,
+      "exactSumMismatch",
+      { expected: total.toString(), received: sum.toString() },
     );
   }
 }
@@ -192,7 +224,10 @@ export function validatePercentages(percentages: readonly Decimal[]): void {
   }
   for (const percentage of percentages) {
     if (percentage.isNegative()) {
-      throw new AllocationError("Percentages must not be negative");
+      throw new AllocationError(
+        "Percentages must not be negative",
+        "percentageNegative",
+      );
     }
   }
   const sum = percentages.reduce(
@@ -202,6 +237,8 @@ export function validatePercentages(percentages: readonly Decimal[]): void {
   if (!sum.equals(100)) {
     throw new AllocationError(
       `Percentages must sum to exactly 100, received ${sum.toString()}`,
+      "percentageSumMismatch",
+      { received: sum.toString() },
     );
   }
 }
@@ -212,7 +249,7 @@ export function validateShares(shares: readonly Decimal[]): void {
   }
   for (const share of shares) {
     if (share.isNegative()) {
-      throw new AllocationError("Shares must not be negative");
+      throw new AllocationError("Shares must not be negative", "shareNegative");
     }
   }
   const sum = shares.reduce(
@@ -220,7 +257,10 @@ export function validateShares(shares: readonly Decimal[]): void {
     new Decimal(0),
   );
   if (sum.isZero()) {
-    throw new AllocationError("At least one share must be greater than zero");
+    throw new AllocationError(
+      "At least one share must be greater than zero",
+      "sharesAllZero",
+    );
   }
 }
 
