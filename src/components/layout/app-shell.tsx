@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,7 @@ export function AppShell({
           className,
         )}
       >
+        <InstallPrompt />
         {children}
       </main>
 

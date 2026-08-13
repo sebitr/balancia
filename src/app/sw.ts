@@ -62,9 +62,13 @@ const serwist = new Serwist({
       }),
     },
     {
+      // Manifest icons, plus the app icons Next.js links into <head>. Those
+      // carry a cache-busting query, so match on the path alone.
       matcher: ({ url }) =>
         url.pathname.startsWith("/icons/") ||
         url.pathname === "/icon.svg" ||
+        url.pathname === "/apple-icon.png" ||
+        url.pathname === "/favicon.ico" ||
         url.pathname === "/manifest.webmanifest",
       handler: new CacheFirst({ cacheName: "balancia-assets" }),
     },
