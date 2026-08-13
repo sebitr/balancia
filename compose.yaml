@@ -45,6 +45,11 @@ x-app-environment: &app-environment
   # EXCHANGE_RATE_PROVIDER in .env gets it interpolated here or not at all.
   EXCHANGE_RATE_PROVIDER: ${EXCHANGE_RATE_PROVIDER:-none}
   EXCHANGE_RATE_API_URL: ${EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v1}
+  # Web Push. Unset by default, which leaves notifications working inside the
+  # app and only turns push delivery off. Generate a pair with `pnpm push:keys`.
+  PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
+  PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
+  PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
