@@ -10,6 +10,7 @@ import {
   type GroupRowView,
 } from "@/components/dashboard/group-list";
 import { PositionHeader } from "@/components/dashboard/position-header";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
   loadHomeOverview,
@@ -153,6 +154,11 @@ export default async function DashboardPage() {
       />
 
       <div className="flex-1 pt-4">
+        {/* Only on this branch: the visitor already has a group, so Balancia
+            has earned the ask. A brand-new account returns above, and never
+            meets an install nudge on its first load. */}
+        <InstallPrompt />
+
         <GroupList
           youOwe={buckets.youOwe.map(toRow)}
           youAreOwed={buckets.youAreOwed.map(toRow)}

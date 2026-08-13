@@ -31,14 +31,18 @@
     "toDark": "Switch to dark theme"
   },
   "pwa": {
-    "title": "Add Balancia to your home screen",
-    "subtitle": "Opens full screen, one tap away — no app store needed.",
-    "showMeHow": "Show me how",
-    "addToHomeScreen": "Add to home screen",
-    "dismiss": "Dismiss install invitation",
-    "iosIntro": "Safari installs web apps from its share menu — two taps and Balancia sits beside your other apps.",
-    "iosStepShare": "Tap <b>Share</b> in the browser toolbar.",
-    "iosStepAdd": "Choose <b>Add to Home Screen</b>."
+    "install": "Install Balancia",
+    "installAction": "Install",
+    "installDescription": "Add Balancia to your Home Screen for faster access and an app-like experience.",
+    "notNow": "Not now",
+    "gotIt": "Got it",
+    "iosStepShare": "Tap the <b>Share</b> button.",
+    "iosStepAdd": "Choose <b>Add to Home Screen</b>.",
+    "iosStepConfirm": "Tap <b>Add</b>.",
+    "openInSafari": "Open Balancia in <b>Safari</b>, then add it from the Share menu.",
+    "openInSafariDescription": "On iPhone and iPad, only Safari can add an app to the Home Screen.",
+    "alreadyInstalled": "Balancia is already installed",
+    "alreadyInstalledDescription": "Open it from your Home Screen to run it full screen."
   },
   "money": {
     "getsBack": "gets back",

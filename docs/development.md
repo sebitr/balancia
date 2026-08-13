@@ -227,6 +227,59 @@ browser produces a genuine attestation and assertion, and the server verifies
 signature, origin, relying-party ID and challenge. Nothing is stubbed
 server-side.
 
+## Installing Balancia (PWA)
+
+The service worker and the install experience are separate concerns. Serwist
+owns the former (see `serwist.config.mjs`); everything about _offering_ the
+install lives in `src/components/pwa/`.
+
+`use-install-prompt.ts` is the single source of truth. It is a module-level
+store rather than React state, because `beforeinstallprompt` fires exactly
+once and can arrive before anything mounts. Components read it through
+`useSyncExternalStore`, whose server snapshot offers nothing at all — so the
+server renders no install affordance and the client fills one in after
+hydration. Nothing ever appears and then vanishes.
+
+It resolves one of four methods, and no component checks a browser itself:
+
+| Method        | Where                               | What the user gets               |
+| ------------- | ----------------------------------- | -------------------------------- |
+| `prompt`      | Android and desktop Chromium        | The browser's own install sheet  |
+| `ios-share`   | Safari on iOS and iPadOS            | Share → Add to Home Screen steps |
+| `ios-browser` | Chrome, Edge, Firefox, Opera on iOS | "Open in Safari"                 |
+| `unavailable` | Installed, or Firefox and friends   | Nothing                          |
+
+Two entry points, deliberately unequal. **The account menu** carries
+"Install Balancia" and stays available for as long as installing is possible.
+**The dashboard** additionally shows a one-time suggestion, but only on the
+branch where the visitor already belongs to a group — a new account never
+meets it on first load. Waving that suggestion away is persisted to
+`localStorage` and never asked again; the menu action is unaffected, because
+dismissal should silence a nudge, not remove a choice.
+
+### Manual QA
+
+Automated tests mock the browser APIs — `beforeinstallprompt` is Chromium-only
+and standalone mode is not something jsdom or Playwright enters. So the matrix
+below is checked by hand against a build served over HTTPS (installability
+requires a secure origin; `localhost` counts, a LAN IP does not).
+
+| Scenario                      | Expected                                                              |
+| ----------------------------- | --------------------------------------------------------------------- |
+| Android Chrome                | Menu action present; opens the native dialog; installs                |
+| Android Chrome, after install | Action gone; home-screen launch opens standalone                      |
+| Android Brave / Edge          | Same as Chrome — nothing keys off "Chrome" specifically               |
+| Firefox for Android           | No install action anywhere                                            |
+| iPhone Safari                 | Action present; opens the share-sheet steps; add to Home Screen works |
+| iPhone Safari, standalone     | No install action                                                     |
+| iPhone Chrome / Edge          | "Open in Safari"; never an Android-style prompt                       |
+| iPad Safari                   | Detected as iOS despite the desktop user agent                        |
+| Desktop Chrome / Edge         | Menu action present; native prompt works                              |
+| Desktop Firefox / Safari      | No install action                                                     |
+
+Check the sheet in both themes, and on a notched iPhone — it pads for
+`safe-area-inset-bottom`.
+
 ## Changing the database schema
 
 1. Edit the relevant file in `src/lib/db/schema/`.
