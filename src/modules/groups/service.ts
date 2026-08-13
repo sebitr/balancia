@@ -62,7 +62,14 @@ const AVATAR_STACK_NAMES = 3;
  * activity" has to mean. Postgres's `GREATEST` skips nulls, and the group's own
  * creation is included as a floor so a group nobody has touched still sorts.
  */
-const lastActivityAt = sql<Date>`GREATEST(
+/*
+ * `mapWith` is load-bearing. Drizzle replaces the driver's timestamp parser
+ * with its own and then re-applies it per column, so a raw expression like
+ * this one arrives as the unparsed string unless it is told which mapper to
+ * borrow — and `sql<Date>` alone is a claim TypeScript believes and Postgres
+ * does not honour.
+ */
+const lastActivityAt = sql`GREATEST(
   ${groups.createdAt},
   (SELECT max(${expenses.createdAt}) FROM ${expenses}
     WHERE ${expenses.groupId} = ${groups.id} AND ${expenses.deletedAt} IS NULL),
@@ -70,7 +77,7 @@ const lastActivityAt = sql<Date>`GREATEST(
     WHERE ${settlements.groupId} = ${groups.id} AND ${settlements.deletedAt} IS NULL),
   (SELECT max(${activityEvents.createdAt}) FROM ${activityEvents}
     WHERE ${activityEvents.groupId} = ${groups.id})
-)`;
+)`.mapWith(groups.createdAt);
 
 /** Groups the signed-in user belongs to. */
 export async function listGroupsForUser(
@@ -113,7 +120,10 @@ export async function listGroupsForUser(
     .from(groupMembers)
     .innerJoin(groups, eq(groups.id, groupMembers.groupId))
     .where(eq(groupMembers.userId, userId))
-    .orderBy(asc(groups.archivedAt), desc(lastActivityAt));
+    // NULLS FIRST is not decoration: an active group has no `archivedAt`, and
+    // PostgreSQL sorts nulls last under a plain ASC — which would file every
+    // live group below the archived ones.
+    .orderBy(sql`${groups.archivedAt} ASC NULLS FIRST`, desc(lastActivityAt));
 
   return rows;
 }
