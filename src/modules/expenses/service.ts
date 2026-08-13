@@ -14,6 +14,11 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import { dispatchNotifications } from "@/modules/notifications/service";
+import {
+  participantsOfExpense,
+  recordExpenseNotification,
+} from "@/modules/notifications/events";
 import { recordCategoryChoice } from "@/modules/categorization/service";
 import {
   resolveConversion,
@@ -223,7 +228,7 @@ export async function createExpense(
     on: input.expenseDate,
   });
 
-  return db.transaction(async (tx) => {
+  const { expenseId, notificationIds } = await db.transaction(async (tx) => {
     const referenced = [
       ...input.payers.map((payer) => payer.participantId),
       ...input.splitEntries.map((entry) => entry.participantId),
@@ -308,8 +313,25 @@ export async function createExpense(
       { db: tx },
     );
 
-    return expense.id;
+    const notificationIds = await recordExpenseNotification(tx, access, {
+      type: "expense.created",
+      expenseId: expense.id,
+      description: input.description,
+      amount: prepared.amount,
+      currency: prepared.currency,
+      participantIds: [
+        ...prepared.payers.map((payer) => payer.participantId),
+        ...prepared.shares.map((share) => share.participantId),
+      ],
+    });
+
+    return { expenseId: expense.id, notificationIds };
   });
+
+  // After the commit: pushing is a call to a third-party push service, and it
+  // must not run inside a transaction that could still roll back.
+  await dispatchNotifications(notificationIds);
+  return expenseId;
 }
 
 export async function updateExpense(
@@ -329,7 +351,7 @@ export async function updateExpense(
     on: input.expenseDate,
   });
 
-  await db.transaction(async (tx) => {
+  const notificationIds = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: expenses.id, description: expenses.description })
       .from(expenses)
@@ -359,6 +381,11 @@ export async function updateExpense(
       now: options.now,
       rateSource,
     });
+
+    // Captured before the allocations are replaced: someone dropped from the
+    // split needs to hear that their share is gone just as much as someone
+    // added to it.
+    const previousParticipants = await participantsOfExpense(tx, expenseId);
 
     await tx
       .update(expenses)
@@ -429,7 +456,22 @@ export async function updateExpense(
       { merchant: input.description, category: input.category ?? null },
       { db: tx },
     );
+
+    return recordExpenseNotification(tx, access, {
+      type: "expense.updated",
+      expenseId,
+      description: input.description,
+      amount: prepared.amount,
+      currency: prepared.currency,
+      participantIds: [
+        ...previousParticipants,
+        ...prepared.payers.map((payer) => payer.participantId),
+        ...prepared.shares.map((share) => share.participantId),
+      ],
+    });
   });
+
+  await dispatchNotifications(notificationIds);
 }
 
 export async function deleteExpense(
@@ -440,7 +482,7 @@ export async function deleteExpense(
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
 
-  await db.transaction(async (tx) => {
+  const notificationIds = await db.transaction(async (tx) => {
     const deleted = await tx
       .update(expenses)
       .set({ deletedAt: new Date() })
@@ -477,7 +519,20 @@ export async function deleteExpense(
         currency: deleted[0].currency,
       },
     });
+
+    // The allocations survive a soft delete, so they still say who this
+    // expense concerned.
+    return recordExpenseNotification(tx, access, {
+      type: "expense.deleted",
+      expenseId,
+      description: deleted[0].description,
+      amount: deleted[0].amount,
+      currency: deleted[0].currency,
+      participantIds: await participantsOfExpense(tx, expenseId),
+    });
   });
+
+  await dispatchNotifications(notificationIds);
 }
 
 async function linkAttachments(

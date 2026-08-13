@@ -31,6 +31,7 @@
     "design-system": "node design-system/build.mjs",
     "build:next": "next build",
     "icons": "tsx scripts/generate-icons.ts",
+    "push:keys": "tsx scripts/generate-push-keys.ts",
     "semantic:install": "tsx scripts/fetch-semantic-model.ts"
   },
   "dependencies": {

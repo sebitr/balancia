@@ -36,6 +36,13 @@
       "when": 1786648811460,
       "tag": "0004_slow_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786651325685,
+      "tag": "0005_steady_the_hunter",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,10 @@ export const QUEUES = {
   importCommit: "import.commit",
   /** Warms cached exchange rates for the pairs groups are using. */
   ratesRefresh: "rates.refresh",
+  /** Pushes the notifications a just-committed change created. */
+  notificationsDeliver: "notifications.deliver",
+  /** Catches notifications the fast path above never got to. */
+  notificationsSweep: "notifications.sweep",
   /** Housekeeping: orphaned uploads, stale rate-limit windows, expired sessions. */
   maintenance: "maintenance.sweep",
 } as const;
@@ -28,6 +32,10 @@ export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
 export interface ImportCommitPayload {
   readonly importRunId: string;
   readonly groupId: string;
+}
+
+export interface NotificationsDeliverPayload {
+  readonly notificationIds: readonly string[];
 }
 
 let boss: PgBoss | undefined;

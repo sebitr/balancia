@@ -30,10 +30,11 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 20  | Exchange-rate provider (opt-in)                         | ✅     |
 | 21  | Group export (JSON, CSV, XLSX)                          | ✅     |
 | 22  | Automatic expense categorization (EN/FR)                | ✅     |
+| 23  | Notifications: in-app inbox and Web Push (opt-in)       | ✅     |
 
 ## Verification
 
-Last full run on macOS with Node 24.19, pnpm 11.20 and PostgreSQL 18.4:
+Last full run on macOS with Node 24.19, pnpm 11.20 and PostgreSQL 14.23:
 
 | Check               | Result                                        |
 | ------------------- | --------------------------------------------- |
@@ -41,13 +42,27 @@ Last full run on macOS with Node 24.19, pnpm 11.20 and PostgreSQL 18.4:
 | `pnpm lint`         | Clean                                         |
 | `pnpm typecheck`    | Clean                                         |
 | `pnpm format:check` | Clean                                         |
-| `pnpm test:all`     | **278 passed**, 19 files (unit + integration) |
-| `pnpm test:e2e`     | **26 passed** (desktop + mobile projects)     |
-| `pnpm build`        | Succeeds; service worker precaches 44 URLs    |
+| `pnpm test:all`     | **647 passed**, 50 files (unit + integration) |
+| `pnpm test:e2e`     | 25 passed, 2 failing (see below)              |
+| `pnpm build`        | Succeeds; service worker precaches 51 URLs    |
 | `pnpm audit --prod` | No known vulnerabilities                      |
 
-`test:e2e` and `audit --prod` are from the previous full run; the rest were
-re-run with the exchange-rate provider in place.
+Every row above was re-run with notifications in place. Note the PostgreSQL
+version: this run used 14.23, not the 18 that Compose ships — the committed
+migrations apply cleanly on both, but a run against 18 is still the one that
+matters before release.
+
+Two end-to-end tests are failing, both predating notifications and both in the
+expense and import areas rather than in it:
+
+- `expenses.spec.ts › rejects percentages that do not add up to 100` asserts on
+  the server-side wording from `allocation.ts` ("must sum to exactly 100"),
+  which the form's own client-side check now pre-empts with "Percentages must
+  add up to 100 — they currently total 90". The validation works; the
+  assertion is against the message that no longer reaches the screen.
+- `import.spec.ts › imports a Splitwise CSV with a preview step` expects the
+  literal "1 payments", while `importWizard.settlementCount` is a plural that
+  correctly renders "1 payment" for one.
 
 ## Notable design decisions made during implementation
 
@@ -70,6 +85,23 @@ does not get to say where the saved rate came from. On write, the service asks
 the rate cache whether the submitted rate is the one this instance actually
 fetched for that pair and day, and labels the row `api` only then — so
 `exchange_rate_source` stays a fact rather than a claim by the client.
+
+**Web Push is implemented rather than depended on.** The protocol is ECDH over
+P-256, HKDF, AES-128-GCM and an ES256 JWT — all of it in `node:crypto`, and all
+of it specified precisely enough to implement in about two hundred lines. The
+maintained JavaScript library for this brings five direct dependencies to audit
+for that, which does not sit well with a dependency list reviewed by hand. The
+encryption is verified by a round trip whose receiving half is written from the
+RFC rather than from the sending code, deriving each key from the source a real
+receiver would use — so an ordering mistake in the key derivation fails the
+authentication tag instead of passing symmetrically.
+
+**One table is both the inbox and the outbox.** A notification row is written
+in the same transaction as the change it describes, so the inbox cannot
+announce something that rolled back. The same row's `pushed_at` is what push
+delivery claims, with an `UPDATE … WHERE pushed_at IS NULL`, which makes
+delivery exactly-once whether the queued job or the five-minute sweep reaches
+it first — and removes the need for a separate outbox table and its poller.
 
 **The XLSX writer is ours; only the ZIP container is not.** An `.xlsx` file is a
 ZIP of XML parts, and the maintained JavaScript libraries for writing one are

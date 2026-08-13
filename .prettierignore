@@ -1,4 +1,8 @@
 node_modules
+# Agent scratch space, including git worktrees holding checkouts of this same
+# repository. Without this, `pnpm format` reformats files inside another
+# checkout — and the rooted patterns below (drizzle/meta) do not match them.
+.claude
 .next
 .next-profiles
 coverage
