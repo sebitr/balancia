@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
@@ -37,11 +38,14 @@ export function AppShell({
           >
             <Wordmark />
           </Link>
-          <UserMenu
-            label={actor.label}
-            email={actor.email}
-            isGuest={actor.isGuest}
-          />
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <UserMenu
+              label={actor.label}
+              email={actor.email}
+              isGuest={actor.isGuest}
+            />
+          </div>
         </div>
       </header>
 
