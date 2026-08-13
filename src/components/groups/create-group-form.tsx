@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CurrencySelect } from "@/components/money/currency-select";
 import { TimezoneSelect } from "@/components/groups/timezone-select";
+import { ParticipantNamesField } from "@/components/groups/participant-names-field";
 import { createGroupAction } from "@/modules/groups/actions";
 import type { CurrencyMode } from "@/modules/currencies/conversion";
 
@@ -30,6 +31,7 @@ export function CreateGroupForm({
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<CurrencyMode>("separate");
+  const [ownerName, setOwnerName] = useState(defaultName);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -88,7 +90,8 @@ export function CreateGroupForm({
         <Input
           id="ownerDisplayName"
           name="ownerDisplayName"
-          defaultValue={defaultName}
+          value={ownerName}
+          onChange={(event) => setOwnerName(event.target.value)}
           required
           maxLength={120}
         />
@@ -96,6 +99,8 @@ export function CreateGroupForm({
           This is how you appear to everyone else in the group.
         </p>
       </div>
+
+      <ParticipantNamesField ownerLabel={ownerName} />
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium">

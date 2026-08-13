@@ -50,6 +50,12 @@ export async function createGroupAction(
     baseCurrency: formData.get("baseCurrency") || undefined,
     timezone: formData.get("timezone"),
     ownerDisplayName: formData.get("ownerDisplayName") || user.name,
+    // One field repeated per person, so the form still submits without
+    // JavaScript. Blank entries are dropped rather than rejected.
+    participantNames: formData
+      .getAll("participantNames")
+      .map((value) => String(value))
+      .filter((value) => value.trim() !== ""),
   });
   if (!parsed.success) {
     return actionError(parsed.error.issues[0]?.message ?? "Check the form.");

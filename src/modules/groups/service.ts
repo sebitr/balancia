@@ -121,6 +121,36 @@ export async function createGroup(
       role: "owner",
     });
 
+    // People named while creating the group. Same transaction as the group
+    // itself: a half-created group with some of its members missing would be
+    // worse than an outright failure the organiser can retry.
+    const others = input.participantNames ?? [];
+    if (others.length > 0) {
+      const created = await tx
+        .insert(participants)
+        .values(
+          others.map((displayName) => ({ groupId: group.id, displayName })),
+        )
+        .returning({
+          id: participants.id,
+          displayName: participants.displayName,
+        });
+
+      for (const person of created) {
+        await recordActivity(tx, {
+          groupId: group.id,
+          action: "participant.created",
+          entityType: "participant",
+          entityId: person.id,
+          actorType: "user",
+          actorUserId: actor.userId,
+          actorParticipantId: participant.id,
+          actorLabel: input.ownerDisplayName,
+          metadata: { displayName: person.displayName },
+        });
+      }
+    }
+
     await recordActivity(tx, {
       groupId: group.id,
       action: "group.created",
