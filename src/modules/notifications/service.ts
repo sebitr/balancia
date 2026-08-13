@@ -114,6 +114,7 @@ async function resolveRecipients(
         settlements: row.settlementsEnabled,
         recurring: row.recurringEnabled,
         imports: row.importsEnabled,
+        reminders: row.remindersEnabled,
       } satisfies NotificationPreferences,
     ]),
   );
@@ -287,6 +288,7 @@ export async function getPreferences(
     settlements: row.settlementsEnabled,
     recurring: row.recurringEnabled,
     imports: row.importsEnabled,
+    reminders: row.remindersEnabled,
   };
 }
 
@@ -301,6 +303,7 @@ export async function savePreferences(
     settlementsEnabled: preferences.settlements,
     recurringEnabled: preferences.recurring,
     importsEnabled: preferences.imports,
+    remindersEnabled: preferences.reminders,
     updatedAt: new Date(),
   };
   await db

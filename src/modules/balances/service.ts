@@ -13,10 +13,12 @@ import type { GroupAccess } from "@/lib/security/authorization";
 import {
   balancesSumToZero,
   computeBalances,
+  contributionsOf,
   simplifyDebts,
   totalSpendByCurrency,
   type BalanceInputExpense,
   type BalanceInputSettlement,
+  type Contribution,
   type CurrencyBalances,
   type RepaymentSuggestion,
 } from "./engine";
@@ -36,11 +38,17 @@ export interface GroupBalances {
   readonly suggestionsByCurrency: ReadonlyMap<string, RepaymentSuggestion[]>;
   readonly totalSpend: ReadonlyMap<string, bigint>;
   readonly participantNames: ReadonlyMap<string, string>;
+  /**
+   * What one participant paid and what their share came to, per currency —
+   * empty unless `contributionsFor` named someone. It is derived from the same
+   * rows the balances are, so asking for it costs no extra query.
+   */
+  readonly contributions: ReadonlyMap<string, Contribution>;
 }
 
 export async function loadGroupBalances(
   access: Pick<GroupAccess, "groupId" | "group">,
-  options: { db?: Database } = {},
+  options: { db?: Database; contributionsFor?: string | null } = {},
 ): Promise<GroupBalances> {
   const db = options.db ?? getDb();
   const { groupId, group } = access;
@@ -186,5 +194,8 @@ export async function loadGroupBalances(
     suggestionsByCurrency,
     totalSpend: totalSpendByCurrency(engineExpenses),
     participantNames,
+    contributions: options.contributionsFor
+      ? contributionsOf(engineExpenses, options.contributionsFor)
+      : new Map(),
   };
 }

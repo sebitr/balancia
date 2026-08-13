@@ -288,6 +288,47 @@ export function balancesSumToZero(
   );
 }
 
+/** What one participant put in, and what they consumed. */
+export interface Contribution {
+  /** Money this participant actually handed over. */
+  readonly paid: bigint;
+  /** The part of the group's spending that is theirs to carry. */
+  readonly share: bigint;
+}
+
+/**
+ * One participant's side of the ledger, per currency.
+ *
+ * Deliberately not a balance: `paid - share` is the balance, and these two are
+ * the halves it hides. "You paid €930.50, your share was €682.50" explains a
+ * position in a way the single net figure cannot.
+ */
+export function contributionsOf(
+  expenses: readonly BalanceInputExpense[],
+  participantId: string,
+): Map<string, Contribution> {
+  const totals = new Map<string, Contribution>();
+
+  for (const expense of expenses) {
+    const paid = expense.payers
+      .filter((payer) => payer.participantId === participantId)
+      .reduce((accumulator, payer) => accumulator + payer.amount, 0n);
+    const share = expense.shares
+      .filter((entry) => entry.participantId === participantId)
+      .reduce((accumulator, entry) => accumulator + entry.amount, 0n);
+
+    if (paid === 0n && share === 0n) continue;
+
+    const running = totals.get(expense.currency) ?? { paid: 0n, share: 0n };
+    totals.set(expense.currency, {
+      paid: running.paid + paid,
+      share: running.share + share,
+    });
+  }
+
+  return totals;
+}
+
 /** Convenience: total spend per currency, derived from expense payer contributions. */
 export function totalSpendByCurrency(
   expenses: readonly BalanceInputExpense[],

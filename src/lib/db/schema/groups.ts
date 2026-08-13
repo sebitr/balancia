@@ -87,6 +87,15 @@ export const participants = pgTable(
       .defaultNow(),
     /** Soft removal: a participant with history cannot simply disappear. */
     removedAt: timestamp("removed_at", { withTimezone: true }),
+    /**
+     * When this person last looked at the group overview.
+     *
+     * It divides the activity feed into what they have already seen and what
+     * happened since, so it is stamped on the way *out* of a visit: reading the
+     * old value, rendering against it, then writing the new one. A participant
+     * who has never opened the group has null, and everything counts as new.
+     */
+    lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
   },
   (table) => [
     index("participants_group_idx").on(table.groupId),

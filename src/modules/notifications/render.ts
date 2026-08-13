@@ -62,6 +62,10 @@ function urlFor(entry: NotificationEntry): string {
       return `${group}/balances`;
     case "import.completed":
       return `${group}/expenses`;
+    // A reminder lands on the reader's own position, which is the thing it is
+    // about and the one screen that can do something about it.
+    case "reminder.received":
+      return group;
   }
 }
 
@@ -141,6 +145,25 @@ export function renderNotification(
         }),
         url,
         tag,
+      };
+
+    /*
+     * The only kind whose title is not the group name. Someone wrote this
+     * sentence and chose to send it; it is the notification, and burying it
+     * under a group name would turn a message into a system event. The line
+     * beneath it stays translated, because the facts are ours to phrase.
+     */
+    case "reminder":
+      return {
+        title: payload.message,
+        body: t("reminderBody", {
+          amount: amountOf(payload, locale),
+          group: payload.groupName,
+        }),
+        url,
+        // One outstanding nudge per group: a second reminder replaces the
+        // first on the lock screen rather than stacking beside it.
+        tag: `reminder:${entry.groupId}`,
       };
   }
 }

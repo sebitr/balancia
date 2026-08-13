@@ -122,6 +122,8 @@ describe("message catalogues", () => {
       "notificationsPage.title",
       "notificationsPage.bell",
       "notificationSettings.title",
+      // Two dates and an en dash: there is nothing in it to translate.
+      "group.metaSpan",
     ]);
 
     const identical = [...english].filter(

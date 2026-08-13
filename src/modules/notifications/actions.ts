@@ -28,6 +28,7 @@ export async function savePreferencesAction(
       settlements: Boolean(preferences.settlements),
       recurring: Boolean(preferences.recurring),
       imports: Boolean(preferences.imports),
+      reminders: Boolean(preferences.reminders),
     });
     revalidatePath("/profile/notifications");
   });

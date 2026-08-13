@@ -28,6 +28,7 @@ export const CATEGORY_BY_TYPE: Record<NotificationType, NotificationCategory> =
     "settlement.deleted": "settlements",
     "recurring.generated": "recurring",
     "import.completed": "imports",
+    "reminder.received": "reminders",
   };
 
 interface BasePayload {
@@ -73,8 +74,31 @@ export interface ImportPayload extends BasePayload {
   readonly failed: number;
 }
 
+/**
+ * Someone asking for money they are owed.
+ *
+ * This is the one payload that carries finished text, and deliberately: the
+ * sender chose that wording from the message library, or wrote it themselves.
+ * Translating it would put words in their mouth, so `message` is treated like
+ * an expense description — authored content, reproduced as written — while the
+ * line under it is still rendered in the reader's own language from the facts.
+ */
+export interface ReminderPayload extends BasePayload {
+  readonly kind: "reminder";
+  /** Minor units, as a string. What the reader owes. */
+  readonly amount: string;
+  readonly currency: string;
+  /** The person owed. The message addresses the debt, never the reader. */
+  readonly creditorName: string;
+  readonly message: string;
+}
+
 export type NotificationPayload =
-  ExpensePayload | SettlementPayload | RecurringPayload | ImportPayload;
+  | ExpensePayload
+  | SettlementPayload
+  | RecurringPayload
+  | ImportPayload
+  | ReminderPayload;
 
 /** One notification as the inbox and the renderer see it. */
 export interface NotificationEntry {
@@ -96,6 +120,7 @@ export interface NotificationPreferences {
   readonly settlements: boolean;
   readonly recurring: boolean;
   readonly imports: boolean;
+  readonly reminders: boolean;
 }
 
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -103,4 +128,5 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
   settlements: true,
   recurring: true,
   imports: true,
+  reminders: true,
 };
