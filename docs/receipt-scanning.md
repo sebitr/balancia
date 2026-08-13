@@ -95,7 +95,7 @@ application. Afterwards everything is served from this instance.
 Then set:
 
 ```bash
-RECEIPT_SCANNING=1
+RECEIPT_SCANNING=true
 ```
 
 That switch also adds `'wasm-unsafe-eval'` to the Content-Security-Policy,
@@ -112,8 +112,23 @@ rebuild:
 services:
   app:
     volumes:
-      - ./models:/app/public/models:ro
+      - ./public/models:/app/public/models:ro
 ```
+
+`compose.yaml` carries that line commented out, next to the `uploads` volume.
+The path is `./public/models` because that is where `pnpm ocr:install` writes —
+run it on the host, in the repository, then uncomment.
+
+Two things have to be true for the feature to appear, and each fails silently
+on its own:
+
+- **`RECEIPT_SCANNING` has to reach the container.** `compose.yaml` forwards an
+  explicit list of variables and nothing else, so a value set only in `.env`
+  never arrives. It is named in the list; a hand-rolled deployment has to pass
+  it too.
+- **The models have to be in `public/models` inside the container.** Without
+  the mount they are copied in at image build time, which means they are lost
+  on the next `--build` unless reinstalled first.
 
 If the files are missing, the browser's one `HEAD` request fails, no worker is
 ever created and no scan button is rendered. Nothing to switch off.
