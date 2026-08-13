@@ -43,6 +43,22 @@ with the `DATABASE_URL` already in `.env.local`.
 Overridable ports: `DEV_APP_PORT`, `DEV_DB_PORT`, `DEV_MAILPIT_UI_PORT`,
 `DEV_MAILPIT_SMTP_PORT`. Log level: `DEV_LOG_LEVEL`.
 
+**Stop any host-side server on 3000 first.** If a `pnpm dev` or `pnpm start` is
+already listening there, Docker will still report the port as published — it
+binds the IPv4 address while the Node process holds the IPv6 one — and
+`localhost:3000` resolves to IPv6 first. The result is that you appear to be
+testing the container while every request goes to the host process. Check with
+`lsof -nP -iTCP:3000 -sTCP:LISTEN`, or set `DEV_APP_PORT` to something else.
+
+**The container runs webpack, not Turbopack.** It is the one deliberate
+difference from a host `pnpm dev`. Turbopack's file watcher does not fire for a
+bind-mounted tree — not even for edits made inside the container, and
+`watchOptions.pollIntervalMs` does not help — so it serves a stale compile
+indefinitely, which is worse than being slow. Webpack polls and picks up an
+edit in about a second. Bundler-specific behaviour is therefore worth
+confirming with a host `pnpm dev` before you trust it. `DEV_BUNDLER_FLAG=--turbopack`
+switches back once upstream watching works.
+
 `compose.dev.yaml` is for development only — fixed public secrets, no
 hardening, source mounted live. Production self-hosting is `compose.yaml`, a
 different image built from `Dockerfile`.

@@ -31,13 +31,15 @@ ENV NODE_ENV=development \
     CHOKIDAR_USEPOLLING=true \
     CHOKIDAR_INTERVAL=400
 
-# Warm the image with the dependency set from the lockfile. At runtime the
-# entrypoint re-checks it against the mounted lockfile and reinstalls only if
-# they have diverged, so a dependency change does not need an image rebuild.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm-dev,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile
+# No dependencies are baked in. They are installed by the entrypoint into the
+# node_modules volume on first start, from the lockfile in the mounted tree.
+#
+# Two reasons. Baking them in stores the same 800 MB twice — once in an image
+# layer, once in the volume Docker seeds from it — and it dates the moment the
+# lockfile moves, leaving the image and the volume to disagree about which
+# copy wins. The volume is the single source of truth instead, and the pnpm
+# store volume makes a reinstall a hardlink pass rather than a download.
+RUN pnpm config set store-dir /pnpm/store
 
 COPY scripts/docker-dev-entrypoint.sh /usr/local/bin/dev-entrypoint
 RUN chmod +x /usr/local/bin/dev-entrypoint

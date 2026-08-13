@@ -163,7 +163,14 @@ passkey configuration rather than failing later at the prompt.
 
 ### Develop on it
 
-See **[docs/development.md](docs/development.md)**. In short:
+See **[docs/development.md](docs/development.md)**. Everything in containers,
+nothing to install but Docker:
+
+```bash
+docker compose -f compose.dev.yaml up --build
+```
+
+Or on the host, which is faster:
 
 ```bash
 pnpm install

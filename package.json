@@ -6,7 +6,7 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
-    "dev:worker": "tsx --conditions=react-server watch src/worker/index.ts",
+    "dev:worker": "tsx watch --conditions=react-server src/worker/index.ts",
     "dev:docker": "docker compose -f compose.dev.yaml up --build",
     "dev:docker:down": "docker compose -f compose.dev.yaml down",
     "dev:docker:seed": "docker compose -f compose.dev.yaml run --rm seed",
