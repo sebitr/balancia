@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericField } from "./numeric-field";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CurrencySelect } from "@/components/money/currency-select";
@@ -183,30 +184,25 @@ export function ReceiptReview({
                   updateItem(item.id, { name: event.target.value })
                 }
               />
-              <Input
+              <NumericField
                 aria-label={t("itemQuantity", { index: index + 1 })}
                 inputMode="numeric"
                 value={item.quantity}
                 placeholder="1"
                 className="w-14"
-                onChange={(event) =>
-                  updateItem(item.id, { quantity: event.target.value })
-                }
+                onValueChange={(quantity) => updateItem(item.id, { quantity })}
               />
-              <Input
+              <NumericField
                 aria-label={t("itemAmount", { index: index + 1 })}
                 aria-describedby={
                   item.uncertain ? `uncertain-${item.id}` : undefined
                 }
-                inputMode="decimal"
                 value={item.amount}
                 placeholder="0.00"
                 className={`w-24 tabular-nums ${
                   item.uncertain ? "border-amber-500 dark:border-amber-400" : ""
                 }`}
-                onChange={(event) =>
-                  updateItem(item.id, { amount: event.target.value })
-                }
+                onValueChange={(amount) => updateItem(item.id, { amount })}
               />
               {item.uncertain && (
                 // The confidence figure itself is never shown; what the reader
@@ -321,13 +317,12 @@ function SummaryField({
       >
         {label}
       </Label>
-      <Input
+      <NumericField
         id={id}
-        inputMode="decimal"
         value={value}
         placeholder="—"
         className="w-28 text-right tabular-nums"
-        onChange={(event) => onChange(event.target.value)}
+        onValueChange={onChange}
       />
     </div>
   );

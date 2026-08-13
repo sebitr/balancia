@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -91,6 +92,54 @@ describe("ReceiptReview", () => {
         items: expect.objectContaining({ length: 3 }),
       }),
     );
+  });
+
+  it("does not let the browser fill in an amount", () => {
+    // A numeric field with no autocomplete is something Safari and password
+    // managers will volunteer values for. Not on a field that decides what
+    // somebody pays.
+    renderReview();
+
+    const amount = screen.getByLabelText("Amount for item 1");
+    expect(amount).toHaveAttribute("autocomplete", "off");
+    expect(amount).toHaveAttribute("autocorrect", "off");
+  });
+
+  it("keeps what was typed while the field has focus", async () => {
+    // The bug this guards: React rewriting a controlled value mid-edit drops
+    // the caret to the start on iOS, and the next digit lands at the front —
+    // 24.00 becomes 124.00 with nobody typing a 1.
+    const user = userEvent.setup();
+    renderReview();
+
+    const amount = screen.getByLabelText("Amount for item 1");
+    await user.click(amount);
+    await user.type(amount, "5");
+
+    // The field shows exactly what was typed, appended, not reordered.
+    expect(amount).toHaveValue("19.005");
+  });
+
+  it("takes an outside change once the field is no longer being typed into", async () => {
+    // The field holds its own text while focused, so a value set from outside
+    // still has to land — accepting the suggested total is exactly that.
+    // Driven through a stateful parent, the way the dialog drives it.
+    function Harness() {
+      const [draft, setDraft] = useState(
+        toDraft(
+          { ...SCANNED, total: undefined },
+          { fallbackCurrency: "CHF", fallbackDate: "2026-08-13" },
+        ),
+      );
+      return <ReceiptReview draft={draft} onChange={setDraft} />;
+    }
+
+    const user = userEvent.setup();
+    renderWithIntl(<Harness />);
+
+    expect(screen.getByLabelText("Total")).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "Use that" }));
+    expect(screen.getByLabelText("Total")).toHaveValue("46.80");
   });
 
   it("marks a line the recognizer was unsure about, without showing a number", () => {
