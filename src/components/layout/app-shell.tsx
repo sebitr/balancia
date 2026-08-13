@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { InstallInstructions } from "@/components/pwa/install-instructions";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationRefresh } from "@/components/notifications/notification-refresh";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +42,8 @@ export function AppShell({
             <Wordmark />
           </Link>
           <div className="flex items-center gap-1">
+            {/* Guests have no account, so nothing to notify and no bell. */}
+            {!actor.isGuest && <NotificationBell />}
             <ThemeToggle />
             <UserMenu
               label={actor.label}
@@ -65,6 +69,9 @@ export function AppShell({
       {/* Mounted once here so the account menu can open it from any page; it
           renders nothing until something asks for installation instructions. */}
       <InstallInstructions />
+
+      {/* Re-reads the unread count when a push lands on an open tab. */}
+      {!actor.isGuest && <NotificationRefresh />}
     </div>
   );
 }

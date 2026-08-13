@@ -111,12 +111,23 @@ test("registers a service worker and serves it from the root scope", async ({
   expect(response.headers()["content-type"]).toContain("javascript");
 
   await page.goto("/");
-  const registered = await page.evaluate(async () => {
-    if (!("serviceWorker" in navigator)) return false;
-    const registration = await navigator.serviceWorker.getRegistration("/");
-    return registration !== undefined;
-  });
-  expect(registered).toBe(true);
+
+  // Registration is kicked off from an effect after hydration, so it is not
+  // done by the time `goto` resolves. Poll rather than sample once: asserting
+  // immediately tests how fast the page hydrates, not whether the worker
+  // registers.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          if (!("serviceWorker" in navigator)) return false;
+          const registration =
+            await navigator.serviceWorker.getRegistration("/");
+          return registration !== undefined;
+        }),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
 });
 
 test("the service worker never caches authentication endpoints", async ({

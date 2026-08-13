@@ -112,6 +112,23 @@ const envSchema = z
     SMTP_SECURE: booleanish.default(false),
     SMTP_FROM: optionalString,
 
+    /**
+     * Web Push (VAPID). Optional: without a key pair the app still notifies
+     * people in its own interface, and only the push delivery is switched off.
+     *
+     * Generate a pair with `pnpm push:keys`. Both halves must come from the
+     * same generation — they are checked against each other before the first
+     * send. Replacing them invalidates every browser subscription.
+     */
+    PUSH_VAPID_PUBLIC_KEY: optionalString,
+    PUSH_VAPID_PRIVATE_KEY: optionalString,
+    /**
+     * Contact address for the push service operators, `mailto:` or `https:`.
+     * It goes into every VAPID token, so use an address you are willing to
+     * hand to Google, Mozilla and Apple.
+     */
+    PUSH_VAPID_SUBJECT: optionalString,
+
     /** Disable open registration on a private instance. */
     ALLOW_REGISTRATION: booleanish.default(true),
 
@@ -223,6 +240,36 @@ const envSchema = z
       });
     }
 
+    // Half a push key pair is always a mistake — usually a copied .env that
+    // dropped the secret. Say so rather than silently disabling push.
+    const pushHalves = [
+      ["PUSH_VAPID_PUBLIC_KEY", value.PUSH_VAPID_PUBLIC_KEY],
+      ["PUSH_VAPID_PRIVATE_KEY", value.PUSH_VAPID_PRIVATE_KEY],
+    ] as const;
+    const missing = pushHalves.filter(([, half]) => !half);
+    if (missing.length === 1) {
+      context.addIssue({
+        code: "custom",
+        path: [missing[0][0]],
+        message:
+          `${missing[0][0]} is required when the other half of the VAPID pair is set. ` +
+          "Generate both with `pnpm push:keys`, or unset both to turn push off.",
+      });
+    }
+
+    if (
+      value.PUSH_VAPID_SUBJECT &&
+      !value.PUSH_VAPID_SUBJECT.startsWith("mailto:") &&
+      !value.PUSH_VAPID_SUBJECT.startsWith("https://")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["PUSH_VAPID_SUBJECT"],
+        message:
+          'PUSH_VAPID_SUBJECT must be a "mailto:" address or an "https://" URL.',
+      });
+    }
+
     if (
       value.NODE_ENV === "production" &&
       /^(change-?me|password|secret|balancia)/i.test(value.AUTH_SECRET)
@@ -243,6 +290,7 @@ export interface AppEnv extends RawEnv {
   readonly webAuthnRpId: string;
   readonly trustedOrigins: readonly string[];
   readonly smtpEnabled: boolean;
+  readonly pushEnabled: boolean;
   readonly isProduction: boolean;
   readonly isTest: boolean;
 }
@@ -282,6 +330,9 @@ function buildEnv(source: NodeJS.ProcessEnv): AppEnv {
     webAuthnRpId: value.WEBAUTHN_RP_ID ?? appUrl.hostname,
     trustedOrigins: [appOrigin, ...extraOrigins],
     smtpEnabled: Boolean(value.SMTP_HOST && value.SMTP_FROM),
+    pushEnabled: Boolean(
+      value.PUSH_VAPID_PUBLIC_KEY && value.PUSH_VAPID_PRIVATE_KEY,
+    ),
     isProduction: value.NODE_ENV === "production",
     isTest: value.NODE_ENV === "test",
   };

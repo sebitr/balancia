@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { Serwist, NetworkFirst, NetworkOnly, CacheFirst } from "serwist";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
+import { applicationServerKey } from "@/lib/push/application-server-key";
 
 /**
  * Balancia service worker.
@@ -92,3 +93,151 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+/**
+ * Push notifications.
+ *
+ * The payload arrives encrypted end to end (RFC 8291) and is decrypted by the
+ * browser before this handler sees it, so the push service in the middle
+ * relayed ciphertext it could not read. What lands here is the JSON the server
+ * rendered in the recipient's language.
+ */
+
+interface PushPayload {
+  readonly title: string;
+  readonly body: string;
+  readonly url: string;
+  readonly tag: string;
+  readonly notificationId: string;
+}
+
+/** Everything Balancia sends is a real event; nothing here is promotional. */
+const FALLBACK_TITLE = "Balancia";
+
+function parsePayload(event: PushEvent): PushPayload | null {
+  if (!event.data) return null;
+  try {
+    const parsed: unknown = event.data.json();
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as PushPayload).title !== "string" ||
+      typeof (parsed as PushPayload).body !== "string"
+    ) {
+      return null;
+    }
+    return parsed as PushPayload;
+  } catch {
+    return null;
+  }
+}
+
+self.addEventListener("push", (event) => {
+  const payload = parsePayload(event);
+
+  // Chrome revokes the push permission from an origin that receives a message
+  // and shows nothing, so there is always a notification — even for a payload
+  // that failed to parse.
+  const title = payload?.title ?? FALLBACK_TITLE;
+  const options: NotificationOptions = {
+    body: payload?.body ?? "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/badge-72.png",
+    // Collapses repeated news about one expense into a single card.
+    tag: payload?.tag ?? "balancia",
+    data: { url: payload?.url ?? "/notifications" },
+  };
+
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, options);
+
+      // Tell any open tab to re-read its unread count. Without this the lock
+      // screen updates and the header does not, until the next navigation.
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clients) {
+        client.postMessage({ type: "balancia:notification" });
+      }
+    })(),
+  );
+});
+
+/**
+ * Opening a notification.
+ *
+ * Focuses a tab that already has Balancia open rather than piling up windows;
+ * only when there is none does it open one.
+ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const data = event.notification.data as { url?: string } | undefined;
+  const target = new URL(data?.url ?? "/notifications", self.location.origin);
+  // Never navigate somewhere else because a payload said so.
+  const path =
+    target.origin === self.location.origin
+      ? `${target.pathname}${target.search}`
+      : "/notifications";
+
+  event.waitUntil(
+    (async () => {
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clients) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        await client.focus();
+        if ("navigate" in client) {
+          await client.navigate(path);
+        }
+        return;
+      }
+      await self.clients.openWindow(path);
+    })(),
+  );
+});
+
+/**
+ * Endpoint rotation.
+ *
+ * A push service may retire a subscription and hand the browser a new one. The
+ * server has to be told, or this device silently stops being notified — the
+ * failure mode nobody reports because nothing visibly breaks.
+ */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const change = event as PushSubscriptionChangeEvent;
+  event.waitUntil(
+    (async () => {
+      try {
+        const response = await fetch("/api/push/key");
+        if (!response.ok) return;
+        const { publicKey } = (await response.json()) as {
+          publicKey: string | null;
+        };
+        if (!publicKey) return;
+
+        const subscription = await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey(publicKey),
+        });
+
+        await fetch("/api/push/subscriptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subscription,
+            // Lets the server drop the row this one replaces.
+            previousEndpoint: change.oldSubscription?.endpoint ?? null,
+          }),
+        });
+      } catch {
+        // Nothing useful to do here: the settings page re-subscribes on its
+        // next visit, and the server drops the endpoint when it 404s.
+      }
+    })(),
+  );
+});

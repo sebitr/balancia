@@ -16,11 +16,30 @@ import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from "./locales";
  */
 const CATALOGUES: Record<AppLocale, Record<string, unknown>> = { en, fr };
 
+/** The locale a background translator will actually use. */
+export function resolveLocale(locale: string | null | undefined): AppLocale {
+  return isAppLocale(locale) ? locale : DEFAULT_LOCALE;
+}
+
 export function emailTranslator(locale: string | null | undefined) {
-  const resolved: AppLocale = isAppLocale(locale) ? locale : DEFAULT_LOCALE;
+  const resolved = resolveLocale(locale);
   return createTranslator({
     locale: resolved,
     messages: CATALOGUES[resolved] as typeof en,
     namespace: "emails",
+  });
+}
+
+/**
+ * The same trick for push notifications, which are also written outside a
+ * request: the worker renders them in the recipient's language, not in the
+ * language of whoever caused the event.
+ */
+export function notificationTranslator(locale: string | null | undefined) {
+  const resolved = resolveLocale(locale);
+  return createTranslator({
+    locale: resolved,
+    messages: CATALOGUES[resolved] as typeof en,
+    namespace: "notifications",
   });
 }

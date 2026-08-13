@@ -18,6 +18,8 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import { dispatchNotifications } from "@/modules/notifications/service";
+import { recordRecurringNotification } from "@/modules/notifications/events";
 import type { ExchangeRateSource } from "@/modules/currencies/conversion";
 import { classifyRateSource } from "@/modules/currencies/rates";
 import { prepareExpense } from "@/modules/expenses/service";
@@ -411,13 +413,15 @@ export async function generateDueOccurrences(
     });
 
     for (const occurrenceDate of due) {
-      const created = await generateSingleOccurrence(
+      const notificationIds = await generateSingleOccurrence(
         db,
         template,
         occurrenceDate,
       );
-      if (created) {
+      if (notificationIds) {
         expensesCreated += 1;
+        // Outside the occurrence transaction, which has already committed.
+        await dispatchNotifications(notificationIds);
       } else {
         occurrencesSkipped += 1;
       }
@@ -479,7 +483,11 @@ interface TemplateRow {
 }
 
 /**
- * Creates one occurrence. Returns false when that date already existed.
+ * Creates one occurrence.
+ *
+ * Returns the notifications it wrote, for the caller to push once the
+ * transaction has committed — or null when that date already existed and
+ * nothing was created.
  *
  * The occurrence row is inserted first with ON CONFLICT DO NOTHING: winning
  * that insert is what grants the right to create the expense, so two workers
@@ -489,7 +497,7 @@ async function generateSingleOccurrence(
   db: Database,
   template: TemplateRow,
   occurrenceDate: string,
-): Promise<boolean> {
+): Promise<string[] | null> {
   return db
     .transaction(async (tx) => {
       const claimed = await tx
@@ -507,7 +515,7 @@ async function generateSingleOccurrence(
         .returning({ id: recurringOccurrences.id });
 
       if (claimed.length === 0) {
-        return false;
+        return null;
       }
 
       const payers = template.payers as {
@@ -628,11 +636,22 @@ async function generateSingleOccurrence(
         },
       });
 
-      return true;
+      return recordRecurringNotification(tx, {
+        groupId: template.groupId,
+        groupName: template.groupName,
+        expenseId: expense.id,
+        description: template.description,
+        amount: prepared.amount,
+        currency: prepared.currency,
+        participantIds: [
+          ...prepared.payers.map((payer) => payer.participantId),
+          ...prepared.shares.map((share) => share.participantId),
+        ],
+      });
     })
     .catch((error: unknown) => {
       if (error instanceof SkipOccurrence) {
-        return false;
+        return null;
       }
       throw error;
     });

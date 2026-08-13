@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { LogOut, ShieldCheck, User } from "lucide-react";
+import { Bell, LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageMenuItems } from "@/components/i18n/language-switcher";
 import { InstallMenuItem } from "@/components/pwa/install-menu-item";
@@ -80,6 +80,12 @@ export function UserMenu({
           <Link href="/profile">
             <User aria-hidden="true" />
             {t("profile")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/profile/notifications">
+            <Bell aria-hidden="true" />
+            {t("notifications")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

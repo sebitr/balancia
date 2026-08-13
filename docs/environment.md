@@ -183,6 +183,49 @@ UPDATE users SET email_verified_at = now() WHERE email_verified_at IS NULL;
 
 ---
 
+## Push notifications (optional)
+
+Balancia notifies people inside the app with no configuration at all: the bell
+in the header and `/notifications` work out of the box. What a VAPID key pair
+adds is **push** — reaching a phone or a laptop when Balancia is closed.
+
+Generate a pair once:
+
+```bash
+pnpm push:keys
+```
+
+| Variable                 | Notes                                                                       |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `PUSH_VAPID_PUBLIC_KEY`  | base64url P-256 public key. Also handed to browsers as the subscribe key.   |
+| `PUSH_VAPID_PRIVATE_KEY` | base64url P-256 private key. A secret — treat it like `AUTH_SECRET`.        |
+| `PUSH_VAPID_SUBJECT`     | `mailto:` address or `https:` URL. Defaults to `admin@<your APP_URL host>`. |
+
+Setting only one of the two halves stops the app at startup rather than
+silently disabling push, because that is nearly always a `.env` that lost its
+secret. The halves are also checked against each other before the first send;
+a mismatched pair disables push with an explanatory log line instead of
+producing 401s from every push service.
+
+**What this means for privacy.** Push notifications cannot be delivered by your
+own server: browsers only accept them from the push service their vendor runs
+(Google's for Chrome, Mozilla's for Firefox, Apple's for Safari). Balancia
+encrypts every payload end to end with the subscription's own key (RFC 8291),
+so the push service relays ciphertext it cannot read — but it does see _that_
+a message went to a given device, and when. That is inherent to Web Push, not
+to Balancia. Leave the keys unset and nothing contacts a third party; people
+still get every notification inside the app.
+
+**Rotating the keys invalidates every subscription.** Browsers bind a
+subscription to the public key that created it, so everyone has to turn
+notifications back on afterwards.
+
+**Delivery needs the worker.** Push is sent from the background worker, like
+recurring expenses. On a single-container install, set `RUN_WORKER_IN_WEB=true`
+or nothing is delivered.
+
+---
+
 ## Instance policy
 
 ### `ALLOW_REGISTRATION`
@@ -198,14 +241,16 @@ set it back.
 
 Default `0`, meaning the built-in protective limits apply:
 
-| Action                 | Limit                     |
-| ---------------------- | ------------------------- |
-| Sign in                | 10 per IP per 5 minutes   |
-| Register               | 5 per IP per hour         |
-| Password reset request | 5 per IP per hour         |
-| Guest link redemption  | 20 per IP per 10 minutes  |
-| Receipt upload         | 60 per IP per 10 minutes  |
-| Exchange-rate lookup   | 240 per IP per 10 minutes |
+| Action                   | Limit                        |
+| ------------------------ | ---------------------------- |
+| Sign in                  | 10 per IP per 5 minutes      |
+| Register                 | 5 per IP per hour            |
+| Password reset request   | 5 per IP per hour            |
+| Guest link redemption    | 20 per IP per 10 minutes     |
+| Receipt upload           | 60 per IP per 10 minutes     |
+| Exchange-rate lookup     | 240 per IP per 10 minutes    |
+| Push device registration | 30 per IP per 10 minutes     |
+| Test notification        | 5 per account per 10 minutes |
 
 A non-zero value raises the three credential limits. **Only do this where many
 legitimate attempts genuinely share one address** — an automated test suite

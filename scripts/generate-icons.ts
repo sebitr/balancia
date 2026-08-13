@@ -34,12 +34,13 @@ const DOT = "#f97361";
  *    merge below 20px, so the glyph is pushed out to the edge of the tile and
  *    the keyline dropped — at 16px every pixel of margin costs legibility.
  */
-type Variant = "tile" | "maskable" | "compact";
+type Variant = "tile" | "maskable" | "compact" | "badge";
 
 const LAYOUT: Record<Variant, { scale: number; radius: number }> = {
   tile: { scale: 0.515, radius: 0.22 },
   maskable: { scale: 0.4, radius: 0 },
   compact: { scale: 0.78, radius: 0.16 },
+  badge: { scale: 0.86, radius: 0 },
 };
 
 /**
@@ -60,6 +61,22 @@ function markSvg(size: number, variant: Variant): string {
   const { scale, radius } = LAYOUT[variant];
   const glyph = size * scale;
   const offset = (size - glyph) / 2;
+
+  // Android draws the notification badge as a mask: it keeps the alpha channel
+  // and throws the colours away. So the badge is the glyph in flat white on a
+  // transparent ground — any tile or colour here would come out as a blob.
+  if (variant === "badge") {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <g transform="translate(${n(offset)} ${n(offset)}) scale(${n(glyph / 32)})">
+    <g transform="translate(2.4 2.6) scale(0.85)">
+      <circle cx="16" cy="4.5" r="4.4" fill="#ffffff"/>
+      <rect x="0" y="14.75" width="32" height="4.5" rx="2.25" fill="#ffffff"/>
+      <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>`;
+  }
+
   // 1px keyline at 12% ink, so the tile keeps an edge on a dark home screen.
   const keyline =
     variant === "tile"
@@ -137,6 +154,8 @@ async function main(): Promise<void> {
     { name: "icon-192.png", size: 192, variant: "tile" },
     { name: "icon-512.png", size: 512, variant: "tile" },
     { name: "icon-maskable-512.png", size: 512, variant: "maskable" },
+    // Referenced by the service worker's push handler, not by the manifest.
+    { name: "badge-72.png", size: 72, variant: "badge" },
   ];
 
   for (const target of manifestIcons) {
