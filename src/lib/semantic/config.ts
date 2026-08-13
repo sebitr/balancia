@@ -4,7 +4,7 @@
  * Balancia never downloads a model at runtime and never calls a hosted
  * inference API. If an operator wants the semantic layer, they place the
  * files under `public/models` (see `scripts/fetch-semantic-model.ts`) and set
- * `SEMANTIC_CATEGORIZATION=1`. Everything is then served by this instance,
+ * `SEMANTIC_CATEGORIZATION=true`. Everything is then served by this instance,
  * from this origin, and the browser does the inference.
  *
  * With no files present, `probeModelAvailable()` fails its one HEAD request

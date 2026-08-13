@@ -13,7 +13,7 @@
  * git-ignored. Nothing else in Balancia depends on it: without these files
  * categorization runs on its deterministic rules, which is the default.
  *
- * Afterwards, set `SEMANTIC_CATEGORIZATION=1` and restart. That switch also
+ * Afterwards, set `SEMANTIC_CATEGORIZATION=true` and restart. That switch also
  * adds `'wasm-unsafe-eval'` to the Content-Security-Policy, which WebAssembly
  * needs and which is otherwise deliberately absent.
  */
@@ -114,7 +114,7 @@ async function main(): Promise<void> {
   console.log(
     [
       "",
-      "Done. Now set SEMANTIC_CATEGORIZATION=1 in .env and restart.",
+      "Done. Now set SEMANTIC_CATEGORIZATION=true in .env and restart.",
       "In Docker, mount public/models into the container so the files survive",
       "an image rebuild — see docs/categorization.md.",
     ].join("\n"),

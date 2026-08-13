@@ -332,7 +332,7 @@ It is off by default for two reasons that have nothing to do with privacy:
 
 ```bash
 pnpm semantic:install --yes
-SEMANTIC_CATEGORIZATION=1
+SEMANTIC_CATEGORIZATION=true
 ```
 
 With the variable set but the files missing, the browser makes one `HEAD`
@@ -364,7 +364,7 @@ them is privacy:
 
 ```bash
 pnpm ocr:install --yes
-RECEIPT_SCANNING=1
+RECEIPT_SCANNING=true
 ```
 
 With the variable set but the files missing, the browser makes one `HEAD`
