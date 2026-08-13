@@ -821,5 +821,83 @@
     "muted": "En sourdine",
     "noGroups": "Vous ne faites encore partie d’aucun groupe.",
     "testBody": "Les notifications push fonctionnent sur cet appareil."
+  },
+  "receiptScanner": {
+    "scanReceipt": "Scanner un reçu",
+    "title": "Scanner un reçu",
+    "onDevice": "La reconnaissance se fait sur cet appareil. La photo n'est envoyée nulle part pour être lue.",
+    "takePhoto": "Prendre une photo",
+    "choosePhoto": "Choisir une photo",
+    "tips": "Posez le reçu à plat, cadrez-le en entier et photographiez-le bien en face. Vous pouvez aussi déposer une image ici.",
+    "anotherPhoto": "Essayer une autre photo",
+    "continue": "Continuer",
+    "back": "Retour",
+    "useReceipt": "Utiliser ce reçu",
+    "keepImage": "Conserver aussi la photo avec cette dépense",
+    "keepImageOn": "L'image sera téléversée et conservée avec la dépense sur ce serveur, comme toute autre pièce jointe.",
+    "keepImageOff": "L'image reste sur cet appareil. Seuls les montants que vous confirmez sont enregistrés.",
+    "progress": {
+      "preparing": "Préparation du scanner",
+      "downloading": "Téléchargement des modèles de lecture",
+      "detecting": "Repérage du texte",
+      "reading": "Lecture du reçu",
+      "analyzing": "Calcul des totaux",
+      "firstRun": "Téléchargement unique d'environ {size} Mo. Les scans suivants le réutilisent, même hors ligne."
+    },
+    "errors": {
+      "nothingFound": "Aucun texte de reçu n'a été trouvé sur cette photo. Réessayez avec le reçu entier dans le cadre, à plat et mieux éclairé.",
+      "unsupported": "Ce navigateur ne peut pas exécuter le scanner. Vous pouvez saisir la dépense à la main.",
+      "modelDownload": "Les modèles de lecture n'ont pas pu être téléchargés. Vérifiez votre connexion et réessayez.",
+      "runtime": "Le reçu n'a pas pu être lu. Essayez une autre photo, ou saisissez la dépense à la main.",
+      "image": "Cette image n'a pas pu être ouverte. Essayez un JPEG ou un PNG.",
+      "timeout": "La lecture du reçu a été trop longue et a été interrompue. Une photo plus petite aide généralement.",
+      "attachFailed": "La dépense est prête, mais la photo n'a pas pu être téléversée."
+    },
+    "review": {
+      "merchant": "Commerçant",
+      "merchantPlaceholder": "C'était où ?",
+      "date": "Date",
+      "currency": "Devise",
+      "items": "Articles",
+      "noItems": "Aucun article n'a été lu. Ajoutez-les ci-dessous, ou utilisez simplement le total.",
+      "itemPlaceholder": "Article",
+      "itemName": "Nom de l'article {index}",
+      "itemQuantity": "Quantité de l'article {index}",
+      "itemAmount": "Montant de l'article {index}",
+      "removeItem": "Retirer {name}",
+      "addItem": "Ajouter un article",
+      "uncertain": "Celui-ci a été difficile à lire — à vérifier.",
+      "subtotal": "Sous-total",
+      "tax": "TVA",
+      "service": "Service",
+      "tip": "Pourboire",
+      "total": "Total",
+      "totalMissing": "Aucun total n'a été lu. Les articles et frais ci-dessus font {amount}.",
+      "useSuggested": "Utiliser ce montant",
+      "showPhoto": "Afficher la photo",
+      "photoAlt": "Le reçu que vous avez scanné",
+      "issues": {
+        "noTotal": "Aucun total n'a été trouvé sur ce reçu. Saisissez-le ci-dessous — c'est à partir de lui que chaque part est calculée.",
+        "noItems": "Aucun article n'a été trouvé. Vous pouvez tout de même partager le total comme d'habitude.",
+        "itemsMissingSubtotal": "Les articles font {items}, mais le reçu indique un sous-total de {subtotal}. Écart : {difference}.",
+        "partsMissingTotal": "Le sous-total et les frais font {parts}, mais le total indique {total}. Écart : {difference}.",
+        "itemsExceedTotal": "Les articles font {items}, soit plus que le total de {total}. Une remise a peut-être été manquée.",
+        "negativeTotal": "Le total a été lu comme un montant négatif ({total}). Vérifiez-le avant de continuer."
+      }
+    },
+    "assign": {
+      "whoHadWhat": "Qui a pris quoi ?",
+      "noItems": "Aucun article à attribuer. Chaque part vient du total.",
+      "untitledItem": "Article",
+      "everyone": "Tout le monde",
+      "splitBetween": "Partagé à parts égales entre {count} personnes",
+      "sharedCharges": "Frais partagés : {amount}",
+      "sharedExplanation": "TVA, service et tout ce qui n'est lié à aucun article — y compris l'écart entre le total et les articles.",
+      "proportional": "Répartir au prorata de ce que chacun a pris",
+      "equal": "Répartir à parts égales",
+      "eachPerson": "Chacun paie",
+      "breakdown": "{items} d'articles + {shared} partagés",
+      "unassigned": "{count, plural, one {# article n'est attribué} other {# articles ne sont attribués}} à personne ; le coût est partagé."
+    }
   }
 }

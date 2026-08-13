@@ -178,6 +178,19 @@ const envSchema = z
      */
     SEMANTIC_CATEGORIZATION: booleanish.default(false),
 
+    /**
+     * On-device receipt scanning. Off by default, for the same two reasons as
+     * the semantic model: it needs `'wasm-unsafe-eval'` in the
+     * Content-Security-Policy, and it needs ~47 MB of OCR models under
+     * `public/models` (`pnpm ocr:install`).
+     *
+     * Receipts can already be attached without it; this only adds reading
+     * them. The image is never uploaded for recognition — the models run in
+     * the browser against files this instance serves. See
+     * docs/receipt-scanning.md.
+     */
+    RECEIPT_SCANNING: booleanish.default(false),
+
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
@@ -378,5 +391,32 @@ export function isSemanticCategorizationEnabled(
 ): boolean {
   return TRUTHY.includes(
     (source.SEMANTIC_CATEGORIZATION ?? "").trim().toLowerCase(),
+  );
+}
+
+/**
+ * Whether on-device receipt scanning is switched on.
+ *
+ * Read the same way and for the same reason as the flag above.
+ */
+export function isReceiptScanningEnabled(
+  source: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return TRUTHY.includes((source.RECEIPT_SCANNING ?? "").trim().toLowerCase());
+}
+
+/**
+ * Whether anything in this instance needs to compile WebAssembly.
+ *
+ * Both optional local-inference features run on onnxruntime-web, and both need
+ * the same one CSP token. Asking the question once here means the policy has a
+ * single reason to be relaxed, and adding a third such feature does not mean
+ * remembering to touch `proxy.ts`.
+ */
+export function isWebAssemblyInferenceEnabled(
+  source: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return (
+    isSemanticCategorizationEnabled(source) || isReceiptScanningEnabled(source)
   );
 }

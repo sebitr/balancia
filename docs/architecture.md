@@ -116,6 +116,11 @@ Redis — background jobs are queued in PostgreSQL through pg-boss.
   group or a user chose for a merchant, written in the same transaction as the
   expense that taught it. The rules themselves are code
   (`src/modules/categorization`), not data — see `docs/categorization.md`.
+- **Receipt scanning**: no schema at all. Reading a receipt is a browser-side
+  operation whose output is a proposal, and the only thing persisted is the
+  expense the user confirms — plus, if they ask for it, the image through the
+  ordinary attachment flow. The rules are code (`src/modules/receipts`) and the
+  models are operator-installed files — see `docs/receipt-scanning.md`.
 - **Activity**: append-only `activity_events` written in the same transaction
   as the financial change.
 - **Notifications**: `notifications` is one row per person told about one

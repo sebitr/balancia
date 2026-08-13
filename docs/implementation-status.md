@@ -31,6 +31,7 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 21  | Group export (JSON, CSV, XLSX)                          | ✅     |
 | 22  | Automatic expense categorization (EN/FR)                | ✅     |
 | 23  | Notifications: in-app inbox and Web Push (opt-in)       | ✅     |
+| 24  | On-device receipt scanning (opt-in)                     | ✅     |
 
 ## Verification
 

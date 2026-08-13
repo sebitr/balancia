@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { uploadReceipt } from "@/components/expenses/upload-receipt";
 
 /**
  * Receipt upload.
@@ -39,27 +40,22 @@ export function ReceiptUploader({
     setPending(true);
 
     try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch(`/api/groups/${groupId}/attachments`, {
-        method: "POST",
-        body,
-      });
-      const payload = (await response.json()) as
-        { id: string; fileName: string } | { error: string };
+      const result = await uploadReceipt(groupId, file, file.name);
 
-      if (!response.ok || "error" in payload) {
-        setError("error" in payload ? payload.error : t("uploadFailed"));
+      if (!result.ok) {
+        setError(
+          result.reason === "offline"
+            ? t("connectionFailed")
+            : (result.message ?? t("uploadFailed")),
+        );
         return;
       }
 
       setUploaded((current) => [
         ...current,
-        { id: payload.id, name: payload.fileName },
+        { id: result.file.id, name: result.file.fileName },
       ]);
-      onUploaded(payload.id);
-    } catch {
-      setError(t("connectionFailed"));
+      onUploaded(result.file.id);
     } finally {
       setPending(false);
       if (inputRef.current) inputRef.current.value = "";
