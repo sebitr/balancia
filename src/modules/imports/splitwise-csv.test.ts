@@ -110,6 +110,84 @@ describe("Splitwise CSV adapter", () => {
   });
 });
 
+describe("Splitwise CSV adapter — localised exports", () => {
+  const parsed = splitwiseCsvAdapter.parse(fixture("groupe-fr.csv"));
+
+  it("detects an export whose headers are accented and localised", () => {
+    expect(
+      splitwiseCsvAdapter.detect(fixture("groupe-fr.csv"), "export.csv"),
+    ).toBe(true);
+  });
+
+  it("reads Coût, Devise and Catégorie as structural columns, not people", () => {
+    expect(parsed.participants.map((p) => p.sourceName)).toEqual([
+      "Sebastien Trosset",
+      "Hervé Trosset",
+      "Cyril",
+    ]);
+    const first = parsed.rows[0].row as StagedExpense;
+    expect(first.amount).toBe("219600");
+    expect(first.currency).toBe("CHF");
+    expect(first.category).toBe("Général");
+  });
+
+  it("keeps each row in the currency it was recorded in", () => {
+    expect(parsed.currencies).toEqual(["CHF", "EUR"]);
+  });
+
+  it("drops a 'Solde total' summary row even when it carries a date", () => {
+    const descriptions = parsed.rows.map(
+      (entry) => (entry.row as StagedExpense).description,
+    );
+    expect(descriptions).not.toContain("Solde total");
+    // Silently, not as a warning: it is expected structure, not a bad row.
+    expect(
+      parsed.warnings.filter((warning) => /solde/i.test(warning.detail ?? "")),
+    ).toHaveLength(0);
+  });
+
+  it("imports an all-zero-net row as an equal split instead of dropping it", () => {
+    const row = parsed.rows.find(
+      (entry) =>
+        (entry.row as StagedExpense).description === "Décompte Electricite 25",
+    )?.row as StagedExpense;
+
+    expect(row.amount).toBe("36105");
+    expect(sumOf(row.shares)).toBe(36105n);
+    expect(sumOf(row.payers)).toBe(36105n);
+    // Each person paid exactly their own share, so nobody's balance moves.
+    expect(row.payers).toEqual(row.shares);
+    expect(
+      parsed.warnings.some((warning) => /equal split/i.test(warning.message)),
+    ).toBe(true);
+  });
+
+  it("reproduces the balances the export itself reports", () => {
+    const nets = new Map<string, bigint>();
+    const bump = (key: string, delta: bigint) =>
+      nets.set(key, (nets.get(key) ?? 0n) + delta);
+
+    for (const { row } of parsed.rows) {
+      if (row.kind !== "expense") continue;
+      for (const payer of row.payers) {
+        bump(`${row.currency}|${payer.sourceName}`, BigInt(payer.amount));
+      }
+      for (const share of row.shares) {
+        bump(`${row.currency}|${share.sourceName}`, -BigInt(share.amount));
+      }
+    }
+
+    expect(Object.fromEntries(nets)).toEqual({
+      "CHF|Sebastien Trosset": -231517n,
+      "CHF|Hervé Trosset": 207683n,
+      "CHF|Cyril": 23834n,
+      "EUR|Sebastien Trosset": -7000n,
+      "EUR|Hervé Trosset": 14000n,
+      "EUR|Cyril": -7000n,
+    });
+  });
+});
+
 describe("Splitwise CSV adapter — resilience", () => {
   it("rejects a file that is not a Splitwise export", () => {
     expect(() => splitwiseCsvAdapter.parse("Name,Total\nAda,10\n")).toThrow(
@@ -154,6 +232,22 @@ describe("Splitwise CSV adapter — resilience", () => {
     );
     expect(result.rows).toHaveLength(0);
     expect(result.warnings[0].message).toMatch(/unreadable amount/);
+  });
+
+  it("keeps a real expense whose description starts like a summary row", () => {
+    // Only a blank cost marks the trailing summary; "Total …" with a cost is a
+    // genuine expense.
+    const result = splitwiseCsvAdapter.parse(
+      [
+        "Date,Description,Cost,Currency,Ada,Blaise",
+        "2026-01-01,Total renovation,10.00,EUR,5.00,-5.00",
+        "",
+      ].join("\n"),
+    );
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0].row as StagedExpense).description).toBe(
+      "Total renovation",
+    );
   });
 
   it("handles a column layout without Category", () => {

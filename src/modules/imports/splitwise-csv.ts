@@ -24,22 +24,64 @@ import {
  * owe.
  *
  * Exports differ across years and locales, so nothing is assumed positionally:
- * headers are detected by name with several known aliases, the person columns
- * are whatever is left, and a trailing "Total balance" summary row is dropped.
- * Rows that cannot be understood become warnings rather than failing the file.
+ * headers are matched by name against known aliases with accents folded away
+ * ("Coût", "Devise", "Catégorie"), the person columns are whatever is left, and
+ * the trailing balance summary is dropped whatever it is called. Rows that
+ * cannot be understood become warnings rather than failing the file.
  */
 
+/**
+ * Lowercases and strips diacritics, so "Coût", "Catégorie" and "Währung" match
+ * the plain-ASCII aliases below. Splitwise localises its headers, and writing
+ * every accented spelling out by hand is how a locale gets missed.
+ */
+function normalizeLabel(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+// Aliases are written without accents; normalizeLabel strips them from the file.
 const DATE_HEADERS = ["date", "fecha", "datum", "data"];
 const DESCRIPTION_HEADERS = [
   "description",
-  "descripción",
   "descripcion",
+  "descricao",
   "beschreibung",
   "descrizione",
+  "omschrijving",
 ];
-const CATEGORY_HEADERS = ["category", "categoría", "categoria", "kategorie"];
-const COST_HEADERS = ["cost", "amount", "coste", "costo", "betrag", "importo"];
-const CURRENCY_HEADERS = ["currency", "moneda", "währung", "wahrung", "valuta"];
+const CATEGORY_HEADERS = [
+  "category",
+  "categorie",
+  "categoria",
+  "kategorie",
+  "kategori",
+];
+const COST_HEADERS = [
+  "cost",
+  "amount",
+  "cout",
+  "montant",
+  "coste",
+  "costo",
+  "custo",
+  "betrag",
+  "kosten",
+  "importo",
+  "bedrag",
+];
+const CURRENCY_HEADERS = [
+  "currency",
+  "devise",
+  "moneda",
+  "wahrung",
+  "valuta",
+  "moeda",
+  "divisa",
+];
 
 /** Non-person trailing columns some exports include. */
 const IGNORED_HEADERS = ["", "total", "balance", "total balance", "saldo"];
@@ -49,7 +91,7 @@ function findHeader(
   candidates: readonly string[],
 ): number {
   return headers.findIndex((header) =>
-    candidates.includes(header.trim().toLowerCase()),
+    candidates.includes(normalizeLabel(header)),
   );
 }
 
@@ -60,6 +102,32 @@ const SETTLEMENT_DESCRIPTIONS = new Set([
   "pago",
   "zahlung",
 ]);
+
+/**
+ * Labels of the balance summary Splitwise appends after the transactions.
+ *
+ * Some exports leave its date blank, others repeat the export date, so the row
+ * has to be recognised by its label. It is only treated as a summary when the
+ * cost cell is empty too, which keeps a real expense called "Total …" safe.
+ */
+const TOTAL_ROW_LABELS = [
+  "total balance",
+  "solde total",
+  "saldo total",
+  "saldo totale",
+  "gesamtsaldo",
+  "totale saldo",
+  "totaalsaldo",
+  "balance",
+  "total",
+  "solde",
+  "saldo",
+];
+
+function isTotalRowLabel(description: string): boolean {
+  const normalized = normalizeLabel(description);
+  return TOTAL_ROW_LABELS.some((label) => normalized.startsWith(label));
+}
 
 function parseDecimalCell(value: string): Decimal | null {
   const trimmed = value.trim();
@@ -136,10 +204,17 @@ export const splitwiseCsvAdapter: ImportAdapter = {
 
   detect(content: string, fileName: string): boolean {
     if (!fileName.toLowerCase().endsWith(".csv")) return false;
-    const firstLine = content.split(/\r?\n/, 1)[0]?.toLowerCase() ?? "";
+    // Match whole header cells rather than substrings of the line: "Coût" only
+    // counts as a cost column, never as part of some unrelated word.
+    const firstLine = content.split(/\r?\n/, 1)[0] ?? "";
+    const cells = firstLine
+      .split(detectDelimiter(content))
+      .map((cell) =>
+        normalizeLabel(cell.replace(/^\ufeff/, "").replace(/"/g, "")),
+      );
     return (
-      DATE_HEADERS.some((header) => firstLine.includes(header)) &&
-      COST_HEADERS.some((header) => firstLine.includes(header))
+      cells.some((cell) => DATE_HEADERS.includes(cell)) &&
+      cells.some((cell) => COST_HEADERS.includes(cell))
     );
   },
 
@@ -196,7 +271,7 @@ export const splitwiseCsvAdapter: ImportAdapter = {
     headers.forEach((header, index) => {
       if (structuralIndexes.has(index)) return;
       const name = header.trim();
-      if (name === "" || IGNORED_HEADERS.includes(name.toLowerCase())) return;
+      if (name === "" || IGNORED_HEADERS.includes(normalizeLabel(name))) return;
       personColumns.push({ index, name });
     });
 
@@ -216,11 +291,12 @@ export const splitwiseCsvAdapter: ImportAdapter = {
       // Header row is 1; data starts at 2, matching what a spreadsheet shows.
       const rowNumber = index + 1;
       const description = (record[descriptionIndex] ?? "").trim();
+      const costCell = (record[costIndex] ?? "").trim();
 
-      // The export ends with a "Total balance" summary; it is not a transaction.
+      // The export ends with a balance summary; it is not a transaction.
       if (
-        description.toLowerCase().startsWith("total balance") ||
-        (record[dateIndex] ?? "").trim() === ""
+        (record[dateIndex] ?? "").trim() === "" ||
+        (costCell === "" && isTotalRowLabel(description))
       ) {
         continue;
       }
@@ -250,12 +326,12 @@ export const splitwiseCsvAdapter: ImportAdapter = {
       }
       currencies.add(currency);
 
-      const cost = parseDecimalCell(record[costIndex] ?? "");
+      const cost = parseDecimalCell(costCell);
       if (!cost) {
         warnings.push({
           rowNumber,
           message: "Skipped a row with an unreadable amount",
-          detail: (record[costIndex] ?? "").slice(0, 60),
+          detail: costCell.slice(0, 60),
         });
         continue;
       }
@@ -330,9 +406,39 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         .reduce((sum, value) => sum.plus(value), new Decimal(0));
 
       if (positiveSum.isZero()) {
+        // Every net is zero, so each person paid exactly their own share. The
+        // export records no split, but any split where paid equals owed has the
+        // same (nil) effect on the balances — so keep the expense rather than
+        // losing it, split evenly, and say so in the preview.
+        const evenShare = cost.dividedBy(personColumns.length);
+        const even = personColumns.map((column) => ({
+          sourceName: column.name,
+          amount: toMinorUnits(evenShare, currency),
+        }));
+        const total = BigInt(toMinorUnits(cost, currency));
+        const settled = balanceToTotal(even, total);
+
         warnings.push({
           rowNumber,
-          message: "Skipped an expense row where nobody appears to have paid",
+          message:
+            "Imported with an equal split: the export shows nobody owing anything on this row, so it records no payer",
+          detail: description.slice(0, 60),
+        });
+        rows.push({
+          rowNumber,
+          row: {
+            kind: "expense",
+            description: description || "Imported expense",
+            category:
+              categoryIndex === -1
+                ? null
+                : (record[categoryIndex] ?? "").trim() || null,
+            date,
+            amount: total.toString(),
+            currency,
+            payers: settled,
+            shares: settled,
+          },
         });
         continue;
       }
