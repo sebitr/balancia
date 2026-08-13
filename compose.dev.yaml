@@ -50,6 +50,12 @@ x-dev-environment: &dev-environment
   # suggestions, or point DEV_EXCHANGE_RATE_API_URL at a local stub.
   EXCHANGE_RATE_PROVIDER: ${DEV_EXCHANGE_RATE_PROVIDER:-none}
   EXCHANGE_RATE_API_URL: ${DEV_EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v1}
+  # Web Push. Unset by default: push needs a key pair, and notifications work
+  # inside the app without one. `pnpm push:keys` prints a pair to paste here
+  # as DEV_PUSH_VAPID_*.
+  PUSH_VAPID_PUBLIC_KEY: ${DEV_PUSH_VAPID_PUBLIC_KEY:-}
+  PUSH_VAPID_PRIVATE_KEY: ${DEV_PUSH_VAPID_PRIVATE_KEY:-}
+  PUSH_VAPID_SUBJECT: ${DEV_PUSH_VAPID_SUBJECT:-mailto:dev@localhost}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

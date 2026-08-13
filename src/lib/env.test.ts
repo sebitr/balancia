@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { EnvironmentError, parseEnv } from "./env";
+import { ENV_VARIABLE_NAMES, EnvironmentError, parseEnv } from "./env";
 
 const base = {
   DATABASE_URL: "postgres://balancia:secret@localhost:5432/balancia",
@@ -178,5 +180,76 @@ describe("environment validation", () => {
         AUTH_SECRET: "change-me-change-me-change-me-change-me",
       } as unknown as NodeJS.ProcessEnv),
     ).toThrow(/placeholder/);
+  });
+});
+
+/**
+ * Settings that are deliberately not handed to the containers.
+ *
+ * Empty, and the intent is that it stays that way. A name added here is a
+ * promise that an operator setting it in `.env` is *meant* to have no effect
+ * under Compose — say why, next to the name.
+ */
+const NOT_FORWARDED = new Set<string>([]);
+
+/**
+ * The variables `compose.yaml` names for the app and worker containers.
+ *
+ * Read as text rather than parsed as YAML: the file is the contract here, and
+ * a dependency-free regex over the one block that matters is enough to say
+ * whether a name appears in it.
+ */
+function forwardedByCompose(): Set<string> {
+  const source = readFileSync(path.join(process.cwd(), "compose.yaml"), "utf8");
+  const start = source.indexOf("x-app-environment:");
+  const end = source.indexOf("services:");
+  expect(start, "compose.yaml should define x-app-environment").toBeGreaterThan(
+    -1,
+  );
+  expect(end).toBeGreaterThan(start);
+
+  const block = source.slice(start, end);
+  return new Set(
+    [...block.matchAll(/^ {2}([A-Z][A-Z0-9_]*):/gm)].map((match) => match[1]),
+  );
+}
+
+describe("configuration reaches the containers", () => {
+  /**
+   * Compose passes only what it names. A setting the schema reads but
+   * `compose.yaml` never mentions can be set in `.env`, survive a rebuild, and
+   * still do nothing — which is how the exchange-rate provider shipped (#31)
+   * and how push notifications shipped after it. This is that bug, as a test.
+   */
+  it("forwards every setting the app reads", () => {
+    const forwarded = forwardedByCompose();
+
+    const missing = ENV_VARIABLE_NAMES.filter(
+      (name) => !forwarded.has(name) && !NOT_FORWARDED.has(name),
+    );
+
+    // The failure message is the fix: paste these lines into
+    // x-app-environment and the test goes green.
+    expect(
+      missing,
+      "compose.yaml does not pass these to the containers, so setting them " +
+        "in .env does nothing. Add under x-app-environment:\n" +
+        missing.map((name) => `  ${name}: \${${name}:-}`).join("\n"),
+    ).toEqual([]);
+  });
+
+  it("names nothing the app does not read", () => {
+    const known = new Set<string>(ENV_VARIABLE_NAMES);
+    // Consumed by the entrypoint to assemble DATABASE_URL, not by the schema.
+    known.add("POSTGRES_PASSWORD");
+
+    const unknown = [...forwardedByCompose()].filter(
+      (name) => !known.has(name),
+    );
+
+    expect(
+      unknown,
+      "compose.yaml forwards variables nothing reads; delete them or add them to the schema",
+    ).toEqual([]);
   });
 });
