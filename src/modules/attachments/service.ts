@@ -41,9 +41,17 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 export class UploadRejectedError extends Error {
-  constructor(message: string) {
+  /** Translated by the Server Action funnel; see `lib/actions.ts`. */
+  readonly params: Readonly<Record<string, string | number>>;
+
+  constructor(
+    message: string,
+    readonly code: "fileEmpty" | "fileTooLarge" | "fileType" = "fileEmpty",
+    params: Readonly<Record<string, string | number>> = {},
+  ) {
     super(message);
     this.name = "UploadRejectedError";
+    this.params = params;
   }
 }
 
@@ -84,12 +92,14 @@ export async function uploadAttachment(
   const db = options.db ?? getDb();
 
   if (file.bytes.byteLength === 0) {
-    throw new UploadRejectedError("That file is empty.");
+    throw new UploadRejectedError("That file is empty.", "fileEmpty");
   }
   if (file.bytes.byteLength > env.UPLOAD_MAX_BYTES) {
     const limitMb = Math.floor(env.UPLOAD_MAX_BYTES / (1024 * 1024));
     throw new UploadRejectedError(
       `That file is larger than the ${limitMb} MB upload limit.`,
+      "fileTooLarge",
+      { limit: limitMb },
     );
   }
 
@@ -97,6 +107,7 @@ export async function uploadAttachment(
   if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
     throw new UploadRejectedError(
       "Receipts must be a JPEG, PNG, WebP, GIF, HEIC image or a PDF.",
+      "fileType",
     );
   }
 
@@ -164,7 +175,10 @@ export async function downloadAttachment(
     .limit(1);
 
   if (!record) {
-    throw new AuthorizationError("That receipt is not part of this group.");
+    throw new AuthorizationError(
+      "That receipt is not part of this group.",
+      "notInGroup",
+    );
   }
 
   const bytes = await getStorage().get(record.storageKey);
@@ -228,7 +242,10 @@ export async function deleteAttachment(
     .returning({ storageKey: attachments.storageKey });
 
   if (deleted.length === 0) {
-    throw new AuthorizationError("That receipt is not part of this group.");
+    throw new AuthorizationError(
+      "That receipt is not part of this group.",
+      "notInGroup",
+    );
   }
 
   await getStorage()

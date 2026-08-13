@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,8 @@ export function CreateGroupForm({
   defaultTimezone: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("groupForm");
+  const tCommon = useTranslations("common");
   const [mode, setMode] = useState<CurrencyMode>("separate");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -39,10 +42,10 @@ export function CreateGroupForm({
     try {
       const result = await createGroupAction(formData);
       if (!result.ok || !result.data) {
-        setError(result.error ?? "The group could not be created.");
+        setError(result.error ?? t("failed"));
         return;
       }
-      toast.success("Group created");
+      toast.success(t("created"));
       router.push(`/groups/${result.data.groupId}`);
       router.refresh();
     } finally {
@@ -59,32 +62,34 @@ export function CreateGroupForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="name">Group name</Label>
+        <Label htmlFor="name">{t("name")}</Label>
         <Input
           id="name"
           name="name"
           required
           maxLength={120}
-          placeholder="Lisbon trip"
+          placeholder={t("namePlaceholder")}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="description">
-          Description{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          {t("description")}{" "}
+          <span className="font-normal text-muted-foreground">
+            ({tCommon("optional")})
+          </span>
         </Label>
         <Textarea
           id="description"
           name="description"
           maxLength={2000}
           rows={2}
-          placeholder="Four days, three people, too much pastry."
+          placeholder={t("descriptionPlaceholder")}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="ownerDisplayName">Your name in this group</Label>
+        <Label htmlFor="ownerDisplayName">{t("yourName")}</Label>
         <Input
           id="ownerDisplayName"
           name="ownerDisplayName"
@@ -92,15 +97,11 @@ export function CreateGroupForm({
           required
           maxLength={120}
         />
-        <p className="text-xs text-muted-foreground">
-          This is how you appear to everyone else in the group.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("yourNameHelp")}</p>
       </div>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">
-          How to handle currencies
-        </legend>
+        <legend className="text-sm font-medium">{t("currencyLegend")}</legend>
         <RadioGroup
           name="currencyMode"
           value={mode}
@@ -118,11 +119,10 @@ export function CreateGroupForm({
             />
             <span className="space-y-1">
               <span className="block text-sm font-medium">
-                Keep currencies separate
+                {t("separateTitle")}
               </span>
               <span className="block text-sm text-muted-foreground">
-                Each currency gets its own balance. Nothing is converted, so no
-                exchange rate can ever distort what someone owes.
+                {t("separateBody")}
               </span>
             </span>
           </label>
@@ -138,11 +138,10 @@ export function CreateGroupForm({
             />
             <span className="space-y-1">
               <span className="block text-sm font-medium">
-                Convert to one base currency
+                {t("convertedTitle")}
               </span>
               <span className="block text-sm text-muted-foreground">
-                Foreign expenses are converted using a rate you enter, frozen at
-                the moment you record them. One balance for the whole group.
+                {t("convertedBody")}
               </span>
             </span>
           </label>
@@ -151,7 +150,7 @@ export function CreateGroupForm({
 
       {mode === "converted" && (
         <div className="space-y-2">
-          <Label htmlFor="baseCurrency">Base currency</Label>
+          <Label htmlFor="baseCurrency">{t("baseCurrency")}</Label>
           <CurrencySelect
             id="baseCurrency"
             name="baseCurrency"
@@ -162,20 +161,18 @@ export function CreateGroupForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="timezone">Group timezone</Label>
+        <Label htmlFor="timezone">{t("timezone")}</Label>
         <TimezoneSelect
           id="timezone"
           name="timezone"
           defaultValue={defaultTimezone}
         />
-        <p className="text-xs text-muted-foreground">
-          Used to decide when recurring expenses are due.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("timezoneHelp")}</p>
       </div>
 
       <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-        Create group
+        {t("submit")}
       </Button>
     </form>
   );

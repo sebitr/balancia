@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { ArrowRightLeft, Coins, Plus, Receipt, Scale } from "lucide-react";
+import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +32,8 @@ export default async function GroupOverviewPage({
 
   const hasActivity = expenses.length > 0;
   const myParticipantId = access.participantId;
+  const t = await getTranslations("group");
+  const format = await getFormatter();
 
   return (
     <div className="space-y-6">
@@ -39,27 +43,29 @@ export default async function GroupOverviewPage({
             {access.group.name}
           </h1>
           {access.group.archivedAt && (
-            <Badge variant="secondary">Archived</Badge>
+            <Badge variant="secondary">{t("archived")}</Badge>
           )}
-          {access.role === "guest" && <Badge variant="outline">Guest</Badge>}
+          {access.role === "guest" && (
+            <Badge variant="outline">{t("guest")}</Badge>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           {access.group.currencyMode === "converted"
-            ? `Everything converted to ${access.group.baseCurrency}`
-            : "Each currency balanced separately"}
+            ? t("convertedAll", { currency: access.group.baseCurrency ?? "" })
+            : t("separateCurrencies")}
         </p>
       </header>
 
       {!hasActivity ? (
         <EmptyState
           icon={Receipt}
-          title="No expenses yet"
-          description="Add the first expense and Balancia will start working out who owes whom."
+          title={t("noExpensesTitle")}
+          description={t("noExpensesDescription")}
           action={
             <Button asChild>
               <Link href={`/groups/${groupId}/expenses/new`}>
                 <Plus aria-hidden="true" />
-                Add an expense
+                {t("addExpense")}
               </Link>
             </Button>
           }
@@ -70,7 +76,7 @@ export default async function GroupOverviewPage({
           {myParticipantId && (
             <section aria-labelledby="your-position">
               <h2 id="your-position" className="sr-only">
-                Your position
+                {t("yourPosition")}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {balances.currencies.map((entry) => {
@@ -82,7 +88,7 @@ export default async function GroupOverviewPage({
                     <Card key={entry.currency}>
                       <CardContent className="space-y-1 p-4">
                         <p className="text-sm text-muted-foreground">
-                          You, in {entry.currency}
+                          {t("youIn", { currency: entry.currency })}
                         </p>
                         {mine.amount === 0n ? (
                           <SettledBadge />
@@ -107,7 +113,7 @@ export default async function GroupOverviewPage({
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
             >
               <Coins aria-hidden="true" className="size-4" />
-              Total spending
+              {t("totalSpending")}
             </h2>
             <div className="flex flex-wrap gap-2">
               {[...balances.totalSpend.entries()].map(([currency, total]) => (
@@ -132,11 +138,11 @@ export default async function GroupOverviewPage({
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
               >
                 <Scale aria-hidden="true" className="size-4" />
-                Balances
+                {t("balances")}
               </h2>
               <Button asChild variant="ghost" size="sm">
                 <Link href={`/groups/${groupId}/balances`}>
-                  Settle up
+                  {t("settleUp")}
                   <ArrowRightLeft aria-hidden="true" />
                 </Link>
               </Button>
@@ -165,7 +171,7 @@ export default async function GroupOverviewPage({
                         {owing.length > 0 && (
                           <div className="space-y-2">
                             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Owes money
+                              {t("owesMoney")}
                             </p>
                             <ul className="space-y-1.5">
                               {owing.map((balance) => (
@@ -192,7 +198,7 @@ export default async function GroupOverviewPage({
                         {owed.length > 0 && (
                           <div className="space-y-2">
                             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Should receive
+                              {t("shouldReceive")}
                             </p>
                             <ul className="space-y-1.5">
                               {owed.map((balance) => (
@@ -231,10 +237,10 @@ export default async function GroupOverviewPage({
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
               >
                 <Receipt aria-hidden="true" className="size-4" />
-                Recent expenses
+                {t("recentExpenses")}
               </h2>
               <Button asChild variant="ghost" size="sm">
-                <Link href={`/groups/${groupId}/expenses`}>See all</Link>
+                <Link href={`/groups/${groupId}/expenses`}>{t("seeAll")}</Link>
               </Button>
             </div>
             <ul className="divide-y rounded-lg border">
@@ -249,7 +255,11 @@ export default async function GroupOverviewPage({
                         {expense.description}
                       </span>
                       <span className="block text-xs text-muted-foreground">
-                        {expense.expenseDate} ·{" "}
+                        {format.dateTime(
+                          parsePlainDate(expense.expenseDate),
+                          PLAIN_DATE_FORMAT,
+                        )}{" "}
+                        ·{" "}
                         {expense.payers
                           .map((payer) => payer.displayName)
                           .join(", ")}
@@ -271,7 +281,7 @@ export default async function GroupOverviewPage({
               id="activity"
               className="text-sm font-medium text-muted-foreground"
             >
-              Recent activity
+              {t("recentActivity")}
             </h2>
             <ActivityFeed entries={activity} />
           </section>

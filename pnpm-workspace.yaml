@@ -3,5 +3,10 @@ allowBuilds:
   sharp: true
   unrs-resolver: false
   "@tailwindcss/oxide": true
+  # Both arrive via next-intl (message extraction and dev-time file watching).
+  # Each ships prebuilt platform binaries, so the postinstall node-gyp fallback
+  # is not needed and is declined rather than run.
+  "@parcel/watcher": false
+  "@swc/core": false
 minimumReleaseAgeExclude:
   - "@aws-sdk/client-s3@3.1109.0"

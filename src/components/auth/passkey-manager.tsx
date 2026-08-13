@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFormatter, useTranslations } from "next-intl";
 import { KeyRound, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,9 @@ export function PasskeyManager({
   enabled: boolean;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("passkeys");
+  const tCommon = useTranslations("common");
+  const format = useFormatter();
   const [name, setName] = useState("");
   const [registering, setRegistering] = useState(false);
   const browserSupported = usePasskeySupport();
@@ -64,17 +68,17 @@ export function PasskeyManager({
     setRegistering(true);
     try {
       await registerPasskey(name.trim() || undefined);
-      toast.success("Passkey added");
+      toast.success(t("addedToast"));
       setName("");
       refresh();
     } catch (registerError) {
       const message =
         registerError instanceof Error &&
         registerError.name === "NotAllowedError"
-          ? "The request was cancelled."
+          ? t("cancelled")
           : registerError instanceof Error
             ? registerError.message
-            : "That passkey could not be registered.";
+            : t("registerFailed");
       toast.error(message);
     } finally {
       setRegistering(false);
@@ -84,13 +88,11 @@ export function PasskeyManager({
   const onDelete = async (id: string) => {
     try {
       await removePasskey(id);
-      toast.success("Passkey removed");
+      toast.success(t("removedToast"));
       refresh();
     } catch (deleteError) {
       toast.error(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "That passkey could not be removed.",
+        deleteError instanceof Error ? deleteError.message : t("removeFailed"),
       );
     }
   };
@@ -99,36 +101,34 @@ export function PasskeyManager({
     <div className="space-y-4">
       {!browserSupported && (
         <Alert>
-          <AlertDescription>
-            This browser does not support passkeys. You can still sign in with
-            your password.
-          </AlertDescription>
+          <AlertDescription>{t("unsupported")}</AlertDescription>
         </Alert>
       )}
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Add a passkey</CardTitle>
+          <CardTitle className="text-base">{t("addTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="passkey-name">
-              Name{" "}
+              {t("name")}{" "}
               <span className="font-normal text-muted-foreground">
-                (optional)
+                ({tCommon("optional")})
               </span>
             </Label>
             <Input
               id="passkey-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Work laptop"
+              placeholder={t("namePlaceholder")}
               maxLength={80}
               disabled={!canRegister}
             />
             <p className="text-xs text-muted-foreground">
-              Registered for <code>{relyingPartyId}</code>. It will only work on
-              this domain.
+              {t.rich("registeredFor", {
+                domain: () => <code>{relyingPartyId}</code>,
+              })}
             </p>
           </div>
           <Button
@@ -140,33 +140,30 @@ export function PasskeyManager({
             ) : (
               <Plus aria-hidden="true" />
             )}
-            Register a passkey
+            {t("register")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Your passkeys</CardTitle>
+          <CardTitle className="text-base">{t("yourPasskeys")}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-              Loading…
+              {tCommon("loading")}
             </p>
           ) : error ? (
             <Alert variant="destructive">
-              <AlertDescription>
-                Your passkeys could not be loaded. Refresh the page to try
-                again.
-              </AlertDescription>
+              <AlertDescription>{t("loadFailed")}</AlertDescription>
             </Alert>
           ) : !data || data.length === 0 ? (
             <EmptyState
               icon={KeyRound}
-              title="No passkeys yet"
-              description="Register one above to sign in without a password."
+              title={t("emptyTitle")}
+              description={t("emptyDescription")}
               className="border-0 py-6"
             />
           ) : (
@@ -178,13 +175,21 @@ export function PasskeyManager({
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">
-                      {passkey.name || "Unnamed passkey"}
+                      {passkey.name || t("unnamed")}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Added {new Date(passkey.createdAt).toLocaleDateString()}
+                      {t("added", {
+                        date: format.dateTime(new Date(passkey.createdAt), {
+                          dateStyle: "medium",
+                        }),
+                      })}
                       {passkey.lastUsedAt &&
-                        ` · last used ${new Date(passkey.lastUsedAt).toLocaleDateString()}`}
-                      {passkey.backedUp && " · synced"}
+                        ` · ${t("lastUsed", {
+                          date: format.dateTime(new Date(passkey.lastUsedAt), {
+                            dateStyle: "medium",
+                          }),
+                        })}`}
+                      {passkey.backedUp && ` · ${t("synced")}`}
                     </span>
                   </span>
                   <AlertDialog>
@@ -192,30 +197,29 @@ export function PasskeyManager({
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Remove ${passkey.name || "this passkey"}`}
+                        aria-label={t("removeLabel", {
+                          name: passkey.name || t("thisPasskey"),
+                        })}
                       >
                         <Trash2 aria-hidden="true" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Remove this passkey?
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>{t("removeTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          You will no longer be able to sign in with it. Make
-                          sure you still have your password or another passkey.
+                          {t("removeBody")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Keep it</AlertDialogCancel>
+                        <AlertDialogCancel>{t("keep")}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={(event) => {
                             event.preventDefault();
                             void onDelete(passkey.id);
                           }}
                         >
-                          Remove
+                          {t("remove")}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

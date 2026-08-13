@@ -334,7 +334,10 @@ export async function updateExpense(
       .limit(1);
 
     if (!existing) {
-      throw new AuthorizationError("That expense is not part of this group.");
+      throw new AuthorizationError(
+        "That expense is not part of this group.",
+        "notInGroup",
+      );
     }
 
     const referenced = [
@@ -441,7 +444,10 @@ export async function deleteExpense(
       });
 
     if (deleted.length === 0) {
-      throw new AuthorizationError("That expense is not part of this group.");
+      throw new AuthorizationError(
+        "That expense is not part of this group.",
+        "notInGroup",
+      );
     }
 
     await recordActivity(tx, {

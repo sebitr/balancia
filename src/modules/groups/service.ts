@@ -2,10 +2,13 @@ import "server-only";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import {
+  activityEvents,
+  expenses,
   groupMembers,
   groups,
   guestInvitations,
   participants,
+  settlements,
 } from "@/lib/db/schema";
 import {
   AuthorizationError,
@@ -40,7 +43,34 @@ export interface GroupSummary {
   readonly archivedAt: Date | null;
   readonly role: "owner" | "member";
   readonly participantCount: number;
+  /** The user's own participant row here — whose balance is "yours". */
+  readonly participantId: string;
+  /** Last time money moved in this group; the group's creation as a floor. */
+  readonly lastActivityAt: Date;
+  /** First few participants, oldest first, for an avatar stack. */
+  readonly memberNames: readonly string[];
 }
+
+/** How many names the avatar stack on the home screen can show. */
+const AVATAR_STACK_NAMES = 3;
+
+/**
+ * When the group last moved.
+ *
+ * `groups.updatedAt` is not this: it changes when someone renames the group and
+ * stays put when an expense is added, which is the opposite of what "last
+ * activity" has to mean. Postgres's `GREATEST` skips nulls, and the group's own
+ * creation is included as a floor so a group nobody has touched still sorts.
+ */
+const lastActivityAt = sql<Date>`GREATEST(
+  ${groups.createdAt},
+  (SELECT max(${expenses.createdAt}) FROM ${expenses}
+    WHERE ${expenses.groupId} = ${groups.id} AND ${expenses.deletedAt} IS NULL),
+  (SELECT max(${settlements.createdAt}) FROM ${settlements}
+    WHERE ${settlements.groupId} = ${groups.id} AND ${settlements.deletedAt} IS NULL),
+  (SELECT max(${activityEvents.createdAt}) FROM ${activityEvents}
+    WHERE ${activityEvents.groupId} = ${groups.id})
+)`;
 
 /** Groups the signed-in user belongs to. */
 export async function listGroupsForUser(
@@ -58,16 +88,32 @@ export async function listGroupsForUser(
       timezone: groups.timezone,
       archivedAt: groups.archivedAt,
       role: groupMembers.role,
+      participantId: groupMembers.participantId,
       participantCount: sql<number>`(
         SELECT count(*)::int FROM ${participants}
         WHERE ${participants.groupId} = ${groups.id}
           AND ${participants.removedAt} IS NULL
       )`,
+      // Aggregated here rather than in a second query per group: the home
+      // screen needs these for every row it draws.
+      memberNames: sql<string[]>`(
+        SELECT coalesce(array_agg(name ORDER BY joined), '{}')
+        FROM (
+          SELECT ${participants.displayName} AS name,
+                 ${participants.createdAt} AS joined
+          FROM ${participants}
+          WHERE ${participants.groupId} = ${groups.id}
+            AND ${participants.removedAt} IS NULL
+          ORDER BY ${participants.createdAt}
+          LIMIT ${AVATAR_STACK_NAMES}
+        ) AS stack
+      )`,
+      lastActivityAt,
     })
     .from(groupMembers)
     .innerJoin(groups, eq(groups.id, groupMembers.groupId))
     .where(eq(groupMembers.userId, userId))
-    .orderBy(asc(groups.archivedAt), desc(groups.updatedAt));
+    .orderBy(asc(groups.archivedAt), desc(lastActivityAt));
 
   return rows;
 }
@@ -334,6 +380,7 @@ export async function updateParticipant(
     if (updated.length === 0) {
       throw new AuthorizationError(
         "That participant is not part of this group.",
+        "notInGroup",
       );
     }
 
@@ -380,6 +427,7 @@ export async function removeParticipant(
     if (!target) {
       throw new AuthorizationError(
         "That participant is not part of this group.",
+        "notInGroup",
       );
     }
 
@@ -485,6 +533,7 @@ export async function createInvitation(
     if (!participant) {
       throw new AuthorizationError(
         "That participant is not part of this group.",
+        "notInGroup",
       );
     }
     if (participant.userId) {

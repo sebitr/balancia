@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { ImportWizard } from "@/components/imports/import-wizard";
 import { requireGroupAccess } from "@/lib/actions";
@@ -15,18 +16,16 @@ export default async function ImportPage({
   }
 
   const runs = await listImportRuns(access.groupId);
+  const t = await getTranslations("importPage");
+  const format = await getFormatter();
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Import from Splitwise
+          {t("title")}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Bring an existing group across. You will see a preview before anything
-          is written, and importing the same file twice never creates
-          duplicates.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("intro")}</p>
       </div>
 
       <ImportWizard groupId={access.groupId} />
@@ -34,7 +33,7 @@ export default async function ImportPage({
       {runs.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-muted-foreground">
-            Previous imports
+            {t("previous")}
           </h2>
           <ul className="divide-y rounded-lg border">
             {runs.map((run) => (
@@ -47,15 +46,25 @@ export default async function ImportPage({
                     {run.fileName}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {run.createdAt.toLocaleString()} · {run.rowsImported}{" "}
-                    imported, {run.rowsSkipped} skipped
-                    {run.rowsFailed > 0 && `, ${run.rowsFailed} failed`}
+                    {format.dateTime(run.createdAt, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}{" "}
+                    ·{" "}
+                    {t("runSummary", {
+                      imported: run.rowsImported,
+                      skipped: run.rowsSkipped,
+                    })}
+                    {run.rowsFailed > 0 &&
+                      t("runFailed", { failed: run.rowsFailed })}
                   </span>
                 </span>
                 <Badge
                   variant={run.status === "completed" ? "secondary" : "outline"}
                 >
-                  {run.status}
+                  {t.has(`status.${run.status}` as "status.completed")
+                    ? t(`status.${run.status}` as "status.completed")
+                    : run.status}
                 </Badge>
               </li>
             ))}

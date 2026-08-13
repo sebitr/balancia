@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { useFormatter, useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { Plus, Receipt } from "lucide-react";
+import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/money/amount";
@@ -18,6 +21,8 @@ export default async function ExpensesPage({
     listExpenses(access.groupId, { limit: 200 }),
     listSettlements(access.groupId, { limit: 200 }),
   ]);
+
+  const t = await getTranslations("expensesList");
 
   // Expenses and settlements share one chronological list — that is how people
   // remember a trip — but settlements are visually distinct because they are
@@ -40,8 +45,11 @@ export default async function ExpensesPage({
       id: settlement.id,
       date: settlement.settledOn,
       createdAt: settlement.createdAt,
-      title: `${settlement.fromName} paid ${settlement.toName}`,
-      subtitle: settlement.notes ?? "Repayment",
+      title: t("settlementTitle", {
+        from: settlement.fromName,
+        to: settlement.toName,
+      }),
+      subtitle: settlement.notes ?? t("repayment"),
       amount: settlement.amount.toString(),
       currency: settlement.currency,
       attachmentCount: 0,
@@ -56,12 +64,12 @@ export default async function ExpensesPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Expenses
+          {t("title")}
         </h1>
         <Button asChild size="sm">
           <Link href={`/groups/${groupId}/expenses/new`}>
             <Plus aria-hidden="true" />
-            Add
+            {t("add")}
           </Link>
         </Button>
       </div>
@@ -69,13 +77,13 @@ export default async function ExpensesPage({
       {timeline.length === 0 ? (
         <EmptyState
           icon={Receipt}
-          title="Nothing recorded yet"
-          description="Add your first expense to start tracking who paid for what."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
           action={
             <Button asChild>
               <Link href={`/groups/${groupId}/expenses/new`}>
                 <Plus aria-hidden="true" />
-                Add an expense
+                {t("addExpense")}
               </Link>
             </Button>
           }
@@ -118,6 +126,11 @@ function ExpenseRowContent({
     recurring: boolean;
   };
 }) {
+  // A synchronous Server Component, so the hook forms resolve here just as
+  // they would in the browser.
+  const t = useTranslations("expensesList");
+  const format = useFormatter();
+
   return (
     <>
       <span className="min-w-0">
@@ -125,19 +138,20 @@ function ExpenseRowContent({
           <span className="truncate text-sm font-medium">{entry.title}</span>
           {entry.kind === "settlement" && (
             <Badge variant="outline" className="shrink-0">
-              Payment
+              {t("paymentBadge")}
             </Badge>
           )}
           {entry.recurring && (
             <Badge variant="secondary" className="shrink-0">
-              Recurring
+              {t("recurringBadge")}
             </Badge>
           )}
         </span>
         <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-          {entry.date} · {entry.subtitle}
+          {format.dateTime(parsePlainDate(entry.date), PLAIN_DATE_FORMAT)} ·{" "}
+          {entry.subtitle}
           {entry.attachmentCount > 0 &&
-            ` · ${entry.attachmentCount} receipt${entry.attachmentCount === 1 ? "" : "s"}`}
+            ` · ${t("receiptCount", { count: entry.attachmentCount })}`}
         </span>
       </span>
       <Amount

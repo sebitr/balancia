@@ -1,3 +1,4 @@
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import { RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,35 +9,16 @@ import { requireGroupAccess } from "@/lib/actions";
 import { listRecurringExpenses } from "@/modules/recurring/service";
 import { listParticipants } from "@/modules/groups/service";
 
-const WEEKDAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
-
-function describeSchedule(template: {
-  frequency: "weekly" | "monthly" | "yearly";
-  interval: number;
-  weekday: number | null;
-  dayOfMonth: number | null;
-  monthOfYear: number | null;
-}): string {
-  const every =
-    template.interval === 1 ? "Every" : `Every ${template.interval}`;
-  switch (template.frequency) {
-    case "weekly":
-      return `${every} ${template.interval === 1 ? "week" : "weeks"} on ${
-        WEEKDAYS[(template.weekday ?? 1) - 1]
-      }`;
-    case "monthly":
-      return `${every} ${template.interval === 1 ? "month" : "months"} on day ${template.dayOfMonth}`;
-    case "yearly":
-      return `${every} ${template.interval === 1 ? "year" : "years"} on ${template.dayOfMonth}/${template.monthOfYear}`;
-  }
+/**
+ * The locale's own name for an ISO weekday (1 = Monday). Taken from `Intl`
+ * rather than the catalogue — see `recurring-form.tsx` for the same approach.
+ * 2024-01-01 was a Monday, which lines the offsets up with ISO numbering.
+ */
+function weekdayName(locale: string, isoWeekday: number): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2024, 0, isoWeekday)));
 }
 
 export default async function RecurringPage({
@@ -50,23 +32,53 @@ export default async function RecurringPage({
     listParticipants(access.groupId),
   ]);
 
+  const t = await getTranslations("recurringPage");
+  const format = await getFormatter();
+  const locale = await getLocale();
+
+  const describeSchedule = (template: {
+    frequency: "weekly" | "monthly" | "yearly";
+    interval: number;
+    weekday: number | null;
+    dayOfMonth: number | null;
+    monthOfYear: number | null;
+  }): string => {
+    switch (template.frequency) {
+      case "weekly":
+        return t("weekly", {
+          count: template.interval,
+          day: weekdayName(locale, template.weekday ?? 1),
+        });
+      case "monthly":
+        return t("monthly", {
+          count: template.interval,
+          day: template.dayOfMonth ?? 1,
+        });
+      case "yearly":
+        return t("yearly", {
+          count: template.interval,
+          day: template.dayOfMonth ?? 1,
+          month: template.monthOfYear ?? 1,
+        });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Recurring expenses
+          {t("title")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Generated automatically in the group&apos;s timezone (
-          {access.group.timezone}).
+          {t("intro", { timezone: access.group.timezone })}
         </p>
       </div>
 
       {templates.length === 0 ? (
         <EmptyState
           icon={RefreshCw}
-          title="No recurring expenses"
-          description="Set one up for rent, a subscription or any bill that arrives on a schedule."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <ul className="divide-y rounded-lg border">
@@ -79,7 +91,7 @@ export default async function RecurringPage({
                 <p className="flex flex-wrap items-center gap-2 font-medium">
                   <span className="truncate">{template.description}</span>
                   {template.pausedAt && (
-                    <Badge variant="secondary">Paused</Badge>
+                    <Badge variant="secondary">{t("pausedBadge")}</Badge>
                   )}
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -91,12 +103,18 @@ export default async function RecurringPage({
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {template.nextRunAt && !template.pausedAt
-                    ? `Next: ${new Date(template.nextRunAt).toLocaleDateString()}`
+                    ? t("next", {
+                        date: format.dateTime(new Date(template.nextRunAt), {
+                          dateStyle: "medium",
+                        }),
+                      })
                     : template.pausedAt
-                      ? "Paused — nothing will be generated"
-                      : "No further occurrences"}
+                      ? t("pausedNote")
+                      : t("noFurther")}
                   {template.generatedCount > 0 &&
-                    ` · ${template.generatedCount} generated so far`}
+                    ` · ${t("generatedSoFar", {
+                      count: template.generatedCount,
+                    })}`}
                 </p>
               </div>
               <RecurringRowActions

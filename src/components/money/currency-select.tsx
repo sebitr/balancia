@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { SUPPORTED_CURRENCIES } from "@/modules/currencies/iso-4217";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,7 @@ export function CurrencySelect({
   className?: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("money");
   const common = SUPPORTED_CURRENCIES.filter((currency) =>
     COMMON.includes(currency.code),
   ).sort((a, b) => COMMON.indexOf(a.code) - COMMON.indexOf(b.code));
@@ -64,14 +66,14 @@ export function CurrencySelect({
         className,
       )}
     >
-      <optgroup label="Common">
+      <optgroup label={t("commonCurrencies")}>
         {common.map((currency) => (
           <option key={currency.code} value={currency.code}>
             {currency.code} — {currency.name}
           </option>
         ))}
       </optgroup>
-      <optgroup label="All currencies">
+      <optgroup label={t("allCurrencies")}>
         {rest.map((currency) => (
           <option key={currency.code} value={currency.code}>
             {currency.code} — {currency.name}

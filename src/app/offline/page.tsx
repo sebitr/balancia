@@ -1,16 +1,30 @@
 import type { Metadata } from "next";
-import { WifiOff } from "lucide-react";
 import { Wordmark } from "@/components/brand/wordmark";
-import { RetryButton } from "@/components/pwa/retry-button";
+import { OfflineNotice } from "@/components/pwa/offline-notice";
 
+/** English at build time; the shell relabels itself once mounted. */
 export const metadata: Metadata = { title: "Offline" };
+
+/**
+ * Forces this route to prerender even though the root layout resolves the
+ * locale from a cookie. Without it, that cookie read makes every route
+ * dynamic, `server/app/offline.html` is never emitted, and the service worker
+ * has nothing to precache — the offline fallback would silently stop working.
+ *
+ * Under `force-static`, `cookies()` returns empty at build time, so the shell
+ * is baked in the default locale and `OfflineNotice` corrects the language in
+ * the browser.
+ */
+export const dynamic = "force-static";
 
 /**
  * Offline fallback shell.
  *
  * Static by design: it must render from the precache with no network and no
- * database. It says plainly that Balancia does not accept offline entries in
- * this version, so nobody types an expense expecting it to sync later.
+ * database, so it deliberately avoids every dynamic API — including the locale
+ * cookie. `OfflineNotice` picks the language client-side instead. It says
+ * plainly that Balancia does not accept offline entries in this version, so
+ * nobody types an expense expecting it to sync later.
  */
 export default function OfflinePage() {
   return (
@@ -21,24 +35,7 @@ export default function OfflinePage() {
         </div>
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-10">
-        <div className="max-w-md space-y-4 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <WifiOff aria-hidden="true" className="size-6" />
-          </span>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            You are offline
-          </h1>
-          <p className="text-pretty text-muted-foreground">
-            Balancia needs a connection to your server to show balances and
-            record expenses. Nothing is lost — reconnect and everything will be
-            where you left it.
-          </p>
-          <p className="text-sm text-pretty text-muted-foreground">
-            This version does not store expenses on your device while offline,
-            so nothing entered here would be saved.
-          </p>
-          <RetryButton />
-        </div>
+        <OfflineNotice />
       </main>
     </div>
   );

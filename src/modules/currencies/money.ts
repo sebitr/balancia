@@ -26,10 +26,25 @@ export class CurrencyMismatchError extends Error {
   }
 }
 
+/**
+ * Why an amount was rejected. As with `AllocationError`, the message stays
+ * English and developer-facing while `code` is what the UI translates.
+ */
+export type InvalidAmountCode = "internal" | "notDecimal" | "tooPrecise";
+
 export class InvalidAmountError extends Error {
-  constructor(message: string) {
+  readonly code: InvalidAmountCode;
+  readonly params: Readonly<Record<string, string | number>>;
+
+  constructor(
+    message: string,
+    code: InvalidAmountCode = "internal",
+    params: Readonly<Record<string, string | number>> = {},
+  ) {
     super(message);
     this.name = "InvalidAmountError";
+    this.code = code;
+    this.params = params;
   }
 }
 
@@ -110,7 +125,11 @@ export function parseMajorAmount(input: string, currency: string): Money {
   const exponent = currencyExponent(currency);
   const trimmed = input.trim();
   if (!/^-?\d+(\.\d+)?$/.test(trimmed)) {
-    throw new InvalidAmountError(`"${input}" is not a valid decimal amount`);
+    throw new InvalidAmountError(
+      `"${input}" is not a valid decimal amount`,
+      "notDecimal",
+      { input },
+    );
   }
   const negative = trimmed.startsWith("-");
   const unsigned = negative ? trimmed.slice(1) : trimmed;
@@ -118,6 +137,8 @@ export function parseMajorAmount(input: string, currency: string): Money {
   if (fraction.length > exponent) {
     throw new InvalidAmountError(
       `${currency} supports at most ${exponent} decimal place(s); received "${input}"`,
+      "tooPrecise",
+      { currency, places: exponent },
     );
   }
   const padded = fraction.padEnd(exponent, "0");

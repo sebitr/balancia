@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
@@ -21,21 +23,23 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Balancia",
-    template: "%s · Balancia",
-  },
-  description:
-    "Privacy-focused, self-hosted shared expense tracking. Shared expenses. Fairly balanced.",
-  applicationName: "Balancia",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Balancia",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return {
+    title: {
+      default: "Balancia",
+      template: "%s · Balancia",
+    },
+    description: t("description"),
+    applicationName: "Balancia",
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Balancia",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -47,10 +51,13 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Resolved from the locale cookie, falling back to Accept-Language.
+  const locale = await getLocale();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       // The theme provider's pre-paint script sets `class` and `style` on this
       // element before React hydrates, which is a mismatch by construction.
       suppressHydrationWarning
@@ -58,8 +65,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <SerwistRegister />
-        <Providers>{children}</Providers>
-        <Toaster position="top-center" richColors closeButton />
+        {/* Locale and messages are inherited from the server render; Client
+            Components below can call useTranslations without prop drilling. */}
+        <NextIntlClientProvider>
+          <Providers>{children}</Providers>
+          <Toaster position="top-center" richColors closeButton />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

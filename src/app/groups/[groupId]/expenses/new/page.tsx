@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/expense-form";
@@ -13,16 +14,18 @@ export default async function NewExpensePage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
   const participants = await listParticipants(access.groupId);
+  const t = await getTranslations("expensePages");
+  const tCommon = await getTranslations("common");
 
   if (participants.length === 0) {
     return (
       <EmptyState
         icon={Users}
-        title="Add someone first"
-        description="An expense needs at least one person to split it between."
+        title={t("noPeopleTitle")}
+        description={t("noPeopleDescription")}
         action={
           <Button asChild>
-            <Link href={`/groups/${groupId}/members`}>Manage people</Link>
+            <Link href={`/groups/${groupId}/members`}>{t("managePeople")}</Link>
           </Button>
         }
       />
@@ -35,11 +38,11 @@ export default async function NewExpensePage({
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/groups/${groupId}/expenses`}>
             <ArrowLeft aria-hidden="true" />
-            Back
+            {tCommon("back")}
           </Link>
         </Button>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Add an expense
+          {t("newTitle")}
         </h1>
       </div>
 

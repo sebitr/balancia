@@ -99,7 +99,7 @@ These are deliberate omissions for this version, not oversights:
   percent-encoded `DATABASE_URL`, honours an explicit override, and `exec`s its
   command with the right exit code. `docker compose config` resolves, and a
   missing `.env` fails with a message naming the fix. But `docker compose up -d
-  --build` itself has not been run against this change, so the image build and
+--build` itself has not been run against this change, so the image build and
   in-container migration have not been observed end to end. CI builds the image
   and checks its entrypoints and non-root user.
 - **No email delivery was exercised end to end.** SMTP paths are implemented and

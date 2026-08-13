@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
@@ -22,6 +23,8 @@ import {
   readSessionCookie,
   setSessionCookie,
 } from "./cookies";
+import { applyStoredLocale } from "@/i18n/cookie";
+import { resolveRequestLocale } from "@/i18n/request";
 
 /**
  * Authentication Server Actions.
@@ -30,25 +33,41 @@ import {
  * be able to make the server run scrypt thousands of times.
  */
 
+/**
+ * Schema messages are catalogue keys, not prose. These only surface when a
+ * request bypasses the client-side form, but when they do they should be in
+ * the reader's language like everything else.
+ */
 const registerSchema = z.object({
-  name: z.string().trim().min(1, "Enter your name").max(120),
-  email: z.email("Enter a valid email address"),
-  password: z.string().min(10, "Use at least 10 characters").max(512),
+  name: z.string().trim().min(1, "name").max(120),
+  email: z.email("email"),
+  password: z.string().min(10, "passwordMin").max(512),
 });
 
 const signInSchema = z.object({
-  email: z.email("Enter a valid email address"),
-  password: z.string().min(1, "Enter your password"),
+  email: z.email("email"),
+  password: z.string().min(1, "password"),
 });
+
+/** Translates the first Zod issue, falling back to a generic prompt. */
+async function validationError(issueKey: string | undefined) {
+  const t = await getTranslations("serverValidation");
+  const key = issueKey as Parameters<typeof t.has>[0] | undefined;
+  return actionError(key && t.has(key) ? t(key) : t("checkForm"));
+}
 
 async function requestContext(): Promise<{
   userAgent: string | null;
   ipAddress: string;
+  locale: string;
 }> {
   const requestHeaders = await headers();
   return {
     userAgent: requestHeaders.get("user-agent"),
     ipAddress: await getClientIp(),
+    // Carried into registration so the verification mail is written in the
+    // language the person was actually reading when they signed up.
+    locale: await resolveRequestLocale(),
   };
 }
 
@@ -61,7 +80,7 @@ export async function registerAction(
 ): Promise<ActionResult<RegisterActionResult>> {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
-    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+    return validationError(parsed.error.issues[0]?.message);
   }
 
   const context = await requestContext();
@@ -82,7 +101,7 @@ export async function registerAction(
 export async function signInAction(input: unknown): Promise<ActionResult> {
   const parsed = signInSchema.safeParse(input);
   if (!parsed.success) {
-    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+    return validationError(parsed.error.issues[0]?.message);
   }
 
   const context = await requestContext();
@@ -94,6 +113,9 @@ export async function signInAction(input: unknown): Promise<ActionResult> {
 
     const result = await signInWithPassword(parsed.data, context);
     await setSessionCookie(result.session.token, result.session.expiresAt);
+    // Seed the language cookie from the account, so a new browser opens in the
+    // language this person already chose elsewhere.
+    await applyStoredLocale(result.locale);
   });
 }
 
@@ -109,11 +131,9 @@ export async function signOutAction(): Promise<void> {
 export async function requestPasswordResetAction(
   input: unknown,
 ): Promise<ActionResult> {
-  const parsed = z
-    .object({ email: z.email("Enter a valid email address") })
-    .safeParse(input);
+  const parsed = z.object({ email: z.email("email") }).safeParse(input);
   if (!parsed.success) {
-    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+    return validationError(parsed.error.issues[0]?.message);
   }
 
   const context = await requestContext();
@@ -132,11 +152,11 @@ export async function resetPasswordAction(
   const parsed = z
     .object({
       token: z.string().min(1),
-      password: z.string().min(10, "Use at least 10 characters").max(512),
+      password: z.string().min(10, "passwordMin").max(512),
     })
     .safeParse(input);
   if (!parsed.success) {
-    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+    return validationError(parsed.error.issues[0]?.message);
   }
 
   return runAction("auth.resetPassword", async () => {
@@ -144,6 +164,7 @@ export async function resetPasswordAction(
     if (!ok) {
       throw new AuthError(
         "That reset link is no longer valid. Ask for a new one.",
+        "resetLinkInvalid",
       );
     }
   });
@@ -155,6 +176,7 @@ export async function verifyEmailAction(token: string): Promise<ActionResult> {
     if (!ok) {
       throw new AuthError(
         "That confirmation link is no longer valid. Sign in to request another.",
+        "confirmLinkInvalid",
       );
     }
   });
@@ -165,18 +187,18 @@ export async function changePasswordAction(
 ): Promise<ActionResult> {
   const parsed = z
     .object({
-      currentPassword: z.string().min(1, "Enter your current password"),
-      newPassword: z.string().min(10, "Use at least 10 characters").max(512),
+      currentPassword: z.string().min(1, "currentPassword"),
+      newPassword: z.string().min(10, "passwordMin").max(512),
     })
     .safeParse(input);
   if (!parsed.success) {
-    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+    return validationError(parsed.error.issues[0]?.message);
   }
 
   return runAction("auth.changePassword", async () => {
     const user = await getCurrentUser();
     if (!user) {
-      throw new AuthError("Sign in to change your password.");
+      throw new AuthError("Sign in to change your password.", "signInRequired");
     }
     await changePassword(
       user.userId,

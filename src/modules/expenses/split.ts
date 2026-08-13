@@ -70,23 +70,33 @@ function assertUniqueParticipants(entries: readonly SplitInputEntry[]): void {
 
 function parseDecimal(value: string | undefined, label: string): Decimal {
   if (value === undefined || value.trim() === "") {
-    throw new AllocationError(`${label} is required for this split method`);
+    throw new AllocationError(
+      `${label} is required for this split method`,
+      "valueRequired",
+    );
   }
   const trimmed = value.trim();
   if (!/^\d+(\.\d+)?$/.test(trimmed)) {
-    throw new AllocationError(`${label} must be a non-negative decimal number`);
+    throw new AllocationError(
+      `${label} must be a non-negative decimal number`,
+      "valueNotDecimal",
+    );
   }
   return new Decimal(trimmed);
 }
 
 function parseMinorUnits(value: string | undefined, label: string): bigint {
   if (value === undefined || value.trim() === "") {
-    throw new AllocationError(`${label} is required for this split method`);
+    throw new AllocationError(
+      `${label} is required for this split method`,
+      "valueRequired",
+    );
   }
   const trimmed = value.trim();
   if (!/^-?\d+$/.test(trimmed)) {
     throw new AllocationError(
       `${label} must be an integer number of minor units`,
+      "valueNotInteger",
     );
   }
   return BigInt(trimmed);
@@ -105,6 +115,7 @@ export function resolveSplit(total: bigint, input: SplitInput): SplitResult {
   if (entries.length === 0) {
     throw new AllocationError(
       "An expense must be split between at least one participant",
+      "participantsRequired",
     );
   }
   assertUniqueParticipants(entries);

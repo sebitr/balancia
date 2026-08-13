@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export function DeleteExpenseButton({
   description: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("deleteExpense");
   const [pending, setPending] = useState(false);
 
   const onConfirm = async () => {
@@ -36,10 +38,10 @@ export function DeleteExpenseButton({
     try {
       const result = await deleteExpenseAction(groupId, expenseId);
       if (!result.ok) {
-        toast.error(result.error ?? "The expense could not be deleted.");
+        toast.error(result.error ?? t("failed"));
         return;
       }
-      toast.success("Expense deleted");
+      toast.success(t("deleted"));
       router.push(`/groups/${groupId}/expenses`);
       router.refresh();
     } finally {
@@ -52,19 +54,18 @@ export function DeleteExpenseButton({
       <AlertDialogTrigger asChild>
         <Button variant="outline" className="text-destructive">
           <Trash2 aria-hidden="true" />
-          Delete
+          {t("trigger")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this expense?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            “{description}” will be removed from the group and balances will be
-            recalculated without it. This cannot be undone from the app.
+            {t("body", { description })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Keep it</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{t("keep")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={(event) => {
               event.preventDefault();
@@ -73,7 +74,7 @@ export function DeleteExpenseButton({
             disabled={pending}
           >
             {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-            Delete expense
+            {t("confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

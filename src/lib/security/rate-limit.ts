@@ -117,6 +117,9 @@ export async function pruneRateLimits(olderThan: Date): Promise<number> {
 }
 
 export class RateLimitedError extends Error {
+  /** Translated by the Server Action funnel; see `lib/actions.ts`. */
+  readonly code = "rateLimited";
+
   constructor(readonly retryAfterSeconds: number) {
     super("Too many attempts. Please try again later.");
     this.name = "RateLimitedError";

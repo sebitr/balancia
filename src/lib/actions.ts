@@ -1,10 +1,12 @@
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import {
   AuthenticationRequiredError,
   AuthorizationError,
   authorizeGroup,
   type GroupAccess,
 } from "@/lib/security/authorization";
+import { AuthError } from "@/modules/auth/service";
 import { getCurrentActor } from "@/lib/security/actor";
 import { logger } from "@/lib/logger";
 import { AllocationError } from "@/modules/expenses/allocation";
@@ -49,6 +51,7 @@ export async function requireGroupAccess(
 /** These carry messages written for humans and are safe to surface verbatim. */
 const SAFE_ERRORS = [
   AllocationError,
+  AuthError,
   AuthorizationError,
   AuthenticationRequiredError,
   CurrencyConfigurationError,
@@ -64,6 +67,29 @@ function isSafeError(error: unknown): error is Error {
 }
 
 /**
+ * The stable reason code a domain error may carry.
+ *
+ * Errors that have one are translated into the reader's language; the rest
+ * fall back to their English `message`, which is still an improvement on a
+ * blank failure and lets codes be added incrementally.
+ */
+function codeOf(error: Error): string | null {
+  const value = (error as { code?: unknown }).code;
+  return typeof value === "string" ? value : null;
+}
+
+async function describe(error: Error): Promise<string> {
+  const code = codeOf(error);
+  if (!code) return error.message;
+  const t = await getTranslations("serverErrors");
+  const key = code as Parameters<typeof t.has>[0];
+  if (!t.has(key)) return error.message;
+  // Errors that interpolate (an upload limit, say) carry their own values.
+  const params = (error as { params?: Record<string, string | number> }).params;
+  return t(key, params);
+}
+
+/**
  * Wraps an action body so failures become `ActionResult` rather than an
  * unhandled rejection. Unexpected errors are logged in full and reported to
  * the user as a generic message.
@@ -76,7 +102,7 @@ export async function runAction<T>(
     return actionOk(await body());
   } catch (error) {
     if (isSafeError(error)) {
-      return actionError(error.message);
+      return actionError(await describe(error));
     }
     logger.error(
       {
@@ -88,8 +114,7 @@ export async function runAction<T>(
       },
       "Action failed",
     );
-    return actionError(
-      "Something went wrong on the server. Nothing was changed.",
-    );
+    const t = await getTranslations("serverErrors");
+    return actionError(t("generic"));
   }
 }

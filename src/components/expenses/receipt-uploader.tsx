@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +26,7 @@ export function ReceiptUploader({
   groupId: string;
   onUploaded: (attachmentId: string) => void;
 }) {
+  const t = useTranslations("receipts");
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploaded, setUploaded] = useState<UploadedFile[]>([]);
   const [pending, setPending] = useState(false);
@@ -47,11 +49,7 @@ export function ReceiptUploader({
         { id: string; fileName: string } | { error: string };
 
       if (!response.ok || "error" in payload) {
-        setError(
-          "error" in payload
-            ? payload.error
-            : "That file could not be uploaded.",
-        );
+        setError("error" in payload ? payload.error : t("uploadFailed"));
         return;
       }
 
@@ -61,7 +59,7 @@ export function ReceiptUploader({
       ]);
       onUploaded(payload.id);
     } catch {
-      setError("The upload failed. Check your connection and try again.");
+      setError(t("connectionFailed"));
     } finally {
       setPending(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -90,7 +88,7 @@ export function ReceiptUploader({
         ) : (
           <Upload aria-hidden="true" />
         )}
-        Attach a receipt
+        {t("attach")}
       </Button>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -112,7 +110,7 @@ export function ReceiptUploader({
                   )
                 }
                 className="ml-auto hover:text-foreground"
-                aria-label={`Remove ${file.name} from this expense`}
+                aria-label={t("removeFile", { name: file.name })}
               >
                 <X aria-hidden="true" className="size-4" />
               </button>
@@ -121,10 +119,7 @@ export function ReceiptUploader({
         </ul>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        JPEG, PNG, WebP, GIF, HEIC or PDF. Stored on this server, visible only
-        to this group.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("formats")}</p>
     </div>
   );
 }

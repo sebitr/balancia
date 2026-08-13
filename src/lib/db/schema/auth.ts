@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -40,6 +41,18 @@ export const users = pgTable(
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     /** scrypt hash. Null for an account that only has passkeys. */
     passwordHash: text("password_hash"),
+    /**
+     * Preferred interface language ("en", "fr"). Null means "not chosen yet",
+     * which falls back to the browser's Accept-Language. Stored so the choice
+     * follows the account onto a new device, where there is no cookie yet.
+     */
+    locale: text("locale"),
+    /**
+     * ISO 4217 code the home screen totals every group position into. Null
+     * means "not chosen yet", and the dashboard falls back to whichever
+     * currency the user's own groups balance in most often.
+     */
+    preferredCurrency: text("preferred_currency"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -51,6 +64,10 @@ export const users = pgTable(
   (table) => [
     // Case-insensitive uniqueness: nobody gets a second account by capitalising.
     uniqueIndex("users_email_unique").on(sql`lower(${table.email})`),
+    check(
+      "users_preferred_currency_format",
+      sql`${table.preferredCurrency} IS NULL OR ${table.preferredCurrency} ~ '^[A-Z]{3}$'`,
+    ),
   ],
 );
 

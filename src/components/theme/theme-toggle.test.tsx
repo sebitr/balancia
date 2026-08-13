@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "next-themes";
+import { renderWithIntl } from "../../../tests/helpers/intl";
 import { ThemeToggle } from "./theme-toggle";
 
 /**
@@ -11,7 +12,7 @@ import { ThemeToggle } from "./theme-toggle";
  * these assertions are about.
  */
 function renderToggle() {
-  return render(
+  return renderWithIntl(
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ThemeToggle />
     </ThemeProvider>,

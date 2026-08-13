@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export function RemoveParticipantButton({
   displayName: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("members");
+  const tCommon = useTranslations("common");
   const [pending, setPending] = useState(false);
 
   const onConfirm = async () => {
@@ -35,10 +38,10 @@ export function RemoveParticipantButton({
     try {
       const result = await removeParticipantAction(groupId, participantId);
       if (!result.ok) {
-        toast.error(result.error ?? "That person could not be removed.");
+        toast.error(result.error ?? t("removeFailed"));
         return;
       }
-      toast.success(`${displayName} removed`);
+      toast.success(t("removed", { name: displayName }));
       router.refresh();
     } finally {
       setPending(false);
@@ -51,22 +54,22 @@ export function RemoveParticipantButton({
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Remove ${displayName} from the group`}
+          aria-label={t("removeLabel", { name: displayName })}
         >
           <UserMinus aria-hidden="true" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove {displayName}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Their past expenses and payments stay in the group so balances
-            remain correct — they simply cannot be added to anything new. Any
-            guest link they hold stops working.
-          </AlertDialogDescription>
+          <AlertDialogTitle>
+            {t("removeTitle", { name: displayName })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>{t("removeBody")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>
+            {tCommon("cancel")}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(event) => {
               event.preventDefault();
@@ -75,7 +78,7 @@ export function RemoveParticipantButton({
             disabled={pending}
           >
             {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-            Remove
+            {t("remove")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

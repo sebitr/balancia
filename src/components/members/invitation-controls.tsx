@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import { Check, Copy, Link2, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,8 @@ export function InvitationControls({
   lastUsedAt: string | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("invitations");
+  const format = useFormatter();
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, setPending] = useState(false);
@@ -62,7 +65,7 @@ export function InvitationControls({
       formData.set("expiresInDays", expiresInDays);
       const result = await createInvitationAction(groupId, formData);
       if (!result.ok || !result.data) {
-        toast.error(result.error ?? "The link could not be created.");
+        toast.error(result.error ?? t("createFailed"));
         return;
       }
       setCreatedUrl(result.data.url);
@@ -77,11 +80,11 @@ export function InvitationControls({
     try {
       const result = await revokeInvitationAction(groupId, participantId);
       if (!result.ok) {
-        toast.error(result.error ?? "The link could not be revoked.");
+        toast.error(result.error ?? t("revokeFailed"));
         return;
       }
       setCreatedUrl(null);
-      toast.success("Link revoked");
+      toast.success(t("revoked"));
       router.refresh();
     } finally {
       setPending(false);
@@ -95,7 +98,7 @@ export function InvitationControls({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Could not copy — select the link and copy it manually.");
+      toast.error(t("copyFailed"));
     }
   };
 
@@ -105,14 +108,12 @@ export function InvitationControls({
         <>
           <Alert>
             <ShieldAlert aria-hidden="true" />
-            <AlertTitle>Copy this link now</AlertTitle>
+            <AlertTitle>{t("copyNow")}</AlertTitle>
             <AlertDescription className="space-y-2">
               <span>
-                It is shown only once — Balancia stores only a hashed copy.
-                Anyone who has this link can act as{" "}
-                <strong>{displayName}</strong>: view the group, add and edit
-                expenses, and record payments. Share it only with them, over a
-                channel you trust.
+                {t.rich("copyWarning", {
+                  name: () => <strong>{displayName}</strong>,
+                })}
               </span>
             </AlertDescription>
           </Alert>
@@ -120,7 +121,7 @@ export function InvitationControls({
             <Input
               readOnly
               value={createdUrl}
-              aria-label={`Invitation link for ${displayName}`}
+              aria-label={t("linkFor", { name: displayName })}
               className="font-mono text-xs"
               onFocus={(event) => event.currentTarget.select()}
             />
@@ -129,7 +130,7 @@ export function InvitationControls({
               variant="outline"
               size="icon"
               onClick={() => void onCopy()}
-              aria-label="Copy invitation link"
+              aria-label={t("copyLink")}
             >
               {copied ? (
                 <Check aria-hidden="true" className="text-positive" />
@@ -144,26 +145,34 @@ export function InvitationControls({
             size="sm"
             onClick={() => setCreatedUrl(null)}
           >
-            I have copied it
+            {t("copied")}
           </Button>
         </>
       ) : hasActiveInvitation ? (
         <div className="space-y-2">
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <Link2 aria-hidden="true" className="size-4" />
-            An invitation link is active
+            {t("active")}
             {invitationPrefix && (
               <span className="font-mono text-xs">({invitationPrefix}…)</span>
             )}
           </p>
           <p className="text-xs text-muted-foreground">
             {expiresAt
-              ? `Expires ${new Date(expiresAt).toLocaleDateString()}.`
-              : "Does not expire."}{" "}
+              ? t("expiresOn", {
+                  date: format.dateTime(new Date(expiresAt), {
+                    dateStyle: "medium",
+                  }),
+                })
+              : t("neverExpires")}{" "}
             {lastUsedAt
-              ? `Last used ${new Date(lastUsedAt).toLocaleDateString()}.`
-              : "Not used yet."}{" "}
-            The link itself cannot be shown again.
+              ? t("lastUsed", {
+                  date: format.dateTime(new Date(lastUsedAt), {
+                    dateStyle: "medium",
+                  }),
+                })
+              : t("neverUsed")}{" "}
+            {t("cannotShowAgain")}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -176,7 +185,7 @@ export function InvitationControls({
               {pending && (
                 <Loader2 aria-hidden="true" className="animate-spin" />
               )}
-              Replace with a new link
+              {t("replace")}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -186,29 +195,27 @@ export function InvitationControls({
                   size="sm"
                   className="text-destructive"
                 >
-                  Revoke
+                  {t("revoke")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    Revoke {displayName}&apos;s link?
+                    {t("revokeTitle", { name: displayName })}
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    The link stops working immediately and anyone currently
-                    signed in through it is signed out. Expenses they already
-                    recorded stay in the group.
+                    {t("revokeBody")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Keep it</AlertDialogCancel>
+                  <AlertDialogCancel>{t("keep")}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={(event) => {
                       event.preventDefault();
                       void onRevoke();
                     }}
                   >
-                    Revoke link
+                    {t("revokeConfirm")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -218,13 +225,12 @@ export function InvitationControls({
       ) : (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            {displayName} has no account. Create a link so they can take part
-            without signing up.
+            {t("noAccount", { name: displayName })}
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
               <Label htmlFor={`expiry-${participantId}`} className="text-xs">
-                Expires
+                {t("expires")}
               </Label>
               <select
                 id={`expiry-${participantId}`}
@@ -232,10 +238,12 @@ export function InvitationControls({
                 onChange={(event) => setExpiresInDays(event.target.value)}
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
-                <option value="never">Never</option>
-                <option value="7">In 7 days</option>
-                <option value="30">In 30 days</option>
-                <option value="90">In 90 days</option>
+                <option value="never">{t("never")}</option>
+                {[7, 30, 90].map((days) => (
+                  <option key={days} value={days}>
+                    {t("inDays", { count: days })}
+                  </option>
+                ))}
               </select>
             </div>
             <Button
@@ -248,7 +256,7 @@ export function InvitationControls({
                 <Loader2 aria-hidden="true" className="animate-spin" />
               )}
               <Link2 aria-hidden="true" />
-              Create invitation link
+              {t("create")}
             </Button>
           </div>
         </div>

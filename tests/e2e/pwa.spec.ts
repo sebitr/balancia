@@ -64,6 +64,44 @@ test("links the manifest from the document head", async ({ page }) => {
   expect(themeColor).toBeTruthy();
 });
 
+test("links a real Balancia favicon, not the framework default", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+
+  // All three matter, and to different clients: the .ico is what Safari and
+  // anything fetching /favicon.ico blind will take, the SVG is what modern
+  // tabs prefer, and the apple-touch-icon is what iOS puts on the home screen.
+  const hrefs = await page
+    .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .evaluateAll((links) =>
+      links.map((link) => (link as HTMLLinkElement).getAttribute("href") ?? ""),
+    );
+  expect(hrefs.some((href) => href.startsWith("/favicon.ico"))).toBe(true);
+  expect(hrefs.some((href) => href.startsWith("/icon.svg"))).toBe(true);
+  expect(hrefs.some((href) => href.startsWith("/apple-icon.png"))).toBe(true);
+
+  for (const href of hrefs) {
+    const response = await request.get(href);
+    expect(response.status(), `${href} should exist`).toBe(200);
+    expect(response.headers()["content-type"]).toContain("image/");
+  }
+
+  // The scaffold favicon shipped here unnoticed once. It is a single 48px
+  // Next.js logo; ours is the Balancia mark at three tab sizes, and the
+  // directory count is the cheapest way to tell them apart.
+  const ico = await (await request.get("/favicon.ico")).body();
+  expect(ico.readUInt16LE(0)).toBe(0); // reserved
+  expect(ico.readUInt16LE(2)).toBe(1); // type: icon
+  expect(ico.readUInt16LE(4)).toBe(3); // 16, 32 and 48px entries
+
+  const svg = await (await request.get("/icon.svg")).text();
+  // The plum ground and coral dot are the mark; the Next.js logo has neither.
+  expect(svg).toContain("#2a0e31");
+  expect(svg).toContain("#f97361");
+});
+
 test("registers a service worker and serves it from the root scope", async ({
   page,
   request,

@@ -231,7 +231,10 @@ export async function setRecurringPaused(
       .returning({ id: recurringExpenses.id });
 
     if (updated.length === 0) {
-      throw new AuthorizationError("That template is not part of this group.");
+      throw new AuthorizationError(
+        "That template is not part of this group.",
+        "notInGroup",
+      );
     }
 
     await recordActivity(tx, {
@@ -267,7 +270,10 @@ export async function deleteRecurringExpense(
       .returning({ description: recurringExpenses.description });
 
     if (deleted.length === 0) {
-      throw new AuthorizationError("That template is not part of this group.");
+      throw new AuthorizationError(
+        "That template is not part of this group.",
+        "notInGroup",
+      );
     }
 
     await recordActivity(tx, {
