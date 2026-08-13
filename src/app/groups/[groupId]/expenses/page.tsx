@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Receipt } from "lucide-react";
+import { Plus, Receipt, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/money/amount";
@@ -58,12 +58,22 @@ export default async function ExpensesPage({
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
           Expenses
         </h1>
-        <Button asChild size="sm">
-          <Link href={`/groups/${groupId}/expenses/new`}>
-            <Plus aria-hidden="true" />
-            Add
-          </Link>
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Rent and bills belong next to the expenses they generate, not
+              buried in group settings. */}
+          <Button asChild size="sm" variant="ghost">
+            <Link href={`/groups/${groupId}/recurring`}>
+              <RefreshCw aria-hidden="true" />
+              Recurring
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href={`/groups/${groupId}/expenses/new`}>
+              <Plus aria-hidden="true" />
+              Add
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {timeline.length === 0 ? (
