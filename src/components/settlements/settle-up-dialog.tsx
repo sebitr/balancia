@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CurrencySelect } from "@/components/money/currency-select";
+import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { createSettlementAction } from "@/modules/expenses/actions";
 import { parseAmountToMinor } from "@/components/expenses/expense-form-logic";
 
@@ -182,19 +183,15 @@ export function SettleUpDialog({
           </div>
 
           {needsRate && (
-            <div className="space-y-2">
-              <Label htmlFor="settle-rate">
-                Exchange rate — 1 {currency} in {baseCurrency}
-              </Label>
-              <Input
-                id="settle-rate"
-                inputMode="decimal"
-                value={exchangeRate}
-                onChange={(event) => setExchangeRate(event.target.value)}
-                placeholder="1.0854"
-                required
-              />
-            </div>
+            <ExchangeRateField
+              id="settle-rate"
+              from={currency}
+              to={baseCurrency!}
+              on={settledOn}
+              value={exchangeRate}
+              onChange={setExchangeRate}
+              hint="Frozen with the repayment, like an expense's rate."
+            />
           )}
 
           <div className="space-y-2">

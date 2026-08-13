@@ -20,12 +20,23 @@ import { generateDueOccurrences } from "@/modules/recurring/service";
 import { commitImportRun } from "@/modules/imports/service";
 import { sweepOrphanedAttachments } from "@/modules/attachments/service";
 import { pruneRateLimits } from "@/lib/security/rate-limit";
+import {
+  pruneRateQuotes,
+  refreshActiveRates,
+} from "@/modules/currencies/rates";
 import { pruneGuestSessions } from "@/lib/security/guest-session";
 import { pruneSessions } from "@/modules/auth/sessions";
 import { pruneWebauthnChallenges } from "@/modules/auth/webauthn";
 
 /** Uploads unattached for longer than this are swept away. */
 const ORPHAN_UPLOAD_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How long cached rate quotes are kept. They are a convenience, not a record —
+ * anything dropped here is re-fetched on demand, and no recorded rate depends
+ * on it.
+ */
+const CACHED_RATE_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
 
 async function main(): Promise<void> {
   const env = getEnv();
@@ -53,6 +64,12 @@ async function main(): Promise<void> {
     jobLogger.info(report, "Committed import run");
   });
 
+  await boss.work(QUEUES.ratesRefresh, async () => {
+    const jobLogger = logger.child({ queue: QUEUES.ratesRefresh });
+    const report = await refreshActiveRates();
+    jobLogger.info(report, "Refreshed exchange rates");
+  });
+
   await boss.work(QUEUES.maintenance, async () => {
     const jobLogger = logger.child({ queue: QUEUES.maintenance });
     const now = new Date();
@@ -62,6 +79,7 @@ async function main(): Promise<void> {
       guestSessionRows,
       sessionRows,
       challengeRows,
+      rateQuoteRows,
     ] = await Promise.all([
       sweepOrphanedAttachments(
         new Date(now.getTime() - ORPHAN_UPLOAD_GRACE_MS),
@@ -70,6 +88,7 @@ async function main(): Promise<void> {
       pruneGuestSessions(now),
       pruneSessions(now),
       pruneWebauthnChallenges(now),
+      pruneRateQuotes(new Date(now.getTime() - CACHED_RATE_RETENTION_MS)),
     ]);
     jobLogger.info(
       {
@@ -78,6 +97,7 @@ async function main(): Promise<void> {
         guestSessionRows,
         sessionRows,
         challengeRows,
+        rateQuoteRows,
       },
       "Maintenance sweep complete",
     );
@@ -87,6 +107,9 @@ async function main(): Promise<void> {
   // hourly tick covers every timezone's midnight without a per-group schedule.
   await boss.schedule(QUEUES.recurringGenerate, "0 * * * *");
   await boss.schedule(QUEUES.maintenance, "30 3 * * *");
+  // Reference rates are published on weekday afternoons (around 15:00 UTC);
+  // 15:45 picks them up the same day. A no-op when no provider is configured.
+  await boss.schedule(QUEUES.ratesRefresh, "45 15 * * 1-5");
 
   logger.info(
     { queues: Object.values(QUEUES) },

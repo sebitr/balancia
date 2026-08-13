@@ -27,7 +27,10 @@ first run.
   once; balances follow who actually paid what.
 - **Multi-currency, two ways.** Keep each currency balanced separately, or
   convert everything into one base currency at a rate frozen when you record
-  it. Historical expenses are never silently recalculated.
+  it. Historical expenses are never silently recalculated. Daily rates can be
+  filled in for you from the European Central Bank's published figures — off by
+  default, because a self-hosted instance should decide for itself whether to
+  talk to anyone.
 - **Passkeys and passwords.** Sign in with a passkey (WebAuthn) or an email and
   password. Both are implemented in this repository — no third-party auth
   service is involved.
@@ -163,7 +166,14 @@ passkey configuration rather than failing later at the prompt.
 
 ### Develop on it
 
-See **[docs/development.md](docs/development.md)**. In short:
+See **[docs/development.md](docs/development.md)**. Everything in containers,
+nothing to install but Docker:
+
+```bash
+docker compose -f compose.dev.yaml up --build
+```
+
+Or on the host, which is faster:
 
 ```bash
 pnpm install

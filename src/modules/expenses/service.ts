@@ -14,7 +14,11 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
-import { resolveConversion } from "@/modules/currencies/conversion";
+import {
+  resolveConversion,
+  type ExchangeRateSource,
+} from "@/modules/currencies/conversion";
+import { classifyRateSource } from "@/modules/currencies/rates";
 import { money } from "@/modules/currencies/money";
 import { AllocationError } from "./allocation";
 import {
@@ -100,7 +104,7 @@ interface PreparedExpense {
   readonly convertedAmount: bigint | null;
   readonly convertedCurrency: string | null;
   readonly exchangeRate: string | null;
-  readonly exchangeRateSource: "manual" | "import" | null;
+  readonly exchangeRateSource: ExchangeRateSource | null;
   readonly exchangeRateAt: Date | null;
   readonly payers: {
     participantId: string;
@@ -130,7 +134,7 @@ export function prepareExpense(
     splitMethod: SplitInput["method"];
     splitEntries: readonly { participantId: string; value?: string }[];
   },
-  options: { rateSource?: "manual" | "import"; now?: Date } = {},
+  options: { rateSource?: ExchangeRateSource; now?: Date } = {},
 ): PreparedExpense {
   const total = BigInt(input.amount);
   const originalAmount = money(total, input.currency);
@@ -208,6 +212,16 @@ export async function createExpense(
   requirePermission(access, "addExpense");
   const db = options.db ?? getDb();
 
+  // Outside the transaction: it is a cache read that only decides how the rate
+  // is labelled, and it should not hold write locks open.
+  const rateSource = await classifyRateSource({
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+    currency: input.currency,
+    rate: input.exchangeRate,
+    on: input.expenseDate,
+  });
+
   return db.transaction(async (tx) => {
     const referenced = [
       ...input.payers.map((payer) => payer.participantId),
@@ -215,7 +229,10 @@ export async function createExpense(
     ];
     await assertParticipantsInGroup(tx, access.groupId, referenced);
 
-    const prepared = prepareExpense(access, input, { now: options.now });
+    const prepared = prepareExpense(access, input, {
+      now: options.now,
+      rateSource,
+    });
 
     const [expense] = await tx
       .insert(expenses)
@@ -295,6 +312,14 @@ export async function updateExpense(
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
 
+  const rateSource = await classifyRateSource({
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+    currency: input.currency,
+    rate: input.exchangeRate,
+    on: input.expenseDate,
+  });
+
   await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: expenses.id, description: expenses.description })
@@ -318,7 +343,10 @@ export async function updateExpense(
     ];
     await assertParticipantsInGroup(tx, access.groupId, referenced);
 
-    const prepared = prepareExpense(access, input, { now: options.now });
+    const prepared = prepareExpense(access, input, {
+      now: options.now,
+      rateSource,
+    });
 
     await tx
       .update(expenses)

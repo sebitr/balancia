@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrencySelect } from "@/components/money/currency-select";
+import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { ReceiptUploader } from "@/components/expenses/receipt-uploader";
 import {
   createExpenseAction,
@@ -336,23 +337,15 @@ export function ExpenseForm({
       </div>
 
       {needsExchangeRate && (
-        <div className="space-y-2">
-          <Label htmlFor="exchangeRate">
-            Exchange rate — 1 {currency} in {baseCurrency}
-          </Label>
-          <Input
-            id="exchangeRate"
-            inputMode="decimal"
-            value={exchangeRate}
-            onChange={(event) => setExchangeRate(event.target.value)}
-            placeholder="1.0854"
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            This rate is frozen with the expense. Changing rates later never
-            rewrites what is already recorded.
-          </p>
-        </div>
+        <ExchangeRateField
+          id="exchangeRate"
+          from={currency}
+          to={baseCurrency!}
+          on={expenseDate}
+          value={exchangeRate}
+          onChange={setExchangeRate}
+          hint="This rate is frozen with the expense. Changing rates later never rewrites what is already recorded."
+        />
       )}
 
       <div className="space-y-2">

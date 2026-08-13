@@ -17,6 +17,8 @@ export const QUEUES = {
   recurringGenerate: "recurring.generate",
   /** Commits a staged Splitwise import. */
   importCommit: "import.commit",
+  /** Warms cached exchange rates for the pairs groups are using. */
+  ratesRefresh: "rates.refresh",
   /** Housekeeping: orphaned uploads, stale rate-limit windows, expired sessions. */
   maintenance: "maintenance.sweep",
 } as const;

@@ -109,6 +109,10 @@ Redis — background jobs are queued in PostgreSQL through pg-boss.
   binary content lives in the storage adapter.
 - **Activity**: append-only `activity_events` written in the same transaction
   as the financial change.
+- **Exchange rates**: `exchange_rate_quotes` caches what an optional external
+  provider answered, per (provider, base, quote, day). It is a cache and
+  nothing more — every rate that matters is frozen on its expense, so the table
+  can be emptied without moving a single balance.
 
 ## Balance engine
 

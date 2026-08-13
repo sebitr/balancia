@@ -15,7 +15,12 @@ import { getCurrency } from "./iso-4217";
 export const CURRENCY_MODES = ["separate", "converted"] as const;
 export type CurrencyMode = (typeof CURRENCY_MODES)[number];
 
-export const EXCHANGE_RATE_SOURCES = ["manual", "import"] as const;
+/**
+ * Where a frozen rate came from: typed by a person, carried in from an import,
+ * or taken from the configured rate provider. Recorded per expense so a figure
+ * can always be traced back to its origin.
+ */
+export const EXCHANGE_RATE_SOURCES = ["manual", "import", "api"] as const;
 export type ExchangeRateSource = (typeof EXCHANGE_RATE_SOURCES)[number];
 
 export class CurrencyConfigurationError extends Error {

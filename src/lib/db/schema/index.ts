@@ -10,3 +10,4 @@ export * from "./guests";
 export * from "./activity";
 export * from "./recurring";
 export * from "./imports";
+export * from "./rates";
