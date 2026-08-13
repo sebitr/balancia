@@ -1,0 +1,154 @@
+<!-- @dsCard group="Patterns" name="Export" subtitle="Three formats, and what each one is honestly for" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Export</h1>
+    <p class="lede">
+      Balancia's claim is that you can leave. That is only true if leaving
+      produces something usable, so the same data is offered three ways — and
+      the interface says plainly which one is which, rather than presenting
+      three interchangeable buttons.
+    </p>
+  </header>
+
+  <section>
+    <h2>On a phone</h2>
+    <div class="spec" style="display: flex; justify-content: center">
+      <div class="frame frame--phone" style="width: 100%">
+        <div style="padding: 1rem">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Export</div></div>
+            <div class="card-content">
+              <p class="note" style="margin: 0 0 0.75rem">
+                Your data, in a format you can open anywhere. The file is built
+                on this server and sent straight to you.
+              </p>
+              <!-- Stacked, full width. Three buttons in a row do not fit at
+                   375px without shrinking each below a comfortable target. -->
+              <div style="display: flex; flex-direction: column; gap: 0.5rem">
+                <button class="btn btn--outline btn--sm">CSV</button>
+                <button class="btn btn--outline btn--sm">Excel</button>
+                <button class="btn btn--outline btn--sm">JSON</button>
+              </div>
+              <p class="note" style="margin: 0.75rem 0 0; font-size: 0.75rem">
+                CSV and Excel hold one row per person per expense, ready to sort
+                and total. JSON is the complete record — every amount exactly as
+                stored — and is the one to keep for an archive.
+              </p>
+              <p class="note" style="margin: 0.5rem 0 0; font-size: 0.75rem">
+                Receipts are not in these files — download them from each
+                expense.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Above <code>sm</code> the three buttons become a row. Nothing else about
+      the card changes: the explanation is not a tooltip or a help link, because
+      choosing a format is exactly the moment the difference matters.
+    </p>
+  </section>
+
+  <section>
+    <h2>What each format is for</h2>
+    <div class="spec">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Shape</th>
+            <th>Amounts</th>
+            <th>Use it when</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>JSON</strong></td>
+            <td>The whole group, nested</td>
+            <td>Integer minor units, as strings</td>
+            <td>Archiving, or moving to another instance</td>
+          </tr>
+          <tr>
+            <td><strong>CSV</strong></td>
+            <td>One row per person per expense</td>
+            <td>Major units, e.g. <code>30.00</code></td>
+            <td>A script, or a spreadsheet pivot</td>
+          </tr>
+          <tr>
+            <td><strong>Excel</strong></td>
+            <td>Four sheets: expenses, payments, people, balances</td>
+            <td>Numeric cells, summable</td>
+            <td>Sharing a readable summary with the group</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The split is deliberate and stated in the copy. JSON is the format that
+      cannot lose a digit; the spreadsheet formats present major units because
+      that is what a spreadsheet can add up. Money never passes through a
+      floating-point number on the way to a cell — the decimal literal the money
+      module produced is written verbatim.
+    </p>
+  </section>
+
+  <section>
+    <h2>Who can export</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Owner and member</span>
+              <span class="list-sub">The Export card is shown</span>
+            </span>
+            <span class="badge badge--secondary">Yes</span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Guest, via an invitation link</span>
+              <span class="list-sub"
+                >No card, and the endpoint answers 404</span
+              >
+            </span>
+            <span class="badge badge--outline">No</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      This is not about secrecy — a guest already reads every expense on screen.
+      An invitation link is a bearer token which may be forwarded, and a
+      one-request download of a group's entire financial history is a sharper
+      tool in the wrong hands than the same data read a page at a time. The
+      refusal is a 404 rather than a 403, like every other authorization
+      failure, so nothing is confirmed to someone who should not be asking.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Say what each format is for, in the same breath as offering it. "CSV,
+          XLSX, JSON" is a file-extension list; "the one to keep for an archive"
+          is a decision someone can actually make.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Imply the export contains more than it does. Receipts live in storage
+          and are downloaded per expense — saying so is better than letting
+          someone discover it after they have deleted their account.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

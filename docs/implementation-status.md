@@ -28,6 +28,7 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 18  | Documentation                                           | ✅     |
 | 19  | CI and final verification                               | ✅     |
 | 20  | Exchange-rate provider (opt-in)                         | ✅     |
+| 21  | Group export (JSON, CSV, XLSX)                          | ✅     |
 
 ## Verification
 
@@ -68,6 +69,17 @@ does not get to say where the saved rate came from. On write, the service asks
 the rate cache whether the submitted rate is the one this instance actually
 fetched for that pair and day, and labels the row `api` only then — so
 `exchange_rate_source` stays a fact rather than a claim by the client.
+
+**The XLSX writer is ours; only the ZIP container is not.** An `.xlsx` file is a
+ZIP of XML parts, and the maintained JavaScript libraries for writing one are
+either an order of magnitude larger than the feature or stale on npm — neither
+sits well with a dependency list that is audited by hand. The writer in
+`src/modules/exports` emits the smallest valid subset (inline strings, no
+shared-string table, no styles) on top of `fflate`, which is MIT with zero
+transitive dependencies. The output is verified by unzipping it in the tests,
+and was checked against an independent OOXML parser before shipping. Money is
+written as the decimal literal the money module already produced, never via a
+JavaScript number.
 
 **`server-only` is aliased away in non-Next contexts.** It is a bundler-time
 guard that throws under plain Node, so the worker and migrator bundles alias it
@@ -115,4 +127,6 @@ These are deliberate omissions for this version, not oversights:
 3. **Expense list pagination and filtering.** The list currently loads up to 200
    entries; groups with years of history need cursor pagination, plus filters by
    participant, category and date.
-4. **CSV/JSON export**, closing the loop on data portability.
+4. **Receipts in the export.** The data leaves as JSON, CSV or XLSX; the
+   attachments still have to be downloaded one expense at a time. A single
+   archive would finish the job.
