@@ -1,5 +1,13 @@
 import "server-only";
-import type { Database } from "@/lib/db/client";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { getDb, type Database } from "@/lib/db/client";
+// Aliased: `groups` is the name this module already uses for the user's own
+// list of groups, and the two would shadow each other.
+import {
+  groupMembers,
+  groups as groupsTable,
+  settlements,
+} from "@/lib/db/schema";
 import {
   absMoney,
   addMoney,
@@ -7,6 +15,7 @@ import {
   convertMoney,
   isNegative,
   isPositive,
+  isZero,
   money,
   subtractMoney,
   zero,
@@ -32,6 +41,17 @@ import { loadGroupBalances } from "./service";
  * one.
  */
 
+/**
+ * Who the user owes inside one group.
+ *
+ * A single creditor can be named, which is the more useful sentence; several
+ * are counted instead, because listing them would not fit and picking one of
+ * them would be a lie.
+ */
+export type Counterparty =
+  | { readonly kind: "single"; readonly name: string }
+  | { readonly kind: "several"; readonly count: number };
+
 /** The user's standing in one group. */
 export interface GroupPosition {
   readonly group: GroupSummary;
@@ -39,12 +59,15 @@ export interface GroupPosition {
   readonly amounts: readonly Money[];
   /** `amounts` summed into the display currency; null if a rate was missing. */
   readonly net: Money | null;
+  /** Only ever set where the user owes: nobody is owed *to* a creditor. */
+  readonly owedTo: Counterparty | null;
 }
 
 export type PositionDirection = "owes" | "owed" | "settled";
 
 export interface HomeBuckets {
-  readonly youOwe: readonly GroupPosition[];
+  /** Groups the user owes in — the only ones that ask for a decision. */
+  readonly needsYou: readonly GroupPosition[];
   readonly youAreOwed: readonly GroupPosition[];
   readonly settled: readonly GroupPosition[];
   readonly archived: readonly GroupPosition[];
@@ -72,6 +95,11 @@ export interface HomeOverview {
   readonly converted: boolean;
   readonly buckets: HomeBuckets;
   readonly groupCount: number;
+  /** Most recent settlement anywhere, for the all-settled footnote. */
+  readonly lastCleared: {
+    readonly at: Date;
+    readonly groupName: string;
+  } | null;
 }
 
 /**
@@ -122,7 +150,9 @@ export function bucketPositions(
     active.filter((position) => directionOf(position) === direction);
 
   return {
-    youOwe: byDirection("owes").sort(byUrgency),
+    // Largest debt first: the head of this list is the one card that gets the
+    // tinted ring and the filled action.
+    needsYou: byDirection("owes").sort(byUrgency),
     youAreOwed: byDirection("owed").sort(byUrgency),
     settled: byDirection("settled").sort(byRecency),
     archived: positions
@@ -262,6 +292,35 @@ async function rateFor(
   return quote;
 }
 
+/**
+ * Who the user has to pay in this group, from the simplified repayment plan.
+ *
+ * The plan is already the answer to "who pays whom"; this only asks how many
+ * distinct people the user's own side of it names. Nobody is returned when the
+ * user owes nothing — a creditor has no counterparty to chase.
+ */
+function counterpartyOf(
+  group: GroupSummary,
+  balances: Awaited<ReturnType<typeof loadGroupBalances>>,
+): Counterparty | null {
+  const creditors = new Set<string>();
+  for (const suggestions of balances.suggestionsByCurrency.values()) {
+    for (const suggestion of suggestions) {
+      if (suggestion.fromParticipantId === group.participantId) {
+        creditors.add(suggestion.toParticipantId);
+      }
+    }
+  }
+
+  if (creditors.size === 0) return null;
+  if (creditors.size === 1) {
+    const [only] = [...creditors];
+    const name = balances.participantNames.get(only);
+    return name ? { kind: "single", name } : { kind: "several", count: 1 };
+  }
+  return { kind: "several", count: creditors.size };
+}
+
 /** The user's own balances in one group, zero-filtered. */
 function ownAmounts(
   group: GroupSummary,
@@ -277,6 +336,29 @@ function ownAmounts(
     }
   }
   return amounts;
+}
+
+/**
+ * The last time the user cleared anything, anywhere.
+ *
+ * Only asked for when every group is square, so the "nothing outstanding"
+ * footnote can say when that became true rather than leaving it undated.
+ */
+async function loadLastCleared(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<{ at: Date; groupName: string } | null> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ at: settlements.createdAt, groupName: groupsTable.name })
+    .from(settlements)
+    .innerJoin(groupsTable, eq(groupsTable.id, settlements.groupId))
+    .innerJoin(groupMembers, eq(groupMembers.groupId, groupsTable.id))
+    .where(and(eq(groupMembers.userId, userId), isNull(settlements.deletedAt)))
+    .orderBy(desc(settlements.createdAt))
+    .limit(1);
+
+  return row ?? null;
 }
 
 export async function loadHomeOverview(
@@ -300,6 +382,7 @@ export async function loadHomeOverview(
         group,
         amounts: ownAmounts(group, balances.currencies),
         net: null,
+        owedTo: counterpartyOf(group, balances),
       };
     }),
   );
@@ -310,6 +393,8 @@ export async function loadHomeOverview(
   );
 
   if (!displayCurrency) {
+    // Nothing outstanding anywhere, which is the all-settled screen: it is the
+    // only state whose footnote asks when things were last cleared.
     return {
       displayCurrency: null,
       netPosition: null,
@@ -318,6 +403,7 @@ export async function loadHomeOverview(
       converted: false,
       buckets: bucketPositions(unconverted),
       groupCount: groups.length,
+      lastCleared: await loadLastCleared(userId, { db: options.db }),
     };
   }
 
@@ -344,9 +430,12 @@ export async function loadHomeOverview(
     positions.push({ ...position, net });
   }
 
+  const netPosition = netPositionOf(positions, displayCurrency);
+  const squareEverywhere = netPosition !== null && isZeroNet(netPosition);
+
   return {
     displayCurrency,
-    netPosition: netPositionOf(positions, displayCurrency),
+    netPosition,
     currencyTotals: perCurrencyTotals(positions),
     ratesAsOf:
       quotedOnDates.length > 0
@@ -355,5 +444,18 @@ export async function loadHomeOverview(
     converted: quotedOnDates.length > 0,
     buckets: bucketPositions(positions),
     groupCount: groups.length,
+    // One extra query, and only on the screen that shows the answer.
+    lastCleared: squareEverywhere
+      ? await loadLastCleared(userId, { db: options.db })
+      : null,
   };
+}
+
+/** Square overall *and* square in every group — not merely netting to zero. */
+function isZeroNet(netPosition: NetPosition): boolean {
+  return (
+    isZero(netPosition.owedToYou) &&
+    isZero(netPosition.youOwe) &&
+    isZero(netPosition.net)
+  );
 }

@@ -42,7 +42,7 @@ function position(
   net: ReturnType<typeof money> | null,
   overrides: Partial<GroupSummary> = {},
 ): GroupPosition {
-  return { group: group(overrides), amounts, net };
+  return { group: group(overrides), amounts, net, owedTo: null };
 }
 
 describe("directionOf", () => {
@@ -79,7 +79,10 @@ describe("bucketPositions", () => {
 
     const buckets = bucketPositions([small, owed, settled, large]);
 
-    expect(buckets.youOwe.map((p) => p.net?.amount)).toEqual([-900n, -100n]);
+    expect(buckets.needsYou.map((p: GroupPosition) => p.net?.amount)).toEqual([
+      -900n,
+      -100n,
+    ]);
     expect(buckets.youAreOwed).toHaveLength(1);
     expect(buckets.settled).toHaveLength(1);
     expect(buckets.archived).toHaveLength(0);
@@ -91,7 +94,7 @@ describe("bucketPositions", () => {
     });
     const buckets = bucketPositions([archived]);
 
-    expect(buckets.youOwe).toHaveLength(0);
+    expect(buckets.needsYou).toHaveLength(0);
     expect(buckets.archived).toHaveLength(1);
   });
 
