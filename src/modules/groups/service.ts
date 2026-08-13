@@ -40,6 +40,8 @@ export interface GroupSummary {
   readonly archivedAt: Date | null;
   readonly role: "owner" | "member";
   readonly participantCount: number;
+  /** The signed-in user's own participant row in this group. */
+  readonly participantId: string;
 }
 
 /** Groups the signed-in user belongs to. */
@@ -58,6 +60,7 @@ export async function listGroupsForUser(
       timezone: groups.timezone,
       archivedAt: groups.archivedAt,
       role: groupMembers.role,
+      participantId: groupMembers.participantId,
       participantCount: sql<number>`(
         SELECT count(*)::int FROM ${participants}
         WHERE ${participants.groupId} = ${groups.id}
