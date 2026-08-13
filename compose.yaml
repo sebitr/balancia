@@ -22,6 +22,7 @@ x-app-environment: &app-environment
   # point at a database outside this project.
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/bootstrap.sh first}
   DATABASE_URL: ${DATABASE_URL:-}
+  DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
   AUTH_SECRET: ${AUTH_SECRET:?run ./scripts/bootstrap.sh first}
   WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Balancia}
@@ -50,7 +51,16 @@ x-app-environment: &app-environment
   PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
   PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
   PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-}
+  # Opt-in, and needs `pnpm semantic:install` plus a relaxed CSP. Off here means
+  # the deterministic rules do the categorising, which is the default anyway.
+  SEMANTIC_CATEGORIZATION: ${SEMANTIC_CATEGORIZATION:-false}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+  AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
+  # This stack runs a dedicated worker container, so the web process must not
+  # also run one — two of them would generate every recurring expense twice.
+  # It is forwarded rather than omitted so that `docker compose up app` alone
+  # is a usable single-container install.
+  RUN_WORKER_IN_WEB: ${RUN_WORKER_IN_WEB:-false}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
