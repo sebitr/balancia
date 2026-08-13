@@ -257,6 +257,42 @@ describe("parseReceipt", () => {
     });
   });
 
+  describe("a times sign the recognizer ran into the name", () => {
+    // From the review screen of a real scan: `2X CAESAR SALAD` came back as
+    // `2X/CAESAR SALAD`, so the count stayed in the name and the quantity
+    // stayed at one — two salads as one line nobody can share.
+    const receipt = parse(
+      [
+        "DINEFINE RESTAURANT",
+        ["2X/CAESAR SALAD", "$24.00"],
+        ["GRILLED SALMON", "$22.00"],
+        ["2X-SPARKLING WATER", "$6.00"],
+        ["2X.OLIVES", "$5.00"],
+        ["SUBTOTAL:", "$57.00"],
+        ["TOTAL:", "$57.00"],
+      ],
+      "USD",
+    );
+
+    it("reads the count and leaves it out of the name", () => {
+      expect(receipt.items.map((item) => [item.name, item.quantity])).toEqual([
+        ["CAESAR SALAD", 2],
+        ["GRILLED SALMON", undefined],
+        ["SPARKLING WATER", 2],
+        ["OLIVES", 2],
+      ]);
+    });
+
+    it("still reads the prices", () => {
+      expect(receipt.items.map((item) => item.total)).toEqual([
+        2400n,
+        2200n,
+        600n,
+        500n,
+      ]);
+    });
+  });
+
   describe("robustness", () => {
     it("returns an empty receipt for an image with no text", () => {
       const receipt = parseReceipt(
