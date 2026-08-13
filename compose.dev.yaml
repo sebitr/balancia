@@ -58,6 +58,10 @@ x-dev-volumes:
   - next-cache:/app/.next
   - pnpm-store:/pnpm/store
   - uploads:/data/uploads
+  # Masked with an empty volume: agent worktrees live under .claude, and a
+  # second copy of the source tree inside the mount is one the watchers poll
+  # and the linter walks. Neither should happen.
+  - /app/.claude
 
 services:
   db:
