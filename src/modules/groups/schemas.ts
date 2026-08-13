@@ -41,6 +41,18 @@ export const createGroupSchema = z
     timezone,
     /** The creator's own display name inside this group. */
     ownerDisplayName: z.string().trim().min(1, "Enter your name").max(120),
+    /**
+     * Other people to create with the group. They get no account — a group
+     * organiser should not have to recruit everyone before recording a bill.
+     *
+     * Optional, so every existing caller stays valid. The cap is an input
+     * bound to keep one request from writing unbounded rows; there is no limit
+     * on how many people a group may hold, and more can be added afterwards.
+     */
+    participantNames: z
+      .array(z.string().trim().min(1, "Enter a name").max(120))
+      .max(50, "Add up to 50 people here — you can add more afterwards")
+      .optional(),
   })
   .refine(
     (value) =>

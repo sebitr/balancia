@@ -51,6 +51,7 @@ export interface GroupPermissions {
   readonly manageInvitations: boolean;
   readonly manageGroupSettings: boolean;
   readonly importData: boolean;
+  readonly exportData: boolean;
   readonly deleteGroup: boolean;
   readonly transferOwnership: boolean;
 }
@@ -101,6 +102,12 @@ export class AuthenticationRequiredError extends Error {
  * settle up and upload receipts. What they cannot do is anything that would
  * let them escalate — managing people, links, group settings, ownership or
  * deletion.
+ *
+ * Bulk export is withheld for a different reason than the rest: a guest can
+ * already read every expense on screen, so this is not about secrecy. It is
+ * that an invitation link is a bearer token which may be forwarded, and a
+ * one-request download of the group's entire financial history is a sharper
+ * tool in the wrong hands than the same data read a page at a time.
  */
 const GUEST_PERMISSIONS: GroupPermissions = {
   viewGroup: true,
@@ -113,6 +120,7 @@ const GUEST_PERMISSIONS: GroupPermissions = {
   manageInvitations: false,
   manageGroupSettings: false,
   importData: false,
+  exportData: false,
   deleteGroup: false,
   transferOwnership: false,
 };
@@ -128,6 +136,7 @@ const MEMBER_PERMISSIONS: GroupPermissions = {
   manageInvitations: true,
   manageGroupSettings: false,
   importData: true,
+  exportData: true,
   deleteGroup: false,
   transferOwnership: false,
 };
@@ -143,6 +152,7 @@ const OWNER_PERMISSIONS: GroupPermissions = {
   manageInvitations: true,
   manageGroupSettings: true,
   importData: true,
+  exportData: true,
   deleteGroup: true,
   transferOwnership: true,
 };

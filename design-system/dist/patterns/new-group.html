@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="Group overview" subtitle="Your position first, then totals, balances, activity" -->
+<!-- @dsCard group="Patterns" name="New group" subtitle="Naming the people who share the costs, before the first expense" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<title>Group overview — Balancia</title>
+<title>New group — Balancia</title>
 <style>
 /*
  * Balancia design-system kit.
@@ -1160,613 +1160,181 @@ a[aria-current="page"] .nav-icon--primary {
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Patterns</div>
-    <h1>Group overview</h1>
+    <h1>New group</h1>
     <p class="lede">
-      The screen the product is judged on. Its order is the whole argument: your
-      own position before anything else, then what the group has spent, then who
-      owes whom, then what changed. Nobody should scroll to find out where they
-      stand.
+      A group is a set of people sharing costs, so creating one asks who they
+      are. This is the moment where "they don't need an account" stops being a
+      claim on a marketing page and becomes something you watch happen: you type
+      three names, and three people are in the group.
     </p>
   </header>
 
   <section>
-    <h2>Full screen</h2>
-    <div class="frame frame--phone" style="max-width: 26rem">
-      <div
-        style="
-          padding: 1.25rem 1rem 1.5rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        "
-      >
-        <header>
-          <div class="row" style="gap: 0.5rem">
-            <h2
-              style="
-                font-size: 1.5rem;
-                font-weight: 600;
-                letter-spacing: -0.02em;
-                text-transform: none;
-                letter-spacing: -0.02em;
-                color: var(--foreground);
-                border: 0;
-                margin: 0;
-                padding: 0;
-              "
-            >
-              Lisbon, March
-            </h2>
-            <span class="badge badge--outline">Guest</span>
-          </div>
-          <p class="note" style="margin: 0.25rem 0 0">
-            Each currency balanced separately
-          </p>
-        </header>
-
-        <section style="margin: 0">
-          <div class="card">
-            <div
-              class="card-content"
-              style="display: flex; flex-direction: column; gap: 0.25rem"
-            >
-              <p class="card-desc" style="margin: 0">You, in EUR</p>
-              <span class="balance balance--positive balance--large">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M17 7 7 17" />
-                  <path d="M17 17H7V7" />
-                </svg>
-                <span class="tabular-nums">€248.00</span>
-                <span class="balance-label">gets back</span>
-              </span>
+    <h2>On a phone</h2>
+    <div class="spec" style="display: flex; justify-content: center">
+      <div class="frame frame--phone" style="width: 100%">
+        <div style="padding: 1rem">
+          <div class="field-group">
+            <div class="field">
+              <label class="field-label" for="ng-name">Group name</label>
+              <input class="input" id="ng-name" value="Lisbon trip" />
             </div>
-          </div>
-        </section>
 
-        <section style="margin: 0">
-          <h3
-            style="
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              font-size: 0.875rem;
-              font-weight: 500;
-              color: var(--muted-foreground);
-              margin: 0 0 0.75rem;
-            "
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="8" cy="8" r="6" />
-              <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
-              <path d="M7 6h1v4" />
-              <path d="m16.71 13.88.7.71-2.82 2.82" />
-            </svg>
-            Total spending
-          </h3>
-          <div class="row" style="gap: 0.5rem">
-            <span class="total-chip">€1,411.00</span>
-            <span class="total-chip">CHF 248.60</span>
-          </div>
-        </section>
+            <fieldset style="border: 0; margin: 0; padding: 0">
+              <legend class="field-label" style="padding: 0 0 0.5rem">
+                Who else is in this group?
+              </legend>
 
-        <section style="margin: 0">
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              gap: 0.75rem;
-              margin-bottom: 0.75rem;
-            "
-          >
-            <h3
-              style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: var(--muted-foreground);
-                margin: 0;
-              "
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
-                <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
-                <path d="M7 21h10" />
-                <path d="M12 3v18" />
-                <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
-              </svg>
-              Balances
-            </h3>
-            <button class="btn btn--ghost btn--sm">
-              Settle up
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m16 3 4 4-4 4" />
-                <path d="M20 7H4" />
-                <path d="m8 21-4-4 4-4" />
-                <path d="M4 17h16" />
-              </svg>
-            </button>
-          </div>
-
-          <div class="card">
-            <div class="card-header" style="padding-bottom: 0">
-              <div class="card-title" style="font-size: 0.875rem">EUR</div>
-            </div>
-            <div
-              class="card-content"
-              style="display: flex; flex-direction: column; gap: 1rem"
-            >
-              <div class="stack" style="gap: 0.5rem">
-                <p
-                  style="
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    letter-spacing: 0.05em;
-                    text-transform: uppercase;
-                    color: var(--muted-foreground);
-                    margin: 0;
-                  "
-                >
-                  Owes money
-                </p>
-                <ul
-                  style="
-                    list-style: none;
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.375rem;
-                  "
-                >
-                  <li
-                    style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: space-between;
-                      gap: 0.75rem;
-                    "
-                  >
-                    <span
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5rem;
-                        min-width: 0;
-                      "
-                      ><span class="avatar">RS</span> Ravi</span
+              <ul class="list">
+                <li>
+                  <div class="list-row">
+                    <span class="list-main">Amélie</span>
+                    <span class="note" style="margin: 0; font-size: 0.75rem"
+                      >You</span
                     >
-                    <span class="balance balance--negative balance--small">
+                  </div>
+                </li>
+                <li>
+                  <div class="list-row">
+                    <span class="list-main">Jonas</span>
+                    <!-- 44px target: this sits beside a text row on a phone. -->
+                    <button
+                      class="btn btn--ghost"
+                      style="width: 2.75rem; height: 2.75rem; padding: 0"
+                      aria-label="Remove Jonas"
+                    >
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="2"
                         stroke-linecap="round"
-                        stroke-linejoin="round"
+                        style="width: 1rem; height: 1rem"
                       >
-                        <path d="M7 17 17 7" />
-                        <path d="M7 7h10v10" />
+                        <path d="M18 6 6 18M6 6l12 12" />
                       </svg>
-                      <span class="tabular-nums">€99.40</span
-                      ><span class="sr-only">owes</span>
-                    </span>
-                  </li>
-                  <li
-                    style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: space-between;
-                      gap: 0.75rem;
-                    "
-                  >
-                    <span
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5rem;
-                        min-width: 0;
-                      "
-                      ><span class="avatar">JT</span> Jonas</span
+                    </button>
+                  </div>
+                </li>
+                <li>
+                  <div class="list-row">
+                    <span class="list-main">Ravi</span>
+                    <button
+                      class="btn btn--ghost"
+                      style="width: 2.75rem; height: 2.75rem; padding: 0"
+                      aria-label="Remove Ravi"
                     >
-                    <span class="balance balance--negative balance--small">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="2"
                         stroke-linecap="round"
-                        stroke-linejoin="round"
+                        style="width: 1rem; height: 1rem"
                       >
-                        <path d="M7 17 17 7" />
-                        <path d="M7 7h10v10" />
+                        <path d="M18 6 6 18M6 6l12 12" />
                       </svg>
-                      <span class="tabular-nums">€148.60</span
-                      ><span class="sr-only">owes</span>
-                    </span>
-                  </li>
-                </ul>
+                    </button>
+                  </div>
+                </li>
+              </ul>
+
+              <!-- Stacked at 375px: a field and a button side by side leaves
+                   neither enough room. -->
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 0.5rem;
+                  margin-top: 0.75rem;
+                "
+              >
+                <input class="input" placeholder="Their name" />
+                <button class="btn btn--outline">Add</button>
               </div>
-              <div class="stack" style="gap: 0.5rem">
-                <p
-                  style="
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    letter-spacing: 0.05em;
-                    text-transform: uppercase;
-                    color: var(--muted-foreground);
-                    margin: 0;
-                  "
-                >
-                  Should receive
-                </p>
-                <ul
-                  style="
-                    list-style: none;
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.375rem;
-                  "
-                >
-                  <li
-                    style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: space-between;
-                      gap: 0.75rem;
-                    "
-                  >
-                    <span
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5rem;
-                        min-width: 0;
-                      "
-                      ><span class="avatar">AM</span> Amélie</span
-                    >
-                    <span class="balance balance--positive balance--small">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M17 7 7 17" />
-                        <path d="M17 17H7V7" />
-                      </svg>
-                      <span class="tabular-nums">€248.00</span
-                      ><span class="sr-only">gets back</span>
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <section style="margin: 0">
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              gap: 0.75rem;
-              margin-bottom: 0.75rem;
-            "
-          >
-            <h3
-              style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: var(--muted-foreground);
-                margin: 0;
-              "
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
-                />
-                <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
-                <path d="M12 17.5v-11" />
-              </svg>
-              Recent expenses
-            </h3>
-            <button class="btn btn--ghost btn--sm">See all</button>
+              <p class="note" style="margin: 0.75rem 0 0; font-size: 0.75rem">
+                They do not need an account. Add them now and send whoever wants
+                to use the app a link later — you can add or rename people at
+                any time.
+              </p>
+            </fieldset>
           </div>
-          <ul class="list">
-            <li>
-              <a class="list-row" href="#">
-                <span class="list-main">
-                  <span class="list-title">Dinner at Trattoria Il Ponte</span>
-                  <span class="list-sub">2026-08-12 · Amélie</span>
-                </span>
-                <span class="tabular-nums" style="font-weight: 500"
-                  >€128.40</span
-                >
-              </a>
-            </li>
-            <li>
-              <a class="list-row" href="#">
-                <span class="list-main">
-                  <span class="list-title"
-                    >Apartment cleaning
-                    <span class="badge badge--secondary">Recurring</span></span
-                  >
-                  <span class="list-sub">2026-08-09 · Ravi</span>
-                </span>
-                <span class="tabular-nums" style="font-weight: 500"
-                  >€65.00</span
-                >
-              </a>
-            </li>
-          </ul>
-        </section>
+        </div>
       </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Your own name heads the list, labelled <em>You</em>. Without it the list
+      reads as "the other people", and the count never matches what the group
+      overview will show a moment later.
+    </p>
+  </section>
 
-      <nav class="bottom-nav" aria-label="Group sections">
-        <ul>
-          <li>
-            <a href="#" aria-current="page"
-              ><span class="nav-icon"
-                ><svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
-                  <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
-                  <path d="M7 21h10" />
-                  <path d="M12 3v18" />
-                  <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg></span
-              >Overview</a
-            >
-          </li>
-          <li>
-            <a href="#"
-              ><span class="nav-icon"
-                ><svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
-                  />
-                  <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
-                  <path d="M12 17.5v-11" /></svg></span
-              >Expenses</a
-            >
-          </li>
-          <li>
-            <a href="#"
-              ><span class="nav-icon nav-icon--primary"
-                ><svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                >
-                  <path d="M5 12h14" />
-                  <path d="M12 5v14" /></svg></span
-              >Add</a
-            >
-          </li>
-          <li>
-            <a href="#"
-              ><span class="nav-icon"
-                ><svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span
-              >People</a
-            >
-          </li>
-          <li>
-            <a href="#"
-              ><span class="nav-icon"
-                ><svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <circle cx="12" cy="12" r="3" />
-                  <path
-                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                  /></svg></span
-              >Settings</a
-            >
-          </li>
-        </ul>
-      </nav>
+  <section>
+    <h2>What the copy has to carry</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"Who else is in this group?"</span>
+              <span class="list-sub"
+                >A question, not a heading. It expects an answer.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"They do not need an account."</span>
+              <span class="list-sub"
+                >Stated where it is true, not on a help page.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"…a link later"</span>
+              <span class="list-sub"
+                >Names the next step without demanding it now.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"…at any time"</span>
+              <span class="list-sub"
+                >Removes the fear of getting the list wrong.</span
+              >
+            </span>
+          </div>
+        </li>
+      </ul>
     </div>
   </section>
 
   <section>
-    <h2>Order, and why</h2>
-    <dl class="dl">
-      <dt>1 — Your position</dt>
-      <dd>
-        One card per currency, <code>size="large"</code>. The question people
-        opened the app to answer.
-      </dd>
-      <dt>2 — Total spending</dt>
-      <dd>
-        Chips, one per currency. Context for the numbers below, never a single
-        summed figure across currencies.
-      </dd>
-      <dt>3 — Balances</dt>
-      <dd>
-        Grouped <em>Owes money</em> then <em>Should receive</em>, so the label
-        carries the direction and each row can drop its word to
-        <code>sr-only</code>.
-      </dd>
-      <dt>4 — Recent expenses</dt>
-      <dd>
-        Five rows and a "See all". Enough to recognise the group, not enough to
-        scroll.
-      </dd>
-      <dt>5 — Activity</dt>
-      <dd>What changed, for people returning after a few days.</dd>
-    </dl>
-  </section>
-
-  <section>
-    <h2>States</h2>
-    <div class="stack">
-      <div class="spec">
-        <div class="spec-label">Empty — no expenses recorded</div>
-        <div class="empty">
-          <span class="empty-icon"
-            ><svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
-              />
-              <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
-              <path d="M12 17.5v-11" /></svg
-          ></span>
-          <h4>No expenses yet</h4>
-          <p>
-            Add the first expense and Balancia will start working out who owes
-            whom.
-          </p>
-          <!-- Stacked and full width on a phone; a row from `sm` up. Only the
-               first is filled, so the order to do things in survives a narrow
-               column. -->
-          <div
-            style="
-              margin-top: 0.5rem;
-              display: flex;
-              flex-direction: column;
-              gap: 0.5rem;
-            "
-          >
-            <button class="btn btn--default">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" /></svg
-              >Add an expense
-            </button>
-            <button class="btn btn--outline">Add people</button>
-            <button class="btn btn--outline">Import from Splitwise</button>
-          </div>
-        </div>
-        <p class="note" style="margin-top: 0.75rem">
-          When the group has no expenses the whole overview collapses to this.
-          Showing empty balance cards with "settled up" would be technically
-          true and completely useless.
-        </p>
-        <p class="note" style="margin-top: 0.5rem">
-          The other two routes in belong here, not only in settings. Someone
-          arriving from Splitwise has a file in hand and no reason to guess that
-          importing is possible; someone who created the group alone needs
-          people before a split means anything. Each is shown only when the
-          viewer may actually do it — a guest sees the first button by itself.
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Let the field stay empty. Someone creating a group alone, or importing
+          from Splitwise a minute later, should not have to dismiss anything.
         </p>
       </div>
-      <div class="spec">
-        <div class="spec-label">Settled — everyone square</div>
-        <div class="card" style="max-width: 22rem">
-          <div
-            class="card-content"
-            style="display: flex; flex-direction: column; gap: 0.25rem"
-          >
-            <p class="card-desc" style="margin: 0">You, in EUR</p>
-            <span class="balance balance--neutral">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <path d="M5 12h14" />
-              </svg>
-              Settled up
-            </span>
-          </div>
-        </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Ask for email addresses here, or make Enter submit the form. The first
+          turns a thirty-second task into recruitment; the second creates a
+          group when someone meant to add a third person.
+        </p>
       </div>
     </div>
   </section>

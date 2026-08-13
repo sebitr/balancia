@@ -181,7 +181,10 @@
     "shouldReceive": "Doit recevoir",
     "recentExpenses": "Dépenses récentes",
     "seeAll": "Tout voir",
-    "recentActivity": "Activité récente"
+    "recentActivity": "Activité récente",
+    "noExpensesDescriptionSolo": "Ajoutez les personnes qui partagent ces frais, puis enregistrez la première dépense.",
+    "addPeople": "Ajouter des personnes",
+    "importFromSplitwise": "Importer depuis Splitwise"
   },
   "expensesList": {
     "title": "Dépenses",
@@ -193,7 +196,8 @@
     "recurringBadge": "Récurrente",
     "settlementTitle": "{from} a payé {to}",
     "repayment": "Remboursement",
-    "receiptCount": "{count, plural, one {# reçu} other {# reçus}}"
+    "receiptCount": "{count, plural, one {# reçu} other {# reçus}}",
+    "recurringLink": "Récurrentes"
   },
   "members": {
     "addTitle": "Ajouter quelqu'un",

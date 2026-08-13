@@ -1,0 +1,183 @@
+<!-- @dsCard group="Patterns" name="New group" subtitle="Naming the people who share the costs, before the first expense" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>New group</h1>
+    <p class="lede">
+      A group is a set of people sharing costs, so creating one asks who they
+      are. This is the moment where "they don't need an account" stops being a
+      claim on a marketing page and becomes something you watch happen: you type
+      three names, and three people are in the group.
+    </p>
+  </header>
+
+  <section>
+    <h2>On a phone</h2>
+    <div class="spec" style="display: flex; justify-content: center">
+      <div class="frame frame--phone" style="width: 100%">
+        <div style="padding: 1rem">
+          <div class="field-group">
+            <div class="field">
+              <label class="field-label" for="ng-name">Group name</label>
+              <input class="input" id="ng-name" value="Lisbon trip" />
+            </div>
+
+            <fieldset style="border: 0; margin: 0; padding: 0">
+              <legend class="field-label" style="padding: 0 0 0.5rem">
+                Who else is in this group?
+              </legend>
+
+              <ul class="list">
+                <li>
+                  <div class="list-row">
+                    <span class="list-main">Amélie</span>
+                    <span class="note" style="margin: 0; font-size: 0.75rem"
+                      >You</span
+                    >
+                  </div>
+                </li>
+                <li>
+                  <div class="list-row">
+                    <span class="list-main">Jonas</span>
+                    <!-- 44px target: this sits beside a text row on a phone. -->
+                    <button
+                      class="btn btn--ghost"
+                      style="width: 2.75rem; height: 2.75rem; padding: 0"
+                      aria-label="Remove Jonas"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        style="width: 1rem; height: 1rem"
+                      >
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+                <li>
+                  <div class="list-row">
+                    <span class="list-main">Ravi</span>
+                    <button
+                      class="btn btn--ghost"
+                      style="width: 2.75rem; height: 2.75rem; padding: 0"
+                      aria-label="Remove Ravi"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        style="width: 1rem; height: 1rem"
+                      >
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              </ul>
+
+              <!-- Stacked at 375px: a field and a button side by side leaves
+                   neither enough room. -->
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 0.5rem;
+                  margin-top: 0.75rem;
+                "
+              >
+                <input class="input" placeholder="Their name" />
+                <button class="btn btn--outline">Add</button>
+              </div>
+
+              <p class="note" style="margin: 0.75rem 0 0; font-size: 0.75rem">
+                They do not need an account. Add them now and send whoever wants
+                to use the app a link later — you can add or rename people at
+                any time.
+              </p>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Your own name heads the list, labelled <em>You</em>. Without it the list
+      reads as "the other people", and the count never matches what the group
+      overview will show a moment later.
+    </p>
+  </section>
+
+  <section>
+    <h2>What the copy has to carry</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"Who else is in this group?"</span>
+              <span class="list-sub"
+                >A question, not a heading. It expects an answer.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"They do not need an account."</span>
+              <span class="list-sub"
+                >Stated where it is true, not on a help page.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"…a link later"</span>
+              <span class="list-sub"
+                >Names the next step without demanding it now.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"…at any time"</span>
+              <span class="list-sub"
+                >Removes the fear of getting the list wrong.</span
+              >
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Let the field stay empty. Someone creating a group alone, or importing
+          from Splitwise a minute later, should not have to dismiss anything.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Ask for email addresses here, or make Enter submit the form. The first
+          turns a thirty-second task into recruitment; the second creates a
+          group when someone meant to add a third person.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

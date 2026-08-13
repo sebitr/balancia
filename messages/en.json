@@ -181,7 +181,10 @@
     "shouldReceive": "Should receive",
     "recentExpenses": "Recent expenses",
     "seeAll": "See all",
-    "recentActivity": "Recent activity"
+    "recentActivity": "Recent activity",
+    "noExpensesDescriptionSolo": "Add the people sharing these costs, then record the first expense.",
+    "addPeople": "Add people",
+    "importFromSplitwise": "Import from Splitwise"
   },
   "expensesList": {
     "title": "Expenses",
@@ -193,7 +196,8 @@
     "recurringBadge": "Recurring",
     "settlementTitle": "{from} paid {to}",
     "repayment": "Repayment",
-    "receiptCount": "{count, plural, one {# receipt} other {# receipts}}"
+    "receiptCount": "{count, plural, one {# receipt} other {# receipts}}",
+    "recurringLink": "Recurring"
   },
   "members": {
     "addTitle": "Add someone",

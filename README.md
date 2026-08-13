@@ -44,6 +44,9 @@ and starts the web app and a background worker.
 - **Splitwise import.** Upload a CSV export or JSON backup, preview exactly what
   will happen, map the people, then import. Re-importing the same file never
   duplicates anything.
+- **Export, in three formats.** Any group downloads as JSON (the complete
+  record, amounts exactly as stored), CSV, or an Excel workbook. Leaving is as
+  easy as arriving.
 - **Installable PWA.** Works as an app on a phone, with an honest offline
   screen. It does not pretend to accept expenses while offline.
 
@@ -97,11 +100,11 @@ Every production dependency was checked for AGPL compatibility. Reproduce it:
 pnpm licenses list --prod
 ```
 
-The result at the time of writing, across ~490 transitive packages:
+The result at the time of writing, across ~491 transitive packages:
 
 | Licence                                | Packages | Compatible with AGPL-3.0-or-later                    |
 | -------------------------------------- | -------- | ---------------------------------------------------- |
-| MIT                                    | 413      | Yes — permissive                                     |
+| MIT                                    | 414      | Yes — permissive                                     |
 | Apache-2.0                             | 37       | Yes — permissive, explicitly GPLv3-compatible        |
 | ISC                                    | 21       | Yes — permissive                                     |
 | BSD-2/3-Clause                         | 13       | Yes — permissive                                     |

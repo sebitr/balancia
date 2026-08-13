@@ -6,10 +6,10 @@ import {
   authorizeGroup,
   type GroupAccess,
 } from "@/lib/security/authorization";
-import { AuthError } from "@/modules/auth/service";
 import { getCurrentActor } from "@/lib/security/actor";
 import { logger } from "@/lib/logger";
 import { AllocationError } from "@/modules/expenses/allocation";
+import { AuthError } from "@/modules/auth/service";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
 import { InvalidAmountError } from "@/modules/currencies/money";
 import { RecurrenceError } from "@/modules/recurring/schedule";
@@ -48,7 +48,16 @@ export async function requireGroupAccess(
   return authorizeGroup(actor, groupId, options);
 }
 
-/** These carry messages written for humans and are safe to surface verbatim. */
+/**
+ * These carry messages written for humans and are safe to surface verbatim.
+ *
+ * `AuthError` belongs here for the same reason as the rest: its messages are
+ * deliberately non-enumerating — every credential failure returns one identical
+ * sentence — so showing them tells an attacker nothing while telling an honest
+ * user why they cannot get in. Without it, "confirm your email address" and
+ * "that password did not work" both surface as an unexplained server error,
+ * and every mistyped password is logged at ERROR level.
+ */
 const SAFE_ERRORS = [
   AllocationError,
   AuthError,

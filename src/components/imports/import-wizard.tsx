@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Loader2, TriangleAlert, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Loader2,
+  TriangleAlert,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -245,34 +251,106 @@ export function ImportWizard({ groupId }: { groupId: string }) {
   }
 
   return (
-    <form action={onUpload} className="space-y-4 rounded-lg border p-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="space-y-2">
-        <Label htmlFor="import-file">{t("fileLabel")}</Label>
-        <input
-          id="import-file"
-          name="file"
-          type="file"
-          accept=".csv,.json"
-          required
-          className="block w-full rounded-md border border-input text-sm file:mr-3 file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground"
-        />
-        <p className="text-xs text-muted-foreground">{t("fileHelp")}</p>
-      </div>
-
-      <Button type="submit" disabled={pending}>
-        {pending ? (
-          <Loader2 aria-hidden="true" className="animate-spin" />
-        ) : (
-          <Upload aria-hidden="true" />
+    <div className="space-y-4">
+      <form action={onUpload} className="space-y-4 rounded-lg border p-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
-        {t("read")}
-      </Button>
-    </form>
+
+        <div className="space-y-2">
+          <Label htmlFor="import-file">{t("fileLabel")}</Label>
+          <input
+            id="import-file"
+            name="file"
+            type="file"
+            accept=".csv,.json"
+            required
+            className="block w-full rounded-md border border-input text-sm file:mr-3 file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground"
+          />
+          <p className="text-xs text-muted-foreground">{t("fileHelp")}</p>
+        </div>
+
+        <Button type="submit" disabled={pending}>
+          {pending ? (
+            <Loader2 aria-hidden="true" className="animate-spin" />
+          ) : (
+            <Upload aria-hidden="true" />
+          )}
+          {t("read")}
+        </Button>
+      </form>
+
+      <ExportInstructions />
+    </div>
+  );
+}
+
+/**
+ * Getting the file out of Splitwise is the step people get stuck on, so the
+ * instructions live next to the upload rather than in the docs. Collapsed by
+ * default: anyone who already has the export should not have to scroll past it.
+ */
+function ExportInstructions() {
+  return (
+    <details className="group rounded-lg border">
+      {/* Safari keeps its own disclosure triangle unless it is hidden explicitly. */}
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+        />
+        How do I export from Splitwise?
+      </summary>
+
+      <div className="space-y-4 border-t px-4 py-3 text-sm">
+        <section className="space-y-2">
+          <h3 className="font-medium">One group, as a spreadsheet (CSV)</h3>
+          <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+            <li>
+              Sign in at{" "}
+              <a
+                href="https://secure.splitwise.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                secure.splitwise.com
+              </a>{" "}
+              — the export is only offered on the web, not in the mobile apps.
+            </li>
+            <li>Open the group you want to bring across.</li>
+            <li>
+              In the panel on the right, choose{" "}
+              <strong className="font-medium text-foreground">
+                Export as spreadsheet
+              </strong>{" "}
+              and pick CSV.
+            </li>
+            <li>Upload the downloaded file above.</li>
+          </ol>
+          <p className="text-xs text-muted-foreground">
+            Repeat per group: a CSV covers one Splitwise group, and each one
+            should be imported into its own Balancia group.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="font-medium">Your whole account, as JSON</h3>
+          <p className="text-muted-foreground">
+            In Splitwise&rsquo;s account settings, request a copy of your data.
+            Splitwise emails you an archive; upload the JSON file holding your
+            expenses. It records who paid and who owed on every expense, so
+            multiple payers and uneven splits come across exactly.
+          </p>
+        </section>
+
+        <p className="text-xs text-muted-foreground">
+          Either way, nothing is imported until you have seen the preview, and
+          re-uploading the same file never creates duplicates.
+        </p>
+      </div>
+    </details>
   );
 }

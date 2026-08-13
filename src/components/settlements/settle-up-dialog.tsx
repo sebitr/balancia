@@ -22,31 +22,65 @@ import {
 import { CurrencySelect } from "@/components/money/currency-select";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { createSettlementAction } from "@/modules/expenses/actions";
-import { parseAmountToMinor } from "@/components/expenses/expense-form-logic";
+import {
+  formatMinorUnits,
+  parseAmountToMinor,
+} from "@/components/expenses/expense-form-logic";
 
-/** Records a repayment between two participants. */
+/**
+ * Records a repayment between two participants.
+ *
+ * Opened either empty from the page header, or filled in from a suggested
+ * transfer. In the second case every field is still editable: people pay round
+ * numbers and pay in parts, and a dialog that only accepts the exact suggested
+ * figure gets abandoned the first time somebody hands over €150 for a €148.60
+ * debt.
+ *
+ * The prefilled values are read once, as initial state. Callers that need the
+ * dialog to reflect a different suggestion mount a separate instance with a
+ * `key` rather than relying on props to sync — which keeps a half-typed amount
+ * from being overwritten underneath the person typing it.
+ */
 export function SettleUpDialog({
   groupId,
   participants,
   currencyMode,
   baseCurrency,
   defaultCurrency,
+  initialFromId,
+  initialToId,
+  initialAmountMinor,
+  initialCurrency,
+  trigger,
 }: {
   groupId: string;
   participants: readonly { id: string; displayName: string }[];
   currencyMode: "separate" | "converted";
   baseCurrency: string | null;
   defaultCurrency: string;
+  initialFromId?: string;
+  initialToId?: string;
+  /** Minor units, as a string — formatted for the field on first render. */
+  initialAmountMinor?: string;
+  initialCurrency?: string;
+  /** Replaces the default "Settle up" button. */
+  trigger?: React.ReactNode;
 }) {
   const router = useRouter();
   const t = useTranslations("settlement");
   const tSplit = useTranslations("expenses.split");
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
-  const [fromId, setFromId] = useState(participants[0]?.id ?? "");
-  const [toId, setToId] = useState(participants[1]?.id ?? "");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState(defaultCurrency);
+  const [fromId, setFromId] = useState(
+    initialFromId ?? participants[0]?.id ?? "",
+  );
+  const [toId, setToId] = useState(initialToId ?? participants[1]?.id ?? "");
+  const [amount, setAmount] = useState(() =>
+    initialAmountMinor
+      ? formatMinorUnits(initialAmountMinor, initialCurrency ?? defaultCurrency)
+      : "",
+  );
+  const [currency, setCurrency] = useState(initialCurrency ?? defaultCurrency);
   const [exchangeRate, setExchangeRate] = useState("");
   const [settledOn, setSettledOn] = useState(
     new Date().toISOString().slice(0, 10),
@@ -112,10 +146,12 @@ export function SettleUpDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <ArrowRightLeft aria-hidden="true" />
-          {t("settleUp")}
-        </Button>
+        {trigger ?? (
+          <Button size="sm">
+            <ArrowRightLeft aria-hidden="true" />
+            {t("settleUp")}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>

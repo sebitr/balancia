@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { ArrowRightLeft, Coins, Plus, Receipt, Scale } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Coins,
+  Plus,
+  Receipt,
+  Scale,
+  Upload,
+  Users,
+} from "lucide-react";
 import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +20,7 @@ import { requireGroupAccess } from "@/lib/actions";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { listGroupActivity } from "@/modules/activity/service";
 import { listExpenses } from "@/modules/expenses/service";
+import { listParticipants } from "@/modules/groups/service";
 
 /**
  * Group overview — the screen that answers, at a glance:
@@ -24,16 +33,18 @@ export default async function GroupOverviewPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [balances, activity, expenses] = await Promise.all([
+  const [balances, activity, expenses, participants] = await Promise.all([
     loadGroupBalances(access),
     listGroupActivity(access.groupId, { limit: 8 }),
     listExpenses(access.groupId, { limit: 5 }),
+    listParticipants(access.groupId),
   ]);
 
   const hasActivity = expenses.length > 0;
   const myParticipantId = access.participantId;
   const t = await getTranslations("group");
   const format = await getFormatter();
+  const participantCount = participants.length;
 
   return (
     <div className="space-y-6">
@@ -60,14 +71,38 @@ export default async function GroupOverviewPage({
         <EmptyState
           icon={Receipt}
           title={t("noExpensesTitle")}
-          description={t("noExpensesDescription")}
+          description={
+            participantCount > 1
+              ? t("noExpensesDescription")
+              : t("noExpensesDescriptionSolo")
+          }
           action={
-            <Button asChild>
-              <Link href={`/groups/${groupId}/expenses/new`}>
-                <Plus aria-hidden="true" />
-                {t("addExpense")}
-              </Link>
-            </Button>
+            /* Stacked and full width on a phone; only the primary action is
+               filled, so the order to do things in survives a narrow column. */
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button asChild>
+                <Link href={`/groups/${groupId}/expenses/new`}>
+                  <Plus aria-hidden="true" />
+                  {t("addExpense")}
+                </Link>
+              </Button>
+              {access.permissions.manageParticipants && (
+                <Button asChild variant="outline">
+                  <Link href={`/groups/${groupId}/members`}>
+                    <Users aria-hidden="true" />
+                    {t("addPeople")}
+                  </Link>
+                </Button>
+              )}
+              {access.permissions.importData && (
+                <Button asChild variant="outline">
+                  <Link href={`/groups/${groupId}/import`}>
+                    <Upload aria-hidden="true" />
+                    {t("importFromSplitwise")}
+                  </Link>
+                </Button>
+              )}
+            </div>
           }
         />
       ) : (

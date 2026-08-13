@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
-import { Plus, Receipt } from "lucide-react";
+import { Plus, Receipt, RefreshCw } from "lucide-react";
 import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -66,12 +66,22 @@ export default async function ExpensesPage({
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
           {t("title")}
         </h1>
-        <Button asChild size="sm">
-          <Link href={`/groups/${groupId}/expenses/new`}>
-            <Plus aria-hidden="true" />
-            {t("add")}
-          </Link>
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Rent and bills belong next to the expenses they generate, not
+              buried in group settings. */}
+          <Button asChild size="sm" variant="ghost">
+            <Link href={`/groups/${groupId}/recurring`}>
+              <RefreshCw aria-hidden="true" />
+              {t("recurringLink")}
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href={`/groups/${groupId}/expenses/new`}>
+              <Plus aria-hidden="true" />
+              {t("add")}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {timeline.length === 0 ? (
