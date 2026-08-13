@@ -10,22 +10,23 @@ one `docker compose up -d --build`.
 ┌────────────────────────────────────────────────────────┐
 │ Docker Compose                                         │
 │                                                        │
-│  ┌──────────┐   ┌──────────┐   ┌───────────────────┐   │
-│  │  app     │   │  worker  │   │  migrate (once)   │   │
-│  │ Next.js  │   │ pg-boss  │   │ drizzle migrator  │   │
-│  └────┬─────┘   └────┬─────┘   └────────┬──────────┘   │
-│       │              │                  │              │
-│       └──────────────┴───────┬──────────┘              │
-│                              ▼                         │
-│                      ┌──────────────┐   ┌───────────┐  │
-│                      │ PostgreSQL 18│   │ volumes:  │  │
-│                      └──────────────┘   │ db, data, │  │
-│                                         │ secrets   │  │
-└─────────────────────────────────────────┴───────────┴──┘
+│  ┌────────────────────┐   ┌────────────────────┐       │
+│  │  app               │   │  worker            │       │
+│  │  migrate → Next.js │   │  migrate → pg-boss │       │
+│  └─────────┬──────────┘   └─────────┬──────────┘       │
+│            │                        │                  │
+│            └───────────┬────────────┘                  │
+│                        ▼                               │
+│                ┌──────────────┐   ┌──────────────────┐ │
+│                │ PostgreSQL 18│   │ volumes:         │ │
+│                └──────────────┘   │ db-data, uploads │ │
+└────────────────────────────────────┴──────────────────┴┘
 ```
 
-All three application containers run the **same image**; the command selects
-the role (`web`, `worker`, `migrate`). There are no microservices and no
+Both application containers run the **same image**; the command selects the
+role (`web` or `worker`). Each applies pending migrations in its entrypoint
+before starting, serialised by a PostgreSQL advisory lock, so there is no
+separate migration container to sequence. There are no microservices and no
 Redis — background jobs are queued in PostgreSQL through pg-boss.
 
 ## Repository layout
@@ -73,10 +74,10 @@ Redis — background jobs are queued in PostgreSQL through pg-boss.
 | 6   | First-party authentication: scrypt passwords, hashed DB sessions, own WebAuthn state machine | A self-hosted app must not depend on an auth vendor with a commercial tier. Only the WebAuthn _protocol_ (CBOR/COSE, signature verification) is delegated, to `@simplewebauthn/server` — MIT, no paid tier. |
 | 7   | Guest access via opaque 256-bit invite tokens, only SHA-256 hashes stored                    | Link holders act as the invited participant; tokens are revocable, optionally expiring, rate limited, and never logged.                                                                                     |
 | 8   | pg-boss (PostgreSQL-backed) for recurring expenses and imports                               | Background processing without Redis; idempotency via a unique `(recurring_expense_id, occurrence_date)` constraint.                                                                                         |
-| 9   | Drizzle ORM + drizzle-kit with committed SQL migrations                                      | Reviewed migrations applied by a dedicated `migrate` step at startup; no schema push in production.                                                                                                         |
+| 9   | Drizzle ORM + drizzle-kit with committed SQL migrations                                      | Reviewed migrations applied by the image entrypoint at startup, serialised by an advisory lock; no schema push in production.                                                                               |
 | 10  | Serwist in “configurator” mode (`serwist build` after `next build`)                          | Turbopack-compatible PWA build; the service worker never caches auth endpoints or mutations.                                                                                                                |
 | 11  | Storage adapter interface with local-disk default, optional S3 driver                        | Receipts persist in a named volume; metadata in PostgreSQL, binary content on disk/S3.                                                                                                                      |
-| 12  | First-run secret bootstrap in Compose (`init-secrets` service + shared volume)               | `docker compose up` works out of the box without fixed shared secrets.                                                                                                                                      |
+| 12  | Secrets generated into `.env` by `scripts/bootstrap.sh`, not baked in                        | No fixed shared secret ships in the repository, and the operator holds the only copy in a file they can see and back up.                                                                                    |
 | 13  | pino structured logs with redaction; no external telemetry                                   | Privacy by default; correlation IDs for requests/jobs/imports.                                                                                                                                              |
 | 14  | AGPL-3.0-or-later                                                                            | Network copyleft matches the self-hosted, community-owned goal.                                                                                                                                             |
 | 15  | Husky/lint-staged omitted                                                                    | CI runs lint/typecheck/tests on every push; local git hooks add setup friction without adding safety.                                                                                                       |

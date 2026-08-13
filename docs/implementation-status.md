@@ -93,13 +93,15 @@ These are deliberate omissions for this version, not oversights:
   imports if you need them folded into the base currency.
 - **The currency mode is fixed at group creation.** Changing it would
   reinterpret every amount already recorded.
-- **Docker was not executed on this machine.** The Dockerfile, `compose.yaml`
-  and the secret bootstrap are written and reviewed, and the bundles they run
-  (`dist/worker.js`, `dist/migrate.js`) were built and smoke-tested directly on
-  the host — the worker started, subscribed to all queues and shut down
-  gracefully on SIGTERM; the migrator applied migrations. But this machine has
-  no Docker daemon, so `docker compose up -d --build` itself has not been run.
-  CI builds the image and checks its entrypoints and non-root user.
+- **The `.env` bootstrap has not been run under Docker.** `scripts/bootstrap.sh`
+  and `scripts/docker-entrypoint.sh` were exercised directly on the host — the
+  script generates and is idempotent, and the entrypoint assembles a correctly
+  percent-encoded `DATABASE_URL`, honours an explicit override, and `exec`s its
+  command with the right exit code. `docker compose config` resolves, and a
+  missing `.env` fails with a message naming the fix. But `docker compose up -d
+  --build` itself has not been run against this change, so the image build and
+  in-container migration have not been observed end to end. CI builds the image
+  and checks its entrypoints and non-root user.
 - **No email delivery was exercised end to end.** SMTP paths are implemented and
   gated behind configuration; without a mail server the instance works fully and
   simply does not offer verification or recovery.

@@ -54,15 +54,24 @@ const envSchema = z
         (value) =>
           value.startsWith("postgres://") || value.startsWith("postgresql://"),
         "DATABASE_URL must be a PostgreSQL connection string",
+      )
+      // Almost always an unencoded password. A literal '/', '#' or '?' ends the
+      // authority section, and what follows is no longer a host and port, so
+      // the URL fails to parse — with a message that never mentions the
+      // password. Say so here instead. ('@' and '%' parse fine.)
+      .refine(
+        (value) => URL.canParse(value),
+        "DATABASE_URL is not a parseable URL. If the password contains '/', '#' " +
+          "or '?', percent-encode it — '/' becomes %2F, '#' becomes %23.",
       ),
 
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
 
     /**
-     * Instance secret. Generated on first run by the Docker bootstrap and
-     * persisted, so sessions survive restarts. Kept for signing/derivation
-     * needs outside the session tokens themselves, which are random and
-     * stored hashed.
+     * Instance secret. Written to .env by `scripts/bootstrap.sh` on first run
+     * and reused from there, so sessions survive restarts. Kept for
+     * signing/derivation needs outside the session tokens themselves, which
+     * are random and stored hashed.
      */
     AUTH_SECRET: z
       .string()

@@ -8,7 +8,7 @@ them is not a backup you can restore from.
 | ------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **Database** | `balancia-db-data` volume                     | Everything is gone: groups, expenses, balances, history.                                             |
 | **Receipts** | `balancia-uploads` volume (or your S3 bucket) | Expenses survive, but every attached receipt is a broken link.                                       |
-| **Secrets**  | `balancia-secrets` volume                     | Everyone is signed out (`auth_secret`), and you cannot open your own database (`postgres_password`). |
+| **Secrets**  | the `.env` file next to `compose.yaml`        | Everyone is signed out (`AUTH_SECRET`), and you cannot open your own database (`POSTGRES_PASSWORD`). |
 
 They must be captured at roughly the same time. A database dump from Tuesday
 next to receipts from Friday will reference files that the dump does not know
@@ -16,8 +16,8 @@ about, and vice versa.
 
 ### Why the database is dumped and the other two are tarred
 
-Receipts and secrets are ordinary files, so a `tar` of the volume is a faithful
-copy. The database is not: a file-level copy of a running cluster is a torn
+Receipts are ordinary files, so a `tar` of the volume is a faithful copy, and
+the secrets are a single `.env` to copy. The database is not: a file-level copy of a running cluster is a torn
 copy, and even a clean one is tied to the exact PostgreSQL major version and
 platform that wrote it.
 
@@ -58,14 +58,8 @@ docker run --rm \
   -v "$(realpath "$DEST")":/backup \
   alpine:3.21 tar czf /backup/uploads.tar.gz -C /data .
 
-# 3. Secrets.
-docker run --rm \
-  -v balancia-secrets:/secrets:ro \
-  -v "$(realpath "$DEST")":/backup \
-  alpine:3.21 tar czf /backup/secrets.tar.gz -C /secrets .
-
-# 4. Your configuration, if you keep one.
-[ -f .env ] && cp .env "$DEST/env"
+# 3. Secrets and configuration — one file, and the only copy of both.
+cp .env "$DEST/env"
 
 chmod -R go-rwx "$DEST"
 echo "Done. $(du -sh "$DEST" | cut -f1)"
@@ -76,8 +70,8 @@ chmod +x balancia-backup.sh
 ./balancia-backup.sh /var/backups/balancia
 ```
 
-`secrets.tar.gz` and `env` contain live credentials. Store the backup somewhere
-only you can read, and encrypt it if it leaves the machine:
+`env` contains live credentials. Store the backup somewhere only you can read,
+and encrypt it if it leaves the machine:
 
 ```bash
 tar czf - -C /var/backups/balancia "$STAMP" \
@@ -119,32 +113,28 @@ docker compose start app worker
 git clone https://github.com/your-org/balancia.git && cd balancia
 git checkout v1.2.3
 
-# 2. Restore configuration, if you had one.
+# 2. Restore secrets and configuration FIRST — the database container
+#    initialises with POSTGRES_PASSWORD from this file, and only ever does so
+#    once. Do NOT run bootstrap.sh here: a fresh password would not match the
+#    one the restored dump's cluster was created with.
 cp /path/to/backup/env .env
 
-# 3. Recreate the volumes and restore secrets FIRST — the database container
-#    initialises with the password from this volume.
-docker volume create balancia-secrets
-docker run --rm -v balancia-secrets:/secrets \
-  -v /path/to/backup:/backup:ro \
-  alpine:3.21 tar xzf /backup/secrets.tar.gz -C /secrets
-
-# 4. Start only the database and let it initialise.
+# 3. Start only the database and let it initialise.
 docker compose up -d db
 until docker compose exec -T db pg_isready -U balancia -d balancia; do sleep 2; done
 
-# 5. Restore the database.
+# 4. Restore the database.
 docker compose exec -T db \
   pg_restore -U balancia -d balancia --clean --if-exists --no-owner \
   < /path/to/backup/balancia.dump
 
-# 6. Restore receipts.
+# 5. Restore receipts.
 docker volume create balancia-uploads
 docker run --rm -v balancia-uploads:/data \
   -v /path/to/backup:/backup:ro \
   alpine:3.21 tar xzf /backup/uploads.tar.gz -C /data
 
-# 7. Bring everything up. Migrations run and become a no-op if the dump is
+# 6. Bring everything up. Migrations run and become a no-op if the dump is
 #    already current, or apply cleanly if you restored an older schema.
 docker compose up -d --build
 ```

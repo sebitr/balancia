@@ -8,12 +8,12 @@ control — no third party in the middle of your money, no analytics, no
 telemetry.
 
 ```bash
-docker compose up -d --build
+./scripts/bootstrap.sh && docker compose up -d --build
 ```
 
-That is the whole installation. It brings up PostgreSQL 18, applies migrations,
-starts the web app and a background worker, and generates its own secrets on
-first run.
+That is the whole installation. The first command generates this instance's own
+secrets into a `.env`; the second brings up PostgreSQL 18, applies migrations,
+and starts the web app and a background worker.
 
 ---
 
@@ -139,14 +139,16 @@ be a security liability, not an independence win.
 ```bash
 git clone https://github.com/your-org/balancia.git
 cd balancia
+./scripts/bootstrap.sh
 docker compose up -d --build
 ```
 
 Open <http://localhost:3000> and create the first account.
 
-No `.env` is required. On first run, a bootstrap step generates the database
-password and instance secret into a named volume and reuses them on every
-restart, so nothing ships with a fixed shared secret.
+Nothing here ships with a fixed shared secret. `bootstrap.sh` generates the
+database password and instance secret into a `.env`, and never overwrites
+values that are already there — so it is safe to re-run, and safe to chain in
+front of every `up`. **Back that file up:** it is the only copy.
 
 ### Run it on a domain
 

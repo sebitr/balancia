@@ -1,21 +1,28 @@
-# Balancia — one-command self-hosted deployment.
+# Balancia — self-hosted deployment.
 #
-#   docker compose up -d --build
+#   ./scripts/bootstrap.sh && docker compose up -d --build
 #
-# What that gives you: PostgreSQL 18, a migration step that runs to completion
-# before anything else starts, the web app, and the background worker — all
-# from one image.
+# The first command writes a .env with this instance's own database password
+# and auth secret; it never overwrites values you have already set, so it is
+# safe in front of every `up`. The second brings up PostgreSQL 18, the web app
+# and the background worker — the last two from one image.
 #
-# Secrets: on first run, `init-secrets` generates AUTH_SECRET and the database
-# password into a named volume and reuses them on every later start. Nothing
-# here ships a fixed shared secret. To pin your own values instead, copy
-# .env.example to .env and set them there.
+# Migrations are applied by the image's entrypoint before either container
+# serves anything, so there is no separate migration step to order. Both doing
+# it at once is fine: the runner takes a PostgreSQL advisory lock, so whichever
+# starts second waits and then finds the schema already current.
 
 name: balancia
 
 x-app-environment: &app-environment
   NODE_ENV: production
   APP_URL: ${APP_URL:-http://localhost:3000}
+  # The entrypoint assembles DATABASE_URL from this, percent-encoding it, so
+  # the password may contain anything. Set DATABASE_URL in .env to override and
+  # point at a database outside this project.
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/bootstrap.sh first}
+  DATABASE_URL: ${DATABASE_URL:-}
+  AUTH_SECRET: ${AUTH_SECRET:?run ./scripts/bootstrap.sh first}
   WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Balancia}
   TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
@@ -38,54 +45,13 @@ x-app-environment: &app-environment
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
-  # Generates and persists secrets on first run. Idempotent: if the files
-  # already exist it leaves them alone, so restarts never invalidate sessions.
-  init-secrets:
-    image: alpine:3.21
-    container_name: balancia-init-secrets
-    volumes:
-      - secrets:/secrets
-    environment:
-      AUTH_SECRET_OVERRIDE: ${AUTH_SECRET:-}
-      POSTGRES_PASSWORD_OVERRIDE: ${POSTGRES_PASSWORD:-}
-    command:
-      - /bin/sh
-      - -euc
-      - |
-        umask 077
-        if [ -n "$${AUTH_SECRET_OVERRIDE}" ]; then
-          printf '%s' "$${AUTH_SECRET_OVERRIDE}" > /secrets/auth_secret
-        elif [ ! -s /secrets/auth_secret ]; then
-          head -c 48 /dev/urandom | base64 | tr -d '\n' > /secrets/auth_secret
-          echo "Generated a new AUTH_SECRET."
-        fi
-        if [ -n "$${POSTGRES_PASSWORD_OVERRIDE}" ]; then
-          printf '%s' "$${POSTGRES_PASSWORD_OVERRIDE}" > /secrets/postgres_password
-        elif [ ! -s /secrets/postgres_password ]; then
-          head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40 > /secrets/postgres_password
-          echo "Generated a new PostgreSQL password."
-        fi
-        # The umask above creates these 0600 root:root, so they are never
-        # briefly world-readable. Hand them to uid 1001 now they exist: app,
-        # worker and migrate run as the non-root `balancia` user the Dockerfile
-        # creates with that uid, and cannot read root-owned 0600 files. The db
-        # container reads the password as root, which bypasses the mode, so it
-        # is unaffected. Keep this uid in step with the Dockerfile.
-        chown 1001:1001 /secrets/auth_secret /secrets/postgres_password
-        chmod 0400 /secrets/auth_secret /secrets/postgres_password
-        echo "Secrets ready."
-    restart: "no"
-
   db:
     image: postgres:18-alpine
     container_name: balancia-db
-    depends_on:
-      init-secrets:
-        condition: service_completed_successfully
     environment:
       POSTGRES_USER: balancia
       POSTGRES_DB: balancia
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/bootstrap.sh first}
       # Deterministic collation so ordering does not shift under a locale change.
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
     volumes:
@@ -94,7 +60,6 @@ services:
       # so that pg_upgrade can run without crossing a mount boundary, and they
       # refuse to start at all if anything is mounted at the old .../data path.
       - db-data:/var/lib/postgresql
-      - secrets:/run/secrets:ro
     # No `ports:` — PostgreSQL is reachable only on the internal network.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U balancia -d balancia"]
@@ -105,31 +70,6 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
 
-  # Applies committed SQL migrations, then exits. Web and worker wait for it.
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: balancia:local
-    container_name: balancia-migrate
-    depends_on:
-      db:
-        condition: service_healthy
-      init-secrets:
-        condition: service_completed_successfully
-    environment:
-      <<: *app-environment
-    volumes:
-      - secrets:/run/secrets:ro
-    entrypoint:
-      - /bin/sh
-      - -euc
-      - |
-        export DATABASE_URL="postgres://balancia:$$(cat /run/secrets/postgres_password)@db:5432/balancia"
-        export AUTH_SECRET="$$(cat /run/secrets/auth_secret)"
-        exec node dist/migrate.js
-    restart: "no"
-
   app:
     build:
       context: .
@@ -139,22 +79,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     environment:
       <<: *app-environment
     volumes:
       - uploads:/data/uploads
-      - secrets:/run/secrets:ro
     ports:
       - "${APP_PORT:-3000}:3000"
-    entrypoint:
-      - /bin/sh
-      - -euc
-      - |
-        export DATABASE_URL="postgres://balancia:$$(cat /run/secrets/postgres_password)@db:5432/balancia"
-        export AUTH_SECRET="$$(cat /run/secrets/auth_secret)"
-        exec /sbin/tini -- node server.js
     healthcheck:
       test:
         - CMD-SHELL
@@ -175,20 +105,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     environment:
       <<: *app-environment
     volumes:
       - uploads:/data/uploads
-      - secrets:/run/secrets:ro
-    entrypoint:
-      - /bin/sh
-      - -euc
-      - |
-        export DATABASE_URL="postgres://balancia:$$(cat /run/secrets/postgres_password)@db:5432/balancia"
-        export AUTH_SECRET="$$(cat /run/secrets/auth_secret)"
-        exec /sbin/tini -- node dist/worker.js
+    command: ["node", "dist/worker.js"]
     # The image's HEALTHCHECK curls the web server, which this container does
     # not run — inheriting it would leave the worker permanently "unhealthy"
     # however well it is working. Liveness here is simply the process running.
@@ -203,5 +124,3 @@ volumes:
     name: balancia-db-data
   uploads:
     name: balancia-uploads
-  secrets:
-    name: balancia-secrets
