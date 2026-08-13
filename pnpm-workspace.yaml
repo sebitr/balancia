@@ -1,0 +1,7 @@
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: false
+  '@tailwindcss/oxide': true
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-s3@3.1109.0'
