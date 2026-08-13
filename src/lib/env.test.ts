@@ -122,6 +122,19 @@ describe("environment validation", () => {
       ).toBe(false);
     });
 
+    it("treats an empty port as unset rather than zero", () => {
+      // compose.yaml passes optional settings as `${SMTP_PORT:-}`, so an
+      // instance with no mail configured supplies "" rather than omitting it.
+      // Coercing that to 0 failed the range check and stopped the app booting.
+      const env = parseEnv({
+        ...base,
+        SMTP_HOST: "",
+        SMTP_PORT: "",
+      } as unknown as NodeJS.ProcessEnv);
+      expect(env.SMTP_PORT).toBeUndefined();
+      expect(env.smtpEnabled).toBe(false);
+    });
+
     it("requires a From address when a host is set", () => {
       expect(() =>
         parseEnv({

@@ -20,6 +20,21 @@ const optionalString = z
   .transform((value) => (value === "" ? undefined : value))
   .optional();
 
+/**
+ * A port that may arrive as an empty string rather than not at all.
+ *
+ * compose.yaml passes optional settings through as `${VAR:-}`, so on an
+ * instance with no SMTP configured the variable is present and empty. Without
+ * this, `z.coerce.number()` turns "" into 0 and the `min(1)` check rejects it,
+ * which stops the app and worker from booting at all. The string variants get
+ * this for free from `optionalString`.
+ */
+const optionalPort = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.coerce.number().int().min(1).max(65535).optional(),
+);
+
 const envSchema = z
   .object({
     NODE_ENV: z
@@ -80,7 +95,7 @@ const envSchema = z
 
     /** SMTP is optional: without it, verification and recovery are disabled. */
     SMTP_HOST: optionalString,
-    SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+    SMTP_PORT: optionalPort,
     SMTP_USER: optionalString,
     SMTP_PASSWORD: optionalString,
     SMTP_SECURE: booleanish.default(false),

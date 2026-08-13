@@ -14,6 +14,22 @@ They must be captured at roughly the same time. A database dump from Tuesday
 next to receipts from Friday will reference files that the dump does not know
 about, and vice versa.
 
+### Why the database is dumped and the other two are tarred
+
+Receipts and secrets are ordinary files, so a `tar` of the volume is a faithful
+copy. The database is not: a file-level copy of a running cluster is a torn
+copy, and even a clean one is tied to the exact PostgreSQL major version and
+platform that wrote it.
+
+`balancia-db-data` is mounted at `/var/lib/postgresql`, and PostgreSQL stores
+the cluster in a version-specific subdirectory beneath it —
+`/var/lib/postgresql/18/docker`. That layout is an implementation detail of the
+image, and it has changed before (see
+[the volume layout note in self-hosting.md](self-hosting.md#the-database-volume-moved-one-time-change)).
+`pg_dump` output does not depend on any of it, which is what makes it restorable
+onto a different host, a different architecture, or a later PostgreSQL. Back up
+the database with `pg_dump`, never with `tar`.
+
 ---
 
 ## Backing up

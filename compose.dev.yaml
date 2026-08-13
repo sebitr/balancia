@@ -73,7 +73,10 @@ services:
       # 55432, not 5432: never fight a PostgreSQL already running on the host.
       - "127.0.0.1:${DEV_DB_PORT:-55432}:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # /var/lib/postgresql, not /var/lib/postgresql/data: the 18+ images store
+      # data under a major-version directory and refuse to start if anything is
+      # mounted at the old path.
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U balancia -d balancia"]
       interval: 5s
