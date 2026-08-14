@@ -23,6 +23,31 @@ import {
 } from "./enums";
 
 /**
+ * How the money tables refuse to outlive the people they name.
+ *
+ * A participant who appears on an expense or a settlement must not be deleted
+ * out from under it — that would silently rewrite a balance. `restrict` used to
+ * say so, and it was wrong: Postgres checks `restrict` *immediately*, before
+ * the rest of the statement runs, so it fired even when the referencing rows
+ * were themselves about to be cascade-deleted. Deleting a group cascades to
+ * participants and to expenses at once, and the participant leg tripped the
+ * check before the expense leg had cleared the shares — so deleting any group
+ * that had ever recorded an expense failed outright.
+ *
+ * `no action` is the same guarantee, checked at the end of the transaction
+ * instead of mid-statement. Deleting a lone participant who is on an expense is
+ * still refused; deleting the whole group now succeeds, because by commit time
+ * the shares are gone too.
+ *
+ * The deferral is the load-bearing half and Drizzle cannot express it, so the
+ * constraints are declared `DEFERRABLE INITIALLY DEFERRED` in a hand-written
+ * migration (`0008_deferred_participant_refs.sql`). Keep this value at
+ * `no action` — drizzle-kit compares only the action, so a change back to
+ * `restrict` would generate a migration that reintroduces the bug.
+ */
+const PARTICIPANT_ON_DELETE = "no action" as const;
+
+/**
  * An expense, or an income — one table, told apart by `direction`.
  *
  * Money columns are `bigint` holding integer minor units — never numeric,
@@ -133,7 +158,7 @@ export const expensePayers = pgTable(
       .references(() => expenses.id, { onDelete: "cascade" }),
     participantId: uuid("participant_id")
       .notNull()
-      .references(() => participants.id, { onDelete: "restrict" }),
+      .references(() => participants.id, { onDelete: PARTICIPANT_ON_DELETE }),
     /** Minor units in the expense's own currency. */
     amount: bigint("amount", { mode: "bigint" }).notNull(),
     /** Minor units in the group base currency, when the group converts. */
@@ -163,7 +188,7 @@ export const expenseShares = pgTable(
       .references(() => expenses.id, { onDelete: "cascade" }),
     participantId: uuid("participant_id")
       .notNull()
-      .references(() => participants.id, { onDelete: "restrict" }),
+      .references(() => participants.id, { onDelete: PARTICIPANT_ON_DELETE }),
     amount: bigint("amount", { mode: "bigint" }).notNull(),
     convertedAmount: bigint("converted_amount", { mode: "bigint" }),
   },
@@ -189,10 +214,10 @@ export const settlements = pgTable(
       .references(() => groups.id, { onDelete: "cascade" }),
     fromParticipantId: uuid("from_participant_id")
       .notNull()
-      .references(() => participants.id, { onDelete: "restrict" }),
+      .references(() => participants.id, { onDelete: PARTICIPANT_ON_DELETE }),
     toParticipantId: uuid("to_participant_id")
       .notNull()
-      .references(() => participants.id, { onDelete: "restrict" }),
+      .references(() => participants.id, { onDelete: PARTICIPANT_ON_DELETE }),
     amount: bigint("amount", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull(),
     convertedAmount: bigint("converted_amount", { mode: "bigint" }),

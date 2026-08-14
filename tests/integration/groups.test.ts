@@ -1,11 +1,29 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
-import { activityEvents, groups, participants } from "@/lib/db/schema";
-import { createGroup, listParticipants } from "@/modules/groups/service";
+import {
+  activityEvents,
+  expensePayers,
+  expenseShares,
+  expenses,
+  groups,
+  participants,
+  settlements,
+} from "@/lib/db/schema";
+import {
+  createGroup,
+  deleteGroup,
+  listParticipants,
+} from "@/modules/groups/service";
 import { createExpense } from "@/modules/expenses/service";
+import { createSettlement } from "@/modules/settlements/service";
 import { authorizeGroup } from "@/lib/security/authorization";
-import { createTestUser, isoToday } from "../helpers/factories";
+import {
+  addTestParticipant,
+  createTestGroup,
+  createTestUser,
+  isoToday,
+} from "../helpers/factories";
 
 /**
  * Group creation, including the people named alongside it.
@@ -156,5 +174,118 @@ describe("createGroup", () => {
         .from(participants)
         .where(eq(participants.displayName, "Blaise")),
     ).toHaveLength(0);
+  });
+});
+
+/**
+ * Deletion, which has to reach every table that names the group.
+ *
+ * A group with any history at all was once undeletable: the cascade into
+ * participants tripped the `ON DELETE restrict` on expense_payers,
+ * expense_shares and settlements before the cascade into expenses had cleared
+ * them. Those constraints are now deferred to commit time, so the whole graph
+ * goes at once. An empty group always deleted cleanly, which is exactly why
+ * this survived so long — so both fixtures here record real history.
+ */
+describe("deleteGroup", () => {
+  it("deletes a group that has expenses and settlements", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+    const group = await createTestGroup(actor, { name: "Voyage Paris" });
+    const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+    await createExpense(group.access, {
+      description: "Dîner",
+      notes: "",
+      category: "Food",
+      amount: "5000",
+      currency: "EUR",
+      exchangeRate: "",
+      expenseDate: isoToday(),
+      payers: [{ participantId: group.ownerParticipantId, amount: "5000" }],
+      splitMethod: "equal",
+      splitEntries: [
+        { participantId: group.ownerParticipantId },
+        { participantId: blaise },
+      ],
+    });
+
+    await createSettlement(group.access, {
+      fromParticipantId: blaise,
+      toParticipantId: group.ownerParticipantId,
+      amount: "2500",
+      currency: "EUR",
+      exchangeRate: "",
+      settledOn: isoToday(),
+      notes: "",
+    });
+
+    await deleteGroup(group.access);
+
+    const db = getDb();
+    expect(
+      await db.select().from(groups).where(eq(groups.id, group.groupId)),
+    ).toHaveLength(0);
+
+    // Nothing may outlive the group it belonged to.
+    expect(
+      await db
+        .select()
+        .from(participants)
+        .where(eq(participants.groupId, group.groupId)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(expenses)
+        .where(eq(expenses.groupId, group.groupId)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(settlements)
+        .where(eq(settlements.groupId, group.groupId)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(expenseShares)
+        .where(eq(expenseShares.participantId, blaise)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(expensePayers)
+        .where(eq(expensePayers.participantId, group.ownerParticipantId)),
+    ).toHaveLength(0);
+  });
+
+  it("still refuses to delete a participant named on an expense", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+    const group = await createTestGroup(actor);
+    const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+    await createExpense(group.access, {
+      description: "Taxi",
+      notes: "",
+      category: "",
+      amount: "3000",
+      currency: "EUR",
+      exchangeRate: "",
+      expenseDate: isoToday(),
+      payers: [{ participantId: group.ownerParticipantId, amount: "3000" }],
+      splitMethod: "equal",
+      splitEntries: [
+        { participantId: group.ownerParticipantId },
+        { participantId: blaise },
+      ],
+    });
+
+    // Deferring the check must not weaken it: a balance may never be rewritten
+    // by deleting one of the people it is computed from. Removing someone from
+    // a live group is a soft delete precisely because this stays impossible.
+    const db = getDb();
+    await expect(
+      db.delete(participants).where(eq(participants.id, blaise)),
+    ).rejects.toThrow();
   });
 });

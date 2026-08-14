@@ -57,6 +57,13 @@
       "when": 1786664051908,
       "tag": "0007_wealthy_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786697681945,
+      "tag": "0008_deferred_participant_refs",
+      "breakpoints": true
     }
   ]
 }
