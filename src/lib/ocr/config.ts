@@ -5,7 +5,7 @@
  * Balancia never downloads a model at runtime from anywhere but this instance,
  * and never calls a hosted inference API. An operator who wants receipt
  * scanning runs `pnpm ocr:install`, which places the files under
- * `public/models` (git-ignored), and sets `RECEIPT_SCANNING=1`.
+ * `public/models` (git-ignored), and sets `RECEIPT_SCANNING=true`.
  *
  * With no files present, `probeOcrAvailable()` fails its one HEAD request, no
  * worker is ever created, and the scan button is not rendered.

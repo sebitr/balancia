@@ -296,6 +296,17 @@ const envSchema = z
     }
   });
 
+/**
+ * Every variable Balancia reads, as a list.
+ *
+ * Exported so a test can hold `compose.yaml` to it: a setting the containers
+ * are never handed is a setting an operator can put in `.env` and watch do
+ * nothing, which is how push notifications shipped switched off.
+ */
+export const ENV_VARIABLE_NAMES = Object.keys(
+  envSchema.shape,
+) as readonly (keyof typeof envSchema.shape)[];
+
 export type RawEnv = z.infer<typeof envSchema>;
 
 export interface AppEnv extends RawEnv {

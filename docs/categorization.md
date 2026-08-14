@@ -216,7 +216,7 @@ running a command, not the application.
 Then set:
 
 ```bash
-SEMANTIC_CATEGORIZATION=1
+SEMANTIC_CATEGORIZATION=true
 ```
 
 That switch also adds `'wasm-unsafe-eval'` to the Content-Security-Policy,

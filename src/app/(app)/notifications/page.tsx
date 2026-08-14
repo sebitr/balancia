@@ -12,6 +12,7 @@ import {
   renderNotification,
   type Translate,
 } from "@/modules/notifications/render";
+import { PUSH } from "@/components/motion/transitions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("notificationsPage");
@@ -53,7 +54,7 @@ export default async function NotificationsPage() {
           {t("title")}
         </h1>
         <Button asChild variant="outline" size="sm">
-          <Link href="/profile/notifications">
+          <Link href="/profile/notifications" transitionTypes={PUSH}>
             <Settings2 aria-hidden="true" />
             {t("settingsLink")}
           </Link>

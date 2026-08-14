@@ -85,10 +85,31 @@ export function validateReceipt(
     issues.push({ code: "noItems", severity: "info", params: {} });
   }
 
+  /*
+   * Where the service charge sits is genuinely ambiguous, and the two layouts
+   * are both common:
+   *
+   *   items ─► subtotal ─► + coperto ─► + IVA ─► total     (added after)
+   *   items ─► + coperto ─► subtotal ─► + IVA ─► total     (already inside)
+   *
+   * A Milanese receipt reading `Totale parziale 264,00` where the items come
+   * to 254,00 and the coperto is 10,00 is *correct* under the second reading —
+   * but assuming the first flags it twice, on a receipt that was read
+   * perfectly. Warnings that fire on good input are how people learn to
+   * dismiss warnings, so a reading that reconciles is accepted.
+   */
+  const service = receipt.service ?? 0n;
+
+  const reconciles = (
+    candidates: readonly bigint[],
+    against: bigint,
+  ): boolean =>
+    candidates.some((value) => absolute(value - against) <= tolerance);
+
   // Items against the subtotal, when the receipt printed one.
   if (hasItems && receipt.subtotal !== undefined) {
     const difference = items - receipt.subtotal;
-    if (absolute(difference) > tolerance) {
+    if (!reconciles([items, items + service], receipt.subtotal)) {
       issues.push({
         code: "itemsMissingSubtotal",
         severity: "warning",
@@ -108,13 +129,15 @@ export function validateReceipt(
     // discrepancy twice.
     const base = receipt.subtotal ?? (hasItems ? items : undefined);
     if (base !== undefined) {
-      const parts =
-        base +
-        (receipt.tax ?? 0n) +
-        (receipt.tip ?? 0n) +
-        (receipt.service ?? 0n);
+      const parts = base + (receipt.tax ?? 0n) + (receipt.tip ?? 0n) + service;
+      // The same ambiguity from the other side: when the service charge is
+      // already inside the printed subtotal, adding it again overshoots the
+      // total by exactly that charge.
+      const withServiceInsideSubtotal =
+        receipt.subtotal !== undefined ? [parts - service] : [];
+
       const difference = parts - receipt.total;
-      if (absolute(difference) > tolerance) {
+      if (!reconciles([parts, ...withServiceInsideSubtotal], receipt.total)) {
         issues.push({
           code: "partsMissingTotal",
           severity: "warning",
@@ -127,10 +150,21 @@ export function validateReceipt(
       }
     }
 
-    // Items alone exceeding the total is its own finding: it means a discount
-    // or a correction line was missed, and splitting by item would over-charge
-    // the table rather than merely mis-attribute it.
-    if (hasItems && items - receipt.total > tolerance) {
+    /*
+     * Items alone exceeding the total is its own finding: it means a discount
+     * or a correction line was missed, and splitting by item would over-charge
+     * the table rather than merely mis-attribute it.
+     *
+     * Only said when the subtotal has not already said it, though. A receipt
+     * whose items overshoot its own subtotal usually overshoots its total by
+     * the same amount, and stacking two banners for one discrepancy reads as
+     * two problems — which makes the screen look like the scan went badly when
+     * what actually happened is that the paper does not add up.
+     */
+    const alreadyReported = issues.some(
+      (issue) => issue.code === "itemsMissingSubtotal",
+    );
+    if (!alreadyReported && hasItems && items - receipt.total > tolerance) {
       issues.push({
         code: "itemsExceedTotal",
         severity: "warning",

@@ -5,6 +5,7 @@ import {
   buildOcrResult,
   FRENCH_BISTRO,
   GERMAN_RESTAURANT,
+  ITALIAN_BARE_QUANTITY,
   ITALIAN_TRATTORIA,
   LARGE_AMOUNTS,
   POORLY_DETECTED,
@@ -221,6 +222,74 @@ describe("parseReceipt", () => {
 
     it("reports low confidence", () => {
       expect(receipt.confidence ?? 0).toBeLessThan(0.5);
+    });
+  });
+
+  describe("a till that prints the count with no times sign", () => {
+    const receipt = parse(ITALIAN_BARE_QUANTITY, "EUR");
+
+    it("reads the leading count as a quantity, not part of the name", () => {
+      expect(receipt.items.map((item) => [item.name, item.quantity])).toEqual([
+        ["Bruschetta miste", 2],
+        ["Tagliatelle ragu", 3],
+        ["Vino rosso cl.75", 2],
+        ["Acqua nat. 1L", 1],
+      ]);
+    });
+
+    it("does not weld a bottle size onto the price beside it", () => {
+      // `2 Vino rosso cl.75 36,00` once produced an item costing 7536.00.
+      const wine = receipt.items.find((item) => item.name.startsWith("Vino"));
+      expect(wine?.total).toBe(3600n);
+    });
+
+    it("does not read the VAT registration number as tax", () => {
+      // `P.IVA 03918270965` contains the word for tax and a very large number.
+      expect(receipt.tax).toBe(900n);
+    });
+
+    it("does not read the cash tendered as the total", () => {
+      expect(receipt.total).toBe(10900n);
+    });
+
+    it("reconciles", () => {
+      expect(validateReceipt(receipt)).toEqual([]);
+    });
+  });
+
+  describe("a times sign the recognizer ran into the name", () => {
+    // From the review screen of a real scan: `2X CAESAR SALAD` came back as
+    // `2X/CAESAR SALAD`, so the count stayed in the name and the quantity
+    // stayed at one — two salads as one line nobody can share.
+    const receipt = parse(
+      [
+        "DINEFINE RESTAURANT",
+        ["2X/CAESAR SALAD", "$24.00"],
+        ["GRILLED SALMON", "$22.00"],
+        ["2X-SPARKLING WATER", "$6.00"],
+        ["2X.OLIVES", "$5.00"],
+        ["SUBTOTAL:", "$57.00"],
+        ["TOTAL:", "$57.00"],
+      ],
+      "USD",
+    );
+
+    it("reads the count and leaves it out of the name", () => {
+      expect(receipt.items.map((item) => [item.name, item.quantity])).toEqual([
+        ["CAESAR SALAD", 2],
+        ["GRILLED SALMON", undefined],
+        ["SPARKLING WATER", 2],
+        ["OLIVES", 2],
+      ]);
+    });
+
+    it("still reads the prices", () => {
+      expect(receipt.items.map((item) => item.total)).toEqual([
+        2400n,
+        2200n,
+        600n,
+        500n,
+      ]);
     });
   });
 

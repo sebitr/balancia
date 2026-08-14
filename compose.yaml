@@ -22,6 +22,7 @@ x-app-environment: &app-environment
   # point at a database outside this project.
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/bootstrap.sh first}
   DATABASE_URL: ${DATABASE_URL:-}
+  DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
   AUTH_SECRET: ${AUTH_SECRET:?run ./scripts/bootstrap.sh first}
   WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Balancia}
@@ -41,7 +42,29 @@ x-app-environment: &app-environment
   SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   SMTP_SECURE: ${SMTP_SECURE:-false}
   SMTP_FROM: ${SMTP_FROM:-}
+  # Nothing forwards a variable this file does not name: an operator who sets
+  # EXCHANGE_RATE_PROVIDER in .env gets it interpolated here or not at all.
+  EXCHANGE_RATE_PROVIDER: ${EXCHANGE_RATE_PROVIDER:-none}
+  EXCHANGE_RATE_API_URL: ${EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v1}
+  # Web Push. Unset by default, which leaves notifications working inside the
+  # app and only turns push delivery off. Generate a pair with `pnpm push:keys`.
+  PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
+  PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
+  PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-}
+  # Opt-in, and needs `pnpm semantic:install` plus a relaxed CSP. Off here means
+  # the deterministic rules do the categorising, which is the default anyway.
+  SEMANTIC_CATEGORIZATION: ${SEMANTIC_CATEGORIZATION:-false}
+  # Opt-in, and needs `pnpm ocr:install` plus the same relaxed CSP. Forwarding
+  # it is not enough on its own: the models have to be inside the container
+  # too. See the commented-out volume on the app service below.
+  RECEIPT_SCANNING: ${RECEIPT_SCANNING:-false}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+  AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
+  # This stack runs a dedicated worker container, so the web process must not
+  # also run one — two of them would generate every recurring expense twice.
+  # It is forwarded rather than omitted so that `docker compose up app` alone
+  # is a usable single-container install.
+  RUN_WORKER_IN_WEB: ${RUN_WORKER_IN_WEB:-false}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
@@ -83,6 +106,11 @@ services:
       <<: *app-environment
     volumes:
       - uploads:/data/uploads
+      # On-device receipt scanning (RECEIPT_SCANNING=1). Run
+      # `pnpm ocr:install --yes` on the host, then uncomment this so the ~47 MB
+      # of models is mounted rather than baked into the image — otherwise they
+      # are rebuilt away and have to be reinstalled before every `up --build`.
+      # - ./public/models:/app/public/models:ro
     ports:
       - "${APP_PORT:-3000}:3000"
     healthcheck:

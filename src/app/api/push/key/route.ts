@@ -19,8 +19,12 @@ export function GET() {
     { publicKey: keys?.publicKey ?? null },
     {
       headers: {
-        // Same for everyone and changes only when an operator rotates it.
-        "Cache-Control": "public, max-age=3600",
+        // Deliberately not cached, though the value is public and rarely
+        // changes. This answer decides whether the settings page offers push
+        // at all, so a cached "null" would go on claiming the instance has no
+        // keys for an hour after an operator finished configuring them —
+        // exactly when someone is reloading to check their work.
+        "Cache-Control": "no-store",
       },
     },
   );

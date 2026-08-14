@@ -21,6 +21,7 @@ import {
   type SplitMessage,
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
+import { POP } from "@/components/motion/transitions";
 import { PLAIN_DATE_FORMAT, parsePlainDate } from "@/i18n/format";
 import { formatMoney, money } from "@/modules/currencies/money";
 import type { LearnedMerchantMapping } from "@/modules/categorization";
@@ -517,6 +518,9 @@ export function AddEntryForm({
     <div className="flex flex-col gap-[18px] pb-4">
       <Link
         href={`/groups/${groupId}`}
+        // Going back up to the group is a pop, and should animate like one —
+        // the rest of the app moves this way since the motion work landed.
+        transitionTypes={POP}
         className="-ml-1 inline-flex items-center gap-1.5 self-start text-sm text-muted-foreground"
       >
         <ChevronLeft aria-hidden="true" className="size-[18px]" />

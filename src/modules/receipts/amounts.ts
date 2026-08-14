@@ -25,9 +25,20 @@ import { currencyExponent } from "@/modules/currencies/iso-4217";
 /** Separators that are only ever grouping marks, never decimal points. */
 const GROUPING_ONLY = /[\s'’   ]/g;
 
-/** A run of digits and separators, not glued to a letter or another digit. */
+/**
+ * A run of digits and separators, not glued to a letter or another digit.
+ *
+ * A space is part of the number only when it is doing the job of a thousands
+ * separator — that is, when exactly three digits follow it. Letting a space
+ * join any two digit groups is how `2 Vino rosso cl.75 36,00` came back as one
+ * item costing 7536.00: the bottle size and the price were run together, and
+ * the result looked like a perfectly ordinary number.
+ *
+ * `.` and `,` stay unrestricted here. `parseReceiptAmount` is what decides
+ * which of them is the decimal point, and what rejects impossible grouping.
+ */
 const NUMERIC_RUN =
-  /(?<![\p{L}\d])\d[\d '’   .,]*\d(?![\p{L}\d])|(?<![\p{L}\d])\d(?![\p{L}\d])/gu;
+  /(?<![\p{L}\d])\d+(?:(?:[ \u00a0\u202f'\u2019](?=\d{3}(?!\d))|[.,])\d+)*(?![\p{L}\d])/gu;
 
 /** `13.08.2026`, `13/08/26`, `2026-08-13` — never an amount. */
 const DATE_SHAPED = /^\d{1,4}[./-]\d{1,2}[./-]\d{2,4}$|^\d{4}-\d{2}-\d{2}$/;
