@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { isScanningAvailable } from "@/lib/ocr/scanner";
-import { ScanReceiptDialog, type ScannedExpense } from "./scan-receipt-dialog";
+import {
+  ScanReceiptDialog,
+  type CaptureActions,
+  type ScannedExpense,
+} from "./scan-receipt-dialog";
 import type { Participant } from "./item-assignment";
 
 /**
@@ -32,7 +36,7 @@ export function ScanReceiptEntry({
   defaultCurrency: string;
   onApply: (result: ScannedExpense) => void;
   /** Replaces the default button — the add-entry screen passes its scan card. */
-  trigger?: React.ReactNode;
+  trigger?: React.ComponentType<CaptureActions>;
 }) {
   const [available, setAvailable] = useState(false);
 
@@ -60,4 +64,4 @@ export function ScanReceiptEntry({
   );
 }
 
-export type { ScannedExpense };
+export type { CaptureActions, ScannedExpense };

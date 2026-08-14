@@ -1019,8 +1019,13 @@
       "amountFromReceipt": "Montant du reçu",
       "payingBack": "Remboursement",
       "description": "Description",
-      "descriptionPlaceholder": "Dîner au port",
-      "more": "Note, catégorie ou pièce jointe"
+      "descriptionPlaceholder": "Dîner au port"
+    },
+    "attach": {
+      "add": "Joindre un fichier",
+      "uploading": "Envoi en cours…",
+      "remove": "Retirer {name}",
+      "notRepeating": "Une entrée récurrente ne conserve pas de fichiers."
     },
     "amount": {
       "zero": "0.00",
@@ -1038,15 +1043,14 @@
       "label": "Date"
     },
     "split": {
-      "title": "Qui a payé, qui doit",
-      "titleIncome": "Qui est crédité",
+      "title": "Paiement et partage",
+      "titleIncome": "Revenu et partage",
       "paid": "{name} a payé",
       "received": "{name} a reçu",
       "paidBy": "Payé par",
+      "receivedBy": "Reçu par",
       "creditedTo": "Crédité à",
       "splitBetween": "Partagé entre",
-      "everyone": "Tout le monde",
-      "justMe": "Moi seul",
       "done": "Terminé",
       "methods": {
         "equal": "Également",
@@ -1075,6 +1079,7 @@
         "justOne": "Le solde de personne d'autre ne bouge"
       },
       "payerOption": "Payé par {name}",
+      "receiverOption": "Reçu par {name}",
       "includeOption": "Inclure {name} dans le partage"
     },
     "currency": {
@@ -1188,7 +1193,7 @@
     },
     "sheetTitles": {
       "keypad": "Montant",
-      "split": "Qui a payé, qui doit",
+      "split": "Paiement et partage",
       "category": "Catégorie",
       "currency": "Devise",
       "method": "Comment a-t-il été payé",

@@ -47,7 +47,26 @@ import { draftItems, draftTotal, toDraft, type ReceiptDraft } from "./draft";
  * The image never leaves the device as part of scanning. It is uploaded only
  * if the user ticks the box asking for it to be kept, and then through the
  * ordinary attachment endpoint. The copy on screen says so in those terms.
+ *
+ * The two file inputs sit outside the dialog rather than in it, so a caller
+ * that already knows which one it wants — the add-entry card, whose Camera and
+ * Upload buttons say exactly that — can fire one straight from the page. The
+ * dialog then opens on the scan already running, instead of on a second screen
+ * asking the same question again.
  */
+
+/**
+ * Firing one of the pickers directly, without the capture screen first.
+ *
+ * A component rather than a callback, so a caller can be a plain function of
+ * these two props and be handed to `trigger` by name — see `ScanCard`.
+ */
+export interface CaptureActions {
+  /** The device camera, on hardware that has one. */
+  readonly camera: () => void;
+  /** The platform's own file picker. */
+  readonly upload: () => void;
+}
 
 export interface ScannedExpense {
   readonly description: string;
@@ -75,8 +94,11 @@ export function ScanReceiptDialog({
   participants: readonly Participant[];
   defaultCurrency: string;
   onApply: (result: ScannedExpense) => void;
-  /** Replaces the default "Scan a receipt" button. */
-  trigger?: React.ReactNode;
+  /**
+   * Replaces the default "Scan a receipt" button. It is rendered with the two
+   * pickers as props, so it can open one itself rather than opening the dialog.
+   */
+  trigger?: React.ComponentType<CaptureActions>;
 }) {
   const t = useTranslations("receiptScanner");
   const [open, setOpen] = useState(false);
@@ -187,11 +209,22 @@ export function ScanReceiptDialog({
     }
   };
 
+  /**
+   * A file arrived, from whichever picker.
+   *
+   * Opening the dialog here rather than through `onOpenChange` matters: that
+   * path resets the flow, which would throw away the scan it was opened for.
+   */
   const onFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) void scan(file);
+    if (!file) return;
+    setOpen(true);
+    void scan(file);
   };
+
+  const openCamera = () => cameraInput.current?.click();
+  const openUpload = () => libraryInput.current?.click();
 
   const total = draft ? draftTotal(draft) : null;
 
@@ -252,153 +285,159 @@ export function ScanReceiptDialog({
     }
   };
 
+  const Trigger = trigger;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button type="button" variant="outline">
-            <ScanLine aria-hidden="true" />
-            {t("scanReceipt")}
-          </Button>
-        )}
-      </DialogTrigger>
+    <>
+      {Trigger && <Trigger camera={openCamera} upload={openUpload} />}
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{t("onDevice")}</DialogDescription>
-        </DialogHeader>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        {!Trigger && (
+          <DialogTrigger asChild>
+            <Button type="button" variant="outline">
+              <ScanLine aria-hidden="true" />
+              {t("scanReceipt")}
+            </Button>
+          </DialogTrigger>
         )}
 
-        {step === "capture" && (
-          <CaptureStep
-            onCamera={() => cameraInput.current?.click()}
-            onLibrary={() => libraryInput.current?.click()}
-            onDropped={(file) => void scan(file)}
-          />
-        )}
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("onDevice")}</DialogDescription>
+          </DialogHeader>
 
-        {step === "scanning" && <ScanProgressView progress={progress} />}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {step === "review" && draft && (
-          <ReceiptReview
-            draft={draft}
-            onChange={setDraft}
-            imageUrl={imageUrl ?? undefined}
-          />
-        )}
-
-        {step === "assign" && draft && total !== null && (
-          <ItemAssignmentView
-            draft={draft}
-            participants={participants}
-            assignments={assignments}
-            onAssignmentsChange={setAssignments}
-            strategy={strategy}
-            onStrategyChange={setStrategy}
-            total={total}
-          />
-        )}
-
-        {(step === "review" || step === "assign") && (
-          <div className="flex items-start gap-2 rounded-lg border p-3">
-            <Checkbox
-              id="keep-receipt-image"
-              checked={keepImage}
-              onCheckedChange={(checked) => setKeepImage(checked === true)}
+          {step === "capture" && (
+            <CaptureStep
+              camera={openCamera}
+              upload={openUpload}
+              onDropped={(file) => void scan(file)}
             />
-            <div className="space-y-1">
-              <Label htmlFor="keep-receipt-image" className="font-normal">
-                {t("keepImage")}
-              </Label>
-              {/* The one distinction this feature must not blur: recognition
+          )}
+
+          {step === "scanning" && <ScanProgressView progress={progress} />}
+
+          {step === "review" && draft && (
+            <ReceiptReview
+              draft={draft}
+              onChange={setDraft}
+              imageUrl={imageUrl ?? undefined}
+            />
+          )}
+
+          {step === "assign" && draft && total !== null && (
+            <ItemAssignmentView
+              draft={draft}
+              participants={participants}
+              assignments={assignments}
+              onAssignmentsChange={setAssignments}
+              strategy={strategy}
+              onStrategyChange={setStrategy}
+              total={total}
+            />
+          )}
+
+          {(step === "review" || step === "assign") && (
+            <div className="flex items-start gap-2 rounded-lg border p-3">
+              <Checkbox
+                id="keep-receipt-image"
+                checked={keepImage}
+                onCheckedChange={(checked) => setKeepImage(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="keep-receipt-image" className="font-normal">
+                  {t("keepImage")}
+                </Label>
+                {/* The one distinction this feature must not blur: recognition
                   is local, storage is not. */}
-              <p className="text-xs text-muted-foreground">
-                {keepImage ? t("keepImageOn") : t("keepImageOff")}
-              </p>
+                <p className="text-xs text-muted-foreground">
+                  {keepImage ? t("keepImageOn") : t("keepImageOff")}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:justify-between">
-          {step === "review" && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setStep("capture")}
-              >
-                {t("anotherPhoto")}
-              </Button>
-              <Button
-                type="button"
-                disabled={total === null}
-                onClick={() => setStep("assign")}
-              >
-                {t("continue")}
-              </Button>
-            </>
           )}
 
-          {step === "assign" && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setStep("review")}
-              >
-                {t("back")}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => void apply()}
-                disabled={applying}
-              >
-                {applying && (
-                  <Loader2 aria-hidden="true" className="animate-spin" />
-                )}
-                {t("useReceipt")}
-              </Button>
-            </>
-          )}
-        </DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {step === "review" && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep("capture")}
+                >
+                  {t("anotherPhoto")}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={total === null}
+                  onClick={() => setStep("assign")}
+                >
+                  {t("continue")}
+                </Button>
+              </>
+            )}
 
-        <input
-          ref={cameraInput}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          onChange={onFile}
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-        <input
-          ref={libraryInput}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          className="sr-only"
-          onChange={onFile}
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-      </DialogContent>
-    </Dialog>
+            {step === "assign" && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep("review")}
+                >
+                  {t("back")}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void apply()}
+                  disabled={applying}
+                >
+                  {applying && (
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                  )}
+                  {t("useReceipt")}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Outside the dialog, so a trigger can fire either one while it is
+          still closed. */}
+      <input
+        ref={cameraInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={onFile}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+      <input
+        ref={libraryInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        className="sr-only"
+        onChange={onFile}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+    </>
   );
 }
 
 function CaptureStep({
-  onCamera,
-  onLibrary,
+  camera,
+  upload,
   onDropped,
-}: {
-  onCamera: () => void;
-  onLibrary: () => void;
+}: CaptureActions & {
   onDropped: (file: File) => void;
 }) {
   const t = useTranslations("receiptScanner");
@@ -422,11 +461,17 @@ function CaptureStep({
       }`}
     >
       <div className="flex flex-col justify-center gap-2 sm:flex-row">
-        <Button type="button" onClick={onCamera}>
+        {/* A mouse has no camera behind it: on a fine pointer the button would
+            open a picker that says "no camera available", so it is not there. */}
+        <Button
+          type="button"
+          className="hidden pointer-coarse:inline-flex"
+          onClick={camera}
+        >
           <Camera aria-hidden="true" />
           {t("takePhoto")}
         </Button>
-        <Button type="button" variant="outline" onClick={onLibrary}>
+        <Button type="button" variant="outline" onClick={upload}>
           <ImageIcon aria-hidden="true" />
           {t("choosePhoto")}
         </Button>

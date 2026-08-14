@@ -15,11 +15,14 @@ import { AddEntryForm } from "./add-entry-form";
  * service layer's problem and is tested there; this is about the form.
  */
 
-const { createExpense, createSettlement, createRecurring } = vi.hoisted(() => ({
-  createExpense: vi.fn(),
-  createSettlement: vi.fn(),
-  createRecurring: vi.fn(),
-}));
+const { createExpense, createSettlement, createRecurring, upload } = vi.hoisted(
+  () => ({
+    createExpense: vi.fn(),
+    createSettlement: vi.fn(),
+    createRecurring: vi.fn(),
+    upload: vi.fn(),
+  }),
+);
 
 vi.mock("@/modules/expenses/actions", () => ({
   createExpenseAction: createExpense,
@@ -27,6 +30,9 @@ vi.mock("@/modules/expenses/actions", () => ({
 }));
 vi.mock("@/modules/recurring/actions", () => ({
   createRecurringAction: createRecurring,
+}));
+vi.mock("@/components/expenses/upload-receipt", () => ({
+  uploadReceipt: upload,
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
@@ -62,6 +68,7 @@ function renderForm(
   createExpense.mockClear();
   createSettlement.mockClear();
   createRecurring.mockClear();
+  upload.mockClear();
 
   createExpense.mockResolvedValue({ ok: true, data: { expenseId: "e1" } });
   createSettlement.mockResolvedValue({
@@ -69,6 +76,10 @@ function renderForm(
     data: { settlementId: "s1" },
   });
   createRecurring.mockResolvedValue({ ok: true, data: { id: "r1" } });
+  upload.mockResolvedValue({
+    ok: true,
+    file: { id: "att-1", fileName: "bill.pdf" },
+  });
 
   return renderWithIntl(
     <AddEntryForm
@@ -98,6 +109,18 @@ async function enterAmount(
     );
   }
   await user.click(screen.getByRole("button", { name: "Done" }));
+}
+
+/**
+ * The attach control's own input.
+ *
+ * It is deliberately `aria-hidden` — the button beside it is the control a
+ * reader gets — so there is no accessible name to find it by.
+ */
+function fileInput(): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("no file input on the form");
+  return input;
 }
 
 describe("the default expense path", () => {
@@ -167,12 +190,12 @@ describe("the split sheet", () => {
 
     await user.click(screen.getByRole("button", { name: /Seb paid/ }));
     expect(
-      screen.getByRole("heading", { name: "Who paid, who owes" }),
+      screen.getByRole("heading", { name: "Payment and split" }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect(
-      screen.queryByRole("heading", { name: "Who paid, who owes" }),
+      screen.queryByRole("heading", { name: "Payment and split" }),
     ).not.toBeInTheDocument();
   });
 
@@ -201,6 +224,104 @@ describe("the split sheet", () => {
     expect(screen.queryByLabelText("Shares for Seb")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Shares" }));
     expect(screen.getByLabelText("Shares for Seb")).toBeInTheDocument();
+  });
+
+  /**
+   * The pills reach both ends in a tap or two, and the sheet already opens on
+   * "everyone" — so two chips restating the selection earned their removal.
+   */
+  it("has no Everyone or Just me shortcut", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "84.60");
+    await user.click(screen.getByRole("button", { name: /Seb paid/ }));
+
+    expect(
+      screen.queryByRole("button", { name: "Everyone" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Just me" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Money that came in was received and credited; nobody paid it. */
+  it("speaks of receiving and crediting on an income", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("tab", { name: "Income" }));
+    await user.click(screen.getByRole("button", { name: /Seb received/ }));
+
+    expect(
+      screen.getByRole("heading", { name: "Income and split" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Received by")).toBeInTheDocument();
+    expect(screen.getByText("Credited to")).toBeInTheDocument();
+    expect(screen.queryByText("Paid by")).not.toBeInTheDocument();
+    expect(screen.queryByText("Split between")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Received by Hervé" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("attaching a file", () => {
+  it("uploads on choosing, and links it to the saved entry", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.upload(
+      fileInput(),
+      new File(["x"], "bill.pdf", { type: "application/pdf" }),
+    );
+
+    expect(upload).toHaveBeenCalledWith("g1", expect.anything(), "bill.pdf");
+    expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    expect(createExpense).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ attachmentIds: ["att-1"] }),
+    );
+  });
+
+  it("says so when the upload fails, and saves nothing behind it", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    upload.mockResolvedValue({ ok: false, reason: "offline" });
+
+    await enterAmount(user, "84.60");
+    await user.upload(
+      fileInput(),
+      new File(["x"], "bill.pdf", { type: "application/pdf" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "The upload failed. Check your connection and try again.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("bill.pdf")).not.toBeInTheDocument();
+  });
+
+  /** A repayment has no attachment column, so the upload must not survive. */
+  it("drops what was attached when the entry becomes a settlement", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84.60");
+    await user.upload(
+      fileInput(),
+      new File(["x"], "bill.pdf", { type: "application/pdf" }),
+    );
+    expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+
+    expect(screen.queryByText("bill.pdf")).not.toBeInTheDocument();
   });
 });
 

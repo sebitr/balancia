@@ -10,19 +10,23 @@ import type {
   SplitMessage,
   SplitPreview,
 } from "@/components/expenses/expense-form-logic";
-import { MemberAvatar, MemberPill, Preset, type EntryMember } from "./pills";
+import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
 
 /**
- * Correcting who paid and who owes.
+ * Correcting who put the money in, and how it divides.
  *
- * Avatars instead of checkbox lists, and presets before per-person controls,
- * because the corrections people actually make are blunt: "it was just me",
- * "everyone", "Hervé paid this time". Those are one tap here. The fiddly cases
- * — exact amounts, percentages, weights — are still available, one tab away,
- * and only those tabs grow a numeric field per person.
+ * Avatars instead of checkbox lists, because the corrections people actually
+ * make are blunt — "Hervé paid this time", "Cyril wasn't there" — and each is
+ * one tap on a face. The fiddly cases — exact amounts, percentages, weights —
+ * are still available, one tab away, and only those tabs grow a numeric field
+ * per person.
  *
  * Order is deliberate: Equally, Shares, Exact, Percent. The two that need no
  * typing come first.
+ *
+ * Income says the same things in its own words. Money that came in was
+ * *received by* somebody and *credited to* the group, and calling that "paid
+ * by" reads as a mistake on a screen whose whole job is who owes what.
  */
 
 const METHODS: readonly SplitMethod[] = [
@@ -45,7 +49,7 @@ export function SplitSheet({
   values,
   onValueChange,
   preview,
-  selfId,
+  received = false,
   splitText,
   onDone,
 }: {
@@ -61,8 +65,8 @@ export function SplitSheet({
   values: Readonly<Record<string, string>>;
   onValueChange: (participantId: string, value: string) => void;
   preview: SplitPreview;
-  /** The reader, for the "Just me" preset. */
-  selfId: string;
+  /** Income was received and credited, not paid and owed. */
+  received?: boolean;
   /** Renders a message from the pure split logic. */
   splitText: (message: SplitMessage) => string;
   onDone: () => void;
@@ -70,8 +74,6 @@ export function SplitSheet({
   const t = useTranslations("addEntry.split");
 
   const everyone = members.map((member) => member.id);
-  const isEveryone = includedIds.length === members.length;
-  const isJustMe = includedIds.length === 1 && includedIds[0] === selfId;
 
   // Rebuilt in member order rather than appended: the equal-split remainder is
   // handed out in this order, so a list that reordered itself on every tap
@@ -104,7 +106,7 @@ export function SplitSheet({
 
       <section className="space-y-2">
         <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-          {t("paidBy")}
+          {t(received ? "receivedBy" : "paidBy")}
         </h3>
         <div className="flex gap-2">
           {members.map((member) => {
@@ -118,7 +120,9 @@ export function SplitSheet({
                 // Both halves of this sheet carry a control per person. The
                 // shapes tell them apart on screen; these names do it for
                 // anyone who is not looking at the screen.
-                aria-label={t("payerOption", { name: member.displayName })}
+                aria-label={t(received ? "receiverOption" : "payerOption", {
+                  name: member.displayName,
+                })}
                 className={cn(
                   "flex flex-1 flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-colors",
                   active
@@ -148,25 +152,13 @@ export function SplitSheet({
       </section>
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-            {t("splitBetween")}
-          </h3>
-          <div className="flex gap-1.5">
-            <Preset
-              active={isEveryone}
-              onClick={() => onIncludedChange(everyone)}
-            >
-              {t("everyone")}
-            </Preset>
-            <Preset
-              active={isJustMe}
-              onClick={() => onIncludedChange([selfId])}
-            >
-              {t("justMe")}
-            </Preset>
-          </div>
-        </div>
+        {/* No "Everyone" / "Just me" shortcuts: everyone is already the state
+            this sheet opens in, and the pills below reach either end in a tap
+            or two. Two more controls that mostly restate the selection cost
+            more attention than they save. */}
+        <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+          {t(received ? "creditedTo" : "splitBetween")}
+        </h3>
         <div className="flex flex-wrap gap-2">
           {members.map((member) => (
             <MemberPill
@@ -188,7 +180,7 @@ export function SplitSheet({
             onClick={() => onMethodChange(candidate)}
             aria-pressed={candidate === method}
             className={cn(
-              "h-9 flex-1 rounded-[9px] text-[13px] transition-colors",
+              "h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-[13px] transition-colors",
               candidate === method
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground",
