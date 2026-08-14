@@ -1,0 +1,1 @@
+ALTER TYPE "public"."activity_action" ADD VALUE 'participant.restored' BEFORE 'guest_link.created';
