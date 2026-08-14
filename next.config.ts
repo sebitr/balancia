@@ -30,6 +30,23 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "1mb",
     },
+
+    // Every screen here is dynamic — each one reads a cookie to find out who
+    // is asking — and a dynamic route's prefetch is thrown away the moment it
+    // is used unless it is given a lifetime. Without this, stepping back to a
+    // tab you were just on refetches it from scratch and the screen slides in
+    // empty; with it, the tab bar behaves like a native one, where the screens
+    // are still there when you come back.
+    //
+    // Staleness is bounded by more than the clock: a server action that
+    // changes something calls revalidatePath, which drops these entries, and a
+    // push from someone else's change triggers router.refresh(), which
+    // ignores them. Thirty seconds is what is left over — a window in which
+    // nobody told us anything had changed.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
 };
 

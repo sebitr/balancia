@@ -31,7 +31,8 @@ import { cn } from "@/lib/utils";
 const DIRECTIONS = {
   push: "push",
   pop: "pop",
-  switch: "switch",
+  "switch-forward": "switch-forward",
+  "switch-back": "switch-back",
   default: "none",
 };
 

@@ -11,7 +11,12 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { PUSH, SWITCH } from "@/components/motion/transitions";
+import {
+  POP,
+  PUSH,
+  SWITCH_BACK,
+  SWITCH_FORWARD,
+} from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,10 +52,48 @@ const ITEMS: readonly NavItem[] = [
   { href: "/settings", labelKey: "settings", icon: Settings, exact: false },
 ];
 
+/**
+ * Which tab the current path belongs to, or -1 when it belongs to none.
+ *
+ * A sideways move needs to know where it starts as well as where it is going,
+ * and prefix matches overlap — /expenses/new is under both "Expenses" and
+ * "Add" — so the longest matching href wins, being the most specific tab.
+ */
+function activeIndexOf(pathname: string, base: string): number {
+  let best = -1;
+  ITEMS.forEach((item, index) => {
+    const href = `${base}${item.href}`;
+    const matches = item.exact ? pathname === href : pathname.startsWith(href);
+    if (
+      matches &&
+      (best === -1 || item.href.length > ITEMS[best].href.length)
+    ) {
+      best = index;
+    }
+  });
+  return best;
+}
+
+/**
+ * The motion a tap on this tab should carry.
+ *
+ * "Add" opens a form over the group — somewhere deeper, not somewhere along
+ * the bar. The rest are peers, so they slide the way the bar itself runs, and
+ * which way that is depends on the tab being left. From a screen that sits on
+ * no tab at all — a balance, an expense, the activity log — every tab is the
+ * way back out, which is a pop.
+ */
+function directionFor(item: NavItem, index: number, activeIndex: number) {
+  if (item.primary) return PUSH;
+  if (activeIndex === -1) return POP;
+  return index > activeIndex ? SWITCH_FORWARD : SWITCH_BACK;
+}
+
 export function GroupNav({ groupId }: { groupId: string }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const base = `/groups/${groupId}`;
+  const activeIndex = activeIndexOf(pathname, base);
 
   return (
     <nav
@@ -59,7 +102,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/85"
     >
       <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-2 pb-2">
-        {ITEMS.map((item) => {
+        {ITEMS.map((item, index) => {
           const href = `${base}${item.href}`;
           const isActive = item.exact
             ? pathname === href
@@ -70,10 +113,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
               <Link
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                // Tabs are peers, and "Add" opens a form over the group rather
-                // than a place inside it — neither is somewhere deeper, so
-                // neither slides.
-                transitionTypes={item.primary ? PUSH : SWITCH}
+                transitionTypes={directionFor(item, index, activeIndex)}
                 className={cn(
                   "flex flex-col items-center rounded-xl px-1 py-2.5 text-xs font-medium transition-transform duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   item.primary
