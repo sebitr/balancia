@@ -24,15 +24,15 @@ docker compose up -d` is a safe habit.
 
 Run from a terminal, it also asks which optional features to switch on:
 
-| Question              | Writes                    | Also does                      |
-| --------------------- | ------------------------- | ------------------------------ |
-| Public URL            | `APP_URL`, `APP_PORT`     | Rejects HTTP outside localhost |
-| Open registration     | `ALLOW_REGISTRATION`      |                                |
-| Exchange rates        | `EXCHANGE_RATE_PROVIDER`  |                                |
-| Receipt scanning      | `RECEIPT_SCANNING`        | Downloads the OCR models       |
-| Semantic categorizing | `SEMANTIC_CATEGORIZATION` | Downloads the embedding model  |
-| Push notifications    | `PUSH_VAPID_*`            | Generates the VAPID pair       |
-| Outgoing email        | `SMTP_*`                  |                                |
+| Question              | Writes                    | Also does                                      |
+| --------------------- | ------------------------- | ---------------------------------------------- |
+| Public URL            | `APP_URL`, `APP_PORT`     | Rejects HTTP outside localhost and a busy port |
+| Open registration     | `ALLOW_REGISTRATION`      |                                                |
+| Exchange rates        | `EXCHANGE_RATE_PROVIDER`  |                                                |
+| Receipt scanning      | `RECEIPT_SCANNING`        | Downloads the OCR models                       |
+| Semantic categorizing | `SEMANTIC_CATEGORIZATION` | Downloads the embedding model                  |
+| Push notifications    | `PUSH_VAPID_*`            | Generates the VAPID pair                       |
+| Outgoing email        | `SMTP_*`                  |                                                |
 
 Every answer is written, including the no's, so the second run asks nothing.
 The two model downloads need Node; on a host that has only Docker, one is
@@ -45,9 +45,20 @@ missing renders no button and explains nothing, so the script that writes the
 flag is the one that fetches the files. It re-checks on every run, in case a
 download failed after the flag was written.
 
+The port question appears only when it has to. Compose publishes the app on
+`${APP_PORT:-3000}`, and if something on this host is already listening there,
+`docker compose up` fails with `address already in use` — after the images have
+been built. So the port is checked while it can still be changed: the script
+offers the next free one, and checks every port you propose in turn. A
+`localhost` URL moves with it, since the port is part of the address people
+type; behind a proxy only `APP_PORT` changes, and the proxy has to be pointed
+at it. Whichever of `ss`, `netstat` and `lsof` the host has is what answers the
+question; on a host with none of them nothing is checked and nothing is asked.
+
 Nothing has to be answered interactively. With no terminal on stdin — CI, a
 pipe — or with `--defaults`, it writes the secrets and leaves every optional
-feature at its documented default.
+feature at its documented default. The port check is part of the question, so
+it goes with it.
 
 Compose then starts three services:
 
