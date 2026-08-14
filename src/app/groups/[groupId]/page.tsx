@@ -98,7 +98,10 @@ export default async function GroupOverviewPage({
         </p>
       </header>
 
-      {access.participantId && (
+      {/* Before the first expense there is no position and no shape to frame:
+          the empty state below is the whole screen, and a card of zeroes above
+          it would only compete for the reader's first glance. */}
+      {!empty && access.participantId && (
         <PositionCard
           positions={overview.positions.map((position) => ({
             currency: position.currency,
@@ -119,27 +122,16 @@ export default async function GroupOverviewPage({
         />
       )}
 
-      <StatStrip
-        stats={
-          // Nothing spent yet, but a group that balances in one currency can
-          // still say so honestly: three zeroes in it, rather than a dash.
-          overview.stats.length === 0 && access.group.baseCurrency
-            ? [
-                {
-                  currency: access.group.baseCurrency,
-                  groupSpent: "0",
-                  youPaid: "0",
-                  yourShare: "0",
-                },
-              ]
-            : overview.stats.map((stat) => ({
-                currency: stat.currency,
-                groupSpent: stat.groupSpent.toString(),
-                youPaid: stat.youPaid.toString(),
-                yourShare: stat.yourShare.toString(),
-              }))
-        }
-      />
+      {!empty && (
+        <StatStrip
+          stats={overview.stats.map((stat) => ({
+            currency: stat.currency,
+            groupSpent: stat.groupSpent.toString(),
+            youPaid: stat.youPaid.toString(),
+            yourShare: stat.yourShare.toString(),
+          }))}
+        />
+      )}
 
       {empty && (
         <EmptyState
