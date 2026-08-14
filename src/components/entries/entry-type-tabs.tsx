@@ -16,6 +16,10 @@ import type { EntryType } from "./entry-logic";
  * The active ring is coloured per type — coral for spending, green for money
  * in, plain white for a repayment — so the amount below is never the first
  * place you learn which mode you are in.
+ *
+ * Its corners are derived rather than eyeballed: a rounded box inset by `p`
+ * inside another only looks concentric when the inner radius is the outer one
+ * minus `p`. A literal value here drifts the moment `--radius` is retuned.
  */
 
 const TYPES: readonly EntryType[] = ["expense", "income", "settle"];
@@ -51,7 +55,7 @@ export function EntryTypeTabs({
             aria-selected={active}
             onClick={() => onChange(type)}
             className={cn(
-              "h-10 flex-1 rounded-[11px] text-sm transition-colors",
+              "h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",
               active
                 ? cn(
                     "bg-accent font-semibold text-foreground",

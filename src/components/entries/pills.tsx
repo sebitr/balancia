@@ -5,15 +5,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 /**
- * The two small controls the split sheet is built from.
+ * The small controls the split sheet is built from.
  *
- * They look different on purpose, because they do different things. A
- * **member pill** is a toggle: it carries a face, it holds a state, and its
- * tick says "this person is included". A **preset** is a command: it has no
- * avatar, no tick, and pressing it changes the pills rather than itself.
- *
- * Making them look alike was the mistake in the old checkbox list — everything
- * was a row, so nothing said whether tapping it would select or act.
+ * Every one of them is a toggle, and they all say so the same way: a tick and
+ * a coral edge mean selected. Making them look alike was the mistake in the
+ * old checkbox list — everything was a row, so nothing said whether tapping it
+ * would select or act — but the answer was one honest shape, not two.
  */
 
 export interface EntryMember {
@@ -122,33 +119,6 @@ export function ChoicePill({
       {selected && (
         <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />
       )}
-    </button>
-  );
-}
-
-/** A command: pressing it rewrites the selection, not its own state. */
-export function Preset({
-  children,
-  active = false,
-  onClick,
-}: {
-  children: React.ReactNode;
-  /** Shows the selection currently *matches* this preset — not a toggle. */
-  active?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-7 items-center rounded-lg border border-border px-2.5 text-xs transition-colors",
-        active
-          ? "bg-white/10 font-semibold text-foreground"
-          : "font-medium text-muted-foreground",
-      )}
-    >
-      {children}
     </button>
   );
 }

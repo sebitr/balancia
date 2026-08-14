@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Camera, ScanLine, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { CaptureActions } from "@/components/receipts/scan-receipt-entry";
 
 /**
  * The receipt, before and after it has been read.
@@ -14,9 +15,15 @@ import { cn } from "@/lib/utils";
  *
  * Once a scan has run the card is replaced by a banner, so the entry point
  * cannot be pressed again on top of values it already produced.
+ *
+ * Camera and Upload are two buttons that do two things, and each opens its own
+ * picker on the spot. They used to be painted labels on one big button that
+ * opened a dialog asking the same question a second time — so choosing
+ * "Camera" cost two taps and told you nothing the first tap had not. The card
+ * is the scanner's `trigger` component, and takes the two pickers as its props.
  */
 
-export function ScanCard() {
+export function ScanCard({ camera, upload }: CaptureActions) {
   const t = useTranslations("addEntry.scan");
 
   return (
@@ -34,14 +41,26 @@ export function ScanCard() {
       </div>
 
       <div className="flex gap-2">
-        <span className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
+        {/* Only where there is a camera to open. A fine pointer means a desktop,
+            and a desktop's "camera" is a picker that finds no camera. */}
+        <button
+          type="button"
+          onClick={camera}
+          className="hidden h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 pointer-coarse:flex"
+        >
           <Camera aria-hidden="true" className="size-4" />
           {t("camera")}
-        </span>
-        <span className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border text-sm font-medium">
+        </button>
+        {/* Which leaves Upload as the only action there, so it takes the
+            primary weight — and gives it back once Camera is alongside it. */}
+        <button
+          type="button"
+          onClick={upload}
+          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors active:opacity-80 pointer-coarse:border pointer-coarse:border-border pointer-coarse:bg-transparent pointer-coarse:font-medium pointer-coarse:text-foreground"
+        >
           <Upload aria-hidden="true" className="size-4" />
           {t("upload")}
-        </span>
+        </button>
       </div>
     </div>
   );

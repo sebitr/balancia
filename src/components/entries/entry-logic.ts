@@ -167,13 +167,15 @@ export function confirmationKey(
  * What switching entry type has to throw away.
  *
  * Income and settlement have no receipt behind them, and a settlement is a
- * single movement that cannot recur or be denominated in anything but the
- * group's base currency. Leaving that state behind would let someone record a
- * repayment that silently carried a scanned receipt's line items.
+ * single movement that cannot recur, carry files, or be denominated in
+ * anything but the group's base currency. Leaving that state behind would let
+ * someone record a repayment that silently carried a scanned receipt's line
+ * items — or hold on to an upload the settlement writer would quietly drop.
  */
 export interface TypeSwitchReset {
   readonly clearScan: boolean;
   readonly clearRecurrence: boolean;
+  readonly clearAttachments: boolean;
   readonly resetCurrency: boolean;
 }
 
@@ -181,6 +183,7 @@ export function resetsForType(next: EntryType): TypeSwitchReset {
   return {
     clearScan: next !== "expense",
     clearRecurrence: next === "settle",
+    clearAttachments: next === "settle",
     resetCurrency: next === "settle",
   };
 }

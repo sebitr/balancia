@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, Loader2, Plus, Repeat } from "lucide-react";
+import { CalendarDays, ChevronLeft, Loader2, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -37,6 +37,7 @@ import {
   type PaymentMethodId,
 } from "@/modules/settlements/payment-methods";
 import { AmountCard } from "./amount-card";
+import { AttachFile, type EntryAttachment } from "./attach-file";
 import { CategoryChip, CategorySheet } from "./category-chip";
 import { CurrencySheet } from "./currency-sheet";
 import {
@@ -92,7 +93,7 @@ export interface AddEntryFormProps {
   groupId: string;
   groupName: string;
   members: readonly EntryMember[];
-  /** The reader, for "Just me" and the default payer. */
+  /** The reader, who is the default payer. */
   selfId: string;
   currencyMode: "separate" | "converted";
   baseCurrency: string | null;
@@ -161,6 +162,10 @@ export function AddEntryForm({
 
   const [scan, setScan] = useState<ScannedExpense | null>(null);
   const [bannerVisible, setBannerVisible] = useState(false);
+  /** Uploaded as they are chosen; linked to the entry when it is saved. */
+  const [attachments, setAttachments] = useState<readonly EntryAttachment[]>(
+    [],
+  );
 
   const [pairIndex, setPairIndex] = useState<number | null>(
     outstanding.length > 0 ? 0 : null,
@@ -268,6 +273,9 @@ export function AddEntryForm({
     if (resets.clearRecurrence) {
       setRecurrence((current) => ({ ...current, enabled: false }));
     }
+    if (resets.clearAttachments) {
+      setAttachments([]);
+    }
     if (resets.resetCurrency) {
       setCurrency(baseCurrency ?? defaultCurrency);
       setRate("");
@@ -341,6 +349,7 @@ export function AddEntryForm({
     setIncludedIds(members.map((member) => member.id));
     setScan(null);
     setBannerVisible(false);
+    setAttachments([]);
     setRecurrence((current) => ({ ...current, enabled: false }));
     // In settle the amount is re-seeded from the pair rather than zeroed:
     // the debt is still there, and blanking it just means retyping it.
@@ -428,7 +437,13 @@ export function AddEntryForm({
       ],
       splitMethod: method,
       splitEntries: splitEntries(),
-      attachmentIds: scan?.attachmentId ? [scan.attachmentId] : [],
+      // The scan's own photograph, if it was kept, plus anything attached by
+      // hand. Both arrived through the same endpoint and are linked the same
+      // way; only the scanner knows the difference.
+      attachmentIds: [
+        ...(scan?.attachmentId ? [scan.attachmentId] : []),
+        ...attachments.map((file) => file.id),
+      ],
     });
 
   const submitRecurring = () =>
@@ -553,11 +568,7 @@ export function AddEntryForm({
           }))}
           defaultCurrency={currency}
           onApply={applyScan}
-          trigger={
-            <button type="button" className="text-left">
-              <ScanCard />
-            </button>
-          }
+          trigger={ScanCard}
         />
       )}
 
@@ -730,14 +741,20 @@ export function AddEntryForm({
       )}
 
       {!isSettle && (
-        <button
-          type="button"
-          onClick={() => setSheet("category")}
-          className="inline-flex items-center gap-2 self-start text-sm text-muted-foreground"
-        >
-          <Plus aria-hidden="true" className="size-4" />
-          {t("labels.more")}
-        </button>
+        <AttachFile
+          groupId={groupId}
+          files={attachments}
+          onAttached={(file) => setAttachments((current) => [...current, file])}
+          onRemove={(id) =>
+            setAttachments((current) =>
+              current.filter((file) => file.id !== id),
+            )
+          }
+          // A recurring template has no attachment of its own to carry, so say
+          // so where the files are rather than after the entry has been saved
+          // without them.
+          note={recurrence.enabled ? t("attach.notRepeating") : null}
+        />
       )}
 
       <div className="flex gap-3">
@@ -811,7 +828,7 @@ export function AddEntryForm({
                 setValues((current) => ({ ...current, [id]: value }))
               }
               preview={preview}
-              selfId={selfId}
+              received={isIncome}
               splitText={splitText}
               onDone={() => setSheet(null)}
             />

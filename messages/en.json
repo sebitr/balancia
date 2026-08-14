@@ -1019,8 +1019,13 @@
       "amountFromReceipt": "Amount from receipt",
       "payingBack": "Paying back",
       "description": "Description",
-      "descriptionPlaceholder": "Dinner at the harbour",
-      "more": "Note, category or attachment"
+      "descriptionPlaceholder": "Dinner at the harbour"
+    },
+    "attach": {
+      "add": "Attach a file",
+      "uploading": "Attaching…",
+      "remove": "Remove {name}",
+      "notRepeating": "Files are not kept on a repeating entry."
     },
     "amount": {
       "zero": "0.00",
@@ -1038,15 +1043,14 @@
       "label": "Date"
     },
     "split": {
-      "title": "Who paid, who owes",
-      "titleIncome": "Who is credited",
+      "title": "Payment and split",
+      "titleIncome": "Income and split",
       "paid": "{name} paid",
       "received": "{name} received",
       "paidBy": "Paid by",
+      "receivedBy": "Received by",
       "creditedTo": "Credited to",
       "splitBetween": "Split between",
-      "everyone": "Everyone",
-      "justMe": "Just me",
       "done": "Done",
       "methods": {
         "equal": "Equally",
@@ -1075,6 +1079,7 @@
         "justOne": "Nobody else's balance moves"
       },
       "payerOption": "Paid by {name}",
+      "receiverOption": "Received by {name}",
       "includeOption": "Include {name} in the split"
     },
     "currency": {
@@ -1188,7 +1193,7 @@
     },
     "sheetTitles": {
       "keypad": "Amount",
-      "split": "Who paid, who owes",
+      "split": "Payment and split",
       "category": "Category",
       "currency": "Currency",
       "method": "How was it paid",

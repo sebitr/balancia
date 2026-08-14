@@ -163,14 +163,16 @@ describe("resetsForType", () => {
     expect(resetsForType("settle").clearScan).toBe(true);
   });
 
-  /** A repayment is one movement, in the group's own currency. */
-  it("strips recurrence and currency choice from a settlement only", () => {
+  /** A repayment is one movement, in the group's own currency, with no paperwork. */
+  it("strips recurrence, files and currency choice from a settlement only", () => {
     expect(resetsForType("settle")).toEqual({
       clearScan: true,
       clearRecurrence: true,
+      clearAttachments: true,
       resetCurrency: true,
     });
     expect(resetsForType("income").clearRecurrence).toBe(false);
+    expect(resetsForType("income").clearAttachments).toBe(false);
     expect(resetsForType("income").resetCurrency).toBe(false);
   });
 });
