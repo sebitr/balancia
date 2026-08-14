@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ENV_VARIABLE_NAMES, EnvironmentError, parseEnv } from "./env";
@@ -250,6 +250,101 @@ describe("configuration reaches the containers", () => {
     expect(
       unknown,
       "compose.yaml forwards variables nothing reads; delete them or add them to the schema",
+    ).toEqual([]);
+  });
+});
+
+/**
+ * Every file that could plausibly act on a setting: the app, and the scripts
+ * that run around it. `env.ts` itself is excluded — declaring a variable is
+ * what is being tested, not evidence of anything.
+ */
+function sourceMentioningEnv(): string {
+  const roots = ["src", "scripts"];
+  const declaration = path.join("src", "lib", "env.ts");
+  const chunks: string[] = [];
+
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules") continue;
+        walk(full);
+      } else if (/\.(ts|tsx|mjs|js|sh)$/.test(entry.name)) {
+        const relative = path.relative(process.cwd(), full);
+        if (relative === declaration || relative.endsWith("env.test.ts")) {
+          continue;
+        }
+        chunks.push(readFileSync(full, "utf8"));
+      }
+    }
+  };
+
+  for (const root of roots) walk(path.join(process.cwd(), root));
+  return chunks.join("\n");
+}
+
+/**
+ * Settings the code consumes through a derived field rather than by name, and
+ * the field each one feeds. The field still has to be used somewhere — a
+ * setting read only by `buildEnv` and then dropped is a setting with no
+ * effect, however thoroughly it was parsed.
+ */
+const READ_AS_DERIVED_FIELD: Readonly<Record<string, string>> = {
+  WEBAUTHN_RP_ID: "webAuthnRpId",
+};
+
+/**
+ * Known gaps: accepted, forwarded, documented, and acted on by nothing.
+ *
+ * Every name here is a bug waiting for someone to come back for it, not a
+ * decision. Fixing one means deleting its line — and each fix is its own
+ * branch, so this list is where they wait rather than being forgotten.
+ */
+const NOT_YET_READ = new Set<string>([
+  // Derived into `trustedOrigins`, which no production code reads. Adding an
+  // origin therefore does not trust it; the setting is inert.
+  "TRUSTED_ORIGINS",
+]);
+
+describe("configuration reaches the code", () => {
+  /**
+   * Forwarding a setting is only half of it. `RUN_WORKER_IN_WEB` was in the
+   * schema, in `x-app-environment`, and in two pages of documentation as the
+   * switch that makes push delivery work on a single-container install — and
+   * no code ever read it, so setting it started nothing and nothing was ever
+   * pushed. Both tests above passed throughout. This is that bug, as a test.
+   */
+  it("reads every setting it accepts", () => {
+    const source = sourceMentioningEnv();
+
+    const unread = ENV_VARIABLE_NAMES.filter((name) => {
+      if (NOT_YET_READ.has(name)) return false;
+      const token = READ_AS_DERIVED_FIELD[name] ?? name;
+      return !source.includes(token);
+    });
+
+    expect(
+      unread,
+      "these are accepted and forwarded but nothing acts on them, so an " +
+        "operator can set them and watch nothing happen:\n" +
+        unread.map((name) => `  ${name}`).join("\n"),
+    ).toEqual([]);
+  });
+
+  it("keeps the known-gap list honest", () => {
+    const source = sourceMentioningEnv();
+
+    // A name that has since been wired up must leave this list, or the list
+    // stops meaning anything.
+    const nowRead = [...NOT_YET_READ].filter((name) => {
+      const token = READ_AS_DERIVED_FIELD[name] ?? name;
+      return source.includes(token);
+    });
+
+    expect(
+      nowRead,
+      "these are in NOT_YET_READ but something reads them now; delete their lines",
     ).toEqual([]);
   });
 });
