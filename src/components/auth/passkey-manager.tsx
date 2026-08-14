@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
 import { KeyRound, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export function PasskeyManager({
   const queryClient = useQueryClient();
   const t = useTranslations("passkeys");
   const tCommon = useTranslations("common");
-  const format = useFormatter();
+  const dates = useDateFormatter();
   const [name, setName] = useState("");
   const [registering, setRegistering] = useState(false);
   const browserSupported = usePasskeySupport();
@@ -179,15 +180,11 @@ export function PasskeyManager({
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {t("added", {
-                        date: format.dateTime(new Date(passkey.createdAt), {
-                          dateStyle: "medium",
-                        }),
+                        date: dates.at(passkey.createdAt),
                       })}
                       {passkey.lastUsedAt &&
                         ` · ${t("lastUsed", {
-                          date: format.dateTime(new Date(passkey.lastUsedAt), {
-                            dateStyle: "medium",
-                          }),
+                          date: dates.at(passkey.lastUsedAt),
                         })}`}
                       {passkey.backedUp && ` · ${t("synced")}`}
                     </span>

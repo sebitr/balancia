@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import { useFormatter, useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { parsePlainDate } from "@/i18n/format";
 import {
   firstOccurrence,
   nextOccurrence,
@@ -62,6 +62,8 @@ export function RecurrenceSheet({
 }) {
   const t = useTranslations("addEntry.repeat");
   const format = useFormatter();
+  // Named apart from the `dates` array the preview builds below.
+  const dateFormatter = useDateFormatter();
 
   const set = <K extends keyof RecurrenceState>(
     key: K,
@@ -201,10 +203,7 @@ export function RecurrenceSheet({
                 )}
               >
                 {state.endDate
-                  ? format.dateTime(parsePlainDate(state.endDate), {
-                      day: "numeric",
-                      month: "short",
-                    })
+                  ? dateFormatter.plain(state.endDate, "dayMonth")
                   : t("onADate")}
               </button>
             </div>
@@ -214,12 +213,7 @@ export function RecurrenceSheet({
             <p className="text-xs text-muted-foreground">
               {t("preview", {
                 dates: upcoming
-                  .map((date) =>
-                    format.dateTime(parsePlainDate(date), {
-                      day: "numeric",
-                      month: "short",
-                    }),
-                  )
+                  .map((date) => dateFormatter.plain(date, "dayMonth"))
                   .join(", "),
                 timezone,
               })}

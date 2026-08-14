@@ -48,7 +48,11 @@ function amountOf(
  * joins a list: "€24.00 and ¥1,400". Two currencies are never added together,
  * so the line names both rather than inventing a total.
  */
-function debtOf(payload: ReminderPayload, locale: string): string {
+function debtOf(
+  payload: ReminderPayload,
+  locale: string,
+  amountLocale: string,
+): string {
   const stored = payload as StoredReminderPayload;
   const debts =
     stored.debts && stored.debts.length > 0
@@ -58,7 +62,9 @@ function debtOf(payload: ReminderPayload, locale: string): string {
         : [];
   return new Intl.ListFormat(locale, { type: "conjunction" }).format(
     debts.map((debt) =>
-      formatMoney(money(BigInt(debt.amount), debt.currency), { locale }),
+      formatMoney(money(BigInt(debt.amount), debt.currency), {
+        locale: amountLocale,
+      }),
     ),
   );
 }
@@ -98,7 +104,16 @@ export function renderNotification(
   entry: NotificationEntry,
   t: Translate,
   locale: string,
+  options: {
+    /**
+     * The notation the reader writes amounts in, when it is not the one their
+     * language implies. Words — the list conjunction above, the sentences
+     * themselves — always follow `locale`.
+     */
+    numberLocale?: string;
+  } = {},
 ): RenderedNotification {
+  const amountLocale = options.numberLocale ?? locale;
   const payload = entry.payload;
   const actor = entry.actorLabel ?? t("someone");
   const url = urlFor(entry);
@@ -121,7 +136,7 @@ export function renderNotification(
         body: t(key, {
           actor,
           description: payload.description,
-          amount: amountOf(payload, locale),
+          amount: amountOf(payload, amountLocale),
         }),
         url,
         tag,
@@ -141,7 +156,7 @@ export function renderNotification(
         title,
         body: t(key, {
           actor,
-          amount: amountOf(payload, locale),
+          amount: amountOf(payload, amountLocale),
           counterpart: payload.counterpartName,
         }),
         url,
@@ -154,7 +169,7 @@ export function renderNotification(
         title,
         body: t("recurringGenerated", {
           description: payload.description,
-          amount: amountOf(payload, locale),
+          amount: amountOf(payload, amountLocale),
         }),
         url,
         tag,
@@ -182,7 +197,7 @@ export function renderNotification(
       return {
         title: payload.message,
         body: t("reminderBody", {
-          amount: debtOf(payload, locale),
+          amount: debtOf(payload, locale, amountLocale),
           group: payload.groupName,
         }),
         url,

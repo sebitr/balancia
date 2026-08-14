@@ -6,6 +6,7 @@ import { Bell, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NotificationList } from "@/components/notifications/notification-list";
+import { getNumberLocale } from "@/i18n/preferences";
 import { getCurrentUser } from "@/lib/security/actor";
 import { listNotifications } from "@/modules/notifications/service";
 import {
@@ -33,10 +34,13 @@ export default async function NotificationsPage() {
   const t = await getTranslations("notificationsPage");
   const translate = (await getTranslations("notifications")) as Translate;
   const locale = await getLocale();
+  const numberLocale = await getNumberLocale();
 
   const entries = await listNotifications(user.userId, { limit: 50 });
   const items = entries.map((entry) => {
-    const rendered = renderNotification(entry, translate, locale);
+    const rendered = renderNotification(entry, translate, locale, {
+      numberLocale,
+    });
     return {
       id: entry.id,
       title: rendered.title,

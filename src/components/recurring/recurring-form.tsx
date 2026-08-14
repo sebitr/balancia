@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { useNumberLocale } from "@/i18n/format-context";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ export function RecurringForm({
 }) {
   const router = useRouter();
   const locale = useLocale();
+  const numberLocale = useNumberLocale();
   const t = useTranslations("recurring");
   const tSplit = useTranslations("expenses.split");
   const weekdays = useWeekdayOptions(locale);
@@ -103,9 +105,9 @@ export function RecurringForm({
         method: "equal",
         participantIds: selectedIds,
         values: {},
-        locale,
+        locale: numberLocale,
       }),
-    [totalMinor, currency, selectedIds, locale],
+    [totalMinor, currency, selectedIds, numberLocale],
   );
 
   const onSubmit = async (event: React.FormEvent) => {

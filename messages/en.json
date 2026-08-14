@@ -323,7 +323,14 @@
     "currencyLabel": "Show totals in",
     "currencyHelp": "Your home screen totals every group into this currency. Each group keeps its own.",
     "currencySaved": "Preferred currency saved",
-    "currencyFailed": "That preference could not be saved."
+    "currencyFailed": "That preference could not be saved.",
+    "formatsTitle": "Dates and numbers",
+    "dateFormatLabel": "Write dates as",
+    "numberFormatLabel": "Write numbers as",
+    "formatAuto": "Automatic ({sample})",
+    "formatsHelp": "Automatic follows your language and the region your browser asks for. This is separate from the language itself, so you can read English and still write 13/08/2026.",
+    "formatsSaved": "Format preferences saved",
+    "formatsFailed": "Those preferences could not be saved."
   },
   "activity": {
     "empty": "Nothing has happened in this group yet.",
@@ -821,7 +828,8 @@
     "appleOnlyCredential": "Apple is the only way you can sign in to this account. Set a password or add a passkey first.",
     "appleNotLinked": "There is no Apple account linked to this account.",
     "appleFailed": "That did not work. Apple could not confirm the sign-in.",
-    "appleExpired": "That sign-in took too long, or was started in another browser. Try again."
+    "appleExpired": "That sign-in took too long, or was started in another browser. Try again.",
+    "unknownFormat": "That is not a date or number format Balancia offers."
   },
   "serverValidation": {
     "checkForm": "Check the form.",

@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PreferredCurrencyForm } from "@/components/profile/preferred-currency-form";
+import { FormatPreferencesForm } from "@/components/profile/format-preferences-form";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
 import { PUSH } from "@/components/motion/transitions";
@@ -51,6 +52,15 @@ export default async function ProfilePage() {
               user ? await getUserPreferredCurrency(user.userId) : null
             }
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{t("formatsTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FormatPreferencesForm />
         </CardContent>
       </Card>
 

@@ -37,19 +37,18 @@ export function isAppLocale(value: unknown): value is AppLocale {
 }
 
 /**
- * Picks the best supported locale from an `Accept-Language` header.
+ * The tags an `Accept-Language` header asks for, best first.
  *
- * Hand-rolled rather than pulling in a negotiation library: with two locales
- * the entire problem is "sort by q, match on the primary subtag". A tag is
- * matched both in full (`fr-CA`) and by its primary subtag (`fr`), so a
- * regional variant still finds the base language.
+ * Hand-rolled rather than pulling in a negotiation library: the entire problem
+ * is "sort by q". Tags are lowercased; `q=0` is an explicit refusal rather
+ * than a weak preference, so those are dropped.
  */
-export function negotiateLocale(
+export function rankLanguageTags(
   acceptLanguage: string | null | undefined,
-): AppLocale {
-  if (!acceptLanguage) return DEFAULT_LOCALE;
+): string[] {
+  if (!acceptLanguage) return [];
 
-  const ranked = acceptLanguage
+  return acceptLanguage
     .split(",")
     .map((part) => {
       const [rawTag, ...params] = part.trim().split(";");
@@ -62,11 +61,21 @@ export function negotiateLocale(
         quality: Number.isFinite(parsed) ? parsed : 0,
       };
     })
-    // q=0 is an explicit refusal, not a weak preference.
     .filter((entry) => entry.tag !== "" && entry.quality > 0)
-    .sort((a, b) => b.quality - a.quality);
+    .sort((a, b) => b.quality - a.quality)
+    .map((entry) => entry.tag);
+}
 
-  for (const { tag } of ranked) {
+/**
+ * Picks the best supported locale from an `Accept-Language` header.
+ *
+ * A tag is matched both in full (`fr-CA`) and by its primary subtag (`fr`), so
+ * a regional variant still finds the base language.
+ */
+export function negotiateLocale(
+  acceptLanguage: string | null | undefined,
+): AppLocale {
+  for (const tag of rankLanguageTags(acceptLanguage)) {
     if (tag === "*") return DEFAULT_LOCALE;
     const primary = tag.split("-")[0];
     const match = LOCALES.find(

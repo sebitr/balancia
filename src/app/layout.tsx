@@ -3,6 +3,8 @@ import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
+import { FormatPreferencesProvider } from "@/i18n/format-context";
+import { resolveFormatPreferences } from "@/i18n/preferences";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
@@ -55,6 +57,9 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Resolved from the locale cookie, falling back to Accept-Language.
   const locale = await getLocale();
+  // Dates and numbers are written the way this reader writes them, which is a
+  // separate choice from the language above.
+  const formats = await resolveFormatPreferences();
 
   return (
     <html
@@ -69,13 +74,25 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {/* Locale and messages are inherited from the server render; Client
             Components below can call useTranslations without prop drilling. */}
         <NextIntlClientProvider>
-          <Providers>{children}</Providers>
-          {/* Above every shell, not inside one: the gesture counts how many of
-              our own screens are behind this one, and moving between a group
-              and the home screen swaps one shell for the other. Mounted in
-              there, it would forget its way back on the way in. */}
-          <SwipeBack />
-          <Toaster position="top-center" richColors closeButton />
+          {/* Only what the browser needs: the resolved number locale is
+              derived from these, so sending it too would be sending the same
+              choice twice. */}
+          <FormatPreferencesProvider
+            value={{
+              dateFormat: formats.dateFormat,
+              numberFormat: formats.numberFormat,
+              formatLocale: formats.formatLocale,
+              timeZone: formats.timeZone,
+            }}
+          >
+            <Providers>{children}</Providers>
+            {/* Above every shell, not inside one: the gesture counts how many
+                of our own screens are behind this one, and moving between a
+                group and the home screen swaps one shell for the other.
+                Mounted in there, it would forget its way back on the way in. */}
+            <SwipeBack />
+            <Toaster position="top-center" richColors closeButton />
+          </FormatPreferencesProvider>
         </NextIntlClientProvider>
       </body>
     </html>

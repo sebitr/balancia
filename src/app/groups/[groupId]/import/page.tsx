@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getDateFormatter } from "@/i18n/preferences";
 import { Badge } from "@/components/ui/badge";
 import { ImportWizard } from "@/components/imports/import-wizard";
 import { requireGroupAccess } from "@/lib/actions";
@@ -17,7 +18,7 @@ export default async function ImportPage({
 
   const runs = await listImportRuns(access.groupId);
   const t = await getTranslations("importPage");
-  const format = await getFormatter();
+  const dates = await getDateFormatter();
 
   return (
     <div className="space-y-6">
@@ -46,11 +47,7 @@ export default async function ImportPage({
                     {run.fileName}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {format.dateTime(run.createdAt, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}{" "}
-                    ·{" "}
+                    {dates.at(run.createdAt, { time: "short" })} ·{" "}
                     {t("runSummary", {
                       imported: run.rowsImported,
                       skipped: run.rowsSkipped,

@@ -6,6 +6,7 @@ import { notifications, pushSubscriptions, users } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
 import { notificationTranslator, resolveLocale } from "@/i18n/emails";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { isNumberFormat, numberLocale } from "@/i18n/format";
 import { isPushConfigured, sendPush, type PushOutcome } from "@/lib/push/send";
 import { renderNotification, type Translate } from "./render";
 import type { NotificationEntry, NotificationPayload } from "./types";
@@ -150,11 +151,29 @@ async function pushClaimed(
   const userIds = [...new Set(claimed.map((row) => row.userId))];
 
   const readers = await db
-    .select({ id: users.id, locale: users.locale })
+    .select({
+      id: users.id,
+      locale: users.locale,
+      numberFormat: users.numberFormat,
+    })
     .from(users)
     .where(inArray(users.id, userIds));
   const localeByUser = new Map(
     readers.map((reader) => [reader.id, resolveLocale(reader.locale)]),
+  );
+  // A reader who writes amounts a particular way is owed that on their lock
+  // screen too, not only inside the app.
+  const numberLocaleByUser = new Map(
+    readers.map((reader) => {
+      const locale = resolveLocale(reader.locale);
+      return [
+        reader.id,
+        numberLocale(
+          isNumberFormat(reader.numberFormat) ? reader.numberFormat : "auto",
+          locale,
+        ),
+      ];
+    }),
   );
 
   const devices = await db
@@ -195,6 +214,7 @@ async function pushClaimed(
       row,
       notificationTranslator(locale) as Translate,
       locale,
+      { numberLocale: numberLocaleByUser.get(row.userId) },
     );
     const payload = JSON.stringify({
       title: rendered.title,

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { after } from "next/server";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { Plus, Receipt, Upload, Users } from "lucide-react";
-import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
+import { getDateFormatter } from "@/i18n/preferences";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -44,7 +44,7 @@ export default async function GroupOverviewPage({
   ]);
 
   const t = await getTranslations("group");
-  const format = await getFormatter();
+  const dates = await getDateFormatter();
   const now = new Date();
 
   // Read during the render, used after it: the value the reader has just been
@@ -63,14 +63,8 @@ export default async function GroupOverviewPage({
     t("metaExpenses", { count: overview.expenseCount }),
     overview.span
       ? t("metaSpan", {
-          first: format.dateTime(
-            parsePlainDate(overview.span.first),
-            PLAIN_DATE_FORMAT,
-          ),
-          last: format.dateTime(
-            parsePlainDate(overview.span.last),
-            PLAIN_DATE_FORMAT,
-          ),
+          first: dates.plain(overview.span.first),
+          last: dates.plain(overview.span.last),
         })
       : null,
   ].filter((part): part is string => part !== null);

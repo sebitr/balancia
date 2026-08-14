@@ -1,4 +1,5 @@
-import { useFormatter, useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { getDateFormatter } from "@/i18n/preferences";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
 
@@ -8,15 +9,18 @@ import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
  * Events are stored as an action plus safe metadata, so the wording lives in
  * the message catalogue rather than in the database — a phrasing change, or a
  * new language, does not require rewriting history.
+ *
+ * Rendered on the server, which is where the reader's date notation can be
+ * read from their cookies without shipping a list renderer to the browser.
  */
 
-export function ActivityFeed({
+export async function ActivityFeed({
   entries,
 }: {
   entries: readonly ActivityEntry[];
 }) {
-  const t = useTranslations("activity");
-  const format = useFormatter();
+  const t = await getTranslations("activity");
+  const dates = await getDateFormatter();
   // The action id is runtime data, so its key cannot be checked at compile
   // time; `t.has` inside the helper is what makes reading it back safe.
   const translate = t as unknown as ActivityTranslate;
@@ -48,10 +52,7 @@ export function ActivityFeed({
               dateTime={entry.createdAt.toISOString()}
               className="text-xs text-muted-foreground"
             >
-              {format.dateTime(entry.createdAt, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
+              {dates.at(entry.createdAt, { time: "short" })}
             </time>
           </span>
         </li>

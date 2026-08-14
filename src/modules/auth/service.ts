@@ -196,11 +196,36 @@ export async function registerUser(
   return { user, session, verificationRequired: false };
 }
 
+/**
+ * What an account chose to read in. Every field is null until it is chosen,
+ * and sign-in seeds the matching cookies from these — which is how a returning
+ * user gets their language and notation on a device that has no cookies yet.
+ */
+export interface StoredPreferences {
+  readonly locale: string | null;
+  readonly dateFormat: string | null;
+  readonly numberFormat: string | null;
+}
+
 export interface SignInResult {
   readonly user: AuthenticatedUser;
   readonly session: CreatedSession;
-  /** The account's stored language, or null if they never chose one. */
-  readonly locale: string | null;
+  readonly preferences: StoredPreferences;
+}
+
+/** The columns behind `StoredPreferences`, for the selects that carry them. */
+const PREFERENCE_COLUMNS = {
+  locale: users.locale,
+  dateFormat: users.dateFormat,
+  numberFormat: users.numberFormat,
+} as const;
+
+function preferencesOf(row: StoredPreferences): StoredPreferences {
+  return {
+    locale: row.locale,
+    dateFormat: row.dateFormat,
+    numberFormat: row.numberFormat,
+  };
 }
 
 export async function signInWithPassword(
@@ -220,7 +245,7 @@ export async function signInWithPassword(
       passwordHash: users.passwordHash,
       emailVerifiedAt: users.emailVerifiedAt,
       disabledAt: users.disabledAt,
-      locale: users.locale,
+      ...PREFERENCE_COLUMNS,
     })
     .from(users)
     .where(eq(sql`lower(${users.email})`, email))
@@ -251,7 +276,7 @@ export async function signInWithPassword(
       emailVerified: row.emailVerifiedAt !== null,
     },
     session,
-    locale: row.locale,
+    preferences: preferencesOf(row),
   };
 }
 
@@ -304,7 +329,7 @@ export async function signInWithApple(
       name: users.name,
       emailVerifiedAt: users.emailVerifiedAt,
       disabledAt: users.disabledAt,
-      locale: users.locale,
+      ...PREFERENCE_COLUMNS,
     })
     .from(oauthIdentities)
     .innerJoin(users, eq(users.id, oauthIdentities.userId))
@@ -346,7 +371,7 @@ export async function signInWithApple(
         emailVerified: existing.emailVerifiedAt !== null,
       },
       session,
-      locale: existing.locale,
+      preferences: preferencesOf(existing),
     };
   }
 
@@ -396,7 +421,7 @@ export async function signInWithApple(
         email: users.email,
         name: users.name,
         emailVerifiedAt: users.emailVerifiedAt,
-        locale: users.locale,
+        ...PREFERENCE_COLUMNS,
       })
       .from(users)
       .where(eq(users.id, claimed.id))
@@ -411,7 +436,7 @@ export async function signInWithApple(
         emailVerified: row.emailVerifiedAt !== null,
       },
       session,
-      locale: row.locale,
+      preferences: preferencesOf(row),
     };
   }
 
@@ -443,7 +468,7 @@ export async function signInWithApple(
         email: users.email,
         name: users.name,
         emailVerifiedAt: users.emailVerifiedAt,
-        locale: users.locale,
+        ...PREFERENCE_COLUMNS,
       });
 
     await tx.insert(oauthIdentities).values({
@@ -469,7 +494,7 @@ export async function signInWithApple(
       emailVerified: created.emailVerifiedAt !== null,
     },
     session,
-    locale: created.locale,
+    preferences: preferencesOf(created),
   };
 }
 
@@ -682,6 +707,25 @@ export async function saveUserPreferredCurrency(
   await db
     .update(users)
     .set({ preferredCurrency, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * How the account writes dates and numbers.
+ *
+ * `null` on either is the same "not chosen yet" the language column uses, and
+ * means the reader's own locale decides. Validation of the values themselves
+ * belongs to the caller, and to the check constraints on the columns.
+ */
+export async function saveUserFormatPreferences(
+  userId: string,
+  preferences: { dateFormat: string | null; numberFormat: string | null },
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(users)
+    .set({ ...preferences, updatedAt: new Date() })
     .where(eq(users.id, userId));
 }
 

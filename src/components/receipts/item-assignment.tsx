@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useNumberLocale } from "@/i18n/format-context";
 import { Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -49,7 +50,7 @@ export function ItemAssignmentView({
   total: bigint;
 }) {
   const t = useTranslations("receiptScanner.assign");
-  const locale = useLocale();
+  const locale = useNumberLocale();
 
   const items = useMemo(() => draftItems(draft), [draft]);
   const claimed = useMemo(
