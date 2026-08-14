@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { addParticipant, createGroup, registerAndSignIn } from "./helpers";
+import {
+  addParticipant,
+  createGroup,
+  createInviteLink,
+  registerAndSignIn,
+} from "./helpers";
 
 /**
  * Guest participation through a secure link — including the property that the
@@ -16,18 +21,11 @@ test("invite a guest and participate through the secure link", async ({
   await addParticipant(ownerPage, groupId, "Grace");
 
   // Create the invitation link.
-  await ownerPage.goto(`/groups/${groupId}/members`);
-  await ownerPage
-    .getByRole("button", { name: "Create invitation link" })
-    .click();
+  const inviteUrl = await createInviteLink(ownerPage, groupId, "Grace");
 
   // The warning about what the link grants must be shown.
   await expect(ownerPage.getByText(/Copy this link now/)).toBeVisible();
   await expect(ownerPage.getByText(/can act as/)).toBeVisible();
-
-  const linkInput = ownerPage.getByLabel(/Invitation link for Grace/);
-  const inviteUrl = await linkInput.inputValue();
-  expect(inviteUrl).toContain("/join/");
 
   // Redeem it in a fresh browser context — a different person entirely.
   const guestContext = await browser.newContext();
@@ -71,13 +69,7 @@ test("a guest cannot reach another group or the dashboard", async ({
   const privateGroup = await createGroup(ownerPage, { name: "Private group" });
   await addParticipant(ownerPage, invitedGroup, "Grace");
 
-  await ownerPage.goto(`/groups/${invitedGroup}/members`);
-  await ownerPage
-    .getByRole("button", { name: "Create invitation link" })
-    .click();
-  const inviteUrl = await ownerPage
-    .getByLabel(/Invitation link for Grace/)
-    .inputValue();
+  const inviteUrl = await createInviteLink(ownerPage, invitedGroup, "Grace");
 
   const guestContext = await browser.newContext();
   const guestPage = await guestContext.newPage();
@@ -106,25 +98,20 @@ test("revoking a link ends the guest's access immediately", async ({
   const groupId = await createGroup(ownerPage, { name: "Revocation" });
   await addParticipant(ownerPage, groupId, "Grace");
 
-  await ownerPage.goto(`/groups/${groupId}/members`);
-  await ownerPage
-    .getByRole("button", { name: "Create invitation link" })
-    .click();
-  const inviteUrl = await ownerPage
-    .getByLabel(/Invitation link for Grace/)
-    .inputValue();
+  const inviteUrl = await createInviteLink(ownerPage, groupId, "Grace");
 
   const guestContext = await browser.newContext();
   const guestPage = await guestContext.newPage();
   await guestPage.goto(inviteUrl);
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
 
-  // Owner revokes.
-  await ownerPage.getByRole("button", { name: "I have copied it" }).click();
+  // Owner revokes. Dismissing the one-time reveal returns the row to the live
+  // link and its two actions; revoking needs no confirmation of its own,
+  // because issuing a fresh link is all it takes to undo.
+  await ownerPage.getByRole("button", { name: "I’ve copied it" }).click();
   await ownerPage.getByRole("button", { name: "Revoke" }).click();
-  await ownerPage.getByRole("button", { name: "Revoke link" }).click();
   await expect(
-    ownerPage.getByRole("button", { name: "Create invitation link" }),
+    ownerPage.getByRole("button", { name: "Create invite link" }),
   ).toBeVisible();
 
   // The guest's session is dead. They are no longer authenticated at all, so

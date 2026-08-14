@@ -24,6 +24,7 @@ export const activityActionEnum = pgEnum("activity_action", [
   "participant.created",
   "participant.updated",
   "participant.removed",
+  "participant.restored",
   "guest_link.created",
   "guest_link.revoked",
   "guest_link.redeemed",
