@@ -8,6 +8,8 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import { dispatchNotifications } from "@/modules/notifications/service";
+import { recordSettlementNotification } from "@/modules/notifications/events";
 import { resolveConversion } from "@/modules/currencies/conversion";
 import { money } from "@/modules/currencies/money";
 import { classifyRateSource } from "@/modules/currencies/rates";
@@ -75,7 +77,7 @@ export async function createSettlement(
     on: input.settledOn,
   });
 
-  return db.transaction(async (tx) => {
+  const { settlementId, notificationIds } = await db.transaction(async (tx) => {
     await assertParticipants(tx, access.groupId, [
       input.fromParticipantId,
       input.toParticipantId,
@@ -108,6 +110,7 @@ export async function createSettlement(
         exchangeRateSource: conversion.frozenRate?.source ?? null,
         exchangeRateAt: conversion.frozenRate?.capturedAt ?? null,
         settledOn: input.settledOn,
+        paymentMethod: input.paymentMethod || null,
         notes: input.notes || null,
         createdByActorType: access.actor.kind,
         createdByParticipantId: access.participantId,
@@ -128,8 +131,20 @@ export async function createSettlement(
       },
     });
 
-    return settlement.id;
+    const notificationIds = await recordSettlementNotification(tx, access, {
+      type: "settlement.created",
+      settlementId: settlement.id,
+      fromParticipantId: input.fromParticipantId,
+      toParticipantId: input.toParticipantId,
+      amount: BigInt(input.amount),
+      currency: input.currency,
+    });
+
+    return { settlementId: settlement.id, notificationIds };
   });
+
+  await dispatchNotifications(notificationIds);
+  return settlementId;
 }
 
 export async function updateSettlement(
@@ -149,7 +164,7 @@ export async function updateSettlement(
     on: input.settledOn,
   });
 
-  await db.transaction(async (tx) => {
+  const notificationIds = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: settlements.id })
       .from(settlements)
@@ -212,7 +227,18 @@ export async function updateSettlement(
       ...activityActorFrom(access),
       metadata: { amount: input.amount, currency: input.currency },
     });
+
+    return recordSettlementNotification(tx, access, {
+      type: "settlement.updated",
+      settlementId,
+      fromParticipantId: input.fromParticipantId,
+      toParticipantId: input.toParticipantId,
+      amount: BigInt(input.amount),
+      currency: input.currency,
+    });
   });
+
+  await dispatchNotifications(notificationIds);
 }
 
 export async function deleteSettlement(
@@ -223,7 +249,7 @@ export async function deleteSettlement(
   requirePermission(access, "addSettlement");
   const db = options.db ?? getDb();
 
-  await db.transaction(async (tx) => {
+  const notificationIds = await db.transaction(async (tx) => {
     const deleted = await tx
       .update(settlements)
       .set({ deletedAt: new Date() })
@@ -238,6 +264,8 @@ export async function deleteSettlement(
         id: settlements.id,
         amount: settlements.amount,
         currency: settlements.currency,
+        fromParticipantId: settlements.fromParticipantId,
+        toParticipantId: settlements.toParticipantId,
       });
 
     if (deleted.length === 0) {
@@ -258,7 +286,18 @@ export async function deleteSettlement(
         currency: deleted[0].currency,
       },
     });
+
+    return recordSettlementNotification(tx, access, {
+      type: "settlement.deleted",
+      settlementId,
+      fromParticipantId: deleted[0].fromParticipantId,
+      toParticipantId: deleted[0].toParticipantId,
+      amount: deleted[0].amount,
+      currency: deleted[0].currency,
+    });
   });
+
+  await dispatchNotifications(notificationIds);
 }
 
 export async function listSettlements(

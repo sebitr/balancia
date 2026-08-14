@@ -13,6 +13,10 @@ import { getPool, closeDb } from "@/lib/db/client";
 const DOMAIN_TABLES = [
   "activity_events",
   "attachments",
+  "notifications",
+  "notification_preferences",
+  "notification_group_mutes",
+  "push_subscriptions",
   "imported_fingerprints",
   "import_rows",
   "import_runs",

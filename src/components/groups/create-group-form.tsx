@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CurrencySelect } from "@/components/money/currency-select";
 import { TimezoneSelect } from "@/components/groups/timezone-select";
 import { ParticipantNamesField } from "@/components/groups/participant-names-field";
+import { useDetectedTimezone } from "@/components/groups/use-detected-timezone";
 import { createGroupAction } from "@/modules/groups/actions";
 import type { CurrencyMode } from "@/modules/currencies/conversion";
 
@@ -37,6 +38,16 @@ export function CreateGroupForm({
   const [ownerName, setOwnerName] = useState(defaultName);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  /**
+   * Most groups keep the time their members keep, so the device's own zone is
+   * a better first guess than UTC — but only until someone says otherwise,
+   * which is why the choice is what is stored and the guess is what fills in
+   * for it.
+   */
+  const detected = useDetectedTimezone();
+  const [chosen, setChosen] = useState<string | null>(null);
+  const timezone = chosen ?? detected ?? defaultTimezone;
 
   const onSubmit = async (formData: FormData) => {
     setError(null);
@@ -170,9 +181,12 @@ export function CreateGroupForm({
         <TimezoneSelect
           id="timezone"
           name="timezone"
-          defaultValue={defaultTimezone}
+          value={timezone}
+          onValueChange={setChosen}
         />
-        <p className="text-xs text-muted-foreground">{t("timezoneHelp")}</p>
+        <p className="text-xs text-muted-foreground">
+          {timezone === detected ? t("timezoneDetected") : t("timezoneHelp")}
+        </p>
       </div>
 
       <Button type="submit" className="w-full" disabled={pending}>

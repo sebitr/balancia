@@ -113,12 +113,33 @@ describe("message catalogues", () => {
 
   it("leaves no message untranslated by accident", () => {
     // Some values are legitimately identical across languages — a bare
-    // placeholder, a product name, a word French borrowed unchanged.
+    // placeholder, a product name, a word French borrowed unchanged. Long
+    // ones have to be named here, so that "identical" stays a deliberate
+    // choice rather than a translation someone forgot.
+    const SAME_IN_BOTH = new Set([
+      "nav.notifications",
+      "notificationsPage.metaTitle",
+      "notificationsPage.title",
+      "notificationsPage.bell",
+      "notificationSettings.title",
+      // Two dates and an en dash: there is nothing in it to translate.
+      "group.metaSpan",
+      // Two placeholders and a comma, same in both.
+      "addEntry.repeat.active",
+      // Product names. Interac and Bancontact Pay are called that in French
+      // too — only the two generic methods, `bank` and `cash`, translate.
+      "paymentMethods.interac",
+      "paymentMethods.payconiq",
+    ]);
+
     const identical = [...english].filter(
       ([key, source]) => french.get(key) === source,
     );
     const unexpected = identical.filter(
-      ([, source]) => source.length > 12 && !/^\{[a-zA-Z]+\}$/.test(source),
+      ([key, source]) =>
+        source.length > 12 &&
+        !/^\{[a-zA-Z]+\}$/.test(source) &&
+        !SAME_IN_BOTH.has(key),
     );
     expect(unexpected.map(([key]) => key)).toEqual([]);
   });

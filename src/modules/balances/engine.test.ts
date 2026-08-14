@@ -4,9 +4,11 @@ import {
   BalanceError,
   balancesSumToZero,
   computeBalances,
+  contributionsOf,
   simplifyDebts,
   totalSpendByCurrency,
   type BalanceComputationInput,
+  type BalanceInputExpense,
   type ParticipantBalance,
 } from "./engine";
 
@@ -541,5 +543,247 @@ describe("simplifyDebts", () => {
       ),
       { numRuns: 400 },
     );
+  });
+});
+
+describe("contributionsOf", () => {
+  const expenses: BalanceInputExpense[] = [
+    {
+      id: "dinner",
+      currency: "EUR",
+      payers: [{ participantId: "a", amount: 9000n }],
+      shares: [
+        { participantId: "a", amount: 3000n },
+        { participantId: "b", amount: 3000n },
+        { participantId: "c", amount: 3000n },
+      ],
+    },
+    {
+      id: "taxi",
+      currency: "EUR",
+      payers: [{ participantId: "b", amount: 2000n }],
+      shares: [
+        { participantId: "a", amount: 1000n },
+        { participantId: "b", amount: 1000n },
+      ],
+    },
+    {
+      id: "ferry",
+      currency: "CHF",
+      payers: [{ participantId: "a", amount: 5000n }],
+      shares: [
+        { participantId: "a", amount: 2500n },
+        { participantId: "b", amount: 2500n },
+      ],
+    },
+  ];
+
+  it("separates what someone put in from what was theirs to carry", () => {
+    expect(contributionsOf(expenses, "a").get("EUR")).toEqual({
+      paid: 9000n,
+      share: 4000n,
+    });
+  });
+
+  /**
+   * The pair is what explains a balance: paid minus share *is* the position,
+   * and showing both is the difference between a number and a reason.
+   */
+  it("agrees with the balance the engine computes", () => {
+    const contribution = contributionsOf(expenses, "b").get("EUR");
+    const balance = balancesFor(
+      { participantIds: ["a", "b", "c"], expenses, settlements: [] },
+      "EUR",
+    ).find((row) => row.participantId === "b");
+
+    expect(contribution).toBeDefined();
+    expect(balance?.amount).toBe(contribution!.paid - contribution!.share);
+  });
+
+  it("keeps each currency apart", () => {
+    const totals = contributionsOf(expenses, "a");
+    expect(totals.get("CHF")).toEqual({ paid: 5000n, share: 2500n });
+    expect([...totals.keys()].sort()).toEqual(["CHF", "EUR"]);
+  });
+
+  it("reports nothing for someone with no part in any expense", () => {
+    expect(contributionsOf(expenses, "nobody").size).toBe(0);
+  });
+
+  it("counts a share without a payment", () => {
+    expect(contributionsOf(expenses, "c").get("EUR")).toEqual({
+      paid: 0n,
+      share: 3000n,
+    });
+  });
+});
+
+describe("computeBalances — income", () => {
+  /**
+   * The mirror image of the single-payer case above: 3000 received and split
+   * three ways leaves the receiver 2000 down instead of 2000 up.
+   */
+  it("puts the receiver in debt and credits everyone else", () => {
+    const balances = balancesFor(
+      {
+        participantIds: ["a", "b", "c"],
+        expenses: [
+          {
+            id: "rent",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 3000n }],
+            shares: [
+              { participantId: "a", amount: 1000n },
+              { participantId: "b", amount: 1000n },
+              { participantId: "c", amount: 1000n },
+            ],
+          },
+        ],
+        settlements: [],
+      },
+      "EUR",
+    );
+    expect(amountsByParticipant(balances)).toEqual({
+      a: -2000n,
+      b: 1000n,
+      c: 1000n,
+    });
+    expect(balancesSumToZero(balances)).toBe(true);
+  });
+
+  /** "Mine only — credit Seb": recorded, but nobody else's balance moves. */
+  it("moves nobody when the income is credited to one person", () => {
+    const balances = balancesFor(
+      {
+        participantIds: ["a", "b", "c"],
+        expenses: [
+          {
+            id: "salary",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 240000n }],
+            shares: [{ participantId: "a", amount: 240000n }],
+          },
+        ],
+        settlements: [],
+      },
+      "EUR",
+    );
+    expect(amountsByParticipant(balances)).toEqual({ a: 0n, b: 0n, c: 0n });
+  });
+
+  it("cancels an identical expense out", () => {
+    const shares = [
+      { participantId: "a", amount: 1000n },
+      { participantId: "b", amount: 1000n },
+    ];
+    const balances = balancesFor(
+      {
+        participantIds: ["a", "b"],
+        expenses: [
+          {
+            id: "paid",
+            currency: "EUR",
+            payers: [{ participantId: "a", amount: 2000n }],
+            shares,
+          },
+          {
+            id: "refunded",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 2000n }],
+            shares,
+          },
+        ],
+        settlements: [],
+      },
+      "EUR",
+    );
+    expect(amountsByParticipant(balances)).toEqual({ a: 0n, b: 0n });
+  });
+
+  it("treats an absent direction as spending", () => {
+    const expense: BalanceInputExpense = {
+      id: "e1",
+      currency: "EUR",
+      payers: [{ participantId: "a", amount: 2000n }],
+      shares: [
+        { participantId: "a", amount: 1000n },
+        { participantId: "b", amount: 1000n },
+      ],
+    };
+    const withDirection = balancesFor(
+      {
+        participantIds: ["a", "b"],
+        expenses: [{ ...expense, direction: "out" }],
+        settlements: [],
+      },
+      "EUR",
+    );
+    const without = balancesFor(
+      { participantIds: ["a", "b"], expenses: [expense], settlements: [] },
+      "EUR",
+    );
+    expect(amountsByParticipant(without)).toEqual(
+      amountsByParticipant(withDirection),
+    );
+  });
+
+  it("still rejects an unbalanced entry", () => {
+    expect(() =>
+      computeBalances({
+        participantIds: ["a", "b"],
+        expenses: [
+          {
+            id: "bad",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 2000n }],
+            shares: [{ participantId: "b", amount: 1500n }],
+          },
+        ],
+        settlements: [],
+      }),
+    ).toThrow(BalanceError);
+  });
+});
+
+describe("spending statistics exclude income", () => {
+  const entries: BalanceInputExpense[] = [
+    {
+      id: "groceries",
+      currency: "EUR",
+      payers: [{ participantId: "a", amount: 6000n }],
+      shares: [
+        { participantId: "a", amount: 3000n },
+        { participantId: "b", amount: 3000n },
+      ],
+    },
+    {
+      id: "rent-received",
+      currency: "EUR",
+      direction: "in",
+      payers: [{ participantId: "a", amount: 240000n }],
+      shares: [
+        { participantId: "a", amount: 120000n },
+        { participantId: "b", amount: 120000n },
+      ],
+    },
+  ];
+
+  /**
+   * A month with heavy spending and one large rent cheque is not a quiet
+   * month, and netting the two would report it as one.
+   */
+  it("leaves income out of total spend", () => {
+    expect(totalSpendByCurrency(entries).get("EUR")).toBe(6000n);
+  });
+
+  it("leaves income out of what someone paid and carried", () => {
+    expect(contributionsOf(entries, "a").get("EUR")).toEqual({
+      paid: 6000n,
+      share: 3000n,
+    });
   });
 });

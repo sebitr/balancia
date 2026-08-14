@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GroupSettingsForm } from "@/components/groups/group-settings-form";
 import { DangerZone } from "@/components/groups/danger-zone";
 import { requireGroupAccess } from "@/lib/actions";
+import { PUSH } from "@/components/motion/transitions";
 
 export default async function GroupSettingsPage({
   params,
@@ -26,14 +27,14 @@ export default async function GroupSettingsPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button asChild variant="outline" size="sm">
-            <Link href={`/groups/${groupId}/recurring`}>
+            <Link href={`/groups/${groupId}/recurring`} transitionTypes={PUSH}>
               <RefreshCw aria-hidden="true" />
               {t("recurring")}
             </Link>
           </Button>
           {access.permissions.importData && (
             <Button asChild variant="outline" size="sm">
-              <Link href={`/groups/${groupId}/import`}>
+              <Link href={`/groups/${groupId}/import`} transitionTypes={PUSH}>
                 <Upload aria-hidden="true" />
                 {t("import")}
               </Link>

@@ -44,6 +44,12 @@ public/sw.js.map
 # optional embedding model, installed by scripts/fetch-semantic-model.ts
 public/models
 
+# optional payment-method logos, supplied by the operator.
+# The instructions stay in the repo; the artwork never does — see the README
+# in that directory for why.
+public/payment-methods/*
+!public/payment-methods/README.md
+
 # build output for worker/migrator bundles
 /dist
 

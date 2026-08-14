@@ -35,6 +35,7 @@ export const activityActionEnum = pgEnum("activity_action", [
   "group.created",
   "group.updated",
   "group.archived",
+  "reminder.sent",
 ]);
 
 /**

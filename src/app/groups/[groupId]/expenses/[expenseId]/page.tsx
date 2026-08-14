@@ -12,6 +12,7 @@ import { requireGroupAccess } from "@/lib/actions";
 import { getExpense } from "@/modules/expenses/service";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
 import { isExpenseCategory } from "@/modules/categorization";
+import { POP, PUSH } from "@/components/motion/transitions";
 
 /** Split method → catalogue key, so the badge follows the reader's language. */
 const SPLIT_LABEL_KEYS = {
@@ -56,7 +57,7 @@ export default async function ExpenseDetailPage({
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}/expenses`}>
+          <Link href={`/groups/${groupId}/expenses`} transitionTypes={POP}>
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>
@@ -194,7 +195,10 @@ export default async function ExpenseDetailPage({
 
       <div className="flex gap-3">
         <Button asChild variant="outline" className="flex-1">
-          <Link href={`/groups/${groupId}/expenses/${expenseId}/edit`}>
+          <Link
+            href={`/groups/${groupId}/expenses/${expenseId}/edit`}
+            transitionTypes={PUSH}
+          >
             <Pencil aria-hidden="true" />
             {t("edit")}
           </Link>

@@ -15,6 +15,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrencySelect } from "@/components/money/currency-select";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { ReceiptUploader } from "@/components/expenses/receipt-uploader";
+import {
+  ScanReceiptEntry,
+  type ScannedExpense,
+} from "@/components/receipts/scan-receipt-entry";
 import { CategoryField } from "@/components/expenses/category-field";
 import { useCategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import {
@@ -22,6 +26,7 @@ import {
   updateExpenseAction,
 } from "@/modules/expenses/actions";
 import type { LearnedMerchantMapping } from "@/modules/categorization";
+import type { EntryDirection } from "@/modules/expenses/direction";
 import {
   formatMinorUnits,
   parseAmountToMinor,
@@ -48,6 +53,14 @@ export interface ExpenseFormParticipant {
 
 export interface ExpenseFormInitialValues {
   readonly id: string;
+  /**
+   * Carried through untouched.
+   *
+   * This form only edits spending, but it must not *change* what it was
+   * handed: saving without this would rewrite an income as an expense and move
+   * every balance by twice the amount.
+   */
+  readonly direction: EntryDirection;
   readonly description: string;
   readonly notes: string;
   readonly category: string;
@@ -83,6 +96,7 @@ export function ExpenseForm({
   initial,
   categoryMappings = NO_MAPPINGS,
   semanticCategorization = false,
+  receiptScanning = false,
 }: {
   groupId: string;
   participants: readonly ExpenseFormParticipant[];
@@ -94,6 +108,8 @@ export function ExpenseForm({
   categoryMappings?: readonly LearnedMerchantMapping[];
   /** Whether the operator installed the optional embedding model. */
   semanticCategorization?: boolean;
+  /** Whether the operator installed the optional OCR models. */
+  receiptScanning?: boolean;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
@@ -236,6 +252,32 @@ export function ExpenseForm({
     );
   };
 
+  /**
+   * Fills the form in from a scanned receipt.
+   *
+   * The scanner produces values for fields that already exist, and the split
+   * it produces is an ordinary **exact** split — so from here on a scanned
+   * expense is indistinguishable from a typed one, and the server recomputes
+   * the same allocations either way.
+   *
+   * A merchant the scanner could not read leaves the description alone rather
+   * than blanking whatever was already typed.
+   */
+  const applyScan = (scan: ScannedExpense) => {
+    if (scan.description !== "") setDescription(scan.description);
+    setAmountText(scan.amount);
+    setCurrency(scan.currency);
+    setExpenseDate(scan.date);
+    setSplitMethod("exact");
+    setSelectedIds([...scan.participantIds]);
+    setSplitValues(scan.splitValues);
+    if (scan.attachmentId) {
+      setAttachmentIds((current) => [...current, scan.attachmentId!]);
+    }
+    // Paid-by is left untouched: the receipt says what was bought, never who
+    // put the card in the machine.
+  };
+
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -291,6 +333,7 @@ export function ExpenseForm({
     });
 
     const payload = {
+      direction: initial?.direction ?? "out",
       description,
       notes,
       category: effectiveCategory,
@@ -330,6 +373,18 @@ export function ExpenseForm({
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+
+      {!isEdit && (
+        // Offered on a new expense only: re-scanning an expense that already
+        // exists would overwrite a split somebody may have adjusted by hand.
+        <ScanReceiptEntry
+          enabled={receiptScanning}
+          groupId={groupId}
+          participants={participants}
+          defaultCurrency={defaultCurrency}
+          onApply={applyScan}
+        />
       )}
 
       <div className="space-y-2">
