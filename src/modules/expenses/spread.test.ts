@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryTotals,
+  isCategorised,
   spreadBands,
   UNCATEGORISED,
   type SpreadEntry,
@@ -122,6 +123,38 @@ describe("categoryTotals", () => {
   it("has nothing to say about a group that has spent nothing", () => {
     expect(categoryTotals([], SEPARATE)).toEqual([]);
     expect(categoryTotals([entry({ direction: "in" })], SEPARATE)).toEqual([]);
+  });
+});
+
+describe("isCategorised", () => {
+  const spreadOf = (entries: SpreadEntry[]) =>
+    categoryTotals(entries, SEPARATE)[0];
+
+  it("says no while every expense is still uncategorised", () => {
+    const spread = spreadOf([
+      entry({ category: null, amount: 25000n }),
+      entry({ category: null, amount: 25000n }),
+    ]);
+
+    // One band holding the whole total is not a breakdown, so the caller
+    // drawing the spine leaves it out.
+    expect(spread.categories).toHaveLength(1);
+    expect(isCategorised(spread)).toBe(false);
+  });
+
+  it("says yes as soon as one expense is filed, however little it is worth", () => {
+    const spread = spreadOf([
+      entry({ category: null, amount: 25000n }),
+      entry({ category: "groceries", amount: 1n }),
+    ]);
+
+    expect(isCategorised(spread)).toBe(true);
+  });
+
+  it("counts an imported free-text category, which is still somebody's answer", () => {
+    expect(isCategorised(spreadOf([entry({ category: "Lodging" })]))).toBe(
+      true,
+    );
   });
 });
 
