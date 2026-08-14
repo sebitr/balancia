@@ -126,6 +126,9 @@ describe("message catalogues", () => {
       "group.metaSpan",
       // Two placeholders and a comma, same in both.
       "addEntry.repeat.active",
+      // A category name and a count of the ones folded in behind it: a
+      // placeholder, a plus sign and a placeholder.
+      "expensesList.bandRemainder",
       // Product names. Interac and Bancontact Pay are called that in French
       // too — only the two generic methods, `bank` and `cash`, translate.
       "paymentMethods.interac",
