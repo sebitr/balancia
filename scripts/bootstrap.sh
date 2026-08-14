@@ -22,6 +22,13 @@
 #                           optional feature at its default, which is off
 #   -h, --help              this text
 #
+#   --color, --no-color     settle the colour rather than detecting it
+#
+# Output is coloured when stdout is a terminal, unless NO_COLOR is set or TERM
+# is "dumb". Piped, redirected, or run by `docker run` without -t, there is no
+# terminal and it comes out as plain text — pass --color, or set FORCE_COLOR,
+# to colour it anyway.
+#
 # The secrets need only a POSIX shell and /dev/urandom: no openssl, no Node.
 # Two of the optional features download model files, and for those it needs
 # Node or Docker; without either it says which command to run instead.
@@ -37,40 +44,97 @@ env_file="$root_dir/.env"
 ocr_sentinel="$root_dir/public/models/ocr/ppocrv5-mobile-rec.onnx"
 semantic_sentinel="$root_dir/public/models/Xenova/paraphrase-multilingual-MiniLM-L12-v2/config.json"
 
-usage() {
-  cat <<'USAGE'
-Balancia first-run setup. Writes .env next to compose.yaml.
+# The settings the questions below write, in the order they are asked. Kept as
+# a list as well as in the code so the prompts can say "3 of 7" — a wizard that
+# will not say how long it is stays longer than it should. One name per
+# question block; adding a block means adding a name.
+question_keys='APP_URL ALLOW_REGISTRATION EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST'
 
-  ./scripts/bootstrap.sh                 generate secrets, ask about features
-  ./scripts/bootstrap.sh --defaults      generate secrets, ask nothing
+# ── Presentation ────────────────────────────────────────────────────────────
 
-  -y, --yes, --defaults   do not ask; leave every optional feature off
-  -h, --help              this text
-
-Safe to re-run: settings already in .env are left alone.
-USAGE
-}
-
-interactive=1
+# Colour when stdout is a terminal that wants it, and nothing at all otherwise:
+# these strings are also the ones that would end up inside .env or a log file.
+# NO_COLOR is the convention at no-color.org, TERM=dumb the older one.
+#
+# Detection is only a default, because it is wrong in both directions often
+# enough to be worth overriding: run through a pipe, a pager, `docker run`
+# without -t, or a CI shell, stdout is not a terminal and the colour goes away
+# with no way to ask for it back. --color and --no-color settle it, and are
+# read here in their own pass because usage() needs the palette before the
+# real argument loop runs.
+colour=auto
 for arg in "$@"; do
   case $arg in
-    -y | --yes | --defaults) interactive=0 ;;
-    -h | --help)
-      usage
-      exit 0
-      ;;
-    *)
-      printf 'bootstrap.sh: unknown option "%s"\n\n' "$arg" >&2
-      usage >&2
-      exit 2
-      ;;
+    --color | --colour) colour=always ;;
+    --no-color | --no-colour) colour=never ;;
   esac
 done
 
-# Questions need somewhere to ask. Without a terminal the script is being run
-# by something rather than someone, and guessing on its behalf is worse than
-# leaving the optional features at their documented defaults.
-[ -t 0 ] || interactive=0
+# In precedence order: the flag, then NO_COLOR, then the FORCE_COLOR pair a
+# scripted caller uses to keep colour through a pipe, then the terminal itself.
+want_colour() {
+  case $colour in
+    always) return 0 ;;
+    never) return 1 ;;
+  esac
+  [ -z "${NO_COLOR-}" ] || return 1
+  [ -z "${FORCE_COLOR-}" ] || return 0
+  [ -z "${CLICOLOR_FORCE-}" ] || return 0
+  [ -t 1 ] && [ "${TERM-}" != dumb ]
+}
+
+if want_colour; then
+  bold=$(printf '\033[1m')
+  dim=$(printf '\033[2m')
+  red=$(printf '\033[31m')
+  green=$(printf '\033[32m')
+  yellow=$(printf '\033[33m')
+  cyan=$(printf '\033[36m')
+  reset=$(printf '\033[0m')
+else
+  bold=''
+  dim=''
+  red=''
+  green=''
+  yellow=''
+  cyan=''
+  reset=''
+fi
+
+# Two indents: headings sit at 2, everything belonging to a heading at 6.
+pad='      '
+
+banner() {
+  printf '\n  %sBalancia%s — first-run setup\n' "$bold" "$reset"
+  printf '  %s────────────────────────────%s\n\n' "$dim" "$reset"
+}
+
+# Body text, fed a heredoc so the source reads as prose rather than as a
+# string with newlines in it.
+prose() {
+  while IFS= read -r _line; do
+    if [ -z "$_line" ]; then
+      printf '\n'
+    else
+      printf '%s%s\n' "$pad" "$_line"
+    fi
+  done
+}
+
+done_line() {
+  printf '  %s✓%s  %s\n' "$green" "$reset" "$1"
+}
+
+# Under a prompt, in the same column as the prompt itself.
+oops() {
+  printf '%s%s✗%s %s\n' "$pad" "$red" "$reset" "$1"
+}
+
+note() {
+  printf '%s%s\n' "$pad" "$1"
+}
+
+# ── .env ────────────────────────────────────────────────────────────────────
 
 # Alphanumeric on purpose, not base64. The database password is spliced into a
 # connection URL, where a literal '/', '#' or '?' would end the authority
@@ -93,6 +157,23 @@ is_enabled() {
   grep -qiE "^[[:space:]]*$1=[\"']?(1|true|yes|on)[\"']?[[:space:]]*\$" "$env_file"
 }
 
+# The value as the application will see it: last assignment wins, one layer of
+# quoting removed. Only used for the closing summary.
+value_of() {
+  _raw=$(grep -E "^[[:space:]]*$1=" "$env_file" 2> /dev/null | tail -n 1 | sed "s/^[[:space:]]*$1=//")
+  case $_raw in
+    "'"*"'")
+      _raw=${_raw#\'}
+      _raw=${_raw%\'}
+      ;;
+    '"'*'"')
+      _raw=${_raw#\"}
+      _raw=${_raw%\"}
+      ;;
+  esac
+  printf '%s' "$_raw"
+}
+
 # Appends one setting, preceded by a blank line and a comment explaining it.
 #
 # Compose parses this file itself, and its parser is not a shell: an unquoted
@@ -107,8 +188,9 @@ write_setting() {
 
   case $_value in
     *"'"*)
-      note_pending "$_key contains a single quote, which .env cannot quote. Add it by hand:
-    $_key=$_value"
+      note_pending "$_key contains a single quote, which .env cannot quote.
+Add it by hand:
+  $_key=$_value"
       return 0
       ;;
   esac
@@ -123,11 +205,29 @@ write_setting() {
 
 # Things the operator still has to do, collected as they come up and printed
 # once at the end, where they will not scroll past under a model download.
+#
+# The marker goes on the first line and every later line is indented to sit
+# under it, so callers write the message as plain wrapped prose and do not each
+# have to know how wide the marker is.
 pending=''
 note_pending() {
-  pending="$pending  ! $1
+  pending="$pending$(
+    printf '%s\n' "$1" | {
+      _n=0
+      while IFS= read -r _line; do
+        _n=$((_n + 1))
+        if [ "$_n" -eq 1 ]; then
+          printf '  %s!%s  %s\n' "$yellow" "$reset" "$_line"
+        else
+          printf '     %s\n' "$_line"
+        fi
+      done
+    }
+  )
 "
 }
+
+# ── Prompts ─────────────────────────────────────────────────────────────────
 
 lower() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
@@ -137,9 +237,9 @@ lower() {
 # command substitution would run `read` in a subshell, where the answer dies
 # with it.
 ask_yes_no() {
-  if [ "$2" = y ]; then _hint='[Y/n]'; else _hint='[y/N]'; fi
+  if [ "$2" = y ]; then _hint='Y/n'; else _hint='y/N'; fi
   while :; do
-    printf '%s %s ' "$1" "$_hint"
+    printf '%s%s%s%s %s[%s]%s ▸ ' "$pad" "$bold" "$1" "$reset" "$dim" "$_hint" "$reset"
     read -r reply || {
       reply=''
       printf '\n'
@@ -148,14 +248,15 @@ ask_yes_no() {
       '') [ "$2" = y ] && return 0 || return 1 ;;
       y | yes) return 0 ;;
       n | no) return 1 ;;
-      *) echo '  Please answer y or n.' ;;
+      *) oops 'Please answer y or n.' ;;
     esac
   done
 }
 
 ask_line() {
-  printf '%s ' "$1"
-  [ -z "$2" ] || printf '[%s] ' "$2"
+  printf '%s%s%s%s ' "$pad" "$bold" "$1" "$reset"
+  [ -z "$2" ] || printf '%s[%s]%s ' "$dim" "$2" "$reset"
+  printf '▸ '
   read -r reply || {
     reply=''
     printf '\n'
@@ -165,7 +266,7 @@ ask_line() {
 
 # Reads without echoing. `read -s` is a bashism; stty is not.
 ask_secret() {
-  printf '%s ' "$1"
+  printf '%s%s%s%s ▸ ' "$pad" "$bold" "$1" "$reset"
   if _stty_saved=$(stty -g 2> /dev/null); then
     stty -echo
     read -r reply || reply=''
@@ -177,29 +278,112 @@ ask_secret() {
 }
 
 # A terminal left with echo off is a terminal the operator has to fix by hand.
-trap 'stty echo 2>/dev/null || :; printf "\nInterrupted. Settings written so far are in .env.\n"; exit 130' INT
+trap 'stty echo 2>/dev/null || :; printf "\n\n  %sInterrupted.%s Settings written so far are in .env.\n\n" "$yellow" "$reset"; exit 130' INT
 
 heading() {
-  printf '\n%s\n' "$1"
+  printf '\n  %s%s%s\n\n' "$bold" "$1" "$reset"
 }
 
-# Introduces the questions, on the first one that turns out to still need
-# asking. A re-run with every answer already in .env should say nothing at all,
-# and it cannot know that until it has been through the list.
-intro_shown=0
+# Numbered heading for a question, introduced on the first one that turns out
+# to still need asking: a re-run with every answer already in .env should say
+# nothing at all, and it cannot know that until it has been through the list.
+questions_total=0
+questions_asked=0
 question() {
-  if [ "$intro_shown" -eq 0 ]; then
-    intro_shown=1
+  # At the banner's indent rather than the body's: it introduces the whole
+  # run, not the question it happens to come before.
+  if [ "$questions_asked" -eq 0 ]; then
     cat <<'INTRO'
 
-Now a few questions about the optional features. Each answer is written to
-.env and remembered, so this only happens once — press Enter to take the
-default in brackets. Everything asked here can be changed later by editing
-.env and restarting.
+  A few questions about the optional features. Every answer is written to
+  .env and remembered, so this only happens once — press Enter to take the
+  default in brackets, and change any of it later by editing .env.
 INTRO
   fi
-  heading "$1"
+  questions_asked=$((questions_asked + 1))
+  printf '\n  %s%s/%s%s  %s%s%s\n\n' \
+    "$cyan" "$questions_asked" "$questions_total" "$reset" "$bold" "$1" "$reset"
 }
+
+# ── Model files ─────────────────────────────────────────────────────────────
+
+# The helpers in scripts/ stay the single source of truth for what is
+# downloaded, from where, and how a VAPID pair is built. Running them from here
+# means none of that is restated in shell, where it would drift.
+#
+# They are TypeScript, and two of them import from src/ without a file
+# extension, which Node's own resolver refuses — so a loader is needed however
+# Node arrives. In preference order: the repository's own tsx when the dev
+# dependencies are installed, a throwaway copy from the registry when they are
+# not, and a container for the host that runs Balancia with Docker and has no
+# Node at all.
+#
+# A major rather than an exact version, because this is a type stripper
+# borrowed for one command, not a dependency of the application. The pinned one
+# in node_modules is used whenever it is there.
+tsx_version=4
+
+# Resolved once, on the first thing that needs it.
+ts_runner=''
+
+resolve_ts_runner() {
+  [ -z "$ts_runner" ] || return 0
+
+  if [ -x "$root_dir/node_modules/.bin/tsx" ]; then
+    ts_runner=repo
+  elif command -v npx > /dev/null 2>&1; then
+    ts_runner=npx
+  elif command -v docker > /dev/null 2>&1; then
+    ts_runner=docker
+    note 'No Node on this host — borrowing one from a throwaway container.'
+  else
+    return 1
+  fi
+}
+
+run_ts() {
+  resolve_ts_runner || return 1
+  case $ts_runner in
+    repo) (cd "$root_dir" && ./node_modules/.bin/tsx "$@") ;;
+    npx) (cd "$root_dir" && npx --yes "tsx@$tsx_version" "$@") ;;
+    # HOME is set because npm caches under it, and the borrowed user id has no
+    # home directory of its own inside the image.
+    docker)
+      docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp \
+        --volume "$root_dir:/repo" --workdir /repo \
+        node:24-alpine npx --yes "tsx@$tsx_version" "$@"
+      ;;
+  esac
+}
+
+# Downloads the model files a feature needs, and says what to run by hand if it
+# cannot. The flag on its own is not enough: with the models missing the
+# browser renders no button and explains nothing, which is the silent failure
+# both feature docs warn about.
+install_models() {
+  _script=$1
+  _label=$2
+  _sentinel=$3
+  # Turning a feature back on after it was turned off should not re-fetch tens
+  # of megabytes that are still sitting in public/models.
+  if [ -e "$_sentinel" ]; then
+    note "The $_label model files are already in public/models."
+    return 0
+  fi
+  note "Fetching the $_label model files. This downloads once."
+  printf '\n'
+  if run_ts "$_script" --yes; then
+    printf '\n'
+    return 0
+  fi
+  printf '\n'
+  note_pending "The $_label models were not installed, so the feature will
+not appear. In a checkout with Node available, run:
+  pnpm install && pnpm tsx $_script --yes"
+  return 0
+}
+
+# ── URLs ────────────────────────────────────────────────────────────────────
 
 # Splits an absolute URL into $url_host and $url_port. A bracketed IPv6
 # literal is taken whole first, so that the ':' inside it is never mistaken
@@ -234,81 +418,55 @@ is_localhost() {
   esac
 }
 
-# The helpers in scripts/ stay the single source of truth for what is
-# downloaded, from where, and how a VAPID pair is built. Running them from here
-# means none of that is restated in shell, where it would drift.
-#
-# They are TypeScript, and two of them import from src/ without a file
-# extension, which Node's own resolver refuses — so a loader is needed however
-# Node arrives. In preference order: the repository's own tsx when the dev
-# dependencies are installed, a throwaway copy from the registry when they are
-# not, and a container for the host that runs Balancia with Docker and has no
-# Node at all.
-#
-# A major rather than an exact version, because this is a type stripper
-# borrowed for one command, not a dependency of the application. The pinned one
-# in node_modules is used whenever it is there.
-tsx_version=4
+# ── Command line ────────────────────────────────────────────────────────────
 
-# Resolved once, on the first thing that needs it.
-ts_runner=''
+usage() {
+  printf '\n  %sBalancia first-run setup.%s Writes .env next to compose.yaml.\n\n' \
+    "$bold" "$reset"
+  cat <<USAGE
+    ./scripts/bootstrap.sh                generate secrets, ask about features
+    ./scripts/bootstrap.sh --defaults     generate secrets, ask nothing
 
-resolve_ts_runner() {
-  [ -z "$ts_runner" ] || return 0
+    -y, --yes, --defaults   do not ask; leave every optional feature off
+        --color             colour the output even when stdout is not a
+                            terminal — a pipe, a pager, docker run without -t
+        --no-color          never colour it
+    -h, --help              this text
 
-  if [ -x "$root_dir/node_modules/.bin/tsx" ]; then
-    ts_runner=repo
-  elif command -v npx > /dev/null 2>&1; then
-    ts_runner=npx
-  elif command -v docker > /dev/null 2>&1; then
-    ts_runner=docker
-    echo 'No Node on this host — borrowing one from a throwaway container.'
-  else
-    return 1
-  fi
+  Safe to re-run: settings already in .env are left alone.
+
+USAGE
 }
 
-run_ts() {
-  resolve_ts_runner || return 1
-  case $ts_runner in
-    repo) (cd "$root_dir" && ./node_modules/.bin/tsx "$@") ;;
-    npx) (cd "$root_dir" && npx --yes "tsx@$tsx_version" "$@") ;;
-    # HOME is set because npm caches under it, and the borrowed user id has no
-    # home directory of its own inside the image.
-    docker)
-      docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp \
-        --volume "$root_dir:/repo" --workdir /repo \
-        node:24-alpine npx --yes "tsx@$tsx_version" "$@"
+interactive=1
+for arg in "$@"; do
+  case $arg in
+    -y | --yes | --defaults) interactive=0 ;;
+    # Already read, in the pass that set up the palette.
+    --color | --colour | --no-color | --no-colour) ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf '\n  %s✗%s  unknown option "%s"\n' "$red" "$reset" "$arg" >&2
+      usage >&2
+      exit 2
       ;;
   esac
-}
+done
 
-# Downloads the model files a feature needs, and says what to run by hand if it
-# cannot. The flag on its own is not enough: with the models missing the
-# browser renders no button and explains nothing, which is the silent failure
-# both feature docs warn about.
-install_models() {
-  _script=$1
-  _label=$2
-  _sentinel=$3
-  # Turning a feature back on after it was turned off should not re-fetch tens
-  # of megabytes that are still sitting in public/models.
-  if [ -e "$_sentinel" ]; then
-    heading "The $_label model files are already in public/models."
-    return 0
-  fi
-  heading "Installing the $_label model files. This downloads once."
-  if run_ts "$_script" --yes; then
-    return 0
-  fi
-  note_pending "The $_label models were not installed, so the feature will not
-    appear. In a checkout with Node available, run:
-    pnpm install && pnpm tsx $_script --yes"
-  return 0
-}
+# Questions need somewhere to ask. Without a terminal the script is being run
+# by something rather than someone, and guessing on its behalf is worse than
+# leaving the optional features at their documented defaults.
+[ -t 0 ] || interactive=0
+
+# ── Secrets ─────────────────────────────────────────────────────────────────
 
 # Secrets, not world-readable.
 umask 077
+
+banner
 
 if [ ! -e "$env_file" ]; then
   cat > "$env_file" <<'HEADER'
@@ -331,44 +489,54 @@ written=0
 if ! has_value AUTH_SECRET; then
   printf '\n# Instance secret. Changing it signs everyone out.\nAUTH_SECRET=%s\n' \
     "$(random_alnum 64)" >> "$env_file"
-  echo 'Generated AUTH_SECRET.'
+  done_line 'Generated AUTH_SECRET'
   written=1
 fi
 
 if ! has_value POSTGRES_PASSWORD; then
   printf '\n# Database password. Applied when the cluster is first created.\nPOSTGRES_PASSWORD=%s\n' \
     "$(random_alnum 40)" >> "$env_file"
-  echo 'Generated POSTGRES_PASSWORD.'
+  done_line 'Generated POSTGRES_PASSWORD'
   written=1
 fi
 
+# ── Questions ───────────────────────────────────────────────────────────────
+
 if [ "$interactive" -eq 1 ]; then
+  for key in $question_keys; do
+    has_value "$key" || questions_total=$((questions_total + 1))
+  done
+
   # ── Where people reach it ─────────────────────────────────────────────────
   if ! has_value APP_URL; then
-    question 'The address people will type into a browser. Behind a reverse
-proxy this is the public HTTPS URL, not the container port. Passkeys
-need HTTPS everywhere except localhost.'
+    question 'Public address'
+    prose <<'TEXT'
+The address people will type into a browser. Behind a reverse proxy
+this is the public HTTPS URL, not the container port. Passkeys need
+HTTPS everywhere except localhost.
+
+TEXT
     while :; do
-      ask_line 'Public URL:' 'http://localhost:3000'
+      ask_line 'Public URL' 'http://localhost:3000'
       app_url=$reply
       case $app_url in
         http://* | https://*) ;;
         *)
-          echo '  Needs to start with http:// or https://.'
+          oops 'Needs to start with http:// or https://.'
           continue
           ;;
       esac
       split_url "$app_url"
       if [ -z "$url_host" ]; then
-        echo '  That URL has no host.'
+        oops 'That URL has no host.'
         continue
       fi
       case $app_url in
         http://*)
           if ! is_localhost "$url_host"; then
-            echo '  Browsers refuse passkeys on plain HTTP outside localhost, and'
-            echo '  Balancia refuses to start with that combination. Use https://,'
-            echo '  or localhost while you try it out.'
+            oops 'Browsers refuse passkeys on plain HTTP outside localhost, and'
+            note '  Balancia refuses to start with that combination. Use https://,'
+            note '  or localhost while you try it out.'
             continue
           fi
           ;;
@@ -383,13 +551,18 @@ need HTTPS everywhere except localhost.'
     if is_localhost "$url_host" && [ -n "$url_port" ] && [ "$url_port" != 3000 ]; then
       write_setting APP_PORT "$url_port" \
         'Host port Compose publishes the app on, matching APP_URL.'
+      note "${dim}Compose will publish on port ${url_port} to match.${reset}"
     fi
   fi
 
   # ── Registration ──────────────────────────────────────────────────────────
   if ! has_value ALLOW_REGISTRATION; then
-    question 'Anyone who can reach this instance may create an account. On a
-private instance, close sign-ups once your own account exists.'
+    question 'Registration'
+    prose <<'TEXT'
+Anyone who can reach this instance may create an account. On a private
+instance, close sign-ups once your own account exists.
+
+TEXT
     if ask_yes_no 'Allow open registration?' y; then
       write_setting ALLOW_REGISTRATION true \
         'Open sign-ups. Set to false to close them on a private instance.'
@@ -401,11 +574,15 @@ private instance, close sign-ups once your own account exists.'
 
   # ── Exchange rates ────────────────────────────────────────────────────────
   if ! has_value EXCHANGE_RATE_PROVIDER; then
-    question "Groups that convert to one base currency can have the day's rate
-filled in from the European Central Bank's published figures, through
+    question 'Exchange rates'
+    prose <<'TEXT'
+Groups that convert to one base currency can have the day's rate filled
+in from the European Central Bank's published figures, through
 api.frankfurter.dev. No API key. Rates are cached in your database and
 can always be typed by hand; recorded rates are never recalculated.
-This is the only routine outbound request Balancia makes."
+This is the only routine outbound request Balancia makes.
+
+TEXT
     if ask_yes_no 'Suggest daily exchange rates?' n; then
       write_setting EXCHANGE_RATE_PROVIDER frankfurter \
         'Rate suggestions from api.frankfurter.dev. "none" turns them off.'
@@ -417,12 +594,16 @@ This is the only routine outbound request Balancia makes."
 
   # ── Receipt scanning ──────────────────────────────────────────────────────
   if ! has_value RECEIPT_SCANNING; then
-    question 'Photograph a receipt and have it read into an expense — merchant,
-date, line items and total — which you then correct and assign to
-people. Recognition runs in the browser against model files this
-instance serves: the image is never uploaded to be read, and there is
-no OCR service involved. Costs a ~47 MB download now, and relaxes the
-Content-Security-Policy with '"'"'wasm-unsafe-eval'"'"'.'
+    question 'Receipt scanning'
+    prose <<'TEXT'
+Photograph a receipt and have it read into an expense — merchant, date,
+line items and total — which you then correct and assign to people.
+Recognition runs in the browser against model files this instance
+serves: the image is never uploaded to be read, and there is no OCR
+service involved. Costs a ~47 MB download now, and relaxes the
+Content-Security-Policy with 'wasm-unsafe-eval'.
+
+TEXT
     if ask_yes_no 'Enable receipt scanning?' n; then
       write_setting RECEIPT_SCANNING true \
         'On-device receipt scanning. Needs the models in public/models.'
@@ -435,11 +616,15 @@ Content-Security-Policy with '"'"'wasm-unsafe-eval'"'"'.'
 
   # ── Semantic categorization ───────────────────────────────────────────────
   if ! has_value SEMANTIC_CATEGORIZATION; then
-    question 'Expense categories are suggested by rules that ship with Balancia,
-with no configuration and no outbound requests. This adds a semantic
+    question 'Semantic categorization'
+    prose <<'TEXT'
+Expense categories are suggested by rules that ship with Balancia, with
+no configuration and no outbound requests. This adds a semantic
 fallback for descriptions the rules do not cover, inferred in the
 browser, so no transaction text leaves the device. Costs a ~150 MB
-download now, and the same CSP relaxation as above.'
+download now, and the same CSP relaxation as above.
+
+TEXT
     if ask_yes_no 'Enable semantic categorization?' n; then
       write_setting SEMANTIC_CATEGORIZATION true \
         'Semantic category fallback. Needs the model in public/models.'
@@ -452,11 +637,15 @@ download now, and the same CSP relaxation as above.'
 
   # ── Push notifications ────────────────────────────────────────────────────
   if ! has_value PUSH_VAPID_PUBLIC_KEY; then
-    question "Notifications appear inside the app either way. Push adds reaching
-a device while Balancia is closed. The messages are relayed by the
+    question 'Push notifications'
+    prose <<'TEXT'
+Notifications appear inside the app either way. Push adds reaching a
+device while Balancia is closed. The messages are relayed by the
 browser vendor's push service (Google, Mozilla, Apple): payloads are
 encrypted end to end so the relay cannot read them, but it does see
-that a message reached a device."
+that a message reached a device.
+
+TEXT
     if ask_yes_no 'Enable push notifications?' n; then
       # The same P-256 pair `pnpm push:keys` prints, generated by the same
       # code — the padding of a short scalar in src/lib/push/keys.ts is the
@@ -467,14 +656,16 @@ that a message reached a device."
       push_private=$(printf '%s\n' "$push_keys" | sed -n 's/^PUSH_VAPID_PRIVATE_KEY=//p')
 
       if [ -n "$push_public" ] && [ -n "$push_private" ]; then
-        echo '  Generated a VAPID key pair. Replacing it later makes every browser'
-        echo '  subscribe again, so keep it with the rest of your secrets.'
+        printf '\n'
+        note "${green}✓${reset} Generated a VAPID key pair. Replacing it later makes"
+        note '  every browser subscribe again, so keep it with your secrets.'
+        printf '\n'
         # Handed to Google, Mozilla and Apple inside every VAPID token, so it is
         # asked for rather than guessed.
         while :; do
-          ask_line 'Contact address for the push services (an email):' ''
+          ask_line 'Contact address for the push services' ''
           case $reply in
-            '') echo '  Needed: the push services require a contact address.' ;;
+            '') oops 'Needed: the push services require a contact address.' ;;
             mailto:* | https://*)
               push_subject=$reply
               break
@@ -483,7 +674,7 @@ that a message reached a device."
               push_subject="mailto:$reply"
               break
               ;;
-            *) echo '  Needs to be an email address, or a "mailto:"/"https://" URL.' ;;
+            *) oops 'Needs to be an email address, or a "mailto:"/"https://" URL.' ;;
           esac
         done
         write_setting PUSH_VAPID_PUBLIC_KEY "$push_public" \
@@ -495,8 +686,8 @@ that a message reached a device."
       else
         # Nothing is written, so the question comes back once Node is there.
         note_pending 'Push keys could not be generated here. Run
-    pnpm push:keys
-    and copy the three lines into .env, or re-run this script later.'
+  pnpm push:keys
+and copy the three lines into .env, or re-run this script later.'
       fi
     else
       # An explicit empty pair is what stops this being asked again; both
@@ -510,41 +701,46 @@ that a message reached a device."
 
   # ── Outgoing email ────────────────────────────────────────────────────────
   if ! has_value SMTP_HOST; then
-    question 'Without SMTP, Balancia works fully but cannot verify an email
-address or send a password-recovery link. Passkeys and passwords both
-work without it.'
+    question 'Outgoing email'
+    prose <<'TEXT'
+Without SMTP, Balancia works fully but cannot verify an email address
+or send a password-recovery link. Passkeys and passwords both work
+without it.
+
+TEXT
     if ask_yes_no 'Configure outgoing email?' n; then
-      ask_line 'SMTP host:' ''
+      printf '\n'
+      ask_line 'SMTP host' ''
       smtp_host=$reply
       if [ -z "$smtp_host" ]; then
-        echo '  No host given — leaving email off. Run this again to set it up.'
+        oops 'No host given — leaving email off. Run this again to set it up.'
       else
         # src/lib/env.ts coerces this to a number and rejects anything outside
         # 1–65535, which stops the app booting. Catch it while it can be retyped.
         while :; do
-          ask_line 'SMTP port:' '587'
+          ask_line 'SMTP port' '587'
           smtp_port=$reply
           case $smtp_port in
-            '' | *[!0-9]*) echo '  Ports are digits, usually 587 or 465.' ;;
+            '' | *[!0-9]*) oops 'Ports are digits, usually 587 or 465.' ;;
             *) break ;;
           esac
         done
-        ask_line 'SMTP username (blank for none):' ''
+        ask_line 'SMTP username, blank for none' ''
         smtp_user=$reply
         smtp_password=''
         if [ -n "$smtp_user" ]; then
-          ask_secret 'SMTP password:'
+          ask_secret 'SMTP password'
           smtp_password=$reply
         fi
         # Implicit TLS from the first byte, which is what port 465 expects.
         # Port 587 starts in the clear and upgrades with STARTTLS, which the
         # mailer does on its own.
-        if ask_yes_no 'Connect with TLS immediately (usually port 465)?' n; then
+        if ask_yes_no 'Connect with TLS immediately, usually port 465?' n; then
           smtp_secure=true
         else
           smtp_secure=false
         fi
-        ask_line 'From address:' "balancia@$smtp_host"
+        ask_line 'From address' "balancia@$smtp_host"
         smtp_from=$reply
 
         write_setting SMTP_HOST "$smtp_host" 'Outgoing mail. Blank turns email off.'
@@ -561,23 +757,33 @@ work without it.'
   fi
 fi
 
+# ── Repairs ─────────────────────────────────────────────────────────────────
+
 # A feature switched on whose model files are missing is the failure both
 # docs/receipt-scanning.md and docs/categorization.md warn about: the browser
 # renders no button and says nothing. Checked on every run, because the
 # download may have failed after the flag was written.
 if [ "$interactive" -eq 1 ]; then
   if is_enabled RECEIPT_SCANNING && [ ! -e "$ocr_sentinel" ]; then
-    heading 'RECEIPT_SCANNING is on, but the OCR models are not in public/models.
-Without them the scan button never appears.'
-    if ask_yes_no 'Install them now (~47 MB)?' y; then
+    heading 'Receipt scanning is on, but its models are missing'
+    prose <<'TEXT'
+RECEIPT_SCANNING is set, and there is nothing in public/models to read
+a receipt with. Without the files the scan button never appears.
+
+TEXT
+    if ask_yes_no 'Install them now, ~47 MB?' y; then
       install_models scripts/fetch-ocr-model.ts OCR "$ocr_sentinel"
     fi
   fi
 
   if is_enabled SEMANTIC_CATEGORIZATION && [ ! -e "$semantic_sentinel" ]; then
-    heading 'SEMANTIC_CATEGORIZATION is on, but the model is not in public/models.
-Without it categorization falls back to its built-in rules.'
-    if ask_yes_no 'Install it now (~150 MB)?' y; then
+    heading 'Semantic categorization is on, but its model is missing'
+    prose <<'TEXT'
+SEMANTIC_CATEGORIZATION is set, and there is nothing in public/models
+to infer with. Without the files categorization uses its built-in rules.
+
+TEXT
+    if ask_yes_no 'Install it now, ~150 MB?' y; then
       install_models scripts/fetch-semantic-model.ts 'categorization' "$semantic_sentinel"
     fi
   fi
@@ -585,28 +791,90 @@ fi
 
 chmod 600 "$env_file"
 
+# ── Summary ─────────────────────────────────────────────────────────────────
+
+# One line per feature, reading .env back rather than remembering what was
+# answered: on a re-run most of it was decided by an earlier one, and the
+# question this answers is "what is this instance going to do", not "what did
+# you just type".
+row() {
+  _state=$2
+  case $_state in
+    off) _colour=$dim ;;
+    *) _colour=$green ;;
+  esac
+  printf '    %-22s %s%s%s\n' "$1" "$_colour" "$_state" "$reset"
+}
+
+on_off() {
+  if is_enabled "$1"; then printf 'on'; else printf 'off'; fi
+}
+
+summary() {
+  printf '  %sThis instance%s\n\n' "$bold" "$reset"
+  row 'Public address' "$(value_of APP_URL)"
+  if is_enabled ALLOW_REGISTRATION; then
+    row 'Registration' 'open'
+  else
+    row 'Registration' 'closed'
+  fi
+  case $(value_of EXCHANGE_RATE_PROVIDER) in
+    frankfurter) row 'Exchange rates' 'frankfurter' ;;
+    *) row 'Exchange rates' 'off' ;;
+  esac
+  row 'Receipt scanning' "$(on_off RECEIPT_SCANNING)"
+  row 'Semantic categories' "$(on_off SEMANTIC_CATEGORIZATION)"
+  if [ -n "$(value_of PUSH_VAPID_PUBLIC_KEY)" ]; then
+    row 'Push notifications' 'on'
+  else
+    row 'Push notifications' 'off'
+  fi
+  if [ -n "$(value_of SMTP_HOST)" ]; then
+    row 'Outgoing email' "$(value_of SMTP_HOST)"
+  else
+    row 'Outgoing email' 'off'
+  fi
+}
+
+# An empty APP_URL means nothing has been answered yet — an unattended run, or
+# a --defaults one. There is nothing to summarise that the defaults do not
+# already say.
+summary_printed=0
+if [ "$interactive" -eq 1 ] && [ -n "$(value_of APP_URL)" ]; then
+  # The banner leaves a blank line behind it, so one is only needed here when
+  # something else has printed since.
+  if [ "$questions_asked" -gt 0 ] || [ "$written" -eq 1 ]; then
+    printf '\n'
+  fi
+  summary
+  summary_printed=1
+fi
+
+# The banner already leaves a blank line behind it, so a run that printed
+# nothing in between — every answer present, nothing to generate — does not
+# need another.
+if [ "$written" -eq 1 ] || [ "$summary_printed" -eq 1 ]; then
+  printf '\n'
+fi
+
 if [ "$written" -eq 0 ]; then
-  echo
-  echo '.env already holds every answer — left untouched.'
+  done_line '.env already holds every answer — left untouched.'
 elif [ "$created" -eq 1 ]; then
-  echo
-  echo 'Wrote .env. Back it up; it is the only copy of these secrets.'
+  done_line "Wrote .env. ${bold}Back it up${reset} — it is the only copy of these secrets."
 else
-  echo
-  echo 'Updated .env. Back it up; it is the only copy of these secrets.'
+  done_line "Updated .env. ${bold}Back it up${reset} — it is the only copy of these secrets."
 fi
 
 if [ -n "$pending" ]; then
-  echo
-  echo 'Still to do:'
+  printf '\n  %sStill to do%s\n\n' "$bold" "$reset"
   printf '%s' "$pending"
 fi
 
 if [ "$interactive" -eq 0 ] && [ "$written" -eq 1 ]; then
-  echo 'Optional features left at their defaults. Re-run in a terminal to be asked about them.'
+  printf '  %s·%s  Optional features left at their defaults. Re-run in a\n' "$dim" "$reset"
+  printf '     terminal to be asked about them.\n'
 fi
 
-echo
-echo 'Next:  docker compose up -d --build'
+printf '\n  Next  %sdocker compose up -d --build%s\n\n' "$cyan" "$reset"
 
 exit 0
