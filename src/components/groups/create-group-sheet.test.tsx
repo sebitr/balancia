@@ -53,6 +53,23 @@ function submitted() {
 }
 
 describe("CreateGroupSheet", () => {
+  /**
+   * The same two limits the add-entry drawer keeps, and for the same reason:
+   * this sheet is the other full-height one, with its close button in a header
+   * at the top edge. See the note on the drawer's own test.
+   */
+  it("keeps its header clear of the island, twice over", () => {
+    renderSheet();
+    const classes = screen.getByRole("dialog").className.split(" ");
+
+    expect(classes.find((name) => name.startsWith("h-["))).toContain(
+      "env(safe-area-inset-top)",
+    );
+    expect(classes.find((name) => name.startsWith("max-h-["))).toContain(
+      "env(safe-area-inset-top)",
+    );
+  });
+
   it("posts a group once it has a name, defaulting everything else", async () => {
     const { user } = renderSheet();
 
