@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PasskeyManager } from "@/components/auth/passkey-manager";
 import { getEnv } from "@/lib/env";
+import { POP } from "@/components/motion/transitions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("securityPage");
@@ -26,7 +27,7 @@ export default async function SecurityPage() {
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/profile">
+          <Link href="/profile" transitionTypes={POP}>
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>

@@ -11,14 +11,17 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { PUSH, SWITCH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 
 /**
  * Bottom navigation for a group, mobile-first.
  *
- * On small screens it is a fixed bar; from `sm` up it becomes a horizontal tab
- * strip inside the page flow. "Add" is centred and visually primary because
- * recording an expense is the action people come here to do.
+ * "Add" is centred and breaks the bar's own line — a raised disc punched
+ * through the top border by a ring in the page colour. Recording an expense is
+ * the thing people open a group to do, and it is the only action here that
+ * creates something, so it is the only one drawn as a button rather than as a
+ * destination.
  */
 interface NavItem {
   readonly href: string;
@@ -51,10 +54,11 @@ export function GroupNav({ groupId }: { groupId: string }) {
 
   return (
     <nav
+      data-slot="app-nav"
       aria-label={t("groupSections")}
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/85"
     >
-      <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-2">
+      <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-2 pb-2">
         {ITEMS.map((item) => {
           const href = `${base}${item.href}`;
           const isActive = item.exact
@@ -66,24 +70,37 @@ export function GroupNav({ groupId }: { groupId: string }) {
               <Link
                 href={href}
                 aria-current={isActive ? "page" : undefined}
+                // Tabs are peers, and "Add" opens a form over the group rather
+                // than a place inside it — neither is somewhere deeper, so
+                // neither slides.
+                transitionTypes={item.primary ? PUSH : SWITCH}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
+                  "flex flex-col items-center rounded-xl px-1 py-2.5 text-xs font-medium transition-transform duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                  item.primary
+                    ? // Lifted out of the bar, and the label keeps full
+                      // contrast: this one is an action, not a place.
+                      "-mt-[26px] gap-[5px] text-foreground hover:-translate-y-px active:translate-y-px motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0"
+                    : cn(
+                        "gap-1 transition-colors",
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground",
+                      ),
                 )}
               >
                 <span
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-full transition-colors",
+                    "flex items-center justify-center rounded-full transition-colors",
                     item.primary
-                      ? "bg-primary text-primary-foreground"
-                      : isActive
-                        ? "bg-accent"
-                        : "bg-transparent",
+                      ? "size-[54px] bg-primary text-primary-foreground shadow-[0_0_0_6px_var(--background),0_10px_20px_-8px_color-mix(in_oklch,var(--primary)_55%,transparent)]"
+                      : cn("size-8", isActive ? "bg-accent" : "bg-transparent"),
                   )}
                 >
-                  <item.icon aria-hidden="true" className="size-4.5" />
+                  <item.icon
+                    aria-hidden="true"
+                    className={item.primary ? "size-[26px]" : "size-4.5"}
+                    strokeWidth={item.primary ? 2.2 : undefined}
+                  />
                 </span>
                 {t(item.labelKey)}
               </Link>

@@ -21,6 +21,7 @@ import {
 } from "@/modules/balances/overview";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
 import { todayIso } from "@/modules/currencies/provider";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Home: where you stand, then which group needs a decision, then a way in.
@@ -269,7 +270,7 @@ function FirstRun({
           {t("emptyDescription")}
         </p>
         <Button asChild className="mt-1 h-[38px] rounded-xl">
-          <Link href="/groups/new">
+          <Link href="/groups/new" transitionTypes={PUSH}>
             <Plus aria-hidden="true" />
             {t("createGroup")}
           </Link>
@@ -287,6 +288,7 @@ function FirstRun({
             yet — so this starts where it has to, at creating one. */}
         <Link
           href="/groups/new"
+          transitionTypes={PUSH}
           className="shrink-0 rounded-md py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {t("splitwiseAction")}

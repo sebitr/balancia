@@ -15,6 +15,7 @@ import { InvalidAmountError } from "@/modules/currencies/money";
 import { RecurrenceError } from "@/modules/recurring/schedule";
 import { UploadRejectedError } from "@/modules/attachments/service";
 import { ImportError } from "@/modules/imports/service";
+import { ReminderError } from "@/modules/reminders/service";
 import { RateLimitedError } from "@/lib/security/rate-limit";
 
 /**
@@ -68,6 +69,7 @@ const SAFE_ERRORS = [
   InvalidAmountError,
   RateLimitedError,
   RecurrenceError,
+  ReminderError,
   UploadRejectedError,
 ] as const;
 

@@ -10,6 +10,7 @@ import { getExpense } from "@/modules/expenses/service";
 import { listParticipants } from "@/modules/groups/service";
 import { loadMappings } from "@/modules/categorization/service";
 import { toMajorString, money } from "@/modules/currencies/money";
+import { POP } from "@/components/motion/transitions";
 
 export default async function EditExpensePage({
   params,
@@ -43,7 +44,10 @@ export default async function EditExpensePage({
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}/expenses/${expenseId}`}>
+          <Link
+            href={`/groups/${groupId}/expenses/${expenseId}`}
+            transitionTypes={POP}
+          >
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>
@@ -66,6 +70,7 @@ export default async function EditExpensePage({
         semanticCategorization={isSemanticCategorizationEnabled()}
         initial={{
           id: expense.id,
+          direction: expense.direction,
           description: expense.description,
           notes: expense.notes ?? "",
           category: expense.category ?? "",

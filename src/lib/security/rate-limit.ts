@@ -26,7 +26,9 @@ export type RateLimitBucket =
   | "guestRedeem"
   | "passwordReset"
   | "upload"
-  | "rateLookup";
+  | "rateLookup"
+  | "pushSubscribe"
+  | "pushTest";
 
 /**
  * Default policies.
@@ -47,6 +49,12 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // Generous: a form re-asks whenever the currency or date changes, and the
     // answers are cached, so this only has to stop outright abuse.
     rateLookup: { limit: 240, windowSeconds: 600 },
+    // Subscribing happens once per device, plus the odd re-subscribe when a
+    // browser rotates an endpoint.
+    pushSubscribe: { limit: 30, windowSeconds: 600 },
+    // A test notification costs an outbound request to a push service, so it
+    // is the one notification endpoint worth keeping on a short leash.
+    pushTest: { limit: 5, windowSeconds: 600 },
   };
 }
 

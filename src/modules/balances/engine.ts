@@ -1,3 +1,9 @@
+import {
+  isSpending,
+  signOf,
+  type EntryDirection,
+} from "@/modules/expenses/direction";
+
 /**
  * Balance engine.
  *
@@ -30,6 +36,15 @@ export interface BalanceInputShare {
 export interface BalanceInputExpense {
   readonly id: string;
   readonly currency: string;
+  /**
+   * `out` — somebody paid for the group, so the group owes them back.
+   * `in` — somebody received money that belongs to the group, so they owe the
+   * others their share.
+   *
+   * The two are the same arithmetic with opposite signs. Omitted means `out`,
+   * which is what every entry recorded before income existed was.
+   */
+  readonly direction?: EntryDirection;
   readonly payers: readonly BalanceInputPayer[];
   readonly shares: readonly BalanceInputShare[];
 }
@@ -134,13 +149,16 @@ export function computeBalances(
         `Expense ${expense.id} is unbalanced: payers contributed ${paid} but shares total ${owed}`,
       );
     }
+    // Income is spending run backwards: the person who received the money is
+    // the one who now owes, and everyone credited moves up instead of down.
+    const sign = signOf(expense.direction);
     for (const payer of expense.payers) {
       assertKnown(payer.participantId, `Expense ${expense.id}`);
-      bump(expense.currency, payer.participantId, payer.amount);
+      bump(expense.currency, payer.participantId, sign * payer.amount);
     }
     for (const share of expense.shares) {
       assertKnown(share.participantId, `Expense ${expense.id}`);
-      bump(expense.currency, share.participantId, -share.amount);
+      bump(expense.currency, share.participantId, -sign * share.amount);
     }
   }
 
@@ -288,12 +306,67 @@ export function balancesSumToZero(
   );
 }
 
-/** Convenience: total spend per currency, derived from expense payer contributions. */
+/** What one participant put in, and what they consumed. */
+export interface Contribution {
+  /** Money this participant actually handed over. */
+  readonly paid: bigint;
+  /** The part of the group's spending that is theirs to carry. */
+  readonly share: bigint;
+}
+
+/**
+ * One participant's side of the ledger, per currency.
+ *
+ * Deliberately not a balance: these are the two halves a net figure hides.
+ * "You paid €930.50, your share was €682.50" explains a position in a way the
+ * single number cannot.
+ *
+ * Spending only. Income is left out because neither word survives it — nobody
+ * "paid" the rent they received, and calling their credit a "share" inverts
+ * its meaning. So `paid - share` is the part of the balance that spending
+ * explains; in a group with income it is no longer the whole balance.
+ */
+export function contributionsOf(
+  expenses: readonly BalanceInputExpense[],
+  participantId: string,
+): Map<string, Contribution> {
+  const totals = new Map<string, Contribution>();
+
+  for (const expense of expenses) {
+    if (!isSpending(expense.direction)) continue;
+    const paid = expense.payers
+      .filter((payer) => payer.participantId === participantId)
+      .reduce((accumulator, payer) => accumulator + payer.amount, 0n);
+    const share = expense.shares
+      .filter((entry) => entry.participantId === participantId)
+      .reduce((accumulator, entry) => accumulator + entry.amount, 0n);
+
+    if (paid === 0n && share === 0n) continue;
+
+    const running = totals.get(expense.currency) ?? { paid: 0n, share: 0n };
+    totals.set(expense.currency, {
+      paid: running.paid + paid,
+      share: running.share + share,
+    });
+  }
+
+  return totals;
+}
+
+/**
+ * Convenience: total spend per currency, derived from expense payer
+ * contributions.
+ *
+ * Income is not spending and is left out entirely — money coming in does not
+ * reduce what the group spent, and netting the two would report a month of
+ * heavy spending against a rent cheque as a quiet month.
+ */
 export function totalSpendByCurrency(
   expenses: readonly BalanceInputExpense[],
 ): Map<string, bigint> {
   const totals = new Map<string, bigint>();
   for (const expense of expenses) {
+    if (!isSpending(expense.direction)) continue;
     const paid = expense.payers.reduce(
       (accumulator, payer) => accumulator + payer.amount,
       0n,

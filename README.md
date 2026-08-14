@@ -206,6 +206,7 @@ pnpm dev
 | [Backup and restore](docs/backup-and-restore.md)       | Database, receipts, secrets               |
 | [Data migration](docs/data-migration.md)               | Importing from Splitwise                  |
 | [Categorization](docs/categorization.md)               | How categories are guessed, and extended  |
+| [Receipt scanning](docs/receipt-scanning.md)           | On-device OCR, parsing, splitting by item |
 | [Security](SECURITY.md)                                | Reporting a vulnerability, security model |
 | [Contributing](CONTRIBUTING.md)                        | How to propose a change                   |
 | [Implementation status](docs/implementation-status.md) | What is built, what is not                |

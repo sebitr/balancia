@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { LogOut, ShieldCheck, User } from "lucide-react";
+import { Bell, LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageMenuItems } from "@/components/i18n/language-switcher";
 import { InstallMenuItem } from "@/components/pwa/install-menu-item";
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOutAction } from "@/modules/auth/actions";
+import { PUSH } from "@/components/motion/transitions";
 
 function initialsOf(label: string): string {
   const parts = label.trim().split(/\s+/).slice(0, 2);
@@ -77,13 +78,19 @@ export function UserMenu({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/profile">
+          <Link href="/profile" transitionTypes={PUSH}>
             <User aria-hidden="true" />
             {t("profile")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/profile/security">
+          <Link href="/profile/notifications" transitionTypes={PUSH}>
+            <Bell aria-hidden="true" />
+            {t("notifications")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/profile/security" transitionTypes={PUSH}>
             <ShieldCheck aria-hidden="true" />
             {t("security")}
           </Link>
