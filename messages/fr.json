@@ -922,6 +922,26 @@
     "keepImage": "Conserver aussi la photo avec cette dépense",
     "keepImageOn": "L'image sera téléversée et conservée avec la dépense sur ce serveur, comme toute autre pièce jointe.",
     "keepImageOff": "L'image reste sur cet appareil. Seuls les montants que vous confirmez sont enregistrés.",
+    "camera": {
+      "starting": "Démarrage de la caméra…",
+      "preparingDetection": "Préparation de la détection des bords…",
+      "manual": "Cadrez le reçu et prenez la photo",
+      "searching": "Visez le reçu avec la caméra",
+      "detected": "Gardez le reçu entier dans le cadre",
+      "holdStill": "Ne bougez plus…",
+      "ready": "Prêt — prenez la photo",
+      "capture": "Prendre la photo",
+      "cancel": "Annuler",
+      "usePhoneCamera": "Utiliser plutôt l'appareil photo du téléphone",
+      "choosePhotoInstead": "Choisir plutôt une photo",
+      "errors": {
+        "unavailable": "Ce navigateur ne peut pas afficher d'aperçu caméra. Utilisez plutôt l'appareil photo du téléphone.",
+        "denied": "L'accès à la caméra a été refusé. Autorisez-le dans les réglages du navigateur, ou utilisez l'appareil photo du téléphone.",
+        "notFound": "Aucune caméra utilisable n'a été trouvée sur cet appareil.",
+        "startFailed": "La caméra n'a pas pu démarrer. Elle est peut-être utilisée par une autre application.",
+        "captureFailed": "La photo n'a pas pu être prise. Réessayez, ou utilisez l'appareil photo du téléphone."
+      }
+    },
     "progress": {
       "preparing": "Préparation du scanner",
       "downloading": "Téléchargement des modèles de lecture",

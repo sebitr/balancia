@@ -29,7 +29,9 @@ import {
   type ItemAssignment,
   type SharedChargeStrategy,
 } from "@/modules/receipts";
+import { isLiveCameraSupported } from "@/lib/doc-scan/engine";
 import { ItemAssignmentView, type Participant } from "./item-assignment";
+import { DocumentCamera } from "./document-camera";
 import { ReceiptReview } from "./receipt-review";
 import { ScanProgressView } from "./scan-progress";
 import { draftItems, draftTotal, toDraft, type ReceiptDraft } from "./draft";
@@ -81,7 +83,7 @@ export interface ScannedExpense {
   readonly attachmentId?: string;
 }
 
-type Step = "capture" | "scanning" | "review" | "assign";
+type Step = "capture" | "camera" | "scanning" | "review" | "assign";
 
 export function ScanReceiptDialog({
   groupId,
@@ -223,7 +225,21 @@ export function ScanReceiptDialog({
     void scan(file);
   };
 
-  const openCamera = () => cameraInput.current?.click();
+  /**
+   * The live scanner where it can run; the platform's camera picker where it
+   * cannot. Opening the dialog directly on the camera step — not through
+   * `onOpenChange`, which resets — mirrors how `onFile` opens on a running
+   * scan.
+   */
+  const openCamera = () => {
+    if (isLiveCameraSupported()) {
+      setError(null);
+      setStep("camera");
+      setOpen(true);
+    } else {
+      cameraInput.current?.click();
+    }
+  };
   const openUpload = () => libraryInput.current?.click();
 
   const total = draft ? draftTotal(draft) : null;
@@ -318,6 +334,17 @@ export function ScanReceiptDialog({
               camera={openCamera}
               upload={openUpload}
               onDropped={(file) => void scan(file)}
+            />
+          )}
+
+          {step === "camera" && (
+            <DocumentCamera
+              onCapture={(file) => void scan(file)}
+              onFallback={() => {
+                setStep("capture");
+                cameraInput.current?.click();
+              }}
+              onCancel={() => setStep("capture")}
             />
           )}
 

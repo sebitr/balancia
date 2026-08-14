@@ -48,6 +48,33 @@ having been scanned, the server recomputes its split with the same domain code
 it uses for a split typed by hand, and nothing is ever created without someone
 confirming it first.
 
+## The live document camera
+
+Where the browser can open a camera stream, the "Camera" entry points open a
+live scanner in the scan dialog instead of the platform's photo picker: the
+rear camera, an outline that follows the receipt's edges, a hint that settles
+from "point the camera" through "hold still" to ready, and a shutter. The
+capture is re-detected at full resolution, perspective-corrected, and handed
+to the same OCR pipeline a picked photo goes through.
+
+Edge detection is plain TypeScript in `src/lib/doc-scan` — grayscale, blur,
+Otsu threshold, connected-region labelling, corner extraction, and a solved
+homography for the perspective crop. Not OpenCV.js: its bindings generate
+code with `new Function()` at startup, which this application's
+Content-Security-Policy forbids, and `'unsafe-eval'` was not going to be
+added app-wide for one feature. The pure pipeline needs no policy token, no
+WebAssembly, no download, and is unit-tested the way the OCR image ops are.
+
+Detection happens on a reduced copy of the frame at about 7 Hz — never at
+full resolution, never concurrently. Camera frames are processed on the
+device and are never uploaded; the `Permissions-Policy` header grants
+`camera=(self)` for exactly this feature.
+
+Everywhere the live camera cannot run — no camera API, permission declined,
+hardware in use — the same buttons fall back to the `<input capture>` picker
+that served before, and a capture with no credible document in view falls
+back to the plain photograph rather than blocking the shutter.
+
 ## Where the code lives
 
 | File                                 | What it does                                        |
@@ -65,7 +92,12 @@ confirming it first.
 | `src/lib/ocr/worker-kernel.ts`       | The engine's arithmetic, as worker source           |
 | `src/lib/ocr/worker-source.ts`       | The worker: runtime, sessions, inference            |
 | `src/lib/ocr/scanner.ts`             | The page's typed handle on the worker               |
-| `src/components/receipts/`           | Capture, progress, review, assignment               |
+| `src/lib/doc-scan/geometry.ts`       | Corner maths, coordinate spaces, cover mapping      |
+| `src/lib/doc-scan/tracking.ts`       | Outline smoothing and hold-still detection          |
+| `src/lib/doc-scan/raster.ts`         | Threshold, region labelling, corner finding         |
+| `src/lib/doc-scan/warp.ts`           | Homography and the perspective crop                 |
+| `src/lib/doc-scan/engine.ts`         | The canvas-facing scanner interface                 |
+| `src/components/receipts/`           | Live camera, capture, progress, review, assignment  |
 
 Everything under `src/modules/receipts` is pure and framework-free, so it runs
 in a unit test against a fixture exactly as it runs in the browser after a
