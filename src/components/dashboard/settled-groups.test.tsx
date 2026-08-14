@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { fakeViewport, releaseViewport } from "../../../tests/helpers/viewport";
 import { SettledGroups, type SettledGroupView } from "./settled-groups";
 
 /**
@@ -119,5 +120,128 @@ describe("SettledGroups", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * The search field is the last thing on the home screen, which is where a
+ * phone keyboard opens: over the field and over every row it filters.
+ *
+ * jsdom lays nothing out and scrolls nothing, so both ends are stubbed — the
+ * measurements the hook reads, and the `scrollTo` it calls. What is being
+ * asserted is the arithmetic in between: that the field is aimed at the top of
+ * the screen and not merely at the top edge of the keyboard, which is what the
+ * browser does by itself and what leaves the results hidden.
+ */
+describe("SettledGroups under a phone keyboard", () => {
+  const HEADER = 56;
+  const GAP = 8;
+
+  afterEach(() => {
+    releaseViewport();
+    document.querySelector("[data-slot='app-header']")?.remove();
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+  });
+
+  /** The sticky header the shell puts above every screen. */
+  function stickyHeader() {
+    const header = document.createElement("header");
+    header.setAttribute("data-slot", "app-header");
+    header.getBoundingClientRect = () =>
+      ({ height: HEADER }) as unknown as DOMRect;
+    document.body.append(header);
+  }
+
+  /** Puts `field` that far down a page already scrolled by `scrolled`. */
+  function place(field: HTMLElement, top: number, scrolled: number) {
+    field.getBoundingClientRect = () => ({ top }) as unknown as DOMRect;
+    Object.defineProperty(window, "scrollY", {
+      value: scrolled,
+      configurable: true,
+    });
+  }
+
+  function renderSettled() {
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo;
+    const { container } = renderWithIntl(
+      <SettledGroups settled={SETTLED} archived={[]} now={NOW} />,
+    );
+    const room = () => container.querySelector("[data-slot='keyboard-room']");
+    return { scrollTo, room };
+  }
+
+  async function openSearch() {
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Search your groups" }));
+    return screen.getByRole("searchbox");
+  }
+
+  it("pulls the field to the top of the screen, not just clear of the keyboard", async () => {
+    const viewport = fakeViewport();
+    stickyHeader();
+    const { scrollTo } = renderSettled();
+    place(await openSearch(), 620, 100);
+
+    viewport.keyboard(336);
+
+    // Where the field sits in the document, less the header it would otherwise
+    // end up behind: 620 + 100 - (56 + 8).
+    expect(scrollTo).toHaveBeenCalledWith({ top: 656, behavior: "auto" });
+  });
+
+  it("adds the room that scroll spends, and takes it back afterwards", async () => {
+    const viewport = fakeViewport();
+    const { room } = renderSettled();
+    place(await openSearch(), 620, 100);
+
+    expect(room()).toBeNull();
+
+    // Below the last row there is nothing left to scroll through, so without
+    // this the page cannot move and the field stays where the keyboard is.
+    viewport.keyboard(336);
+    expect(room()).toHaveStyle({ height: "336px" });
+
+    viewport.keyboard(0);
+    expect(room()).toBeNull();
+  });
+
+  it("leaves the page alone on a desktop, where nothing is covered", async () => {
+    const viewport = fakeViewport();
+    stickyHeader();
+    const { scrollTo, room } = renderSettled();
+    place(await openSearch(), 620, 100);
+
+    viewport.keyboard(0);
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(room()).toBeNull();
+  });
+
+  /** A keyboard opened for something else is not this field's business. */
+  it("stays put when the search was never opened", () => {
+    const viewport = fakeViewport();
+    stickyHeader();
+    const { scrollTo, room } = renderSettled();
+
+    viewport.keyboard(336);
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(room()).toBeNull();
+  });
+
+  it("clears the header it would otherwise hide behind", async () => {
+    const viewport = fakeViewport();
+    const { scrollTo } = renderSettled();
+    place(await openSearch(), 620, 100);
+
+    viewport.keyboard(336);
+
+    // No header in the document: the field goes to the very top, less the gap.
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 720 - GAP,
+      behavior: "auto",
+    });
   });
 });

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import {
+  LAYOUT_HEIGHT,
+  fakeViewport,
+  releaseViewport,
+} from "../../../tests/helpers/viewport";
 import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
 /**
@@ -12,36 +17,7 @@ import { Sheet, SheetContent, SheetTitle } from "./sheet";
  * cannot tell you the sheet moved by exactly the right number of pixels.
  */
 
-const LAYOUT_HEIGHT = 800;
-
-/** Stands in for `window.visualViewport`, which jsdom does not implement. */
-function fakeViewport(height: number, offsetTop = 0) {
-  const listeners = new Set<() => void>();
-  const viewport = {
-    height,
-    offsetTop,
-    addEventListener: (_: string, listener: () => void) =>
-      void listeners.add(listener),
-    removeEventListener: (_: string, listener: () => void) =>
-      void listeners.delete(listener),
-    /** Opens or closes a keyboard `covered` pixels tall. */
-    keyboard(covered: number) {
-      viewport.height = LAYOUT_HEIGHT - covered;
-      act(() => listeners.forEach((listener) => listener()));
-    },
-  };
-  Object.defineProperty(window, "visualViewport", {
-    value: viewport,
-    configurable: true,
-    writable: true,
-  });
-  window.innerHeight = LAYOUT_HEIGHT;
-  return viewport;
-}
-
-afterEach(() => {
-  Reflect.deleteProperty(window, "visualViewport");
-});
+afterEach(releaseViewport);
 
 function renderSheet() {
   render(
