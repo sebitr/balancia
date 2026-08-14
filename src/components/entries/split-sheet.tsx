@@ -11,6 +11,7 @@ import type {
   SplitPreview,
 } from "@/components/expenses/expense-form-logic";
 import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
+import type { SplitNote } from "./split-notes";
 
 /**
  * Correcting who put the money in, and how it divides.
@@ -49,6 +50,7 @@ export function SplitSheet({
   values,
   onValueChange,
   preview,
+  note,
   received = false,
   splitText,
   onDone,
@@ -65,6 +67,8 @@ export function SplitSheet({
   values: Readonly<Record<string, string>>;
   onValueChange: (participantId: string, value: string) => void;
   preview: SplitPreview;
+  /** What the split does not add up to, if anything. */
+  note: SplitNote | null;
   /** Income was received and credited, not paid and owed. */
   received?: boolean;
   /** Renders a message from the pure split logic. */
@@ -108,46 +112,30 @@ export function SplitSheet({
         <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {t(received ? "receivedBy" : "paidBy")}
         </h3>
-        <div className="flex gap-2">
-          {members.map((member) => {
-            const active = member.id === payerId;
-            return (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => onPayerChange(member.id)}
-                aria-pressed={active}
-                // Both halves of this sheet carry a control per person. The
-                // shapes tell them apart on screen; these names do it for
-                // anyone who is not looking at the screen.
-                aria-label={t(received ? "receiverOption" : "payerOption", {
-                  name: member.displayName,
-                })}
-                className={cn(
-                  "flex flex-1 flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-colors",
-                  active
-                    ? "border-primary bg-primary/10"
-                    : "border-border bg-white/4",
-                )}
-              >
-                <MemberAvatar
-                  name={member.displayName}
-                  className="size-[34px]"
-                  selected={active}
-                />
-                <span
-                  className={cn(
-                    "truncate text-xs",
-                    active
-                      ? "font-semibold text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {member.displayName}
-                </span>
-              </button>
-            );
-          })}
+        {/* Wrapping pills rather than a row of equal columns: a group of ten
+            would otherwise divide the width ten ways and truncate every name
+            to its first letter. */}
+        <div
+          role="radiogroup"
+          aria-label={t(received ? "receivedBy" : "paidBy")}
+          className="flex flex-wrap gap-2"
+        >
+          {members.map((member) => (
+            <MemberPill
+              key={member.id}
+              name={member.displayName}
+              // Both halves of this sheet carry a control per person. The
+              // colours tell them apart on screen; these names do it for
+              // anyone who is not looking at the screen.
+              label={t(received ? "receiverOption" : "payerOption", {
+                name: member.displayName,
+              })}
+              selected={member.id === payerId}
+              onToggle={() => onPayerChange(member.id)}
+              tone="payer"
+              choice
+            />
+          ))}
         </div>
       </section>
 
@@ -194,7 +182,10 @@ export function SplitSheet({
         {t(`hints.${method}`)}
       </p>
 
-      <ul className="overflow-hidden rounded-[14px] bg-white/4">
+      {/* The rows are a scroll container of their own past a few people, and
+          they must overflow rather than compress: a squashed row is how a
+          ten-person split loses its amounts. */}
+      <ul className="max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-white/4 [&>*]:shrink-0">
         {members
           .filter((member) => includedIds.includes(member.id))
           .map((member) => {
@@ -204,7 +195,11 @@ export function SplitSheet({
                 key={member.id}
                 className="flex items-center gap-3 border-b border-white/8 p-3 last:border-b-0"
               >
-                <MemberAvatar name={member.displayName} selected />
+                <MemberAvatar
+                  name={member.displayName}
+                  selected
+                  tone={member.id === payerId ? "payer" : "primary"}
+                />
                 <span className="flex-1 truncate text-[15px]">
                   {member.displayName}
                 </span>
@@ -232,16 +227,35 @@ export function SplitSheet({
           })}
       </ul>
 
-      {!preview.ok && preview.error && (
-        <p className="text-[13px] text-negative">{splitText(preview.error)}</p>
-      )}
-      {preview.ok && preview.roundingNote && (
-        <p className="text-[13px] text-muted-foreground">
-          {splitText(preview.roundingNote)}
+      {/* The note says which way the split is out and by how much; the
+          rounding note only has something to add when it does not. */}
+      {note ? (
+        <p
+          className={cn(
+            "text-[13px]",
+            note.tone === "error" ? "text-negative" : "text-muted-foreground",
+          )}
+        >
+          {t(`notes.${note.key}`, note.params)}
         </p>
+      ) : (
+        preview.ok &&
+        preview.roundingNote && (
+          <p className="text-[13px] text-muted-foreground">
+            {splitText(preview.roundingNote)}
+          </p>
+        )
       )}
 
-      <Button type="button" size="lg" className="h-13" onClick={onDone}>
+      <Button
+        type="button"
+        size="lg"
+        className="h-13"
+        // Nothing to be done with an empty split but put somebody back in it,
+        // and the note above says so.
+        disabled={includedIds.length === 0}
+        onClick={onDone}
+      >
         {t("done")}
       </Button>
     </div>

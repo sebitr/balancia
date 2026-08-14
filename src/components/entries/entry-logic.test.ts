@@ -135,6 +135,16 @@ describe("summariseSplit", () => {
       "justOne",
     );
   });
+
+  /**
+   * Nobody is not one person. "Nobody else's balance moves" is true of an
+   * empty split and tells the reader nothing about why it will not save.
+   */
+  it("tells an empty split apart from a one-person one", () => {
+    expect(summariseSplit({ method: "equal", participantCount: 0 }).key).toBe(
+      "nobody",
+    );
+  });
 });
 
 describe("directionOf", () => {

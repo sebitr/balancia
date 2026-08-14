@@ -34,6 +34,8 @@
   --color-negative: var(--negative);
   --color-negative-foreground: var(--negative-foreground);
   --color-neutral-balance: var(--neutral-balance);
+  --color-payer: var(--payer);
+  --color-payer-foreground: var(--payer-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -70,6 +72,9 @@
  *   --positive  : money the participant should receive (never color alone)
  *   --negative  : money the participant owes
  *   --neutral-balance : settled / zero
+ *   --payer     : who put the money in — the one role coral cannot carry,
+ *                 because on the add screen coral already means "in the split"
+ *                 and a payer is frequently also a participant in it
  * All pairings meet WCAG 2.2 AA contrast on their backgrounds.
  */
 :root {
@@ -93,6 +98,8 @@
   --negative: oklch(0.639 0.18 32);
   --negative-foreground: oklch(0.977 0.007 85);
   --neutral-balance: oklch(0.62 0.035 319);
+  --payer: oklch(0.72 0.145 70);
+  --payer-foreground: oklch(0.226 0.072 319);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
@@ -148,6 +155,8 @@
   --negative: oklch(0.72 0.16 32);
   --negative-foreground: oklch(0.226 0.072 319);
   --neutral-balance: oklch(0.7 0.03 319);
+  --payer: oklch(0.82 0.14 78);
+  --payer-foreground: oklch(0.226 0.072 319);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.712 0.168 30);

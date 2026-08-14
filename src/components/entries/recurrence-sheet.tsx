@@ -46,6 +46,47 @@ export interface RecurrenceState {
   readonly endDate: string | null;
 }
 
+/**
+ * The next few dates a rule would produce, from the real scheduler.
+ *
+ * Wrapped because an in-progress rule can be invalid — day 31 of a weekly
+ * schedule, an end date before the start — and a preview that threw would take
+ * whatever is rendering it down too.
+ *
+ * Shared with the form, whose repeats row states the same three dates. Two
+ * implementations of "when does this next happen" is one more than a schedule
+ * can survive.
+ */
+export function upcomingOccurrences(
+  state: RecurrenceState,
+  startDate: string,
+  timezone: string,
+  limit = 3,
+): string[] {
+  if (!state.enabled) return [];
+  const rule: RecurrenceRule = {
+    frequency: state.frequency,
+    interval: state.interval,
+    weekday: state.frequency === "weekly" ? state.weekday : null,
+    dayOfMonth: state.frequency === "weekly" ? null : state.dayOfMonth,
+    monthOfYear: null,
+    timezone,
+    startDate,
+    endDate: state.endDate,
+  };
+  try {
+    const dates: string[] = [];
+    let current = firstOccurrence(rule);
+    while (current && dates.length < limit) {
+      dates.push(current);
+      current = nextOccurrence(rule, current);
+    }
+    return dates;
+  } catch {
+    return [];
+  }
+}
+
 export function RecurrenceSheet({
   state,
   onChange,
@@ -70,37 +111,10 @@ export function RecurrenceSheet({
     value: RecurrenceState[K],
   ) => onChange({ ...state, [key]: value });
 
-  /**
-   * The next three dates, from the real scheduler.
-   *
-   * Wrapped because an in-progress rule can be invalid — day 31 of a weekly
-   * schedule, an end date before the start — and a preview that throws would
-   * take the sheet down with it.
-   */
-  const upcoming = useMemo(() => {
-    if (!state.enabled) return [];
-    const rule: RecurrenceRule = {
-      frequency: state.frequency,
-      interval: state.interval,
-      weekday: state.frequency === "weekly" ? state.weekday : null,
-      dayOfMonth: state.frequency === "weekly" ? null : state.dayOfMonth,
-      monthOfYear: null,
-      timezone,
-      startDate,
-      endDate: state.endDate,
-    };
-    try {
-      const dates: string[] = [];
-      let current = firstOccurrence(rule);
-      while (current && dates.length < 3) {
-        dates.push(current);
-        current = nextOccurrence(rule, current);
-      }
-      return dates;
-    } catch {
-      return [];
-    }
-  }, [state, startDate, timezone]);
+  const upcoming = useMemo(
+    () => upcomingOccurrences(state, startDate, timezone),
+    [state, startDate, timezone],
+  );
 
   return (
     <div className="flex flex-col gap-4">

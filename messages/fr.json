@@ -1049,6 +1049,12 @@
   },
   "addEntry": {
     "back": "Retour",
+    "titles": {
+      "expense": "Ajouter une dépense",
+      "income": "Ajouter un revenu",
+      "settle": "Rembourser"
+    },
+    "close": "Fermer",
     "types": {
       "label": "Type d'écriture",
       "expense": "Dépense",
@@ -1060,8 +1066,7 @@
       "amountReceived": "Montant reçu",
       "amountFromReceipt": "Montant du reçu",
       "payingBack": "Remboursement",
-      "description": "Description",
-      "descriptionPlaceholder": "Dîner au port"
+      "description": "Description"
     },
     "attach": {
       "add": "Joindre un fichier",
@@ -1113,27 +1118,34 @@
         "percentages": "Par pourcentage · {count} personnes",
         "shares": "Par parts · {count} personnes",
         "byItem": "Par article · {count} personnes",
-        "justOne": "Le solde de personne d'autre ne bouge"
+        "justOne": "Le solde de personne d'autre ne bouge",
+        "nobody": "Personne n'est sélectionné"
       },
       "payerOption": "Payé par {name}",
       "receiverOption": "Reçu par {name}",
-      "includeOption": "Inclure {name} dans le partage"
+      "includeOption": "Inclure {name} dans le partage",
+      "notes": {
+        "nobody": "Choisissez au moins une personne pour ce partage.",
+        "remainderAbsorbed": "{amount} ne se partage pas exactement — {name} l'absorbe.",
+        "stillToAssign": "Il reste {amount} à attribuer.",
+        "overTheTotal": "{amount} de trop par rapport au total.",
+        "percentagesOff": "Les pourcentages font {sum} %, pas 100 %."
+      }
     },
     "currency": {
       "title": "Devise",
       "groupBase": "Base du groupe : {currency}",
       "search": "Rechercher par code ou par nom",
       "noMatch": "Aucune devise ne correspond.",
-      "done": "Terminé"
+      "done": "Terminé",
+      "base": "Base"
     },
     "category": {
       "add": "Ajouter une catégorie",
-      "detected": "détectée depuis la description",
-      "chosen": "choisie",
-      "optional": "facultative",
       "title": "Catégorie",
       "backToDetected": "Revenir à la détection",
-      "done": "Terminé"
+      "done": "Terminé",
+      "detectedTag": "Détectée"
     },
     "repeat": {
       "title": "Répéter",
@@ -1160,7 +1172,10 @@
       "never": "Jamais",
       "onADate": "À une date",
       "preview": "Prochaines : {dates}. Créées automatiquement, heure de {timezone}.",
-      "done": "Terminé"
+      "done": "Terminé",
+      "label": "Récurrence",
+      "schedule": "Recréer cette écriture selon un calendrier",
+      "next": "Prochaines : {dates}"
     },
     "scan": {
       "title": "Scanner un reçu",

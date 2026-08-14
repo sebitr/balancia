@@ -70,6 +70,7 @@ export function hasAmount(text: string): boolean {
  * each person carries, and that number is what someone checks before saving.
  */
 export type SplitSummaryKey =
+  | "nobody"
   | "equalEach"
   | "exactAmounts"
   | "percentages"
@@ -92,7 +93,13 @@ export function summariseSplit(input: {
 }): SplitSummary {
   const { method, participantCount, eachFormatted, byItem } = input;
 
-  if (participantCount <= 1) {
+  // An empty split is a state somebody chose, and it says so rather than
+  // borrowing the one-person wording — "nobody else's balance moves" is true
+  // of a split with nobody in it, and completely the wrong thing to tell them.
+  if (participantCount === 0) {
+    return { key: "nobody", params: {} };
+  }
+  if (participantCount === 1) {
     return { key: "justOne", params: { count: participantCount } };
   }
   if (byItem) {

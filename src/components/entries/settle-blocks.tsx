@@ -33,6 +33,14 @@ export interface DebtPair {
   readonly toParticipantId: string;
   readonly toName: string;
   readonly amountMinor: string;
+  /**
+   * What the debt is denominated in.
+   *
+   * Carried per pair rather than taken from the group, because a group in
+   * `separate` mode has no base currency at all and still owes money — in
+   * several currencies at once, one row each.
+   */
+  readonly currency: string;
   readonly amountFormatted: string;
 }
 
@@ -233,7 +241,7 @@ export function PaymentMethodRow({
               onClick={() => onSelect(id)}
               aria-pressed={active}
               className={cn(
-                "flex h-12 flex-1 flex-col items-center justify-center gap-1 rounded-xl border transition-colors",
+                "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border transition-colors",
                 active
                   ? "border-primary bg-primary/10"
                   : "border-border bg-white/4",
@@ -258,7 +266,7 @@ export function PaymentMethodRow({
           type="button"
           onClick={onOpenAll}
           className={cn(
-            "flex h-12 flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed transition-colors",
+            "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed transition-colors",
             offRow
               ? "border-primary bg-primary/10"
               : "border-white/22 text-muted-foreground",

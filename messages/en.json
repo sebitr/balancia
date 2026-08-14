@@ -1049,6 +1049,12 @@
   },
   "addEntry": {
     "back": "Back",
+    "titles": {
+      "expense": "Add expense",
+      "income": "Add income",
+      "settle": "Settle up"
+    },
+    "close": "Close",
     "types": {
       "label": "What kind of entry",
       "expense": "Expense",
@@ -1060,8 +1066,7 @@
       "amountReceived": "Amount received",
       "amountFromReceipt": "Amount from receipt",
       "payingBack": "Paying back",
-      "description": "Description",
-      "descriptionPlaceholder": "Dinner at the harbour"
+      "description": "Description"
     },
     "attach": {
       "add": "Attach a file",
@@ -1113,27 +1118,34 @@
         "percentages": "Split by percentage · {count} people",
         "shares": "Split by shares · {count} people",
         "byItem": "Split by item · {count} people",
-        "justOne": "Nobody else's balance moves"
+        "justOne": "Nobody else's balance moves",
+        "nobody": "Nobody selected yet"
       },
       "payerOption": "Paid by {name}",
       "receiverOption": "Received by {name}",
-      "includeOption": "Include {name} in the split"
+      "includeOption": "Include {name} in the split",
+      "notes": {
+        "nobody": "Pick at least one person to split this with.",
+        "remainderAbsorbed": "{amount} could not be split evenly — {name} absorbs it.",
+        "stillToAssign": "{amount} still to assign.",
+        "overTheTotal": "{amount} over the total.",
+        "percentagesOff": "Percentages add up to {sum}%, not 100%."
+      }
     },
     "currency": {
       "title": "Currency",
       "groupBase": "Group base: {currency}",
       "search": "Search by code or name",
       "noMatch": "No currency matches that.",
-      "done": "Done"
+      "done": "Done",
+      "base": "Base"
     },
     "category": {
       "add": "Add a category",
-      "detected": "detected from the description",
-      "chosen": "chosen",
-      "optional": "optional",
       "title": "Category",
       "backToDetected": "Back to detected",
-      "done": "Done"
+      "done": "Done",
+      "detectedTag": "Detected"
     },
     "repeat": {
       "title": "Repeat",
@@ -1160,7 +1172,10 @@
       "never": "Never",
       "onADate": "On a date",
       "preview": "Next: {dates}. Created automatically, {timezone} time.",
-      "done": "Done"
+      "done": "Done",
+      "label": "Repeats",
+      "schedule": "Create this entry again on a schedule",
+      "next": "Next: {dates}"
     },
     "scan": {
       "title": "Scan a receipt",
