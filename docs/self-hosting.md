@@ -144,6 +144,12 @@ APP_URL=https://balancia.example.com
 
 # Optional: close sign-ups on a private instance.
 # ALLOW_REGISTRATION=false
+
+# Optional: Sign in with Apple. See the walkthrough below.
+# APPLE_CLIENT_ID=com.example.balancia.web
+# APPLE_TEAM_ID=A1B2C3D4E5
+# APPLE_KEY_ID=ABC1234567
+# APPLE_PRIVATE_KEY=
 ```
 
 Full details in [environment.md](environment.md).
@@ -230,6 +236,110 @@ server {
 
 Any other proxy works too. Balancia has no proxy-specific behaviour — it only
 reads standard forwarded headers.
+
+---
+
+## Sign in with Apple
+
+Optional, and the one feature here with a prerequisite Balancia cannot supply:
+a **paid Apple Developer Program membership** (currently $99/year). Apple issues
+the credentials below only to enrolled accounts, so there is no way to offer
+this button without one. Everything else in Balancia works without it, and
+people who prefer a password or a passkey never touch Apple at all.
+
+You also need a public HTTPS hostname — the one from `APP_URL`. Apple will not
+redirect back to `http://` or to `localhost`.
+
+### In the Apple Developer portal
+
+Four things, in this order. All of them are under
+[Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources).
+
+1. **An App ID.** _Identifiers → + → App IDs → App._ Give it any bundle ID you
+   like (`com.example.balancia`), and enable the **Sign in with Apple**
+   capability. Nothing is shipped to the App Store; this exists because Apple
+   requires a Services ID to be grouped under one.
+
+2. **A Services ID.** _Identifiers → + → Services IDs._ The identifier you
+   choose here is your `APPLE_CLIENT_ID` — conventionally the App ID with a
+   suffix, e.g. `com.example.balancia.web`. Enable **Sign in with Apple**,
+   press **Configure**, and set:
+
+   - **Primary App ID**: the App ID from step 1.
+   - **Domains and Subdomains**: `balancia.example.com` — the host only, no
+     scheme and no path.
+   - **Return URLs**: `https://balancia.example.com/api/auth/apple/callback` —
+     the full URL, and it must match byte for byte. A missing or extra trailing
+     slash is the single most common cause of `invalid_client`.
+
+3. **A key.** _Keys → + →_ tick **Sign in with Apple**, configure it against
+   the same primary App ID, and register it. Apple lets you download the `.p8`
+   **once** — if you lose it, revoke the key and make another. The key's ID is
+   your `APPLE_KEY_ID`.
+
+4. **Your team ID.** Top right of the developer portal, or under Membership.
+   Ten characters; this is `APPLE_TEAM_ID`.
+
+### In `.env`
+
+```bash
+APPLE_CLIENT_ID=com.example.balancia.web
+APPLE_TEAM_ID=A1B2C3D4E5
+APPLE_KEY_ID=ABC1234567
+APPLE_PRIVATE_KEY="$(awk '{printf "%s\\n", $0}' AuthKey_ABC1234567.p8)"
+```
+
+The `awk` is not decoration: the `.p8` is a multi-line PEM block, and a `.env`
+line cannot hold real newlines. Balancia turns the `\n` back into newlines when
+it reads the value. Then:
+
+```bash
+docker compose up -d
+```
+
+The button appears on the sign-in and register pages. If the four values are
+incomplete or malformed, the app says so at startup rather than at the redirect.
+
+### Afterwards
+
+- **Hidden addresses.** People who choose "Hide My Email" arrive with an
+  `@privaterelay.appleid.com` forwarder, which Balancia treats like any other
+  address. If you have SMTP configured with a `SMTP_FROM` at a domain Apple
+  does not know, register that domain with Apple as a
+  [private email relay source](https://developer.apple.com/help/account/configure-app-capabilities/configure-private-email-relay-service),
+  or Apple will silently drop mail to those forwarders.
+
+- **Existing accounts are not claimed automatically.** If somebody already has
+  a Balancia account with the same address, Apple sign-in links to it only when
+  both Apple and this instance have verified that address. Otherwise they are
+  asked to sign in as they already do and link Apple from _Profile → Passkeys &
+  security_. On an instance with no SMTP nothing is ever verified locally, so
+  that deliberate path is always the one taken. The reasoning is in
+  [environment.md](environment.md#sign-in-with-apple-optional).
+
+- **Nobody gets locked out.** An account whose only credential is Apple cannot
+  unlink it; Balancia asks for a password or a passkey first.
+
+- **Turning it off.** Unset the four variables and restart. Accounts created
+  through Apple keep working — but if one has no password and no passkey, it
+  has no way in, so give people warning.
+
+### Trying it before you commit
+
+Apple will not redirect to localhost, so the dev stack has `DEV_APP_URL` for
+pointing at a tunnel:
+
+```bash
+DEV_APP_URL=https://something.trycloudflare.com \
+DEV_APPLE_CLIENT_ID=com.example.balancia.web \
+DEV_APPLE_TEAM_ID=A1B2C3D4E5 \
+DEV_APPLE_KEY_ID=ABC1234567 \
+DEV_APPLE_PRIVATE_KEY="$(awk '{printf "%s\\n", $0}' AuthKey_ABC1234567.p8)" \
+  pnpm dev:docker
+```
+
+Register the tunnel hostname and its callback URL with the Services ID first,
+the same as a real domain.
 
 ---
 

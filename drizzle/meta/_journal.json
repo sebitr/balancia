@@ -71,6 +71,13 @@
       "when": 1786701621011,
       "tag": "0009_little_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786712070148,
+      "tag": "0010_polite_boom_boom",
+      "breakpoints": true
     }
   ]
 }

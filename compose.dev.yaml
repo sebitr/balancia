@@ -32,7 +32,10 @@ x-dev-image: &dev-image
 
 x-dev-environment: &dev-environment
   NODE_ENV: development
-  APP_URL: http://localhost:${DEV_APP_PORT:-3000}
+  # DEV_APP_URL exists for the one thing localhost cannot do: Sign in with
+  # Apple, which Apple will only redirect back to over public HTTPS. Point it
+  # at the tunnel hostname you registered, and leave it unset otherwise.
+  APP_URL: ${DEV_APP_URL:-http://localhost:${DEV_APP_PORT:-3000}}
   DATABASE_URL: postgres://balancia:balancia@db:5432/balancia
   # Dev-only, deliberately not a secret: this stack is not reachable off-host
   # and the value is committed. Compose generates a real one for production.
@@ -60,6 +63,13 @@ x-dev-environment: &dev-environment
   # `pnpm ocr:install` on the host is enough — unlike the production stack,
   # which needs the models mounted or baked into the image.
   RECEIPT_SCANNING: ${DEV_RECEIPT_SCANNING:-false}
+  # Sign in with Apple. Unset by default; setting these also means setting
+  # DEV_APP_URL, because the schema refuses the combination of Apple sign-in
+  # and a localhost APP_URL that Apple would never redirect to.
+  APPLE_CLIENT_ID: ${DEV_APPLE_CLIENT_ID:-}
+  APPLE_TEAM_ID: ${DEV_APPLE_TEAM_ID:-}
+  APPLE_KEY_ID: ${DEV_APPLE_KEY_ID:-}
+  APPLE_PRIVATE_KEY: ${DEV_APPLE_PRIVATE_KEY:-}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

@@ -232,6 +232,66 @@ or nothing is delivered.
 
 ---
 
+## Sign in with Apple (optional)
+
+Off by default. Passwords and passkeys are unaffected by it; this adds a third
+way in, and it is the one that involves somebody else's server.
+
+| Variable            | Notes                                                              |
+| ------------------- | ------------------------------------------------------------------ |
+| `APPLE_CLIENT_ID`   | The **Services ID** identifier, e.g. `com.example.balancia.web`.   |
+| `APPLE_TEAM_ID`     | Your 10-character Apple Developer team ID.                         |
+| `APPLE_KEY_ID`      | The 10-character ID of the sign-in key below.                      |
+| `APPLE_PRIVATE_KEY` | Contents of the `.p8` key. A secret — treat it like `AUTH_SECRET`. |
+
+Set all four or none: three of four stops the app at startup, naming the one
+that is missing, rather than failing later at a redirect where the error is
+Apple's and says nothing useful.
+
+The step-by-step Apple Developer setup is in
+[self-hosting.md](self-hosting.md#sign-in-with-apple).
+
+**A multi-line value in a single-line file.** `APPLE_PRIVATE_KEY` is a PEM
+block, and neither `.env` nor Compose interpolation carries real newlines.
+Write them as `\n`, which Balancia unescapes:
+
+```bash
+APPLE_PRIVATE_KEY="$(awk '{printf "%s\\n", $0}' AuthKey_ABC1234567.p8)"
+```
+
+**`APP_URL` must be public HTTPS.** Apple refuses to redirect to `http://` or
+to `localhost`, so an instance configured with both Apple sign-in and a
+localhost URL is stopped at startup — it could never complete a sign-in. To try
+it locally, put a tunnel in front and register that hostname with Apple; the
+dev stack takes `DEV_APP_URL` for exactly this.
+
+**What this means for privacy.** Every sign-in through this button is a
+conversation between the person's browser and Apple, and then between this
+instance and Apple's token endpoint. Apple learns that someone signed in to
+your instance and when, and your instance's hostname is registered with Apple
+in advance. Nothing about groups, expenses or balances is involved, and people
+who use a password or a passkey never contact Apple at all. Leaving these unset
+keeps the instance from talking to Apple.
+
+**Hidden addresses work.** Someone choosing "Hide My Email" gets an
+`@privaterelay.appleid.com` forwarder. Balancia stores it like any other
+address; mail sent to it reaches them through Apple's relay. If you use
+`SMTP_FROM` at a domain Apple does not know, register it with Apple as a
+[Sign in with Apple email
+source](https://developer.apple.com/help/account/configure-app-capabilities/configure-private-email-relay-service)
+or the relay will drop your mail.
+
+**Linking to existing accounts is deliberate.** Balancia links an Apple account
+to an existing local one automatically only when both sides have verified the
+address — Apple says it verified it, and this instance did too. Otherwise the
+person is asked to sign in the way they already can and link Apple from
+_Profile → Passkeys & security_. Without that rule, anyone able to register with
+an address they do not own could wait to inherit the account of whoever later
+arrives through Apple. Note that an instance with no SMTP never verifies an
+address, so on one of those the deliberate path is always the one taken.
+
+---
+
 ## Instance policy
 
 ### `ALLOW_REGISTRATION`

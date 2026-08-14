@@ -1,7 +1,12 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
-import { users, verificationTokens } from "@/lib/db/schema";
+import {
+  oauthIdentities,
+  passkeys,
+  users,
+  verificationTokens,
+} from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import {
@@ -56,7 +61,13 @@ export type AuthErrorCode =
   | "invalidCredentials"
   | "resetLinkInvalid"
   | "confirmLinkInvalid"
-  | "signInRequired";
+  | "signInRequired"
+  | "appleNoEmail"
+  | "appleEmailTaken"
+  | "appleLinkedElsewhere"
+  | "appleAlreadyLinked"
+  | "appleOnlyCredential"
+  | "appleNotLinked";
 
 export class AuthError extends Error {
   constructor(
@@ -242,6 +253,384 @@ export async function signInWithPassword(
     session,
     locale: row.locale,
   };
+}
+
+/**
+ * Signs in with a verified Apple identity, creating or linking as needed.
+ *
+ * The caller has already proved the claims came from Apple (see apple.ts);
+ * what is decided here is which local account they belong to. Three cases, in
+ * order:
+ *
+ *  1. This Apple account has been seen before — sign that user in. The `sub`
+ *     is the only thing matched on, because it is the only claim Apple
+ *     guarantees is stable. An address can change; a relay can be switched off.
+ *
+ *  2. It has not been seen, and the address matches an existing account.
+ *     Linking the two would hand whoever holds the Apple account everything in
+ *     the local one, so it happens only when both sides are verified — Apple
+ *     says it verified the address, and this instance verified it too. Failing
+ *     that, the person is asked to sign in the way they already can and link
+ *     from the security page, which is the same outcome without trusting an
+ *     unverified match. Note that an instance with no SMTP never verifies an
+ *     address, so on one of those this branch always asks.
+ *
+ *  3. Neither — a new account, subject to ALLOW_REGISTRATION like any other.
+ */
+export async function signInWithApple(
+  identity: {
+    subject: string;
+    email: string | null;
+    emailVerified: boolean;
+    isPrivateEmail: boolean;
+  },
+  context: {
+    userAgent?: string | null;
+    ipAddress?: string | null;
+    /** Apple sends this only on the very first authorization. */
+    fullName?: string | null;
+  } = {},
+  options: { db?: Database } = {},
+): Promise<SignInResult> {
+  const db = options.db ?? getDb();
+  const env = getEnv();
+  const now = new Date();
+  const email = identity.email ? normalizeEmail(identity.email) : null;
+
+  const [existing] = await db
+    .select({
+      userId: oauthIdentities.userId,
+      email: users.email,
+      name: users.name,
+      emailVerifiedAt: users.emailVerifiedAt,
+      disabledAt: users.disabledAt,
+      locale: users.locale,
+    })
+    .from(oauthIdentities)
+    .innerJoin(users, eq(users.id, oauthIdentities.userId))
+    .where(
+      and(
+        eq(oauthIdentities.provider, "apple"),
+        eq(oauthIdentities.subject, identity.subject),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    if (existing.disabledAt) {
+      throw new AuthError(INVALID_CREDENTIALS, "invalidCredentials");
+    }
+
+    // Keep the stored address current, so the security page names the Apple ID
+    // that is actually linked rather than the one that was linked in 2024.
+    await db
+      .update(oauthIdentities)
+      .set({
+        lastUsedAt: now,
+        email,
+        isPrivateEmail: identity.isPrivateEmail,
+      })
+      .where(
+        and(
+          eq(oauthIdentities.provider, "apple"),
+          eq(oauthIdentities.subject, identity.subject),
+        ),
+      );
+
+    const session = await createSession(existing.userId, context, { db });
+    return {
+      user: {
+        userId: existing.userId,
+        email: existing.email,
+        name: existing.name,
+        emailVerified: existing.emailVerifiedAt !== null,
+      },
+      session,
+      locale: existing.locale,
+    };
+  }
+
+  // Everything below creates or claims an account, and every route to that
+  // needs an address.
+  if (!email) {
+    throw new AuthError(
+      "Apple did not share an email address with this instance, so there is nothing to create an account from.",
+      "appleNoEmail",
+    );
+  }
+
+  const [claimed] = await db
+    .select({
+      id: users.id,
+      emailVerifiedAt: users.emailVerifiedAt,
+    })
+    .from(users)
+    .where(eq(sql`lower(${users.email})`, email))
+    .limit(1);
+
+  if (claimed) {
+    if (!identity.emailVerified || claimed.emailVerifiedAt === null) {
+      throw new AuthError(
+        "An account already uses that email address. Sign in with your password or passkey, " +
+          "then link Apple from the security page.",
+        "appleEmailTaken",
+      );
+    }
+
+    await db.insert(oauthIdentities).values({
+      userId: claimed.id,
+      provider: "apple",
+      subject: identity.subject,
+      email,
+      isPrivateEmail: identity.isPrivateEmail,
+      lastUsedAt: now,
+    });
+    logger.info(
+      { userId: claimed.id },
+      "Linked an Apple identity to an existing account on both sides verified",
+    );
+
+    const [row] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        emailVerifiedAt: users.emailVerifiedAt,
+        locale: users.locale,
+      })
+      .from(users)
+      .where(eq(users.id, claimed.id))
+      .limit(1);
+
+    const session = await createSession(claimed.id, context, { db });
+    return {
+      user: {
+        userId: row.id,
+        email: row.email,
+        name: row.name,
+        emailVerified: row.emailVerifiedAt !== null,
+      },
+      session,
+      locale: row.locale,
+    };
+  }
+
+  if (!env.ALLOW_REGISTRATION) {
+    throw new AuthError(
+      "Registration is closed on this instance.",
+      "registrationClosed",
+    );
+  }
+
+  // Apple offers a name once, on the first authorization, and never again. If
+  // it was not there, the local part of the address is a better placeholder
+  // than an empty heading — and the person can change it in their profile.
+  const name = context.fullName?.trim() || email.split("@")[0] || email;
+
+  const created = await db.transaction(async (tx) => {
+    const [user] = await tx
+      .insert(users)
+      .values({
+        email,
+        name,
+        // Apple verified the address; requiring this instance to verify it
+        // again by mail would be asking a question that is already answered.
+        // An unverified one (which Apple should not send) stays unverified.
+        emailVerifiedAt: identity.emailVerified ? now : null,
+      })
+      .returning({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        emailVerifiedAt: users.emailVerifiedAt,
+        locale: users.locale,
+      });
+
+    await tx.insert(oauthIdentities).values({
+      userId: user.id,
+      provider: "apple",
+      subject: identity.subject,
+      email,
+      isPrivateEmail: identity.isPrivateEmail,
+      lastUsedAt: now,
+    });
+
+    return user;
+  });
+
+  logger.info({ userId: created.id }, "Created an account from Apple sign-in");
+
+  const session = await createSession(created.id, context, { db });
+  return {
+    user: {
+      userId: created.id,
+      email: created.email,
+      name: created.name,
+      emailVerified: created.emailVerifiedAt !== null,
+    },
+    session,
+    locale: created.locale,
+  };
+}
+
+export interface LinkedAppleIdentity {
+  readonly email: string | null;
+  readonly isPrivateEmail: boolean;
+  readonly linkedAt: Date;
+  readonly lastUsedAt: Date | null;
+}
+
+/** The Apple account linked to this user, if any. */
+export async function getLinkedAppleIdentity(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<LinkedAppleIdentity | null> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({
+      email: oauthIdentities.email,
+      isPrivateEmail: oauthIdentities.isPrivateEmail,
+      linkedAt: oauthIdentities.createdAt,
+      lastUsedAt: oauthIdentities.lastUsedAt,
+    })
+    .from(oauthIdentities)
+    .where(
+      and(
+        eq(oauthIdentities.userId, userId),
+        eq(oauthIdentities.provider, "apple"),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Links an Apple account to the signed-in user.
+ *
+ * This is the deliberate path that `signInWithApple` refuses to take on its
+ * own: the person is already authenticated here, so no email match has to be
+ * trusted. One Apple account per user and one user per Apple account — the
+ * unique index enforces the second, and the check below reports it as
+ * something a human can act on rather than a constraint violation.
+ */
+export async function linkAppleIdentity(
+  userId: string,
+  identity: {
+    subject: string;
+    email: string | null;
+    isPrivateEmail: boolean;
+  },
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+
+  const [taken] = await db
+    .select({ userId: oauthIdentities.userId })
+    .from(oauthIdentities)
+    .where(
+      and(
+        eq(oauthIdentities.provider, "apple"),
+        eq(oauthIdentities.subject, identity.subject),
+      ),
+    )
+    .limit(1);
+
+  if (taken) {
+    throw taken.userId === userId
+      ? new AuthError(
+          "That Apple account is already linked to this account.",
+          "appleAlreadyLinked",
+        )
+      : new AuthError(
+          "That Apple account is already linked to a different Balancia account.",
+          "appleLinkedElsewhere",
+        );
+  }
+
+  const existing = await getLinkedAppleIdentity(userId, { db });
+  if (existing) {
+    throw new AuthError(
+      "This account already has an Apple account linked. Unlink it first.",
+      "appleAlreadyLinked",
+    );
+  }
+
+  try {
+    await db.insert(oauthIdentities).values({
+      userId,
+      provider: "apple",
+      subject: identity.subject,
+      email: identity.email ? normalizeEmail(identity.email) : null,
+      isPrivateEmail: identity.isPrivateEmail,
+    });
+  } catch (error) {
+    // Two link attempts at once: the index is the authority, not the SELECT.
+    if (isUniqueViolation(error)) {
+      throw new AuthError(
+        "That Apple account is already linked to a different Balancia account.",
+        "appleLinkedElsewhere",
+      );
+    }
+    throw error;
+  }
+  logger.info({ userId }, "Linked an Apple identity from the security page");
+}
+
+/**
+ * Unlinks it, unless doing so would lock the person out.
+ *
+ * An account created through Apple has no password and may have no passkey, in
+ * which case the Apple link is the only way back in. Removing it would leave
+ * an account nobody can reach — and on an instance without SMTP there is not
+ * even a password reset to recover with.
+ */
+export async function unlinkAppleIdentity(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+
+  const [row] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!row) {
+    throw new AuthError("Sign in to change your account.", "signInRequired");
+  }
+
+  if (!row.passwordHash) {
+    const [passkey] = await db
+      .select({ id: passkeys.id })
+      .from(passkeys)
+      .where(eq(passkeys.userId, userId))
+      .limit(1);
+
+    if (!passkey) {
+      throw new AuthError(
+        "Apple is the only way you can sign in to this account. Set a password or add a passkey first.",
+        "appleOnlyCredential",
+      );
+    }
+  }
+
+  const removed = await db
+    .delete(oauthIdentities)
+    .where(
+      and(
+        eq(oauthIdentities.userId, userId),
+        eq(oauthIdentities.provider, "apple"),
+      ),
+    )
+    .returning({ id: oauthIdentities.id });
+
+  if (removed.length === 0) {
+    throw new AuthError(
+      "There is no Apple account linked to this account.",
+      "appleNotLinked",
+    );
+  }
+  logger.info({ userId }, "Unlinked an Apple identity");
 }
 
 /**

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isWebAssemblyInferenceEnabled } from "@/lib/env";
+import { APPLE_CALLBACK_PATH } from "@/modules/auth/apple-paths";
 
 /**
  * Security headers and origin validation.
@@ -17,6 +18,20 @@ import { isWebAssemblyInferenceEnabled } from "@/lib/env";
  */
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * The one endpoint a cross-origin POST is supposed to reach.
+ *
+ * Sign in with Apple returns its result as a form POST from
+ * appleid.apple.com, so the origin check below would reject every completed
+ * sign-in. What stands in for it there is the `state` parameter: the callback
+ * compares it against an HMAC-signed, browser-bound cookie before it does
+ * anything, which is the defence this check approximates for everything else.
+ *
+ * Kept to an exact path — not a prefix — so it exempts that handler and no
+ * route that might later be added beside it.
+ */
+const CROSS_ORIGIN_POST_ALLOWED = new Set([APPLE_CALLBACK_PATH]);
 
 function buildCsp(nonce: string, isDevelopment: boolean): string {
   // Compiling WebAssembly needs its own token. Added only where the operator
@@ -64,7 +79,10 @@ export function proxy(request: NextRequest): NextResponse {
 
   // Origin check for state-changing requests. Server Actions are additionally
   // protected by Next.js itself; this covers route handlers too.
-  if (!SAFE_METHODS.has(request.method)) {
+  if (
+    !SAFE_METHODS.has(request.method) &&
+    !CROSS_ORIGIN_POST_ALLOWED.has(request.nextUrl.pathname)
+  ) {
     const origin = request.headers.get("origin");
     if (origin) {
       const host = request.headers.get("host");

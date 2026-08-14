@@ -31,6 +31,8 @@ export const verificationPurposeEnum = pgEnum("verification_purpose", [
   "password_reset",
 ]);
 
+export const oauthProviderEnum = pgEnum("oauth_provider", ["apple"]);
+
 export const users = pgTable(
   "users",
   {
@@ -144,6 +146,51 @@ export const passkeys = pgTable(
   (table) => [
     uniqueIndex("passkeys_credential_id_unique").on(table.credentialId),
     index("passkeys_user_idx").on(table.userId),
+  ],
+);
+
+/**
+ * An external identity provider's account, linked to a local user.
+ *
+ * A third row type alongside passwords and passkeys, for the same reason they
+ * are separate rows: a person may sign in with any of them, and unlinking one
+ * must not disturb the others.
+ *
+ * `subject` is the provider's stable identifier for the person. Apple's is
+ * scoped to the developer team, so it is meaningless anywhere else and cannot
+ * be correlated with another site's — but it is the only durable handle there
+ * is, because the email may be a relay address that the user can switch off.
+ * Uniqueness is on (provider, subject), never on email.
+ */
+export const oauthIdentities = pgTable(
+  "oauth_identities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: oauthProviderEnum("provider").notNull(),
+    /** The provider's `sub` claim. Opaque; never parsed. */
+    subject: text("subject").notNull(),
+    /**
+     * The address the provider last reported, kept for display so someone can
+     * tell which Apple ID is linked. Never used to find the account — that is
+     * what `subject` is for.
+     */
+    email: text("email"),
+    /** Apple's private relay (`@privaterelay.appleid.com`) rather than a real inbox. */
+    isPrivateEmail: boolean("is_private_email").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("oauth_identities_provider_subject_unique").on(
+      table.provider,
+      table.subject,
+    ),
+    index("oauth_identities_user_idx").on(table.userId),
   ],
 );
 

@@ -79,6 +79,11 @@
       "generic": "That did not work.",
       "passkeyCancelled": "The passkey request was cancelled.",
       "passkeyFailed": "Your browser could not complete the passkey request."
+    },
+    "apple": {
+      "signIn": "Sign in with Apple",
+      "signUp": "Sign up with Apple",
+      "continue": "Continue with Apple"
     }
   },
   "expenses": {
@@ -808,7 +813,15 @@
     "unknownCurrency": "That is not a currency Balancia knows.",
     "reminderEmpty": "A reminder needs something to say.",
     "reminderNotOwed": "That person does not owe you anything in this group.",
-    "reminderTooSoon": "That person was reminded in the last 24 hours. Give them a day."
+    "reminderTooSoon": "That person was reminded in the last 24 hours. Give them a day.",
+    "appleNoEmail": "Apple did not share an email address with this instance, so there is nothing to create an account from.",
+    "appleEmailTaken": "An account already uses that email address. Sign in with your password or passkey, then link Apple from the security page.",
+    "appleLinkedElsewhere": "That Apple account is already linked to a different Balancia account.",
+    "appleAlreadyLinked": "This account already has an Apple account linked. Unlink it first.",
+    "appleOnlyCredential": "Apple is the only way you can sign in to this account. Set a password or add a passkey first.",
+    "appleNotLinked": "There is no Apple account linked to this account.",
+    "appleFailed": "That did not work. Apple could not confirm the sign-in.",
+    "appleExpired": "That sign-in took too long, or was started in another browser. Try again."
   },
   "serverValidation": {
     "checkForm": "Check the form.",
@@ -1278,5 +1291,19 @@
     "IN": "India",
     "CA": "Canada",
     "AU": "Australia"
+  },
+  "appleAccount": {
+    "title": "Apple account",
+    "intro": "Link your Apple account to sign in with Face ID, Touch ID or your Apple ID password.",
+    "link": "Link Apple account",
+    "linkedOn": "Linked on {date}",
+    "linkedToast": "Your Apple account is linked.",
+    "relayNote": "Apple forwards mail to your real address and does not share it with this instance.",
+    "addressHidden": "Apple did not share an address",
+    "unlink": "Unlink",
+    "unlinkTitle": "Unlink your Apple account?",
+    "unlinkBody": "You will no longer be able to sign in with Apple. Your password and any passkeys keep working.",
+    "unlinkedToast": "Your Apple account is no longer linked.",
+    "unlinkFailed": "That Apple account could not be unlinked."
   }
 }

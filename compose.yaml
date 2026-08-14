@@ -58,6 +58,13 @@ x-app-environment: &app-environment
   # it is not enough on its own: the models have to be inside the container
   # too. See the commented-out volume on the app service below.
   RECEIPT_SCANNING: ${RECEIPT_SCANNING:-false}
+  # Sign in with Apple. Off unless all four are set. Needs a paid Apple
+  # Developer account and a public HTTPS APP_URL registered with Apple; the
+  # private key is the .p8 contents, with newlines written as \n.
+  APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+  APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+  APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+  APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
   # This stack runs a dedicated worker container, so the web process must not

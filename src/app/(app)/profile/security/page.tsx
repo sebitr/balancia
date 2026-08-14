@@ -5,7 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PasskeyManager } from "@/components/auth/passkey-manager";
+import { AppleAccountCard } from "@/components/auth/apple-account-card";
 import { getEnv } from "@/lib/env";
+import { getCurrentUser } from "@/lib/security/actor";
+import { getLinkedAppleIdentity } from "@/modules/auth/service";
 import { POP } from "@/components/motion/transitions";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,10 +16,37 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
-export default async function SecurityPage() {
+/**
+ * What the Apple round trip may redirect back with. An allowlist, for the same
+ * reason as on the sign-in page: `?error=` is as easy to type as to be sent.
+ */
+const APPLE_ERROR_CODES = new Set([
+  "appleFailed",
+  "appleAlreadyLinked",
+  "appleLinkedElsewhere",
+  "generic",
+]);
+
+export default async function SecurityPage({
+  searchParams,
+}: PageProps<"/profile/security">) {
   const env = getEnv();
   const t = await getTranslations("securityPage");
   const tCommon = await getTranslations("common");
+  const tApple = await getTranslations("appleAccount");
+
+  const { error, linked: justLinked } = await searchParams;
+  const code = typeof error === "string" ? error : undefined;
+  let appleError: string | null = null;
+  if (code && APPLE_ERROR_CODES.has(code)) {
+    const tErrors = await getTranslations("serverErrors");
+    const key = code as Parameters<typeof tErrors.has>[0];
+    appleError = tErrors.has(key) ? tErrors(key) : tErrors("generic");
+  }
+
+  const user = env.appleSignInEnabled ? await getCurrentUser() : null;
+  const linkedApple = user ? await getLinkedAppleIdentity(user.userId) : null;
+
   const isLocalhost =
     env.webAuthnRpId === "localhost" ||
     env.webAuthnRpId === "127.0.0.1" ||
@@ -46,10 +76,36 @@ export default async function SecurityPage() {
         </Alert>
       )}
 
+      {appleError && (
+        <Alert variant="destructive">
+          <AlertDescription>{appleError}</AlertDescription>
+        </Alert>
+      )}
+
+      {justLinked === "apple" && !appleError && (
+        <Alert>
+          <AlertDescription>{tApple("linkedToast")}</AlertDescription>
+        </Alert>
+      )}
+
       <PasskeyManager
         relyingPartyId={env.webAuthnRpId}
         enabled={secureContext}
       />
+
+      {env.appleSignInEnabled && (
+        <AppleAccountCard
+          linked={
+            linkedApple
+              ? {
+                  email: linkedApple.email,
+                  isPrivateEmail: linkedApple.isPrivateEmail,
+                  linkedAt: linkedApple.linkedAt.toISOString(),
+                }
+              : null
+          }
+        />
+      )}
     </div>
   );
 }

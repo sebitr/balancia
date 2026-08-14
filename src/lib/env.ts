@@ -129,6 +129,34 @@ const envSchema = z
      */
     PUSH_VAPID_SUBJECT: optionalString,
 
+    /**
+     * Sign in with Apple. All four values come from one Apple Developer
+     * account, and the feature is on exactly when all four are set.
+     *
+     * Off by default, and not because of the code: switching it on means every
+     * sign-in attempt is a round trip to Apple, and it costs the operator a
+     * paid Developer Program membership. Both are decisions for whoever runs
+     * the instance. Nothing depends on it — passwords and passkeys are
+     * unaffected. See docs/self-hosting.md.
+     */
+
+    /** Services ID identifier, e.g. `com.example.balancia.web`. Not the App ID. */
+    APPLE_CLIENT_ID: optionalString,
+    /** The 10-character Apple Developer team identifier. */
+    APPLE_TEAM_ID: optionalString,
+    /** The 10-character identifier of the private key below. */
+    APPLE_KEY_ID: optionalString,
+    /**
+     * Contents of the `.p8` sign-in key, PKCS#8 PEM. Newlines may be written
+     * as `\n`, because a multi-line value survives neither `.env` nor
+     * compose's interpolation.
+     */
+    APPLE_PRIVATE_KEY: z
+      .string()
+      .transform((value) => value.trim().replace(/\\n/g, "\n"))
+      .transform((value) => (value === "" ? undefined : value))
+      .optional(),
+
     /** Disable open registration on a private instance. */
     ALLOW_REGISTRATION: booleanish.default(true),
 
@@ -270,6 +298,65 @@ const envSchema = z
       });
     }
 
+    // Sign in with Apple needs all four values or none. Three of four is the
+    // same mistake as half a VAPID pair, and it fails at the redirect rather
+    // than at boot, so it is worth catching here.
+    const appleParts = [
+      ["APPLE_CLIENT_ID", value.APPLE_CLIENT_ID],
+      ["APPLE_TEAM_ID", value.APPLE_TEAM_ID],
+      ["APPLE_KEY_ID", value.APPLE_KEY_ID],
+      ["APPLE_PRIVATE_KEY", value.APPLE_PRIVATE_KEY],
+    ] as const;
+    const appleSet = appleParts.filter(([, part]) => part);
+    if (appleSet.length > 0 && appleSet.length < appleParts.length) {
+      for (const [key, part] of appleParts) {
+        if (part) continue;
+        context.addIssue({
+          code: "custom",
+          path: [key],
+          message:
+            `${key} is required when the other Sign in with Apple settings are set. ` +
+            "Set all four, or unset them all to turn Apple sign-in off. See docs/self-hosting.md.",
+        });
+      }
+    }
+
+    if (appleSet.length === appleParts.length) {
+      // Apple will not redirect to plain HTTP or to localhost, so an instance
+      // configured this way can never complete a sign-in. Better to say so at
+      // boot than to let the operator debug Apple's own error page.
+      if (appUrl.protocol !== "https:" || isLocalhost) {
+        context.addIssue({
+          code: "custom",
+          path: ["APP_URL"],
+          message:
+            `Sign in with Apple requires a public HTTPS APP_URL; "${value.APP_URL}" is not one. ` +
+            "Apple refuses to redirect to http:// or to localhost. To try it locally, put a tunnel " +
+            "in front and register that hostname with Apple.",
+        });
+      }
+
+      for (const key of ["APPLE_TEAM_ID", "APPLE_KEY_ID"] as const) {
+        if (!/^[A-Z0-9]{10}$/.test(value[key]!)) {
+          context.addIssue({
+            code: "custom",
+            path: [key],
+            message: `${key} should be the 10-character identifier Apple shows, e.g. "A1B2C3D4E5".`,
+          });
+        }
+      }
+
+      if (!/^-----BEGIN PRIVATE KEY-----/.test(value.APPLE_PRIVATE_KEY!)) {
+        context.addIssue({
+          code: "custom",
+          path: ["APPLE_PRIVATE_KEY"],
+          message:
+            "APPLE_PRIVATE_KEY must be the contents of the .p8 file Apple issued, beginning " +
+            '"-----BEGIN PRIVATE KEY-----" — not the file path, and not the key ID.',
+        });
+      }
+    }
+
     if (
       value.PUSH_VAPID_SUBJECT &&
       !value.PUSH_VAPID_SUBJECT.startsWith("mailto:") &&
@@ -315,6 +402,7 @@ export interface AppEnv extends RawEnv {
   readonly trustedOrigins: readonly string[];
   readonly smtpEnabled: boolean;
   readonly pushEnabled: boolean;
+  readonly appleSignInEnabled: boolean;
   readonly isProduction: boolean;
   readonly isTest: boolean;
 }
@@ -356,6 +444,12 @@ function buildEnv(source: NodeJS.ProcessEnv): AppEnv {
     smtpEnabled: Boolean(value.SMTP_HOST && value.SMTP_FROM),
     pushEnabled: Boolean(
       value.PUSH_VAPID_PUBLIC_KEY && value.PUSH_VAPID_PRIVATE_KEY,
+    ),
+    appleSignInEnabled: Boolean(
+      value.APPLE_CLIENT_ID &&
+      value.APPLE_TEAM_ID &&
+      value.APPLE_KEY_ID &&
+      value.APPLE_PRIVATE_KEY,
     ),
     isProduction: value.NODE_ENV === "production",
     isTest: value.NODE_ENV === "test",

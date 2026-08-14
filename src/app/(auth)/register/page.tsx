@@ -36,5 +36,5 @@ export default async function RegisterPage() {
     );
   }
 
-  return <RegisterForm />;
+  return <RegisterForm appleEnabled={env.appleSignInEnabled} />;
 }
