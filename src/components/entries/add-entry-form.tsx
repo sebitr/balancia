@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
+import { useNumberLocale } from "@/i18n/format-context";
 import Link from "next/link";
 import { CalendarDays, ChevronLeft, Loader2, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,6 @@ import {
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
 import { POP } from "@/components/motion/transitions";
-import { PLAIN_DATE_FORMAT, parsePlainDate } from "@/i18n/format";
 import { formatMoney, money } from "@/modules/currencies/money";
 import type { LearnedMerchantMapping } from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
@@ -121,8 +122,8 @@ export function AddEntryForm({
   receiptScanning = false,
 }: AddEntryFormProps) {
   const router = useRouter();
-  const locale = useLocale();
-  const format = useFormatter();
+  const locale = useNumberLocale();
+  const dates = useDateFormatter();
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tCommon = useTranslations("common");
@@ -649,9 +650,7 @@ export function AddEntryForm({
               aria-hidden="true"
               className="size-4 text-muted-foreground"
             />
-            {isToday(date)
-              ? t("date.today")
-              : format.dateTime(parsePlainDate(date), PLAIN_DATE_FORMAT)}
+            {isToday(date) ? t("date.today") : dates.plain(date)}
           </span>
           {/* The native picker, made invisible over its own label: one control,
               the platform's own calendar, and no second date implementation. */}

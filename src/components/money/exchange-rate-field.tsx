@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
 import { Loader2 } from "lucide-react";
-import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -46,7 +46,7 @@ export function ExchangeRateField({
   hint: React.ReactNode;
 }) {
   const t = useTranslations("exchangeRate");
-  const format = useFormatter();
+  const dates = useDateFormatter();
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -118,7 +118,7 @@ export function ExchangeRateField({
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Loader2 className="size-3 animate-spin" aria-hidden />
           {t("looking", {
-            date: format.dateTime(parsePlainDate(on), PLAIN_DATE_FORMAT),
+            date: dates.plain(on),
           })}
         </p>
       )}
@@ -127,10 +127,7 @@ export function ExchangeRateField({
         <p className="text-xs text-muted-foreground">
           {t("suggested", {
             provider: suggestion.provider,
-            date: format.dateTime(
-              parsePlainDate(suggestion.quotedOn),
-              PLAIN_DATE_FORMAT,
-            ),
+            date: dates.plain(suggestion.quotedOn),
           })}
         </p>
       )}
@@ -140,10 +137,7 @@ export function ExchangeRateField({
           {t("quotes", {
             provider: suggestion.provider,
             rate: suggestion.rate,
-            date: format.dateTime(
-              parsePlainDate(suggestion.quotedOn),
-              PLAIN_DATE_FORMAT,
-            ),
+            date: dates.plain(suggestion.quotedOn),
           })}{" "}
           <button
             type="button"

@@ -24,7 +24,7 @@ import {
   readSessionCookie,
   setSessionCookie,
 } from "./cookies";
-import { applyStoredLocale } from "@/i18n/cookie";
+import { applyStoredPreferences } from "@/i18n/cookie";
 import { resolveRequestLocale } from "@/i18n/request";
 
 /**
@@ -114,9 +114,9 @@ export async function signInAction(input: unknown): Promise<ActionResult> {
 
     const result = await signInWithPassword(parsed.data, context);
     await setSessionCookie(result.session.token, result.session.expiresAt);
-    // Seed the language cookie from the account, so a new browser opens in the
-    // language this person already chose elsewhere.
-    await applyStoredLocale(result.locale);
+    // Seed the display cookies from the account, so a new browser opens in the
+    // language and notation this person already chose elsewhere.
+    await applyStoredPreferences(result.preferences);
   });
 }
 

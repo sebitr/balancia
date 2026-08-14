@@ -3,7 +3,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
+import { useNumberLocale } from "@/i18n/format-context";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -12,7 +14,6 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
 import { Input } from "@/components/ui/input";
 import { Amount, toneFor, type BalanceTone } from "@/components/money/amount";
 import { formatMoney, money } from "@/modules/currencies/money";
@@ -144,8 +145,8 @@ export function Transactions({
   backIn: readonly { currency: string; amount: string }[];
 }) {
   const t = useTranslations("expensesList");
-  const format = useFormatter();
-  const locale = useLocale();
+  const dates = useDateFormatter();
+  const locale = useNumberLocale();
   const searchParams = useSearchParams();
   const categoryLabel = useCategoryLabel();
 
@@ -216,7 +217,7 @@ export function Transactions({
       return false;
     }
     if (needle === "") return true;
-    const date = format.dateTime(parsePlainDate(row.date), PLAIN_DATE_FORMAT);
+    const date = dates.plain(row.date);
     return `${row.title} ${date}`.toLowerCase().includes(needle);
   });
 
@@ -418,7 +419,7 @@ function Hero({
   labelOf: (band: BandView) => string;
 }) {
   const t = useTranslations("expensesList");
-  const locale = useLocale();
+  const locale = useNumberLocale();
   const single = spreads.length === 1 ? spreads[0] : null;
 
   const formatted = (amount: string, currency: string) =>
@@ -527,7 +528,7 @@ function Row({
   rail: string;
   name: string | null;
 }) {
-  const format = useFormatter();
+  const dates = useDateFormatter();
   const Glyph = hasGlyph(row.category)
     ? CATEGORY_GLYPHS[row.category]
     : FALLBACK_GLYPH;
@@ -555,7 +556,7 @@ function Row({
           <span className="truncate text-sm font-medium">{row.title}</span>
         </span>
         <span className="mt-[3px] block truncate text-[0.71875rem] text-muted-foreground">
-          {format.dateTime(parsePlainDate(row.date), PLAIN_DATE_FORMAT)}
+          {dates.plain(row.date)}
         </span>
         {badge && <TypeBadge kind={badge} />}
       </span>

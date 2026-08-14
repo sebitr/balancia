@@ -1,4 +1,5 @@
-import { getFormatter, getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { getDateFormatter } from "@/i18n/preferences";
 import { RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -33,7 +34,7 @@ export default async function RecurringPage({
   ]);
 
   const t = await getTranslations("recurringPage");
-  const format = await getFormatter();
+  const dates = await getDateFormatter();
   const locale = await getLocale();
 
   const describeSchedule = (template: {
@@ -104,9 +105,7 @@ export default async function RecurringPage({
                 <p className="text-xs text-muted-foreground">
                   {template.nextRunAt && !template.pausedAt
                     ? t("next", {
-                        date: format.dateTime(new Date(template.nextRunAt), {
-                          dateStyle: "medium",
-                        }),
+                        date: dates.at(template.nextRunAt),
                       })
                     : template.pausedAt
                       ? t("pausedNote")

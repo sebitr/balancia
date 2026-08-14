@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useNumberLocale } from "@/i18n/format-context";
 import { Plus, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ export function ReceiptReview({
   imageUrl?: string;
 }) {
   const t = useTranslations("receiptScanner.review");
-  const locale = useLocale();
+  const locale = useNumberLocale();
 
   const issues = useMemo(() => validateReceipt(draftToReceipt(draft)), [draft]);
 

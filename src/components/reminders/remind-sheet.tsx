@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { useNumberLocale } from "@/i18n/format-context";
 import { toast } from "sonner";
 import { ArrowLeft, Bell, Check, Share2, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export function RemindSheet({
   const t = useTranslations("remind");
   const tCommon = useTranslations("common");
   const format = useFormatter();
-  const locale = useLocale();
+  const locale = useNumberLocale();
   const [isPending, startTransition] = useTransition();
 
   const [step, setStep] = useState<Step>("who");
