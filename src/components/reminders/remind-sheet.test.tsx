@@ -24,8 +24,7 @@ function recipient(overrides: Partial<RemindRecipient> = {}): RemindRecipient {
   return {
     participantId: "jonas",
     name: "Jonas",
-    amount: "14800",
-    currency: "EUR",
+    debts: [{ amount: "14800", currency: "EUR" }],
     channel: "push",
     lastRemindedAt: null,
     locked: false,
@@ -62,7 +61,7 @@ describe("choosing who to remind", () => {
         participantId: "padi",
         name: "Padi",
         channel: "share",
-        amount: "10000",
+        debts: [{ amount: "10000", currency: "EUR" }],
       }),
     ]);
 
@@ -109,6 +108,52 @@ describe("choosing who to remind", () => {
     expect(screen.getByText(/Reminded/)).toBeInTheDocument();
   });
 
+  /**
+   * A group that spent in two currencies owes two simplified debts between the
+   * same pair. That is one person to ask, once — so one row, one checkbox, and
+   * a count of people rather than of debts.
+   */
+  it("asks somebody who owes in two currencies once, for both", () => {
+    render([
+      recipient({
+        debts: [
+          { amount: "14800", currency: "EUR" },
+          { amount: "1400", currency: "JPY" },
+        ],
+      }),
+    ]);
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.getByText("€148.00")).toBeInTheDocument();
+    expect(screen.getByText("¥1,400")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 person owes you €148.00 and ¥1,400."),
+    ).toBeInTheDocument();
+  });
+
+  it("totals what is owed per currency, and never across them", () => {
+    render([
+      recipient({
+        debts: [
+          { amount: "14800", currency: "EUR" },
+          { amount: "1400", currency: "JPY" },
+        ],
+      }),
+      recipient({
+        participantId: "padi",
+        name: "Padi",
+        debts: [
+          { amount: "10000", currency: "EUR" },
+          { amount: "600", currency: "JPY" },
+        ],
+      }),
+    ]);
+
+    expect(
+      screen.getByText("2 people owe you €248.00 and ¥2,000."),
+    ).toBeInTheDocument();
+  });
+
   it("cannot go on to a message with nobody selected", async () => {
     const user = userEvent.setup();
     render([recipient()]);
@@ -132,9 +177,55 @@ describe("writing the message", () => {
     const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
       name: /the message to send/i,
     });
+    // The opening draft is drawn at random from the gentle ones, and only five
+    // of the seven name the group — so the assertion holds to the two facts
+    // every draft in the library carries.
     expect(draft.value).toContain("€148.00");
     expect(draft.value).toContain("Seb");
-    expect(draft.value).toContain("Portugal, March");
+  });
+
+  /**
+   * Naming one of two currencies would ask for part of the debt while spending
+   * the whole day's allowance, so the draft names both.
+   */
+  it("names every currency the person owes in", async () => {
+    const user = userEvent.setup();
+    render([
+      recipient({
+        debts: [
+          { amount: "14800", currency: "EUR" },
+          { amount: "1400", currency: "JPY" },
+        ],
+      }),
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /write the message/i }),
+    );
+
+    const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: /the message to send/i,
+    });
+    expect(draft.value).toContain("€148.00 and ¥1,400");
+  });
+
+  /** One person, one send — not one per currency. */
+  it("does not queue the same person twice", async () => {
+    const user = userEvent.setup();
+    render([
+      recipient({
+        debts: [
+          { amount: "14800", currency: "EUR" },
+          { amount: "1400", currency: "JPY" },
+        ],
+      }),
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /write the message/i }),
+    );
+
+    expect(screen.getByText("Jonas · sent one by one")).toBeInTheDocument();
   });
 
   it("names the channel on the button that will do the sending", async () => {

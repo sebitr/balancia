@@ -79,13 +79,13 @@ interface Fixture {
 let fixture: Fixture;
 
 /** The owner pays for everyone, so everyone else ends up owing them. */
-async function spend(amount: string): Promise<void> {
+async function spend(amount: string, currency = "EUR"): Promise<void> {
   await createExpense(fixture.group.access, {
     description: "Dinner",
     notes: "",
     category: "",
     amount,
-    currency: "EUR",
+    currency,
     exchangeRate: "",
     payers: [{ participantId: fixture.group.ownerParticipantId, amount }],
     splitMethod: "equal" as const,
@@ -132,8 +132,28 @@ describe("who can be reminded", () => {
       "Padi",
       "Jonas",
     ]);
-    expect(recipients[0].amount).toBe("5000");
-    expect(recipients[1].amount).toBe("2400");
+    expect(recipients[0].debts).toEqual([{ amount: "5000", currency: "EUR" }]);
+    expect(recipients[1].debts).toEqual([{ amount: "2400", currency: "EUR" }]);
+  });
+
+  /**
+   * A separate-currency group simplifies each currency on its own, so one
+   * person can owe the reader twice over. They are still one person: one row,
+   * one 24-hour limit, and both amounts named — never a total, because these
+   * two figures have no exchange rate between them.
+   */
+  it("gathers what one person owes in several currencies into one row", async () => {
+    await spend("4800");
+    await spend("1400", "JPY");
+
+    const recipients = await listRemindRecipients(fixture.group.access);
+
+    expect(recipients).toHaveLength(1);
+    expect(recipients[0].name).toBe("Jonas");
+    expect(recipients[0].debts).toEqual([
+      { amount: "2400", currency: "EUR" },
+      { amount: "700", currency: "JPY" },
+    ]);
   });
 
   /**
@@ -221,6 +241,53 @@ describe("sending one", () => {
       );
     expect(events).toHaveLength(1);
     expect(events[0].metadata).toMatchObject({ recipient: "Jonas" });
+  });
+
+  /**
+   * One asking, two debts: the table keeps a row per currency because that is
+   * what was owed, while the limit — which reads the latest row for the pair —
+   * still counts it as the single reminder it was.
+   */
+  it("records each currency of a debt it asked about at once", async () => {
+    await subscribeDevice(fixture.debtor.actor.userId);
+    await spend("4800");
+    await spend("1400", "JPY");
+
+    await sendReminder(fixture.group.access, {
+      toParticipantId: fixture.debtor.participantId,
+      message: "Still open from Portugal, March: €24.00 and ¥700 owed to Seb.",
+      logToActivity: true,
+    });
+
+    const rows = await getDb()
+      .select()
+      .from(reminders)
+      .where(eq(reminders.groupId, fixture.group.groupId));
+    expect(
+      rows
+        .map((row) => ({ amount: row.amount, currency: row.currency }))
+        .sort((a, b) => a.currency.localeCompare(b.currency)),
+    ).toEqual([
+      { amount: 2400n, currency: "EUR" },
+      { amount: 700n, currency: "JPY" },
+    ]);
+
+    // Asked about together, logged once: the group learns that a nudge went
+    // out, not how many currencies it happened to cover.
+    const events = await getDb()
+      .select()
+      .from(activityEvents)
+      .where(eq(activityEvents.action, "reminder.sent"));
+    expect(events).toHaveLength(1);
+
+    const inbox = await listNotifications(fixture.debtor.actor.userId);
+    const reminder = inbox.find((entry) => entry.type === "reminder.received");
+    expect(reminder!.payload as ReminderPayload).toMatchObject({
+      debts: [
+        { amount: "2400", currency: "EUR" },
+        { amount: "700", currency: "JPY" },
+      ],
+    });
   });
 
   it("leaves activity alone when the sender turns logging off", async () => {
