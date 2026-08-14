@@ -20,6 +20,11 @@ import { SUPPORTED_CURRENCIES } from "@/modules/currencies/iso-4217";
  *
  * The group's own currency is named at the top: it is the one people convert
  * *to*, and knowing it is what makes choosing another one meaningful.
+ *
+ * Everything but the list is `shrink-0`. Typing in the search field opens a
+ * keyboard, the sheet above shortens itself to sit on top of it, and the only
+ * part that may lose height for that is the list — never the field being typed
+ * into or the Done button under it.
  */
 
 export function CurrencySheet({
@@ -47,8 +52,8 @@ export function CurrencySheet({
   }, [query]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between gap-3">
+    <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 items-baseline justify-between gap-3">
         <SheetTitle className="text-[19px] font-semibold tracking-[-0.02em]">
           {t("title")}
         </SheetTitle>
@@ -59,7 +64,7 @@ export function CurrencySheet({
         )}
       </div>
 
-      <div className="relative">
+      <div className="relative shrink-0">
         <Search
           aria-hidden="true"
           className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -73,7 +78,7 @@ export function CurrencySheet({
         />
       </div>
 
-      <ul className="-mx-1 max-h-[46vh] overflow-y-auto px-1">
+      <ul className="-mx-1 max-h-[46vh] min-h-0 flex-auto overflow-y-auto px-1">
         {matches.map((currency) => {
           const active = currency.code === value;
           return (
@@ -106,7 +111,12 @@ export function CurrencySheet({
         )}
       </ul>
 
-      <Button type="button" size="lg" className="h-13" onClick={onDone}>
+      <Button
+        type="button"
+        size="lg"
+        className="h-13 shrink-0"
+        onClick={onDone}
+      >
         {t("done")}
       </Button>
     </div>

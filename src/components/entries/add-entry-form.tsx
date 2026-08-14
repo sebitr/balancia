@@ -8,7 +8,7 @@ import { CalendarDays, ChevronLeft, Loader2, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
 import type { ScannedExpense } from "@/components/receipts/scan-receipt-dialog";
 import { useCategorySuggestion } from "@/components/expenses/use-category-suggestion";
@@ -46,12 +46,12 @@ import {
   hasAmount,
   primaryActionKey,
   resetsForType,
+  sanitiseAmount,
   summariseSplit,
   type EntryType,
 } from "./entry-logic";
 import { EntrySaved } from "./entry-saved";
 import { EntryTypeTabs } from "./entry-type-tabs";
-import { KeypadSheet } from "./keypad-sheet";
 import { ScanBanner, ScanCard, ReceiptItems } from "./receipt-blocks";
 import { RecurrenceSheet, type RecurrenceState } from "./recurrence-sheet";
 import { SplitSheet } from "./split-sheet";
@@ -84,8 +84,7 @@ import type { EntryMember } from "./pills";
  * booleans, so two sheets cannot both believe they are showing.
  */
 
-type OpenSheet =
-  null | "keypad" | "split" | "category" | "currency" | "method" | "recur";
+type OpenSheet = null | "split" | "category" | "currency" | "method" | "recur";
 
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
 
@@ -591,9 +590,8 @@ export function AddEntryForm({
         date={date}
         positive={isIncome}
         currencyLocked={isSettle}
-        onOpenKeypad={() => setSheet("keypad")}
+        onAmountChange={(next) => setAmountText(sanitiseAmount(next, currency))}
         onOpenCurrency={() => setSheet("currency")}
-        caret={sheet === "keypad"}
         locale={locale}
       />
 
@@ -789,26 +787,6 @@ export function AddEntryForm({
           showCloseButton={false}
           className="max-h-[86vh] gap-0 overflow-y-auto rounded-t-[26px] px-4 pt-3.5 pb-5"
         >
-          {/* Every other sheet's own heading *is* its `SheetTitle`, so it is
-              announced once rather than twice. The pad has no heading — the
-              amount is the content — so it gets a hidden one here. */}
-          {sheet === "keypad" && (
-            <SheetTitle className="sr-only">
-              {t("sheetTitles.keypad")}
-            </SheetTitle>
-          )}
-
-          {sheet === "keypad" && (
-            <KeypadSheet
-              label={amountLabel}
-              value={amountText}
-              currency={currency}
-              positive={isIncome}
-              onChange={setAmountText}
-              onDone={() => setSheet(null)}
-            />
-          )}
-
           {sheet === "split" && (
             <SplitSheet
               members={members}
@@ -850,7 +828,13 @@ export function AddEntryForm({
             <CurrencySheet
               value={currency}
               baseCurrency={baseCurrency}
-              onSelect={setCurrency}
+              // What is already typed has to survive the new currency's rules:
+              // 84.60 picked up again as yen is ¥84, not an amount the server
+              // will refuse.
+              onSelect={(code) => {
+                setCurrency(code);
+                setAmountText((current) => sanitiseAmount(current, code));
+              }}
               onDone={() => setSheet(null)}
             />
           )}

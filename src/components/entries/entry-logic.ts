@@ -17,50 +17,45 @@ import type { SplitMethod } from "@/modules/expenses/split";
 
 export type EntryType = "expense" | "income" | "settle";
 
-/** A key on the amount pad. `delete` is the backspace. */
-export type KeypadKey =
-  "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "." | "delete";
-
 /** Digits before the decimal point. Past this the amount stops being credible. */
 const MAX_INTEGER_DIGITS = 8;
 
 /**
- * Applies one keypress to the raw amount text.
+ * Reduces whatever the keyboard produced to an amount.
  *
- * The prototype caps decimals at two. This honours the currency instead: yen
- * has no minor unit and never accepts a decimal point, dinar takes three. The
- * form would otherwise let someone type ¥1200.50 and only find out it was
- * impossible when the server rejected it.
+ * The amount field is a plain text input driven by the platform's own numeric
+ * keyboard, which is not a pad under our control: it offers a comma where the
+ * locale wants one, a minus and an `e` on some desktop layouts, and none of it
+ * stops a paste. So rather than police keystrokes, this takes the field's
+ * whole value and keeps what is still a plausible amount.
  *
- * Returns the text unchanged when a key would produce something invalid, so
- * the caller can set state unconditionally.
+ * It never rejects — an unparseable edit yields the nearest thing that parses,
+ * so typing is never silently dropped mid-word and the caller can set state
+ * unconditionally.
+ *
+ * Precision comes from the currency and not from a constant: yen has no minor
+ * unit and keeps no decimal point at all, dinar keeps three. The form would
+ * otherwise take ¥1200.50 and only find out it was impossible once the server
+ * had refused it.
  */
-export function pressKey(
-  text: string,
-  key: KeypadKey,
-  currency: string,
-): string {
+export function sanitiseAmount(text: string, currency: string): string {
   const exponent = currencyExponent(currency);
+  // A comma is what most of Europe gets under its thumb for the decimal.
+  const cleaned = text.replace(/,/g, ".").replace(/[^\d.]/g, "");
+  const [whole = "", ...rest] = cleaned.split(".");
 
-  if (key === "delete") return text.slice(0, -1);
+  // Leading zeros carry no meaning: "05" is 5, while "0.5" keeps its zero.
+  const digits = whole.replace(/^0+(?=\d)/, "").slice(0, MAX_INTEGER_DIGITS);
 
-  if (key === ".") {
-    // A currency without a minor unit has nothing to put after the point.
-    if (exponent === 0) return text;
-    if (text.includes(".")) return text;
-    // A leading point is how people type "point five"; make it explicit.
-    return text === "" ? "0." : `${text}.`;
-  }
+  // A currency without a minor unit has nothing to put after the point, so the
+  // point goes too rather than sitting there doing nothing.
+  if (exponent === 0 || !cleaned.includes(".")) return digits;
 
-  const [whole = "", fraction] = text.split(".");
-  if (fraction === undefined) {
-    // Leading zeros carry no meaning: "0" then "5" is 5, not 05.
-    if (text === "0") return key;
-    if (whole.length >= MAX_INTEGER_DIGITS) return text;
-    return text + key;
-  }
-  if (fraction.length >= exponent) return text;
-  return text + key;
+  // Everything past the first point is one fraction: "1.2.3" is 1.23. The
+  // point is kept even with nothing behind it yet — that is mid-typing, not an
+  // error, and eating it would make a decimal impossible to enter.
+  const fraction = rest.join("").slice(0, exponent);
+  return `${digits === "" ? "0" : digits}.${fraction}`;
 }
 
 /** Whether the text is a real amount greater than zero. */

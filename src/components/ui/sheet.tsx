@@ -5,6 +5,7 @@ import { Dialog as SheetPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useKeyboardInset } from "@/components/ui/use-keyboard-inset";
 import { XIcon } from "lucide-react";
 
 /** Share of its own height a sheet must travel before letting go closes it. */
@@ -13,6 +14,8 @@ const DISMISS_THRESHOLD = 0.28;
 const DISMISS_VELOCITY = 0.5;
 /** Movement before a touch is a drag rather than a tap, in pixels. */
 const SLOP = 6;
+/** Page left showing above a sheet that has been pushed up by a keyboard. */
+const HEADROOM = 16;
 
 /**
  * Push a bottom sheet down to dismiss it.
@@ -175,6 +178,7 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  style,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left";
@@ -182,6 +186,24 @@ function SheetContent({
 }) {
   const bottom = side === "bottom";
   const { sheet, close } = useSwipeDismiss(bottom);
+
+  /**
+   * A bottom sheet with a keyboard open rides on top of it.
+   *
+   * Anchored to the bottom edge, a sheet whose content includes a text field —
+   * the currency search, the exact-amount rows — puts that field and its Done
+   * button behind the keyboard the moment the field takes focus. Sitting the
+   * sheet on the keyboard instead is what every native sheet does.
+   *
+   * Height has to give as well, or the top of the sheet is pushed off-screen
+   * in exchange. `dvh` ignores the keyboard by design, so the space actually
+   * left is the dynamic viewport minus what the keyboard took.
+   *
+   * `bottom` rather than a transform: the drag-to-dismiss above owns
+   * `transform`, and the two must not fight over it.
+   */
+  const keyboard = useKeyboardInset();
+  const lifted = bottom && keyboard > 0;
 
   return (
     <SheetPortal>
@@ -198,6 +220,15 @@ function SheetContent({
             "duration-[380ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-open:slide-in-from-bottom-[100%] data-closed:slide-out-to-bottom-[100%]",
           className,
         )}
+        style={
+          lifted
+            ? {
+                bottom: keyboard,
+                maxHeight: `calc(100dvh - ${keyboard + HEADROOM}px)`,
+                ...style,
+              }
+            : style
+        }
         {...props}
         ref={sheet}
       >

@@ -1066,11 +1066,6 @@
       "rateFrozen": "This rate is frozen with the entry. Changing rates later never rewrites what is already recorded.",
       "inBaseCurrency": "In the group's base currency"
     },
-    "keypad": {
-      "zero": "0.00",
-      "delete": "Delete the last digit",
-      "done": "Done"
-    },
     "date": {
       "today": "Today",
       "oneOff": "One-off",
@@ -1226,7 +1221,6 @@
       "saveFailed": "That could not be saved. Try again."
     },
     "sheetTitles": {
-      "keypad": "Amount",
       "split": "Payment and split",
       "category": "Category",
       "currency": "Currency",

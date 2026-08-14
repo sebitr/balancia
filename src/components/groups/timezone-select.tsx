@@ -28,6 +28,14 @@ import { cn } from "@/lib/utils";
  * The list is built the first time the picker opens, never during the server
  * render — nobody can see it there, and the server's copy of the IANA
  * database need not agree with the browser's.
+ *
+ * On a phone the search field opens a keyboard over the bottom half of the
+ * screen, which is where a popover anchored below its trigger lands. Radix
+ * already measures against the *visual* viewport, so it will flip the list
+ * above the field and shorten it — but only when something asks it to
+ * recompute, and a keyboard appearing fires no event it watches. Hence
+ * `updatePositionStrategy="always"`: while the list is open it re-measures
+ * every frame, which also keeps it glued as the keyboard slides in.
  */
 
 const NO_OPTIONS: readonly TimezoneOption[] = [];
@@ -172,9 +180,11 @@ export function TimezoneSelect({
         <PopoverContent
           id={popoverId}
           align="start"
-          className="w-(--radix-popover-trigger-width) gap-0 p-0"
+          updatePositionStrategy="always"
+          collisionPadding={8}
+          className="max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) gap-0 p-0"
         >
-          <div className="flex items-center gap-2 border-b border-border px-2.5">
+          <div className="flex shrink-0 items-center gap-2 border-b border-border px-2.5">
             <Search
               aria-hidden="true"
               className="size-4 shrink-0 text-muted-foreground"
@@ -205,7 +215,7 @@ export function TimezoneSelect({
             id={listboxId}
             role="listbox"
             aria-label={t("list")}
-            className="max-h-64 overflow-y-auto p-1"
+            className="max-h-64 min-h-0 flex-auto overflow-y-auto p-1"
           >
             {matches.map((option) => (
               <div
@@ -234,7 +244,7 @@ export function TimezoneSelect({
           </div>
 
           {matches.length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            <p className="shrink-0 px-3 py-6 text-center text-sm text-muted-foreground">
               {t("empty")}
             </p>
           )}
