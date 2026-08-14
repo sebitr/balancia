@@ -1,17 +1,36 @@
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
-import { Plus, Receipt, RefreshCw } from "lucide-react";
-import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
+import { Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Amount } from "@/components/money/amount";
-import { Badge } from "@/components/ui/badge";
 import { requireGroupAccess } from "@/lib/actions";
 import { listExpenses } from "@/modules/expenses/service";
 import { listSettlements } from "@/modules/settlements/service";
+import { isSpending, signOf } from "@/modules/expenses/direction";
+import {
+  categoryKeyOf,
+  categoryTotals,
+  spreadBands,
+} from "@/modules/expenses/spread";
 import { PUSH } from "@/components/motion/transitions";
+import {
+  Transactions,
+  type BandView,
+  type RowView,
+} from "@/components/expenses/transactions";
 
+/**
+ * Everything the group has recorded, and where the money went.
+ *
+ * The screen is split down one line: this Server Component owns the facts —
+ * what was spent, by whom, in what currency, and what each row means for the
+ * person reading it — and the client island owns the filtering, which is the
+ * only thing here that changes without the data changing.
+ *
+ * There is no page title. The eyebrow is the heading, the way the home
+ * screen's position header does it: a number the reader came for beats a word
+ * they already know.
+ */
 export default async function ExpensesPage({
   params,
 }: PageProps<"/groups/[groupId]/expenses">) {
@@ -24,71 +43,80 @@ export default async function ExpensesPage({
   ]);
 
   const t = await getTranslations("expensesList");
+  const self = access.participantId;
+
+  /**
+   * What this expense left the reader holding, in the expense's own currency.
+   *
+   * Paid minus owed, signed by direction — income is spending run backwards,
+   * so the person who received the money is the one who now owes. Taken from
+   * the stored allocations, never from an assumed even split: a 70/30 dinner
+   * is not 50/50 just because it is easier to render.
+   */
+  function positionOf(expense: (typeof expenses)[number]): string | null {
+    if (!self) return null;
+    const paid = expense.payers
+      .filter((payer) => payer.participantId === self)
+      .reduce((sum, payer) => sum + payer.amount, 0n);
+    const owed = expense.shares
+      .filter((share) => share.participantId === self)
+      .reduce((sum, share) => sum + share.amount, 0n);
+    if (paid === 0n && owed === 0n) return null;
+    return (signOf(expense.direction) * (paid - owed)).toString();
+  }
 
   // Expenses and settlements share one chronological list — that is how people
-  // remember a trip — but settlements are visually distinct because they are
-  // repayments, not spending.
-  const timeline = [
-    ...expenses.map((expense) => ({
-      kind: "expense" as const,
+  // remember a trip — but a settlement is a repayment, not spending, and says
+  // so with its own badge, its own neutral rail and no category.
+  const rows: RowView[] = [
+    ...expenses.map((expense): RowView => ({
+      kind: "expense",
       id: expense.id,
       date: expense.expenseDate,
-      createdAt: expense.createdAt,
+      createdAt: expense.createdAt.toISOString(),
       title: expense.description,
-      subtitle: expense.payers.map((payer) => payer.displayName).join(", "),
       amount: expense.amount.toString(),
       currency: expense.currency,
-      attachmentCount: expense.attachmentCount,
+      category: categoryKeyOf(expense.category),
+      position: positionOf(expense),
+      // Income keeps its amount positive in the database; the badge is what
+      // says which way it went.
+      revenue: !isSpending(expense.direction),
       recurring: expense.recurringExpenseId !== null,
     })),
-    ...settlements.map((settlement) => ({
-      kind: "settlement" as const,
+    ...settlements.map((settlement): RowView => ({
+      kind: "settlement",
       id: settlement.id,
       date: settlement.settledOn,
-      createdAt: settlement.createdAt,
+      createdAt: settlement.createdAt.toISOString(),
       title: t("settlementTitle", {
         from: settlement.fromName,
         to: settlement.toName,
       }),
-      subtitle: settlement.notes ?? t("repayment"),
       amount: settlement.amount.toString(),
       currency: settlement.currency,
-      attachmentCount: 0,
+      category: null,
+      // A repayment clears a position rather than creating one, so it is
+      // shown neutrally — and only to the two people it names. Which of
+      // them paid is already the row's title.
+      position:
+        self &&
+        (settlement.fromParticipantId === self ||
+          settlement.toParticipantId === self)
+          ? settlement.amount.toString()
+          : null,
+      revenue: false,
       recurring: false,
     })),
   ].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    return b.createdAt.getTime() - a.createdAt.getTime();
+    return a.createdAt < b.createdAt ? 1 : -1;
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <div className="flex shrink-0 items-center gap-1">
-          {/* Rent and bills belong next to the expenses they generate, not
-              buried in group settings. */}
-          <Button asChild size="sm" variant="ghost">
-            <Link href={`/groups/${groupId}/recurring`} transitionTypes={PUSH}>
-              <RefreshCw aria-hidden="true" />
-              {t("recurringLink")}
-            </Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link
-              href={`/groups/${groupId}/expenses/new`}
-              transitionTypes={PUSH}
-            >
-              <Plus aria-hidden="true" />
-              {t("add")}
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {timeline.length === 0 ? (
+  if (rows.length === 0) {
+    return (
+      <div className="space-y-4">
+        <Eyebrow label={t("eyebrow")} />
         <EmptyState
           icon={Receipt}
           title={t("emptyTitle")}
@@ -105,80 +133,93 @@ export default async function ExpensesPage({
             </Button>
           }
         />
-      ) : (
-        <ul className="divide-y rounded-lg border">
-          {timeline.map((entry) => (
-            <li key={`${entry.kind}-${entry.id}`}>
-              {entry.kind === "expense" ? (
-                <Link
-                  href={`/groups/${groupId}/expenses/${entry.id}`}
-                  transitionTypes={PUSH}
-                  // A finger never hovers, so the row answers the press
-                  // itself — every other list in the app already does.
-                  className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-muted motion-reduce:transition-none"
-                >
-                  <ExpenseRowContent entry={entry} />
-                </Link>
-              ) : (
-                <div className="flex items-center justify-between gap-3 p-3">
-                  <ExpenseRowContent entry={entry} />
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  /*
+   * The spread, per currency and never across them.
+   *
+   * A converted group resolves to exactly one currency, which is the screen
+   * the design draws. A `separate` group — the default — can hold several, and
+   * there is no honest way to rank categories across them: the comparison the
+   * spine invites would need an exchange rate nobody chose. So the spine
+   * appears only when there is one currency to measure in, and the hero shows
+   * the totals side by side when there is not.
+   */
+  const spreads = categoryTotals(expenses, {
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+  });
+  const single = spreads.length === 1 ? spreads[0] : null;
+  const bands: BandView[] | null = single
+    ? spreadBands(single).map((band) => ({
+        key: band.key,
+        categories: [...band.categories],
+        total: band.total.toString(),
+        share: band.share,
+        rank: band.rank,
+      }))
+    : null;
+
+  const settled = settlements.reduce(
+    (totals, settlement) => sum(totals, settlement.currency, settlement.amount),
+    new Map<string, bigint>(),
+  );
+  const received = expenses
+    .filter((expense) => !isSpending(expense.direction))
+    .reduce(
+      (totals, expense) => sum(totals, expense.currency, expense.amount),
+      new Map<string, bigint>(),
+    );
+
+  return (
+    <Transactions
+      groupId={groupId}
+      eyebrow={<Eyebrow label={t("eyebrow")} />}
+      bands={bands}
+      spreads={spreads.map((spread) => ({
+        currency: spread.currency,
+        total: spread.total.toString(),
+        categories: spread.categories.length,
+      }))}
+      rows={rows}
+      repaid={serialize(settled)}
+      backIn={serialize(received)}
+    />
   );
 }
 
-function ExpenseRowContent({
-  entry,
-}: {
-  entry: {
-    kind: "expense" | "settlement";
-    date: string;
-    title: string;
-    subtitle: string;
-    amount: string;
-    currency: string;
-    attachmentCount: number;
-    recurring: boolean;
-  };
-}) {
-  // A synchronous Server Component, so the hook forms resolve here just as
-  // they would in the browser.
-  const t = useTranslations("expensesList");
-  const format = useFormatter();
-
+/**
+ * The screen's heading, which is also its eyebrow.
+ *
+ * Rendered here rather than inside the island so the words that name the
+ * screen are in the server's HTML, and so the island cannot accidentally
+ * become the only thing that says what this page is.
+ */
+function Eyebrow({ label }: { label: string }) {
   return (
-    <>
-      <span className="min-w-0">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium">{entry.title}</span>
-          {entry.kind === "settlement" && (
-            <Badge variant="outline" className="shrink-0">
-              {t("paymentBadge")}
-            </Badge>
-          )}
-          {entry.recurring && (
-            <Badge variant="secondary" className="shrink-0">
-              {t("recurringBadge")}
-            </Badge>
-          )}
-        </span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-          {format.dateTime(parsePlainDate(entry.date), PLAIN_DATE_FORMAT)} ·{" "}
-          {entry.subtitle}
-          {entry.attachmentCount > 0 &&
-            ` · ${t("receiptCount", { count: entry.attachmentCount })}`}
-        </span>
-      </span>
-      <Amount
-        minorUnits={entry.amount}
-        currency={entry.currency}
-        className="shrink-0 text-sm font-medium"
-      />
-    </>
+    <h1 className="text-[0.6875rem] font-semibold tracking-[0.08em] text-primary uppercase">
+      {label}
+    </h1>
   );
+}
+
+function sum(
+  totals: Map<string, bigint>,
+  currency: string,
+  amount: bigint,
+): Map<string, bigint> {
+  totals.set(currency, (totals.get(currency) ?? 0n) + amount);
+  return totals;
+}
+
+/** Minor units cross to the client as strings; bigint has no JSON form. */
+function serialize(
+  totals: ReadonlyMap<string, bigint>,
+): { currency: string; amount: string }[] {
+  return [...totals]
+    .filter(([, amount]) => amount !== 0n)
+    .map(([currency, amount]) => ({ currency, amount: amount.toString() }))
+    .sort((a, b) => (a.currency < b.currency ? -1 : 1));
 }
