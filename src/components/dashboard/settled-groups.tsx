@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Archive, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useKeyboardReveal } from "@/components/ui/use-keyboard-reveal";
 import { GroupIconTile } from "@/components/groups/group-icon";
 import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
 import { RelativeTime } from "./relative-time";
@@ -48,6 +49,9 @@ export function SettledGroups({
   const [query, setQuery] = useState("");
   const [archivedOpen, setArchivedOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The search field is the last thing on the screen, so a phone keyboard
+  // opens straight over it and over the rows it is there to narrow down.
+  const keyboardRoom = useKeyboardReveal(inputRef, searchOpen);
 
   const needle = query.trim().toLowerCase();
   const shown = useMemo(
@@ -159,6 +163,17 @@ export function SettledGroups({
             </ul>
           )}
         </section>
+      )}
+
+      {/* What the page scrolls against to get the field out from under the
+          keyboard: below the last row, there is otherwise nothing left to
+          scroll through. Gone the moment the keyboard is. */}
+      {keyboardRoom > 0 && (
+        <div
+          data-slot="keyboard-room"
+          aria-hidden="true"
+          style={{ height: keyboardRoom }}
+        />
       )}
     </>
   );
