@@ -33,7 +33,7 @@ export function MemberStack({
     <span
       role="img"
       aria-label={label}
-      className="flex shrink-0 -space-x-1.5 *:ring-2 *:ring-card"
+      className="flex shrink-0 -space-x-1.5 *:ring-2 *:ring-background"
     >
       {shown.map((name, index) => (
         <Avatar key={`${name}-${index}`} className="size-5">
@@ -43,7 +43,7 @@ export function MemberStack({
         </Avatar>
       ))}
       {counter > 0 && (
-        <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-accent-foreground ring-2 ring-card">
+        <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-accent-foreground ring-2 ring-background">
           +{counter}
         </span>
       )}
