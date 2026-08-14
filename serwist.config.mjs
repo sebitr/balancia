@@ -1,4 +1,5 @@
 import { serwist } from "@serwist/next/config";
+import { precacheManifestTransform } from "./src/lib/pwa/precache-urls.mjs";
 
 /**
  * Serwist "configurator" mode.
@@ -17,5 +18,8 @@ export default await serwist({
   // Precache the offline shell and the versioned static assets only. Nothing
   // authenticated is ever precached.
   globPatterns: ["static/**/*.{js,css,woff2}", "server/app/offline.html"],
+  // Globbing yields paths relative to `.next`, which are not URLs this app
+  // serves — see src/lib/pwa/precache-urls.mjs for what that cost.
+  manifestTransforms: [precacheManifestTransform],
   disablePrecacheManifest: process.env.NODE_ENV !== "production",
 });
