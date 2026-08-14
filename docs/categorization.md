@@ -202,7 +202,9 @@ alongside other evidence.
 The model is never asked about a transaction the rules already settled, or one
 a learned mapping already answered.
 
-**Installing it.**
+**Installing it.** `./scripts/bootstrap.sh` offers this as one of its setup
+questions, and answering yes does both halves: the download, and
+`SEMANTIC_CATEGORIZATION=true` in `.env`. To do it by hand instead:
 
 ```bash
 pnpm semantic:install --yes

@@ -12,8 +12,11 @@ telemetry.
 ```
 
 That is the whole installation. The first command generates this instance's own
-secrets into a `.env`; the second brings up PostgreSQL 18, applies migrations,
-and starts the web app and a background worker.
+secrets into a `.env` and asks which optional features you want — receipt
+scanning, exchange-rate suggestions, push, email — writing the answers, and
+downloading anything they need, before the second command brings up PostgreSQL
+18, applies migrations, and starts the web app and a background worker. Every
+question has a default, and with no terminal to ask on it asks nothing.
 
 ---
 
@@ -157,6 +160,12 @@ Nothing here ships with a fixed shared secret. `bootstrap.sh` generates the
 database password and instance secret into a `.env`, and never overwrites
 values that are already there — so it is safe to re-run, and safe to chain in
 front of every `up`. **Back that file up:** it is the only copy.
+
+It also asks, once, which optional features to switch on, and writes every
+answer including the no's — so a second run has nothing left to ask. Answering
+yes to receipt scanning or semantic categorization downloads the model files
+they need there and then, using Node if the host has it and a throwaway
+container if it does not. `--defaults` skips the questions entirely.
 
 ### Run it on a domain
 

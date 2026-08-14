@@ -22,6 +22,33 @@ only a POSIX shell and `/dev/urandom`, and it never overwrites a value that is
 already set — so re-running it is a no-op, and `./scripts/bootstrap.sh &&
 docker compose up -d` is a safe habit.
 
+Run from a terminal, it also asks which optional features to switch on:
+
+| Question              | Writes                    | Also does                      |
+| --------------------- | ------------------------- | ------------------------------ |
+| Public URL            | `APP_URL`, `APP_PORT`     | Rejects HTTP outside localhost |
+| Open registration     | `ALLOW_REGISTRATION`      |                                |
+| Exchange rates        | `EXCHANGE_RATE_PROVIDER`  |                                |
+| Receipt scanning      | `RECEIPT_SCANNING`        | Downloads the OCR models       |
+| Semantic categorizing | `SEMANTIC_CATEGORIZATION` | Downloads the embedding model  |
+| Push notifications    | `PUSH_VAPID_*`            | Generates the VAPID pair       |
+| Outgoing email        | `SMTP_*`                  |                                |
+
+Every answer is written, including the no's, so the second run asks nothing.
+The two model downloads need Node; on a host that has only Docker, one is
+borrowed from a throwaway `node:24-alpine` container for the length of the
+download. If neither is there, the flag is still written and the script says
+which command to run.
+
+That is a deliberate pairing: a feature switched on whose model files are
+missing renders no button and explains nothing, so the script that writes the
+flag is the one that fetches the files. It re-checks on every run, in case a
+download failed after the flag was written.
+
+Nothing has to be answered interactively. With no terminal on stdin — CI, a
+pipe — or with `--defaults`, it writes the secrets and leaves every optional
+feature at its documented default.
+
 Compose then starts three services:
 
 | Service  | Role                                                                                          |
