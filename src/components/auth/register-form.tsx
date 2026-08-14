@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerAction } from "@/modules/auth/actions";
+import { AppleSignInButton } from "./apple-sign-in-button";
 
 /**
  * Field messages are catalogue keys rather than prose, translated at render
@@ -35,9 +36,14 @@ type FormValues = z.infer<typeof schema>;
 type ValidationKey =
   "name" | "email" | "passwordMin" | "passwordMax" | "mismatch";
 
-export function RegisterForm() {
+export function RegisterForm({
+  appleEnabled = false,
+}: {
+  appleEnabled?: boolean;
+}) {
   const router = useRouter();
   const t = useTranslations("register");
+  const tCommon = useTranslations("common");
   const tValidation = useTranslations("register.validation");
   const [formError, setFormError] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
@@ -196,6 +202,20 @@ export function RegisterForm() {
           {t("submit")}
         </Button>
       </form>
+
+      {appleEnabled && (
+        <>
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground uppercase">
+              {tCommon("or")}
+            </span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <AppleSignInButton intent="signUp" />
+        </>
+      )}
 
       <p className="text-center text-sm text-muted-foreground">
         {t("haveAccount")}{" "}

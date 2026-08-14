@@ -79,6 +79,11 @@
       "generic": "Cela n'a pas fonctionné.",
       "passkeyCancelled": "La demande de clé d'accès a été annulée.",
       "passkeyFailed": "Votre navigateur n'a pas pu traiter la demande de clé d'accès."
+    },
+    "apple": {
+      "signIn": "Se connecter avec Apple",
+      "signUp": "S'inscrire avec Apple",
+      "continue": "Continuer avec Apple"
     }
   },
   "expenses": {
@@ -808,7 +813,15 @@
     "unknownCurrency": "Balancia ne connaît pas cette devise.",
     "reminderEmpty": "Une relance doit contenir un message.",
     "reminderNotOwed": "Cette personne ne vous doit rien dans ce groupe.",
-    "reminderTooSoon": "Cette personne a été relancée il y a moins de 24 heures. Laissez-lui un jour."
+    "reminderTooSoon": "Cette personne a été relancée il y a moins de 24 heures. Laissez-lui un jour.",
+    "appleNoEmail": "Apple n'a communiqué aucune adresse e-mail à cette instance : il n'y a pas de quoi créer un compte.",
+    "appleEmailTaken": "Un compte utilise déjà cette adresse e-mail. Connectez-vous avec votre mot de passe ou votre clé d'accès, puis associez Apple depuis la page sécurité.",
+    "appleLinkedElsewhere": "Ce compte Apple est déjà associé à un autre compte Balancia.",
+    "appleAlreadyLinked": "Ce compte a déjà un compte Apple associé. Dissociez-le d'abord.",
+    "appleOnlyCredential": "Apple est votre seul moyen de vous connecter à ce compte. Définissez d'abord un mot de passe ou ajoutez une clé d'accès.",
+    "appleNotLinked": "Aucun compte Apple n'est associé à ce compte.",
+    "appleFailed": "Cela n'a pas fonctionné. Apple n'a pas pu confirmer la connexion.",
+    "appleExpired": "Cette connexion a pris trop de temps, ou a été lancée dans un autre navigateur. Réessayez."
   },
   "serverValidation": {
     "checkForm": "Vérifiez le formulaire.",
@@ -1278,5 +1291,19 @@
     "IN": "Inde",
     "CA": "Canada",
     "AU": "Australie"
+  },
+  "appleAccount": {
+    "title": "Compte Apple",
+    "intro": "Associez votre compte Apple pour vous connecter avec Face ID, Touch ID ou votre mot de passe Apple.",
+    "link": "Associer un compte Apple",
+    "linkedOn": "Associé le {date}",
+    "linkedToast": "Votre compte Apple est associé.",
+    "relayNote": "Apple relaie les messages vers votre vraie adresse et ne la communique pas à cette instance.",
+    "addressHidden": "Apple n'a pas communiqué d'adresse",
+    "unlink": "Dissocier",
+    "unlinkTitle": "Dissocier votre compte Apple ?",
+    "unlinkBody": "Vous ne pourrez plus vous connecter avec Apple. Votre mot de passe et vos clés d'accès continuent de fonctionner.",
+    "unlinkedToast": "Votre compte Apple n'est plus associé.",
+    "unlinkFailed": "Ce compte Apple n'a pas pu être dissocié."
   }
 }

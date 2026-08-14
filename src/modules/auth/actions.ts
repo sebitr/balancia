@@ -15,6 +15,7 @@ import {
   requestPasswordReset,
   resetPassword,
   signInWithPassword,
+  unlinkAppleIdentity,
   verifyEmail,
 } from "./service";
 import { revokeSession } from "./sessions";
@@ -179,6 +180,25 @@ export async function verifyEmailAction(token: string): Promise<ActionResult> {
         "confirmLinkInvalid",
       );
     }
+  });
+}
+
+/**
+ * Unlinks the Apple account.
+ *
+ * Linking is not an action: it needs a round trip through Apple, so it starts
+ * at /api/auth/apple/start like any other sign-in and comes back knowing who
+ * asked. Removing the link needs nobody's permission but the account holder's,
+ * and the service refuses if it would leave them locked out.
+ */
+export async function unlinkAppleAction(): Promise<ActionResult> {
+  return runAction("auth.unlinkApple", async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new AuthError("Sign in to change your account.", "signInRequired");
+    }
+    await unlinkAppleIdentity(user.userId);
+    revalidatePath("/profile/security");
   });
 }
 

@@ -36,7 +36,9 @@ question has a default, and with no terminal to ask on it asks nothing.
   talk to anyone.
 - **Passkeys and passwords.** Sign in with a passkey (WebAuthn) or an email and
   password. Both are implemented in this repository — no third-party auth
-  service is involved.
+  service is involved. Sign in with Apple can be switched on as a third option;
+  it is off by default, because it is the only one that talks to somebody
+  else's server and it needs an Apple Developer account to set up.
 - **Guest participation without an account.** Invite someone through a
   revocable link. They can view the group, add and edit expenses, settle up and
   upload receipts — but never manage people, links or the group itself.

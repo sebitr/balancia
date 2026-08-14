@@ -15,13 +15,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signInAction } from "@/modules/auth/actions";
 import { signInWithPasskey } from "@/modules/auth/passkey-client";
 import { usePasskeySupport } from "./use-passkey-support";
+import { AppleSignInButton } from "./apple-sign-in-button";
 
 /**
- * Sign in with email and password, or with a passkey.
+ * Sign in with email and password, with a passkey, or with Apple.
  *
  * The passkey button uses a discoverable credential, so nothing has to be
  * typed first — the authenticator identifies the user. It is hidden entirely
  * on browsers without WebAuthn rather than offering a button that cannot work.
+ * The Apple button is hidden on the same principle, on any instance whose
+ * operator has not configured it.
  */
 
 /**
@@ -38,13 +41,25 @@ type FormValues = z.infer<typeof schema>;
 
 type ValidationKey = "email" | "password";
 
-export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
+export function SignInForm({
+  mailEnabled,
+  appleEnabled = false,
+  /**
+   * A failure from the Apple round trip, which cannot report itself: the
+   * callback is a redirect, so the page it lands on has to carry the message.
+   */
+  initialError = null,
+}: {
+  mailEnabled: boolean;
+  appleEnabled?: boolean;
+  initialError?: string | null;
+}) {
   const router = useRouter();
   const t = useTranslations("auth.signIn");
   const tValidation = useTranslations("auth.validation");
   const tErrors = useTranslations("auth.errors");
   const tCommon = useTranslations("common");
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(initialError);
   const [passkeyPending, setPasskeyPending] = useState(false);
   const passkeysAvailable = usePasskeySupport();
 
@@ -166,7 +181,7 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
         </Button>
       </form>
 
-      {passkeysAvailable && (
+      {(passkeysAvailable || appleEnabled) && (
         <>
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
@@ -176,20 +191,26 @@ export function SignInForm({ mailEnabled }: { mailEnabled: boolean }) {
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => void onPasskey()}
-            disabled={passkeyPending}
-          >
-            {passkeyPending ? (
-              <Loader2 aria-hidden="true" className="animate-spin" />
-            ) : (
-              <KeyRound aria-hidden="true" />
+          <div className="space-y-2">
+            {passkeysAvailable && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => void onPasskey()}
+                disabled={passkeyPending}
+              >
+                {passkeyPending ? (
+                  <Loader2 aria-hidden="true" className="animate-spin" />
+                ) : (
+                  <KeyRound aria-hidden="true" />
+                )}
+                {t("withPasskey")}
+              </Button>
             )}
-            {t("withPasskey")}
-          </Button>
+
+            {appleEnabled && <AppleSignInButton intent="signIn" />}
+          </div>
         </>
       )}
 

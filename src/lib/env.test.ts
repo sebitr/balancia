@@ -158,6 +158,101 @@ describe("environment validation", () => {
     });
   });
 
+  describe("Sign in with Apple", () => {
+    const apple = {
+      APP_URL: "https://balancia.example.com",
+      APPLE_CLIENT_ID: "com.example.balancia.web",
+      APPLE_TEAM_ID: "A1B2C3D4E5",
+      APPLE_KEY_ID: "ABC1234567",
+      APPLE_PRIVATE_KEY:
+        "-----BEGIN PRIVATE KEY-----\nMIGH\n-----END PRIVATE KEY-----",
+    };
+
+    it("stays disabled when unconfigured", () => {
+      expect(
+        parseEnv({ ...base } as unknown as NodeJS.ProcessEnv)
+          .appleSignInEnabled,
+      ).toBe(false);
+    });
+
+    it("enables it when all four values are present", () => {
+      const env = parseEnv({
+        ...base,
+        ...apple,
+      } as unknown as NodeJS.ProcessEnv);
+      expect(env.appleSignInEnabled).toBe(true);
+    });
+
+    it("names the missing half rather than half-working", () => {
+      // Three of four fails at the redirect, where the error is Apple's and
+      // says nothing useful. It should fail at boot instead.
+      expect(() =>
+        parseEnv({
+          ...base,
+          ...apple,
+          APPLE_KEY_ID: "",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/APPLE_KEY_ID is required/);
+    });
+
+    it("unescapes the newlines a .env file cannot carry", () => {
+      const env = parseEnv({
+        ...base,
+        ...apple,
+        APPLE_PRIVATE_KEY:
+          "-----BEGIN PRIVATE KEY-----\\nMIGH\\n-----END PRIVATE KEY-----",
+      } as unknown as NodeJS.ProcessEnv);
+      expect(env.APPLE_PRIVATE_KEY).toBe(
+        "-----BEGIN PRIVATE KEY-----\nMIGH\n-----END PRIVATE KEY-----",
+      );
+    });
+
+    it("rejects a key that is a path or an identifier rather than a key", () => {
+      expect(() =>
+        parseEnv({
+          ...base,
+          ...apple,
+          APPLE_PRIVATE_KEY: "/run/secrets/AuthKey_ABC1234567.p8",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/BEGIN PRIVATE KEY/);
+    });
+
+    it("rejects identifiers that are not Apple's ten characters", () => {
+      expect(() =>
+        parseEnv({
+          ...base,
+          ...apple,
+          APPLE_TEAM_ID: "A1B2C3",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/APPLE_TEAM_ID/);
+    });
+
+    it("refuses an origin Apple would never redirect to", () => {
+      // Apple rejects http:// and localhost return URLs outright, so an
+      // instance configured this way can never complete a sign-in.
+      for (const APP_URL of [
+        "http://balancia.example.com",
+        "http://localhost:3000",
+        "https://localhost:3000",
+      ]) {
+        expect(() =>
+          parseEnv({
+            ...base,
+            ...apple,
+            APP_URL,
+          } as unknown as NodeJS.ProcessEnv),
+        ).toThrow(/public HTTPS APP_URL/);
+      }
+    });
+
+    it("leaves a plain localhost instance alone", () => {
+      // The rule above must only bite when Apple is actually configured.
+      expect(() =>
+        parseEnv({ ...base } as unknown as NodeJS.ProcessEnv),
+      ).not.toThrow();
+    });
+  });
+
   it("collects extra trusted origins", () => {
     const env = parseEnv({
       ...base,

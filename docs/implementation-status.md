@@ -14,6 +14,7 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 4   | Money and allocation domain                             | ✅     |
 | 5   | Balance engine                                          | ✅     |
 | 6   | Authentication (email/password + passkeys, first-party) | ✅     |
+| 6b  | Sign in with Apple (optional, off by default)           | ✅     |
 | 7   | Groups, participants and central authorization          | ✅     |
 | 8   | Secure guest access                                     | ✅     |
 | 9   | Expenses and settlements                                | ✅     |
@@ -75,6 +76,13 @@ hashes, and the WebAuthn state machine is ours. Only the WebAuthn _protocol_
 (CBOR/COSE parsing, signature verification) is delegated, to
 `@simplewebauthn/server` — MIT, no company, no paid tier. Hand-rolling that
 would be a security liability rather than an independence win.
+
+Sign in with Apple was added later on the same terms, and needed no dependency
+at all: it is one ES256 assertion to sign and one RS256 token to verify against
+a published key set, which `node:crypto` does directly. It is off unless an
+operator configures it, both because it is the one sign-in path that contacts a
+third party and because Apple only issues the credentials to a paid Developer
+Program member.
 
 **Serwist runs in configurator mode.** The default `withSerwist` plugin is
 webpack-only, and Next.js 16 builds with Turbopack. `pnpm build` therefore runs
