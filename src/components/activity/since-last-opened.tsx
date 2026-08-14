@@ -3,6 +3,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * What changed while the reader was away.
@@ -86,6 +87,7 @@ export function SinceLastOpened({
 
       <Link
         href={`/groups/${groupId}/activity`}
+        transitionTypes={PUSH}
         className="-my-1 self-start rounded-md py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         {tGroup("showEarlierActivity")}

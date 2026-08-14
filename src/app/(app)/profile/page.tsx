@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PreferredCurrencyForm } from "@/components/profile/preferred-currency-form";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
+import { PUSH } from "@/components/motion/transitions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("profile");
@@ -60,7 +61,7 @@ export default async function ProfilePage() {
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">{t("securityNote")}</p>
           <Button asChild variant="outline" size="sm">
-            <Link href="/profile/security">
+            <Link href="/profile/security" transitionTypes={PUSH}>
               <ShieldCheck aria-hidden="true" />
               {t("managePasskeys")}
             </Link>

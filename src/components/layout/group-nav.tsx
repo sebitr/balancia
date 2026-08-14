@@ -11,6 +11,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { PUSH, SWITCH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 
 /**
@@ -72,6 +73,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
                 // Tabs are peers, and "Add" opens a form over the group rather
                 // than a place inside it — neither is somewhere deeper, so
                 // neither slides.
+                transitionTypes={item.primary ? PUSH : SWITCH}
                 className={cn(
                   "flex flex-col items-center rounded-xl px-1 py-2.5 text-xs font-medium transition-transform duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   item.primary

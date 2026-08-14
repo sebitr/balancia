@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { requireGroupAccess } from "@/lib/actions";
 import { listExpenses } from "@/modules/expenses/service";
 import { listSettlements } from "@/modules/settlements/service";
+import { PUSH } from "@/components/motion/transitions";
 
 export default async function ExpensesPage({
   params,
@@ -70,13 +71,16 @@ export default async function ExpensesPage({
           {/* Rent and bills belong next to the expenses they generate, not
               buried in group settings. */}
           <Button asChild size="sm" variant="ghost">
-            <Link href={`/groups/${groupId}/recurring`}>
+            <Link href={`/groups/${groupId}/recurring`} transitionTypes={PUSH}>
               <RefreshCw aria-hidden="true" />
               {t("recurringLink")}
             </Link>
           </Button>
           <Button asChild size="sm">
-            <Link href={`/groups/${groupId}/expenses/new`}>
+            <Link
+              href={`/groups/${groupId}/expenses/new`}
+              transitionTypes={PUSH}
+            >
               <Plus aria-hidden="true" />
               {t("add")}
             </Link>
@@ -91,7 +95,10 @@ export default async function ExpensesPage({
           description={t("emptyDescription")}
           action={
             <Button asChild>
-              <Link href={`/groups/${groupId}/expenses/new`}>
+              <Link
+                href={`/groups/${groupId}/expenses/new`}
+                transitionTypes={PUSH}
+              >
                 <Plus aria-hidden="true" />
                 {t("addExpense")}
               </Link>
@@ -105,7 +112,10 @@ export default async function ExpensesPage({
               {entry.kind === "expense" ? (
                 <Link
                   href={`/groups/${groupId}/expenses/${entry.id}`}
-                  className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  transitionTypes={PUSH}
+                  // A finger never hovers, so the row answers the press
+                  // itself — every other list in the app already does.
+                  className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-muted motion-reduce:transition-none"
                 >
                   <ExpenseRowContent entry={entry} />
                 </Link>

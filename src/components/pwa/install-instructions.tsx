@@ -52,11 +52,8 @@ export function InstallInstructions() {
         showCloseButton={false}
         className="mx-auto max-h-[85dvh] gap-4 overflow-y-auto rounded-t-[22px] px-5 pt-4 pb-[max(1.375rem,env(safe-area-inset-bottom))] sm:max-w-sm"
       >
-        <span
-          aria-hidden="true"
-          className="mx-auto h-1 w-9 shrink-0 rounded-full bg-muted-foreground/30"
-        />
-
+        {/* The grabber is the sheet's own, now that every bottom sheet has
+            one — a second would only sit under the first. */}
         <SheetHeader className="flex-row items-center gap-3 p-0">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent">
             <BalanciaMark className="size-6" />

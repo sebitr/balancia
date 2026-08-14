@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BalanceAmount } from "@/components/money/amount";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Who owes whom, in reading order: the reader, then the people owed money,
@@ -51,6 +52,7 @@ export function BalanceList({
         </h2>
         <Link
           href={`/groups/${groupId}/balances`}
+          transitionTypes={PUSH}
           className="-my-2 shrink-0 rounded-[10px] px-2 py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {t("allBalances")}
@@ -62,6 +64,7 @@ export function BalanceList({
           <li key={`${row.participantId}-${row.currency}`}>
             <Link
               href={`/groups/${groupId}/members`}
+              transitionTypes={PUSH}
               className="flex min-h-11 items-center justify-between gap-3 border-t px-3 py-[11px] transition-colors first:border-t-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
             >
               <span className="flex min-w-0 items-center gap-2.5">

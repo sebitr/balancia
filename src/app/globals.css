@@ -164,6 +164,17 @@
     font-feature-settings:
       "tnum" 1,
       "lnum" 1;
+    /* The grey flash a tap leaves behind is the giveaway that this is a web
+       page. Every tappable surface below answers a press itself instead. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Installed, Balancia is the whole window: an overscroll that bounces the
+     app away from the top edge, or reloads it, belongs to a browser. */
+  @media (display-mode: standalone), (display-mode: fullscreen) {
+    html {
+      overscroll-behavior-y: none;
+    }
   }
 }
 
@@ -179,5 +190,243 @@
     font-family: var(--font-serif);
     font-weight: 400;
     letter-spacing: -0.02em;
+  }
+}
+
+/* ========================================================================== *
+ *  Motion
+ *
+ *  Balancia is used one-handed, on a phone, usually standing up. The motion
+ *  below is borrowed from iOS for one reason: it is the vocabulary the hand
+ *  already knows. A screen arrives from the side you are travelling towards,
+ *  the chrome holds still so you never lose your place, and the left edge is
+ *  always a way back out.
+ *
+ *  Direction is carried by the link — see src/components/motion/transitions.ts
+ *  — and applied by <Screen>. Navigations that carry no direction (the browser
+ *  back button, router.refresh()) deliberately animate nothing.
+ * ========================================================================== */
+
+:root {
+  /* Leaves fast, settles slow: the curve UIKit uses for a navigation push. */
+  --ease-screen: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-screen: 360ms;
+
+  /* Wide viewports get a hint of the same motion rather than the whole
+     gesture — a screen the width of a column has no business flying across a
+     desktop, so it moves a little and crossfades instead. */
+  --screen-in: 28px;
+  --screen-out: -18px;
+  --screen-dim: 1;
+  --screen-fade: 200ms;
+}
+
+/* Phone-sized: the full push, opaque and edge to edge. */
+@media (max-width: 47.9375rem) {
+  :root {
+    --screen-in: 100vw;
+    /* The screen underneath travels a third as far. That difference is the
+       whole illusion of depth. */
+    --screen-out: -24vw;
+    --screen-dim: 0.6;
+    --screen-fade: 0s;
+  }
+}
+
+@keyframes screen-from-edge {
+  from {
+    translate: var(--screen-in) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@keyframes screen-to-edge {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: var(--screen-in) 0;
+  }
+}
+@keyframes screen-recede {
+  from {
+    translate: 0 0;
+    opacity: 1;
+  }
+  to {
+    translate: var(--screen-out) 0;
+    opacity: var(--screen-dim);
+  }
+}
+@keyframes screen-return {
+  from {
+    translate: var(--screen-out) 0;
+    opacity: var(--screen-dim);
+  }
+  to {
+    translate: 0 0;
+    opacity: 1;
+  }
+}
+@keyframes screen-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Going deeper: the new screen slides in over the old, which recedes. */
+::view-transition-old(.push) {
+  animation: var(--duration-screen) var(--ease-screen) both screen-recede;
+}
+::view-transition-new(.push) {
+  animation:
+    var(--duration-screen) var(--ease-screen) both screen-from-edge,
+    var(--screen-fade) ease-out both screen-fade-in;
+  z-index: 1;
+}
+
+/* Coming back: the same move played backwards — the screen you are leaving
+   slides off, uncovering the one that was there all along. */
+::view-transition-old(.pop) {
+  animation: var(--duration-screen) var(--ease-screen) both screen-to-edge;
+  z-index: 1;
+}
+::view-transition-new(.pop) {
+  animation: var(--duration-screen) var(--ease-screen) both screen-return;
+}
+
+/* A page root has no background of its own, so the screen on top would be
+   see-through mid-flight. Painted onto the snapshot, not the element, so
+   nothing changes when no transition is running. */
+::view-transition-new(.push),
+::view-transition-old(.pop) {
+  background-color: var(--background);
+}
+
+/* Sideways, between tabs: nowhere new was entered, so nothing travels. */
+::view-transition-old(.switch) {
+  animation: 110ms ease-out both screen-fade-in reverse;
+}
+::view-transition-new(.switch) {
+  animation: 190ms ease-in 70ms both screen-fade-in;
+}
+
+/* The chrome is what you navigate by. It does not go along for the ride. */
+::view-transition-group(app-header),
+::view-transition-group(app-nav),
+::view-transition-group(app-toaster) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(app-header),
+::view-transition-old(app-nav),
+::view-transition-old(app-toaster) {
+  /* Both copies are briefly live; showing them together reads as a flicker. */
+  display: none;
+}
+::view-transition-new(app-header),
+::view-transition-new(app-nav),
+::view-transition-new(app-toaster) {
+  animation: none;
+}
+
+/* Whatever is left over is the page's own ground, the same colour on both
+   sides of the navigation. Crossfading it would only cost a frame. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* A tap during a transition should reach the page, not the snapshot over it. */
+::view-transition {
+  pointer-events: none;
+}
+
+[data-slot="app-header"] {
+  view-transition-name: app-header;
+}
+[data-slot="app-nav"] {
+  view-transition-name: app-nav;
+}
+[data-sonner-toaster] {
+  view-transition-name: app-toaster;
+}
+
+/* -------------------------------------------------------------------------- *
+ *  Swipe back
+ *
+ *  Driven from src/components/motion/swipe-back.tsx, which sets the progress
+ *  of the gesture — 0 at rest, 1 fully off — on the document. Everything the
+ *  eye follows is derived from that one number.
+ * -------------------------------------------------------------------------- */
+
+@property --swipe-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Off-transform entirely at rest: a permanent transform on the screen would
+   make it a containing block, which changes how the snapshots above are
+   captured. */
+:root[data-swipe] [data-slot="app-screen"] {
+  position: relative;
+  z-index: 1;
+  background-color: var(--background);
+  transform: translate3d(calc(var(--swipe-progress) * 100vw), 0, 0);
+  /* The edge that is being lifted away from what is underneath. */
+  box-shadow: -12px 0 28px -8px oklch(0 0 0 / 0.3);
+  will-change: transform;
+}
+
+/* Released. How long the rest of the journey takes is set by the gesture, from
+   what is left of it — a screen nearly off should not linger. */
+:root[data-swipe="settle"] [data-slot="app-screen"] {
+  transition: transform var(--swipe-settle, var(--duration-screen))
+    var(--ease-screen);
+}
+
+/* Arrived. The screen that was underneath finishes the last of the parallax. */
+:root[data-swipe="arrive"] [data-slot="app-screen"] {
+  animation: var(--duration-screen) var(--ease-screen) both screen-return;
+}
+
+/* What sits behind the screen being dragged away: the app's own ground,
+   dimmed while it is still covered, lifting as the screen clears it. */
+[data-slot="swipe-ground"] {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: none;
+  background-color: var(--background);
+}
+:root[data-swipe]:not([data-swipe="arrive"]) [data-slot="swipe-ground"] {
+  display: block;
+}
+[data-slot="swipe-ground"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: oklch(0 0 0 / 0.22);
+  opacity: calc(1 - var(--swipe-progress));
+}
+
+/* -------------------------------------------------------------------------- *
+ *  Reduced motion
+ *
+ *  Sliding a whole screen across the viewport is the most likely thing here to
+ *  make someone unwell, so it is the first thing to go. The swipe gesture
+ *  disarms itself in JavaScript; what remains is an instant swap.
+ * -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
   }
 }

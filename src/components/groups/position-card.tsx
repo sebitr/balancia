@@ -11,6 +11,7 @@ import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
 import type { RemindRecipient } from "@/modules/reminders/types";
 import { cn } from "@/lib/utils";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Where the reader stands, and the two things they can do about it.
@@ -146,7 +147,7 @@ export function PositionCard({
             size="lg"
             className="h-9 flex-1 rounded-xl text-sm font-medium"
           >
-            <Link href={`/groups/${groupId}/balances`}>
+            <Link href={`/groups/${groupId}/balances`} transitionTypes={PUSH}>
               <ArrowRightLeft aria-hidden="true" className="size-4" />
               {t("settleUp")}
             </Link>

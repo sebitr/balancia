@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PUSH } from "@/components/motion/transitions";
 import { signOutAction } from "@/modules/auth/actions";
 
 function initialsOf(label: string): string {
@@ -77,19 +78,19 @@ export function UserMenu({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/profile">
+          <Link href="/profile" transitionTypes={PUSH}>
             <User aria-hidden="true" />
             {t("profile")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/profile/notifications">
+          <Link href="/profile/notifications" transitionTypes={PUSH}>
             <Bell aria-hidden="true" />
             {t("notifications")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/profile/security">
+          <Link href="/profile/security" transitionTypes={PUSH}>
             <ShieldCheck aria-hidden="true" />
             {t("security")}
           </Link>

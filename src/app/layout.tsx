@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
+import { SwipeBack } from "@/components/motion/swipe-back";
 import "./globals.css";
 
 /** Interface, headings and amounts. */
@@ -69,6 +70,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             Components below can call useTranslations without prop drilling. */}
         <NextIntlClientProvider>
           <Providers>{children}</Providers>
+          {/* Above every shell, not inside one: the gesture counts how many of
+              our own screens are behind this one, and moving between a group
+              and the home screen swaps one shell for the other. Mounted in
+              there, it would forget its way back on the way in. */}
+          <SwipeBack />
           <Toaster position="top-center" richColors closeButton />
         </NextIntlClientProvider>
       </body>

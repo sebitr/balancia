@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * The quiet end of the list: groups nobody owes anything in, plus the archived
@@ -94,6 +95,7 @@ export function SettledGroups({
                 <li key={group.id}>
                   <Link
                     href={`/groups/${group.id}`}
+                    transitionTypes={PUSH}
                     className="inline-flex h-[30px] items-center rounded-full border px-3 text-[0.8125rem] transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
                   >
                     {group.name}
@@ -122,6 +124,7 @@ export function SettledGroups({
                 <li key={group.id}>
                   <Link
                     href={`/groups/${group.id}`}
+                    transitionTypes={PUSH}
                     className="inline-flex h-[30px] items-center rounded-full border px-3 text-[0.8125rem] text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     {group.name}
