@@ -7,9 +7,10 @@ import { AddEntryForm } from "./add-entry-form";
 /**
  * What the screen does, from the outside.
  *
- * These assert the behaviours the rework is *for*: the amount comes from a
- * pad, the split is one row until you open it, the type switch keeps what it
- * can and drops what it must, and the primary button says what it will do.
+ * These assert the behaviours the rework is *for*: the amount is typed into
+ * the figure itself, the split is one row until you open it, the type switch
+ * keeps what it can and drops what it must, and the primary button says what
+ * it will do.
  *
  * Server actions are mocked. Whether an expense is stored correctly is the
  * service layer's problem and is tested there; this is about the form.
@@ -97,18 +98,13 @@ function renderForm(
   );
 }
 
-/** Types an amount through the pad, the way a thumb would. */
+/** Types an amount into the figure, one character at a time. */
 async function enterAmount(
   user: ReturnType<typeof userEvent.setup>,
   digits: string,
+  label = "Amount",
 ) {
-  await user.click(screen.getByRole("button", { name: /^Amount$/ }));
-  for (const key of digits) {
-    await user.click(
-      screen.getByRole("button", { name: key === "." ? "." : key }),
-    );
-  }
-  await user.click(screen.getByRole("button", { name: "Done" }));
+  await user.type(screen.getByRole("textbox", { name: label }), digits);
 }
 
 /**
@@ -331,11 +327,7 @@ describe("income", () => {
     renderForm();
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
-    await user.click(screen.getByRole("button", { name: /^Amount received$/ }));
-    for (const key of "2400") {
-      await user.click(screen.getByRole("button", { name: key }));
-    }
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    await enterAmount(user, "2400", "Amount received");
     await user.type(screen.getByLabelText("Description"), "Rent");
     await user.click(screen.getByRole("button", { name: "Add income" }));
 
@@ -367,7 +359,9 @@ describe("switching type", () => {
     await enterAmount(user, "84.60");
     await user.click(screen.getByRole("tab", { name: "Income" }));
 
-    expect(screen.getByRole("button", { name: /84\.60/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Amount received" }),
+    ).toHaveValue("84.60");
   });
 
   it("turns recurrence off when a settlement cannot have it", async () => {
@@ -392,7 +386,9 @@ describe("settlement", () => {
     await user.click(screen.getByRole("tab", { name: "Settle" }));
 
     expect(screen.getByText("Hervé owes Seb")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /128\.40/ })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
+      "128.40",
+    );
   });
 
   it("offers the methods that country actually uses", async () => {
@@ -491,20 +487,48 @@ describe("after saving", () => {
   });
 });
 
-describe("the amount pad", () => {
+describe("the amount field", () => {
+  /**
+   * The native keyboard will happily offer a fourth character after "1.23";
+   * what stops it is the field refusing to hold one, not the keyboard.
+   */
   it("refuses a third decimal in a two-decimal currency", async () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("button", { name: /^Amount$/ }));
-    for (const key of "1.239") {
-      await user.click(
-        screen.getByRole("button", { name: key === "." ? "." : key }),
-      );
-    }
+    await enterAmount(user, "1.239");
 
-    const keypad = screen.getByRole("dialog");
-    expect(within(keypad).getByText("1.23")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("1.23");
+  });
+
+  /** The keyboard's own decimal key is a comma across most of Europe. */
+  it("takes a comma for the decimal separator", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84,60");
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue(
+      "84.60",
+    );
+  });
+
+  /**
+   * Yen has no minor unit. An amount already typed as francs has to be brought
+   * with the new currency's rules rather than left as something the server
+   * would only refuse at save time.
+   */
+  it("re-reads what is typed against a newly chosen currency", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "1200.50");
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+    const sheet = screen.getByRole("dialog");
+    await user.click(within(sheet).getByRole("button", { name: /^JPY/ }));
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("1200");
   });
 });
 

@@ -1066,11 +1066,6 @@
       "rateFrozen": "Ce taux est figé avec l'écriture. Un changement de taux ne réécrit jamais ce qui est déjà enregistré.",
       "inBaseCurrency": "Dans la devise de base du groupe"
     },
-    "keypad": {
-      "zero": "0.00",
-      "delete": "Effacer le dernier chiffre",
-      "done": "Terminé"
-    },
     "date": {
       "today": "Aujourd'hui",
       "oneOff": "Ponctuel",
@@ -1226,7 +1221,6 @@
       "saveFailed": "Impossible d'enregistrer. Réessayez."
     },
     "sheetTitles": {
-      "keypad": "Montant",
       "split": "Paiement et partage",
       "category": "Catégorie",
       "currency": "Devise",

@@ -3,28 +3,44 @@ import {
   confirmationKey,
   directionOf,
   hasAmount,
-  pressKey,
   primaryActionKey,
   resetsForType,
+  sanitiseAmount,
   summariseSplit,
-  type KeypadKey,
 } from "./entry-logic";
 
-/** Types a whole string through the pad, one key at a time. */
+/**
+ * Retypes a string one character at a time, the way the field actually fills.
+ *
+ * Sanitising the finished string is not the same test: every intermediate
+ * value is also state the field holds and re-renders, so a rule that only
+ * holds for the complete amount would still lose characters while typing.
+ */
 const type = (keys: string, currency = "CHF"): string =>
-  [...keys].reduce(
-    (text, key) => pressKey(text, key as KeypadKey, currency),
-    "",
-  );
+  [...keys].reduce((text, key) => sanitiseAmount(text + key, currency), "");
 
-describe("pressKey", () => {
-  it("builds an amount digit by digit", () => {
+describe("sanitiseAmount", () => {
+  it("builds an amount character by character", () => {
     expect(type("8460")).toBe("8460");
     expect(type("84.60")).toBe("84.60");
   });
 
+  it("keeps a point with nothing behind it yet", () => {
+    expect(sanitiseAmount("84.", "CHF")).toBe("84.");
+  });
+
   it("turns a leading point into an explicit zero", () => {
     expect(type(".5")).toBe("0.5");
+  });
+
+  /** The decimal key is a comma on most of Europe's keyboards. */
+  it("takes a comma for the decimal separator", () => {
+    expect(sanitiseAmount("84,60", "CHF")).toBe("84.60");
+  });
+
+  it("drops anything that is not a digit or a separator", () => {
+    expect(sanitiseAmount("CHF 84.60", "CHF")).toBe("84.60");
+    expect(sanitiseAmount("-1e5", "CHF")).toBe("15");
   });
 
   it("refuses a second decimal point", () => {
@@ -41,7 +57,7 @@ describe("pressKey", () => {
    */
   it("gives a currency with no minor unit no decimal point at all", () => {
     expect(type("1200.50", "JPY")).toBe("120050");
-    expect(pressKey("1200", ".", "JPY")).toBe("1200");
+    expect(sanitiseAmount("1200.50", "JPY")).toBe("1200");
   });
 
   it("allows the third decimal a currency actually has", () => {
@@ -62,10 +78,10 @@ describe("pressKey", () => {
     expect(type("0.5")).toBe("0.5");
   });
 
-  it("deletes from the end, and does nothing when empty", () => {
-    expect(pressKey("84.60", "delete", "CHF")).toBe("84.6");
-    expect(pressKey("8", "delete", "CHF")).toBe("");
-    expect(pressKey("", "delete", "CHF")).toBe("");
+  it("survives a backspace back to empty", () => {
+    expect(sanitiseAmount("84.6", "CHF")).toBe("84.6");
+    expect(sanitiseAmount("8", "CHF")).toBe("8");
+    expect(sanitiseAmount("", "CHF")).toBe("");
   });
 });
 
