@@ -101,3 +101,114 @@ describe("a bottom sheet with the keyboard open", () => {
     expect(screen.getByRole("dialog").style.bottom).toBe("");
   });
 });
+
+/**
+ * Pushing a sheet away, and not pushing it away by accident.
+ *
+ * The interesting case is the tall sheet, which keeps its header and footer
+ * fixed and scrolls a body inside instead. Its own `scrollTop` is 0 whatever
+ * the body is doing, so a gesture that consulted only the sheet armed itself
+ * on every touch — and the body could then be scrolled down but never back up,
+ * because the swipe that would scroll it up dismissed the sheet instead.
+ */
+describe("pushing a bottom sheet away", () => {
+  function renderTallSheet() {
+    render(
+      <Sheet open>
+        {/* The shape the add-entry drawer and the group sheet both take. */}
+        <SheetContent side="bottom" className="overflow-hidden">
+          <SheetTitle>Add expense</SheetTitle>
+          <div data-testid="body" className="overflow-y-auto">
+            <p data-testid="row">A row some way down the list</p>
+          </div>
+        </SheetContent>
+      </Sheet>,
+    );
+    return {
+      sheet: screen.getByRole("dialog"),
+      body: screen.getByTestId("body"),
+      row: screen.getByTestId("row"),
+    };
+  }
+
+  /** jsdom ships no `PointerEvent`, and only four of its fields are read. */
+  function touch(target: Element, type: string, clientY: number) {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      pointerType: "touch",
+      isPrimary: true,
+      pointerId: 1,
+      clientY,
+    });
+    target.dispatchEvent(event);
+  }
+
+  /**
+   * Also the guard on the binding itself. The gesture used to read the sheet
+   * from a ref on a commit where Radix's portal had not rendered the content
+   * yet, so the listeners went nowhere and this moved nothing.
+   */
+  it("follows a downward drag that starts at the top of the body", () => {
+    const { sheet, row } = renderTallSheet();
+
+    touch(row, "pointerdown", 100);
+    touch(row, "pointermove", 140);
+
+    expect(sheet.style.transform).toBe("translate3d(0, 40px, 0)");
+  });
+
+  /** The regression: the body scrolls, and the sheet stays where it is. */
+  it("leaves a scrolled body to scroll itself back up", () => {
+    const { sheet, body, row } = renderTallSheet();
+    body.scrollTop = 120;
+
+    touch(row, "pointerdown", 100);
+    touch(row, "pointermove", 140);
+
+    expect(sheet.style.transform).toBe("");
+  });
+
+  it("does not lift the sheet off the bottom edge on an upward swipe", () => {
+    const { sheet, row } = renderTallSheet();
+
+    touch(row, "pointerdown", 100);
+    touch(row, "pointermove", 60);
+
+    expect(sheet.style.transform).toBe("");
+  });
+});
+
+/**
+ * The short sheets — currency, category, the payment methods — scroll their
+ * own content rather than a body inside, and must keep doing so.
+ */
+describe("a sheet that scrolls itself", () => {
+  it("reads its own scroll position", () => {
+    render(
+      <Sheet open>
+        <SheetContent side="bottom" className="overflow-y-auto">
+          <SheetTitle>Currency</SheetTitle>
+          <p data-testid="row">CHF</p>
+        </SheetContent>
+      </Sheet>,
+    );
+    const sheet = screen.getByRole("dialog");
+    const row = screen.getByTestId("row");
+
+    const event = new Event("pointerdown", { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      pointerType: "touch",
+      isPrimary: true,
+      pointerId: 1,
+      clientY: 100,
+    });
+    sheet.scrollTop = 90;
+    row.dispatchEvent(event);
+
+    const move = new Event("pointermove", { bubbles: true, cancelable: true });
+    Object.assign(move, { pointerId: 1, clientY: 140 });
+    row.dispatchEvent(move);
+
+    expect(sheet.style.transform).toBe("");
+  });
+});
