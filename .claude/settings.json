@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "worktree": {
+    "baseRef": "fresh"
+  },
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/worktree-install.sh",
+            "timeout": 30,
+            "statusMessage": "Installing dependencies"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/report-branch.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/guard-branch.sh",
+            "timeout": 10,
+            "statusMessage": "Checking branch"
+          }
+        ]
+      }
+    ]
+  }
+}

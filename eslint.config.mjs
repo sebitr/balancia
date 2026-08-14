@@ -63,6 +63,10 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // Agent worktrees are whole checkouts of this repository. Linting them
+    // reports the same file twice and at a path where the rules above — which
+    // are anchored at the repository root — no longer match.
+    ".claude/**",
   ]),
 ]);
 
