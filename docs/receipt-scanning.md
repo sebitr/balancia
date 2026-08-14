@@ -74,6 +74,10 @@ read, not weights you cannot.
 
 ## Installing it
 
+`./scripts/bootstrap.sh` offers this as one of its setup questions, and
+answering yes does everything below: the download, and `RECEIPT_SCANNING=true`
+in `.env`. To do it by hand instead:
+
 ```bash
 pnpm ocr:install --yes
 ```
