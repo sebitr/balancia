@@ -922,6 +922,26 @@
     "keepImage": "Also keep the photo with this expense",
     "keepImageOn": "The image will be uploaded and stored with the expense on this server, like any other attachment.",
     "keepImageOff": "The image stays on this device. Only the amounts you confirm are saved.",
+    "camera": {
+      "starting": "Starting the camera…",
+      "preparingDetection": "Getting ready to find the edges…",
+      "manual": "Frame the receipt and take the photo",
+      "searching": "Point the camera at the receipt",
+      "detected": "Keep the whole receipt in view",
+      "holdStill": "Hold still…",
+      "ready": "Ready — take the photo",
+      "capture": "Take the photo",
+      "cancel": "Cancel",
+      "usePhoneCamera": "Use the phone's camera instead",
+      "choosePhotoInstead": "Choose a photo instead",
+      "errors": {
+        "unavailable": "This browser cannot show a live camera preview. Use the phone's camera instead.",
+        "denied": "Camera access was declined. Allow it in the browser settings, or use the phone's camera.",
+        "notFound": "No usable camera was found on this device.",
+        "startFailed": "The camera could not be started. It may be in use by another app.",
+        "captureFailed": "The photo could not be taken. Try again, or use the phone's camera."
+      }
+    },
     "progress": {
       "preparing": "Preparing the scanner",
       "downloading": "Downloading the receipt models",

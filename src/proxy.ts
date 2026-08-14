@@ -118,7 +118,9 @@ export function proxy(request: NextRequest): NextResponse {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    // camera=(self): the receipt scanner's live document camera. Frames are
+    // processed on the device and never uploaded; see src/lib/doc-scan.
+    "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
   );
   response.headers.set("X-Request-Id", requestId);
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
