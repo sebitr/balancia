@@ -46,6 +46,8 @@ export async function createGroupAction(
   const parsed = createGroupSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") ?? "",
+    icon: formData.get("icon") ?? "",
+    iconColor: formData.get("iconColor") ?? "",
     currencyMode: formData.get("currencyMode"),
     baseCurrency: formData.get("baseCurrency") || undefined,
     timezone: formData.get("timezone"),

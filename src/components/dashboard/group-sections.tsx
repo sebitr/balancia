@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BalanceAmount } from "@/components/money/amount";
+import { GroupIconTile } from "@/components/groups/group-icon";
+import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
 import { MemberStack } from "./member-stack";
 import { RelativeTime } from "./relative-time";
 import { cn } from "@/lib/utils";
@@ -18,7 +20,19 @@ import { PUSH } from "@/components/motion/transitions";
  * never the only signal.
  */
 
-export interface NeedsYouView {
+/**
+ * A group's icon, once it has one.
+ *
+ * Groups created before the picker existed have none, and a list where only
+ * some rows carry a tile reads worse than one where none do — so the tile is
+ * drawn only when there is an icon, rather than falling back to an initial.
+ */
+export interface GroupMark {
+  readonly icon: GroupIcon | null;
+  readonly iconColor: GroupIconColor | null;
+}
+
+export interface NeedsYouView extends GroupMark {
   readonly id: string;
   readonly name: string;
   readonly memberNames: readonly string[];
@@ -31,7 +45,7 @@ export interface NeedsYouView {
     | null;
 }
 
-export interface OwedView {
+export interface OwedView extends GroupMark {
   readonly id: string;
   readonly name: string;
   readonly participantCount: number;
@@ -88,7 +102,15 @@ export function NeedsYouCard({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="flex min-w-0 flex-col gap-1.5">
+        {group.icon && (
+          <GroupIconTile
+            icon={group.icon}
+            color={group.iconColor}
+            className="mt-0.5 size-10 rounded-xl"
+            iconClassName="size-5"
+          />
+        )}
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
           {/* The whole card is the link; the buttons below sit above it. */}
           <Link
             href={`/groups/${group.id}`}
@@ -174,7 +196,15 @@ export function OwedCard({
             transitionTypes={PUSH}
             className="flex min-h-11 items-center justify-between gap-3 px-4 py-[13px] transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_60%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
           >
-            <span className="flex min-w-0 flex-col gap-0.5">
+            {group.icon && (
+              <GroupIconTile
+                icon={group.icon}
+                color={group.iconColor}
+                className="size-9 rounded-[10px]"
+                iconClassName="size-[18px]"
+              />
+            )}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="truncate text-[0.9375rem] font-medium">
                 {group.name}
               </span>

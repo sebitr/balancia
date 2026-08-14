@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { Plus, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { CreateGroupLauncher } from "@/components/groups/create-group-launcher";
 import { Button } from "@/components/ui/button";
 import {
   NeedsYouCard,
@@ -20,8 +22,8 @@ import {
   type GroupPosition,
 } from "@/modules/balances/overview";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
+import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
 import { todayIso } from "@/modules/currencies/provider";
-import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Home: where you stand, then which group needs a decision, then a way in.
@@ -57,8 +59,23 @@ function amountsOf(position: GroupPosition) {
   }));
 }
 
+/**
+ * The stored icon, if it is still one we know how to draw.
+ *
+ * The column holds free text — the catalogue is not pinned in a constraint —
+ * so a row written by a newer version, or by hand, resolves to no icon rather
+ * than to a crash.
+ */
+function markOf(group: GroupPosition["group"]) {
+  return {
+    icon: isGroupIcon(group.icon) ? group.icon : null,
+    iconColor: isGroupIconColor(group.iconColor) ? group.iconColor : null,
+  };
+}
+
 function toNeedsYou(position: GroupPosition): NeedsYouView {
   return {
+    ...markOf(position.group),
     id: position.group.id,
     name: position.group.name,
     memberNames: [...position.group.memberNames],
@@ -71,6 +88,7 @@ function toNeedsYou(position: GroupPosition): NeedsYouView {
 
 function toOwed(position: GroupPosition): OwedView {
   return {
+    ...markOf(position.group),
     id: position.group.id,
     name: position.group.name,
     participantCount: position.group.participantCount,
@@ -93,8 +111,29 @@ export default async function DashboardPage() {
   });
   const { buckets, netPosition } = overview;
 
+  /*
+   * The sheet is mounted on both branches below, because both offer to create
+   * a group and `?new` may arrive at either — the shortcut does not know yet
+   * whether this account has any groups.
+   */
+  const createGroup = (
+    // useSearchParams suspends; nothing under it should hold up the page.
+    <Suspense fallback={null}>
+      <CreateGroupLauncher
+        defaultName={user.name ?? ""}
+        defaultTimezone="UTC"
+        defaultCurrency={preferredCurrency ?? "CHF"}
+      />
+    </Suspense>
+  );
+
   if (overview.groupCount === 0) {
-    return <FirstRun title={t("title")} subtitle={t("empty")} t={t} />;
+    return (
+      <>
+        <FirstRun title={t("title")} subtitle={t("empty")} t={t} />
+        {createGroup}
+      </>
+    );
   }
 
   const active = [
@@ -234,6 +273,7 @@ export default async function DashboardPage() {
           }))}
         />
       </div>
+      {createGroup}
     </div>
   );
 }
@@ -270,7 +310,8 @@ function FirstRun({
           {t("emptyDescription")}
         </p>
         <Button asChild className="mt-1 h-[38px] rounded-xl">
-          <Link href="/groups/new" transitionTypes={PUSH}>
+          {/* Opens the sheet on this page rather than pushing a screen. */}
+          <Link href="?new" replace scroll={false}>
             <Plus aria-hidden="true" />
             {t("createGroup")}
           </Link>
@@ -287,8 +328,9 @@ function FirstRun({
         {/* Importing needs somewhere to import *into*, and there are no groups
             yet — so this starts where it has to, at creating one. */}
         <Link
-          href="/groups/new"
-          transitionTypes={PUSH}
+          href="?new"
+          replace
+          scroll={false}
           className="shrink-0 rounded-md py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {t("splitwiseAction")}

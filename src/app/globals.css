@@ -110,6 +110,21 @@
   --sidebar-accent-foreground: oklch(0.33 0.088 319);
   --sidebar-border: oklch(0.9 0.012 82);
   --sidebar-ring: oklch(0.712 0.168 30);
+
+  /*
+   * Group accents.
+   *
+   * A group's icon colour is content, not chrome — the same group should read
+   * as the same colour in either theme. The dark values are the palette as
+   * drawn; the light ones are the same hues taken down in lightness, because
+   * an icon stroke is a graphical object and owes its background 3:1
+   * (WCAG 2.2 1.4.11) which the dark palette does not have on cream.
+   */
+  --group-accent-coral: oklch(0.577 0.183 30);
+  --group-accent-emerald: oklch(0.52 0.11 167);
+  --group-accent-amber: oklch(0.55 0.11 70);
+  --group-accent-plum: oklch(0.47 0.085 319);
+  --group-accent-blue: oklch(0.51 0.14 250);
 }
 
 .dark {
@@ -149,6 +164,13 @@
   --sidebar-accent-foreground: oklch(0.977 0.007 85);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.712 0.168 30);
+
+  /* The palette as drawn — see the light block above for why it differs. */
+  --group-accent-coral: oklch(0.712 0.168 30);
+  --group-accent-emerald: oklch(0.75 0.13 167);
+  --group-accent-amber: oklch(0.78 0.13 70);
+  --group-accent-plum: oklch(0.71 0.048 319);
+  --group-accent-blue: oklch(0.68 0.12 250);
 }
 
 @layer base {

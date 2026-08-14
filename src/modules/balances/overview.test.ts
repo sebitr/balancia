@@ -24,6 +24,8 @@ function group(overrides: Partial<GroupSummary> = {}): GroupSummary {
     id: crypto.randomUUID(),
     name: "Trip",
     description: null,
+    icon: null,
+    iconColor: null,
     currencyMode: "separate",
     baseCurrency: null,
     timezone: "UTC",

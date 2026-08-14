@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
 import { CURRENCY_MODES } from "@/modules/currencies/conversion";
+import { GROUP_ICONS, GROUP_ICON_COLORS } from "./icons";
 
 /**
  * Input validation for group and participant operations.
@@ -32,10 +33,19 @@ const timezone = z
     }
   }, "Not a recognised IANA timezone");
 
+/**
+ * The group's decoration. Both are optional and independent: an icon may be
+ * chosen and then cleared, leaving the accent behind to tint the initial.
+ */
+const icon = z.enum(GROUP_ICONS).optional().or(z.literal(""));
+const iconColor = z.enum(GROUP_ICON_COLORS).optional().or(z.literal(""));
+
 export const createGroupSchema = z
   .object({
     name: z.string().trim().min(1, "Give the group a name").max(120),
     description: z.string().trim().max(2000).optional().or(z.literal("")),
+    icon,
+    iconColor,
     currencyMode: z.enum(CURRENCY_MODES),
     baseCurrency: currencyCode.optional(),
     timezone,
@@ -68,6 +78,8 @@ export type CreateGroupInput = z.infer<typeof createGroupSchema>;
 export const updateGroupSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
+  icon,
+  iconColor,
   timezone,
 });
 

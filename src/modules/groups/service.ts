@@ -37,6 +37,9 @@ export interface GroupSummary {
   readonly id: string;
   readonly name: string;
   readonly description: string | null;
+  /** Slugs from `./icons`; null until someone chooses one. */
+  readonly icon: string | null;
+  readonly iconColor: string | null;
   readonly currencyMode: "separate" | "converted";
   readonly baseCurrency: string | null;
   readonly timezone: string;
@@ -90,6 +93,8 @@ export async function listGroupsForUser(
       id: groups.id,
       name: groups.name,
       description: groups.description,
+      icon: groups.icon,
+      iconColor: groups.iconColor,
       currencyMode: groups.currencyMode,
       baseCurrency: groups.baseCurrency,
       timezone: groups.timezone,
@@ -150,11 +155,18 @@ export async function createGroup(
       .values({
         name: input.name,
         description: input.description || null,
+        icon: input.icon || null,
+        iconColor: input.iconColor || null,
         currencyMode: input.currencyMode,
-        baseCurrency:
-          input.currencyMode === "converted"
-            ? (input.baseCurrency ?? null)
-            : null,
+        /*
+         * In a converted group this is the currency everything is converted
+         * into. In a separate group nothing is converted and no balance code
+         * reads it — every reader gates on `currencyMode === "converted"` —
+         * so it is kept only as the currency to offer first when recording an
+         * expense. Storing it means switching between the two modes while
+         * creating the group does not throw the choice away.
+         */
+        baseCurrency: input.baseCurrency ?? null,
         timezone: input.timezone,
         createdByUserId: actor.userId,
       })
@@ -242,6 +254,13 @@ export async function updateGroup(
         name: input.name,
         description: input.description || null,
         timezone: input.timezone,
+        // Absent means "leave as it was", empty string means "clear it". A
+        // caller that does not manage the icon — the settings form — must not
+        // wipe one by saying nothing about it.
+        ...(input.icon === undefined ? {} : { icon: input.icon || null }),
+        ...(input.iconColor === undefined
+          ? {}
+          : { iconColor: input.iconColor || null }),
         updatedAt: new Date(),
       })
       .where(eq(groups.id, access.groupId));

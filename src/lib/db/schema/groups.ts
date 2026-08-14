@@ -33,6 +33,14 @@ export const groups = pgTable(
     baseCurrency: text("base_currency"),
     /** IANA timezone, used for recurring-expense scheduling. */
     timezone: text("timezone").notNull().default("UTC"),
+    /**
+     * Optional decoration: which icon the group wears in a list, and in which
+     * accent. Slugs from `@/modules/groups/icons`, not colour values — see
+     * there for why. A group with no icon shows its initial instead, so both
+     * stay nullable and neither is worth a default.
+     */
+    icon: text("icon"),
+    iconColor: text("icon_color"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -53,6 +61,14 @@ export const groups = pgTable(
     check(
       "groups_base_currency_format",
       sql`${table.baseCurrency} IS NULL OR ${table.baseCurrency} ~ '^[A-Z]{3}$'`,
+    ),
+    check(
+      "groups_icon_format",
+      sql`${table.icon} IS NULL OR ${table.icon} ~ '^[a-z][a-z0-9-]{0,31}$'`,
+    ),
+    check(
+      "groups_icon_color_format",
+      sql`${table.iconColor} IS NULL OR ${table.iconColor} ~ '^[a-z][a-z0-9-]{0,31}$'`,
     ),
   ],
 );
