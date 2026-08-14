@@ -255,6 +255,26 @@ describe("configuration reaches the containers", () => {
 });
 
 /**
+ * The same text with its comments removed.
+ *
+ * Prose that mentions a setting is not code that acts on it, and the whole
+ * point here is the difference. `SEMANTIC_CATEGORIZATION` and
+ * `RECEIPT_SCANNING` each appear in two comments and a console message; had
+ * the accessor calls that actually read them been deleted, the scan below
+ * would have gone on passing on the strength of the comments alone — which is
+ * the bug this file exists to catch, not to re-enact.
+ *
+ * `//` preceded by `:` is left alone so that a URL does not swallow the rest
+ * of its line, and `#` only starts a comment in shell scripts.
+ */
+function stripComments(source: string, shell: boolean): string {
+  const text = source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  return shell ? text.replace(/(^|\s)#.*$/gm, "$1") : text;
+}
+
+/**
  * Every file that could plausibly act on a setting: the app, and the scripts
  * that run around it. `env.ts` itself is excluded — declaring a variable is
  * what is being tested, not evidence of anything.
@@ -275,7 +295,9 @@ function sourceMentioningEnv(): string {
         if (relative === declaration || relative.endsWith("env.test.ts")) {
           continue;
         }
-        chunks.push(readFileSync(full, "utf8"));
+        chunks.push(
+          stripComments(readFileSync(full, "utf8"), entry.name.endsWith(".sh")),
+        );
       }
     }
   };
@@ -292,6 +314,12 @@ function sourceMentioningEnv(): string {
  */
 const READ_AS_DERIVED_FIELD: Readonly<Record<string, string>> = {
   WEBAUTHN_RP_ID: "webAuthnRpId",
+  // Read through accessors rather than off the parsed object, so that
+  // `proxy.ts` can ask on every request without the whole schema having to
+  // parse cleanly. The accessor call is the evidence; the name itself now
+  // survives only in prose.
+  SEMANTIC_CATEGORIZATION: "isSemanticCategorizationEnabled",
+  RECEIPT_SCANNING: "isReceiptScanningEnabled",
 };
 
 /**
