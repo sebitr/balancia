@@ -173,6 +173,34 @@ describe("the drawer", () => {
       screen.queryByRole("heading", { name: "Add expense" }),
     ).not.toBeInTheDocument();
   });
+
+  /**
+   * That the drawer keeps two independent limits on its height.
+   *
+   * jsdom does no layout, so what is checked here is what reaches the element
+   * rather than what it measures — which is the part that has broken twice.
+   * A height is one declaration: an engine that cannot parse any piece of it
+   * drops the whole thing and leaves the sheet at its content's height, and a
+   * sheet anchored to the bottom edge grows off the *top*, taking its close
+   * button with it. So the backstop must say the same thing without the two
+   * newest pieces, `dvh` and `min()`, and both must survive the class merge —
+   * a height added to `SheetContent`'s own base classes would otherwise
+   * silently eat the one passed in here.
+   */
+  it("limits its height twice, and the backstop needs no modern units", () => {
+    renderForm();
+    const classes = screen.getByRole("dialog").className.split(" ");
+
+    const height = classes.find((name) => name.startsWith("h-["));
+    const backstop = classes.find((name) => name.startsWith("max-h-["));
+
+    // Both leave the island its room, or the header sits underneath it.
+    expect(height).toContain("env(safe-area-inset-top)");
+    expect(backstop).toContain("env(safe-area-inset-top)");
+
+    expect(backstop).not.toContain("dvh");
+    expect(backstop).not.toContain("min(");
+  });
 });
 
 describe("the default expense path", () => {
