@@ -2,7 +2,8 @@
 
 import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { CalendarDays, Loader2, Repeat, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -25,7 +26,6 @@ import {
   type SplitMessage,
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
-import { PLAIN_DATE_FORMAT, parsePlainDate } from "@/i18n/format";
 import { formatMoney, money } from "@/modules/currencies/money";
 import type { LearnedMerchantMapping } from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
@@ -139,8 +139,8 @@ export function AddEntryForm({
   onBackToGroup,
 }: AddEntryFormProps) {
   const router = useRouter();
-  const locale = useLocale();
-  const format = useFormatter();
+  const locale = useNumberLocale();
+  const dates = useDateFormatter();
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tCategories = useTranslations("expenses.categories");
@@ -305,9 +305,15 @@ export function AddEntryForm({
     [recurrence, date, timezone],
   );
 
-  /** The dates the repeats row promises, as the reader writes dates. */
+  /**
+   * The dates the repeats row promises, as the reader writes dates.
+   *
+   * Day and month only, matching the recurrence sheet's own preview — three
+   * full dates on one subline would wrap, and the year is the same for all of
+   * them anyway.
+   */
   const upcomingLabel = upcoming
-    .map((day) => format.dateTime(parsePlainDate(day), PLAIN_DATE_FORMAT))
+    .map((day) => dates.plain(day, "dayMonth"))
     .join(", ");
 
   /** "Monthly, day 1" — the rule in one line, wherever it is named. */
@@ -584,10 +590,10 @@ export function AddEntryForm({
 
   /** Today, unless a schedule has moved the first one somewhere else. */
   const dateLabel = upcoming[0]
-    ? format.dateTime(parsePlainDate(upcoming[0]), PLAIN_DATE_FORMAT)
+    ? dates.plain(upcoming[0])
     : isToday(date)
       ? t("date.today")
-      : format.dateTime(parsePlainDate(date), PLAIN_DATE_FORMAT);
+      : dates.plain(date);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
+import { getDateFormatter } from "@/i18n/preferences";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
 import { PUSH } from "@/components/motion/transitions";
@@ -18,7 +19,7 @@ import { PUSH } from "@/components/motion/transitions";
  * visit as empty of news rather than as a screen that never changes.
  */
 
-export function SinceLastOpened({
+export async function SinceLastOpened({
   entries,
   lastOpenedAt,
   groupId,
@@ -31,9 +32,10 @@ export function SinceLastOpened({
   /** Pinned by the server, so relative times survive hydration unchanged. */
   now: string;
 }) {
-  const t = useTranslations("activity");
-  const tGroup = useTranslations("group");
-  const format = useFormatter();
+  const t = await getTranslations("activity");
+  const tGroup = await getTranslations("group");
+  const format = await getFormatter();
+  const dates = await getDateFormatter();
   const translate = t as unknown as ActivityTranslate;
   const boundary = lastOpenedAt ? new Date(lastOpenedAt) : null;
 
@@ -72,9 +74,9 @@ export function SinceLastOpened({
               </span>
               <time
                 dateTime={entry.createdAt.toISOString()}
-                title={format.dateTime(entry.createdAt, {
-                  dateStyle: "long",
-                  timeStyle: "short",
+                title={dates.at(entry.createdAt, {
+                  style: "long",
+                  time: "short",
                 })}
                 className="shrink-0 text-xs text-muted-foreground"
               >

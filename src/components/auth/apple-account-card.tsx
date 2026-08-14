@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export interface LinkedApple {
 export function AppleAccountCard({ linked }: { linked: LinkedApple | null }) {
   const t = useTranslations("appleAccount");
   const tCommon = useTranslations("common");
-  const format = useFormatter();
+  const dates = useDateFormatter();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -74,9 +75,7 @@ export function AppleAccountCard({ linked }: { linked: LinkedApple | null }) {
                 {linked.isPrivateEmail
                   ? t("relayNote")
                   : t("linkedOn", {
-                      date: format.dateTime(new Date(linked.linkedAt), {
-                        dateStyle: "medium",
-                      }),
+                      date: dates.at(linked.linkedAt),
                     })}
               </p>
             </div>

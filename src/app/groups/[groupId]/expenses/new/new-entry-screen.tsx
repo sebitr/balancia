@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getNumberLocale } from "@/i18n/preferences";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -38,7 +39,9 @@ export async function NewEntryScreen({
     listParticipants(access.groupId),
     loadMappings(access),
     loadGroupBalances(access),
-    getLocale(),
+    // The amounts below are pre-formatted for the form, so they follow the
+    // reader's notation rather than their language.
+    getNumberLocale(),
   ]);
 
   const t = await getTranslations("expensePages");

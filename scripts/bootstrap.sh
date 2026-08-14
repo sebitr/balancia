@@ -385,12 +385,19 @@ not appear. In a checkout with Node available, run:
 
 # ── URLs ────────────────────────────────────────────────────────────────────
 
-# Splits an absolute URL into $url_host and $url_port. A bracketed IPv6
-# literal is taken whole first, so that the ':' inside it is never mistaken
-# for the port separator.
+# Splits an absolute URL into $url_scheme, $url_host, $url_port and $url_path
+# — the pieces needed to put it back together with a different port. A
+# bracketed IPv6 literal is taken whole first, so that the ':' inside it is
+# never mistaken for the port separator.
 split_url() {
-  _authority=${1#*://}
-  _authority=${_authority%%/*}
+  url_scheme=${1%%://*}
+  _rest=${1#*://}
+  # Everything from the first '/' onwards, if there is one.
+  case $_rest in
+    */*) url_path=/${_rest#*/} ;;
+    *) url_path='' ;;
+  esac
+  _authority=${_rest%%/*}
   case $_authority in
     \[*\]*)
       url_host=${_authority%%\]*}]
@@ -416,6 +423,81 @@ is_localhost() {
     localhost | 127.0.0.1 | '[::1]' | *.localhost) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# ── Ports ───────────────────────────────────────────────────────────────────
+
+# Reads a table of sockets on stdin and answers whether any of them is
+# listening on port $1. Both `ss -ltn` and `netstat -an` put the local address
+# in the fourth column and spell the state LISTEN — at the front of the line in
+# ss, at the end of it in netstat.
+#
+# The separator before the number is part of the match, or port 3000 is found
+# inside 13000. BSD and macOS write that separator as a dot rather than a
+# colon, and a wildcard address as '*' rather than '0.0.0.0'.
+listens_on() {
+  awk -v want="$1" '
+    ($1 == "LISTEN" || $NF == "LISTEN") && $4 ~ ("[:.]" want "$") { hit = 1 }
+    END { exit hit ? 0 : 1 }
+  '
+}
+
+# Whether something already holds this TCP port on this host, asked of
+# whichever tool the host has: ss on any current Linux, netstat on macOS and
+# older Linux, lsof where neither is installed.
+#
+# A connect test would be shorter and wrong: it cannot see a listener bound to
+# a single interface, which is exactly the kind Compose then collides with —
+# publishing a port binds the wildcard address, and that fails against any
+# listener already on the number.
+#
+# Only a sighting counts. Where none of the three is installed the answer is
+# "free", which is where this script stood before it asked at all: better than
+# arguing with an operator about a port on no evidence. The same goes for a
+# check run inside a container, which is looking at that container's network
+# namespace rather than the host's.
+port_taken() {
+  _port=$1
+  if command -v ss > /dev/null 2>&1 && ss -ltn 2> /dev/null | listens_on "$_port"; then
+    return 0
+  fi
+  if command -v netstat > /dev/null 2>&1 && netstat -an 2> /dev/null | listens_on "$_port"; then
+    return 0
+  fi
+  # Unprivileged lsof sees only this user's own sockets, so it comes last and
+  # is believed only when it says yes.
+  if command -v lsof > /dev/null 2>&1 &&
+    lsof -nP -iTCP:"$_port" -sTCP:LISTEN > /dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+# A whole number in 1–65535. The width is checked before the value, because a
+# long enough string of digits makes the shell's own arithmetic complain
+# instead of answering.
+is_port() {
+  case $1 in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  [ "${#1}" -le 5 ] || return 1
+  [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+# The first free port at or after $1, printed, as an opening offer. Bounded
+# because a host with thirty consecutive ports spoken for has an operator who
+# already knows which number they want.
+suggest_port() {
+  _try=$1
+  _last=$((_try + 30))
+  while [ "$_try" -le "$_last" ] && [ "$_try" -le 65535 ]; do
+    if ! port_taken "$_try"; then
+      printf '%s' "$_try"
+      return 0
+    fi
+    _try=$((_try + 1))
+  done
+  return 1
 }
 
 # ── Command line ────────────────────────────────────────────────────────────
@@ -543,15 +625,76 @@ TEXT
       esac
       break
     done
+
+    # Which host port Compose is going to bind. A localhost URL names it
+    # itself — the browser talks straight to the published port — while behind
+    # a proxy the URL says nothing about it and Compose's own default stands.
+    if is_localhost "$url_host" && [ -n "$url_port" ]; then
+      app_port=$url_port
+    else
+      app_port=3000
+    fi
+
+    # A port that is already held fails at `docker compose up` with "address
+    # already in use", after the images have been built: a long way to come
+    # for a number that could have been settled here. Asked rather than
+    # chosen, because the operator may know what is on it — an earlier
+    # instance of this app, say — and a port is theirs to pick.
+    port_changed=0
+    if port_taken "$app_port"; then
+      printf '\n'
+      oops "Something is already listening on port $app_port."
+      note '  Compose would not be able to bind it. Another port here changes'
+      note '  only where this host publishes the app.'
+      printf '\n'
+      suggested=$(suggest_port $((app_port + 1)) || :)
+      while :; do
+        # Kept out of $reply, which the next prompt overwrites.
+        ask_line 'Host port' "$suggested"
+        chosen=$reply
+        if ! is_port "$chosen"; then
+          oops 'Ports are whole numbers, 1 to 65535.'
+          continue
+        fi
+        if ! port_taken "$chosen"; then
+          app_port=$chosen
+          break
+        fi
+        # Taken too — but the operator may be about to stop whatever holds
+        # it, and only they can know that.
+        oops "Port $chosen is taken as well."
+        if ask_yes_no 'Use it anyway?' n; then
+          app_port=$chosen
+          break
+        fi
+      done
+      port_changed=1
+      # For a localhost URL the port is part of the address people type, so
+      # the answer above moves the URL with it.
+      if is_localhost "$url_host"; then
+        app_url="$url_scheme://$url_host:$app_port$url_path"
+      fi
+    fi
+
     write_setting APP_URL "$app_url" \
       'The public URL people type. Must match exactly, scheme included.'
 
-    # Compose publishes the app on ${APP_PORT:-3000}. A localhost URL naming
-    # any other port would otherwise point at nothing.
-    if is_localhost "$url_host" && [ -n "$url_port" ] && [ "$url_port" != 3000 ]; then
-      write_setting APP_PORT "$url_port" \
+    # Compose publishes the app on ${APP_PORT:-3000}. Anything else has to be
+    # written down: a localhost URL naming another port would otherwise point
+    # at nothing.
+    if [ "$app_port" != 3000 ]; then
+      write_setting APP_PORT "$app_port" \
         'Host port Compose publishes the app on, matching APP_URL.'
-      note "${dim}Compose will publish on port ${url_port} to match.${reset}"
+    fi
+
+    if [ "$port_changed" -eq 1 ]; then
+      if is_localhost "$url_host"; then
+        note "${dim}Balancia will be at ${app_url}.${reset}"
+      else
+        note "${dim}Compose will publish on port ${app_port}; point the proxy there.${reset}"
+      fi
+    elif [ "$app_port" != 3000 ]; then
+      note "${dim}Compose will publish on port ${app_port} to match.${reset}"
     fi
   fi
 

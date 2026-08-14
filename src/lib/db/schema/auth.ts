@@ -55,6 +55,15 @@ export const users = pgTable(
      * currency the user's own groups balance in most often.
      */
     preferredCurrency: text("preferred_currency"),
+    /**
+     * How dates are written ("dmy", "mdy", "ymd"). Null means "not chosen
+     * yet", which follows the reader's language and region. Kept apart from
+     * `locale` because notation and language are separate choices: English in
+     * Paris is still 13/08/2026.
+     */
+    dateFormat: text("date_format"),
+    /** How numbers are written ("comma-dot", "dot-comma", "space-comma"). */
+    numberFormat: text("number_format"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -69,6 +78,16 @@ export const users = pgTable(
     check(
       "users_preferred_currency_format",
       sql`${table.preferredCurrency} IS NULL OR ${table.preferredCurrency} ~ '^[A-Z]{3}$'`,
+    ),
+    // "auto" is expressed as NULL rather than stored, so there is one way to
+    // say "no choice" and the column cannot disagree with itself.
+    check(
+      "users_date_format_known",
+      sql`${table.dateFormat} IS NULL OR ${table.dateFormat} IN ('dmy', 'mdy', 'ymd')`,
+    ),
+    check(
+      "users_number_format_known",
+      sql`${table.numberFormat} IS NULL OR ${table.numberFormat} IN ('comma-dot', 'dot-comma', 'space-comma')`,
     ),
   ],
 );

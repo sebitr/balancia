@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useDateFormatter } from "@/i18n/format-context";
 import { Check, Copy, Link2, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ export function InvitationControls({
 }) {
   const router = useRouter();
   const t = useTranslations("invitations");
-  const format = useFormatter();
+  const dates = useDateFormatter();
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, setPending] = useState(false);
@@ -160,16 +161,12 @@ export function InvitationControls({
           <p className="text-xs text-muted-foreground">
             {expiresAt
               ? t("expiresOn", {
-                  date: format.dateTime(new Date(expiresAt), {
-                    dateStyle: "medium",
-                  }),
+                  date: dates.at(expiresAt),
                 })
               : t("neverExpires")}{" "}
             {lastUsedAt
               ? t("lastUsed", {
-                  date: format.dateTime(new Date(lastUsedAt), {
-                    dateStyle: "medium",
-                  }),
+                  date: dates.at(lastUsedAt),
                 })
               : t("neverUsed")}{" "}
             {t("cannotShowAgain")}

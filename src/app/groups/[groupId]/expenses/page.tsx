@@ -10,6 +10,7 @@ import { isSpending, signOf } from "@/modules/expenses/direction";
 import {
   categoryKeyOf,
   categoryTotals,
+  isCategorised,
   spreadBands,
 } from "@/modules/expenses/spread";
 import { PUSH } from "@/components/motion/transitions";
@@ -146,21 +147,28 @@ export default async function ExpensesPage({
    * spine invites would need an exchange rate nobody chose. So the spine
    * appears only when there is one currency to measure in, and the hero shows
    * the totals side by side when there is not.
+   *
+   * It also needs something to divide. Until somebody files an expense under a
+   * category the whole total sits in one bucket, and the spine becomes a single
+   * full-height band reading "Uncategorised · 100%" — a chart of one fact, and
+   * a filter whose only setting is the list already on screen. So it stays out
+   * until there is a division to draw, and the list takes the width back.
    */
   const spreads = categoryTotals(expenses, {
     mode: access.group.currencyMode,
     baseCurrency: access.group.baseCurrency,
   });
   const single = spreads.length === 1 ? spreads[0] : null;
-  const bands: BandView[] | null = single
-    ? spreadBands(single).map((band) => ({
-        key: band.key,
-        categories: [...band.categories],
-        total: band.total.toString(),
-        share: band.share,
-        rank: band.rank,
-      }))
-    : null;
+  const bands: BandView[] | null =
+    single && isCategorised(single)
+      ? spreadBands(single).map((band) => ({
+          key: band.key,
+          categories: [...band.categories],
+          total: band.total.toString(),
+          share: band.share,
+          rank: band.rank,
+        }))
+      : null;
 
   const settled = settlements.reduce(
     (totals, settlement) => sum(totals, settlement.currency, settlement.amount),

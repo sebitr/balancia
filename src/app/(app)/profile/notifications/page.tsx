@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getDateFormatter } from "@/i18n/preferences";
 import { BellRing, Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MutedGroupsForm } from "@/components/notifications/muted-groups-form";
@@ -24,7 +25,7 @@ export default async function NotificationSettingsPage() {
   if (!user) redirect("/sign-in");
 
   const t = await getTranslations("notificationSettings");
-  const format = await getFormatter();
+  const dates = await getDateFormatter();
 
   const [preferences, mutedGroupIds, groups, devices] = await Promise.all([
     getPreferences(user.userId),
@@ -76,9 +77,7 @@ export default async function NotificationSettingsPage() {
                     <span>{device.userAgent ?? t("deviceUnknown")}</span>
                     <span className="text-muted-foreground/70">
                       {t("deviceAdded", {
-                        date: format.dateTime(device.createdAt, {
-                          dateStyle: "medium",
-                        }),
+                        date: dates.at(device.createdAt),
                       })}
                     </span>
                   </li>

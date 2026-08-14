@@ -17,7 +17,7 @@ import {
   linkAppleIdentity,
   signInWithApple,
 } from "@/modules/auth/service";
-import { applyStoredLocale } from "@/i18n/cookie";
+import { applyStoredPreferences } from "@/i18n/cookie";
 
 /**
  * Where Apple sends the result.
@@ -181,8 +181,8 @@ export async function POST(request: Request) {
       fullName: readFullName(fields.user),
     });
     await setSessionCookie(result.session.token, result.session.expiresAt);
-    // Seed the language cookie from the account, as password sign-in does.
-    await applyStoredLocale(result.locale);
+    // Seed the display cookies from the account, as password sign-in does.
+    await applyStoredPreferences(result.preferences);
   } catch (error) {
     if (error instanceof AuthError) {
       return backToSignIn(error.code ?? "generic");

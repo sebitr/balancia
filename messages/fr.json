@@ -323,7 +323,14 @@
     "currencyLabel": "Afficher les totaux en",
     "currencyHelp": "Votre écran d'accueil totalise tous les groupes dans cette devise. Chaque groupe conserve la sienne.",
     "currencySaved": "Devise préférée enregistrée",
-    "currencyFailed": "Cette préférence n'a pas pu être enregistrée."
+    "currencyFailed": "Cette préférence n'a pas pu être enregistrée.",
+    "formatsTitle": "Dates et nombres",
+    "dateFormatLabel": "Écrire les dates comme",
+    "numberFormatLabel": "Écrire les nombres comme",
+    "formatAuto": "Automatique ({sample})",
+    "formatsHelp": "Le mode automatique suit votre langue et la région demandée par votre navigateur. Ce réglage est distinct de la langue : vous pouvez lire l'anglais et écrire malgré tout 13/08/2026.",
+    "formatsSaved": "Préférences de format enregistrées",
+    "formatsFailed": "Ces préférences n'ont pas pu être enregistrées."
   },
   "activity": {
     "empty": "Il ne s'est encore rien passé dans ce groupe.",
@@ -821,7 +828,8 @@
     "appleOnlyCredential": "Apple est votre seul moyen de vous connecter à ce compte. Définissez d'abord un mot de passe ou ajoutez une clé d'accès.",
     "appleNotLinked": "Aucun compte Apple n'est associé à ce compte.",
     "appleFailed": "Cela n'a pas fonctionné. Apple n'a pas pu confirmer la connexion.",
-    "appleExpired": "Cette connexion a pris trop de temps, ou a été lancée dans un autre navigateur. Réessayez."
+    "appleExpired": "Cette connexion a pris trop de temps, ou a été lancée dans un autre navigateur. Réessayez.",
+    "unknownFormat": "Ce format de date ou de nombre n'est pas proposé par Balancia."
   },
   "serverValidation": {
     "checkForm": "Vérifiez le formulaire.",

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft, Paperclip, Pencil } from "lucide-react";
-import { parsePlainDate, PLAIN_DATE_FORMAT } from "@/i18n/format";
+import { getDateFormatter, getNumberLocale } from "@/i18n/preferences";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,7 +41,8 @@ export default async function ExpenseDetailPage({
   const t = await getTranslations("expenseDetail");
   const tCommon = await getTranslations("common");
   const tCategories = await getTranslations("expenses.categories");
-  const format = await getFormatter();
+  const dates = await getDateFormatter();
+  const numbers = new Intl.NumberFormat(await getNumberLocale());
 
   // Canonical categories are translated; anything else came from an import
   // and is shown exactly as it was imported.
@@ -69,10 +70,7 @@ export default async function ExpenseDetailPage({
               {expense.description}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {format.dateTime(
-                parsePlainDate(expense.expenseDate),
-                PLAIN_DATE_FORMAT,
-              )}
+              {dates.plain(expense.expenseDate)}
               {categoryLabel && ` · ${categoryLabel}`}
             </p>
           </div>
@@ -182,7 +180,7 @@ export default async function ExpenseDetailPage({
                 </a>
                 <span className="ml-2 text-xs text-muted-foreground">
                   {t("kilobytes", {
-                    size: format.number(
+                    size: numbers.format(
                       Math.round(Number(attachment.byteSize) / 1024),
                     ),
                   })}
