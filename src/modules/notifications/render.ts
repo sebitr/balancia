@@ -1,5 +1,10 @@
 import { formatMoney, money } from "@/modules/currencies/money";
-import type { NotificationEntry, NotificationPayload } from "./types";
+import type {
+  NotificationEntry,
+  NotificationPayload,
+  ReminderPayload,
+  StoredReminderPayload,
+} from "./types";
 
 /**
  * Turns a stored payload into the line someone reads.
@@ -36,6 +41,26 @@ function amountOf(
   return formatMoney(money(BigInt(payload.amount), payload.currency), {
     locale,
   });
+}
+
+/**
+ * Every currency a reminder is about, joined the way the reader's language
+ * joins a list: "€24.00 and ¥1,400". Two currencies are never added together,
+ * so the line names both rather than inventing a total.
+ */
+function debtOf(payload: ReminderPayload, locale: string): string {
+  const stored = payload as StoredReminderPayload;
+  const debts =
+    stored.debts && stored.debts.length > 0
+      ? stored.debts
+      : stored.amount !== undefined && stored.currency !== undefined
+        ? [{ amount: stored.amount, currency: stored.currency }]
+        : [];
+  return new Intl.ListFormat(locale, { type: "conjunction" }).format(
+    debts.map((debt) =>
+      formatMoney(money(BigInt(debt.amount), debt.currency), { locale }),
+    ),
+  );
 }
 
 /**
@@ -157,7 +182,7 @@ export function renderNotification(
       return {
         title: payload.message,
         body: t("reminderBody", {
-          amount: amountOf(payload, locale),
+          amount: debtOf(payload, locale),
           group: payload.groupName,
         }),
         url,

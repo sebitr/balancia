@@ -85,12 +85,35 @@ export interface ImportPayload extends BasePayload {
  */
 export interface ReminderPayload extends BasePayload {
   readonly kind: "reminder";
-  /** Minor units, as a string. What the reader owes. */
-  readonly amount: string;
-  readonly currency: string;
+  /**
+   * What the reader owes, one entry per currency.
+   *
+   * A list rather than a single amount because a separate-currency group can
+   * leave the same two people owing in two currencies, and one reminder asks
+   * about all of them.
+   */
+  readonly debts: readonly {
+    /** Minor units, as a string. */
+    readonly amount: string;
+    readonly currency: string;
+  }[];
   /** The person owed. The message addresses the debt, never the reader. */
   readonly creditorName: string;
   readonly message: string;
+}
+
+/**
+ * A reminder payload as it comes *back* out of the table.
+ *
+ * Reminders written before debts were grouped per person carry a single
+ * `amount` and `currency` instead of `debts`. Those rows are still in people's
+ * inboxes, so the renderer reads either shape — a notification already
+ * delivered should not change what it says, or stop saying it.
+ */
+export interface StoredReminderPayload {
+  readonly debts?: ReminderPayload["debts"];
+  readonly amount?: string;
+  readonly currency?: string;
 }
 
 export type NotificationPayload =
