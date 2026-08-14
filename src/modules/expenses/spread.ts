@@ -115,6 +115,18 @@ function byTotalThenKey(a: CategoryTotal, b: CategoryTotal): number {
 }
 
 /**
+ * Whether anybody has filed any of this spending under a category.
+ *
+ * A group where nobody has still produces a spread: everything lands in the
+ * uncategorised bucket, which then holds the whole total. That is a breakdown
+ * with nothing broken down, and a caller drawing one — the spine — has nothing
+ * to draw and should not.
+ */
+export function isCategorised(spread: CategorySpread): boolean {
+  return spread.categories.some((entry) => entry.category !== null);
+}
+
+/**
  * How many categories get a colour of their own.
  *
  * Five, because five is how many `--chart-*` tokens the design system has.
