@@ -21,7 +21,6 @@ const SPLIT_LABEL_KEYS = {
   percentage: "splitPercentage",
   shares: "splitShares",
 } as const;
-import { POP, PUSH } from "@/components/motion/transitions";
 
 export default async function ExpenseDetailPage({
   params,
