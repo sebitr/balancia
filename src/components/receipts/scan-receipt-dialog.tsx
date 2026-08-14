@@ -69,11 +69,14 @@ export function ScanReceiptDialog({
   participants,
   defaultCurrency,
   onApply,
+  trigger,
 }: {
   groupId: string;
   participants: readonly Participant[];
   defaultCurrency: string;
   onApply: (result: ScannedExpense) => void;
+  /** Replaces the default "Scan a receipt" button. */
+  trigger?: React.ReactNode;
 }) {
   const t = useTranslations("receiptScanner");
   const [open, setOpen] = useState(false);
@@ -252,10 +255,12 @@ export function ScanReceiptDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline">
-          <ScanLine aria-hidden="true" />
-          {t("scanReceipt")}
-        </Button>
+        {trigger ?? (
+          <Button type="button" variant="outline">
+            <ScanLine aria-hidden="true" />
+            {t("scanReceipt")}
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">

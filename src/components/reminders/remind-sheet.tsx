@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { sendReminderAction } from "@/modules/reminders/actions";
+import { sumByCurrency } from "@/modules/reminders/debts";
 import {
   DEFAULT_TONE,
   DRAFTS,
@@ -20,7 +21,7 @@ import {
   positionOf,
   type RemindTone,
 } from "@/modules/reminders/messages";
-import type { RemindRecipient } from "@/modules/reminders/types";
+import type { RemindDebt, RemindRecipient } from "@/modules/reminders/types";
 
 /**
  * Two steps: who owes you, and what to say to them.
@@ -34,6 +35,12 @@ import type { RemindRecipient } from "@/modules/reminders/types";
  * never discovered afterwards. Somebody who silenced this group still appears,
  * still gets asked, and still does not get a push: their setting wins, and the
  * row says so.
+ *
+ * One row per person, never per debt. A group that spends in two currencies
+ * leaves the same person owing in both, and since a reminder may only go out
+ * once a day, asking them per currency would spend the whole allowance on half
+ * the debt. Their amounts are listed instead — beside each other in the row,
+ * and both named in the one message — because two currencies have no sum.
  */
 
 const TONES: readonly RemindTone[] = ["gentle", "dry", "cheeky"];
@@ -91,12 +98,28 @@ export function RemindSheet({
   );
   const current = queue[0] ?? null;
 
+  /**
+   * A debt as one phrase: "€148.00", or "€148.00 and ¥1,400" when the group
+   * spent in more than one currency. Joined in the reader's language, never
+   * added up.
+   */
+  const phrase = (debts: readonly RemindDebt[]): string =>
+    format.list(
+      debts.map((debt) =>
+        formatMoney(money(BigInt(debt.amount), debt.currency), { locale }),
+      ),
+      { type: "conjunction" },
+    );
+
+  /** Everything the reader is owed, per currency — the subtitle's figure. */
+  const totals = useMemo(
+    () => sumByCurrency(recipients.flatMap((recipient) => recipient.debts)),
+    [recipients],
+  );
+
   /** The draft as it reads for one recipient: their debt, the reader's name. */
   const composeFor = (recipient: RemindRecipient): string => {
-    const amount = formatMoney(
-      money(BigInt(recipient.amount), recipient.currency),
-      { locale },
-    );
+    const amount = phrase(recipient.debts);
     const body =
       edited ??
       t(`drafts.${draftKey}` as "drafts.gentle1", {
@@ -221,31 +244,7 @@ export function RemindSheet({
           <p className="text-[0.8125rem] text-muted-foreground">
             {t("sheetSubtitle", {
               count: recipients.length,
-              amount: format.list(
-                [
-                  ...new Map(
-                    recipients.map((recipient) => [
-                      recipient.currency,
-                      recipient,
-                    ]),
-                  ).keys(),
-                ].map((currency) =>
-                  formatMoney(
-                    money(
-                      recipients
-                        .filter((recipient) => recipient.currency === currency)
-                        .reduce(
-                          (total, recipient) =>
-                            total + BigInt(recipient.amount),
-                          0n,
-                        ),
-                      currency,
-                    ),
-                    { locale },
-                  ),
-                ),
-                { type: "conjunction" },
-              ),
+              amount: phrase(totals),
             })}
           </p>
         </div>
@@ -336,11 +335,18 @@ export function RemindSheet({
                   </span>
                 </span>
 
-                <Amount
-                  minorUnits={recipient.amount}
-                  currency={recipient.currency}
-                  className="shrink-0 text-sm font-medium text-negative"
-                />
+                {/* Stacked, one line per currency: the euros and the yen are
+                    two debts to the same person, and there is no rate here to
+                    turn them into one figure. */}
+                <span className="flex shrink-0 flex-col items-end gap-0.5 text-sm font-medium text-negative">
+                  {recipient.debts.map((debt) => (
+                    <Amount
+                      key={debt.currency}
+                      minorUnits={debt.amount}
+                      currency={debt.currency}
+                    />
+                  ))}
+                </span>
               </label>
             );
           })}

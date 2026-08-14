@@ -27,6 +27,7 @@ import {
 import { classifyRateSource } from "@/modules/currencies/rates";
 import { money } from "@/modules/currencies/money";
 import { AllocationError } from "./allocation";
+import type { EntryDirection } from "./direction";
 import {
   convertAllocations,
   resolveSplit,
@@ -51,6 +52,7 @@ import type { ExpenseInput } from "./schemas";
 
 export interface ExpenseSummary {
   readonly id: string;
+  readonly direction: EntryDirection;
   readonly description: string;
   readonly notes: string | null;
   readonly category: string | null;
@@ -244,6 +246,7 @@ export async function createExpense(
       .insert(expenses)
       .values({
         groupId: access.groupId,
+        direction: input.direction ?? "out",
         description: input.description,
         notes: input.notes || null,
         category: input.category || null,
@@ -390,6 +393,7 @@ export async function updateExpense(
     await tx
       .update(expenses)
       .set({
+        direction: input.direction ?? "out",
         description: input.description,
         notes: input.notes || null,
         category: input.category || null,
@@ -563,6 +567,7 @@ export async function listExpenses(
   const rows = await db
     .select({
       id: expenses.id,
+      direction: expenses.direction,
       description: expenses.description,
       notes: expenses.notes,
       category: expenses.category,
@@ -633,6 +638,7 @@ export async function getExpense(
   const [row] = await db
     .select({
       id: expenses.id,
+      direction: expenses.direction,
       description: expenses.description,
       notes: expenses.notes,
       category: expenses.category,

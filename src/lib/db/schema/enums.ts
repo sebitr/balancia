@@ -35,3 +35,16 @@ export const recurrenceFrequencyEnum = pgEnum("recurrence_frequency", [
   "monthly",
   "yearly",
 ]);
+
+/**
+ * Which way the money moved.
+ *
+ * `out` is spending — somebody paid, the group owes them back. `in` is money
+ * received on the group's behalf — rent, a shared refund, a deposit returned —
+ * where the receiver owes the others their share instead.
+ *
+ * Both live in `expenses` because they are the same shape: an amount, payers,
+ * and a split. Only the sign differs, and the balance engine applies it. A
+ * separate table would have bought nothing but a duplicate of every read path.
+ */
+export const entryDirectionEnum = pgEnum("entry_direction", ["out", "in"]);

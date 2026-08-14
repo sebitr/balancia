@@ -26,6 +26,7 @@ import {
   updateExpenseAction,
 } from "@/modules/expenses/actions";
 import type { LearnedMerchantMapping } from "@/modules/categorization";
+import type { EntryDirection } from "@/modules/expenses/direction";
 import {
   formatMinorUnits,
   parseAmountToMinor,
@@ -52,6 +53,14 @@ export interface ExpenseFormParticipant {
 
 export interface ExpenseFormInitialValues {
   readonly id: string;
+  /**
+   * Carried through untouched.
+   *
+   * This form only edits spending, but it must not *change* what it was
+   * handed: saving without this would rewrite an income as an expense and move
+   * every balance by twice the amount.
+   */
+  readonly direction: EntryDirection;
   readonly description: string;
   readonly notes: string;
   readonly category: string;
@@ -324,6 +333,7 @@ export function ExpenseForm({
     });
 
     const payload = {
+      direction: initial?.direction ?? "out",
       description,
       notes,
       category: effectiveCategory,

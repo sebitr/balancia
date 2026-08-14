@@ -12,6 +12,7 @@ import { requireGroupAccess } from "@/lib/actions";
 import { getExpense } from "@/modules/expenses/service";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
 import { isExpenseCategory } from "@/modules/categorization";
+import { POP, PUSH } from "@/components/motion/transitions";
 
 /** Split method → catalogue key, so the badge follows the reader's language. */
 const SPLIT_LABEL_KEYS = {

@@ -15,9 +15,11 @@ import {
   dispatchNotifications,
   recordNotifications,
 } from "@/modules/notifications/service";
+import { compareDebts, sumByCurrency } from "./debts";
 import {
   REMIND_LOCK_HOURS,
   type RemindChannel,
+  type RemindDebt,
   type RemindRecipient,
   type RemindResult,
 } from "./types";
@@ -65,6 +67,11 @@ export function isLocked(
  * Read off the *simplified* debts: the question is who the reader would ask
  * for money, and simplification is what turns a web of small balances into
  * that shorter list.
+ *
+ * One entry per *person*, not per debt. A separate-currency group simplifies
+ * each currency on its own, so somebody who owes in euros and in yen appears
+ * twice in that list and once here — because they are one person, to be asked
+ * once, under one 24-hour limit, in a message that names both amounts.
  */
 export async function listRemindRecipients(
   access: Pick<GroupAccess, "groupId" | "group" | "participantId">,
@@ -160,36 +167,41 @@ export async function listRemindRecipients(
   }
   const nameOf = new Map(rows.map((row) => [row.id, row]));
 
-  return debts
-    .map((debt) => {
-      const person = nameOf.get(debt.fromParticipantId);
-      const userId = person?.userId ?? null;
-      const isMuted = userId !== null && mutedUsers.has(userId);
-      const channel: RemindChannel =
-        userId !== null &&
-        hasDevice.has(userId) &&
-        !remindersOff.has(userId) &&
-        !isMuted
-          ? "push"
-          : "share";
-      const remindedAt = lastSent.get(debt.fromParticipantId) ?? null;
+  const owedBy = new Map<string, RemindDebt[]>();
+  for (const debt of debts) {
+    const list = owedBy.get(debt.fromParticipantId) ?? [];
+    list.push({ amount: debt.amount.toString(), currency: debt.currency });
+    owedBy.set(debt.fromParticipantId, list);
+  }
 
-      return {
-        participantId: debt.fromParticipantId,
-        name: person?.displayName ?? "",
-        amount: debt.amount.toString(),
-        currency: debt.currency,
-        channel,
-        lastRemindedAt: remindedAt?.toISOString() ?? null,
-        locked: isLocked(remindedAt, now),
-        muted: isMuted,
-      } satisfies RemindRecipient;
-    })
-    .sort((a, b) => {
-      const left = BigInt(a.amount);
-      const right = BigInt(b.amount);
-      return right > left ? 1 : right < left ? -1 : 0;
-    });
+  const people = [...owedBy].map(([participantId, owed]) => {
+    const person = nameOf.get(participantId);
+    const userId = person?.userId ?? null;
+    const isMuted = userId !== null && mutedUsers.has(userId);
+    const channel: RemindChannel =
+      userId !== null &&
+      hasDevice.has(userId) &&
+      !remindersOff.has(userId) &&
+      !isMuted
+        ? "push"
+        : "share";
+    const remindedAt = lastSent.get(participantId) ?? null;
+
+    return {
+      participantId,
+      name: person?.displayName ?? "",
+      debts: sumByCurrency(owed),
+      channel,
+      lastRemindedAt: remindedAt?.toISOString() ?? null,
+      locked: isLocked(remindedAt, now),
+      muted: isMuted,
+    } satisfies RemindRecipient;
+  });
+
+  // Biggest debt first. Somebody owing in two currencies has no total to be
+  // ranked by, so their largest single debt stands for them rather than a
+  // figure no exchange rate was ever applied to.
+  return people.sort((a, b) => compareDebts(a.debts[0], b.debts[0]));
 }
 
 export interface SendReminderInput {
@@ -250,15 +262,21 @@ export async function sendReminder(
   const actor = activityActorFrom(access);
 
   const notificationIds = await db.transaction(async (tx) => {
-    await tx.insert(reminders).values({
-      groupId: access.groupId,
-      fromParticipantId: self,
-      toParticipantId: recipient.participantId,
-      channel: recipient.channel,
-      amount: BigInt(recipient.amount),
-      currency: recipient.currency,
-      sentAt: now,
-    });
+    // One row per currency: the table records a debt as it stood, and two
+    // currencies are two debts even when one message asked about both. The
+    // 24-hour limit reads the most recent row for the pair, so it does not
+    // matter to it how many were written.
+    await tx.insert(reminders).values(
+      recipient.debts.map((debt) => ({
+        groupId: access.groupId,
+        fromParticipantId: self,
+        toParticipantId: recipient.participantId,
+        channel: recipient.channel,
+        amount: BigInt(debt.amount),
+        currency: debt.currency,
+        sentAt: now,
+      })),
+    );
 
     if (input.logToActivity) {
       await recordActivity(tx, {
@@ -285,8 +303,7 @@ export async function sendReminder(
       payload: {
         kind: "reminder",
         groupName: access.group.name,
-        amount: recipient.amount,
-        currency: recipient.currency,
+        debts: recipient.debts,
         creditorName: actor.actorLabel,
         message,
       },

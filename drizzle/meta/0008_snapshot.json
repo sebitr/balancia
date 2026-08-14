@@ -1,6 +1,6 @@
 {
-  "id": "e5c1f5ea-a114-4547-8fd1-7eb37787babf",
-  "prevId": "1398550c-912a-43ad-9110-683f5517da21",
+  "id": "359d5bd8-9712-4d96-8f00-0210904b437d",
+  "prevId": "e5c1f5ea-a114-4547-8fd1-7eb37787babf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1081,7 +1081,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -1194,7 +1194,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -1696,7 +1696,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "settlements_to_participant_id_participants_id_fk": {
@@ -1709,7 +1709,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "settlements_created_by_participant_id_participants_id_fk": {

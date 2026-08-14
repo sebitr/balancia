@@ -124,6 +124,12 @@ describe("message catalogues", () => {
       "notificationSettings.title",
       // Two dates and an en dash: there is nothing in it to translate.
       "group.metaSpan",
+      // Two placeholders and a comma, same in both.
+      "addEntry.repeat.active",
+      // Product names. Interac and Bancontact Pay are called that in French
+      // too — only the two generic methods, `bank` and `cash`, translate.
+      "paymentMethods.interac",
+      "paymentMethods.payconiq",
     ]);
 
     const identical = [...english].filter(

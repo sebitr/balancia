@@ -17,13 +17,18 @@ import { groups, participants } from "./groups";
 import { expenses } from "./expenses";
 import {
   actorTypeEnum,
+  entryDirectionEnum,
   exchangeRateSourceEnum,
   recurrenceFrequencyEnum,
   splitMethodEnum,
 } from "./enums";
 
 /**
- * A reusable expense template that generates real expenses on a schedule.
+ * A reusable entry template that generates real entries on a schedule.
+ *
+ * Recurrence is a property of an entry rather than a kind of its own, so a
+ * monthly rent *income* and a monthly cleaning *expense* are the same template
+ * with a different `direction`.
  *
  * Scheduling is timezone-aware: the group's timezone decides when "the 1st of
  * the month" actually happens, and `nextRunAt` is a `timestamptz` so the worker
@@ -38,6 +43,8 @@ export const recurringExpenses = pgTable(
     groupId: uuid("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
+    /** Carried onto every entry this template generates. */
+    direction: entryDirectionEnum("direction").notNull().default("out"),
     description: text("description").notNull(),
     notes: text("notes"),
     category: text("category"),

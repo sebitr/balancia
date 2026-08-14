@@ -16,12 +16,29 @@
  */
 export type RemindChannel = "push" | "share";
 
-export interface RemindRecipient {
-  readonly participantId: string;
-  readonly name: string;
+/**
+ * One currency's worth of what somebody owes.
+ *
+ * A group that spends in two currencies keeps two sets of balances, and they
+ * are never added together — so what one person owes is a list of amounts, not
+ * a number.
+ */
+export interface RemindDebt {
   /** Minor units owed to the reader, always positive. */
   readonly amount: string;
   readonly currency: string;
+}
+
+export interface RemindRecipient {
+  readonly participantId: string;
+  readonly name: string;
+  /**
+   * What they owe, one entry per currency, largest first — never empty.
+   *
+   * A person is one recipient however many currencies they owe in: they are
+   * asked once, they are counted once, and the one reminder names every amount.
+   */
+  readonly debts: readonly RemindDebt[];
   readonly channel: RemindChannel;
   /** ISO instant of the last reminder along this debt, if any. */
   readonly lastRemindedAt: string | null;

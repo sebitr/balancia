@@ -987,5 +987,253 @@
       "cheeky6": "Debt collection, Balancia edition: {amount}, to {name}, no kneecaps involved."
     },
     "sendCaptionShare": "Balancia opens your share sheet for {name} — nothing is sent as you."
+  },
+  "addEntry": {
+    "back": "Back",
+    "types": {
+      "label": "What kind of entry",
+      "expense": "Expense",
+      "income": "Income",
+      "settle": "Settle"
+    },
+    "labels": {
+      "amount": "Amount",
+      "amountReceived": "Amount received",
+      "amountFromReceipt": "Amount from receipt",
+      "payingBack": "Paying back",
+      "description": "Description",
+      "descriptionPlaceholder": "Dinner at the harbour",
+      "more": "Note, category or attachment"
+    },
+    "amount": {
+      "zero": "0.00",
+      "rateFrozen": "This rate is frozen with the entry. Changing rates later never rewrites what is already recorded.",
+      "inBaseCurrency": "In the group's base currency"
+    },
+    "keypad": {
+      "zero": "0.00",
+      "delete": "Delete the last digit",
+      "done": "Done"
+    },
+    "date": {
+      "today": "Today",
+      "oneOff": "One-off",
+      "label": "Date"
+    },
+    "split": {
+      "title": "Who paid, who owes",
+      "titleIncome": "Who is credited",
+      "paid": "{name} paid",
+      "received": "{name} received",
+      "paidBy": "Paid by",
+      "creditedTo": "Credited to",
+      "splitBetween": "Split between",
+      "everyone": "Everyone",
+      "justMe": "Just me",
+      "done": "Done",
+      "methods": {
+        "equal": "Equally",
+        "shares": "Shares",
+        "exact": "Exact",
+        "percentage": "Percent"
+      },
+      "hints": {
+        "equal": "Split evenly between everyone selected.",
+        "shares": "Give each person a weight — 2 shares pay double.",
+        "exact": "Enter each person's exact amount.",
+        "percentage": "Percentages must add up to 100."
+      },
+      "inputLabels": {
+        "equal": "Share for {name}",
+        "shares": "Shares for {name}",
+        "exact": "Exact amount for {name}",
+        "percentage": "Percentage for {name}"
+      },
+      "summary": {
+        "equalEach": "Split equally between {count} · {amount} each",
+        "exactAmounts": "Split by exact amounts · {count} people",
+        "percentages": "Split by percentage · {count} people",
+        "shares": "Split by shares · {count} people",
+        "byItem": "Split by item · {count} people",
+        "justOne": "Nobody else's balance moves"
+      },
+      "payerOption": "Paid by {name}",
+      "includeOption": "Include {name} in the split"
+    },
+    "currency": {
+      "title": "Currency",
+      "groupBase": "Group base: {currency}",
+      "search": "Search by code or name",
+      "noMatch": "No currency matches that.",
+      "done": "Done"
+    },
+    "category": {
+      "add": "Add a category",
+      "detected": "detected from the description",
+      "chosen": "chosen",
+      "optional": "optional",
+      "title": "Category",
+      "backToDetected": "Back to detected",
+      "done": "Done"
+    },
+    "repeat": {
+      "title": "Repeat",
+      "oneOff": "One-off",
+      "active": "{frequency}, {day}",
+      "frequency": {
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      },
+      "every": "Every",
+      "interval": {
+        "weekly": "{count, plural, one {# week} other {# weeks}}",
+        "monthly": "{count, plural, one {# month} other {# months}}",
+        "yearly": "{count, plural, one {# year} other {# years}}"
+      },
+      "onDay": "On day",
+      "dayOfMonth": "Day {day}",
+      "fewer": "Less often",
+      "more": "More often",
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "ends": "Ends",
+      "never": "Never",
+      "onADate": "On a date",
+      "preview": "Next: {dates}. Created automatically, {timezone} time.",
+      "done": "Done"
+    },
+    "scan": {
+      "title": "Scan a receipt",
+      "subtitle": "Fills amount, date, merchant and items",
+      "camera": "Camera",
+      "upload": "Upload",
+      "scanning": "Reading the receipt…",
+      "read": "Read {count, plural, one {# item} other {# items}} from {merchant}",
+      "check": "Check the amount and date before saving",
+      "dismiss": "Dismiss",
+      "itemsTitle": "Items from the receipt",
+      "splitByItem": "Split by item",
+      "tagEveryone": "all {count}",
+      "tagWithBill": "with the bill",
+      "tagUnassigned": "unassigned"
+    },
+    "items": {
+      "title": "Assign the items",
+      "everyone": "Everyone",
+      "tipNote": "Shared in proportion to what each person ordered.",
+      "owes": "Each person owes",
+      "matches": "Matches the receipt total.",
+      "unassigned": "Assigned {assigned} of {total} — the rest is unassigned.",
+      "use": "Use these amounts"
+    },
+    "income": {
+      "belongsTo": "Who does it belong to",
+      "shared": "Shared — credit everyone",
+      "sharedHint": "Each of the {count} gains {amount}",
+      "mine": "Mine only — credit {name}",
+      "mineHint": "Recorded, but nobody else's balance moves"
+    },
+    "settle": {
+      "outstanding": "Outstanding",
+      "owes": "{from} owes {to}",
+      "nothingOutstanding": "Everyone is settled up.",
+      "paidBy": "Paid by",
+      "other": "Other",
+      "methodTitle": "How was it paid",
+      "methodSearch": "Search payment methods",
+      "commonIn": "Common in {country}",
+      "allMethods": "All methods, A–Z",
+      "noMethod": "No method matches. It will be saved as a note instead.",
+      "outcome": "{from} and {to} settle {amount} by {method}.",
+      "outcomeNoMethod": "{from} and {to} settle {amount}."
+    },
+    "actions": {
+      "addExpense": "Add expense",
+      "addIncome": "Add income",
+      "saveRecurringExpense": "Save recurring expense",
+      "saveRecurringIncome": "Save recurring income",
+      "recordPayment": "Record payment"
+    },
+    "saved": {
+      "expenseAdded": "Expense added",
+      "incomeAdded": "Income added",
+      "recurringSaved": "Recurring entry saved",
+      "paymentRecorded": "Payment recorded",
+      "addAnother": "Add another",
+      "backToGroup": "Back to group"
+    },
+    "errors": {
+      "amountRequired": "Enter an amount first.",
+      "descriptionRequired": "Give this entry a description.",
+      "choosePair": "Choose who is paying whom.",
+      "saveFailed": "That could not be saved. Try again."
+    },
+    "sheetTitles": {
+      "keypad": "Amount",
+      "split": "Who paid, who owes",
+      "category": "Category",
+      "currency": "Currency",
+      "method": "How was it paid",
+      "recur": "Repeat"
+    }
+  },
+  "paymentMethods": {
+    "alipay": "Alipay",
+    "apple_pay": "Apple Pay",
+    "bancomat_pay": "BANCOMAT Pay",
+    "bank": "Bank transfer",
+    "bizum": "Bizum",
+    "blik": "BLIK",
+    "cash": "Cash",
+    "cash_app": "Cash App",
+    "cheque": "Cheque",
+    "crypto": "Crypto",
+    "google_pay": "Google Pay",
+    "interac": "Interac e-Transfer",
+    "lydia": "Lydia",
+    "mbway": "MB WAY",
+    "mobilepay": "MobilePay",
+    "monzo": "Monzo",
+    "n26": "N26",
+    "payconiq": "Bancontact Pay",
+    "payid": "PayID",
+    "paypal": "PayPal",
+    "pix": "PIX",
+    "revolut": "Revolut",
+    "satispay": "Satispay",
+    "swish": "Swish",
+    "tikkie": "Tikkie",
+    "twint": "TWINT",
+    "upi": "UPI",
+    "venmo": "Venmo",
+    "vipps": "Vipps",
+    "wechat_pay": "WeChat Pay",
+    "wero": "Wero",
+    "wise": "Wise",
+    "zelle": "Zelle"
+  },
+  "countries": {
+    "CH": "Switzerland",
+    "FR": "France",
+    "DE": "Germany",
+    "GB": "United Kingdom",
+    "US": "United States",
+    "NL": "Netherlands",
+    "BE": "Belgium",
+    "AT": "Austria",
+    "IT": "Italy",
+    "ES": "Spain",
+    "PT": "Portugal",
+    "PL": "Poland",
+    "SE": "Sweden",
+    "NO": "Norway",
+    "DK": "Denmark",
+    "FI": "Finland",
+    "IE": "Ireland",
+    "BR": "Brazil",
+    "IN": "India",
+    "CA": "Canada",
+    "AU": "Australia"
   }
 }

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PUSH } from "@/components/motion/transitions";
 import { signOutAction } from "@/modules/auth/actions";
+import { PUSH } from "@/components/motion/transitions";
 
 function initialsOf(label: string): string {
   const parts = label.trim().split(/\s+/).slice(0, 2);

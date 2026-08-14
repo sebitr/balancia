@@ -617,3 +617,173 @@ describe("contributionsOf", () => {
     });
   });
 });
+
+describe("computeBalances — income", () => {
+  /**
+   * The mirror image of the single-payer case above: 3000 received and split
+   * three ways leaves the receiver 2000 down instead of 2000 up.
+   */
+  it("puts the receiver in debt and credits everyone else", () => {
+    const balances = balancesFor(
+      {
+        participantIds: ["a", "b", "c"],
+        expenses: [
+          {
+            id: "rent",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 3000n }],
+            shares: [
+              { participantId: "a", amount: 1000n },
+              { participantId: "b", amount: 1000n },
+              { participantId: "c", amount: 1000n },
+            ],
+          },
+        ],
+        settlements: [],
+      },
+      "EUR",
+    );
+    expect(amountsByParticipant(balances)).toEqual({
+      a: -2000n,
+      b: 1000n,
+      c: 1000n,
+    });
+    expect(balancesSumToZero(balances)).toBe(true);
+  });
+
+  /** "Mine only — credit Seb": recorded, but nobody else's balance moves. */
+  it("moves nobody when the income is credited to one person", () => {
+    const balances = balancesFor(
+      {
+        participantIds: ["a", "b", "c"],
+        expenses: [
+          {
+            id: "salary",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 240000n }],
+            shares: [{ participantId: "a", amount: 240000n }],
+          },
+        ],
+        settlements: [],
+      },
+      "EUR",
+    );
+    expect(amountsByParticipant(balances)).toEqual({ a: 0n, b: 0n, c: 0n });
+  });
+
+  it("cancels an identical expense out", () => {
+    const shares = [
+      { participantId: "a", amount: 1000n },
+      { participantId: "b", amount: 1000n },
+    ];
+    const balances = balancesFor(
+      {
+        participantIds: ["a", "b"],
+        expenses: [
+          {
+            id: "paid",
+            currency: "EUR",
+            payers: [{ participantId: "a", amount: 2000n }],
+            shares,
+          },
+          {
+            id: "refunded",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 2000n }],
+            shares,
+          },
+        ],
+        settlements: [],
+      },
+      "EUR",
+    );
+    expect(amountsByParticipant(balances)).toEqual({ a: 0n, b: 0n });
+  });
+
+  it("treats an absent direction as spending", () => {
+    const expense: BalanceInputExpense = {
+      id: "e1",
+      currency: "EUR",
+      payers: [{ participantId: "a", amount: 2000n }],
+      shares: [
+        { participantId: "a", amount: 1000n },
+        { participantId: "b", amount: 1000n },
+      ],
+    };
+    const withDirection = balancesFor(
+      {
+        participantIds: ["a", "b"],
+        expenses: [{ ...expense, direction: "out" }],
+        settlements: [],
+      },
+      "EUR",
+    );
+    const without = balancesFor(
+      { participantIds: ["a", "b"], expenses: [expense], settlements: [] },
+      "EUR",
+    );
+    expect(amountsByParticipant(without)).toEqual(
+      amountsByParticipant(withDirection),
+    );
+  });
+
+  it("still rejects an unbalanced entry", () => {
+    expect(() =>
+      computeBalances({
+        participantIds: ["a", "b"],
+        expenses: [
+          {
+            id: "bad",
+            currency: "EUR",
+            direction: "in",
+            payers: [{ participantId: "a", amount: 2000n }],
+            shares: [{ participantId: "b", amount: 1500n }],
+          },
+        ],
+        settlements: [],
+      }),
+    ).toThrow(BalanceError);
+  });
+});
+
+describe("spending statistics exclude income", () => {
+  const entries: BalanceInputExpense[] = [
+    {
+      id: "groceries",
+      currency: "EUR",
+      payers: [{ participantId: "a", amount: 6000n }],
+      shares: [
+        { participantId: "a", amount: 3000n },
+        { participantId: "b", amount: 3000n },
+      ],
+    },
+    {
+      id: "rent-received",
+      currency: "EUR",
+      direction: "in",
+      payers: [{ participantId: "a", amount: 240000n }],
+      shares: [
+        { participantId: "a", amount: 120000n },
+        { participantId: "b", amount: 120000n },
+      ],
+    },
+  ];
+
+  /**
+   * A month with heavy spending and one large rent cheque is not a quiet
+   * month, and netting the two would report it as one.
+   */
+  it("leaves income out of total spend", () => {
+    expect(totalSpendByCurrency(entries).get("EUR")).toBe(6000n);
+  });
+
+  it("leaves income out of what someone paid and carried", () => {
+    expect(contributionsOf(entries, "a").get("EUR")).toEqual({
+      paid: 6000n,
+      share: 3000n,
+    });
+  });
+});

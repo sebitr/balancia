@@ -22,6 +22,10 @@ import { dispatchNotifications } from "@/modules/notifications/service";
 import { recordRecurringNotification } from "@/modules/notifications/events";
 import type { ExchangeRateSource } from "@/modules/currencies/conversion";
 import { classifyRateSource } from "@/modules/currencies/rates";
+import {
+  ENTRY_DIRECTIONS,
+  type EntryDirection,
+} from "@/modules/expenses/direction";
 import { prepareExpense } from "@/modules/expenses/service";
 import {
   currencyCodeSchema,
@@ -53,6 +57,8 @@ import {
 
 export const recurringInputSchema = z
   .object({
+    /** A monthly rent income is this same template with `direction: "in"`. */
+    direction: z.enum(ENTRY_DIRECTIONS).optional(),
     description: z.string().trim().min(1, "Describe the expense").max(200),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
     category: z.string().trim().max(60).optional().or(z.literal("")),
@@ -92,6 +98,7 @@ export type RecurringInput = z.infer<typeof recurringInputSchema>;
 
 export interface RecurringSummary {
   readonly id: string;
+  readonly direction: EntryDirection;
   readonly description: string;
   readonly category: string | null;
   readonly amount: bigint;
@@ -168,6 +175,7 @@ export async function createRecurringExpense(
       .insert(recurringExpenses)
       .values({
         groupId: access.groupId,
+        direction: input.direction ?? "out",
         description: input.description,
         notes: input.notes || null,
         category: input.category || null,
@@ -297,6 +305,7 @@ export async function listRecurringExpenses(
   return db
     .select({
       id: recurringExpenses.id,
+      direction: recurringExpenses.direction,
       description: recurringExpenses.description,
       category: recurringExpenses.category,
       amount: recurringExpenses.amount,
@@ -350,6 +359,7 @@ export async function generateDueOccurrences(
     .select({
       id: recurringExpenses.id,
       groupId: recurringExpenses.groupId,
+      direction: recurringExpenses.direction,
       description: recurringExpenses.description,
       notes: recurringExpenses.notes,
       category: recurringExpenses.category,
@@ -456,6 +466,7 @@ export async function generateDueOccurrences(
 interface TemplateRow {
   id: string;
   groupId: string;
+  direction: EntryDirection;
   description: string;
   notes: string | null;
   category: string | null;
@@ -581,6 +592,7 @@ async function generateSingleOccurrence(
         .insert(expenses)
         .values({
           groupId: template.groupId,
+          direction: template.direction,
           description: template.description,
           notes: template.notes,
           category: template.category,
