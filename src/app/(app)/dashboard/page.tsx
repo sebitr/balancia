@@ -6,15 +6,16 @@ import { getTranslations } from "next-intl/server";
 import { CreateGroupLauncher } from "@/components/groups/create-group-launcher";
 import { Button } from "@/components/ui/button";
 import {
-  NeedsYouCard,
-  OwedCard,
-  RecentlyActiveCard,
+  GroupList,
   Section,
-  type NeedsYouView,
-  type OwedView,
+  type GroupRowView,
 } from "@/components/dashboard/group-sections";
-import { PositionHeader } from "@/components/dashboard/position-header";
-import { SettledGroups } from "@/components/dashboard/settled-groups";
+import { PositionWidget } from "@/components/dashboard/position-widget";
+import type { PickableGroup } from "@/components/dashboard/add-expense-sheet";
+import {
+  SettledGroups,
+  type SettledGroupView,
+} from "@/components/dashboard/settled-groups";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
@@ -26,16 +27,13 @@ import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
 import { todayIso } from "@/modules/currencies/provider";
 
 /**
- * Home: where you stand, then which group needs a decision, then a way in.
+ * Home: where you stand, then which groups need you, then the quiet ones.
  *
- * Everything is resolved here, on the server. Only the settled chips and the
- * archived link are handed to a client component, so the view models below are
+ * Everything is resolved here, on the server. Only the position widget and the
+ * settled line are handed to client components, so the view models below are
  * plain serialisable values — amounts as minor-unit strings, never as JS
  * numbers, and instants as ISO text.
  */
-
-/** How many groups the all-settled screen lists as recently active. */
-const RECENTLY_ACTIVE = 2;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("dashboard");
@@ -73,7 +71,8 @@ function markOf(group: GroupPosition["group"]) {
   };
 }
 
-function toNeedsYou(position: GroupPosition): NeedsYouView {
+/** One anatomy for both directional sections; the label supplies the sign. */
+function toRow(position: GroupPosition): GroupRowView {
   return {
     ...markOf(position.group),
     id: position.group.id,
@@ -82,18 +81,26 @@ function toNeedsYou(position: GroupPosition): NeedsYouView {
     participantCount: position.group.participantCount,
     lastActivityAt: position.group.lastActivityAt.toISOString(),
     amounts: amountsOf(position),
-    owedTo: position.owedTo,
   };
 }
 
-function toOwed(position: GroupPosition): OwedView {
+function toPickable(position: GroupPosition): PickableGroup {
+  return {
+    ...markOf(position.group),
+    id: position.group.id,
+    name: position.group.name,
+    lastActivityAt: position.group.lastActivityAt.toISOString(),
+  };
+}
+
+/** The same row with nothing outstanding: no avatars, a word for an amount. */
+function toQuiet(position: GroupPosition): SettledGroupView {
   return {
     ...markOf(position.group),
     id: position.group.id,
     name: position.group.name,
     participantCount: position.group.participantCount,
     lastActivityAt: position.group.lastActivityAt.toISOString(),
-    amounts: amountsOf(position),
   };
 }
 
@@ -136,6 +143,8 @@ export default async function DashboardPage() {
     );
   }
 
+  // The add-expense sheet offers these in the order it finds them, and an
+  // archived group is not somewhere anyone is adding an expense.
   const active = [
     ...buckets.needsYou,
     ...buckets.youAreOwed,
@@ -145,27 +154,13 @@ export default async function DashboardPage() {
       b.group.lastActivityAt.getTime() - a.group.lastActivityAt.getTime(),
   );
 
-  // No group is chosen yet, so the header's action defaults to the one the
-  // user touched last — the likeliest thing they are about to add to.
-  const addExpenseHref = active[0]
-    ? `/groups/${active[0].group.id}/expenses/new`
-    : "/groups/new";
-
-  // There is no cross-group settle screen, so this opens the settle flow of
-  // the group with the largest debt: the one tap that clears the most.
-  const settleUpHref = buckets.needsYou[0]
-    ? `/groups/${buckets.needsYou[0].group.id}/balances`
-    : null;
-
   const nowIso = now.toISOString();
-  const allSquare =
-    buckets.needsYou.length === 0 && buckets.youAreOwed.length === 0;
 
   return (
-    <div className="-mt-6 flex flex-col">
+    <div className="flex flex-col gap-[26px]">
       <h1 className="sr-only">{t("title")}</h1>
 
-      <PositionHeader
+      <PositionWidget
         net={
           netPosition
             ? {
@@ -190,8 +185,6 @@ export default async function DashboardPage() {
               }
             : null
         }
-        owedGroupCount={netPosition?.owedGroupCount ?? 0}
-        owingGroupCount={netPosition?.owingGroupCount ?? 0}
         currencyTotals={overview.currencyTotals.map((total) => ({
           currency: total.currency,
           owedToYou: total.owedToYou.amount.toString(),
@@ -202,8 +195,7 @@ export default async function DashboardPage() {
         today={todayIso(now)}
         now={nowIso}
         converted={overview.converted}
-        addExpenseHref={addExpenseHref}
-        settleUpHref={settleUpHref}
+        groups={active.map(toPickable)}
         groupCount={overview.groupCount}
         lastCleared={
           overview.lastCleared
@@ -215,62 +207,28 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="flex flex-col gap-[18px] pt-5 pb-[max(1.625rem,env(safe-area-inset-bottom))]">
+      <div className="flex flex-col gap-[26px] pb-[max(2.125rem,env(safe-area-inset-bottom))]">
         {/* The visitor already has a group, so Balancia has earned the ask.
             A brand-new account returns above, and never meets an install
             nudge on its first load. */}
         <InstallPrompt />
 
-        {allSquare ? (
-          <Section label={t("sectionRecentlyActive")}>
-            <RecentlyActiveCard
-              groups={active.slice(0, RECENTLY_ACTIVE).map(toOwed)}
-              now={nowIso}
-            />
+        {buckets.needsYou.length > 0 && (
+          <Section label={t("sectionNeedsYou")}>
+            <GroupList groups={buckets.needsYou.map(toRow)} now={nowIso} />
           </Section>
-        ) : (
-          <>
-            {buckets.needsYou.length > 0 && (
-              <Section
-                label={t("sectionNeedsYou")}
-                count={buckets.needsYou.length}
-              >
-                <div className="flex flex-col gap-2.5">
-                  {buckets.needsYou.map((position, index) => (
-                    <NeedsYouCard
-                      key={position.group.id}
-                      group={toNeedsYou(position)}
-                      now={nowIso}
-                      urgent={index === 0}
-                    />
-                  ))}
-                </div>
-              </Section>
-            )}
+        )}
 
-            {buckets.youAreOwed.length > 0 && (
-              <Section
-                label={t("sectionYouAreOwed")}
-                count={buckets.youAreOwed.length}
-              >
-                <OwedCard
-                  groups={buckets.youAreOwed.map(toOwed)}
-                  now={nowIso}
-                />
-              </Section>
-            )}
-          </>
+        {buckets.youAreOwed.length > 0 && (
+          <Section label={t("sectionYouAreOwed")}>
+            <GroupList groups={buckets.youAreOwed.map(toRow)} now={nowIso} />
+          </Section>
         )}
 
         <SettledGroups
-          settled={buckets.settled.map((position) => ({
-            id: position.group.id,
-            name: position.group.name,
-          }))}
-          archived={buckets.archived.map((position) => ({
-            id: position.group.id,
-            name: position.group.name,
-          }))}
+          settled={buckets.settled.map(toQuiet)}
+          archived={buckets.archived.map(toQuiet)}
+          now={nowIso}
         />
       </div>
       {createGroup}

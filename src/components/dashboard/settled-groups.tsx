@@ -3,30 +3,45 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Search } from "lucide-react";
+import { Archive, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { GroupIconTile } from "@/components/groups/group-icon";
+import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
+import { RelativeTime } from "./relative-time";
 import { PUSH } from "@/components/motion/transitions";
 
 /**
- * The quiet end of the list: groups nobody owes anything in, plus the archived
- * ones behind a link.
+ * The quiet end of the list: groups nobody owes anything in, then the archived
+ * ones behind a row that opens them.
+ *
+ * These are rows in the same list as every other section, dimmed one step, so
+ * the screen is one list from top to bottom rather than a list that trails off
+ * into text. The dimming is the muted tile and the absent amount — never a
+ * lighter name, which would read as disabled.
  *
  * The only client state on this screen lives here — whether the search field
- * has been revealed, and what has been typed into it. Everything else is
- * server-rendered, so this island stays small.
+ * has been revealed, what has been typed into it, and whether the archived
+ * rows are open. Everything else is server-rendered, so this island stays
+ * small.
  */
 
 export interface SettledGroupView {
   readonly id: string;
   readonly name: string;
+  readonly icon: GroupIcon | null;
+  readonly iconColor: GroupIconColor | null;
+  readonly participantCount: number;
+  readonly lastActivityAt: string;
 }
 
 export function SettledGroups({
   settled,
   archived,
+  now,
 }: {
   settled: readonly SettledGroupView[];
   archived: readonly SettledGroupView[];
+  now: string;
 }) {
   const t = useTranslations("dashboard");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -52,18 +67,18 @@ export function SettledGroups({
               {t("sectionSettled", { count: settled.length })}
             </h3>
             {!searchOpen && (
+              // The fill is what makes this an affordance: a bare icon out
+              // here read as decoration and was missed.
               <button
                 type="button"
                 onClick={() => {
                   setSearchOpen(true);
-                  // The affordance is only worth revealing if it is also ready
-                  // to be typed into.
                   requestAnimationFrame(() => inputRef.current?.focus());
                 }}
-                className="-my-2 inline-flex shrink-0 items-center gap-1.5 rounded-md py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                aria-label={t("searchLabel")}
+                className="-my-[7px] inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-foreground/[0.06] text-muted-foreground transition-colors hover:bg-foreground/[0.12] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
-                <Search aria-hidden="true" className="size-[13px]" />
-                {t("search")}
+                <Search aria-hidden="true" className="size-[15px]" />
               </button>
             )}
           </div>
@@ -85,56 +100,114 @@ export function SettledGroups({
             </div>
           )}
 
-          {shown.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("noMatch", { query: query.trim() })}
-            </p>
-          ) : (
-            <ul className="flex flex-wrap gap-1.5">
-              {shown.map((group) => (
-                <li key={group.id}>
-                  <Link
-                    href={`/groups/${group.id}`}
-                    transitionTypes={PUSH}
-                    className="inline-flex h-[30px] items-center rounded-full border px-3 text-[0.8125rem] transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
-                  >
-                    {group.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul>
+            {shown.length === 0 ? (
+              <li className="border-t py-3.5 text-sm text-muted-foreground">
+                {t("noMatch", { query: query.trim() })}
+              </li>
+            ) : (
+              shown.map((group) => (
+                <QuietRow
+                  key={group.id}
+                  group={group}
+                  word={t("settledWord")}
+                  meta={
+                    <>
+                      {t("peopleCount", { count: group.participantCount })}
+                      {" · "}
+                      <RelativeTime value={group.lastActivityAt} now={now} />
+                    </>
+                  }
+                />
+              ))
+            )}
+          </ul>
         </section>
       )}
 
       {archived.length > 0 && (
-        <section>
+        <section className={settled.length > 0 ? "-mt-[26px]" : undefined}>
           <button
             type="button"
             onClick={() => setArchivedOpen((open) => !open)}
             aria-expanded={archivedOpen}
-            className="-my-2 rounded-md py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="flex w-full items-center gap-2.5 border-t py-3.5 text-left text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            {t("archivedGroups", { count: archived.length })}
+            <Archive aria-hidden="true" className="size-[15px] shrink-0" />
+            <span className="flex-1">
+              {t("archivedGroups", { count: archived.length })}
+            </span>
+            {archivedOpen ? (
+              <ChevronUp aria-hidden="true" className="size-[15px] shrink-0" />
+            ) : (
+              <ChevronDown
+                aria-hidden="true"
+                className="size-[15px] shrink-0"
+              />
+            )}
           </button>
 
           {archivedOpen && (
-            <ul className="flex flex-wrap gap-1.5 pt-2.5">
+            <ul>
               {archived.map((group) => (
-                <li key={group.id}>
-                  <Link
-                    href={`/groups/${group.id}`}
-                    transitionTypes={PUSH}
-                    className="inline-flex h-[30px] items-center rounded-full border px-3 text-[0.8125rem] text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  >
-                    {group.name}
-                  </Link>
-                </li>
+                <QuietRow
+                  key={group.id}
+                  group={group}
+                  word={t("archivedWord")}
+                />
               ))}
             </ul>
           )}
         </section>
       )}
     </>
+  );
+}
+
+/**
+ * A group with nothing outstanding: the active row's anatomy, one step down.
+ *
+ * The right column carries a word rather than an amount. It is a plain
+ * quantity and not a balance — there is no direction to point at — so it takes
+ * neither an arrow nor a tint, and the design system's word-icon-colour rule
+ * does not apply.
+ */
+function QuietRow({
+  group,
+  word,
+  meta,
+}: {
+  group: SettledGroupView;
+  word: string;
+  meta?: React.ReactNode;
+}) {
+  return (
+    <li className="border-t">
+      <Link
+        href={`/groups/${group.id}`}
+        transitionTypes={PUSH}
+        className="flex items-center gap-3 py-3.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+      >
+        <GroupIconTile
+          icon={group.icon}
+          color={group.iconColor}
+          name={group.name}
+          muted
+          className="size-10 rounded-xl bg-foreground/[0.05] text-neutral-balance"
+          iconClassName="size-[19px]"
+        />
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="truncate text-base font-medium tracking-[-0.01em]">
+            {group.name}
+          </span>
+          {meta && (
+            <span className="text-xs text-muted-foreground">{meta}</span>
+          )}
+        </span>
+        <span className="shrink-0 text-[0.8125rem] text-neutral-balance">
+          {word}
+        </span>
+      </Link>
+    </li>
   );
 }

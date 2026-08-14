@@ -1,21 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { renderWithIntl } from "../../../tests/helpers/intl";
-import {
-  NeedsYouCard,
-  OwedCard,
-  type NeedsYouView,
-  type OwedView,
-} from "./group-sections";
+import { GroupList, type GroupRowView } from "./group-sections";
 
 /**
- * Weight follows what a group asks of the reader: a debt gets a card with the
- * two things you might do about it, being owed gets a row.
+ * One row anatomy for both directional sections. Urgency comes from the order
+ * and the section label above, never from the row — so a row carries no
+ * actions, and an amount is the same size whichever way it points.
  */
 
 const NOW = "2026-08-13T12:00:00.000Z";
 
-function needsYou(overrides: Partial<NeedsYouView> = {}): NeedsYouView {
+function row(overrides: Partial<GroupRowView> = {}): GroupRowView {
   return {
     id: "g1",
     name: "Flatshare",
@@ -25,111 +21,72 @@ function needsYou(overrides: Partial<NeedsYouView> = {}): NeedsYouView {
     participantCount: 2,
     lastActivityAt: "2026-08-11T12:00:00.000Z",
     amounts: [{ minorUnits: "-10000", currency: "EUR" }],
-    owedTo: { kind: "single", name: "Mika" },
     ...overrides,
   };
 }
 
-function owed(overrides: Partial<OwedView> = {}): OwedView {
-  return {
-    id: "g2",
-    name: "Lisbon, March",
-    icon: null,
-    iconColor: null,
-    participantCount: 4,
-    lastActivityAt: "2026-08-13T08:00:00.000Z",
-    amounts: [{ minorUnits: "24800", currency: "EUR" }],
-    ...overrides,
-  };
-}
+describe("GroupList", () => {
+  it("makes the whole row one link to the group, and offers nothing else", () => {
+    renderWithIntl(<GroupList groups={[row()]} now={NOW} />);
 
-describe("NeedsYouCard", () => {
-  it("names a single creditor, and offers both ways out of the debt", () => {
-    renderWithIntl(
-      <NeedsYouCard group={needsYou()} now={NOW} urgent={false} />,
-    );
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/groups/g1");
+    expect(within(link).getByText("Flatshare")).toBeVisible();
 
-    expect(screen.getByText("€100.00")).toBeVisible();
-    expect(screen.getByText("you owe Mika")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Settle up" })).toHaveAttribute(
-      "href",
-      "/groups/g1/balances",
-    );
-    expect(screen.getByRole("link", { name: "Add expense" })).toHaveAttribute(
-      "href",
-      "/groups/g1/expenses/new",
-    );
+    // Every action lives inside the group; the row's only job is to open it.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
-  it("counts creditors instead of naming one when there are several", () => {
-    renderWithIntl(
-      <NeedsYouCard
-        group={needsYou({ owedTo: { kind: "several", count: 3 } })}
+  it("keeps the amount's direction as a word for a screen reader", () => {
+    renderWithIntl(<GroupList groups={[row()]} now={NOW} />);
+
+    expect(screen.getByText("€100.00")).toBeVisible();
+    // The section label carries the direction visually, so the row's own word
+    // is present but not shown — colour is never the only signal.
+    const word = screen.getByText("owes");
+    expect(word).toBeInTheDocument();
+    expect(word).toHaveClass("sr-only");
+  });
+
+  it("draws an amount the same size whichever way it points", () => {
+    const { container } = renderWithIntl(
+      <GroupList
+        groups={[
+          row({ amounts: [{ minorUnits: "-10000", currency: "EUR" }] }),
+          row({
+            id: "g2",
+            name: "Lisbon, March",
+            amounts: [{ minorUnits: "24800", currency: "EUR" }],
+          }),
+        ]}
         now={NOW}
-        urgent={false}
       />,
     );
 
-    expect(screen.getByText("split across 3 people")).toBeVisible();
-  });
-
-  it("keeps the direction word for a screen reader, since the label carries it visually", () => {
-    renderWithIntl(
-      <NeedsYouCard group={needsYou()} now={NOW} urgent={false} />,
+    const [owing, owed] = [...container.querySelectorAll("li")].map(
+      (item) => item.querySelector(".text-base:not(.font-medium)") ?? item,
     );
-
-    expect(screen.getByText("owes")).toBeInTheDocument();
+    expect(owing?.className).toEqual(owed?.className);
   });
 
-  it("names the people behind the avatar stack", () => {
+  it("names the members of a group once, for the whole stack", () => {
     renderWithIntl(
-      <NeedsYouCard
-        group={needsYou({
-          memberNames: ["Sofia", "Jonas", "Mika"],
-          participantCount: 6,
-        })}
+      <GroupList
+        groups={[row({ memberNames: ["Sofia", "Mika"], participantCount: 6 })]}
         now={NOW}
-        urgent={false}
       />,
     );
 
     expect(
-      screen.getByRole("img", { name: "Sofia, Jonas and 4 others" }),
-    ).toBeVisible();
+      screen.getByRole("img", { name: "Sofia and 5 others" }),
+    ).toBeInTheDocument();
   });
 
-  it("tints only the urgent card, and never as the sole cue", () => {
-    const { container: plain } = renderWithIntl(
-      <NeedsYouCard group={needsYou()} now={NOW} urgent={false} />,
-    );
-    const plainRing = plain.firstElementChild?.className ?? "";
-
-    const { container: urgent } = renderWithIntl(
-      <NeedsYouCard group={needsYou()} now={NOW} urgent />,
-    );
-    const urgentRing = urgent.firstElementChild?.className ?? "";
-
-    expect(plainRing).toContain("ring-border");
-    expect(urgentRing).toContain("--negative");
-    // The amount, its icon and its hidden word are unchanged by urgency.
-    expect(screen.getAllByText("€100.00")).toHaveLength(2);
-  });
-});
-
-describe("OwedCard", () => {
-  it("collapses to rows carrying size and last activity, not avatars", () => {
-    renderWithIntl(<OwedCard groups={[owed()]} now={NOW} />);
-
-    const row = screen.getByRole("link", { name: /Lisbon, March/ });
-    expect(within(row).getByText(/4 people/)).toBeVisible();
-    expect(within(row).getByText("4 hours ago")).toBeVisible();
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
-  });
-
-  it("shows each group's own currency, not the converted total", () => {
+  it("shows every group's own currency, unconverted", () => {
     renderWithIntl(
-      <OwedCard
-        groups={[owed({ amounts: [{ minorUnits: "21000", currency: "CHF" }] })]}
+      <GroupList
+        groups={[row({ amounts: [{ minorUnits: "21000", currency: "CHF" }] })]}
         now={NOW}
       />,
     );

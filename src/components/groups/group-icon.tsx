@@ -66,6 +66,7 @@ export function GroupIconTile({
   icon,
   color,
   name,
+  muted,
   className,
   iconClassName,
 }: {
@@ -73,12 +74,19 @@ export function GroupIconTile({
   color: GroupIconColor | null;
   /** Supplies the initial shown when there is no icon. */
   name?: string;
+  /**
+   * Drops the group's accent so `className` decides the tile's colours. A
+   * settled group keeps its own icon but stops advertising it, which is the
+   * difference between quiet and gone.
+   */
+  muted?: boolean;
   className?: string;
   iconClassName?: string;
 }) {
   const accent = groupAccent(color);
   const Glyph = icon ? GROUP_ICON_GLYPHS[icon] : null;
   const initial = name?.trim().slice(0, 1).toUpperCase();
+  const tinted = Glyph !== null && !muted;
 
   return (
     <span
@@ -89,10 +97,10 @@ export function GroupIconTile({
         className,
       )}
       style={{
-        background: Glyph
+        background: tinted
           ? `color-mix(in oklch, ${accent} 20%, transparent)`
           : undefined,
-        color: Glyph ? accent : undefined,
+        color: tinted ? accent : undefined,
       }}
     >
       {Glyph ? (
