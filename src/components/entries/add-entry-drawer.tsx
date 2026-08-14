@@ -71,7 +71,12 @@ export function AddEntryDrawer({
         // row cards inside somewhere to sit. On `bg-card` they were white on
         // white in the light theme, with only their internal hairlines to say
         // where one card ended and the next began.
-        className="h-[min(800px,calc(100dvh-28px))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground"
+        //
+        // The 28px gap is measured from the bottom of the safe area, not from
+        // the top of the screen: `viewport-fit=cover` means `100dvh` runs the
+        // full height of the display, so installed on a phone with an island
+        // the header — and the close button in it — sat underneath.
+        className="h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground"
       >
         <AddEntryForm
           {...form}

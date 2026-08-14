@@ -28,13 +28,20 @@ const HEADROOM = 16;
  * Closing is handed back to Radix — the sheet is animated to the bottom edge
  * here, then the hidden close is clicked, so state, focus and the overlay all
  * unwind the way they would from any other dismissal.
+ *
+ * The node arrives in state rather than in a ref, and the effect waits for it.
+ * A ref would be read once, on a commit where the sheet does not exist yet:
+ * Radix's portal renders nothing until a layout effect has told it the
+ * container is there, so the first pass has no content node to bind to. With a
+ * ref the listeners were simply never attached — and whether they were came
+ * down to how one commit's effects happened to interleave with the next,
+ * which is the sort of thing that works in a test and not on a phone.
  */
 function useSwipeDismiss(enabled: boolean) {
-  const sheet = React.useRef<HTMLDivElement>(null);
+  const [element, setElement] = React.useState<HTMLDivElement | null>(null);
   const close = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
-    const element = sheet.current;
     if (!element || !enabled) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
@@ -50,10 +57,33 @@ function useSwipeDismiss(enabled: boolean) {
       element.style.transform = `translate3d(0, ${value}px, 0)`;
     };
 
+    /**
+     * Whether everything under the touch is already scrolled to its top.
+     *
+     * The sheet is not always its own scroll container. The tall ones keep
+     * their header and footer fixed and scroll a body inside instead, and for
+     * those `element.scrollTop` is 0 forever — so reading it alone armed the
+     * drag on every touch, and a downward swipe dismissed the sheet rather
+     * than scrolling the body back up. Which is to say: the body could be
+     * scrolled down and never up again.
+     *
+     * Walking the chain needs no check for which ancestors are scrollable.
+     * Anything that cannot scroll reports 0 and passes on its own.
+     */
+    const atTop = (target: EventTarget | null): boolean => {
+      let node = target instanceof Element ? target : null;
+      while (node) {
+        if (node.scrollTop > 0) return false;
+        if (node === element) break;
+        node = node.parentElement;
+      }
+      return true;
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType !== "touch" || !event.isPrimary) return;
       // Anywhere but the top of the content, the gesture is a scroll.
-      if (element.scrollTop > 0) return;
+      if (!atTop(event.target)) return;
       tracking = true;
       pointer = event.pointerId;
       startY = lastY = event.clientY;
@@ -130,9 +160,9 @@ function useSwipeDismiss(enabled: boolean) {
       element.removeEventListener("pointercancel", onPointerUp);
       element.removeEventListener("touchmove", onTouchMove);
     };
-  }, [enabled]);
+  }, [element, enabled]);
 
-  return { sheet, close };
+  return { sheet: setElement, close };
 }
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -212,7 +242,15 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-[side=left]:data-open:slide-in-from-left-10 data-[side=right]:data-open:slide-in-from-right-10 data-[side=top]:data-open:slide-in-from-top-10 data-closed:animate-out data-closed:fade-out-0 data-[side=left]:data-closed:slide-out-to-left-10 data-[side=right]:data-closed:slide-out-to-right-10 data-[side=top]:data-closed:slide-out-to-top-10",
+          // No `h-auto` on the top and bottom variants, and it must not come
+          // back. It only restated the default — a fixed element with one edge
+          // pinned and no height is already content-height — but it restated it
+          // from a `[data-side]` selector, which outranks any plain `h-*` a
+          // caller passes and lands later in the sheet besides. The full-height
+          // sheets asked for `h-[min(800px,…)]`, silently got their content's
+          // height, and grew off the top of the screen when there was enough of
+          // it: header gone, nothing to scroll, because nothing overflowed.
+          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:border-b data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-[side=left]:data-open:slide-in-from-left-10 data-[side=right]:data-open:slide-in-from-right-10 data-[side=top]:data-open:slide-in-from-top-10 data-closed:animate-out data-closed:fade-out-0 data-[side=left]:data-closed:slide-out-to-left-10 data-[side=right]:data-closed:slide-out-to-right-10 data-[side=top]:data-closed:slide-out-to-top-10",
           // A bottom sheet comes all the way up from the edge it is anchored
           // to, on the curve the rest of the app moves on. Ten pixels and a
           // fade is a popover pretending to be a sheet.
