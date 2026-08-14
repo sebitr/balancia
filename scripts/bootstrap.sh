@@ -22,8 +22,12 @@
 #                           optional feature at its default, which is off
 #   -h, --help              this text
 #
-# Output is coloured only when stdout is a terminal, and not when NO_COLOR is
-# set or TERM is "dumb". Redirected or piped, it is plain text.
+#   --color, --no-color     settle the colour rather than detecting it
+#
+# Output is coloured when stdout is a terminal, unless NO_COLOR is set or TERM
+# is "dumb". Piped, redirected, or run by `docker run` without -t, there is no
+# terminal and it comes out as plain text — pass --color, or set FORCE_COLOR,
+# to colour it anyway.
 #
 # The secrets need only a POSIX shell and /dev/urandom: no openssl, no Node.
 # Two of the optional features download model files, and for those it needs
@@ -51,7 +55,35 @@ question_keys='APP_URL ALLOW_REGISTRATION EXCHANGE_RATE_PROVIDER RECEIPT_SCANNIN
 # Colour when stdout is a terminal that wants it, and nothing at all otherwise:
 # these strings are also the ones that would end up inside .env or a log file.
 # NO_COLOR is the convention at no-color.org, TERM=dumb the older one.
-if [ -t 1 ] && [ -z "${NO_COLOR-}" ] && [ "${TERM-}" != dumb ]; then
+#
+# Detection is only a default, because it is wrong in both directions often
+# enough to be worth overriding: run through a pipe, a pager, `docker run`
+# without -t, or a CI shell, stdout is not a terminal and the colour goes away
+# with no way to ask for it back. --color and --no-color settle it, and are
+# read here in their own pass because usage() needs the palette before the
+# real argument loop runs.
+colour=auto
+for arg in "$@"; do
+  case $arg in
+    --color | --colour) colour=always ;;
+    --no-color | --no-colour) colour=never ;;
+  esac
+done
+
+# In precedence order: the flag, then NO_COLOR, then the FORCE_COLOR pair a
+# scripted caller uses to keep colour through a pipe, then the terminal itself.
+want_colour() {
+  case $colour in
+    always) return 0 ;;
+    never) return 1 ;;
+  esac
+  [ -z "${NO_COLOR-}" ] || return 1
+  [ -z "${FORCE_COLOR-}" ] || return 0
+  [ -z "${CLICOLOR_FORCE-}" ] || return 0
+  [ -t 1 ] && [ "${TERM-}" != dumb ]
+}
+
+if want_colour; then
   bold=$(printf '\033[1m')
   dim=$(printf '\033[2m')
   red=$(printf '\033[31m')
@@ -396,6 +428,9 @@ usage() {
     ./scripts/bootstrap.sh --defaults     generate secrets, ask nothing
 
     -y, --yes, --defaults   do not ask; leave every optional feature off
+        --color             colour the output even when stdout is not a
+                            terminal — a pipe, a pager, docker run without -t
+        --no-color          never colour it
     -h, --help              this text
 
   Safe to re-run: settings already in .env are left alone.
@@ -407,6 +442,8 @@ interactive=1
 for arg in "$@"; do
   case $arg in
     -y | --yes | --defaults) interactive=0 ;;
+    # Already read, in the pass that set up the palette.
+    --color | --colour | --no-color | --no-colour) ;;
     -h | --help)
       usage
       exit 0
