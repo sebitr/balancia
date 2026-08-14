@@ -39,6 +39,7 @@ async function resolveAccess(groupId: string): Promise<GroupAccess> {
 
 export default async function GroupLayout({
   children,
+  entry,
   params,
 }: LayoutProps<"/groups/[groupId]">) {
   const { groupId } = await params;
@@ -57,6 +58,10 @@ export default async function GroupLayout({
       bottomNav={<GroupNav groupId={access.groupId} />}
     >
       {children}
+      {/* The add-entry drawer, when a navigation into it was intercepted. It
+          lives beside the group rather than inside it so that opening it
+          leaves the screen underneath mounted, scrolled where it was. */}
+      {entry}
     </AppShell>
   );
 }

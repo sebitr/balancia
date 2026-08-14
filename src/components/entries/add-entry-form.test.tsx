@@ -2,15 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
-import { AddEntryForm } from "./add-entry-form";
+import { AddEntryDrawer } from "./add-entry-drawer";
 
 /**
  * What the screen does, from the outside.
  *
  * These assert the behaviours the rework is *for*: the amount is typed into
- * the figure itself, the split is one row until you open it, the type switch
- * keeps what it can and drops what it must, and the primary button says what
- * it will do.
+ * the figure itself, the split is one row until you open it, an empty split
+ * stays empty, the type switch keeps what it can and drops what it must, and
+ * the primary button says what it will do.
+ *
+ * Rendered as the drawer rather than as the bare form, because that is what
+ * ships — the title, the close and the one footer button are all part of the
+ * sheet, and a form tested outside one would not have them.
  *
  * Server actions are mocked. Whether an expense is stored correctly is the
  * service layer's problem and is tested there; this is about the form.
@@ -57,12 +61,13 @@ const OUTSTANDING = [
     toParticipantId: "seb",
     toName: "Seb",
     amountMinor: "12840",
+    currency: "CHF",
     amountFormatted: "CHF 128.40",
   },
 ];
 
 function renderForm(
-  overrides: Partial<Parameters<typeof AddEntryForm>[0]> = {},
+  overrides: Partial<Parameters<typeof AddEntryDrawer>[0]> = {},
 ) {
   // Module mocks are shared across the file; without this a "was not called"
   // assertion would be reading the previous test's call.
@@ -83,9 +88,9 @@ function renderForm(
   });
 
   return renderWithIntl(
-    <AddEntryForm
+    <AddEntryDrawer
+      dismissTo="back"
       groupId="g1"
-      groupName="Flat 12 · Genève"
       members={MEMBERS}
       selfId="seb"
       currencyMode="converted"
@@ -107,6 +112,19 @@ async function enterAmount(
   await user.type(screen.getByRole("textbox", { name: label }), digits);
 }
 
+/** The sheet that is open over the drawer, by its own title. */
+function sheet(name: string) {
+  return within(screen.getByRole("dialog", { name }));
+}
+
+/** Opens the split editor from the summary row. */
+async function openSplit(
+  user: ReturnType<typeof userEvent.setup>,
+  who = /Seb paid/,
+) {
+  await user.click(screen.getByRole("button", { name: who }));
+}
+
 /**
  * The attach control's own input.
  *
@@ -119,8 +137,46 @@ function fileInput(): HTMLInputElement {
   return input;
 }
 
+describe("the drawer", () => {
+  it("is titled by what it is about to add", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(
+      screen.getByRole("heading", { name: "Add expense" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    expect(
+      screen.getByRole("heading", { name: "Settle up" }),
+    ).toBeInTheDocument();
+  });
+
+  /** One way forward, and the ways out cost no room: X, scrim, swipe. */
+  it("carries one primary button and no Cancel", () => {
+    renderForm();
+
+    expect(
+      screen.getByRole("button", { name: "Add expense" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Cancel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closes from the X", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(
+      screen.queryByRole("heading", { name: "Add expense" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("the default expense path", () => {
-  it("takes an amount from the pad and shows the computed share", async () => {
+  it("takes an amount and shows the computed share", async () => {
     const user = userEvent.setup();
     renderForm();
 
@@ -184,12 +240,14 @@ describe("the split sheet", () => {
     renderForm();
     await enterAmount(user, "84.60");
 
-    await user.click(screen.getByRole("button", { name: /Seb paid/ }));
+    await openSplit(user);
     expect(
       screen.getByRole("heading", { name: "Payment and split" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.click(
+      sheet("Payment and split").getByRole("button", { name: "Done" }),
+    );
     expect(
       screen.queryByRole("heading", { name: "Payment and split" }),
     ).not.toBeInTheDocument();
@@ -199,12 +257,13 @@ describe("the split sheet", () => {
     const user = userEvent.setup();
     renderForm();
     await enterAmount(user, "84.60");
-    await user.click(screen.getByRole("button", { name: /Seb paid/ }));
+    await openSplit(user);
 
+    const split = sheet("Payment and split");
     await user.click(
-      screen.getByRole("button", { name: "Include Cyril in the split" }),
+      split.getByRole("button", { name: "Include Cyril in the split" }),
     );
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.click(split.getByRole("button", { name: "Done" }));
 
     expect(
       screen.getByText(/Split equally between 2 · CHF 42\.30 each/),
@@ -215,29 +274,27 @@ describe("the split sheet", () => {
     const user = userEvent.setup();
     renderForm();
     await enterAmount(user, "84.60");
-    await user.click(screen.getByRole("button", { name: /Seb paid/ }));
+    await openSplit(user);
 
-    expect(screen.queryByLabelText("Shares for Seb")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Shares" }));
-    expect(screen.getByLabelText("Shares for Seb")).toBeInTheDocument();
+    const split = sheet("Payment and split");
+    expect(split.queryByLabelText("Shares for Seb")).not.toBeInTheDocument();
+    await user.click(split.getByRole("button", { name: "Shares" }));
+    expect(split.getByLabelText("Shares for Seb")).toBeInTheDocument();
   });
 
-  /**
-   * The pills reach both ends in a tap or two, and the sheet already opens on
-   * "everyone" — so two chips restating the selection earned their removal.
-   */
-  it("has no Everyone or Just me shortcut", async () => {
+  /** Who paid is one of many, and reports itself as such. */
+  it("offers the payer as a choice rather than three toggles", async () => {
     const user = userEvent.setup();
     renderForm();
     await enterAmount(user, "84.60");
-    await user.click(screen.getByRole("button", { name: /Seb paid/ }));
+    await openSplit(user);
 
-    expect(
-      screen.queryByRole("button", { name: "Everyone" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Just me" }),
-    ).not.toBeInTheDocument();
+    const payer = sheet("Payment and split").getByRole("radio", {
+      name: "Paid by Hervé",
+    });
+    expect(payer).toHaveAttribute("aria-checked", "false");
+    await user.click(payer);
+    expect(payer).toHaveAttribute("aria-checked", "true");
   });
 
   /** Money that came in was received and credited; nobody paid it. */
@@ -246,18 +303,88 @@ describe("the split sheet", () => {
     renderForm();
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
-    await user.click(screen.getByRole("button", { name: /Seb received/ }));
+    await openSplit(user, /Seb received/);
 
+    const split = sheet("Income and split");
     expect(
       screen.getByRole("heading", { name: "Income and split" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Received by")).toBeInTheDocument();
-    expect(screen.getByText("Credited to")).toBeInTheDocument();
-    expect(screen.queryByText("Paid by")).not.toBeInTheDocument();
-    expect(screen.queryByText("Split between")).not.toBeInTheDocument();
+    expect(split.getByText("Received by")).toBeInTheDocument();
+    expect(split.getByText("Credited to")).toBeInTheDocument();
+    expect(split.queryByText("Paid by")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Received by Hervé" }),
+      split.getByRole("radio", { name: "Received by Hervé" }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * The state the old form refused to have.
+ *
+ * Deselecting everybody used to silently put everyone back, which is the kind
+ * of help that loses work: the person doing it was halfway through choosing
+ * two of five. It is now a real state that simply cannot be saved.
+ */
+describe("an empty split", () => {
+  async function emptyTheSplit(user: ReturnType<typeof userEvent.setup>) {
+    await enterAmount(user, "84.60");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    for (const member of MEMBERS) {
+      await user.click(
+        split.getByRole("button", {
+          name: `Include ${member.displayName} in the split`,
+        }),
+      );
+    }
+    return split;
+  }
+
+  it("stays empty, and says what to do about it", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await emptyTheSplit(user);
+
+    expect(
+      split.getByText("Pick at least one person to split this with."),
+    ).toBeInTheDocument();
+    expect(split.getByRole("button", { name: "Done" })).toBeDisabled();
+  });
+
+  it("cannot be saved", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await emptyTheSplit(user);
+
+    // Back out of the sheet the only way an empty split allows.
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("heading", { name: "Payment and split" }),
+    ).not.toBeInTheDocument();
+
+    expect(screen.getByText("Nobody selected yet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add expense" })).toBeDisabled();
+  });
+});
+
+describe("the split note", () => {
+  it("says which way exact amounts are out, and by how much", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "84.60");
+    await openSplit(user);
+
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Exact" }));
+
+    // Seeded from an equal split, so it starts balanced.
+    expect(split.queryByText(/still to assign/)).not.toBeInTheDocument();
+
+    await user.clear(split.getByLabelText("Exact amount for Cyril"));
+    expect(split.getByText("CHF 28.20 still to assign.")).toBeInTheDocument();
+
+    await user.type(split.getByLabelText("Exact amount for Cyril"), "40");
+    expect(split.getByText("CHF 11.80 over the total.")).toBeInTheDocument();
   });
 });
 
@@ -346,7 +473,7 @@ describe("income", () => {
     await user.click(screen.getByRole("tab", { name: "Income" }));
     expect(screen.getByText(/Seb received/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Mine only/ }));
+    await user.click(screen.getByRole("radio", { name: /Mine only/ }));
     expect(screen.queryByText(/Seb received/)).not.toBeInTheDocument();
   });
 });
@@ -368,13 +495,12 @@ describe("switching type", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("button", { name: /One-off/ }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.getByRole("button", { name: /Monthly/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    expect(screen.getByRole("switch", { name: "Repeats" })).toBeChecked();
 
     await user.click(screen.getByRole("tab", { name: "Settle" }));
     await user.click(screen.getByRole("tab", { name: "Expense" }));
-    expect(screen.getByRole("button", { name: /One-off/ })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Repeats" })).not.toBeChecked();
   });
 });
 
@@ -389,6 +515,29 @@ describe("settlement", () => {
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
       "128.40",
     );
+  });
+
+  /**
+   * A group that keeps its currencies separate has no base to pin a repayment
+   * to, and the debt is denominated anyway — in whatever it was run up in.
+   */
+  it("takes its currency from the debt, not from the group", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      currencyMode: "separate",
+      baseCurrency: null,
+      defaultCurrency: "CHF",
+      outstanding: [
+        { ...OUTSTANDING[0], currency: "EUR", amountMinor: "4000" },
+      ],
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
+      "40.00",
+    );
+    expect(screen.getByText("EUR")).toBeInTheDocument();
   });
 
   it("offers the methods that country actually uses", async () => {
@@ -438,12 +587,23 @@ describe("recurrence", () => {
       screen.getByRole("button", { name: "Add expense" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /One-off/ }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
 
     expect(
       screen.getByRole("button", { name: "Save recurring expense" }),
     ).toBeInTheDocument();
+  });
+
+  /** The switch turns it on; the rule row is what opens the editor. */
+  it("shows the rule, and opens the sheet from it", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(screen.queryByText(/^Monthly/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+
+    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    expect(screen.getByRole("heading", { name: "Repeat" })).toBeInTheDocument();
   });
 
   it("writes a template rather than a single entry", async () => {
@@ -452,8 +612,7 @@ describe("recurrence", () => {
     await enterAmount(user, "84.60");
     await user.type(screen.getByLabelText("Description"), "Cleaning");
 
-    await user.click(screen.getByRole("button", { name: /One-off/ }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
     await user.click(
       screen.getByRole("button", { name: "Save recurring expense" }),
     );
@@ -524,11 +683,23 @@ describe("the amount field", () => {
 
     await enterAmount(user, "1200.50");
     await user.click(screen.getByRole("button", { name: "CHF" }));
-    const sheet = screen.getByRole("dialog");
-    await user.click(within(sheet).getByRole("button", { name: /^JPY/ }));
-    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+
+    const currency = sheet("Currency");
+    await user.click(currency.getByRole("button", { name: /^JPY/ }));
+    await user.click(currency.getByRole("button", { name: "Done" }));
 
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("1200");
+  });
+
+  /** The one people convert *to* should not be a hundred rows down. */
+  it("puts the group's own currency first, and marks it", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+
+    const rows = sheet("Currency").getAllByRole("button");
+    expect(rows[0]).toHaveTextContent("CHF");
+    expect(rows[0]).toHaveTextContent("Base");
   });
 });
 

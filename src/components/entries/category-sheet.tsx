@@ -2,68 +2,20 @@
 
 import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 import {
   EXPENSE_CATEGORIES,
-  isExpenseCategory,
   type ExpenseCategory,
 } from "@/modules/categorization";
 import { ChoicePill } from "./pills";
 
 /**
- * The category, as a chip beside the description rather than a field below it.
+ * Picking a category, when the classifier's guess is wrong or missing.
  *
- * Category is optional and usually guessed correctly, so it should cost no
- * vertical space until someone disagrees with the guess. Three states, and the
- * helper text beside the chip is what distinguishes them:
- *
- *  - **detected** — the classifier filled it in; an amber sparkle marks that
- *    it was read from the description rather than chosen.
- *  - **chosen** — someone picked it, and from then on the classifier stops.
- *  - **empty** — a dashed outline inviting a choice, and nothing more.
+ * The category itself is a row in the card beside the description — this is
+ * only the sheet that row opens.
  */
-
-export function CategoryChip({
-  value,
-  detected,
-  onOpen,
-}: {
-  value: string;
-  /** True when `value` came from the classifier rather than a person. */
-  detected: boolean;
-  onOpen: () => void;
-}) {
-  const t = useTranslations("addEntry.category");
-  const tCategories = useTranslations("expenses.categories");
-
-  return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={onOpen}
-        className={cn(
-          "inline-flex h-[30px] items-center gap-1.5 rounded-full px-3 text-xs transition-colors",
-          value
-            ? "border border-border bg-accent font-medium text-foreground"
-            : "border border-dashed border-white/22 text-muted-foreground",
-        )}
-      >
-        {detected && value && (
-          <Sparkles aria-hidden="true" className="size-3 text-chart-4" />
-        )}
-        {isExpenseCategory(value) ? tCategories(value) : t("add")}
-        <ChevronDown aria-hidden="true" className="size-3" />
-      </button>
-
-      <span className="text-xs text-muted-foreground">
-        {value ? (detected ? t("detected") : t("chosen")) : t("optional")}
-      </span>
-    </div>
-  );
-}
 
 export function CategorySheet({
   value,

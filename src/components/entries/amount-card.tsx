@@ -79,28 +79,15 @@ export function AmountCard({
       : null;
 
   return (
-    <div className="space-y-4 rounded-[17px] bg-card p-4 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-muted-foreground">
-          {label}
-        </span>
-        {currencyLocked ? (
-          <span className="inline-flex h-8 items-center rounded-[10px] px-2.5 text-[13px] font-semibold text-muted-foreground">
-            {currency}
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpenCurrency}
-            className="inline-flex h-8 items-center gap-1 rounded-[10px] border border-white/14 bg-white/8 px-2.5 text-[13px] font-semibold transition-colors active:bg-white/14"
-          >
-            {currency}
-            <ChevronDown aria-hidden="true" className="size-[13px]" />
-          </button>
-        )}
-      </div>
+    <div className="space-y-3 rounded-[17px] bg-card p-4 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+      <span className="block text-xs font-medium text-muted-foreground">
+        {label}
+      </span>
 
-      <div className="flex w-full items-center">
+      {/* The figure and its currency on one line, because they are one value.
+          The field takes the room that is left rather than the room it wants,
+          so a six-figure amount pushes nothing off the card. */}
+      <div className="flex w-full items-center gap-3">
         {/* The sign belongs to the figure, not to the value: it is never typed
             and must never come back out of the field. */}
         {positive && !empty && (
@@ -128,10 +115,27 @@ export function AmountCard({
           autoComplete="off"
           className={cn(
             FIGURE,
-            "w-full min-w-0 bg-transparent outline-none placeholder:text-muted-foreground/60",
+            "min-w-0 flex-1 bg-transparent caret-primary outline-none placeholder:text-muted-foreground/60",
             positive ? "text-positive" : "text-foreground",
           )}
         />
+
+        {/* A settlement is denominated by the debt it clears, so there is
+            nothing to choose and the pill states the currency instead. */}
+        {currencyLocked ? (
+          <span className="inline-flex h-10 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold text-muted-foreground">
+            {currency}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenCurrency}
+            className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full border border-white/14 bg-white/8 px-3 text-[13px] font-semibold transition-colors active:bg-white/14"
+          >
+            {currency}
+            <ChevronDown aria-hidden="true" className="size-[13px]" />
+          </button>
+        )}
       </div>
 
       {needsRate && baseCurrency && (

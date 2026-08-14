@@ -41,7 +41,13 @@ export function SplitSummaryRow({
       className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-[17px] bg-card p-3.5 text-left shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)] transition-colors active:bg-accent"
     >
       <span className="flex items-center gap-2">
-        <MemberAvatar name={payerName} className="size-6" selected />
+        {/* Amber, matching the payer pills in the sheet this opens. */}
+        <MemberAvatar
+          name={payerName}
+          className="size-7"
+          selected
+          tone="payer"
+        />
         <span className="text-sm font-semibold">
           {received
             ? t("received", { name: payerName })

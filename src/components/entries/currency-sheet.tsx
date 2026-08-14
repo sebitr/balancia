@@ -41,15 +41,28 @@ export function CurrencySheet({
   const t = useTranslations("addEntry.currency");
   const [query, setQuery] = useState("");
 
+  /**
+   * The group's own currency first, then the alphabet.
+   *
+   * It is the one every other amount is converted *to*, and the one people
+   * come back to after a trip — so it should not be somewhere down a list of
+   * a hundred and seventy.
+   */
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (needle === "") return SUPPORTED_CURRENCIES;
-    return SUPPORTED_CURRENCIES.filter(
-      (currency) =>
-        currency.code.toLowerCase().includes(needle) ||
-        currency.name.toLowerCase().includes(needle),
+    const found =
+      needle === ""
+        ? SUPPORTED_CURRENCIES
+        : SUPPORTED_CURRENCIES.filter(
+            (currency) =>
+              currency.code.toLowerCase().includes(needle) ||
+              currency.name.toLowerCase().includes(needle),
+          );
+    if (baseCurrency === null) return found;
+    return [...found].sort((a, b) =>
+      a.code === baseCurrency ? -1 : b.code === baseCurrency ? 1 : 0,
     );
-  }, [query]);
+  }, [query, baseCurrency]);
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
@@ -97,6 +110,11 @@ export function CurrencySheet({
                 <span className="flex-1 truncate text-sm text-muted-foreground">
                   {currency.name}
                 </span>
+                {currency.code === baseCurrency && (
+                  <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                    {t("base")}
+                  </span>
+                )}
                 {active && (
                   <Check aria-hidden="true" className="size-4 text-primary" />
                 )}
