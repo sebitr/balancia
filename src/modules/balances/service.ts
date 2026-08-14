@@ -78,6 +78,7 @@ export async function loadGroupBalances(
   const expenseRows = await db
     .select({
       id: expenses.id,
+      direction: expenses.direction,
       currency: expenses.currency,
       convertedCurrency: expenses.convertedCurrency,
     })
@@ -152,6 +153,7 @@ export async function loadGroupBalances(
 
   const engineExpenses: BalanceInputExpense[] = expenseRows.map((row) => ({
     id: row.id,
+    direction: row.direction,
     currency: converts ? (group.baseCurrency as string) : row.currency,
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],

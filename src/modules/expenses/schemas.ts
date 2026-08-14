@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
+import { ENTRY_DIRECTIONS } from "./direction";
 import { SPLIT_METHODS } from "./split";
 
 /**
@@ -47,6 +48,8 @@ export const splitEntrySchema = z.object({
 
 export const expenseInputSchema = z
   .object({
+    /** Absent means spending, which is what every caller meant before income. */
+    direction: z.enum(ENTRY_DIRECTIONS).optional(),
     description: z.string().trim().min(1, "Describe the expense").max(200),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
     category: z.string().trim().max(60).optional().or(z.literal("")),
@@ -87,6 +90,11 @@ export const settlementInputSchema = z
       .optional()
       .or(z.literal("")),
     settledOn: isoDateSchema,
+    /**
+     * How the money moved. Free text, because the picker's list is a
+     * convenience and not a closed world — see the column comment.
+     */
+    paymentMethod: z.string().trim().max(60).optional().or(z.literal("")),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
   })
   .refine((value) => value.fromParticipantId !== value.toParticipantId, {

@@ -70,6 +70,7 @@ export default async function EditExpensePage({
         semanticCategorization={isSemanticCategorizationEnabled()}
         initial={{
           id: expense.id,
+          direction: expense.direction,
           description: expense.description,
           notes: expense.notes ?? "",
           category: expense.category ?? "",

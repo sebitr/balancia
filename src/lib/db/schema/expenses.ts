@@ -17,16 +17,22 @@ import { groups, participants } from "./groups";
 import { recurringExpenses } from "./recurring";
 import {
   actorTypeEnum,
+  entryDirectionEnum,
   exchangeRateSourceEnum,
   splitMethodEnum,
 } from "./enums";
 
 /**
- * An expense.
+ * An expense, or an income — one table, told apart by `direction`.
  *
  * Money columns are `bigint` holding integer minor units — never numeric,
  * never float. Drizzle is configured with `mode: "bigint"` so values arrive in
  * TypeScript as `bigint` rather than a lossy `number`.
+ *
+ * `amount` stays positive whichever way the money went; `direction` says which
+ * way to apply it. Storing income as a negative expense would have made every
+ * `SUM(amount)` in the codebase quietly wrong, and every reader would have had
+ * to remember the convention.
  *
  * Currency handling:
  *   - `amount` / `currency` are always what the user entered.
@@ -42,6 +48,11 @@ export const expenses = pgTable(
     groupId: uuid("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
+    /**
+     * `out` for spending, `in` for money received on the group's behalf.
+     * Defaulted so every row written before income existed reads as spending.
+     */
+    direction: entryDirectionEnum("direction").notNull().default("out"),
     description: text("description").notNull(),
     notes: text("notes"),
     category: text("category"),
@@ -190,6 +201,14 @@ export const settlements = pgTable(
     exchangeRateSource: exchangeRateSourceEnum("exchange_rate_source"),
     exchangeRateAt: timestamp("exchange_rate_at", { withTimezone: true }),
     notes: text("notes"),
+    /**
+     * How the money actually changed hands — "TWINT", "Cash", "Revolut".
+     *
+     * Free text rather than an enum: the picker offers a known list, but
+     * payment habits are regional and change faster than migrations, and a
+     * method nobody has heard of is still worth recording verbatim.
+     */
+    paymentMethod: text("payment_method"),
     settledOn: date("settled_on").notNull(),
     createdByActorType: actorTypeEnum("created_by_actor_type").notNull(),
     createdByParticipantId: uuid("created_by_participant_id").references(

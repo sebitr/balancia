@@ -110,6 +110,7 @@ export async function createSettlement(
         exchangeRateSource: conversion.frozenRate?.source ?? null,
         exchangeRateAt: conversion.frozenRate?.capturedAt ?? null,
         settledOn: input.settledOn,
+        paymentMethod: input.paymentMethod || null,
         notes: input.notes || null,
         createdByActorType: access.actor.kind,
         createdByParticipantId: access.participantId,

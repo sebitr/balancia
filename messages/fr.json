@@ -987,5 +987,253 @@
       "cheeky6": "Recouvrement de créances, version Balancia : {amount}, pour {name}, sans casser de rotules."
     },
     "sendCaptionShare": "Balancia ouvre votre partage pour {name} — rien n'est envoyé en votre nom."
+  },
+  "addEntry": {
+    "back": "Retour",
+    "types": {
+      "label": "Type d'écriture",
+      "expense": "Dépense",
+      "income": "Revenu",
+      "settle": "Rembourser"
+    },
+    "labels": {
+      "amount": "Montant",
+      "amountReceived": "Montant reçu",
+      "amountFromReceipt": "Montant du reçu",
+      "payingBack": "Remboursement",
+      "description": "Description",
+      "descriptionPlaceholder": "Dîner au port",
+      "more": "Note, catégorie ou pièce jointe"
+    },
+    "amount": {
+      "zero": "0.00",
+      "rateFrozen": "Ce taux est figé avec l'écriture. Un changement de taux ne réécrit jamais ce qui est déjà enregistré.",
+      "inBaseCurrency": "Dans la devise de base du groupe"
+    },
+    "keypad": {
+      "zero": "0.00",
+      "delete": "Effacer le dernier chiffre",
+      "done": "Terminé"
+    },
+    "date": {
+      "today": "Aujourd'hui",
+      "oneOff": "Ponctuel",
+      "label": "Date"
+    },
+    "split": {
+      "title": "Qui a payé, qui doit",
+      "titleIncome": "Qui est crédité",
+      "paid": "{name} a payé",
+      "received": "{name} a reçu",
+      "paidBy": "Payé par",
+      "creditedTo": "Crédité à",
+      "splitBetween": "Partagé entre",
+      "everyone": "Tout le monde",
+      "justMe": "Moi seul",
+      "done": "Terminé",
+      "methods": {
+        "equal": "Également",
+        "shares": "Parts",
+        "exact": "Exact",
+        "percentage": "Pourcent"
+      },
+      "hints": {
+        "equal": "Réparti également entre les personnes sélectionnées.",
+        "shares": "Donnez un poids à chacun — 2 parts paient le double.",
+        "exact": "Saisissez le montant exact de chaque personne.",
+        "percentage": "Les pourcentages doivent totaliser 100."
+      },
+      "inputLabels": {
+        "equal": "Part de {name}",
+        "shares": "Parts de {name}",
+        "exact": "Montant exact de {name}",
+        "percentage": "Pourcentage de {name}"
+      },
+      "summary": {
+        "equalEach": "Partagé également entre {count} · {amount} chacun",
+        "exactAmounts": "Montants exacts · {count} personnes",
+        "percentages": "Par pourcentage · {count} personnes",
+        "shares": "Par parts · {count} personnes",
+        "byItem": "Par article · {count} personnes",
+        "justOne": "Le solde de personne d'autre ne bouge"
+      },
+      "payerOption": "Payé par {name}",
+      "includeOption": "Inclure {name} dans le partage"
+    },
+    "currency": {
+      "title": "Devise",
+      "groupBase": "Base du groupe : {currency}",
+      "search": "Rechercher par code ou par nom",
+      "noMatch": "Aucune devise ne correspond.",
+      "done": "Terminé"
+    },
+    "category": {
+      "add": "Ajouter une catégorie",
+      "detected": "détectée depuis la description",
+      "chosen": "choisie",
+      "optional": "facultative",
+      "title": "Catégorie",
+      "backToDetected": "Revenir à la détection",
+      "done": "Terminé"
+    },
+    "repeat": {
+      "title": "Répéter",
+      "oneOff": "Ponctuel",
+      "active": "{frequency}, {day}",
+      "frequency": {
+        "weekly": "Chaque semaine",
+        "monthly": "Chaque mois",
+        "yearly": "Chaque année"
+      },
+      "every": "Tous les",
+      "interval": {
+        "weekly": "{count, plural, one {# semaine} other {# semaines}}",
+        "monthly": "{count, plural, one {# mois} other {# mois}}",
+        "yearly": "{count, plural, one {# an} other {# ans}}"
+      },
+      "onDay": "Le jour",
+      "dayOfMonth": "Jour {day}",
+      "fewer": "Moins souvent",
+      "more": "Plus souvent",
+      "previousDay": "Jour précédent",
+      "nextDay": "Jour suivant",
+      "ends": "Fin",
+      "never": "Jamais",
+      "onADate": "À une date",
+      "preview": "Prochaines : {dates}. Créées automatiquement, heure de {timezone}.",
+      "done": "Terminé"
+    },
+    "scan": {
+      "title": "Scanner un reçu",
+      "subtitle": "Remplit le montant, la date, le commerçant et les articles",
+      "camera": "Appareil photo",
+      "upload": "Importer",
+      "scanning": "Lecture du reçu…",
+      "read": "{count, plural, one {# article lu} other {# articles lus}} chez {merchant}",
+      "check": "Vérifiez le montant et la date avant d'enregistrer",
+      "dismiss": "Ignorer",
+      "itemsTitle": "Articles du reçu",
+      "splitByItem": "Partager par article",
+      "tagEveryone": "les {count}",
+      "tagWithBill": "avec l'addition",
+      "tagUnassigned": "non attribué"
+    },
+    "items": {
+      "title": "Attribuer les articles",
+      "everyone": "Tout le monde",
+      "tipNote": "Partagé au prorata de ce que chacun a commandé.",
+      "owes": "Chacun doit",
+      "matches": "Correspond au total du reçu.",
+      "unassigned": "{assigned} attribué sur {total} — le reste ne l'est pas.",
+      "use": "Utiliser ces montants"
+    },
+    "income": {
+      "belongsTo": "À qui appartient-il",
+      "shared": "Partagé — créditer tout le monde",
+      "sharedHint": "Chacun des {count} gagne {amount}",
+      "mine": "À moi seul — créditer {name}",
+      "mineHint": "Enregistré, mais le solde de personne d'autre ne bouge"
+    },
+    "settle": {
+      "outstanding": "En cours",
+      "owes": "{from} doit à {to}",
+      "nothingOutstanding": "Tout le monde est à jour.",
+      "paidBy": "Payé par",
+      "other": "Autre",
+      "methodTitle": "Comment a-t-il été payé",
+      "methodSearch": "Rechercher un moyen de paiement",
+      "commonIn": "Courant en {country}",
+      "allMethods": "Tous les moyens, A–Z",
+      "noMethod": "Aucun moyen ne correspond. Il sera enregistré comme une note à la place.",
+      "outcome": "{from} et {to} sont quittes de {amount} par {method}.",
+      "outcomeNoMethod": "{from} et {to} sont quittes de {amount}."
+    },
+    "actions": {
+      "addExpense": "Ajouter la dépense",
+      "addIncome": "Ajouter le revenu",
+      "saveRecurringExpense": "Enregistrer la dépense récurrente",
+      "saveRecurringIncome": "Enregistrer le revenu récurrent",
+      "recordPayment": "Enregistrer le paiement"
+    },
+    "saved": {
+      "expenseAdded": "Dépense ajoutée",
+      "incomeAdded": "Revenu ajouté",
+      "recurringSaved": "Écriture récurrente enregistrée",
+      "paymentRecorded": "Paiement enregistré",
+      "addAnother": "En ajouter une autre",
+      "backToGroup": "Retour au groupe"
+    },
+    "errors": {
+      "amountRequired": "Saisissez d'abord un montant.",
+      "descriptionRequired": "Donnez une description à cette écriture.",
+      "choosePair": "Choisissez qui rembourse qui.",
+      "saveFailed": "Impossible d'enregistrer. Réessayez."
+    },
+    "sheetTitles": {
+      "keypad": "Montant",
+      "split": "Qui a payé, qui doit",
+      "category": "Catégorie",
+      "currency": "Devise",
+      "method": "Comment a-t-il été payé",
+      "recur": "Répéter"
+    }
+  },
+  "paymentMethods": {
+    "alipay": "Alipay",
+    "apple_pay": "Apple Pay",
+    "bancomat_pay": "BANCOMAT Pay",
+    "bank": "Virement",
+    "bizum": "Bizum",
+    "blik": "BLIK",
+    "cash": "Espèces",
+    "cash_app": "Cash App",
+    "cheque": "Chèque",
+    "crypto": "Crypto",
+    "google_pay": "Google Pay",
+    "interac": "Interac e-Transfer",
+    "lydia": "Lydia",
+    "mbway": "MB WAY",
+    "mobilepay": "MobilePay",
+    "monzo": "Monzo",
+    "n26": "N26",
+    "payconiq": "Bancontact Pay",
+    "payid": "PayID",
+    "paypal": "PayPal",
+    "pix": "PIX",
+    "revolut": "Revolut",
+    "satispay": "Satispay",
+    "swish": "Swish",
+    "tikkie": "Tikkie",
+    "twint": "TWINT",
+    "upi": "UPI",
+    "venmo": "Venmo",
+    "vipps": "Vipps",
+    "wechat_pay": "WeChat Pay",
+    "wero": "Wero",
+    "wise": "Wise",
+    "zelle": "Zelle"
+  },
+  "countries": {
+    "CH": "Suisse",
+    "FR": "France",
+    "DE": "Allemagne",
+    "GB": "Royaume-Uni",
+    "US": "États-Unis",
+    "NL": "Pays-Bas",
+    "BE": "Belgique",
+    "AT": "Autriche",
+    "IT": "Italie",
+    "ES": "Espagne",
+    "PT": "Portugal",
+    "PL": "Pologne",
+    "SE": "Suède",
+    "NO": "Norvège",
+    "DK": "Danemark",
+    "FI": "Finlande",
+    "IE": "Irlande",
+    "BR": "Brésil",
+    "IN": "Inde",
+    "CA": "Canada",
+    "AU": "Australie"
   }
 }

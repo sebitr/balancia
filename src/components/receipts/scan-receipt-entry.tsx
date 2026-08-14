@@ -23,6 +23,7 @@ export function ScanReceiptEntry({
   participants,
   defaultCurrency,
   onApply,
+  trigger,
 }: {
   /** Whether the operator switched receipt scanning on for this instance. */
   enabled: boolean;
@@ -30,6 +31,8 @@ export function ScanReceiptEntry({
   participants: readonly Participant[];
   defaultCurrency: string;
   onApply: (result: ScannedExpense) => void;
+  /** Replaces the default button — the add-entry screen passes its scan card. */
+  trigger?: React.ReactNode;
 }) {
   const [available, setAvailable] = useState(false);
 
@@ -52,6 +55,7 @@ export function ScanReceiptEntry({
       participants={participants}
       defaultCurrency={defaultCurrency}
       onApply={onApply}
+      trigger={trigger}
     />
   );
 }
