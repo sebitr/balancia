@@ -34,6 +34,8 @@ export function CurrencySelect({
   required,
   className,
   disabled,
+  /** For the callers whose label is drawn rather than written. */
+  "aria-label": ariaLabel,
 }: {
   id?: string;
   name?: string;
@@ -43,6 +45,7 @@ export function CurrencySelect({
   required?: boolean;
   className?: string;
   disabled?: boolean;
+  "aria-label"?: string;
 }) {
   const t = useTranslations("money");
   const common = SUPPORTED_CURRENCIES.filter((currency) =>
@@ -56,6 +59,7 @@ export function CurrencySelect({
     <select
       id={id}
       name={name}
+      aria-label={ariaLabel}
       required={required}
       disabled={disabled}
       defaultValue={value === undefined ? defaultValue : undefined}

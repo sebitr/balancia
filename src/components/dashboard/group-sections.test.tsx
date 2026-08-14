@@ -19,6 +19,8 @@ function needsYou(overrides: Partial<NeedsYouView> = {}): NeedsYouView {
   return {
     id: "g1",
     name: "Flatshare",
+    icon: null,
+    iconColor: null,
     memberNames: ["Sofia", "Mika"],
     participantCount: 2,
     lastActivityAt: "2026-08-11T12:00:00.000Z",
@@ -32,6 +34,8 @@ function owed(overrides: Partial<OwedView> = {}): OwedView {
   return {
     id: "g2",
     name: "Lisbon, March",
+    icon: null,
+    iconColor: null,
     participantCount: 4,
     lastActivityAt: "2026-08-13T08:00:00.000Z",
     amounts: [{ minorUnits: "24800", currency: "EUR" }],
