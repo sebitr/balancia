@@ -78,7 +78,7 @@ async function main(): Promise<void> {
   await createExpense(tripAccess, {
     description: "Apartment",
     notes: "",
-    category: "Lodging",
+    category: "lodging",
     amount: "60000",
     currency: "EUR",
     exchangeRate: "",
@@ -96,7 +96,7 @@ async function main(): Promise<void> {
   await createExpense(tripAccess, {
     description: "Train tickets",
     notes: "Different fares",
-    category: "Transport",
+    category: "transport",
     amount: "8550",
     currency: "EUR",
     exchangeRate: "",
@@ -114,7 +114,7 @@ async function main(): Promise<void> {
   await createExpense(tripAccess, {
     description: "Tasting menu",
     notes: "",
-    category: "Food",
+    category: "restaurants",
     amount: "12000",
     currency: "EUR",
     exchangeRate: "",
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
   await createExpense(tripAccess, {
     description: "Taxi to the airport",
     notes: "Ada had two suitcases",
-    category: "Transport",
+    category: "transport",
     amount: "4500",
     currency: "EUR",
     exchangeRate: "",
@@ -150,7 +150,7 @@ async function main(): Promise<void> {
   await createExpense(tripAccess, {
     description: "Duty-free perfume",
     notes: "Bought in dollars",
-    category: "Shopping",
+    category: "shopping",
     amount: "11000",
     currency: "USD",
     exchangeRate: "0.92",
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
   await createExpense(tripAccess, {
     description: "Boat tour",
     notes: "Ada and Grace split the deposit",
-    category: "Activities",
+    category: "activities",
     amount: "9000",
     currency: "EUR",
     exchangeRate: "",
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
   await createExpense(flatAccess, {
     description: "Electricity",
     notes: "",
-    category: "Utilities",
+    category: "utilities",
     amount: "8400",
     currency: "EUR",
     exchangeRate: "",
@@ -231,7 +231,7 @@ async function main(): Promise<void> {
   await createExpense(flatAccess, {
     description: "Souvenir from Tokyo",
     notes: "Recorded in yen; this group keeps currencies apart",
-    category: "Gifts",
+    category: "gifts",
     amount: "9000",
     currency: "JPY",
     exchangeRate: "",
@@ -245,7 +245,7 @@ async function main(): Promise<void> {
   await createRecurringExpense(flatAccess, {
     description: "Rent",
     notes: "",
-    category: "Housing",
+    category: "housing",
     amount: "120000",
     currency: "EUR",
     exchangeRate: "",

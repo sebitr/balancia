@@ -73,7 +73,12 @@ describe("warpPerspective", () => {
       bottomRight: { x: 60, y: 80 },
       bottomLeft: { x: 20, y: 80 },
     };
-    const warped = warpPerspective(gradientFrame(100, 100), frame, corners, 500);
+    const warped = warpPerspective(
+      gradientFrame(100, 100),
+      frame,
+      corners,
+      500,
+    );
     expect(warped).not.toBeNull();
     expect(warped!.width).toBe(40);
     expect(warped!.height).toBe(50);

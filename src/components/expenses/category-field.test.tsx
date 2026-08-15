@@ -3,7 +3,10 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { CategoryField } from "./category-field";
-import type { ClassificationResult } from "@/modules/categorization";
+import {
+  EXPENSE_CATEGORIES,
+  type ClassificationResult,
+} from "@/modules/categorization";
 
 /**
  * What the field tells the person filling the form.
@@ -48,8 +51,10 @@ describe("CategoryField", () => {
     const options = screen.getAllByRole("option");
     expect(options[0]).toHaveTextContent("Select a category…");
     expect(options.at(-1)).toHaveTextContent("Other");
-    // 15 categories plus the empty placeholder.
-    expect(options).toHaveLength(16);
+    // Every category, plus the empty placeholder. Counted from the vocabulary
+    // rather than written out, so adding a code does not fail here for the
+    // wrong reason.
+    expect(options).toHaveLength(EXPENSE_CATEGORIES.length + 1);
   });
 
   it("says when it filled the field in itself", () => {

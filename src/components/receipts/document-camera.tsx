@@ -5,11 +5,7 @@ import { useTranslations } from "next-intl";
 import { Camera, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  cornerList,
-  projectToCover,
-  type Size,
-} from "@/lib/doc-scan/geometry";
+import { cornerList, projectToCover, type Size } from "@/lib/doc-scan/geometry";
 import { useDocumentCamera, type CameraFault } from "./use-document-camera";
 
 /**

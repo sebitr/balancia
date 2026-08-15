@@ -65,25 +65,71 @@ export async function loadMappings(
     .orderBy(desc(expenseCategoryMappings.lastUsedAt))
     .limit(options.limit ?? MAPPING_LIMIT);
 
-  // A category dropped from the vocabulary must not resurrect through an old
-  // row, so unknown values are discarded on read rather than trusted.
-  return rows.flatMap((row) =>
-    isExpenseCategory(row.category)
-      ? [
-          {
-            scope: row.scope,
-            rawMerchant: row.rawMerchant,
-            normalizedMerchant: row.normalizedMerchant,
-            category: row.category,
-            transactionType: isTransactionType(row.transactionType)
-              ? row.transactionType
-              : null,
-            correctionCount: row.correctionCount,
-            conflictCount: row.conflictCount,
-          } satisfies LearnedMerchantMapping,
-        ]
-      : [],
-  );
+  return rows.flatMap(toMapping);
+}
+
+/**
+ * The group's own mappings, without an actor.
+ *
+ * The import worker runs minutes after whoever started it closed the page, so
+ * there is no user scope to consult and no session to authorize against — the
+ * caller has already established that this group is the one being written to.
+ * Only group scope is read, which is exactly what a guest's corrections teach.
+ */
+export async function loadGroupMappings(
+  groupId: string,
+  options: { db?: Database; limit?: number } = {},
+): Promise<LearnedMerchantMapping[]> {
+  const db = options.db ?? getDb();
+  const rows = await db
+    .select({
+      scope: expenseCategoryMappings.scope,
+      rawMerchant: expenseCategoryMappings.rawMerchant,
+      normalizedMerchant: expenseCategoryMappings.normalizedMerchant,
+      category: expenseCategoryMappings.category,
+      transactionType: expenseCategoryMappings.transactionType,
+      correctionCount: expenseCategoryMappings.correctionCount,
+      conflictCount: expenseCategoryMappings.conflictCount,
+    })
+    .from(expenseCategoryMappings)
+    .where(eq(expenseCategoryMappings.groupId, groupId))
+    .orderBy(desc(expenseCategoryMappings.lastUsedAt))
+    .limit(options.limit ?? MAPPING_LIMIT);
+
+  return rows.flatMap(toMapping);
+}
+
+interface MappingRow {
+  scope: MappingScope;
+  rawMerchant: string;
+  normalizedMerchant: string;
+  category: string;
+  transactionType: string | null;
+  correctionCount: number;
+  conflictCount: number;
+}
+
+/**
+ * A stored row as the classifier wants it, or nothing.
+ *
+ * A category dropped from the vocabulary must not resurrect through an old
+ * row, so unknown values are discarded on read rather than trusted.
+ */
+function toMapping(row: MappingRow): LearnedMerchantMapping[] {
+  if (!isExpenseCategory(row.category)) return [];
+  return [
+    {
+      scope: row.scope,
+      rawMerchant: row.rawMerchant,
+      normalizedMerchant: row.normalizedMerchant,
+      category: row.category,
+      transactionType: isTransactionType(row.transactionType)
+        ? row.transactionType
+        : null,
+      correctionCount: row.correctionCount,
+      conflictCount: row.conflictCount,
+    } satisfies LearnedMerchantMapping,
+  ];
 }
 
 /**

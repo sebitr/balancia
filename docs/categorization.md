@@ -16,7 +16,7 @@ adding entries to a data file.
 | `normalize.ts`        | Turns a bank descriptor into a comparable merchant             |
 | `transaction-type.ts` | Refund, salary, transfer… before any category is considered    |
 | `seeds.ts`            | The rule data: merchants, phrases, keywords, exclusions        |
-| `overrides.ts`        | Apple, Amazon, Uber, filling stations                          |
+| `overrides.ts`        | Apple, Amazon, Uber, filling stations, store formats           |
 | `confidence.ts`       | Signal groups, score combination, thresholds                   |
 | `deterministic.ts`    | Scores every category against the seeds                        |
 | `prototypes.ts`       | Short sentences the semantic layer compares against            |
@@ -27,7 +27,8 @@ adding entries to a data file.
 
 The browser side of the optional model is `src/lib/semantic/`, and the UI is
 `src/components/expenses/category-field.tsx` plus
-`use-category-suggestion.ts`.
+`use-category-suggestion.ts`. Imports come in through
+`src/modules/imports/categories.ts`.
 
 Everything except `service.ts` is pure and framework-free, so the same code
 runs in a Server Action, in the recurring-expense worker, and in the browser
@@ -59,6 +60,24 @@ description / notes
 The deterministic pass is synchronous string matching over pre-compiled token
 arrays. It runs on every (debounced) keystroke and the form never waits for
 anything.
+
+## The vocabulary
+
+Eighteen codes, in `types.ts`. Three of them are splits rather than additions,
+and the line between each pair is what a rule has to be filed against:
+
+| This         | Not that        | The line                                           |
+| ------------ | --------------- | -------------------------------------------------- |
+| `lodging`    | `travel`        | where the trip slept, not getting there            |
+| `activities` | `entertainment` | tickets, tours and entries, not shows and games    |
+| `household`  | `shopping`      | the upkeep of the home, not a thing someone bought |
+| `household`  | `housing`       | living in the place, not paying for it             |
+
+Each split had a reason. A week's Airbnb is four fifths of a trip's total, so
+leaving it in `travel` made every holiday chart one bar about the place people
+slept. A guided walk and a games console were never the same line. And
+supplies, furniture and repairs used to scatter between `shopping` and
+`housing`, which is why neither total meant anything.
 
 ## Matching priority
 
@@ -141,6 +160,25 @@ digits, `MIGROS 1234` does not. The matcher decides which is which, using
 descriptor and everything after it is noise. That is why `MIGROS 1234` is
 Migros and `Max's birthday dinner` is not the streaming service.
 
+### Store formats
+
+A few retail groups put one name over several shops. Coop is a supermarket, a
+pharmacy, a filling station, a DIY shed and a restaurant; Migros is a
+supermarket, a DIY shed and an electronics shop. The format is written on the
+receipt, so it decides:
+
+```
+COOP BAU+HOBBY LAUSANNE  → household
+COOP VITALITY            → health
+MIGROS DO IT GARDEN      → household
+MIGROS 1234              → groceries
+COOP                     → ask (supermarket? pharmacy? petrol?)
+```
+
+Format words are matched against the _merchant_, never the description — the
+word "coop" in a note about who paid is not a shop. A brand with no format
+named stays exactly as ambiguous as it was.
+
 Payment processors are unwrapped, never classified:
 
 ```
@@ -175,6 +213,51 @@ merchant that normalizes to nothing.
 Storage is `expense_category_mappings` (migration `0004`), written in the same
 transaction as the expense that taught it. Guests have no user account, so
 their corrections teach the group scope only.
+
+## Imported rows
+
+A Splitwise row arrives with the label _its_ app used — `Dining out`,
+`Fournitures ménagères`, `Bus/train`. Stored as it stands, that label is not a
+category: it gets its own bucket in the spread, no icon, and no rule will ever
+match it again. A year of history imports as a legend of one-off strings.
+
+`categorizeImportedExpense()` resolves one, most trustworthy source first:
+
+1. **The source's own leaf.** Splitwise's category list is fixed and public, so
+   translating `Dining out` is a lookup, not a guess. English and French
+   exports are both covered, and a Balancia code passes through unchanged.
+2. **The classifier**, over the description, with the group's learned mappings
+   loaded once for the whole run. Only an `auto_assigned` answer is taken — an
+   import is unattended, and anything the form would have _asked_ about is not
+   something to decide alone.
+3. **The source's group**, for exports that write the section rather than the
+   leaf. Splitwise files hotels and flights under `Transportation` and a museum
+   entry under `Entertainment`, so a group is worth less than a description
+   that named one of them — which is why it is consulted here, and not first.
+4. **The label, exactly as it came.** Unrecognised is not absent, and the
+   source's own word is the only thing the row said about itself.
+
+```
+Dining out   + "Chez Léa"        → restaurants   (leaf)
+Entertainment + "Museum tickets" → activities    (description beats a group)
+Transportation + "Getting around"→ transport     (group, once the text failed)
+Food and drink + "Bits"          → "Food and drink"  (kept: the group scatters)
+Général      + "Revolu"          → nothing       (the source filed nothing)
+```
+
+Some labels are deliberately never translated:
+
+- **`General`, `Other` and their French spellings** mean the source filed
+  nothing. They are dropped rather than kept, because a "Général" slice on the
+  spread would be a category invented for the rows that have none.
+- **Groups whose leaves scatter** — `Food and drink` is half a supermarket and
+  half a restaurant, `Life` runs from childcare to taxes.
+- **`Insurance`**, because which category it belongs to depends on the policy,
+  and the description is what says.
+
+Nothing here writes a learned mapping. An imported label is somebody else's
+classification of a merchant this group may never have chosen a category for,
+and an import must not teach through the back door.
 
 ## The semantic layer (optional)
 
@@ -281,6 +364,11 @@ A brand that spans categories in a way the text can settle belongs in
    translation.
 3. Add a `CategorySeed` in `seeds.ts`.
 4. Add prototypes in `prototypes.ts` if the semantic layer should know it.
+5. Draw it: `CATEGORY_GLYPHS` in `components/expenses/category-icon.tsx` is
+   exhaustive over the type, so a code with no glyph is a compile error rather
+   than a blank space on a row.
+6. If an import source names it, add the label to `SOURCE_CATEGORIES` in
+   `modules/imports/categories.ts`.
 
 Existing rows keep their old category string; `loadMappings()` discards
 mappings whose category is no longer in the vocabulary, so a removed category

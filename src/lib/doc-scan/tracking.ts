@@ -69,10 +69,7 @@ export class CornerTracker {
     this.#misses = 0;
   }
 
-  update(
-    detected: DocumentCorners | null,
-    timestampMs: number,
-  ): TrackerState {
+  update(detected: DocumentCorners | null, timestampMs: number): TrackerState {
     if (detected === null) {
       this.#misses += 1;
       // A missed frame interrupts the hold either way: readiness must mean

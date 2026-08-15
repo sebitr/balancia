@@ -30,12 +30,17 @@ describe("merchants", () => {
     ["SBB CFF FFS", "transport"],
     ["SNCF CONNECT", "transport"],
     ["AMAVITA", "health"],
-    ["BOOKING.COM", "travel"],
-    ["AIRBNB", "travel"],
+    ["BOOKING.COM", "lodging"],
+    ["AIRBNB", "lodging"],
+    ["EASYJET", "travel"],
     ["SWISSCOM", "utilities"],
     ["EDF", "utilities"],
     ["ZOOPLUS", "pets"],
     ["ZALANDO", "shopping"],
+    ["IKEA 0815", "household"],
+    ["LEROY MERLIN", "household"],
+    ["EUROPAPARK", "activities"],
+    ["GETYOURGUIDE", "activities"],
     ["TICKETCORNER", "entertainment"],
     ["INTERFLORA", "gifts"],
   ];
@@ -71,6 +76,19 @@ describe("phrases, in English and in French", () => {
     ["TICKETMASTER CONCERT", "entertainment"],
     ["Vétérinaire", "pets"],
     ["Charity donation", "gifts"],
+    ["Ice cream at the lake", "restaurants"],
+    ["Glaces au bord du lac", "restaurants"],
+    ["Glace italienne", "restaurants"],
+    ["Apéro chez nous", "restaurants"],
+    ["Nuit d'hôtel à Berne", "lodging"],
+    ["Camping pitch", "lodging"],
+    ["Location de vacances", "lodging"],
+    ["Musée d'art", "activities"],
+    ["Forfait de ski", "activities"],
+    ["Guided tour", "activities"],
+    ["Produits d'entretien", "household"],
+    ["Cleaning products", "household"],
+    ["Plombier", "household"],
   ];
 
   for (const [description, expected] of cases) {
@@ -108,6 +126,22 @@ describe("contextual overrides", () => {
     expect(categoryOf("SHELL ESSENCE")).toBe("transport");
     // A sandwich and a coffee at the same station is not a transport cost.
     expect(classify("SHELL").decision).not.toBe("auto_assigned");
+  });
+
+  it("reads a Coop store format, and leaves bare Coop alone", () => {
+    expect(categoryOf("COOP BAU+HOBBY LAUSANNE")).toBe("household");
+    expect(categoryOf("COOP VITALITY")).toBe("health");
+    expect(categoryOf("COOP RESTAURANT")).toBe("restaurants");
+
+    // Bare Coop is still a supermarket, a pharmacy and a filling station.
+    expect(classify("COOP").decision).not.toBe("auto_assigned");
+  });
+
+  it("reads a Migros store format the same way", () => {
+    expect(categoryOf("MIGROS DO IT GARDEN")).toBe("household");
+    expect(categoryOf("MIGROS RESTAURANT")).toBe("restaurants");
+    // The supermarket itself is untouched by any of that.
+    expect(categoryOf("MIGROS 1234")).toBe("groceries");
   });
 
   it("never classifies the payment processor itself", () => {
