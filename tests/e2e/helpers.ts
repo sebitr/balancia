@@ -31,6 +31,13 @@ export async function registerAndSignIn(
   return { email, name };
 }
 
+/**
+ * Creates a group through the sheet at `/groups/new`.
+ *
+ * The name field carries no label, only a placeholder, so it is addressed by
+ * its accessible name. Converted is the sheet's own default, which is why only
+ * "separate" needs a click.
+ */
 export async function createGroup(
   page: Page,
   options: {
@@ -40,18 +47,16 @@ export async function createGroup(
   },
 ): Promise<string> {
   await page.goto("/groups/new");
-  await page.getByLabel("Group name").fill(options.name);
+  await page.getByRole("textbox", { name: "Group name" }).fill(options.name);
 
-  if (options.mode === "converted") {
+  if (options.mode === "separate") {
+    await page.getByRole("radio", { name: /Keep currencies separate/ }).click();
+  }
+
+  if (options.baseCurrency) {
     await page
-      .getByRole("radio", { name: /Convert to one base currency/ })
+      .getByRole("button", { name: options.baseCurrency, exact: true })
       .click();
-    if (options.baseCurrency) {
-      // Scoped by role: "Base currency" also matches the radio option's label.
-      await page
-        .getByRole("combobox", { name: "Base currency" })
-        .selectOption(options.baseCurrency);
-    }
   }
 
   await page.getByRole("button", { name: "Create group" }).click();

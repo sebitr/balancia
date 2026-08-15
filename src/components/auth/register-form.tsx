@@ -38,8 +38,11 @@ type ValidationKey =
 
 export function RegisterForm({
   appleEnabled = false,
+  guestName = null,
 }: {
   appleEnabled?: boolean;
+  /** The name the group already knows a guest by, prefilled for them. */
+  guestName?: string | null;
 }) {
   const router = useRouter();
   const t = useTranslations("register");
@@ -50,7 +53,12 @@ export function RegisterForm({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: {
+      name: guestName ?? "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
   });
 
   const fieldError = (field: keyof FormValues): string | null => {
@@ -73,12 +81,17 @@ export function RegisterForm({
 
     if (result.data?.verificationRequired) {
       // With SMTP configured the account needs email verification before it
-      // can sign in, so show a confirmation notice instead of signing in.
+      // can sign in, so show a confirmation notice instead of signing in. A
+      // guest keeps their session until then; the claim lands on first sign-in.
       setVerificationSent(true);
       return;
     }
 
-    router.push("/dashboard");
+    // A guest whose group came across is shown what moved before anything else.
+    const claimedGroupId = result.data?.claimedGroupId;
+    router.push(
+      claimedGroupId ? `/register/done?group=${claimedGroupId}` : "/dashboard",
+    );
     router.refresh();
   });
 
@@ -125,12 +138,25 @@ export function RegisterForm({
           <Input
             id="name"
             autoComplete="name"
+            // Also on the element, not only in `defaultValues`: that one is
+            // applied on mount, so the server's HTML would otherwise ship an
+            // empty field and fill it a frame later.
+            defaultValue={guestName ?? undefined}
             aria-invalid={Boolean(form.formState.errors.name)}
             aria-describedby={
-              form.formState.errors.name ? "name-error" : undefined
+              form.formState.errors.name
+                ? "name-error"
+                : guestName
+                  ? "name-hint"
+                  : undefined
             }
             {...form.register("name")}
           />
+          {guestName && !fieldError("name") && (
+            <p id="name-hint" className="text-xs text-muted-foreground">
+              {t("guestNameHint")}
+            </p>
+          )}
           {fieldError("name") && (
             <p id="name-error" className="text-sm text-destructive">
               {fieldError("name")}

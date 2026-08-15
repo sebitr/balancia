@@ -505,6 +505,7 @@
     "title": "Create your account",
     "subtitle": "You can add a passkey afterwards, from your account settings.",
     "name": "Name",
+    "guestNameHint": "The name the group already uses for you.",
     "email": "Email",
     "password": "Password",
     "passwordHint": "At least 10 characters.",
@@ -523,6 +524,38 @@
       "mismatch": "The passwords do not match"
     },
     "createFailed": "That account could not be created."
+  },
+  "invite": {
+    "metaTitle": "You have been invited",
+    "invitedBy": "{inviter} invited you, {name}",
+    "invited": "You have been invited, {name}",
+    "balanceLabel": "Your balance in this group",
+    "balanceFrom": "{name} owes you this",
+    "balanceTo": "You owe this to {name}",
+    "promiseExpenses": "See every expense and settle up",
+    "promiseAdd": "Add what you paid",
+    "promiseNoEmail": "No email needed to start",
+    "continueAsGuest": "Continue as guest",
+    "createAccount": "Create an account",
+    "haveAccount": "I already have an account"
+  },
+  "guestWidget": {
+    "title": "You are in {group} as a guest",
+    "bodyPlain": "This browser is the only place your access lives. An account keeps {group} and everything you do in it.",
+    "bodyBalance": "This browser is the only place your access lives. An account keeps {group} and your <balance></balance>.",
+    "bodyBalanceExpenses": "This browser is the only place your access lives. An account keeps {group}, your <balance></balance> and {count, plural, one {the expense you added} other {the # expenses you added}}.",
+    "cta": "Create your account"
+  },
+  "registerDone": {
+    "metaTitle": "Account created",
+    "title": "You're set, {name}",
+    "body": "Your guest activity now belongs to your account, and the group sees you as a member of {group}.",
+    "memberSince": "Member since today",
+    "expenseYouAdded": "The expense you added",
+    "kept": "Kept",
+    "keptMore": "{count, plural, one {And # more expense you added} other {And # more expenses you added}}",
+    "linkRetired": "The old guest link no longer opens this group.",
+    "goToGroup": "Go to {group}"
   },
   "exchangeRate": {
     "label": "Exchange rate — 1 {from} in {to}",

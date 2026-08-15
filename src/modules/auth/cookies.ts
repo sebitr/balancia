@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { getEnv } from "@/lib/env";
+import { GUEST_COOKIE_NAME } from "@/lib/security/guest-session";
 import { SESSION_COOKIE_NAME } from "./sessions";
 import {
   APPLE_STATE_COOKIE_NAME,
@@ -52,6 +53,37 @@ export async function clearSessionCookie(): Promise<void> {
 export async function readSessionCookie(): Promise<string | undefined> {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE_NAME)?.value;
+}
+
+/**
+ * The guest session cookie, which carries the same three attributes for the
+ * same three reasons. It is here rather than in the redemption handler so that
+ * the two cookies that stand for an identity cannot drift apart: sign-in reads
+ * this one to claim the guest's participant, and clears it once it has.
+ */
+export async function setGuestCookie(
+  token: string,
+  expiresAt: Date,
+): Promise<void> {
+  const env = getEnv();
+  const cookieStore = await cookies();
+  cookieStore.set(GUEST_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.appOrigin.startsWith("https://"),
+    path: "/",
+    expires: expiresAt,
+  });
+}
+
+export async function clearGuestCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(GUEST_COOKIE_NAME);
+}
+
+export async function readGuestCookie(): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get(GUEST_COOKIE_NAME)?.value;
 }
 
 /**
