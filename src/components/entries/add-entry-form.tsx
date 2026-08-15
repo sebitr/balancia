@@ -920,6 +920,29 @@ export function AddEntryForm({
         <SheetContent
           side="bottom"
           showCloseButton={false}
+          // A dialog focuses its first control on opening, and in the category
+          // picker that is the search field — so the keyboard came up over the
+          // shortlist the sheet exists to show, and the one tap it was built
+          // around cost a dismissal first. Searching is the exception there:
+          // eighteen categories with the likely three on top are meant to be
+          // read, not typed past.
+          //
+          // Focus is moved to the sheet itself rather than simply dropped.
+          // Preventing the default alone would leave it on the row behind, and
+          // an open dialog with the focus outside it is one nothing can be
+          // tabbed through and Escape does not close.
+          onOpenAutoFocus={
+            sheet === "category"
+              ? (event) => {
+                  event.preventDefault();
+                  // The event is dispatched on the sheet, which Radix gives a
+                  // `tabIndex` of -1 precisely so it can hold focus itself.
+                  if (event.currentTarget instanceof HTMLElement) {
+                    event.currentTarget.focus();
+                  }
+                }
+              : undefined
+          }
           className="max-h-[86vh] gap-0 overflow-y-auto rounded-t-[26px] px-4 pt-3.5 pb-5"
         >
           {sheet === "split" && (

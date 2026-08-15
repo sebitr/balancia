@@ -754,3 +754,30 @@ describe("payment method marks", () => {
     expect(logo).toHaveStyle({ opacity: "0" });
   });
 });
+
+describe("the category picker", () => {
+  /**
+   * A dialog focuses its first control when it opens, which in this sheet is
+   * the search field — and on a phone that is a keyboard over the shortlist,
+   * before anybody has said they want to search.
+   */
+  it("opens on the chips rather than in the search field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: /Category/ }));
+
+    const search = screen.getByRole("textbox", { name: "Search categories" });
+    expect(search).not.toHaveFocus();
+    // Focus still has to be inside the dialog, or nothing can be tabbed
+    // through and Escape has nothing to close.
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+
+    // And it is still a search field the moment somebody wants one.
+    await user.type(search, "trav");
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Travel" })).toBeInTheDocument();
+  });
+});
