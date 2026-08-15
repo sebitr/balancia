@@ -13,7 +13,7 @@ PDF that carries its own text — most emailed invoices — is read without eith
 
 The optional **server-side** one sends the image to a provider the operator
 configures. It is not here because the on-device reader is bad — since v6 tiny
-it is [measurably good](#why-this-model), and it is free. It is here because a
+it is [measurably good](#why-tiny), and it is free. It is here because a
 vision model returns _structure_ where the on-device path returns text boxes
 that a parser then has to interpret, and because some receipts are beyond a
 6 MB model whatever its benchmark score: handwriting, unusual layouts, scripts
@@ -381,7 +381,7 @@ Figures are August 2026 and will date.
 
 **The first row is not a joke entry.** Since PP-OCRv6 tiny the on-device reader
 is good enough that many instances need nothing else — see [why this
-model](#why-this-model) for the measurements. Read the rest of this table as
+model](#why-tiny) for the measurements. Read the rest of this table as
 answering "what if that is not enough for my receipts", not "what should I use".
 
 **If you do want a provider, the recommendation is the self-hosted rows**, and
@@ -734,8 +734,8 @@ one.
 
 ### Storing the receipt is a separate decision
 
-Recognition is local. Storage is not, and the interface says so rather than
-letting the first fact imply the second:
+Reading a receipt and keeping it are two decisions, and the interface refuses
+to let either imply the other. On the default reader:
 
 > Recognition happens on this device. The photo is not sent anywhere to be
 > read.
@@ -747,6 +747,11 @@ Tick the box and the copy changes to say the image will be uploaded and stored
 with the expense on this server — through the ordinary attachment flow,
 unchanged, the same one the paperclip button has always used.
 
+Select a provider and the first line changes too, to name the server and the
+provider the photograph is going to. The checkbox is unaffected: sending an
+image to be _read_ still says nothing about whether it is _kept_, which is the
+whole point of asking twice.
+
 ## Offline and caching
 
 The models are cached by the service worker on first use, `CacheFirst`, in
@@ -757,6 +762,10 @@ manifest is unchanged by this feature.
 
 So the first scan needs the network and later scans do not — including with no
 connection at all, since everything after the image is local.
+
+That is a property of the on-device reader only. A provider is a network call
+by definition, so scanning through one offline fails, and the reader choice is
+the thing that decides which of the two an operator gets.
 
 The cache name carries a version because the files are served from stable
 paths. An operator installing newer models bumps `MODEL_CACHE` in
