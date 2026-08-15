@@ -407,7 +407,7 @@ Roughly, per 1000 receipts, as of August 2026:
   your own GPU   free     most accurate, and nothing leaves your box
   gemini         $0.33    cheapest hosted
   openai         $1.70    mid-range
-  mistral        $4.00    flat per page, so the bill is predictable
+  mistral        $2-4     flat per page; the older generation is the $2
   anthropic      $16-33   most capable, and much the most expensive
 
 "Your own GPU" is the openai option with a base URL pointing at your
@@ -439,7 +439,12 @@ TEXT
       note 'Name a smaller model here to cut the bill.'
       ;;
     mistral)
-      note 'Defaults to mistral-ocr-latest.'
+      note 'Two generations, and the older one is half the price:'
+      note '  mistral-ocr-4-1   $4 / 1000   block labels and confidences'
+      note '  mistral-ocr-2505  $2 / 1000   the generation before it'
+      note 'Blank takes mistral-ocr-latest, which tracks the newest — and'
+      note 'so the dearer — of the two. Check the older id against'
+      note "Mistral's model list; dated snapshots do get retired."
       ;;
     gemini)
       note 'Name a vision model. A Flash-Lite class one is the cheap choice.'

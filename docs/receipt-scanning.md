@@ -267,6 +267,26 @@ option and Mistral OCR is the predictable one — a flat page rate with no token
 arithmetic to do, which is worth something when you are budgeting for a
 household rather than a company.
 
+Mistral has two generations in service, and the price difference between them
+is the whole cost story for that driver:
+
+| Model                | Per 1,000 pages | What the newer one adds                                |
+| -------------------- | --------------- | ------------------------------------------------------ |
+| `mistral-ocr-4-1`    | $4              | Structural block labels, block-level confidence scores |
+| `mistral-ocr-4-0`    | $4              | Bounding boxes                                         |
+| the pre-4 generation | $2              | —                                                      |
+
+The Batch API halves whichever you pick. `mistral-ocr-latest` is the default
+and tracks the newest, so it is also the dearest — name a model explicitly to
+take the cheaper one. Receipts are small, single-page and unstructured
+compared to the invoices and forms those newer features target, so the $2
+generation is worth trying first: on a receipt, block labels and confidence
+scores are extra data this pipeline does not read.
+
+The dated snapshot id for the older generation moves as Mistral retires
+versions, so check it against their current model list rather than trusting a
+constant written here.
+
 **Note the last row.** The `anthropic` driver defaults to `claude-opus-5`,
 which sits in the most expensive band on this table — roughly one to three
 cents a scan. That is a deliberate default (if you pick Claude, you get the

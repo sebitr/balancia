@@ -468,7 +468,10 @@ open-weight document models that is also the most accurate and by far the
 cheapest option — see the comparison in docs/receipt-scanning.md.
 
 `mistral` is a purpose-built document endpoint priced per page rather than per
-token, which makes the bill predictable.
+token, which makes the bill predictable. It has two generations in service at
+$4 and $2 per 1,000 pages; the default tracks the newer, dearer one, and the
+newer features are aimed at invoices and forms rather than receipts. See
+docs/receipt-scanning.md.
 
 The image is held in memory for the length of the call and never written to
 storage. Keeping the photograph with the expense is the separate checkbox it
