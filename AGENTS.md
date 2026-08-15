@@ -28,3 +28,20 @@ merged. Splitting them apart afterwards cost far more than branching would have.
 
 Keep a branch to one topic. If a second, unrelated thing needs doing, it gets
 its own branch.
+
+# Fields are never smaller than 16px on a phone
+
+Safari on iOS zooms the page in whenever a control it can put a caret or a
+picker in — `<input>`, `<textarea>`, `<select>` — takes focus below 16px, and
+it never zooms back out. The reader is left on a scaled-up layout they have to
+pinch out of by hand, once per field they tap.
+
+So a text-entry control carries `text-base`, and the size it was actually
+designed at comes back from `md:` up: `text-base md:text-sm`. `Input` and
+`Textarea` already do this, so a call site only has to say it when it overrides
+the size — and an override is exactly how this bug gets back in. Arbitrary
+sizes count too: `text-[15px]` and `text-[0.8125rem]` are both under the line.
+
+Buttons and Radix triggers are exempt, as is `<input type="file">` — the
+browser only zooms for controls it can type into. The long form, with the list
+of what it applies to, is in `docs/development.md` under _Notes on the stack_.
