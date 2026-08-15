@@ -1199,8 +1199,13 @@
       "add": "Add a category",
       "title": "Category",
       "backToDetected": "Back to detected",
-      "done": "Done",
-      "detectedTag": "Detected"
+      "detectedTag": "Detected",
+      "search": "Search categories",
+      "because": "Because it says “{description}”",
+      "mostUsed": "Most used in this group",
+      "all": "All categories",
+      "results": "Results",
+      "noMatch": "No category matches."
     },
     "repeat": {
       "title": "Repeat",

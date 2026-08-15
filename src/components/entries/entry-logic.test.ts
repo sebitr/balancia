@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { ClassificationResult } from "@/modules/categorization";
 import {
+  categoryShortlist,
   confirmationKey,
   directionOf,
   hasAmount,
@@ -200,5 +202,109 @@ describe("resetsForType", () => {
     expect(resetsForType("income").clearRecurrence).toBe(false);
     expect(resetsForType("income").clearAttachments).toBe(false);
     expect(resetsForType("income").resetCurrency).toBe(false);
+  });
+});
+
+/**
+ * The shortlist over the picker.
+ *
+ * The heading it carries is a claim about where the chips came from, so what
+ * matters in these is not only the order but whether `fromDescription` can end
+ * up saying "because it says…" over categories the description never produced.
+ */
+function classified(
+  overrides: Partial<ClassificationResult> = {},
+): ClassificationResult {
+  return {
+    transactionType: "expense",
+    confidence: 0.95,
+    decision: "auto_assigned",
+    source: "merchant",
+    alternatives: [],
+    signals: [],
+    ...overrides,
+  };
+}
+
+describe("categoryShortlist", () => {
+  it("leads with the detected category, then what the group uses", () => {
+    const shortlist = categoryShortlist({
+      suggestion: classified({ category: "restaurants" }),
+      frequent: ["groceries", "transport", "housing"],
+    });
+
+    expect(shortlist.categories).toEqual([
+      "restaurants",
+      "groceries",
+      "transport",
+    ]);
+    expect(shortlist.fromDescription).toBe(true);
+  });
+
+  it("falls back to the group's own habit when nothing was detected", () => {
+    const shortlist = categoryShortlist({
+      suggestion: null,
+      frequent: ["groceries", "restaurants", "transport", "housing"],
+    });
+
+    expect(shortlist.categories).toEqual([
+      "groceries",
+      "restaurants",
+      "transport",
+    ]);
+    // Nothing was read off the description, so nothing may claim it was.
+    expect(shortlist.fromDescription).toBe(false);
+  });
+
+  it("offers the runners-up of a guess it was not sure about", () => {
+    const shortlist = categoryShortlist({
+      suggestion: classified({
+        decision: "suggested",
+        confidence: 0.68,
+        category: "restaurants",
+        alternatives: [
+          { category: "groceries", confidence: 0.61 },
+          // Below the offering threshold: the classifier would not put this
+          // one forward itself, so neither does the sheet.
+          { category: "shopping", confidence: 0.2 },
+        ],
+      }),
+      frequent: ["transport"],
+    });
+
+    expect(shortlist.categories).toEqual([
+      "restaurants",
+      "groceries",
+      "transport",
+    ]);
+  });
+
+  it("keeps the alternatives of a decided answer out", () => {
+    const shortlist = categoryShortlist({
+      suggestion: classified({
+        category: "restaurants",
+        alternatives: [{ category: "groceries", confidence: 0.9 }],
+      }),
+      frequent: [],
+    });
+
+    // It was sure: the runner-up is what it rejected, not a second opinion.
+    expect(shortlist.categories).toEqual(["restaurants"]);
+  });
+
+  it("never repeats a category between the two sources", () => {
+    const shortlist = categoryShortlist({
+      suggestion: classified({ category: "groceries" }),
+      frequent: ["groceries", "restaurants"],
+    });
+
+    expect(shortlist.categories).toEqual(["groceries", "restaurants"]);
+  });
+
+  it("has nothing to say about a group with no history and no guess", () => {
+    expect(categoryShortlist({ suggestion: null, frequent: [] })).toEqual({
+      categories: [],
+      fromDescription: false,
+    });
   });
 });

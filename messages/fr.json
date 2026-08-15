@@ -1199,8 +1199,13 @@
       "add": "Ajouter une catégorie",
       "title": "Catégorie",
       "backToDetected": "Revenir à la détection",
-      "done": "Terminé",
-      "detectedTag": "Détectée"
+      "detectedTag": "Détectée",
+      "search": "Rechercher une catégorie",
+      "because": "D’après « {description} »",
+      "mostUsed": "Les plus utilisées dans ce groupe",
+      "all": "Toutes les catégories",
+      "results": "Résultats",
+      "noMatch": "Aucune catégorie ne correspond."
     },
     "repeat": {
       "title": "Répéter",

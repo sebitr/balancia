@@ -1,7 +1,17 @@
 import "server-only";
-import { and, desc, eq, or } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  max,
+  ne,
+  or,
+} from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
-import { expenseCategoryMappings } from "@/lib/db/schema";
+import { expenseCategoryMappings, expenses } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import { learningKeyFor, planCorrection } from "./learning";
 import { normalizeMerchant } from "./normalize";
@@ -97,6 +107,63 @@ export async function loadGroupMappings(
     .limit(options.limit ?? MAPPING_LIMIT);
 
   return rows.flatMap(toMapping);
+}
+
+/**
+ * How many rows the frequency query returns before filtering.
+ *
+ * The picker shows at most three, but this list is filtered afterwards — codes
+ * retired from the vocabulary and the imported free-text labels that share the
+ * column both drop out on read — so it asks for enough that three survive.
+ */
+const FREQUENT_SCAN = 8;
+
+/**
+ * What this group actually files things as, most used first.
+ *
+ * The category picker leads with a handful of chips rather than the whole
+ * vocabulary, and until there is a description to classify, the only honest
+ * basis for choosing them is what this household has picked before. A fixed
+ * list would be a guess about a group we can already measure.
+ *
+ * Ordered by use and then by recency, which are the same thing for a young
+ * group and diverge usefully for an old one: the tie is broken towards what
+ * was chosen most recently rather than towards whatever happens to sort first.
+ *
+ * `other` is excluded on purpose. It is the escape hatch — a group that files
+ * a lot under it has told us nothing about what to offer, and putting it in
+ * the shortlist would make the least informative answer the easiest to pick.
+ * Free-text categories from an import are excluded by the same read-time check
+ * the mappings use: they are labels, not codes, and nothing can be filed under
+ * them deliberately.
+ */
+export async function loadFrequentCategories(
+  access: GroupAccess,
+  options: { db?: Database; limit?: number } = {},
+): Promise<ExpenseCategory[]> {
+  const db = options.db ?? getDb();
+  const uses = count();
+  const lastUsed = max(expenses.createdAt);
+
+  const rows = await db
+    .select({ category: expenses.category, uses, lastUsed })
+    .from(expenses)
+    .where(
+      and(
+        eq(expenses.groupId, access.groupId),
+        isNull(expenses.deletedAt),
+        isNotNull(expenses.category),
+        ne(expenses.category, ""),
+        ne(expenses.category, "other"),
+      ),
+    )
+    .groupBy(expenses.category)
+    .orderBy(desc(uses), desc(lastUsed))
+    .limit(options.limit ?? FREQUENT_SCAN);
+
+  return rows.flatMap((row) =>
+    isExpenseCategory(row.category) ? [row.category] : [],
+  );
 }
 
 interface MappingRow {

@@ -27,7 +27,10 @@ import {
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
-import type { LearnedMerchantMapping } from "@/modules/categorization";
+import type {
+  ExpenseCategory,
+  LearnedMerchantMapping,
+} from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
 import {
   createExpenseAction,
@@ -101,6 +104,8 @@ import type { EntryMember } from "./pills";
 type OpenSheet = null | "split" | "category" | "currency" | "method" | "recur";
 
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
+/** A group with no history yet — the picker simply has nothing to lead with. */
+const NO_FREQUENT: readonly ExpenseCategory[] = [];
 
 export interface AddEntryFormProps {
   groupId: string;
@@ -115,6 +120,8 @@ export interface AddEntryFormProps {
   /** Outstanding debts, most owed first, for the settle tab. */
   outstanding: readonly DebtPair[];
   categoryMappings?: readonly LearnedMerchantMapping[];
+  /** What this group files things under, most used first, for the picker. */
+  frequentCategories?: readonly ExpenseCategory[];
   semanticCategorization?: boolean;
   receiptScanning?: boolean;
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
@@ -133,6 +140,7 @@ export function AddEntryForm({
   timezone,
   outstanding,
   categoryMappings = NO_MAPPINGS,
+  frequentCategories = NO_FREQUENT,
   semanticCategorization = false,
   receiptScanning = false,
   onClose,
@@ -944,11 +952,23 @@ export function AddEntryForm({
             <CategorySheet
               value={effectiveCategory}
               detectedValue={detectedCategory}
+              description={description}
+              suggestion={suggestion}
+              frequent={frequentCategories}
               onSelect={(next) => {
                 setCategoryChosen(true);
                 setCategory(next);
+                setSheet(null);
               }}
-              onDone={() => setSheet(null)}
+              // Reverting has to clear the override rather than re-pick the
+              // detected value: a category that merely *equals* the guess is
+              // still a manual choice, and would stop following the
+              // description the moment it was edited again.
+              onRevert={() => {
+                setCategoryChosen(false);
+                setCategory("");
+                setSheet(null);
+              }}
             />
           )}
 
