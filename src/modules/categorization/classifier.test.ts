@@ -373,8 +373,6 @@ describe("learned mappings", () => {
 describe("ordinary descriptions", () => {
   const cases: [string, ExpenseCategory][] = [
     // Drinks and street food, the shape of a shared expense on a day out.
-    ["Coca", "restaurants"],
-    ["Coca cola", "restaurants"],
     ["Gaufres", "restaurants"],
     ["Crêpes", "restaurants"],
     ["Churros", "restaurants"],
@@ -480,5 +478,81 @@ describe("words that belong to two languages", () => {
   it("files an outing bought as a present as a present", () => {
     expect(categoryOf("Parapente cadeau Célia")).toBe("gifts");
     expect(categoryOf("Parapente")).toBe("activities");
+  });
+});
+
+/**
+ * Brands, which is how half of what a group buys is actually named.
+ *
+ * A brand names a *product*, and a product is bought — so `Pepsi` is the
+ * shopping and not the bar. What gets ordered is named by the drink or by the
+ * place ("bière", "apéro", "au bar"), and that is what keeps a scanned
+ * supermarket receipt from reading as a night out because there was a Coke on
+ * it.
+ */
+describe("brands", () => {
+  const cases: [string, ExpenseCategory][] = [
+    ["Pepsi", "groceries"],
+    ["Coca", "groceries"],
+    ["Fuze tea", "groceries"],
+    ["Ice tea", "groceries"],
+    ["Red bull", "groceries"],
+    ["Evian", "groceries"],
+    ["Haribo", "groceries"],
+    ["Nutella", "groceries"],
+    ["Toblerone", "groceries"],
+    ["Heineken", "groceries"],
+    ["Nespresso", "groceries"],
+    // Ordered rather than carried home.
+    ["Aperol spritz", "restaurants"],
+    ["Mojito", "restaurants"],
+    ["Bière", "restaurants"],
+    // Chains arrive as card descriptors as often as they are typed.
+    ["Amorino", "restaurants"],
+    ["McDo", "restaurants"],
+    ["CB MCDONALDS 12/05", "restaurants"],
+    ["Wagamama", "restaurants"],
+    ["Sprüngli", "restaurants"],
+    ["Dominos", "restaurants"],
+  ];
+
+  for (const [description, expected] of cases) {
+    it(`files "${description}" as ${expected}`, () => {
+      expect(categoryOf(description)).toBe(expected);
+    });
+  }
+
+  it("keeps a supermarket receipt out of the restaurants", () => {
+    // Every line of this is a grocery brand, and one of them is a soft drink.
+    const result = classifyTransactionSync({
+      description: "Migros",
+      receipt: {
+        merchant: "MIGROS 1234",
+        itemNames: ["Coca cola 1.5L", "Pepsi", "Pain", "Lait", "Haribo"],
+      },
+    });
+    expect(result.category).toBe("groceries");
+    expect(result.decision).toBe("auto_assigned");
+  });
+
+  it("offers both when the words disagree", () => {
+    // The drink says shop and the place says bar; neither gets to decide.
+    const result = classify("Pepsi au bar");
+    expect(result.decision).toBe("suggested");
+    expect([
+      result.category,
+      ...result.alternatives.map((alternative) => alternative.category),
+    ]).toEqual(expect.arrayContaining(["groceries", "restaurants"]));
+  });
+
+  /**
+   * Names that mean something else more often than they mean the brand. Each
+   * was looked at and left out: `Mars` is a month in French, `Paul` is a person
+   * in an app whose descriptions are full of people, and `Pret` is `prêt`.
+   */
+  it("leaves out the brands whose names are ordinary words", () => {
+    for (const description of ["Mars", "Paul", "Pret", "Innocent"]) {
+      expect(classify(description).decision).toBe("needs_user_input");
+    }
   });
 });
