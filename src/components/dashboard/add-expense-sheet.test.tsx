@@ -86,3 +86,27 @@ describe("AddExpenseSheet", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });
+
+describe("opening", () => {
+  /**
+   * The sheet opens on the list, not in the field above it. Most people have a
+   * handful of groups and tap the one they mean; raising a keyboard over that
+   * list makes the common answer the one you have to dismiss something to
+   * reach.
+   */
+  it("does not put the keyboard up before anybody has asked to search", async () => {
+    renderSheet();
+
+    const search = screen.getByRole("searchbox");
+    expect(search).not.toHaveFocus();
+    // Still inside the dialog, or nothing can be tabbed and Escape is dead.
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+
+    // And it is a search field the moment somebody wants one.
+    await userEvent.type(search, "berlin");
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("link", { name: /Berlin trip/ })).toBeVisible();
+  });
+});

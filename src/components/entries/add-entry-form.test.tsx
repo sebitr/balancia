@@ -754,3 +754,53 @@ describe("payment method marks", () => {
     expect(logo).toHaveStyle({ opacity: "0" });
   });
 });
+
+describe("the category picker", () => {
+  /**
+   * A dialog focuses its first control when it opens, which in this sheet is
+   * the search field — and on a phone that is a keyboard over the shortlist,
+   * before anybody has said they want to search.
+   */
+  it("opens on the chips rather than in the search field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: /Category/ }));
+
+    const search = screen.getByRole("textbox", { name: "Search categories" });
+    expect(search).not.toHaveFocus();
+    // Focus still has to be inside the dialog, or nothing can be tabbed
+    // through and Escape has nothing to close.
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+
+    // And it is still a search field the moment somebody wants one.
+    await user.type(search, "trav");
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Travel" })).toBeInTheDocument();
+  });
+});
+
+describe("the currency picker", () => {
+  /** The same rule as the category sheet: the list first, the keyboard later. */
+  it("opens on the currency list rather than in the search field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    // The pill beside the amount, not the currency's own row.
+    await user.click(screen.getAllByRole("button", { name: /CHF/ })[0]);
+
+    const search = screen.getByRole("textbox", {
+      name: "Search by code or name",
+    });
+    expect(search).not.toHaveFocus();
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+
+    await user.type(search, "yen");
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("button", { name: /JPY/ })).toBeInTheDocument();
+  });
+});

@@ -165,6 +165,27 @@ function useSwipeDismiss(enabled: boolean) {
   return { sheet: setElement, close };
 }
 
+/**
+ * Opens a sheet on its content rather than inside its first field.
+ *
+ * A dialog focuses its first control when it opens. For a sheet that leads
+ * with a search field that means the keyboard arrives on top of the very list
+ * the sheet was opened to show, and the tap the sheet was built around costs a
+ * dismissal first. Searching is how you find one row among many; it is not how
+ * you pick from six.
+ *
+ * Focus is moved rather than merely withheld. Preventing the default alone
+ * would leave it on whatever opened the sheet, and an open dialog with focus
+ * outside it cannot be tabbed through and does not close on Escape. Radix
+ * gives the content `tabIndex={-1}` for exactly this.
+ *
+ * Pass as `onOpenAutoFocus`.
+ */
+export function openOnContent(event: Event): void {
+  event.preventDefault();
+  if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+}
+
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }

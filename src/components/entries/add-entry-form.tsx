@@ -7,7 +7,12 @@ import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { CalendarDays, Loader2, Repeat, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  openOnContent,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
 import type { ScannedExpense } from "@/components/receipts/scan-receipt-dialog";
@@ -920,6 +925,10 @@ export function AddEntryForm({
         <SheetContent
           side="bottom"
           showCloseButton={false}
+          // Every one of these sheets opens on what it has to show — the
+          // category chips, the currency list, who is in the split — and none
+          // of them wants a keyboard over it before anybody has asked to type.
+          onOpenAutoFocus={openOnContent}
           className="max-h-[86vh] gap-0 overflow-y-auto rounded-t-[26px] px-4 pt-3.5 pb-5"
         >
           {sheet === "split" && (
