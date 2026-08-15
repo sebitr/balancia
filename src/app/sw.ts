@@ -72,8 +72,9 @@ const serwist = new Serwist({
     },
     {
       /*
-       * Optional local-inference assets: the OCR models, the embedding model
-       * and the onnxruntime WebAssembly binary.
+       * Optional local-inference assets: the OCR models, the embedding model,
+       * the onnxruntime WebAssembly binary, and pdf.js's image codecs for the
+       * scanned PDFs no browser decodes natively.
        *
        * CacheFirst, and deliberately *not* precached. Together these are tens
        * of megabytes, and precaching them would download the lot on every
@@ -84,8 +85,12 @@ const serwist = new Serwist({
        * The cache name carries a version because these files are served from
        * stable paths: an operator who reinstalls a newer model bumps
        * MODEL_CACHE, and the old bytes are dropped rather than served forever.
+       * The same applies to `/pdfjs/`, which `pnpm build` refreshes from
+       * whichever pdfjs-dist the lockfile pins.
        */
-      matcher: ({ url }) => url.pathname.startsWith("/models/"),
+      matcher: ({ url }) =>
+        url.pathname.startsWith("/models/") ||
+        url.pathname.startsWith("/pdfjs/"),
       handler: new CacheFirst({ cacheName: MODEL_CACHE }),
     },
     {

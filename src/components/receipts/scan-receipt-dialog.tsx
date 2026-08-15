@@ -30,6 +30,7 @@ import {
   type SharedChargeStrategy,
 } from "@/modules/receipts";
 import { isLiveCameraSupported } from "@/lib/doc-scan/engine";
+import { looksLikePdf } from "@/lib/pdf/read-pdf";
 import { ItemAssignmentView, type Participant } from "./item-assignment";
 import { DocumentCamera } from "./document-camera";
 import { ReceiptReview } from "./receipt-review";
@@ -119,6 +120,8 @@ export function ScanReceiptDialog({
   const scannerRef = useRef<ReceiptScanner | null>(null);
   const fileRef = useRef<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  /** Whether what was scanned was a document rather than a photograph. */
+  const [isPdf, setIsPdf] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
 
@@ -141,6 +144,7 @@ export function ScanReceiptDialog({
     setAssignments([]);
     setStrategy("proportional");
     setKeepImage(false);
+    setIsPdf(false);
     setError(null);
     release();
   };
@@ -165,6 +169,10 @@ export function ScanReceiptDialog({
         return t("errors.modelDownload");
       case "image":
         return t("errors.image");
+      case "pdfPassword":
+        return t("errors.pdfPassword");
+      case "pdf":
+        return t("errors.pdf");
       case "timeout":
         return t("errors.timeout");
       default:
@@ -178,7 +186,12 @@ export function ScanReceiptDialog({
     setProgress({ stage: "preparing" });
 
     fileRef.current = file;
-    const url = URL.createObjectURL(file);
+
+    // A PDF has no picture to hold up beside the values, so the review screen
+    // is given none rather than an <img> pointed at a document.
+    const pdf = await looksLikePdf(file);
+    setIsPdf(pdf);
+    const url = pdf ? null : URL.createObjectURL(file);
     setImageUrl((current) => {
       if (current) URL.revokeObjectURL(current);
       return url;
@@ -193,7 +206,8 @@ export function ScanReceiptDialog({
       });
 
       if (parsed.items.length === 0 && parsed.total === undefined) {
-        setError(t("errors.nothingFound"));
+        // Advice about framing and light is no help to someone holding a PDF.
+        setError(pdf ? t("errors.nothingFoundPdf") : t("errors.nothingFound"));
         setStep("capture");
         return;
       }
@@ -379,12 +393,18 @@ export function ScanReceiptDialog({
               />
               <div className="space-y-1">
                 <Label htmlFor="keep-receipt-image" className="font-normal">
-                  {t("keepImage")}
+                  {isPdf ? t("keepFile") : t("keepImage")}
                 </Label>
                 {/* The one distinction this feature must not blur: recognition
                   is local, storage is not. */}
                 <p className="text-xs text-muted-foreground">
-                  {keepImage ? t("keepImageOn") : t("keepImageOff")}
+                  {isPdf
+                    ? keepImage
+                      ? t("keepFileOn")
+                      : t("keepFileOff")
+                    : keepImage
+                      ? t("keepImageOn")
+                      : t("keepImageOff")}
                 </p>
               </div>
             </div>
@@ -450,13 +470,29 @@ export function ScanReceiptDialog({
       <input
         ref={libraryInput}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
         className="sr-only"
         onChange={onFile}
         aria-hidden="true"
         tabIndex={-1}
       />
     </>
+  );
+}
+
+/**
+ * Whether a dropped file is worth trying to read.
+ *
+ * Deliberately generous about the type: a drag out of some mail clients
+ * arrives as `application/octet-stream`, and refusing it there would look like
+ * the drop target was broken. The name is the tiebreak, and `scan` sniffs the
+ * bytes afterwards anyway.
+ */
+function isScannable(file: File): boolean {
+  return (
+    file.type.startsWith("image/") ||
+    file.type === "application/pdf" ||
+    /\.pdf$/i.test(file.name)
   );
 }
 
@@ -481,7 +517,7 @@ function CaptureStep({
         event.preventDefault();
         setDragging(false);
         const file = event.dataTransfer.files?.[0];
-        if (file?.type.startsWith("image/")) onDropped(file);
+        if (file && isScannable(file)) onDropped(file);
       }}
       className={`space-y-4 rounded-lg border border-dashed p-6 text-center transition-colors ${
         dragging ? "border-primary bg-muted" : ""

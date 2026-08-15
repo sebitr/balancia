@@ -43,6 +43,7 @@ public/sw.js.map
 
 # optional embedding model, installed by scripts/fetch-semantic-model.ts
 public/models
+public/pdfjs
 
 # optional payment-method logos, supplied by the operator.
 # The instructions stay in the repo; the artwork never does — see the README

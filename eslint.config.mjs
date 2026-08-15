@@ -60,6 +60,10 @@ const eslintConfig = defineConfig([
     "dist/**",
     "next-env.d.ts",
     "public/sw.js",
+    // Somebody else's build output, copied in by `pnpm pdf:assets`: pdf.js's
+    // image codecs, which are minified Emscripten. Left in, every developer
+    // who has run `pnpm dev` once gets seventeen hundred errors out of it.
+    "public/pdfjs/**",
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
