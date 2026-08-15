@@ -390,6 +390,40 @@ edited, startup fails loudly rather than applying a changed migration silently.
 [backup-and-restore.md](backup-and-restore.md) — it takes seconds and it is the
 difference between a bad upgrade being an inconvenience and a disaster.
 
+### Upgrading over SSH
+
+`scripts/deploy.sh` runs those same two commands on a remote host, and is meant
+to be run from a laptop rather than on the server:
+
+```bash
+./scripts/deploy.sh
+```
+
+It pushes nothing. The server pulls from origin, so a deploy ships what is
+merged, and starting one from a feature branch is harmless.
+
+Before it changes anything, it checks in a single round trip that the path is a
+checkout with a `compose.yaml` and a `.env`, that `docker compose` is available
+to that user, that the branch is not detached and tracks an upstream, and that
+the working tree is clean. Then it fetches and prints the commits that are
+about to land. `--dry-run` stops exactly there.
+
+The pull is `--ff-only`. A deploy host that cannot fast-forward has commits of
+its own, and merging them silently is how a server ends up running something no
+branch describes; it stops and asks for a person instead. Afterwards it polls
+`docker compose ps` until every service is running — and healthy, for the two
+that have a healthcheck — so a zero exit status means the containers actually
+came back, not merely that Compose accepted the command.
+
+| Flag / variable                         | Default       | What it picks              |
+| --------------------------------------- | ------------- | -------------------------- |
+| `-H`, `--host` / `BALANCIA_DEPLOY_HOST` | `ecom-debian` | ssh alias, or `user@host`  |
+| `-C`, `--path` / `BALANCIA_DEPLOY_PATH` | `balancia`    | the checkout on the server |
+| `BALANCIA_DEPLOY_TIMEOUT`               | `180`         | seconds to wait on health  |
+
+Host keys, users and jump hosts are all left to `~/.ssh/config`, which already
+knows about them.
+
 ### The database volume moved (one-time change)
 
 `compose.yaml` used to mount the `balancia-db-data` volume at
