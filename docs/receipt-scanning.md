@@ -260,19 +260,34 @@ services:
 The path is `./public/models` because that is where `pnpm ocr:install` writes —
 run it on the host, in the repository, then uncomment.
 
-Two things have to be true for the feature to appear, and each fails silently
-on its own:
+Two things have to be true for the feature to appear:
 
 - **`RECEIPT_SCANNING` has to reach the container.** `compose.yaml` forwards an
   explicit list of variables and nothing else, so a value set only in `.env`
   never arrives. It is named in the list; a hand-rolled deployment has to pass
   it too.
-- **The models have to be in `public/models` inside the container.** Without
-  the mount they are copied in at image build time, which means they are lost
-  on the next `--build` unless reinstalled first.
+- **The models have to be in `public/models` inside the container.** Nothing is
+  downloaded during `docker build` — deliberately, since the feature is off by
+  default and a build should not reach out to a model host. `COPY . .` carries
+  in whatever the host happened to have, which means they are lost on the next
+  `--build` unless the volume is mounted instead.
 
 If the files are missing, the browser's one `HEAD` request fails, no worker is
-ever created and no scan button is rendered. Nothing to switch off.
+ever created and no scan button is rendered — there is nothing on screen to
+switch off, and nothing that looks broken. Because that is impossible to guess
+at, the container **says so on startup**:
+
+```
+WARNING: Receipt scanning is on, but its files are not in this container.
+         RECEIPT_SCANNING is set, and this is missing:
+           /app/public/models/ocr/ppocrv6-tiny-det.onnx
+```
+
+It warns and starts anyway: scanning is optional and the rest of the
+application is fine without it. `scripts/bootstrap.sh` makes the same check for
+a host install. Note that the sentinel names the release the _current build_
+reads, so this also catches the likelier case — an upgrade where the models on
+disk are a version behind, which to this build is the same as having none.
 
 ### A note on the two WebAssembly binaries
 
