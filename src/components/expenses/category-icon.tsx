@@ -1,17 +1,20 @@
 import {
   ArrowLeftRight,
+  BedDouble,
   Car,
   CircleArrowDown,
   Ellipsis,
   Gift,
   HeartPulse,
   House,
+  Mountain,
   PawPrint,
   Percent,
   Plane,
   RefreshCw,
   ShoppingBag,
   ShoppingBasket,
+  Sofa,
   Tag,
   Ticket,
   Users,
@@ -44,6 +47,9 @@ export const CATEGORY_GLYPHS: Record<ExpenseCategory, LucideIcon> = {
   health: HeartPulse,
   entertainment: Ticket,
   travel: Plane,
+  lodging: BedDouble,
+  activities: Mountain,
+  household: Sofa,
   subscriptions: RefreshCw,
   family: Users,
   pets: PawPrint,
@@ -55,12 +61,12 @@ export const CATEGORY_GLYPHS: Record<ExpenseCategory, LucideIcon> = {
 /**
  * What anything outside the vocabulary is drawn as.
  *
- * A category that is not one of ours came in through an import, and is marked
- * as a label rather than as a thing: we know it was filed under *something*,
- * and guessing which of our fifteen it resembles is exactly the guess the
- * classifier declines to make. Spending with no category at all gets the same
- * mark, because "not filed" and "filed as something we do not know" are
- * equally unreadable to the spread.
+ * A category that is not one of ours came in through an import whose label
+ * nothing recognised, and is marked as a label rather than as a thing: we know
+ * it was filed under *something*, and guessing which of ours it resembles is
+ * exactly the guess the classifier declines to make. Spending with no category
+ * at all gets the same mark, because "not filed" and "filed as something we do
+ * not know" are equally unreadable to the spread.
  *
  * Callers index `CATEGORY_GLYPHS` themselves rather than going through a
  * helper — a lookup resolves at the call site, where React can see that the
