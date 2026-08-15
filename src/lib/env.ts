@@ -209,7 +209,7 @@ const envSchema = z
     /**
      * On-device receipt scanning. Off by default, for the same two reasons as
      * the semantic model: it needs `'wasm-unsafe-eval'` in the
-     * Content-Security-Policy, and it needs ~47 MB of OCR models under
+     * Content-Security-Policy, and it needs ~32 MB of OCR models under
      * `public/models` (`pnpm ocr:install`).
      *
      * Receipts can already be attached without it; this only adds reading

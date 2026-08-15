@@ -39,7 +39,7 @@ const OFFLINE_URL = "/offline";
  * already cached the old ones fetch the new ones instead of serving a model
  * the current worker cannot use.
  */
-const MODEL_CACHE = "balancia-models-v1";
+const MODEL_CACHE = "balancia-models-v2";
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,

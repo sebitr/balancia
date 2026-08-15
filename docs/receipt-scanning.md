@@ -5,7 +5,7 @@ say who had what, and create the expense. The reading happens in the browser,
 on the device holding the photo. The image is not uploaded to be recognized,
 and there is no OCR API key to configure, because there is no OCR API.
 
-Off by default. It needs ~47 MB of model files and one extra
+Off by default. It needs ~32 MB of model files and one extra
 Content-Security-Policy token, and both of those are the operator's call.
 
 ## What it does, and what it does not
@@ -23,10 +23,10 @@ camera or photo library
   onnxruntime-web       WebGPU if available, WebAssembly if not │
         │                                                       │
         ▼                                                       │
-  PP-OCRv5 detection ──► boxes                                  │
+  PP-OCRv6 detection ──► boxes                                  │
         │                                                       │
         ▼                                                       │
-  PP-OCRv5 recognition ─► text + confidence                     │
+  PP-OCRv6 recognition ─► text + confidence                     │
         │                                                       │
         └───────────────────────────────────────────────────────┘
         │
@@ -77,27 +77,28 @@ back to the plain photograph rather than blocking the shutter.
 
 ## Where the code lives
 
-| File                                 | What it does                                        |
-| ------------------------------------ | --------------------------------------------------- |
-| `src/modules/receipts/amounts.ts`    | Decimal separators, grouping, signs                 |
-| `src/modules/receipts/dates.ts`      | Date formats, day-first by default                  |
-| `src/modules/receipts/labels.ts`     | TOTAL / TVA / MwSt / IVA vocabulary, currency marks |
-| `src/modules/receipts/lines.ts`      | Text boxes grouped back into receipt lines          |
-| `src/modules/receipts/parser.ts`     | Lines to a `ParsedReceipt`                          |
-| `src/modules/receipts/validation.ts` | Whether the numbers reconcile                       |
-| `src/modules/receipts/assignment.ts` | Items and shared charges to per-person amounts      |
-| `src/lib/ocr/config.ts`              | Model paths, sizes, the availability probe          |
-| `src/lib/ocr/image-ops.ts`           | Resize maths, luminance, contrast                   |
-| `src/lib/ocr/preprocess.ts`          | Photograph to pixels the detector can use           |
-| `src/lib/ocr/worker-kernel.ts`       | The engine's arithmetic, as worker source           |
-| `src/lib/ocr/worker-source.ts`       | The worker: runtime, sessions, inference            |
-| `src/lib/ocr/scanner.ts`             | The page's typed handle on the worker               |
-| `src/lib/doc-scan/geometry.ts`       | Corner maths, coordinate spaces, cover mapping      |
-| `src/lib/doc-scan/tracking.ts`       | Outline smoothing and hold-still detection          |
-| `src/lib/doc-scan/raster.ts`         | Threshold, region labelling, corner finding         |
-| `src/lib/doc-scan/warp.ts`           | Homography and the perspective crop                 |
-| `src/lib/doc-scan/engine.ts`         | The canvas-facing scanner interface                 |
-| `src/components/receipts/`           | Live camera, capture, progress, review, assignment  |
+| File                                 | What it does                                          |
+| ------------------------------------ | ----------------------------------------------------- |
+| `src/modules/receipts/amounts.ts`    | Decimal separators, grouping, signs                   |
+| `src/modules/receipts/dates.ts`      | Date formats, day-first by default                    |
+| `src/modules/receipts/labels.ts`     | TOTAL / TVA / MwSt / IVA vocabulary, currency marks   |
+| `src/modules/receipts/lines.ts`      | Text boxes grouped back into receipt lines            |
+| `src/modules/receipts/parser.ts`     | Lines to a `ParsedReceipt`                            |
+| `src/modules/receipts/validation.ts` | Whether the numbers reconcile                         |
+| `src/modules/receipts/assignment.ts` | Items and shared charges to per-person amounts        |
+| `src/lib/ocr/config.ts`              | Model sets, their thresholds, the availability probe  |
+| `src/lib/ocr/paddle-dict.ts`         | PP-OCRv6's character list, out of its `inference.yml` |
+| `src/lib/ocr/image-ops.ts`           | Resize maths, luminance, contrast                     |
+| `src/lib/ocr/preprocess.ts`          | Photograph to pixels the detector can use             |
+| `src/lib/ocr/worker-kernel.ts`       | The engine's arithmetic, as worker source             |
+| `src/lib/ocr/worker-source.ts`       | The worker: runtime, sessions, inference              |
+| `src/lib/ocr/scanner.ts`             | The page's typed handle on the worker                 |
+| `src/lib/doc-scan/geometry.ts`       | Corner maths, coordinate spaces, cover mapping        |
+| `src/lib/doc-scan/tracking.ts`       | Outline smoothing and hold-still detection            |
+| `src/lib/doc-scan/raster.ts`         | Threshold, region labelling, corner finding           |
+| `src/lib/doc-scan/warp.ts`           | Homography and the perspective crop                   |
+| `src/lib/doc-scan/engine.ts`         | The canvas-facing scanner interface                   |
+| `src/components/receipts/`           | Live camera, capture, progress, review, assignment    |
 
 Everything under `src/modules/receipts` is pure and framework-free, so it runs
 in a unit test against a fixture exactly as it runs in the browser after a
@@ -114,15 +115,21 @@ in `.env`. To do it by hand instead:
 pnpm ocr:install --yes
 ```
 
-That downloads ~47 MB into `public/models` (git-ignored):
+That downloads ~32 MB into `public/models` (git-ignored):
 
 | File                                               | Size    | What                            |
 | -------------------------------------------------- | ------- | ------------------------------- |
-| `ocr/ppocrv5-mobile-det.onnx`                      | 4.7 MB  | Text detection                  |
-| `ocr/ppocrv5-mobile-rec.onnx`                      | 16.5 MB | Text recognition                |
-| `ocr/ppocrv5_dict.txt`                             | 0.1 MB  | The recognizer's character list |
+| `ocr/ppocrv6-tiny-det.onnx`                        | 1.8 MB  | Text detection                  |
+| `ocr/ppocrv6-tiny-rec.onnx`                        | 4.5 MB  | Text recognition                |
+| `ocr/ppocrv6_tiny_dict.txt`                        | 0.05 MB | The recognizer's character list |
 | `runtime/ort/ort.webgpu.min.mjs`                   | 0.1 MB  | onnxruntime-web API             |
 | `runtime/ort/ort-wasm-simd-threaded.asyncify.wasm` | 25.4 MB | The runtime itself              |
+
+The runtime is now four fifths of the download. `--model v6-small` or
+`--model v5-mobile` install the other sets Balancia knows about, but the
+application reads whichever one `ACTIVE_MODEL_SET` names — installing a set the
+build does not expect leaves the scan button unrendered, because the probe
+looks for the detector by name.
 
 As with the semantic categorization model, this is the only moment Balancia
 talks to a model host, and it is an operator running a command rather than the
@@ -180,36 +187,82 @@ disk, at a cost of about 25 MB. No browser ever loads both.
 
 ## The model
 
-**PP-OCRv5 mobile**, detection and recognition, from the PaddleOCR project.
-
-Chosen because it is small enough to download onto a phone (21 MB for the pair
-against hundreds of megabytes for a vision-language model), fast enough to be
-worth waiting for, accurate on printed Latin text, and licensed so that
-Balancia can redistribute it.
+**PP-OCRv6 tiny**, detection and recognition, from the PaddleOCR project.
 
 It is an OCR model and nothing more. A large vision-language model would read a
 receipt more cleverly and would also be too large to ship, impossible to run on
 a mid-range phone, and unable to explain itself — and the interesting part of
 this feature is the splitting, not the reading.
 
+### Why tiny
+
+The feature shipped on PP-OCRv5 mobile. PP-OCRv6 arrived in June 2026 in three
+sizes, and all three were measured with `pnpm ocr:eval` against this
+repository's own fixtures rendered as photographs — 32 scans each, on WebGPU:
+
+|                               | PP-OCRv5 mobile | PP-OCRv6 tiny | PP-OCRv6 small |
+| ----------------------------- | --------------- | ------------- | -------------- |
+| Weights                       | 21.3 MB         | **6.3 MB**    | 31.1 MB        |
+| Median scan                   | 970 ms          | **355 ms**    | 1381 ms        |
+| **Items, clean photo**        | 85%             | **85%**       | **85%**        |
+| **Items, dim photo**          | 59%             | **100%**      | **100%**       |
+| **Items, soft focus**         | 70%             | **100%**      | **100%**       |
+| **Items, heavy sensor noise** | **22%**         | 0%            | 0%             |
+| Total                         | 31%             | 44%           | **56%**        |
+| Subtotal                      | 34%             | 34%           | **56%**        |
+| Merchant                      | 38%             | 47%           | **59%**        |
+| Tax                           | 29%             | **50%**       | 39%            |
+
+Against v5 the case for v6 is not close: a third of the download, 2.7× faster,
+and the gain lands exactly where it is worth having — the dim and
+slightly-out-of-focus photographs people actually take in restaurants, where v5
+loses a third of the line items and v6 loses none.
+
+Between `tiny` and `small` it is a real trade, and it comes down to one row:
+**the two read line items identically**, variant for variant, and line items
+are what this feature is for. What `small` buys is the summary block — the
+total, the subtotal, the merchant — and it charges five times the download and
+four times the scan for them. It is also the only set here that is _slower than
+the v5 it replaces_, and on a phone without WebGPU that multiplies again.
+
+So `tiny` it is. `small` is a defensible choice for an instance that cares more
+about the total than about splitting by item — it is one constant,
+`ACTIVE_MODEL_SET`, and the numbers above are reproducible with one command.
+Note that a misread total is not silent: it fails the parts-against-total
+reconciliation in `validation.ts`, and where no total is found at all the items'
+own sum is offered instead.
+
+The one place v5 beats both is the heavy-noise stress case, where all three are
+bad enough to be useless — under that much grain DB's detection fragments,
+lines lose their ends and the amount column stops being found at all. No model
+here should be trusted there.
+
 ### Licensing
 
-| Component                                                | Licence    |
-| -------------------------------------------------------- | ---------- |
-| PP-OCRv5 weights (PaddleOCR, PaddlePaddle)               | Apache-2.0 |
-| ONNX conversion (`bukuroo/PPOCRv5-ONNX` on Hugging Face) | Apache-2.0 |
-| `ppocrv5_dict.txt` character list                        | Apache-2.0 |
-| onnxruntime-web                                          | MIT        |
+| Component                                             | Licence    |
+| ----------------------------------------------------- | ---------- |
+| PP-OCRv6 weights (PaddleOCR, PaddlePaddle)            | Apache-2.0 |
+| `PaddlePaddle/PP-OCRv6_tiny_*_onnx` ONNX exports      | Apache-2.0 |
+| The recognizer's character list, from `inference.yml` | Apache-2.0 |
+| onnxruntime-web                                       | MIT        |
 
 Apache-2.0 and MIT are both compatible with Balancia's AGPL-3.0-or-later
 distribution. Nothing here is downloaded at build time or vendored into the
 repository; the files are fetched by an operator, on purpose, into a
 git-ignored directory.
 
-PaddlePaddle publishes PP-OCRv5 in Paddle's own inference format rather than
-ONNX, which is why the conversion comes from a third party. If you would rather
-convert the official weights yourself, `paddle2onnx` produces equivalent files;
-point `scripts/fetch-ocr-model.ts` at them.
+Unlike v5 — which had to come from a third-party conversion, because
+PaddlePaddle published it only in Paddle's own inference format — the v6 ONNX
+exports are PaddlePaddle's own. That removes a link from the supply chain.
+
+### The character list
+
+PP-OCRv6 ships no `ppocrv6_dict.txt`. The recognizer's character list is a YAML
+sequence inside `inference.yml`, and `pnpm ocr:install` extracts it into the
+plain one-character-per-line file the worker already reads, so the browser
+never learns there was a difference. See `src/lib/ocr/paddle-dict.ts` — a
+deliberately small reader for one generated file rather than a YAML
+implementation shipped to every phone.
 
 ## Execution providers
 
@@ -217,12 +270,16 @@ WebGPU when the browser has it, WebAssembly when it does not, and WebAssembly
 again if WebGPU initialization throws — which happens on drivers that advertise
 the API and then fail to allocate. **WebGPU is never required.**
 
-Measured on the detection model, desktop Chrome, a 576×512 input:
+Measured on PP-OCRv5's detection model, desktop Chrome, a 576×512 input:
 
 | Provider    | Session creation | First inference | Warm inference |
 | ----------- | ---------------- | --------------- | -------------- |
 | WebGPU      | 87 ms            | 92 ms           | 33 ms          |
 | WebAssembly | 376 ms           | 193 ms          | 116 ms         |
+
+The ratio between the two providers is what that table is for, and it holds.
+The absolute figures predate PP-OCRv6 tiny, which is roughly a third of the
+work; `pnpm ocr:eval` reports whole-scan times for whatever is installed.
 
 Threads are pinned to one. onnxruntime's threaded WebAssembly needs
 `SharedArrayBuffer`, which needs cross-origin isolation, which Balancia does
@@ -421,5 +478,36 @@ evaluate that exact text and run it — the CTC decoder's collapsing rule, the
 CRLF handling in the character list, connected components, and the bilinear
 crop — because every bug that file has had was invisible in review.
 
+### Measuring the models
+
+Those tests say nothing at all about the models: they feed the parser the boxes
+a _perfect_ recognizer would have produced. So a model swap changes only the
+one layer nothing measures, which is what `pnpm ocr:eval` is for.
+
+```bash
+pnpm ocr:eval --models v5-mobile,v6-tiny
+```
+
+Each fixture is drawn as a receipt, photographed as a JPEG in four qualities,
+and put through the real preprocessing, the real worker and the real parser in
+a real browser. What comes out is scored against `parseReceipt` on the _same
+fixture's text_ — so the number is exactly "what reading it as an image cost",
+with the parser's own behaviour cancelled out of both sides, and no second
+ground truth to maintain. `--dump` writes every photograph and every box it
+found to `.ocr-eval/`, which is the only way to tell a bad model from a bad
+harness.
+
+Two things worth knowing before reading a run:
+
+- **Render at capture resolution, not at reading resolution.** The harness's
+  first version laid down 1.5-pixel glyph stems and JPEG-compressed _those_,
+  which scored PP-OCRv5 at zero on images a person reads without effort. A
+  camera compresses twelve megapixels and the reduction comes after. Getting
+  that order wrong makes any model look broken.
+- **`italian-bare-quantity` fails its clean variant on both models** while
+  passing the degraded ones. It is not understood, it is not a difference
+  between the models, and it is left in rather than quietly dropped.
+
 No fixture is a real receipt. They are written by hand, and none contains
-anybody's card number, tax ID or dinner.
+anybody's card number, tax ID or dinner — including the ones the harness
+photographs.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { transform } from "esbuild";
 import { ocrKernelSource } from "./worker-kernel";
 import { ocrWorkerSource } from "./worker-source";
-import { DET_MODEL_URL, REC_MODEL_URL, RUNTIME_URL } from "./config";
+import { ACTIVE_MODEL_SET, RUNTIME_URL } from "./config";
 
 /**
  * The worker is source text, so nothing type-checks it — and unlike the
@@ -92,8 +92,19 @@ describe("the worker source", () => {
   it("carries the configured paths, with no second definition of them", () => {
     const source = ocrWorkerSource();
     expect(source).toContain(RUNTIME_URL);
-    expect(source).toContain(DET_MODEL_URL);
-    expect(source).toContain(REC_MODEL_URL);
+    expect(source).toContain(ACTIVE_MODEL_SET.detUrl);
+    expect(source).toContain(ACTIVE_MODEL_SET.recUrl);
+    expect(source).toContain(ACTIVE_MODEL_SET.dictUrl);
+  });
+
+  it("carries the detector thresholds the chosen model was published with", () => {
+    // These travel with the weights, not with the arithmetic. Building the
+    // worker for one model and leaving another's thresholds in it is not a
+    // crash — it is a quietly worse read on every receipt.
+    const source = ocrWorkerSource(ACTIVE_MODEL_SET);
+    expect(source).toContain(`"detThreshold":${ACTIVE_MODEL_SET.detThreshold}`);
+    expect(source).toContain(`"boxThreshold":${ACTIVE_MODEL_SET.boxThreshold}`);
+    expect(source).toContain(`"unclipRatio":${ACTIVE_MODEL_SET.unclipRatio}`);
   });
 
   it("names no host but this one", () => {
