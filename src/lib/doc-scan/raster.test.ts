@@ -42,8 +42,7 @@ function inConvexPolygon(point: Point, polygon: readonly Point[]): boolean {
   for (let index = 0; index < polygon.length; index += 1) {
     const a = polygon[index];
     const b = polygon[(index + 1) % polygon.length];
-    const cross =
-      (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
+    const cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
     if (cross === 0) continue;
     const current = Math.sign(cross);
     if (sign === 0) sign = current;
