@@ -1,4 +1,5 @@
 import type { OcrResult } from "@/modules/receipts";
+import { looksLikePdf, PdfError, readPdf } from "@/lib/pdf/read-pdf";
 import { probeOcrAvailable } from "./config";
 import { prepareImage } from "./preprocess";
 import { ocrWorkerSource } from "./worker-source";
@@ -76,7 +77,11 @@ export type ScanErrorCode =
   | "modelDownload"
   | "runtime"
   | "image"
-  | "timeout";
+  | "timeout"
+  /** Encrypted. Nothing to do about it here — the reader must unlock it. */
+  | "pdfPassword"
+  /** Damaged, or not really a PDF at all. */
+  | "pdf";
 
 export class ScanError extends Error {
   readonly code: ScanErrorCode;
@@ -147,6 +152,12 @@ export class ReceiptScanner {
    * The image is reduced on the main thread — the browser's own decoder is the
    * fastest thing available and it has to happen somewhere — and only its
    * pixels cross into the worker, transferred rather than copied.
+   *
+   * A PDF takes a detour first. If it carries its own text — an emailed
+   * invoice, a train ticket — that text *is* the answer, and this returns
+   * before the worker is ever created: no models, no WebAssembly, no
+   * recognition error. If it does not, its first page becomes a picture and
+   * carries on below as though it had been photographed.
    */
   async scan(
     file: Blob,
@@ -154,9 +165,22 @@ export class ReceiptScanner {
   ): Promise<OcrResult> {
     onProgress?.({ stage: "preparing" });
 
+    let source = file;
+    if (await looksLikePdf(file)) {
+      const content = await readPdf(file).catch((failure: unknown) => {
+        throw classifyPdf(failure);
+      });
+
+      if (content.kind === "text") {
+        onProgress?.({ stage: "analyzing" });
+        return content.result;
+      }
+      source = content.image;
+    }
+
     let prepared;
     try {
-      prepared = await prepareImage(file);
+      prepared = await prepareImage(source);
     } catch {
       throw new ScanError("image", "That image could not be read");
     }
@@ -247,6 +271,17 @@ export class ReceiptScanner {
       this.#objectUrl = null;
     }
   }
+}
+
+/** Maps a PDF failure onto something the UI can explain. */
+function classifyPdf(failure: unknown): ScanError {
+  if (failure instanceof PdfError && failure.code === "password") {
+    return new ScanError("pdfPassword", failure.message);
+  }
+  return new ScanError(
+    "pdf",
+    failure instanceof Error ? failure.message : "That PDF could not be read",
+  );
 }
 
 /** Maps the worker's message onto something the UI can explain. */

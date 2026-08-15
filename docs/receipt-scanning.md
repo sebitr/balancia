@@ -6,30 +6,38 @@ on the device holding the photo. The image is not uploaded to be recognized,
 and there is no OCR API key to configure, because there is no OCR API.
 
 Off by default. It needs ~32 MB of model files and one extra
-Content-Security-Policy token, and both of those are the operator's call.
+Content-Security-Policy token, and both of those are the operator's call. A
+PDF that carries its own text — most emailed invoices — is read without either,
+though the feature switch still governs whether any of this appears at all.
 
 ## What it does, and what it does not
 
 ```
-camera or photo library
+camera, photo library, or a PDF
         │
-        ▼
-  preprocessing        resize, EXIF rotation, contrast   (main thread)
-        │
-        ▼
-  Web Worker ──────────────────────────────────────────────────┐
-        │                                                       │
-        ▼                                                       │
-  onnxruntime-web       WebGPU if available, WebAssembly if not │
-        │                                                       │
-        ▼                                                       │
-  PP-OCRv6 detection ──► boxes                                  │
-        │                                                       │
-        ▼                                                       │
-  PP-OCRv6 recognition ─► text + confidence                     │
-        │                                                       │
-        └───────────────────────────────────────────────────────┘
-        │
+        ├─────────────────────────────┐
+        │                             │ a PDF that carries its own text
+        │                             ▼
+        │                       pdf.js text layer ──► boxes ──┐
+        │                       (no model, no download)       │
+        ▼                                                     │
+  preprocessing        resize, EXIF rotation, contrast        │
+        │              (a scanned PDF is drawn to pixels here)│
+        ▼                                                     │
+  Web Worker ───────────────────────────────────────────────┐ │
+        │                                                   │ │
+        ▼                                                   │ │
+  onnxruntime-web    WebGPU if available, WebAssembly if not│ │
+        │                                                   │ │
+        ▼                                                   │ │
+  PP-OCRv6 detection ──► boxes                              │ │
+        │                                                   │ │
+        ▼                                                   │ │
+  PP-OCRv6 recognition ─► text + confidence                 │ │
+        │                                                   │ │
+        └───────────────────────────────────────────────────┘ │
+        │                                                     │
+        ├─────────────────────────────────────────────────────┘
         ▼
   parser               merchant, date, items, totals
         │
@@ -75,6 +83,93 @@ hardware in use — the same buttons fall back to the `<input capture>` picker
 that served before, and a capture with no credible document in view falls
 back to the plain photograph rather than blocking the shutter.
 
+## PDFs
+
+Receipts arrive as PDFs at least as often as photographs — an emailed invoice,
+a hotel folio, a train ticket, a scan from an office copier. The same entry
+points take them: the file picker offers them, and the drop target accepts
+them.
+
+Two very different files share that extension, and they are read in two very
+different ways.
+
+**A PDF that was made by a computer already knows what it says.** Its text
+layer holds every string, its font size and the matrix that places it on the
+page, which is converted straight into the `OcrTextBox` shape the recognizer
+produces. Nothing else in the pipeline can tell the difference. This path
+
+- **runs no model**, downloads no weights and needs no WebAssembly;
+- takes a few tens of milliseconds rather than a second;
+- is **exact**. Recognition guesses at `0` against `O` and at `5` against `S`;
+  reading a file does not guess, so every box comes back at confidence 1 and
+  the review screen has nothing to flag.
+
+Several pages are stacked into one coordinate space rather than parsed
+separately, so a folio whose total is on page three reads as one document and
+the parser needs to know nothing about pages. Eight pages is the limit — past
+that it is not a receipt, and a 400-page statement would hang the tab.
+
+**A scan is a picture in a page**, and pdf.js is only the thing that gets the
+picture out. Its **first page** is drawn at the detector's working size and
+goes through preprocessing and the models exactly as a photograph does, with
+all the accuracy that implies. Only the first page: a scanned receipt is one
+page, and each further page would be another full pass over the models.
+
+Which kind a file is cannot be asked, so the text layer is always extracted
+first and weighed. A scan is not always textless — a copier stamps a page
+number, a fax gateway adds a header — and a few characters must not be allowed
+to beat OCR to the receipt, so a text layer only wins if it amounts to
+something (`hasUsableTextLayer`).
+
+Not read: **password-protected PDFs**, which say so and suggest a photograph
+instead. PDF JavaScript is never enabled, and neither `standardFontDataUrl` nor
+`iccUrl` is set — both would be fetches, and neither changes what a page
+_says_.
+
+### Two things about pdf.js worth knowing
+
+**It parses on the main thread.** pdf.js normally uses a Web Worker loaded from
+a URL, and it cannot here: its worker is an ES module, and Turbopack strips
+`type: "module"` from `new Worker(new URL(...))` — the same wall that made the
+OCR worker a Blob built from source text. Rather than install a second copy of
+pdf.js under `public/` just to have a URL to point at, its worker module is
+imported as an ordinary chunk and registered as pdf.js's main-thread handler.
+A receipt-sized document parses in tens of milliseconds behind a modal that is
+already showing progress. It would be the wrong trade for the OCR models, which
+run for seconds; it is the right one here.
+
+**Rasterization asks for the print intent, and not because of printers.** A
+`display` render is paced by `requestAnimationFrame`, which stops firing the
+moment the tab is hidden — so someone who switches apps while a scanned receipt
+is being read comes back to a scan that never finished and never failed either.
+The print intent runs the same drawing on microtasks. This was caught in
+verification rather than reasoned about in advance, because the browser pane
+that the check ran in reports itself hidden.
+
+### The image codecs
+
+`pnpm build` and `pnpm dev` copy pdf.js's JBIG2 and JPEG 2000 decoders into
+`public/pdfjs` (git-ignored, ~440 KB), because some scanners encode a page in
+formats no browser decodes natively and pdf.js fetches those decoders at the
+moment it meets one. Without them a scan renders with a hole where the receipt
+was and the models read a blank sheet — a silent wrong answer rather than an
+error, which is the worst kind. Nothing is fetched until such an image actually
+appears, which for an emailed invoice or a phone scan is never.
+
+They are cached by the service worker alongside the models and deliberately
+**not** precached, for the same reason: an install should not pay for a feature
+it may never use. The pdf.js bundle itself is 1.1 MB and is excluded from the
+precache on the same principle — see `serwist.config.mjs`.
+
+### How it is tested
+
+`src/lib/pdf/text-layer.test.ts` builds **real PDF files**, by hand and without
+a library, out of the receipt fixtures the parser is already tested against;
+runs them back through real pdf.js; and demands the same `ParsedReceipt` the
+box fixtures produce. That is the claim worth making — a PDF and a perfect scan
+of the same receipt are the same receipt — and all eight fixtures hold it,
+across pages and at any rendering scale.
+
 ## Where the code lives
 
 | File                                 | What it does                                          |
@@ -98,6 +193,9 @@ back to the plain photograph rather than blocking the shutter.
 | `src/lib/doc-scan/raster.ts`         | Threshold, region labelling, corner finding           |
 | `src/lib/doc-scan/warp.ts`           | Homography and the perspective crop                   |
 | `src/lib/doc-scan/engine.ts`         | The canvas-facing scanner interface                   |
+| `src/lib/pdf/text-layer.ts`          | A PDF's own text, as the boxes OCR would have found   |
+| `src/lib/pdf/read-pdf.ts`            | Opening a PDF, and which of the two kinds it is       |
+| `scripts/copy-pdf-assets.ts`         | pdf.js's image codecs into `public/pdfjs`             |
 | `src/components/receipts/`           | Live camera, capture, progress, review, assignment    |
 
 Everything under `src/modules/receipts` is pure and framework-free, so it runs

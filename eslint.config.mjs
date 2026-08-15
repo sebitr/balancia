@@ -65,6 +65,9 @@ const eslintConfig = defineConfig([
     // developer who ran `pnpm ocr:install` or `pnpm semantic:install` got
     // several hundred lint errors from inside `ort.webgpu.min.mjs`.
     "public/models/**",
+    // The same again for pdf.js's image codecs, which `pnpm dev` and
+    // `pnpm build` copy in: minified Emscripten, seventeen hundred more.
+    "public/pdfjs/**",
     "coverage/**",
     // The eval harness's photographs and box dumps.
     ".ocr-eval/**",
