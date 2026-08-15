@@ -781,3 +781,26 @@ describe("the category picker", () => {
     expect(screen.getByRole("button", { name: "Travel" })).toBeInTheDocument();
   });
 });
+
+describe("the currency picker", () => {
+  /** The same rule as the category sheet: the list first, the keyboard later. */
+  it("opens on the currency list rather than in the search field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    // The pill beside the amount, not the currency's own row.
+    await user.click(screen.getAllByRole("button", { name: /CHF/ })[0]);
+
+    const search = screen.getByRole("textbox", {
+      name: "Search by code or name",
+    });
+    expect(search).not.toHaveFocus();
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+
+    await user.type(search, "yen");
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("button", { name: /JPY/ })).toBeInTheDocument();
+  });
+});
