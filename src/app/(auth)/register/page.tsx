@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { RegisterForm } from "@/components/auth/register-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser } from "@/lib/security/actor";
+import { getCurrentActor } from "@/lib/security/actor";
 import { getEnv } from "@/lib/env";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,7 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RegisterPage() {
-  if (await getCurrentUser()) {
+  const actor = await getCurrentActor();
+  if (actor?.kind === "user") {
     redirect("/dashboard");
   }
 
@@ -36,5 +37,12 @@ export default async function RegisterPage() {
     );
   }
 
-  return <RegisterForm appleEnabled={env.appleSignInEnabled} />;
+  // A guest arrives with a name the group already uses for them; asking for it
+  // again would only invite a second spelling of the same person.
+  return (
+    <RegisterForm
+      appleEnabled={env.appleSignInEnabled}
+      guestName={actor?.kind === "guest" ? actor.displayName : null}
+    />
+  );
 }

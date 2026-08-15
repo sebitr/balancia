@@ -20,10 +20,14 @@ import {
 } from "./service";
 import { revokeSession } from "./sessions";
 import {
+  clearGuestCookie,
   clearSessionCookie,
+  readGuestCookie,
   readSessionCookie,
   setSessionCookie,
 } from "./cookies";
+import { claimGuestSession } from "@/modules/guests/service";
+import { logger } from "@/lib/logger";
 import { applyStoredPreferences } from "@/i18n/cookie";
 import { resolveRequestLocale } from "@/i18n/request";
 
@@ -72,8 +76,48 @@ async function requestContext(): Promise<{
   };
 }
 
+/**
+ * Claims the guest identity this browser is holding, if it holds one.
+ *
+ * Called from both sign-up and sign-in, because the session that makes a claim
+ * possible arrives at different moments: an instance with SMTP configured
+ * issues none until the address is verified, so for those the claim lands on
+ * the first sign-in instead. It is also what makes "I already have an account"
+ * work from the invite screen.
+ *
+ * Failures are logged and swallowed. The authentication has already succeeded,
+ * and nobody should be left without a session because the link they arrived on
+ * could not be retired.
+ */
+async function claimGuestIdentity(userId: string): Promise<string | null> {
+  const guestToken = await readGuestCookie();
+  if (!guestToken) return null;
+
+  try {
+    const outcome = await claimGuestSession(userId, guestToken);
+    if (outcome.status === "claimed") {
+      await clearGuestCookie();
+      return outcome.groupId;
+    }
+    // A dead cookie buys nobody anything. A conflicting one is kept: the claim
+    // was skipped, so signing out should still return them to the guest.
+    if (outcome.status === "none") {
+      await clearGuestCookie();
+    }
+    return null;
+  } catch (error) {
+    logger.error(
+      { err: error instanceof Error ? error.message : String(error) },
+      "Guest claim failed after authentication",
+    );
+    return null;
+  }
+}
+
 export interface RegisterActionResult {
   readonly verificationRequired: boolean;
+  /** The group carried over from a guest session, when there was one. */
+  readonly claimedGroupId: string | null;
 }
 
 export async function registerAction(
@@ -92,10 +136,15 @@ export async function registerAction(
     }
 
     const result = await registerUser(parsed.data, context);
+    let claimedGroupId: string | null = null;
     if (result.session) {
       await setSessionCookie(result.session.token, result.session.expiresAt);
+      claimedGroupId = await claimGuestIdentity(result.user.userId);
     }
-    return { verificationRequired: result.verificationRequired };
+    return {
+      verificationRequired: result.verificationRequired,
+      claimedGroupId,
+    };
   });
 }
 
@@ -117,6 +166,10 @@ export async function signInAction(input: unknown): Promise<ActionResult> {
     // Seed the display cookies from the account, so a new browser opens in the
     // language and notation this person already chose elsewhere.
     await applyStoredPreferences(result.preferences);
+    // Signing in from a guest browser is the other way an account claims what
+    // the guest did — the invite screen's third button, and the path taken
+    // when sign-up required an email confirmation first.
+    await claimGuestIdentity(result.user.userId);
   });
 }
 
