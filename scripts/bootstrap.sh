@@ -397,25 +397,65 @@ Then a provider is required — receipt scanning needs a reader.
 TEXT
   fi
 
+  # The choice costs money on every scan from here on, so the figures belong
+  # at the moment it is made rather than only in the documentation. Rounded
+  # and dated on purpose: precise-looking numbers that have gone stale are
+  # worse than round ones that are obviously approximate.
+  prose <<'TEXT'
+Roughly, per 1000 receipts, as of August 2026:
+
+  your own GPU   free     most accurate, and nothing leaves your box
+  gemini         $0.33    cheapest hosted
+  openai         $1.70    mid-range
+  mistral        $4.00    flat per page, so the bill is predictable
+  anthropic      $16-33   most capable, and much the most expensive
+
+"Your own GPU" is the openai option with a base URL pointing at your
+own Ollama or vLLM. On current open-weight document models it scores
+above every hosted one and costs nothing per scan.
+
+There is no independent receipt benchmark, and those accuracy claims
+come from document-parsing tests, which are a proxy for reading a
+crumpled receipt. docs/receipt-scanning.md shows the workings.
+
+TEXT
+
   local provider=''
   while :; do
     ask_line 'Provider (anthropic, gemini, mistral, openai)' anthropic
     case $(lower "$reply") in
       anthropic | gemini | mistral | openai) provider=$(lower "$reply"); break ;;
-      '') ;;
       *) oops 'Pick one of anthropic, gemini, mistral or openai.' ;;
     esac
   done
 
-  # Only the anthropic driver has a default model. See src/lib/env.ts: naming
-  # one for the others here would be a 404 at the first scan the day it moves.
+  # Two of the four have a default. See src/lib/env.ts: naming one for the
+  # other two here would be a 404 at the first scan the day it moves — so they
+  # are asked for, and the asking says what sort of answer is wanted.
   local model=''
+  case $provider in
+    anthropic)
+      note 'Defaults to claude-opus-5 — the capable end, and the pricey end.'
+      note 'Name a smaller model here to cut the bill.'
+      ;;
+    mistral)
+      note 'Defaults to mistral-ocr-latest.'
+      ;;
+    gemini)
+      note 'Name a vision model. A Flash-Lite class one is the cheap choice.'
+      ;;
+    openai)
+      note 'Name the model your endpoint serves. Against your own Ollama or'
+      note 'vLLM, a document model such as PaddleOCR-VL or dots.ocr.'
+      ;;
+  esac
+
   if [ "$provider" = anthropic ] || [ "$provider" = mistral ]; then
     ask_line 'Model (blank for the default)' ''
     model=$reply
   else
     while :; do
-      ask_line 'Model (the vision model your endpoint serves)' ''
+      ask_line 'Model' ''
       [ -n "$reply" ] && { model=$reply; break; }
       oops 'A model is required for this provider.'
     done
