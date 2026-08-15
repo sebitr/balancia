@@ -2,8 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
 import { expenseCategoryMappings } from "@/lib/db/schema";
-import { createExpense, updateExpense } from "@/modules/expenses/service";
 import {
+  createExpense,
+  deleteExpense,
+  updateExpense,
+} from "@/modules/expenses/service";
+import {
+  loadFrequentCategories,
   loadMappings,
   recordCategoryChoice,
 } from "@/modules/categorization/service";
@@ -205,5 +210,110 @@ describe("recording a category choice", () => {
       category: "other",
     });
     expect(await loadMappings(group.access)).toEqual([]);
+  });
+});
+
+/**
+ * What the group actually files things under.
+ *
+ * The picker leads with these, so the ordering is the feature and not an
+ * implementation detail: it is a `GROUP BY` with an aggregate in its `ORDER
+ * BY`, which is precisely the shape a typed unit test cannot check.
+ */
+describe("the group's most-used categories", () => {
+  it("ranks by use, and keeps one group's habits out of another's", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+
+    for (const description of ["Coop", "Migros", "Aldi"]) {
+      await addExpense(group, other, { description, category: "groceries" });
+    }
+    for (const description of ["Le Rado", "Café"]) {
+      await addExpense(group, other, { description, category: "restaurants" });
+    }
+    await addExpense(group, other, {
+      description: "SBB",
+      category: "transport",
+    });
+
+    const elsewhere = await createTestGroup(actor);
+    const stranger = await addTestParticipant(elsewhere.groupId, "Jonas");
+    for (const description of ["Fnac", "Payot"]) {
+      await addExpense(elsewhere, stranger, {
+        description,
+        category: "shopping",
+      });
+    }
+
+    expect(await loadFrequentCategories(group.access)).toEqual([
+      "groceries",
+      "restaurants",
+      "transport",
+    ]);
+    expect(await loadFrequentCategories(elsewhere.access)).toEqual([
+      "shopping",
+    ]);
+  });
+
+  it("breaks a tie towards what was filed most recently", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+
+    await addExpense(group, other, {
+      description: "Coop",
+      category: "groceries",
+    });
+    await addExpense(group, other, {
+      description: "Le Rado",
+      category: "restaurants",
+    });
+
+    // One each: the more recent of the two leads.
+    expect(await loadFrequentCategories(group.access)).toEqual([
+      "restaurants",
+      "groceries",
+    ]);
+  });
+
+  it("counts nothing that cannot be chosen from the picker", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+
+    // The escape hatch, twice — enough to top the list if it were counted.
+    await addExpense(group, other, { description: "Odds", category: "other" });
+    await addExpense(group, other, { description: "Ends", category: "other" });
+    // An imported label: filed under something, but not under a code of ours.
+    await addExpense(group, other, {
+      description: "Splitwise row",
+      category: "Fournitures ménagères",
+    });
+    await addExpense(group, other, { description: "Nothing", category: "" });
+    await addExpense(group, other, {
+      description: "Coop",
+      category: "groceries",
+    });
+
+    expect(await loadFrequentCategories(group.access)).toEqual(["groceries"]);
+  });
+
+  it("forgets a deleted expense's category", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+
+    const binned = await addExpense(group, other, {
+      description: "Le Rado",
+      category: "restaurants",
+    });
+    await addExpense(group, other, {
+      description: "Coop",
+      category: "groceries",
+    });
+    await deleteExpense(group.access, binned);
+
+    expect(await loadFrequentCategories(group.access)).toEqual(["groceries"]);
   });
 });

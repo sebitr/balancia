@@ -133,15 +133,23 @@ export function MemberPill({
  * Same shape and same tap target, for choices that are one-of-many rather than
  * people — categories, mostly. It keeps the sheets feeling like one family
  * instead of introducing a third kind of small control.
+ *
+ * With an `icon` it takes the member pill's other half too: the glyph sits in
+ * the tile an avatar would occupy, and fills with coral when chosen. The tick
+ * goes away in that form — the filled tile already says "this one", and a pill
+ * carrying both reads as two separate marks for one piece of state.
  */
 export function ChoicePill({
   children,
   selected,
   onClick,
+  icon: Icon,
 }: {
   children: React.ReactNode;
   selected: boolean;
   onClick: () => void;
+  /** Drawn in a 32px tile at the leading edge, the way a face would be. */
+  icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }) {
   return (
     <button
@@ -149,14 +157,27 @@ export function ChoicePill({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm transition-colors",
+        "inline-flex h-10 items-center gap-2 rounded-full border text-sm transition-colors",
+        Icon ? "pr-4 pl-1" : "px-4",
         selected
           ? "border-primary bg-primary/15 font-semibold text-foreground"
           : "border-border bg-white/4 font-normal text-muted-foreground",
       )}
     >
-      {children}
-      {selected && (
+      {Icon && (
+        <span
+          className={cn(
+            "grid size-8 shrink-0 place-items-center rounded-full",
+            selected
+              ? "bg-primary text-primary-foreground"
+              : "bg-white/6 text-muted-foreground",
+          )}
+        >
+          <Icon aria-hidden={true} className="size-[18px]" />
+        </span>
+      )}
+      <span className="truncate">{children}</span>
+      {selected && !Icon && (
         <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />
       )}
     </button>
