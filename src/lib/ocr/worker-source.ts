@@ -1,16 +1,15 @@
 import {
-  DET_MODEL_URL,
-  DICT_URL,
-  REC_MODEL_URL,
+  ACTIVE_MODEL_SET,
   RUNTIME_URL,
   WASM_PATH,
+  type OcrModelSet,
 } from "./config";
 import { ocrKernelSource } from "./worker-kernel";
 
 /**
  * The OCR worker.
  *
- * Everything expensive happens in here — loading a 21 MB pair of models,
+ * Everything expensive happens in here — loading a 6 MB pair of models,
  * compiling WebAssembly, and running two neural networks — so that the expense
  * form stays interactive while a receipt is read. The main thread's only job is
  * to hand over pixels and render what comes back.
@@ -44,13 +43,20 @@ const PROGRESS_EVERY = 4;
  */
 const MAX_REGIONS = 160;
 
-export function ocrWorkerSource(): string {
+/**
+ * The worker, built for one model set.
+ *
+ * The parameter exists so the eval harness can stand two releases side by side
+ * in one browser without editing this file — the same reason `prepareImage`
+ * takes `enhance`. The application never passes it.
+ */
+export function ocrWorkerSource(model: OcrModelSet = ACTIVE_MODEL_SET): string {
   const constants = {
     runtimeUrl: RUNTIME_URL,
     wasmPath: WASM_PATH,
-    detUrl: DET_MODEL_URL,
-    recUrl: REC_MODEL_URL,
-    dictUrl: DICT_URL,
+    detUrl: model.detUrl,
+    recUrl: model.recUrl,
+    dictUrl: model.dictUrl,
     progressEvery: PROGRESS_EVERY,
     maxRegions: MAX_REGIONS,
   };
@@ -58,7 +64,7 @@ export function ocrWorkerSource(): string {
   return `
 const CONFIG = ${JSON.stringify(constants)};
 
-${ocrKernelSource()}
+${ocrKernelSource(model)}
 
 let runtime = null;
 let sessions = null;

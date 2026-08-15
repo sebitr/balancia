@@ -1,4 +1,9 @@
-import { RECOGNITION_HEIGHT, RECOGNITION_MAX_WIDTH } from "./config";
+import {
+  ACTIVE_MODEL_SET,
+  RECOGNITION_HEIGHT,
+  RECOGNITION_MAX_WIDTH,
+  type OcrModelSet,
+} from "./config";
 
 /**
  * The OCR engine's arithmetic, as source text.
@@ -22,33 +27,33 @@ import { RECOGNITION_HEIGHT, RECOGNITION_MAX_WIDTH } from "./config";
 const DET_MEAN = [0.485, 0.456, 0.406];
 const DET_STD = [0.229, 0.224, 0.225];
 
-/** Probability above which a detector pixel counts as text. */
-const DET_THRESHOLD = 0.3;
-
-/** Mean probability a whole region needs before it is believed. */
-const BOX_THRESHOLD = 0.5;
-
 /**
- * How far a detected region is grown before it is cropped.
+ * Smallest region worth recognizing, in detector pixels.
  *
- * DB (Differentiable Binarization) shrinks the polygon it was trained to
- * predict, so the raw region clips the tops and tails of the glyphs. PaddleOCR
- * expands it again by an "unclip ratio"; this is the same idea computed from
- * the box's area and perimeter, which is all that survives of the polygon once
- * the region has been reduced to a rectangle.
+ * Unlike the detector's thresholds — which came with the weights and live on
+ * the model set — this one is about what a *receipt* is, and holds whichever
+ * release is installed.
  */
-const UNCLIP_RATIO = 1.6;
-
-/** Smallest region worth recognizing, in detector pixels. */
 const MIN_BOX_SIDE = 3;
 
-export function ocrKernelSource(): string {
+/**
+ * The kernel, tuned for one model set.
+ *
+ * The three detector numbers below (`thresh`, `box_thresh`, `unclip_ratio` in
+ * PaddleOCR's own configuration) are published per release and differ between
+ * them, so they arrive with the model rather than being baked in here. See
+ * `OcrModelSet`. The unclip ratio in particular is what stops DB's shrunken
+ * polygon from clipping the tops and tails of the glyphs; this computes the
+ * same expansion from the box's area and perimeter, which is all that survives
+ * of the polygon once the region has been reduced to a rectangle.
+ */
+export function ocrKernelSource(model: OcrModelSet = ACTIVE_MODEL_SET): string {
   const constants = {
     detMean: DET_MEAN,
     detStd: DET_STD,
-    detThreshold: DET_THRESHOLD,
-    boxThreshold: BOX_THRESHOLD,
-    unclipRatio: UNCLIP_RATIO,
+    detThreshold: model.detThreshold,
+    boxThreshold: model.boxThreshold,
+    unclipRatio: model.unclipRatio,
     minBoxSide: MIN_BOX_SIDE,
     recHeight: RECOGNITION_HEIGHT,
     recMaxWidth: RECOGNITION_MAX_WIDTH,

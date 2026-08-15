@@ -426,7 +426,7 @@ them is privacy:
 
 - it needs `'wasm-unsafe-eval'` in the Content-Security-Policy. Setting either
   this or `SEMANTIC_CATEGORIZATION` to `1` adds it, once.
-- it needs ~47 MB of model files under `public/models`:
+- it needs ~32 MB of model files under `public/models`:
 
 ```bash
 pnpm ocr:install --yes

@@ -114,7 +114,7 @@ services:
     volumes:
       - uploads:/data/uploads
       # On-device receipt scanning (RECEIPT_SCANNING=1). Run
-      # `pnpm ocr:install --yes` on the host, then uncomment this so the ~47 MB
+      # `pnpm ocr:install --yes` on the host, then uncomment this so the ~32 MB
       # of models is mounted rather than baked into the image — otherwise they
       # are rebuilt away and have to be reinstalled before every `up --build`.
       # - ./public/models:/app/public/models:ro

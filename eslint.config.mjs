@@ -60,7 +60,14 @@ const eslintConfig = defineConfig([
     "dist/**",
     "next-env.d.ts",
     "public/sw.js",
+    // Downloaded models and the onnxruntime bundle that reads them. Optional,
+    // git-ignored, and somebody else's minified code: before this line, any
+    // developer who ran `pnpm ocr:install` or `pnpm semantic:install` got
+    // several hundred lint errors from inside `ort.webgpu.min.mjs`.
+    "public/models/**",
     "coverage/**",
+    // The eval harness's photographs and box dumps.
+    ".ocr-eval/**",
     "playwright-report/**",
     "test-results/**",
     // Agent worktrees are whole checkouts of this repository. Linting them
