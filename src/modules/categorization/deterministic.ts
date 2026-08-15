@@ -4,6 +4,7 @@ import {
   indexOfTokenRun,
   isIdentifyingPrefix,
   normalizeMerchant,
+  singularize,
   stripStructuredNoise,
   tokenize,
 } from "./normalize";
@@ -26,6 +27,14 @@ interface CompiledPhrase {
   /** Normalized form, used as the signal's explanation and dedupe key. */
   readonly token: string;
   readonly tokens: readonly string[];
+  /**
+   * The same tokens singularised, for matching against text.
+   *
+   * Only phrases, keywords and excludes are compared this way. Merchants are
+   * matched on `tokens`, because a brand is a name and `migros` is not the
+   * plural of anything.
+   */
+  readonly stems: readonly string[];
 }
 
 interface CompiledSeed {
@@ -41,12 +50,13 @@ interface CompiledSeed {
 /** Merchant rules go through the same normalization as the input they meet. */
 function compileMerchant(value: string): CompiledPhrase {
   const { normalizedMerchant } = normalizeMerchant(value);
-  return { token: normalizedMerchant, tokens: tokenize(normalizedMerchant) };
+  const tokens = tokenize(normalizedMerchant);
+  return { token: normalizedMerchant, tokens, stems: tokens };
 }
 
 function compilePhrase(value: string): CompiledPhrase {
   const tokens = tokenize(value);
-  return { token: tokens.join(" "), tokens };
+  return { token: tokens.join(" "), tokens, stems: tokens.map(singularize) };
 }
 
 function compileSeed(seed: CategorySeed): CompiledSeed {
@@ -78,6 +88,8 @@ export interface PreparedText {
   readonly merchantTokens: readonly string[];
   /** Merchant, description, note and receipt text, tokenized together. */
   readonly textTokens: readonly string[];
+  /** The same tokens singularised, so `pizzas` meets the rule for `pizza`. */
+  readonly textStems: readonly string[];
   readonly processor: string | null;
   readonly processorOnly: boolean;
   /** Free text for the semantic pass, with identifiers already removed. */
@@ -115,11 +127,14 @@ export function prepareText(input: ClassifyTransactionInput): PreparedText {
     .map(stripStructuredNoise)
     .filter((part) => part !== "");
 
+  const textTokens = tokenize(matchable.join(" "));
+
   return {
     rawMerchant: merchantSource,
     normalizedMerchant: normalized.normalizedMerchant,
     merchantTokens: tokenize(normalized.normalizedMerchant),
-    textTokens: tokenize(matchable.join(" ")),
+    textTokens,
+    textStems: textTokens.map(singularize),
     processor: normalized.processor,
     processorOnly: normalized.processorOnly,
     semanticText: [...new Set(semantic)].join(" | "),
@@ -169,7 +184,7 @@ export function collectDeterministicSignals(
     if (suppressed.has(seed.id)) continue;
 
     const excluded = seed.excludes.some((phrase) =>
-      containsTokenRun(prepared.textTokens, phrase.tokens),
+      containsTokenRun(prepared.textStems, phrase.stems),
     );
 
     for (const merchant of seed.merchants) {
@@ -202,7 +217,7 @@ export function collectDeterministicSignals(
     if (excluded) continue;
 
     for (const phrase of seed.phrases) {
-      if (containsTokenRun(prepared.textTokens, phrase.tokens)) {
+      if (containsTokenRun(prepared.textStems, phrase.stems)) {
         add(seed.id, {
           group: "phrase",
           token: phrase.token,
@@ -212,7 +227,7 @@ export function collectDeterministicSignals(
     }
 
     for (const keyword of seed.keywords) {
-      if (containsTokenRun(prepared.textTokens, keyword.tokens)) {
+      if (containsTokenRun(prepared.textStems, keyword.stems)) {
         add(seed.id, {
           group: "keyword",
           token: keyword.token,

@@ -160,6 +160,29 @@ digits, `MIGROS 1234` does not. The matcher decides which is which, using
 descriptor and everything after it is noise. That is why `MIGROS 1234` is
 Migros and `Max's birthday dinner` is not the streaming service.
 
+### Plurals
+
+Words are compared with their plural marker removed, so a rule written once as
+`pizza` also answers `Pizzas`. Before this, every plural had to be listed
+beside its singular, and the ones nobody remembered were simply invisible:
+`Pizza` was recognised and `Pizzas` was not.
+
+`singularize` takes off one trailing `s` or `x` and does nothing else. It is
+not a stemmer, and it declines the cases where guessing costs more than
+missing:
+
+```
+pizzas → pizza      gateaux → gateau
+pass   → pass       (an `ss` ending is not a plural: `pas` is half of French)
+bus    → bus        (too short; `bus` is not the plural of `bu`)
+chevaux → chevaux   (irregular, so it stays its own entry)
+```
+
+**Merchants are never folded this way.** `normalizeMerchant` builds the string
+that becomes a learned mapping's stored key, so folding there would change the
+key of every mapping already written: `migros` would start looking up `migro`
+and a household's learned history would silently stop matching.
+
 ### Store formats
 
 A few retail groups put one name over several shops. Coop is a supermarket, a

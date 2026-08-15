@@ -39,6 +39,47 @@ export function tokenize(value: string): string[] {
   return tokens ?? [];
 }
 
+/**
+ * A token with its plural marker taken off, for comparing *words* only.
+ *
+ * `pizzas` and `pizza` are the same purchase, and before this every plural had
+ * to be written into the seed data beside its singular — which is how `Pizza`
+ * was recognised and `Pizzas` was not. A rule file cannot be the place a
+ * language's morphology is enumerated by hand.
+ *
+ * Deliberately not a stemmer. It removes one trailing `s` or `x` and nothing
+ * else: no suffix tables, no vowel rules, no irregulars. `chevaux` will not
+ * find `cheval`, and that is the right trade — the failure of an
+ * over-eager stemmer is a wrong category, which costs more than a miss.
+ *
+ * Three guards keep it from inventing matches:
+ *
+ *  - Both sides are folded identically, so this can only ever merge words, and
+ *    a merge is harmless unless two *different* words collapse together.
+ *  - A word ending in `ss` keeps it. `pass` must not become `pas`, which is one
+ *    of the commonest words in French and would match half the sentences typed
+ *    into the form.
+ *  - Short words are left alone, because that is where collisions live: `bus`
+ *    is not a plural of `bu`, and `jus` is not a plural of `ju`.
+ *
+ * Never applied to merchants. `normalizeMerchant` builds the string that
+ * becomes a learned mapping's stored key, so folding there would change the
+ * key of every mapping already in every database — `migros` would look up
+ * `migro` and a household's history would silently stop matching.
+ */
+export function singularize(token: string): string {
+  if (token.length >= 5 && token.endsWith("x")) return token.slice(0, -1);
+  if (token.length >= 4 && token.endsWith("s") && !token.endsWith("ss")) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+/** `tokenize`, then every token singularised. Text evidence only. */
+export function tokenizeStems(value: string): string[] {
+  return tokenize(value).map(singularize);
+}
+
 /** Payment processors that front for the merchant who actually got paid. */
 const PROCESSOR_PATTERN =
   /\b(paypal|sq|sumup|stripe|sq \*|zettle|izettle)\s*\*\s*/;

@@ -5,6 +5,7 @@ import {
   isIdentifyingPrefix,
   merchantKey,
   normalizeMerchant,
+  singularize,
   tokenize,
 } from "./normalize";
 
@@ -129,5 +130,33 @@ describe("merchantKey", () => {
   it("keeps a name that is nothing but short tokens", () => {
     expect(merchantKey("sig")).toBe("sig");
     expect(merchantKey("edf")).toBe("edf");
+  });
+});
+
+describe("singularize", () => {
+  it("takes off the plural a rule file should not have to spell out", () => {
+    expect(singularize("pizzas")).toBe("pizza");
+    expect(singularize("burgers")).toBe("burger");
+    expect(singularize("gaufres")).toBe("gaufre");
+    // Accents are already folded by the time this runs.
+    expect(singularize(foldText("crêpes"))).toBe("crepe");
+    expect(singularize("gateaux")).toBe("gateau");
+  });
+
+  it("leaves a word that only looks plural", () => {
+    // `pass` must not become `pas`, which is half of written French.
+    expect(singularize("pass")).toBe("pass");
+    expect(singularize("class")).toBe("class");
+    // Short words are where collisions live: `bus` is not a plural of `bu`.
+    expect(singularize("bus")).toBe("bus");
+    expect(singularize("jus")).toBe("jus");
+    expect(singularize("gas")).toBe("gas");
+  });
+
+  it("is idempotent, so a singular rule and a plural input meet", () => {
+    for (const word of ["pizza", "pizzas", "velo", "velos"]) {
+      expect(singularize(singularize(word))).toBe(singularize(word));
+    }
+    expect(singularize("velos")).toBe(singularize("velo"));
   });
 });

@@ -149,10 +149,17 @@ describe("contextual overrides", () => {
     expect(classify("SQ *CAFE CENTRAL").category).toBe("restaurants");
 
     // The merchant is extracted even when what is behind it stays uncertain:
-    // a bakery is a shop as often as it is somewhere to sit down.
+    // a bakery is a shop as often as it is somewhere to sit down. Both are
+    // offered and neither is applied, which is that sentence as behaviour —
+    // the bakery used to be a hint towards restaurants and too weak to put
+    // on screen at all, so the answer was a blank field.
     const bakery = classify("SUMUP *BOULANGERIE DUPONT");
     expect(bakery.normalizedMerchant).toBe("boulangerie dupont");
-    expect(bakery.alternatives[0]?.category).toBe("restaurants");
+    expect(bakery.decision).toBe("suggested");
+    expect([
+      bakery.category,
+      ...bakery.alternatives.map((alternative) => alternative.category),
+    ]).toEqual(expect.arrayContaining(["restaurants", "groceries"]));
   });
 });
 
@@ -351,5 +358,127 @@ describe("learned mappings", () => {
     );
     expect(result.category).toBe("groceries");
     expect(result.source).not.toBe("learned_mapping");
+  });
+});
+
+/**
+ * The everyday words people actually type.
+ *
+ * The seeds began as merchants and formal phrases — `billet de train`,
+ * `facture électricité` — which is not how anybody describes a round of drinks
+ * to their flatmates. Two in five ordinary descriptions came back with nothing
+ * at all, and a blank category field is what the picker was then asked to
+ * apologise for.
+ */
+describe("ordinary descriptions", () => {
+  const cases: [string, ExpenseCategory][] = [
+    // Drinks and street food, the shape of a shared expense on a day out.
+    ["Coca", "restaurants"],
+    ["Coca cola", "restaurants"],
+    ["Gaufres", "restaurants"],
+    ["Crêpes", "restaurants"],
+    ["Churros", "restaurants"],
+    ["Barbe à papa", "restaurants"],
+    ["Chocolat chaud", "restaurants"],
+    ["Bière", "restaurants"],
+    ["Coffee", "restaurants"],
+    ["Wine", "restaurants"],
+    ["Frites", "restaurants"],
+    ["Goûter", "restaurants"],
+    ["Take away", "restaurants"],
+    // Staples, which is what the other half of the food spending is.
+    ["Pain", "groceries"],
+    ["Lait", "groceries"],
+    ["Oeufs", "groceries"],
+    ["Fromage", "groceries"],
+    ["Légumes", "groceries"],
+    ["Pâtes", "groceries"],
+    ["Bread", "groceries"],
+    ["Milk", "groceries"],
+    ["Vegetables", "groceries"],
+    // Getting about.
+    ["Bus", "transport"],
+    ["Métro", "transport"],
+    ["Ferry", "transport"],
+    ["Vélo", "transport"],
+    ["Gasoil", "transport"],
+    ["Vignette", "transport"],
+    // The flat.
+    ["Éponges", "household"],
+    ["Sacs poubelle", "household"],
+    ["Piles", "household"],
+    ["Rideaux", "household"],
+    ["Facture de gaz", "utilities"],
+    ["Forfait mobile", "utilities"],
+    // Out and about.
+    ["Plongée", "activities"],
+    ["Fleurs", "gifts"],
+    ["Nuit d'hôtel", "lodging"],
+  ];
+
+  for (const [description, expected] of cases) {
+    it(`files "${description}" as ${expected}`, () => {
+      expect(categoryOf(description)).toBe(expected);
+    });
+  }
+});
+
+describe("plurals", () => {
+  /**
+   * Every rule used to need its own plural written in beside it, which is how
+   * `Pizza` was recognised and `Pizzas` was not.
+   */
+  it("reads a plural as the word it is the plural of", () => {
+    for (const [singular, plural] of [
+      ["Pizza", "Pizzas"],
+      ["Burger", "Burgers"],
+      ["Sandwich", "Sandwichs"],
+      ["Vélo", "Vélos"],
+      ["Musée", "Musées"],
+      ["Billet de train", "Billets de train"],
+    ]) {
+      expect(categoryOf(plural)).toBe(categoryOf(singular));
+      expect(classify(plural).decision).toBe("auto_assigned");
+    }
+  });
+
+  it("does not read a singular word that ends in s as a plural", () => {
+    // `pass` collapsing to `pas` would match most French sentences.
+    expect(categoryOf("Ski pass")).toBe("activities");
+    expect(classify("Bus").decision).toBe("auto_assigned");
+  });
+});
+
+describe("words that belong to two languages", () => {
+  /**
+   * The cost of teaching the classifier French words for food is that some of
+   * them are English words for other things. Each one is named rather than
+   * given up, because `pain` and `eau` are too useful to lose.
+   */
+  it("does not read English pain as French bread", () => {
+    expect(categoryOf("Back pain massage")).toBe("health");
+    expect(categoryOf("Neck pain physio")).toBe("health");
+    expect(categoryOf("Pain")).toBe("groceries");
+  });
+
+  it("keeps perfume out of the food shopping", () => {
+    expect(categoryOf("Eau de parfum")).toBe("shopping");
+    expect(categoryOf("Eau")).toBe("groceries");
+  });
+
+  it("tells a water bill from a bottle of water", () => {
+    expect(categoryOf("Facture d'eau")).toBe("utilities");
+    expect(categoryOf("Bouteilles d'eau")).toBe("groceries");
+  });
+
+  it("does not let an ingredient outvote the dish", () => {
+    // "sucre" is a grocery; "crêpes au sucre" is not.
+    expect(categoryOf("Crêpes au sucre")).toBe("restaurants");
+    expect(categoryOf("Pain au chocolat")).toBe("restaurants");
+  });
+
+  it("files an outing bought as a present as a present", () => {
+    expect(categoryOf("Parapente cadeau Célia")).toBe("gifts");
+    expect(categoryOf("Parapente")).toBe("activities");
   });
 });
