@@ -29,41 +29,45 @@ until an operator turns it on.
 ```
 camera, photo library, or a PDF
         │
-        ├─────────────────────────────┐
-        │                             │ a PDF that carries its own text
-        │                             ▼
-        │                       pdf.js text layer ──► boxes ──┐
-        │                       (no model, no download)       │
-        ▼                                                     │
-  preprocessing        resize, EXIF rotation, contrast        │
-        │              (a scanned PDF is drawn to pixels here)│
-        ▼                                                     │
-  Web Worker ───────────────────────────────────────────────┐ │
-        │                                                   │ │
-        ▼                                                   │ │
-  onnxruntime-web    WebGPU if available, WebAssembly if not│ │
-        │                                                   │ │
-        ▼                                                   │ │
-  PP-OCRv6 detection ──► boxes                              │ │
-        │                                                   │ │
-        ▼                                                   │ │
-  PP-OCRv6 recognition ─► text + confidence                 │ │
-        │                                                   │ │
-        └───────────────────────────────────────────────────┘ │
-        │                                                     │
-        ├─────────────────────────────────────────────────────┘
-        ▼
-  parser               merchant, date, items, totals
-        │
-        ▼
-  validation           do the numbers reconcile?
-        │
-        ▼
-  you review and correct every value
-        │
-        ▼
-  item assignment ──► Balancia's ordinary exact split
+        ├──────────────────────────────────┐ a PDF carrying its own text.
+        │                                  │ Read here whichever reader is
+        │                                  ▼ chosen, and never uploaded.
+        │                            pdf.js text layer
+        ▼                                  │
+  which reader?   chosen per scan          │
+        │         (a scanned PDF is drawn  │
+        │          to pixels either way)   │
+        │                                  │
+        ├──────────────────┐               │
+        │ on this device   │ with a provider
+        ▼                  ▼               │
+  preprocessing      POST to this server   │
+        │                  │               │
+        ▼                  ▼               │
+  Web Worker         the operator's        │
+  onnxruntime-web    configured provider   │
+  PP-OCRv6 det+rec         │               │
+        │                  │               │
+        ▼                  │               │
+      boxes ◄──────────────┼───────────────┘
+        │                  │
+        ▼                  │  structure already,
+  parser                   │  so no parsing needed
+        │                  │
+        └────────┬─────────┘
+                 ▼
+           validation      do the numbers reconcile?
+                 │
+                 ▼
+        you review and correct every value
+                 │
+                 ▼
+        item assignment ──► Balancia's ordinary exact split
 ```
+
+Note where the two paths rejoin. A provider skips the parser, because it
+returns fields rather than text boxes — but it does **not** skip validation,
+and it does not skip you.
 
 The expense that comes out is an ordinary expense. It carries no trace of
 having been scanned, the server recomputes its split with the same domain code
@@ -364,29 +368,35 @@ own receipts.
 
 Figures are August 2026 and will date.
 
-| Option                                                               | Accuracy signal                        | Cost per 1,000 scans    |
-| -------------------------------------------------------------------- | -------------------------------------- | ----------------------- |
-| **Self-hosted PaddleOCR-VL-1.5 or GLM-OCR**, via the `openai` driver | >94% on OmniDocBench 1.5               | electricity             |
-| **Self-hosted dots.ocr** (3B), via the `openai` driver               | 0.032 edit distance — best in that set | electricity             |
-| Gemini 2.5 Flash-Lite, via `gemini`                                  | —                                      | ~$0.33                  |
-| GPT-5.4-nano, via `openai`                                           | —                                      | ~$1.67 (~$0.84 batched) |
-| Mistral OCR 4, via `mistral`                                         | 72.0% on olmOCR-Bench                  | $4 flat, $2 batched     |
-| Gemini 3 Pro, via `gemini`                                           | 90.3% on OmniDocBench                  | flagship band           |
-| Flagship chat models, incl. this driver's `claude-opus-5` default    | —                                      | $16–$33                 |
+| Option                                                               | Accuracy signal                                | Cost per 1,000 scans       |
+| -------------------------------------------------------------------- | ---------------------------------------------- | -------------------------- |
+| **No provider at all** — PP-OCRv6 tiny on the device                 | loses no line items on blurry restaurant shots | nothing                    |
+| **Self-hosted PaddleOCR-VL-1.5 or GLM-OCR**, via the `openai` driver | >94% on OmniDocBench 1.5                       | electricity                |
+| **Self-hosted dots.ocr** (3B), via the `openai` driver               | 0.032 edit distance — best in that set         | electricity                |
+| Gemini 2.5 Flash-Lite, via `gemini`                                  | —                                              | ~$0.33                     |
+| GPT-5.4-nano, via `openai`                                           | —                                              | ~$1.67 (~$0.84 batched)    |
+| Mistral OCR, via `mistral`                                           | 72.0% on olmOCR-Bench, on the pre-4 generation | $2–$4 flat, halved batched |
+| Gemini 3 Pro, via `gemini`                                           | 90.3% on OmniDocBench                          | flagship band              |
+| Flagship chat models, incl. this driver's `claude-opus-5` default    | —                                              | $16–$33                    |
 
-**The recommendation for this project is the first row**, and it is not a
-compromise. A 0.9B document model scores above every hosted flagship on the
-parsing benchmarks, runs in 2–4 GB of VRAM on a consumer GPU, costs nothing
-per scan, and — the part that matters here — the receipt never leaves the
-operator's hardware, so the privacy paragraph above stays true in its
-strongest form. Serve it with vLLM or Ollama and point the `openai` driver at
-it:
+**The first row is not a joke entry.** Since PP-OCRv6 tiny the on-device reader
+is good enough that many instances need nothing else — see [why this
+model](#why-this-model) for the measurements. Read the rest of this table as
+answering "what if that is not enough for my receipts", not "what should I use".
+
+**If you do want a provider, the recommendation is the self-hosted rows**, and
+they are not a compromise. A 0.9B document model scores above every hosted
+flagship on the parsing benchmarks, runs in 2–4 GB of VRAM on a consumer GPU,
+costs nothing per scan, and — the part that matters here — the receipt never
+leaves the operator's hardware, so the privacy paragraph above stays true in
+its strongest form. Serve it with vLLM or Ollama and point the `openai` driver
+at it:
 
 ```bash
 RECEIPT_OCR_PROVIDER=openai
 RECEIPT_OCR_BASE_URL=http://localhost:11434/v1
 RECEIPT_OCR_MODEL=<the model your server serves>
-RECEIPT_OCR_LOCAL=false   # optional: no 47 MB download, strict CSP
+RECEIPT_OCR_LOCAL=false   # optional: no 32 MB download, strict CSP
 ```
 
 If you would rather not run a GPU, Gemini 2.5 Flash-Lite is the cheap hosted
@@ -432,11 +442,19 @@ Sources: [OmniDocBench](https://github.com/opendatalab/OmniDocBench),
 ### Turning off the WebAssembly reader
 
 An instance reading receipts only through a provider should set
-`RECEIPT_OCR_LOCAL=false`. It then downloads none of the ~47 MB, and —
+`RECEIPT_OCR_LOCAL=false`. It then downloads none of the ~32 MB, and —
 because `isWebAssemblyInferenceEnabled()` asks whether the _browser_ reader is
 in use rather than whether scanning is on — keeps the strict
 Content-Security-Policy. `'wasm-unsafe-eval'` is granted for a reader that
 runs, not for a feature that is enabled.
+
+There is one thing the strict policy costs, and it is worth stating plainly.
+pdf.js compiles WebAssembly for JBIG2 and JPEG 2000 images — formats a few
+document scanners emit — so a PDF containing one cannot be drawn to a page
+image on such an instance. Reading a PDF's _text layer_ uses no codec, and a
+photograph uses none either, so the common cases are unaffected. If your
+receipts arrive as JBIG2 scans, leave `RECEIPT_OCR_LOCAL=true`; you can still
+send everything to the provider.
 
 ### What it costs
 

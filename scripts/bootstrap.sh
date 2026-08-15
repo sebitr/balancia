@@ -371,15 +371,17 @@ run_ts() {
 # and the provider answer asks before turning local off.
 choose_receipt_reader() {
   prose <<'TEXT'
-On this device: a ~47 MB model download now, and the photo is never
+On this device: a ~32 MB model download now, and the photo is never
 uploaded to be read. It also relaxes the Content-Security-Policy with
-'wasm-unsafe-eval', which WebAssembly needs.
+'wasm-unsafe-eval', which WebAssembly needs. This reads an ordinary
+receipt well and costs nothing per scan.
 
 Through a provider: no download and no CSP change, but the photo is
-sent by this server to whoever you configure. A provider reads a
-crumpled or faded receipt far better than the on-device model. Point
-the openai driver at your own Ollama or vLLM and it stays on your
-hardware.
+sent by this server to whoever you configure. Worth it for what the
+small model cannot do — handwriting, unusual layouts, scripts outside
+its dictionary — and for getting structure back instead of text a
+parser has to interpret. Point the openai driver at your own Ollama
+or vLLM and it stays on your hardware.
 
 TEXT
 

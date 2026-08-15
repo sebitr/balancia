@@ -941,7 +941,7 @@
     "reader": {
       "local": "Lire sur cet appareil",
       "remote": "Lire avec {provider}",
-      "remoteExplain": "La photo est envoyée à ce serveur, puis à {provider}, pour être lue. Seuls les montants que vous confirmez sont enregistrés."
+      "remoteExplain": "La photo est envoyée à ce serveur, puis à {provider}, pour être lue. Un PDF qui contient déjà son texte est lu sur cet appareil, sans être envoyé. Seuls les montants que vous confirmez sont enregistrés."
     },
     "takePhoto": "Prendre une photo",
     "choosePhoto": "Choisir une photo ou un PDF",

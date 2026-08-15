@@ -941,7 +941,7 @@
     "reader": {
       "local": "Read on this device",
       "remote": "Read with {provider}",
-      "remoteExplain": "The photo is sent to this server, and on to {provider}, to be read. Only the amounts you confirm are saved."
+      "remoteExplain": "The photo is sent to this server, and on to {provider}, to be read. A PDF that carries its own text is read on this device and not sent. Only the amounts you confirm are saved."
     },
     "takePhoto": "Take a photo",
     "choosePhoto": "Choose a photo or PDF",

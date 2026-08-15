@@ -3,8 +3,8 @@
  *
  * Two implementations of one interface:
  *
- *  - `LocalReader` runs PP-OCRv5 in a worker on this device and parses the
- *    boxes it finds. The image does not leave the page.
+ *  - `LocalReader` runs PP-OCRv6 tiny in a worker on this device and parses
+ *    the boxes it finds. The image does not leave the page.
  *  - `RemoteReader` posts the image to this instance, which forwards it to
  *    the provider the operator configured and returns what it read.
  *
@@ -13,8 +13,9 @@
  * is selected and what it means before the shutter is pressed.
  */
 import { parseReceipt, type ParsedReceipt } from "@/modules/receipts";
+import { looksLikePdf, readPdf } from "@/lib/pdf/read-pdf";
 import { probeOcrAvailable } from "./config";
-import { ReceiptScanner, isScanningSupported } from "./scanner";
+import { ReceiptScanner, classifyPdf, isScanningSupported } from "./scanner";
 import { deserializeParsedReceipt } from "./serialize";
 import {
   ScanError,
@@ -74,10 +75,43 @@ export class RemoteReader implements ReceiptReader {
     file: Blob,
     onProgress?: (progress: ScanProgress) => void,
   ): Promise<ParsedReceipt> {
+    onProgress?.({ stage: "preparing" });
+
+    /*
+     * A PDF is triaged here rather than posted, because the endpoint takes
+     * pictures: the drivers behind it are vision models, and teaching each one
+     * its vendor's document format would be four more request shapes to keep
+     * right.
+     *
+     * The split follows the on-device reader's exactly, so that choosing a
+     * provider never rejects a file the other reader would have accepted:
+     *
+     *  - a PDF carrying its own text is *answered here*. That text is the
+     *    receipt, character for character, and no model — local or hosted —
+     *    can improve on it. Sending it anyway would cost the operator money
+     *    to make the answer worse, so nothing is uploaded at all.
+     *  - a scanned PDF becomes a picture of its first page, and that picture
+     *    is what goes to the provider.
+     */
+    let source = file;
+    if (await looksLikePdf(file)) {
+      const content = await readPdf(file).catch((failure: unknown) => {
+        throw classifyPdf(failure);
+      });
+
+      if (content.kind === "text") {
+        onProgress?.({ stage: "analyzing" });
+        return parseReceipt(content.result, {
+          fallbackCurrency: this.#fallbackCurrency,
+        });
+      }
+      source = content.image;
+    }
+
     onProgress?.({ stage: "uploading" });
 
     const body = new FormData();
-    body.append("file", file, "receipt");
+    body.append("file", source, "receipt");
     body.append("currency", this.#fallbackCurrency);
 
     let response: Response;

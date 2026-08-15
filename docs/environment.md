@@ -453,13 +453,27 @@ a feature that is enabled.
 Setting this to `0` with `RECEIPT_OCR_PROVIDER=none` while `RECEIPT_SCANNING=1`
 is refused at boot — that is a scan button with nothing behind it.
 
+One consequence of the strict policy: pdf.js compiles WebAssembly for JBIG2 and
+JPEG 2000 images, which a few document scanners emit, so a PDF containing one
+cannot be drawn on a provider-only instance. Reading a PDF's _text_ needs no
+codec, so emailed invoices — the common case — are unaffected. Set this back to
+`1` if your receipts arrive as JBIG2 scans.
+
 ### `RECEIPT_OCR_PROVIDER`
 
 `none` (default) | `anthropic` | `openai` | `gemini` | `mistral`.
 
-An optional server-side reader, for receipts the on-device model struggles
-with. **Your server** makes the call, never the browser, so the credential
-stays here and the page's `connect-src 'self'` is untouched.
+An optional server-side reader. Not a replacement for the on-device one, which
+since PP-OCRv6 tiny reads an ordinary receipt well and costs nothing per scan;
+this is for what a 6 MB model cannot do — handwriting, unusual layouts, scripts
+outside its dictionary — and for getting structure back rather than text a
+parser has to interpret. **Your server** makes the call, never the browser, so
+the credential stays here and the page's `connect-src 'self'` is untouched.
+
+A PDF is never sent: the browser reads its text layer when it has one and draws
+its first page when it does not, so what reaches the provider is always an
+image. A text PDF is therefore answered on the device even when a provider is
+selected — exact, and free.
 
 `openai` is the driver for the protocol rather than the vendor: with
 `RECEIPT_OCR_BASE_URL` pointed at Ollama, vLLM or LM Studio it runs a vision

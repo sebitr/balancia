@@ -28,7 +28,13 @@ import { serializeParsedReceipt } from "@/lib/ocr/serialize";
  * puts in front of someone. Nothing here is trusted or stored.
  */
 
-/** Vision endpoints take images. A PDF receipt goes through the form. */
+/**
+ * Vision endpoints take pictures, so this one does too.
+ *
+ * A PDF never reaches here: `RemoteReader` reads its text layer on the device
+ * when it has one, and draws its first page when it does not. What arrives is
+ * always already an image, whatever the person picked.
+ */
 const READABLE_TYPES = new Set([
   "image/jpeg",
   "image/png",

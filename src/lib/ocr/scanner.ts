@@ -226,7 +226,7 @@ export class ReceiptScanner {
 }
 
 /** Maps a PDF failure onto something the UI can explain. */
-function classifyPdf(failure: unknown): ScanError {
+export function classifyPdf(failure: unknown): ScanError {
   if (failure instanceof PdfError && failure.code === "password") {
     return new ScanError("pdfPassword", failure.message);
   }

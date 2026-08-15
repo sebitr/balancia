@@ -219,21 +219,30 @@ const envSchema = z
     RECEIPT_SCANNING: booleanish.default(false),
 
     /**
-     * The on-device reader: PP-OCRv5 in the browser, against models this
+     * The on-device reader: PP-OCRv6 tiny in the browser, against models this
      * instance serves. On by default, because it is what receipt scanning has
      * always meant here and it is the only reader that needs no third party.
      *
      * Turning it off is for an instance that reads receipts exclusively
-     * through `RECEIPT_OCR_PROVIDER`. That instance runs no WebAssembly, so it
-     * keeps the strict Content-Security-Policy and needs none of the ~47 MB
-     * under `public/models`.
+     * through `RECEIPT_OCR_PROVIDER`. That instance runs no WebAssembly of its
+     * own, so it keeps the strict Content-Security-Policy and needs none of
+     * the ~32 MB under `public/models`.
+     *
+     * One consequence worth knowing: pdf.js compiles WebAssembly for JBIG2 and
+     * JPEG 2000 images, which a few scanners emit. Such a PDF cannot be drawn
+     * on an instance with the strict policy. A PDF's *text* needs no codec, so
+     * the common emailed-invoice case is unaffected either way.
      */
     RECEIPT_OCR_LOCAL: booleanish.default(true),
 
     /**
-     * An optional server-side reader, for receipts the on-device model
-     * struggles with — crumpled thermal paper, faded print, multi-column
-     * layouts.
+     * An optional server-side reader.
+     *
+     * Not a replacement for the on-device one, which since PP-OCRv6 tiny reads
+     * an ordinary receipt well and costs nothing. This is for what a 6 MB
+     * model cannot do: it returns structure directly instead of boxes a parser
+     * has to interpret, and it copes with handwriting, unusual layouts and
+     * scripts outside the recognizer's dictionary.
      *
      * This is the one place Balancia will send a receipt image somewhere to be
      * read, it is off by default, and the person scanning chooses it per scan
