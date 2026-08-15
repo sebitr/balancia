@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   RECEIPT_INSTRUCTIONS,
+  RECEIPT_JSON_SCHEMA,
   extractJson,
   receiptReplySchema,
   toParsedReceipt,
@@ -241,5 +242,76 @@ describe("the instructions", () => {
   it("still tells the model not to invent anything", () => {
     // Wrapped across a line in the prompt, hence the loose whitespace.
     expect(RECEIPT_INSTRUCTIONS).toMatch(/[Nn]ever\s+invent/);
+  });
+});
+
+describe("the JSON schema", () => {
+  /**
+   * Two drivers now hand this to their endpoint as an enforced contract, and
+   * `receiptReplySchema` parses whatever comes back. If the two drift, the
+   * endpoint guarantees a shape the parser then discards — which reads as a
+   * receipt that came back empty for no visible reason.
+   */
+  it("names exactly the fields the parser reads", () => {
+    expect(Object.keys(RECEIPT_JSON_SCHEMA.properties).sort()).toEqual(
+      [
+        "currency",
+        "date",
+        "items",
+        "merchant",
+        "service",
+        "subtotal",
+        "tax",
+        "tip",
+        "total",
+      ].sort(),
+    );
+  });
+
+  /** `strict: true` on both endpoints requires every key listed and closed. */
+  it("is strict-mode compatible", () => {
+    expect(RECEIPT_JSON_SCHEMA.additionalProperties).toBe(false);
+    expect([...RECEIPT_JSON_SCHEMA.required].sort()).toEqual(
+      Object.keys(RECEIPT_JSON_SCHEMA.properties).sort(),
+    );
+
+    const item = RECEIPT_JSON_SCHEMA.properties.items.items;
+    expect(item.additionalProperties).toBe(false);
+    expect([...item.required].sort()).toEqual(
+      Object.keys(item.properties).sort(),
+    );
+  });
+
+  /** The rule the whole module exists to protect. */
+  it("asks for amounts as strings, never as numbers", () => {
+    const { properties } = RECEIPT_JSON_SCHEMA;
+    for (const field of [
+      "subtotal",
+      "tax",
+      "tip",
+      "service",
+      "total",
+    ] as const) {
+      expect(JSON.stringify(properties[field])).not.toContain('"number"');
+    }
+    expect(properties.items.items.properties.total).toEqual({ type: "string" });
+  });
+
+  /** A schema the endpoint accepts but the parser rejects would be useless. */
+  it("produces something the reply schema accepts", () => {
+    const sample = {
+      merchant: "Trattoria",
+      date: "13.08.2026",
+      currency: "EUR",
+      items: [
+        { name: "Pizza", quantity: null, unitPrice: null, total: "19,00" },
+      ],
+      subtotal: "19,00",
+      tax: null,
+      tip: null,
+      service: null,
+      total: "19,00",
+    };
+    expect(receiptReplySchema.safeParse(sample).success).toBe(true);
   });
 });

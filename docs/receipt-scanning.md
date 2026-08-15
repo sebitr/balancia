@@ -187,9 +187,14 @@ disk, at a cost of about 25 MB. No browser ever loads both.
 
 ## The server-side reader
 
-Off unless `RECEIPT_OCR_PROVIDER` names one. Three drivers, all behind the
+Off unless `RECEIPT_OCR_PROVIDER` names one. Four drivers, all behind the
 same `OcrProvider` contract in `src/lib/ocr/providers`, arranged the way
 `src/lib/storage` arranges its local and S3 drivers.
+
+Three of them post a chat completion to a general vision model. `mistral` is
+the exception: a purpose-built document endpoint priced per page rather than
+per token, which makes a bill predictable. It is handed the same JSON Schema
+the `anthropic` driver uses and its answer goes through the same conversion.
 
 | Setting                | What it does                                                                   |
 | ---------------------- | ------------------------------------------------------------------------------ |
@@ -208,11 +213,74 @@ does not need to know which, and the interface names the endpoint by its host
 rather than calling it "OpenAI", because on most instances that would be a
 false statement about who receives the image.
 
-Only `anthropic` has a default model (`claude-opus-5`). The other two require
+`anthropic` defaults to `claude-opus-5` and `mistral` to `mistral-ocr-latest`
+(a product name rather than a version, so it does not go stale). The other two require
 `RECEIPT_OCR_MODEL`, and the schema refuses to start without it: model names
 on those endpoints belong to whoever is serving them, and a constant compiled
 in here would eventually be a 404 at somebody's first scan rather than an
 error at boot.
+
+### Which one to pick
+
+Read the caveats before the table, because they are load-bearing.
+
+**There is no independent receipt benchmark.** Almost every published
+comparison of these tools comes from a vendor that ranks itself first. The
+numbers below are from document-parsing benchmarks — [OmniDocBench
+1.5](https://github.com/opendatalab/OmniDocBench) and
+[olmOCR-Bench](https://www.llamaindex.ai/blog/omnidocbench-is-saturated-what-s-next-for-ocr-benchmarks)
+— which measure turning a page into faithful markdown. That is a _proxy_ for
+reading a crumpled thermal receipt into fields, not a measurement of it. A
+model that parses a two-column paper beautifully can still put the tax on the
+wrong line. Treat the table as a shortlist, not a ranking, and try two on your
+own receipts.
+
+Figures are August 2026 and will date.
+
+| Option                                                               | Accuracy signal                        | Cost per 1,000 scans    |
+| -------------------------------------------------------------------- | -------------------------------------- | ----------------------- |
+| **Self-hosted PaddleOCR-VL-1.5 or GLM-OCR**, via the `openai` driver | >94% on OmniDocBench 1.5               | electricity             |
+| **Self-hosted dots.ocr** (3B), via the `openai` driver               | 0.032 edit distance — best in that set | electricity             |
+| Gemini 2.5 Flash-Lite, via `gemini`                                  | —                                      | ~$0.33                  |
+| GPT-5.4-nano, via `openai`                                           | —                                      | ~$1.67 (~$0.84 batched) |
+| Mistral OCR 4, via `mistral`                                         | 72.0% on olmOCR-Bench                  | $4 flat, $2 batched     |
+| Gemini 3 Pro, via `gemini`                                           | 90.3% on OmniDocBench                  | flagship band           |
+| Flagship chat models, incl. this driver's `claude-opus-5` default    | —                                      | $16–$33                 |
+
+**The recommendation for this project is the first row**, and it is not a
+compromise. A 0.9B document model scores above every hosted flagship on the
+parsing benchmarks, runs in 2–4 GB of VRAM on a consumer GPU, costs nothing
+per scan, and — the part that matters here — the receipt never leaves the
+operator's hardware, so the privacy paragraph above stays true in its
+strongest form. Serve it with vLLM or Ollama and point the `openai` driver at
+it:
+
+```bash
+RECEIPT_OCR_PROVIDER=openai
+RECEIPT_OCR_BASE_URL=http://localhost:11434/v1
+RECEIPT_OCR_MODEL=<the model your server serves>
+RECEIPT_OCR_LOCAL=false   # optional: no 47 MB download, strict CSP
+```
+
+If you would rather not run a GPU, Gemini 2.5 Flash-Lite is the cheap hosted
+option and Mistral OCR is the predictable one — a flat page rate with no token
+arithmetic to do, which is worth something when you are budgeting for a
+household rather than a company.
+
+**Note the last row.** The `anthropic` driver defaults to `claude-opus-5`,
+which sits in the most expensive band on this table — roughly one to three
+cents a scan. That is a deliberate default (if you pick Claude, you get the
+capable one) and it is one line to change:
+
+```bash
+RECEIPT_OCR_MODEL=<a cheaper model>
+```
+
+Sources: [OmniDocBench](https://github.com/opendatalab/OmniDocBench),
+[LlamaIndex on benchmark saturation](https://www.llamaindex.ai/blog/omnidocbench-is-saturated-what-s-next-for-ocr-benchmarks),
+[open-weight OCR VLMs compared](https://www.spheron.network/blog/best-open-source-ocr-vlm-self-host-gpu-cloud-2026/),
+[per-page LLM OCR costs](https://docuocr.com/blog/which-llm-is-cheapest-for-ocr),
+[Mistral OCR pricing](https://www.aimadetools.com/blog/mistral-ocr-4-complete-guide/).
 
 ### Turning off the WebAssembly reader
 

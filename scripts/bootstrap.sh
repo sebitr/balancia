@@ -399,18 +399,18 @@ TEXT
 
   local provider=''
   while :; do
-    ask_line 'Provider (anthropic, gemini, openai)' anthropic
+    ask_line 'Provider (anthropic, gemini, mistral, openai)' anthropic
     case $(lower "$reply") in
-      anthropic | gemini | openai) provider=$(lower "$reply"); break ;;
+      anthropic | gemini | mistral | openai) provider=$(lower "$reply"); break ;;
       '') ;;
-      *) oops 'Pick one of anthropic, gemini or openai.' ;;
+      *) oops 'Pick one of anthropic, gemini, mistral or openai.' ;;
     esac
   done
 
   # Only the anthropic driver has a default model. See src/lib/env.ts: naming
   # one for the others here would be a 404 at the first scan the day it moves.
   local model=''
-  if [ "$provider" = anthropic ]; then
+  if [ "$provider" = anthropic ] || [ "$provider" = mistral ]; then
     ask_line 'Model (blank for the default)' ''
     model=$reply
   else

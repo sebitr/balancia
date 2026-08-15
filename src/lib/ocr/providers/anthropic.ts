@@ -15,6 +15,7 @@ import {
 import { postJson } from "./http";
 import {
   RECEIPT_INSTRUCTIONS,
+  RECEIPT_JSON_SCHEMA,
   extractJson,
   receiptReplySchema,
   toParsedReceipt,
@@ -39,60 +40,6 @@ const IMAGE_TYPES = new Set([
   "image/gif",
   "image/webp",
 ]);
-
-/**
- * The reply schema, enforced rather than requested.
- *
- * Structured outputs make the shape a guarantee instead of a hope, which
- * removes the failure the other drivers still have to recover from: a model
- * that answers in prose, or wraps its JSON in a code fence. `reply.ts` keeps
- * its tolerant parsing anyway, because two of the three drivers need it.
- *
- * Amounts are strings here for the reason spelled out in `reply.ts`: the
- * separator rule belongs to `amounts.ts`, not to a model.
- */
-const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] };
-const nullableNumber = { anyOf: [{ type: "number" }, { type: "null" }] };
-
-const REPLY_SCHEMA = {
-  type: "object",
-  properties: {
-    merchant: nullableString,
-    date: nullableString,
-    currency: nullableString,
-    items: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          quantity: nullableNumber,
-          unitPrice: nullableString,
-          total: { type: "string" },
-        },
-        required: ["name", "quantity", "unitPrice", "total"],
-        additionalProperties: false,
-      },
-    },
-    subtotal: nullableString,
-    tax: nullableString,
-    tip: nullableString,
-    service: nullableString,
-    total: nullableString,
-  },
-  required: [
-    "merchant",
-    "date",
-    "currency",
-    "items",
-    "subtotal",
-    "tax",
-    "tip",
-    "service",
-    "total",
-  ],
-  additionalProperties: false,
-} as const;
 
 interface AnthropicReply {
   readonly content?: readonly {
@@ -139,7 +86,7 @@ export class AnthropicOcrProvider implements OcrProvider {
         // A bounded extraction, not an open problem. Low effort reads a
         // receipt as well as high does and costs a fraction of it.
         effort: "low",
-        format: { type: "json_schema", schema: REPLY_SCHEMA },
+        format: { type: "json_schema", schema: RECEIPT_JSON_SCHEMA },
       },
       messages: [
         {

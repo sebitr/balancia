@@ -243,10 +243,15 @@ const envSchema = z
      *
      * `openai` is also the driver for anything speaking the same protocol —
      * set `RECEIPT_OCR_BASE_URL` at Ollama, vLLM or LM Studio and the image
-     * never leaves the operator's own hardware.
+     * never leaves the operator's own hardware. That is the cheapest and most
+     * private option, and on current open-weight document models the most
+     * accurate one too; see docs/receipt-scanning.md.
+     *
+     * `mistral` is the odd one: a per-page-priced document endpoint rather
+     * than a general vision model.
      */
     RECEIPT_OCR_PROVIDER: z
-      .enum(["none", "anthropic", "openai", "gemini"])
+      .enum(["none", "anthropic", "openai", "gemini", "mistral"])
       .default("none"),
     RECEIPT_OCR_API_KEY: optionalString,
     /** Base URL override. Anything OpenAI-compatible, including a local one. */
@@ -328,7 +333,8 @@ const envSchema = z
     }
 
     /*
-     * Only the Anthropic driver carries a default model. On the other two the
+     * Only the Anthropic and Mistral drivers carry a default model. On the
+     * other two the
      * model name belongs to whoever is serving the endpoint — an operator's
      * own Ollama, or an API whose version suffixes move — and a constant
      * compiled in here would eventually be a 404 at somebody's first scan
@@ -344,7 +350,7 @@ const envSchema = z
         path: ["RECEIPT_OCR_MODEL"],
         message:
           `RECEIPT_OCR_MODEL is required when RECEIPT_OCR_PROVIDER is "${value.RECEIPT_OCR_PROVIDER}" — ` +
-          "name the vision model the endpoint serves. Only the anthropic driver has a default.",
+          "name the vision model the endpoint serves. The anthropic and mistral drivers have defaults.",
       });
     }
 
@@ -628,6 +634,8 @@ export function configuredOcrProviderName(
       return "Claude";
     case "gemini":
       return "Gemini";
+    case "mistral":
+      return "Mistral OCR";
     case "openai": {
       if (!baseUrl) return "OpenAI";
       try {

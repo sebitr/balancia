@@ -12,6 +12,7 @@
 import { getEnv } from "@/lib/env";
 import { AnthropicOcrProvider } from "./anthropic";
 import { GeminiOcrProvider } from "./gemini";
+import { MistralOcrProvider } from "./mistral";
 import { OpenAiOcrProvider } from "./openai";
 import type { OcrProvider } from "./types";
 
@@ -49,6 +50,9 @@ export function getOcrProvider(): OcrProvider | undefined {
         ...options,
         model: options.model as string,
       });
+      break;
+    case "mistral":
+      provider = new MistralOcrProvider(options);
       break;
     default:
       provider = undefined;

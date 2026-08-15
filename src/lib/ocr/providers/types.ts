@@ -27,7 +27,7 @@
  */
 import type { ParsedReceipt } from "@/modules/receipts";
 
-export type OcrProviderName = "anthropic" | "openai" | "gemini";
+export type OcrProviderName = "anthropic" | "openai" | "gemini" | "mistral";
 
 export interface OcrReadOptions {
   /** Used only when the receipt names no currency of its own. */

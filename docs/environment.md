@@ -455,7 +455,7 @@ is refused at boot — that is a scan button with nothing behind it.
 
 ### `RECEIPT_OCR_PROVIDER`
 
-`none` (default) | `anthropic` | `openai` | `gemini`.
+`none` (default) | `anthropic` | `openai` | `gemini` | `mistral`.
 
 An optional server-side reader, for receipts the on-device model struggles
 with. **Your server** makes the call, never the browser, so the credential
@@ -463,7 +463,12 @@ stays here and the page's `connect-src 'self'` is untouched.
 
 `openai` is the driver for the protocol rather than the vendor: with
 `RECEIPT_OCR_BASE_URL` pointed at Ollama, vLLM or LM Studio it runs a vision
-model on your own hardware and the image never leaves it.
+model on your own hardware and the image never leaves it. On current
+open-weight document models that is also the most accurate and by far the
+cheapest option — see the comparison in docs/receipt-scanning.md.
+
+`mistral` is a purpose-built document endpoint priced per page rather than per
+token, which makes the bill predictable.
 
 The image is held in memory for the length of the call and never written to
 storage. Keeping the photograph with the expense is the separate checkbox it
@@ -481,12 +486,14 @@ own server.
 
 ### `RECEIPT_OCR_MODEL`
 
-**Required** for `openai` and `gemini`; optional for `anthropic`, which
-defaults to `claude-opus-5`. The other two have no default on purpose: model
+**Required** for `openai` and `gemini`. Defaulted for `anthropic`
+(`claude-opus-5`) and `mistral` (`mistral-ocr-latest`). The other two have no
+default on purpose: model
 names on those endpoints belong to whoever serves them, and a constant baked
 in here would eventually be a 404 at your first scan instead of an error at
 boot. Set a cheaper model here if the default costs more than a scan is worth
-to you.
+to you — `claude-opus-5` is in the most expensive band of the options compared
+in docs/receipt-scanning.md.
 
 Note that this and `SEMANTIC_CATEGORIZATION` install _different_ onnxruntime
 WebAssembly binaries, which are not interchangeable; enabling both costs about

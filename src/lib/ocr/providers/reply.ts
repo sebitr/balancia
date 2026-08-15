@@ -62,6 +62,60 @@ Rules:
 - Use null for anything the receipt does not show or you cannot read. Never
   invent a value, and never compute one that is not printed.`;
 
+/**
+ * The same contract again, as a JSON Schema.
+ *
+ * `RECEIPT_INSTRUCTIONS` asks; this one enforces. Drivers whose endpoint
+ * supports schema-constrained output send it and get the shape as a
+ * guarantee rather than a hope — no prose, no code fence, no missing key.
+ * The tolerant parsing above stays regardless, for the drivers that cannot.
+ *
+ * Amounts are strings here for the reason spelled out above: the separator
+ * rule belongs to `amounts.ts`, not to a model.
+ */
+const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] };
+const nullableNumber = { anyOf: [{ type: "number" }, { type: "null" }] };
+
+export const RECEIPT_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    merchant: nullableString,
+    date: nullableString,
+    currency: nullableString,
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          quantity: nullableNumber,
+          unitPrice: nullableString,
+          total: { type: "string" },
+        },
+        required: ["name", "quantity", "unitPrice", "total"],
+        additionalProperties: false,
+      },
+    },
+    subtotal: nullableString,
+    tax: nullableString,
+    tip: nullableString,
+    service: nullableString,
+    total: nullableString,
+  },
+  required: [
+    "merchant",
+    "date",
+    "currency",
+    "items",
+    "subtotal",
+    "tax",
+    "tip",
+    "service",
+    "total",
+  ],
+  additionalProperties: false,
+} as const;
+
 /** Tolerant on purpose: models emit nulls, empty strings and stray keys. */
 const text = z
   .union([z.string(), z.number()])
