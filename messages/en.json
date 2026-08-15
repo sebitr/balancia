@@ -180,8 +180,6 @@
     "emptyDescription": "A trip, a flat, a project — anywhere people share costs. Balancia works out who owes whom.",
     "createGroup": "Create a group",
     "positionEyebrow": "Your position",
-    "owedToYou": "owed to you",
-    "youOweOverall": "you owe",
     "ratesUnavailable": "Rates unavailable — showing each group's own currency",
     "convertedToday": "Converted to {currency} at today's rates",
     "convertedOn": "Converted to {currency} at rates from {date}",

@@ -180,8 +180,6 @@
     "emptyDescription": "Un voyage, une colocation, un projet — partout où des frais sont partagés. Balancia calcule qui doit quoi à qui.",
     "createGroup": "Créer un groupe",
     "positionEyebrow": "Votre position",
-    "owedToYou": "en votre faveur",
-    "youOweOverall": "à votre charge",
     "ratesUnavailable": "Taux indisponibles — chaque groupe dans sa devise",
     "convertedToday": "Converti en {currency} aux taux du jour",
     "convertedOn": "Converti en {currency} aux taux du {date}",
