@@ -61,13 +61,45 @@ export async function createGroup(
   return groupId;
 }
 
+/**
+ * Adds someone with no way in — the "Just add them" path.
+ *
+ * The composer offers a link by default, which most callers here do not want:
+ * the invitation tests issue one deliberately, and the rest only need a name to
+ * split an expense with.
+ */
 export async function addParticipant(
   page: Page,
   groupId: string,
   name: string,
 ): Promise<void> {
   await page.goto(`/groups/${groupId}/members`);
+  await page.getByRole("button", { name: "Add someone" }).click();
   await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByRole("button", { name: "Just add them" }).click();
   await page.getByRole("button", { name: "Add person" }).click();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+}
+
+/**
+ * Opens someone's row and issues them an invitation link, returning the URL
+ * from its one-time reveal.
+ */
+export async function createInviteLink(
+  page: Page,
+  groupId: string,
+  name: string,
+): Promise<string> {
+  await page.goto(`/groups/${groupId}/members`);
+  await page.getByRole("button", { name: new RegExp(name) }).click();
+  await page.getByRole("button", { name: "Create invite link" }).click();
+
+  // Shown once, in a code block rather than a field: it is there to be copied,
+  // never edited.
+  const url = await page
+    .getByText(/\/join\//)
+    .first()
+    .innerText();
+  expect(url).toContain("/join/");
+  return url.trim();
 }

@@ -52,6 +52,59 @@ const AMAZON_SUBSCRIPTION_MARKERS = ["prime", "prime membership"].map(tokenize);
 
 const UBER_EATS_MARKERS = ["uber eats", "ubereats"].map(tokenize);
 
+/**
+ * Retail groups that put one name over several shops.
+ *
+ * Coop is a supermarket, a pharmacy, a filling station, a DIY shed and a
+ * restaurant; Migros is a supermarket, a DIY shed and an electronics shop.
+ * The format is written on the receipt, so a named format is a decision —
+ * bare `COOP` stays the ambiguous merchant it has always been.
+ *
+ * The format words are matched against the *merchant*, not the description:
+ * "coop" in a note about who paid is not a shop.
+ */
+interface StoreFormat {
+  readonly brand: readonly string[];
+  readonly formats: readonly {
+    readonly marker: readonly string[];
+    readonly category: ExpenseCategory;
+  }[];
+}
+
+const STORE_FORMATS: readonly StoreFormat[] = [
+  {
+    brand: tokenize("coop"),
+    formats: [
+      { marker: tokenize("bau hobby"), category: "household" },
+      { marker: tokenize("bau und hobby"), category: "household" },
+      { marker: tokenize("brico"), category: "household" },
+      { marker: tokenize("vitality"), category: "health" },
+      { marker: tokenize("restaurant"), category: "restaurants" },
+      { marker: tokenize("city"), category: "shopping" },
+    ],
+  },
+  {
+    brand: tokenize("migros"),
+    formats: [
+      { marker: tokenize("do it"), category: "household" },
+      { marker: tokenize("micasa"), category: "household" },
+      { marker: tokenize("restaurant"), category: "restaurants" },
+      { marker: tokenize("melectronics"), category: "shopping" },
+      { marker: tokenize("sportxx"), category: "shopping" },
+      { marker: tokenize("klubschule"), category: "family" },
+      { marker: tokenize("ecole club"), category: "family" },
+    ],
+  },
+];
+
+/** Pet shops named after the animals, not after the outing. */
+const PET_SHOP_BRANDS = [
+  tokenize("maxi zoo"),
+  tokenize("zoo plus"),
+  tokenize("zooplus"),
+  tokenize("zoo royal"),
+];
+
 /** Filling-station brands. Ambiguous until the text mentions what was bought. */
 const FUEL_BRANDS = [
   "shell",
@@ -139,6 +192,18 @@ export function contextualOverrides(
     }
   }
 
+  // Pet shops whose names contain the word for somewhere you go to look at
+  // animals. `Maxi Zoo` is where the food comes from, not a day out, and
+  // without this the `zoo` in it outvoted the shop it names.
+  const petShop = startsWithAny(merchant, PET_SHOP_BRANDS);
+  if (petShop) {
+    matches.push({
+      category: "pets",
+      token: petShop.join(" "),
+      suppress: ["activities"],
+    });
+  }
+
   // Uber: the ride company and the delivery company share a name.
   const uberEats = hasAny(text, UBER_EATS_MARKERS);
   if (uberEats) {
@@ -156,6 +221,21 @@ export function contextualOverrides(
       category: "transport",
       token: `${fuelBrand.join(" ")} fuel`,
       suppress: ["groceries"],
+    });
+  }
+
+  // One name, several shops: the format on the receipt says which.
+  for (const store of STORE_FORMATS) {
+    if (indexOfTokenRun(merchant, store.brand) !== 0) continue;
+    const format = store.formats.find((candidate) =>
+      containsTokenRun(merchant, candidate.marker),
+    );
+    if (!format) continue;
+    matches.push({
+      category: format.category,
+      token: `${store.brand.join(" ")} ${format.marker.join(" ")}`,
+      // The supermarket hint is what a named format is *not*.
+      suppress: format.category === "groceries" ? [] : ["groceries"],
     });
   }
 

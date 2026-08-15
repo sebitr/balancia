@@ -21,6 +21,7 @@ import {
   createInvitation,
   deleteGroup,
   removeParticipant,
+  restoreParticipant,
   revokeInvitation,
   setGroupArchived,
   updateGroup,
@@ -131,7 +132,7 @@ export async function deleteGroupAction(
 export async function addParticipantAction(
   groupId: string,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ participantId: string }>> {
   const parsed = addParticipantSchema.safeParse({
     displayName: formData.get("displayName"),
     email: formData.get("email") ?? "",
@@ -140,9 +141,12 @@ export async function addParticipantAction(
     return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
   }
 
+  // The new id is returned because "add them and create their link" is one
+  // gesture on the People screen: the caller needs someone to issue it for.
   const result = await runAction("participants.add", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    await addParticipant(access, parsed.data);
+    const participantId = await addParticipant(access, parsed.data);
+    return { participantId };
   });
 
   if (result.ok) {
@@ -183,6 +187,23 @@ export async function removeParticipantAction(
   const result = await runAction("participants.remove", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
     await removeParticipant(access, participantId);
+  });
+
+  if (result.ok) {
+    revalidatePath(`/groups/${groupId}/members`);
+    revalidatePath(`/groups/${groupId}`);
+  }
+  return result;
+}
+
+/** Undo for the removal above, offered on the toast for a few seconds. */
+export async function restoreParticipantAction(
+  groupId: string,
+  participantId: string,
+): Promise<ActionResult> {
+  const result = await runAction("participants.restore", async () => {
+    const access = await requireGroupAccess(groupId, { requireActive: true });
+    await restoreParticipant(access, participantId);
   });
 
   if (result.ok) {

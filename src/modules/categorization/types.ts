@@ -21,6 +21,22 @@ export const TRANSACTION_TYPES = [
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
+/**
+ * The vocabulary, in the order the design lays the picker out.
+ *
+ * `lodging`, `activities` and `household` are splits, not additions. Each one
+ * existed as spending long before it had a code, filed under a neighbour that
+ * then stopped meaning anything:
+ *
+ *  - **lodging** — a week's Airbnb is four fifths of a trip's total, so
+ *    leaving it in `travel` made every holiday chart a single bar about the
+ *    place people slept. `travel` keeps the getting there.
+ *  - **activities** — tickets, tours and entries are planned outings; leaving
+ *    them with `entertainment` put a guided walk beside a games console.
+ *  - **household** — supplies, furniture and repairs used to scatter between
+ *    `shopping` (a thing was bought) and `housing` (the flat was involved).
+ *    It is the shared upkeep of where people live, not the rent for it.
+ */
 export const EXPENSE_CATEGORIES = [
   "groceries",
   "restaurants",
@@ -31,6 +47,9 @@ export const EXPENSE_CATEGORIES = [
   "health",
   "entertainment",
   "travel",
+  "lodging",
+  "activities",
+  "household",
   "subscriptions",
   "family",
   "pets",

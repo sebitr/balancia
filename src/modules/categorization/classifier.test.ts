@@ -30,12 +30,17 @@ describe("merchants", () => {
     ["SBB CFF FFS", "transport"],
     ["SNCF CONNECT", "transport"],
     ["AMAVITA", "health"],
-    ["BOOKING.COM", "travel"],
-    ["AIRBNB", "travel"],
+    ["BOOKING.COM", "lodging"],
+    ["AIRBNB", "lodging"],
+    ["EASYJET", "travel"],
     ["SWISSCOM", "utilities"],
     ["EDF", "utilities"],
     ["ZOOPLUS", "pets"],
     ["ZALANDO", "shopping"],
+    ["IKEA 0815", "household"],
+    ["LEROY MERLIN", "household"],
+    ["EUROPAPARK", "activities"],
+    ["GETYOURGUIDE", "activities"],
     ["TICKETCORNER", "entertainment"],
     ["INTERFLORA", "gifts"],
   ];
@@ -71,6 +76,19 @@ describe("phrases, in English and in French", () => {
     ["TICKETMASTER CONCERT", "entertainment"],
     ["Vétérinaire", "pets"],
     ["Charity donation", "gifts"],
+    ["Ice cream at the lake", "restaurants"],
+    ["Glaces au bord du lac", "restaurants"],
+    ["Glace italienne", "restaurants"],
+    ["Apéro chez nous", "restaurants"],
+    ["Nuit d'hôtel à Berne", "lodging"],
+    ["Camping pitch", "lodging"],
+    ["Location de vacances", "lodging"],
+    ["Musée d'art", "activities"],
+    ["Forfait de ski", "activities"],
+    ["Guided tour", "activities"],
+    ["Produits d'entretien", "household"],
+    ["Cleaning products", "household"],
+    ["Plombier", "household"],
   ];
 
   for (const [description, expected] of cases) {
@@ -110,15 +128,38 @@ describe("contextual overrides", () => {
     expect(classify("SHELL").decision).not.toBe("auto_assigned");
   });
 
+  it("reads a Coop store format, and leaves bare Coop alone", () => {
+    expect(categoryOf("COOP BAU+HOBBY LAUSANNE")).toBe("household");
+    expect(categoryOf("COOP VITALITY")).toBe("health");
+    expect(categoryOf("COOP RESTAURANT")).toBe("restaurants");
+
+    // Bare Coop is still a supermarket, a pharmacy and a filling station.
+    expect(classify("COOP").decision).not.toBe("auto_assigned");
+  });
+
+  it("reads a Migros store format the same way", () => {
+    expect(categoryOf("MIGROS DO IT GARDEN")).toBe("household");
+    expect(categoryOf("MIGROS RESTAURANT")).toBe("restaurants");
+    // The supermarket itself is untouched by any of that.
+    expect(categoryOf("MIGROS 1234")).toBe("groceries");
+  });
+
   it("never classifies the payment processor itself", () => {
     expect(classify("PAYPAL *SPOTIFY").category).toBe("subscriptions");
     expect(classify("SQ *CAFE CENTRAL").category).toBe("restaurants");
 
     // The merchant is extracted even when what is behind it stays uncertain:
-    // a bakery is a shop as often as it is somewhere to sit down.
+    // a bakery is a shop as often as it is somewhere to sit down. Both are
+    // offered and neither is applied, which is that sentence as behaviour —
+    // the bakery used to be a hint towards restaurants and too weak to put
+    // on screen at all, so the answer was a blank field.
     const bakery = classify("SUMUP *BOULANGERIE DUPONT");
     expect(bakery.normalizedMerchant).toBe("boulangerie dupont");
-    expect(bakery.alternatives[0]?.category).toBe("restaurants");
+    expect(bakery.decision).toBe("suggested");
+    expect([
+      bakery.category,
+      ...bakery.alternatives.map((alternative) => alternative.category),
+    ]).toEqual(expect.arrayContaining(["restaurants", "groceries"]));
   });
 });
 
@@ -317,5 +358,255 @@ describe("learned mappings", () => {
     );
     expect(result.category).toBe("groceries");
     expect(result.source).not.toBe("learned_mapping");
+  });
+});
+
+/**
+ * The everyday words people actually type.
+ *
+ * The seeds began as merchants and formal phrases — `billet de train`,
+ * `facture électricité` — which is not how anybody describes a round of drinks
+ * to their flatmates. Two in five ordinary descriptions came back with nothing
+ * at all, and a blank category field is what the picker was then asked to
+ * apologise for.
+ */
+describe("ordinary descriptions", () => {
+  const cases: [string, ExpenseCategory][] = [
+    // Drinks and street food, the shape of a shared expense on a day out.
+    ["Gaufres", "restaurants"],
+    ["Crêpes", "restaurants"],
+    ["Churros", "restaurants"],
+    ["Barbe à papa", "restaurants"],
+    ["Chocolat chaud", "restaurants"],
+    ["Bière", "restaurants"],
+    ["Coffee", "restaurants"],
+    ["Wine", "restaurants"],
+    ["Frites", "restaurants"],
+    ["Goûter", "restaurants"],
+    ["Take away", "restaurants"],
+    // Staples, which is what the other half of the food spending is.
+    ["Pain", "groceries"],
+    ["Lait", "groceries"],
+    ["Oeufs", "groceries"],
+    ["Fromage", "groceries"],
+    ["Légumes", "groceries"],
+    ["Pâtes", "groceries"],
+    ["Bread", "groceries"],
+    ["Milk", "groceries"],
+    ["Vegetables", "groceries"],
+    // Getting about.
+    ["Bus", "transport"],
+    ["Métro", "transport"],
+    ["Ferry", "transport"],
+    ["Vélo", "transport"],
+    ["Gasoil", "transport"],
+    ["Vignette", "transport"],
+    // The flat.
+    ["Éponges", "household"],
+    ["Sacs poubelle", "household"],
+    ["Piles", "household"],
+    ["Rideaux", "household"],
+    ["Facture de gaz", "utilities"],
+    ["Forfait mobile", "utilities"],
+    // Out and about.
+    ["Plongée", "activities"],
+    ["Fleurs", "gifts"],
+    ["Nuit d'hôtel", "lodging"],
+  ];
+
+  for (const [description, expected] of cases) {
+    it(`files "${description}" as ${expected}`, () => {
+      expect(categoryOf(description)).toBe(expected);
+    });
+  }
+});
+
+describe("plurals", () => {
+  /**
+   * Every rule used to need its own plural written in beside it, which is how
+   * `Pizza` was recognised and `Pizzas` was not.
+   */
+  it("reads a plural as the word it is the plural of", () => {
+    for (const [singular, plural] of [
+      ["Pizza", "Pizzas"],
+      ["Burger", "Burgers"],
+      ["Sandwich", "Sandwichs"],
+      ["Vélo", "Vélos"],
+      ["Musée", "Musées"],
+      ["Billet de train", "Billets de train"],
+    ]) {
+      expect(categoryOf(plural)).toBe(categoryOf(singular));
+      expect(classify(plural).decision).toBe("auto_assigned");
+    }
+  });
+
+  it("does not read a singular word that ends in s as a plural", () => {
+    // `pass` collapsing to `pas` would match most French sentences.
+    expect(categoryOf("Ski pass")).toBe("activities");
+    expect(classify("Bus").decision).toBe("auto_assigned");
+  });
+});
+
+describe("words that belong to two languages", () => {
+  /**
+   * The cost of teaching the classifier French words for food is that some of
+   * them are English words for other things. Each one is named rather than
+   * given up, because `pain` and `eau` are too useful to lose.
+   */
+  it("does not read English pain as French bread", () => {
+    expect(categoryOf("Back pain massage")).toBe("health");
+    expect(categoryOf("Neck pain physio")).toBe("health");
+    expect(categoryOf("Pain")).toBe("groceries");
+  });
+
+  it("keeps perfume out of the food shopping", () => {
+    expect(categoryOf("Eau de parfum")).toBe("shopping");
+    expect(categoryOf("Eau")).toBe("groceries");
+  });
+
+  it("tells a water bill from a bottle of water", () => {
+    expect(categoryOf("Facture d'eau")).toBe("utilities");
+    expect(categoryOf("Bouteilles d'eau")).toBe("groceries");
+  });
+
+  it("does not let an ingredient outvote the dish", () => {
+    // "sucre" is a grocery; "crêpes au sucre" is not.
+    expect(categoryOf("Crêpes au sucre")).toBe("restaurants");
+    expect(categoryOf("Pain au chocolat")).toBe("restaurants");
+  });
+
+  it("files an outing bought as a present as a present", () => {
+    expect(categoryOf("Parapente cadeau Célia")).toBe("gifts");
+    expect(categoryOf("Parapente")).toBe("activities");
+  });
+});
+
+/**
+ * Brands, which is how half of what a group buys is actually named.
+ *
+ * A brand names a *product*, and a product is bought — so `Pepsi` is the
+ * shopping and not the bar. What gets ordered is named by the drink or by the
+ * place ("bière", "apéro", "au bar"), and that is what keeps a scanned
+ * supermarket receipt from reading as a night out because there was a Coke on
+ * it.
+ */
+describe("brands", () => {
+  const cases: [string, ExpenseCategory][] = [
+    ["Pepsi", "groceries"],
+    ["Coca", "groceries"],
+    ["Fuze tea", "groceries"],
+    ["Ice tea", "groceries"],
+    ["Red bull", "groceries"],
+    ["Evian", "groceries"],
+    ["Haribo", "groceries"],
+    ["Nutella", "groceries"],
+    ["Toblerone", "groceries"],
+    ["Heineken", "groceries"],
+    ["Nespresso", "groceries"],
+    // Ordered rather than carried home.
+    ["Aperol spritz", "restaurants"],
+    ["Mojito", "restaurants"],
+    ["Bière", "restaurants"],
+    // Chains arrive as card descriptors as often as they are typed.
+    ["Amorino", "restaurants"],
+    ["McDo", "restaurants"],
+    ["CB MCDONALDS 12/05", "restaurants"],
+    ["Wagamama", "restaurants"],
+    ["Sprüngli", "restaurants"],
+    ["Dominos", "restaurants"],
+  ];
+
+  for (const [description, expected] of cases) {
+    it(`files "${description}" as ${expected}`, () => {
+      expect(categoryOf(description)).toBe(expected);
+    });
+  }
+
+  it("keeps a supermarket receipt out of the restaurants", () => {
+    // Every line of this is a grocery brand, and one of them is a soft drink.
+    const result = classifyTransactionSync({
+      description: "Migros",
+      receipt: {
+        merchant: "MIGROS 1234",
+        itemNames: ["Coca cola 1.5L", "Pepsi", "Pain", "Lait", "Haribo"],
+      },
+    });
+    expect(result.category).toBe("groceries");
+    expect(result.decision).toBe("auto_assigned");
+  });
+
+  it("offers both when the words disagree", () => {
+    // The drink says shop and the place says bar; neither gets to decide.
+    const result = classify("Pepsi au bar");
+    expect(result.decision).toBe("suggested");
+    expect([
+      result.category,
+      ...result.alternatives.map((alternative) => alternative.category),
+    ]).toEqual(expect.arrayContaining(["groceries", "restaurants"]));
+  });
+
+  /**
+   * A name that is also an ordinary word is usually still the brand: somebody
+   * typing `Paul` into an expense means the bakery, and the safeguard that
+   * makes that safe already exists. A single-word merchant rule under five
+   * characters only matches when it *opens* the descriptor and everything
+   * after it is noise, so `Paul` is the bakery and `Paul's share` is Paul.
+   */
+  it("takes a brand name at its word, and still knows a person", () => {
+    expect(categoryOf("Paul")).toBe("restaurants");
+    expect(categoryOf("Pret")).toBe("restaurants");
+    expect(categoryOf("Oasis")).toBe("groceries");
+
+    expect(classify("Paul's share").decision).toBe("needs_user_input");
+    // `dinner` decides this one; the point is that `Paul` did not have to.
+    expect(categoryOf("Dinner with Paul")).toBe("restaurants");
+    expect(categoryOf("Prêt immobilier")).toBe("housing");
+  });
+
+  /**
+   * `Mars` is the exception, and the only one. It is a month, and a month
+   * turns up in descriptions all year: `loyer mars`, `vacances en mars`.
+   */
+  it("leaves out the chocolate bar that is also a month", () => {
+    expect(classify("Mars").decision).toBe("needs_user_input");
+    expect(categoryOf("Loyer mars")).toBe("housing");
+    expect(classify("Vacances en mars").category).not.toBe("groceries");
+  });
+});
+
+describe("names the normalizer used to eat", () => {
+  /**
+   * `Novotel` normalized to nothing: the identifier stripper read `no` as the
+   * label "number" and `votel` as the number itself. Every brand starting with
+   * one of those labels was invisible, including `refuge`, which this
+   * repository ships as a lodging rule and which could never once have matched.
+   */
+  it("classifies the brands that used to normalize to nothing", () => {
+    expect(categoryOf("Novotel")).toBe("lodging");
+    expect(categoryOf("Refuge de montagne")).toBe("lodging");
+    expect(categoryOf("NordVPN")).toBe("subscriptions");
+    expect(categoryOf("Nordsee")).toBe("restaurants");
+  });
+
+  it("still strips a real identifier", () => {
+    expect(classify("REF12345").decision).toBe("needs_user_input");
+    expect(classify("AUTH 998877").decision).toBe("needs_user_input");
+    expect(classify("No 12345").decision).toBe("needs_user_input");
+  });
+});
+
+describe("brand names that contain another category's word", () => {
+  it("reads a pet shop rather than a day out", () => {
+    expect(categoryOf("Maxi zoo")).toBe("pets");
+    expect(categoryOf("MAXI ZOO LAUSANNE")).toBe("pets");
+    // The animals themselves are still an outing.
+    expect(categoryOf("Zoo de Servion")).toBe("activities");
+  });
+
+  it("does not bill a fruit juice as a phone", () => {
+    // `orange` is a telecom merchant, and was answering for the fruit.
+    const juice = classify("Jus d'orange");
+    expect(juice.category).toBe("groceries");
+    expect(juice.decision).not.toBe("auto_assigned");
   });
 });

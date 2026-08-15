@@ -26,14 +26,88 @@ export const WASM_PATH = `${MODEL_BASE_PATH}/runtime/ort/`;
 
 export const OCR_MODEL_PATH = `${MODEL_BASE_PATH}/ocr`;
 
-/** PP-OCRv5 mobile text *detection* — finds the boxes. */
-export const DET_MODEL_URL = `${OCR_MODEL_PATH}/ppocrv5-mobile-det.onnx`;
+/**
+ * A model set: two ONNX graphs, a character list, and the handful of numbers
+ * its detector's post-processing was published with.
+ *
+ * The thresholds belong here rather than in the kernel because they are a
+ * property of the weights, not of the arithmetic. PaddleOCR ships them in each
+ * model's `inference.yml` and they are not the same across releases — PP-OCRv5
+ * mobile is tuned at 0.3/0.5/1.6, PP-OCRv6 at 0.2/0.4/1.4. Running one
+ * release's weights on the other's thresholds is not a crash, it is a quietly
+ * worse read, which is the kind of regression nothing catches.
+ */
+export interface OcrModelSet {
+  /** For logs and for the eval harness's report. */
+  readonly name: string;
+  readonly detUrl: string;
+  readonly recUrl: string;
+  readonly dictUrl: string;
+  /** Probability above which a detector pixel counts as text. */
+  readonly detThreshold: number;
+  /** Mean probability a whole region needs before it is believed. */
+  readonly boxThreshold: number;
+  /** How far a detected region is grown before it is cropped. */
+  readonly unclipRatio: number;
+}
 
-/** PP-OCRv5 mobile text *recognition* — reads each box. */
-export const REC_MODEL_URL = `${OCR_MODEL_PATH}/ppocrv5-mobile-rec.onnx`;
+/**
+ * PP-OCRv5 mobile: what `pnpm ocr:install` has always installed.
+ *
+ * The file names carry the release, so an instance can hold more than one set
+ * on disk and the eval harness can compare them without a reinstall between
+ * runs.
+ */
+export const PP_OCR_V5_MOBILE: OcrModelSet = {
+  name: "PP-OCRv5_mobile",
+  detUrl: `${OCR_MODEL_PATH}/ppocrv5-mobile-det.onnx`,
+  recUrl: `${OCR_MODEL_PATH}/ppocrv5-mobile-rec.onnx`,
+  dictUrl: `${OCR_MODEL_PATH}/ppocrv5_dict.txt`,
+  detThreshold: 0.3,
+  boxThreshold: 0.5,
+  unclipRatio: 1.6,
+};
 
-/** The recognizer's character list, one character per line. */
-export const DICT_URL = `${OCR_MODEL_PATH}/ppocrv5_dict.txt`;
+/** PP-OCRv6 tiny: a third of the download, and its own detector thresholds. */
+export const PP_OCR_V6_TINY: OcrModelSet = {
+  name: "PP-OCRv6_tiny",
+  detUrl: `${OCR_MODEL_PATH}/ppocrv6-tiny-det.onnx`,
+  recUrl: `${OCR_MODEL_PATH}/ppocrv6-tiny-rec.onnx`,
+  dictUrl: `${OCR_MODEL_PATH}/ppocrv6_tiny_dict.txt`,
+  detThreshold: 0.2,
+  boxThreshold: 0.4,
+  unclipRatio: 1.4,
+};
+
+/** PP-OCRv6 small: the accurate one, and half again the download of v5. */
+export const PP_OCR_V6_SMALL: OcrModelSet = {
+  name: "PP-OCRv6_small",
+  detUrl: `${OCR_MODEL_PATH}/ppocrv6-small-det.onnx`,
+  recUrl: `${OCR_MODEL_PATH}/ppocrv6-small-rec.onnx`,
+  dictUrl: `${OCR_MODEL_PATH}/ppocrv6_small_dict.txt`,
+  detThreshold: 0.2,
+  boxThreshold: 0.4,
+  unclipRatio: 1.4,
+};
+
+export const OCR_MODEL_SETS = {
+  "v5-mobile": PP_OCR_V5_MOBILE,
+  "v6-tiny": PP_OCR_V6_TINY,
+  "v6-small": PP_OCR_V6_SMALL,
+} as const;
+
+export type OcrModelKey = keyof typeof OCR_MODEL_SETS;
+
+/**
+ * What the application scans with.
+ *
+ * One constant, so there is exactly one answer to "which model is this
+ * instance using" and the probe, the worker and the docs cannot drift apart.
+ */
+export const ACTIVE_MODEL_SET: OcrModelSet = PP_OCR_V6_TINY;
+
+/** The key of the set above, so `pnpm ocr:install` cannot install the wrong one. */
+export const ACTIVE_MODEL_KEY: OcrModelKey = "v6-tiny";
 
 /**
  * Roughly what a first scan downloads, for the "this will take a moment"
@@ -41,10 +115,10 @@ export const DICT_URL = `${OCR_MODEL_PATH}/ppocrv5_dict.txt`;
  * compression, and a precise-looking number that is wrong is worse than a
  * round one that is right.
  */
-export const APPROXIMATE_DOWNLOAD_MB = 47;
+export const APPROXIMATE_DOWNLOAD_MB = 32;
 
 /** One file that must exist for the feature to work at all. */
-const PROBE_URL = DET_MODEL_URL;
+const PROBE_URL = ACTIVE_MODEL_SET.detUrl;
 
 /**
  * Cheap existence check, so an instance without the models pays one HEAD

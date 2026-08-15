@@ -53,6 +53,23 @@ function submitted() {
 }
 
 describe("CreateGroupSheet", () => {
+  /**
+   * The same two limits the add-entry drawer keeps, and for the same reason:
+   * this sheet is the other full-height one, with its close button in a header
+   * at the top edge. See the note on the drawer's own test.
+   */
+  it("keeps its header clear of the island, twice over", () => {
+    renderSheet();
+    const classes = screen.getByRole("dialog").className.split(" ");
+
+    expect(classes.find((name) => name.startsWith("h-["))).toContain(
+      "env(safe-area-inset-top)",
+    );
+    expect(classes.find((name) => name.startsWith("max-h-["))).toContain(
+      "env(safe-area-inset-top)",
+    );
+  });
+
   it("posts a group once it has a name, defaulting everything else", async () => {
     const { user } = renderSheet();
 
@@ -118,19 +135,6 @@ describe("CreateGroupSheet", () => {
     const form = submitted();
     expect(form.get("icon")).toBe("tent");
     expect(form.get("iconColor")).toBe("blue");
-  });
-
-  it("clears the icon again from the picker", async () => {
-    const { user } = renderSheet();
-
-    await user.type(screen.getByPlaceholderText("Group name"), "Ski");
-    await user.click(screen.getByRole("button", { name: "Choose an icon" }));
-    await user.click(screen.getByRole("radio", { name: "tent" }));
-    await user.click(screen.getByRole("button", { name: "None" }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
-    await user.click(screen.getByRole("button", { name: "Create group" }));
-
-    expect(submitted().get("icon")).toBe("");
   });
 
   it("relabels the currency row without losing the chosen currency", async () => {

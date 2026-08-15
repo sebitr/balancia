@@ -115,7 +115,13 @@ export function CreateGroupSheet({
         showCloseButton={false}
         // The sheet is the scroll container the swipe-to-dismiss gesture reads,
         // so the body scrolls inside it and the chrome stays put.
-        className="h-[min(800px,calc(100dvh-48px))] gap-0 overflow-hidden rounded-t-[28px] bg-card p-0 text-card-foreground"
+        //
+        // The 48px gap is measured from the bottom of the safe area, and the
+        // `max-h` repeats the limit in `%` and `calc` alone so that losing
+        // `dvh` or `min()` cannot drop the height and leave the sheet at its
+        // content's height. Both for the reasons written out in
+        // `add-entry-drawer`, which is the same sheet in a different hat.
+        className="h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card p-0 text-card-foreground"
       >
         {view === "form" ? (
           <form

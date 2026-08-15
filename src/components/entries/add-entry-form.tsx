@@ -7,7 +7,12 @@ import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { CalendarDays, Loader2, Repeat, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  openOnContent,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
 import type { ScannedExpense } from "@/components/receipts/scan-receipt-dialog";
@@ -27,7 +32,10 @@ import {
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
-import type { LearnedMerchantMapping } from "@/modules/categorization";
+import type {
+  ExpenseCategory,
+  LearnedMerchantMapping,
+} from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
 import {
   createExpenseAction,
@@ -101,6 +109,8 @@ import type { EntryMember } from "./pills";
 type OpenSheet = null | "split" | "category" | "currency" | "method" | "recur";
 
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
+/** A group with no history yet — the picker simply has nothing to lead with. */
+const NO_FREQUENT: readonly ExpenseCategory[] = [];
 
 export interface AddEntryFormProps {
   groupId: string;
@@ -115,6 +125,8 @@ export interface AddEntryFormProps {
   /** Outstanding debts, most owed first, for the settle tab. */
   outstanding: readonly DebtPair[];
   categoryMappings?: readonly LearnedMerchantMapping[];
+  /** What this group files things under, most used first, for the picker. */
+  frequentCategories?: readonly ExpenseCategory[];
   semanticCategorization?: boolean;
   receiptScanning?: boolean;
   /** Whether the on-device reader is switched on (`RECEIPT_OCR_LOCAL`). */
@@ -137,6 +149,7 @@ export function AddEntryForm({
   timezone,
   outstanding,
   categoryMappings = NO_MAPPINGS,
+  frequentCategories = NO_FREQUENT,
   semanticCategorization = false,
   receiptScanning = false,
   receiptOcrLocal = true,
@@ -920,6 +933,10 @@ export function AddEntryForm({
         <SheetContent
           side="bottom"
           showCloseButton={false}
+          // Every one of these sheets opens on what it has to show — the
+          // category chips, the currency list, who is in the split — and none
+          // of them wants a keyboard over it before anybody has asked to type.
+          onOpenAutoFocus={openOnContent}
           className="max-h-[86vh] gap-0 overflow-y-auto rounded-t-[26px] px-4 pt-3.5 pb-5"
         >
           {sheet === "split" && (
@@ -952,11 +969,23 @@ export function AddEntryForm({
             <CategorySheet
               value={effectiveCategory}
               detectedValue={detectedCategory}
+              description={description}
+              suggestion={suggestion}
+              frequent={frequentCategories}
               onSelect={(next) => {
                 setCategoryChosen(true);
                 setCategory(next);
+                setSheet(null);
               }}
-              onDone={() => setSheet(null)}
+              // Reverting has to clear the override rather than re-pick the
+              // detected value: a category that merely *equals* the guess is
+              // still a manual choice, and would stop following the
+              // description the moment it was edited again.
+              onRevert={() => {
+                setCategoryChosen(false);
+                setCategory("");
+                setSheet(null);
+              }}
             />
           )}
 

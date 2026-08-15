@@ -317,8 +317,11 @@ export interface ParticipantSummary {
   readonly email: string | null;
   readonly userId: string | null;
   readonly role: "owner" | "member" | "guest";
+  /** When they were added to the group — the "joined 2 Jul" on their row. */
+  readonly createdAt: Date;
   readonly hasActiveInvitation: boolean;
   readonly invitationPrefix: string | null;
+  readonly invitationCreatedAt: Date | null;
   readonly invitationExpiresAt: Date | null;
   readonly invitationLastUsedAt: Date | null;
 }
@@ -334,10 +337,12 @@ export async function listParticipants(
       displayName: participants.displayName,
       email: participants.email,
       userId: participants.userId,
+      createdAt: participants.createdAt,
       removedAt: participants.removedAt,
       role: groupMembers.role,
       invitationId: guestInvitations.id,
       invitationPrefix: guestInvitations.tokenPrefix,
+      invitationCreatedAt: guestInvitations.createdAt,
       invitationExpiresAt: guestInvitations.expiresAt,
       invitationLastUsedAt: guestInvitations.lastUsedAt,
     })
@@ -372,8 +377,10 @@ export async function listParticipants(
     email: row.email,
     userId: row.userId,
     role: row.role ?? "guest",
+    createdAt: row.createdAt,
     hasActiveInvitation: row.invitationId !== null,
     invitationPrefix: row.invitationPrefix,
+    invitationCreatedAt: row.invitationCreatedAt,
     invitationExpiresAt: row.invitationExpiresAt,
     invitationLastUsedAt: row.invitationLastUsedAt,
   }));
@@ -546,6 +553,78 @@ export async function removeParticipant(
       entityId: participantId,
       ...activityActorFrom(access),
       metadata: { displayName: target.displayName },
+    });
+  });
+}
+
+/**
+ * Puts a removed participant back — the Undo behind the People screen's
+ * removal toast.
+ *
+ * What comes back is the person, not their access. Removal revokes any live
+ * invitation and kills the sessions derived from it, and neither is recoverable
+ * here: the token was only ever stored as a hash, so there is nothing to
+ * un-revoke even in principle. Restoring hands back the row, the history that
+ * hangs off it and — for someone with an account — their membership; a guest
+ * needs a fresh link. The confirmation says exactly this before anyone agrees
+ * to it, so the offer of an undo is not overstated.
+ */
+export async function restoreParticipant(
+  access: GroupAccess,
+  participantId: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  requirePermission(access, "manageParticipants");
+  const db = options.db ?? getDb();
+
+  await db.transaction(async (tx) => {
+    const [restored] = await tx
+      .update(participants)
+      .set({ removedAt: null })
+      .where(
+        and(
+          eq(participants.id, participantId),
+          eq(participants.groupId, access.groupId),
+        ),
+      )
+      .returning({
+        id: participants.id,
+        displayName: participants.displayName,
+        userId: participants.userId,
+      });
+
+    if (!restored) {
+      throw new AuthorizationError(
+        "That participant is not part of this group.",
+        "notInGroup",
+      );
+    }
+
+    /*
+     * Removal deleted the membership row and with it the role it carried. The
+     * owner cannot be removed at all — `removeParticipant` refuses — so the
+     * only role that can ever be coming back is "member", and re-deriving it is
+     * safer than trusting a role recorded somewhere else in the meantime.
+     */
+    if (restored.userId) {
+      await tx
+        .insert(groupMembers)
+        .values({
+          groupId: access.groupId,
+          userId: restored.userId,
+          participantId: restored.id,
+          role: "member",
+        })
+        .onConflictDoNothing();
+    }
+
+    await recordActivity(tx, {
+      groupId: access.groupId,
+      action: "participant.restored",
+      entityType: "participant",
+      entityId: participantId,
+      ...activityActorFrom(access),
+      metadata: { displayName: restored.displayName },
     });
   });
 }

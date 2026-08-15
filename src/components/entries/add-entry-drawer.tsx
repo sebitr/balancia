@@ -76,7 +76,16 @@ export function AddEntryDrawer({
         // the top of the screen: `viewport-fit=cover` means `100dvh` runs the
         // full height of the display, so installed on a phone with an island
         // the header — and the close button in it — sat underneath.
-        className="h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground"
+        //
+        // The `max-h` says the same thing a second time, in older words. A
+        // height is one declaration, and a browser that cannot parse any part
+        // of it drops the whole thing and leaves the sheet at its content's
+        // height — which is how the close button left the screen twice. The
+        // backstop is built from `%` and `calc` alone, so it survives losing
+        // the two newest pieces, `dvh` and `min()`. It never binds while the
+        // height applies: `100%` of a fixed element is the large viewport, so
+        // it can only ever be the looser of the two.
+        className="h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground"
       >
         <AddEntryForm
           {...form}

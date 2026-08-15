@@ -14,7 +14,10 @@ import {
   isSemanticCategorizationEnabled,
 } from "@/lib/env";
 import { listParticipants } from "@/modules/groups/service";
-import { loadMappings } from "@/modules/categorization/service";
+import {
+  loadFrequentCategories,
+  loadMappings,
+} from "@/modules/categorization/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { PUSH } from "@/components/motion/transitions";
@@ -37,14 +40,16 @@ export async function NewEntryScreen({
 }) {
   const access = await requireGroupAccess(groupId);
 
-  const [participants, categoryMappings, balances, locale] = await Promise.all([
-    listParticipants(access.groupId),
-    loadMappings(access),
-    loadGroupBalances(access),
-    // The amounts below are pre-formatted for the form, so they follow the
-    // reader's notation rather than their language.
-    getNumberLocale(),
-  ]);
+  const [participants, categoryMappings, frequentCategories, balances, locale] =
+    await Promise.all([
+      listParticipants(access.groupId),
+      loadMappings(access),
+      loadFrequentCategories(access),
+      loadGroupBalances(access),
+      // The amounts below are pre-formatted for the form, so they follow the
+      // reader's notation rather than their language.
+      getNumberLocale(),
+    ]);
 
   const t = await getTranslations("expensePages");
 
@@ -114,6 +119,7 @@ export async function NewEntryScreen({
       timezone={access.group.timezone}
       outstanding={outstanding}
       categoryMappings={categoryMappings}
+      frequentCategories={frequentCategories}
       semanticCategorization={isSemanticCategorizationEnabled()}
       receiptScanning={isReceiptScanningEnabled()}
       receiptOcrLocal={isLocalReceiptOcrEnabled()}

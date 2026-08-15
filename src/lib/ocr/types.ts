@@ -49,6 +49,10 @@ export type ScanErrorCode =
   | "runtime"
   | "image"
   | "timeout"
+  /** Encrypted. Nothing to do about it here — the reader must unlock it. */
+  | "pdfPassword"
+  /** Damaged, or not really a PDF at all. */
+  | "pdf"
   /** The reader is configured but refused or could not be reached. */
   | "provider";
 

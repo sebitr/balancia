@@ -41,7 +41,7 @@ env_file="$root_dir/.env"
 # models already here?". They are the paths the browser itself probes before
 # offering the feature — see src/lib/ocr/config.ts and
 # src/lib/semantic/config.ts.
-ocr_sentinel="$root_dir/public/models/ocr/ppocrv5-mobile-rec.onnx"
+ocr_sentinel="$root_dir/public/models/ocr/ppocrv6-tiny-det.onnx"
 semantic_sentinel="$root_dir/public/models/Xenova/paraphrase-multilingual-MiniLM-L12-v2/config.json"
 
 # The settings the questions below write, in the order they are asked. Kept as
@@ -1050,7 +1050,7 @@ RECEIPT_SCANNING is set, and there is nothing in public/models to read
 a receipt with. Without the files the scan button never appears.
 
 TEXT
-    if ask_yes_no 'Install them now, ~47 MB?' y; then
+    if ask_yes_no 'Install them now, ~32 MB?' y; then
       install_models scripts/fetch-ocr-model.ts OCR "$ocr_sentinel"
     fi
   fi

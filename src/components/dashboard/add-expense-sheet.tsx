@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  openOnContent,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { GroupIconTile } from "@/components/groups/group-icon";
 import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
@@ -68,6 +73,9 @@ export function AddExpenseSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
+        // The list is the point. Most people have a handful of groups and tap
+        // the one they mean; the search is for the person who has thirty.
+        onOpenAutoFocus={openOnContent}
         className="gap-4 rounded-t-[22px] bg-card px-5 pt-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-card-foreground"
       >
         <div className="flex flex-col gap-0.5">
@@ -87,9 +95,6 @@ export function AddExpenseSheet({
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <Input
-            // The sheet exists to be typed into; opening it and then asking for
-            // a tap on the field would be asking twice.
-            autoFocus
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}

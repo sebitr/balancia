@@ -1,4 +1,9 @@
 import { currencyExponent } from "@/modules/currencies/iso-4217";
+import { THRESHOLDS } from "@/modules/categorization";
+import type {
+  ClassificationResult,
+  ExpenseCategory,
+} from "@/modules/categorization";
 import type { EntryDirection } from "@/modules/expenses/direction";
 import type { SplitMethod } from "@/modules/expenses/split";
 
@@ -188,4 +193,62 @@ export function resetsForType(next: EntryType): TypeSwitchReset {
     clearAttachments: next === "settle",
     resetCurrency: next === "settle",
   };
+}
+
+/** How many chips the category picker leads with before the full list. */
+export const SUGGESTED_CATEGORIES = 3;
+
+export interface CategoryShortlist {
+  readonly categories: readonly ExpenseCategory[];
+  /**
+   * Whether the description produced any of them — which is the difference
+   * between "because it says…" and "most used", and therefore between a
+   * heading that is true and one that is not.
+   */
+  readonly fromDescription: boolean;
+}
+
+/**
+ * The few categories the picker offers before the alphabet.
+ *
+ * Two sources, in the order a person would think of them. What the description
+ * says comes first, because they have just typed it and the answer is about
+ * *this* entry. What the group usually picks fills the rest, because before
+ * anything is typed there is nothing else to go on — and it beats the top of an
+ * alphabetical list, which is a fact about spelling.
+ *
+ * Only candidates the classifier would have been willing to *offer* are taken.
+ * Below that threshold its ranking is noise, and a chip is a recommendation:
+ * three plausible categories help, whereas three arbitrary ones cost a reader
+ * more than the full list would, because they look like they mean something.
+ *
+ * An already-decided answer contributes its one category and no alternatives —
+ * when the classifier is that sure, the runners-up are what it rejected.
+ */
+export function categoryShortlist(input: {
+  suggestion: ClassificationResult | null;
+  frequent: readonly ExpenseCategory[];
+  limit?: number;
+}): CategoryShortlist {
+  const { suggestion, frequent, limit = SUGGESTED_CATEGORIES } = input;
+
+  const described: ExpenseCategory[] = [];
+  if (suggestion && suggestion.category) {
+    described.push(suggestion.category);
+    if (suggestion.decision === "suggested") {
+      for (const alternative of suggestion.alternatives) {
+        if (alternative.confidence >= THRESHOLDS.suggestMinScore) {
+          described.push(alternative.category);
+        }
+      }
+    }
+  }
+
+  const ordered: ExpenseCategory[] = [];
+  for (const category of [...described, ...frequent]) {
+    if (ordered.length >= limit) break;
+    if (!ordered.includes(category)) ordered.push(category);
+  }
+
+  return { categories: ordered, fromDescription: described.length > 0 };
 }

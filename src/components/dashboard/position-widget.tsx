@@ -24,8 +24,8 @@ import { cn } from "@/lib/utils";
  *
  * The proportional rule is decorative and hidden from assistive technology;
  * the two totals underneath say the same thing in a form a screen reader can
- * read, and the sign of the headline figure is carried by its colour, the
- * arrows below it and its trailing phrase rather than by colour alone.
+ * read, and the sign of the headline figure is carried by its colour and the
+ * arrows below it rather than by colour alone.
  */
 
 interface Figure {
@@ -116,35 +116,23 @@ export function PositionWidget({
 
   const figure =
     net && netUnits !== null ? (
-      <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <Amount
-          minorUnits={(netUnits < 0n ? -netUnits : netUnits).toString()}
-          currency={net.currency}
-          className={cn(
-            "text-[2.875rem] leading-none font-semibold tracking-[-0.035em]",
-            positive ? "text-positive" : "text-negative",
-          )}
-        />
-        <span className="text-[0.9375rem] text-muted-foreground">
-          {positive ? t("owedToYou") : t("youOweOverall")}
-        </span>
-      </p>
+      <Amount
+        minorUnits={(netUnits < 0n ? -netUnits : netUnits).toString()}
+        currency={net.currency}
+        className={cn(
+          "text-[2.875rem] leading-none font-semibold tracking-[-0.035em]",
+          positive ? "text-positive" : "text-negative",
+        )}
+      />
     ) : null;
 
   return (
     <section
-      aria-labelledby="your-position"
+      aria-label={t("positionEyebrow")}
       className="overflow-hidden rounded-[20px] bg-card shadow-[inset_0_1px_0_0_oklch(1_0_0/7%)] ring-1 ring-foreground/10"
     >
       <div className="flex flex-col gap-[18px] px-[18px] pt-5 pb-4">
         <div className="flex flex-col gap-2.5">
-          <h2
-            id="your-position"
-            className="text-xs font-medium tracking-[0.07em] text-muted-foreground uppercase"
-          >
-            {t("positionEyebrow")}
-          </h2>
-
           {allSquare ? (
             <p className="text-[1.875rem] font-semibold tracking-[-0.025em] text-neutral-balance">
               {tMoney("settledUpBadge")}

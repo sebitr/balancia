@@ -48,7 +48,6 @@ describe("PositionWidget", () => {
     renderWidget();
 
     expect(screen.getByText("€412.60")).toBeVisible();
-    expect(screen.getByText("owed to you")).toBeVisible();
     expect(screen.getByText("Owed to you")).toBeVisible();
     expect(screen.getByText("€560.40")).toBeVisible();
     expect(screen.getByText("You owe")).toBeVisible();
