@@ -97,6 +97,14 @@ const STORE_FORMATS: readonly StoreFormat[] = [
   },
 ];
 
+/** Pet shops named after the animals, not after the outing. */
+const PET_SHOP_BRANDS = [
+  tokenize("maxi zoo"),
+  tokenize("zoo plus"),
+  tokenize("zooplus"),
+  tokenize("zoo royal"),
+];
+
 /** Filling-station brands. Ambiguous until the text mentions what was bought. */
 const FUEL_BRANDS = [
   "shell",
@@ -182,6 +190,18 @@ export function contextualOverrides(
         suppress: ["shopping"],
       });
     }
+  }
+
+  // Pet shops whose names contain the word for somewhere you go to look at
+  // animals. `Maxi Zoo` is where the food comes from, not a day out, and
+  // without this the `zoo` in it outvoted the shop it names.
+  const petShop = startsWithAny(merchant, PET_SHOP_BRANDS);
+  if (petShop) {
+    matches.push({
+      category: "pets",
+      token: petShop.join(" "),
+      suppress: ["activities"],
+    });
   }
 
   // Uber: the ride company and the delivery company share a name.
