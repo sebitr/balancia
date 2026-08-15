@@ -5,7 +5,7 @@
  * runtime it ran on and the browser it ran in are all somebody else's problem —
  * `src/lib/ocr` owns those. Keeping the boundary here is what lets every
  * deterministic decision in `parser.ts`, `validation.ts` and `assignment.ts` be
- * tested against fixtures instead of against a 21 MB model.
+ * tested against fixtures instead of against a 6 MB model.
  *
  * Amounts are integer minor units, like everywhere else in Balancia. OCR never
  * produces a `number` that reaches the accounting code.

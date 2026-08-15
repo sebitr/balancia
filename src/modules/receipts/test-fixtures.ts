@@ -6,7 +6,7 @@ import type { OcrResult, OcrTextBox } from "./types";
  * These are *fixtures*, not photographs: every one was written by hand to
  * reproduce a layout Balancia has to cope with, and none contains anybody's
  * real card number, tax ID or dinner. Running the actual models in a unit test
- * would make the suite depend on a 21 MB download and on floating-point
+ * would make the suite depend on a 6 MB download and on floating-point
  * agreement between two runtimes, and would test the model rather than the
  * parser.
  *

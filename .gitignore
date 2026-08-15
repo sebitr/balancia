@@ -69,3 +69,4 @@ next-env.d.ts
 # otherwise show up as untracked files in the checkout that contains them
 .claude/worktrees/
 .worktree-install.log
+.ocr-eval/
