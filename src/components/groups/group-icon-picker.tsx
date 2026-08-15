@@ -62,13 +62,6 @@ export function GroupIconPicker({
         <SheetTitle className="flex-1 text-lg font-semibold tracking-[-0.01em]">
           {t("iconTitle")}
         </SheetTitle>
-        <button
-          type="button"
-          onClick={() => onIcon(null)}
-          className="flex h-8 shrink-0 items-center rounded-full px-2.5 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-foreground/6"
-        >
-          {t("iconNone")}
-        </button>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-5 pb-3">
