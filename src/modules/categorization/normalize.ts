@@ -130,8 +130,15 @@ const NOISE_PATTERNS: readonly RegExp[] = [
   /\b[x*]{2,}[\s-]?\d{2,4}\b/gi,
   // UUIDs, which are ours and never the user's words.
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
-  // Explicitly labelled identifiers.
-  /\b(auth|autorisation|authorization|approval|ref|reference|trn|txn|tran|id|no|nr|num|numero|terminal|term|tid|mid)\.?[\s:#-]*[a-z0-9]{3,}\b/gi,
+  // Explicitly labelled identifiers: `AUTH 998877`, `REF12345`, `no. 4471`.
+  //
+  // The label has to be followed by either a separator or something that looks
+  // like an identifier — meaning it contains a digit. Allowing neither made
+  // the label match the first syllable of an ordinary word, and the rest of
+  // the word became the identifier: `Novotel` was `no` + `votel` and
+  // normalized to nothing at all. So did Nordsee, Notion, Nomad, Nocibé and
+  // `refuge`, which is a lodging rule this file ships and could never match.
+  /\b(auth|autorisation|authorization|approval|ref|reference|trn|txn|tran|id|no|nr|num|numero|terminal|term|tid|mid)\.?(?:[\s:#-]+[a-z0-9]{3,}|(?=[a-z0-9]*\d)[a-z0-9]{3,})\b/gi,
   // Long identifiers: 6+ digits, or 8+ mixed alphanumerics containing a digit.
   /\b\d{6,}\b/gi,
   /\b(?=[a-z0-9]*\d)[a-z0-9]{8,}\b/gi,

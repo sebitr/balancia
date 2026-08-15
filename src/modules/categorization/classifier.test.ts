@@ -546,13 +546,67 @@ describe("brands", () => {
   });
 
   /**
-   * Names that mean something else more often than they mean the brand. Each
-   * was looked at and left out: `Mars` is a month in French, `Paul` is a person
-   * in an app whose descriptions are full of people, and `Pret` is `prêt`.
+   * A name that is also an ordinary word is usually still the brand: somebody
+   * typing `Paul` into an expense means the bakery, and the safeguard that
+   * makes that safe already exists. A single-word merchant rule under five
+   * characters only matches when it *opens* the descriptor and everything
+   * after it is noise, so `Paul` is the bakery and `Paul's share` is Paul.
    */
-  it("leaves out the brands whose names are ordinary words", () => {
-    for (const description of ["Mars", "Paul", "Pret", "Innocent"]) {
-      expect(classify(description).decision).toBe("needs_user_input");
-    }
+  it("takes a brand name at its word, and still knows a person", () => {
+    expect(categoryOf("Paul")).toBe("restaurants");
+    expect(categoryOf("Pret")).toBe("restaurants");
+    expect(categoryOf("Oasis")).toBe("groceries");
+
+    expect(classify("Paul's share").decision).toBe("needs_user_input");
+    // `dinner` decides this one; the point is that `Paul` did not have to.
+    expect(categoryOf("Dinner with Paul")).toBe("restaurants");
+    expect(categoryOf("Prêt immobilier")).toBe("housing");
+  });
+
+  /**
+   * `Mars` is the exception, and the only one. It is a month, and a month
+   * turns up in descriptions all year: `loyer mars`, `vacances en mars`.
+   */
+  it("leaves out the chocolate bar that is also a month", () => {
+    expect(classify("Mars").decision).toBe("needs_user_input");
+    expect(categoryOf("Loyer mars")).toBe("housing");
+    expect(classify("Vacances en mars").category).not.toBe("groceries");
+  });
+});
+
+describe("names the normalizer used to eat", () => {
+  /**
+   * `Novotel` normalized to nothing: the identifier stripper read `no` as the
+   * label "number" and `votel` as the number itself. Every brand starting with
+   * one of those labels was invisible, including `refuge`, which this
+   * repository ships as a lodging rule and which could never once have matched.
+   */
+  it("classifies the brands that used to normalize to nothing", () => {
+    expect(categoryOf("Novotel")).toBe("lodging");
+    expect(categoryOf("Refuge de montagne")).toBe("lodging");
+    expect(categoryOf("NordVPN")).toBe("subscriptions");
+    expect(categoryOf("Nordsee")).toBe("restaurants");
+  });
+
+  it("still strips a real identifier", () => {
+    expect(classify("REF12345").decision).toBe("needs_user_input");
+    expect(classify("AUTH 998877").decision).toBe("needs_user_input");
+    expect(classify("No 12345").decision).toBe("needs_user_input");
+  });
+});
+
+describe("brand names that contain another category's word", () => {
+  it("reads a pet shop rather than a day out", () => {
+    expect(categoryOf("Maxi zoo")).toBe("pets");
+    expect(categoryOf("MAXI ZOO LAUSANNE")).toBe("pets");
+    // The animals themselves are still an outing.
+    expect(categoryOf("Zoo de Servion")).toBe("activities");
+  });
+
+  it("does not bill a fruit juice as a phone", () => {
+    // `orange` is a telecom merchant, and was answering for the fruit.
+    const juice = classify("Jus d'orange");
+    expect(juice.category).toBe("groceries");
+    expect(juice.decision).not.toBe("auto_assigned");
   });
 });
