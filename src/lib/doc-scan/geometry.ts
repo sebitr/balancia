@@ -222,10 +222,7 @@ export function scaleCorners(
 }
 
 /** Mean corner displacement between two sets, in whatever space both share. */
-export function cornerMovement(
-  a: DocumentCorners,
-  b: DocumentCorners,
-): number {
+export function cornerMovement(a: DocumentCorners, b: DocumentCorners): number {
   const from = cornerList(a);
   const to = cornerList(b);
   let total = 0;
@@ -290,10 +287,7 @@ export interface CoverProjection {
   readonly offsetY: number;
 }
 
-export function coverProjection(
-  frame: Size,
-  container: Size,
-): CoverProjection {
+export function coverProjection(frame: Size, container: Size): CoverProjection {
   if (frame.width <= 0 || frame.height <= 0) {
     return { scale: 1, offsetX: 0, offsetY: 0 };
   }

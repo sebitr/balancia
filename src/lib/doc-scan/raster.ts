@@ -300,8 +300,7 @@ export function cornersFromRegion(region: Region): DocumentCorners | null {
       (point.y < region.centroid.y ? 0 : 2) +
       (point.x < region.centroid.x ? 0 : 1);
     const squared =
-      (point.x - region.centroid.x) ** 2 +
-      (point.y - region.centroid.y) ** 2;
+      (point.x - region.centroid.x) ** 2 + (point.y - region.centroid.y) ** 2;
     if (squared > farthestDistance[quadrant]) {
       farthestDistance[quadrant] = squared;
       farthest[quadrant] = point;
