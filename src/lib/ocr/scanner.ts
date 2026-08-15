@@ -1,7 +1,12 @@
 import type { OcrResult } from "@/modules/receipts";
-import { probeOcrAvailable } from "./config";
 import { prepareImage } from "./preprocess";
 import { ocrWorkerSource } from "./worker-source";
+import {
+  ScanError,
+  type ScanBackend,
+  type ScanProgress,
+  type ScanStage,
+} from "./types";
 
 /**
  * The page's handle on the OCR worker.
@@ -20,27 +25,6 @@ import { ocrWorkerSource } from "./worker-source";
  * every keystroke — so the worker is created for a scanning session and
  * terminated when the dialog closes.
  */
-
-/** What the user is waiting for. Reported honestly; see `stage` below. */
-export type ScanStage =
-  "preparing" | "downloading" | "detecting" | "reading" | "analyzing";
-
-export interface ScanProgress {
-  readonly stage: ScanStage;
-  /** Regions read, or bytes downloaded — only when they can be counted. */
-  readonly done?: number;
-  readonly total?: number;
-  /**
-   * Bytes of the file currently downloading. Reported per file rather than as
-   * one figure across the whole install, because the runtime's own
-   * WebAssembly is fetched by onnxruntime and cannot be counted here — a
-   * combined percentage would be wrong by whatever that weighs.
-   */
-  readonly fileLoaded?: number;
-  readonly fileTotal?: number;
-}
-
-export type ScanBackend = "webgpu" | "wasm" | "unknown";
 
 interface WorkerReady {
   readonly type: "ready";
@@ -69,25 +53,6 @@ interface WorkerFailure {
 type WorkerResponse =
   WorkerReady | WorkerProgress | WorkerResult | WorkerFailure;
 
-/** Machine-readable failures, so the UI can say something specific. */
-export type ScanErrorCode =
-  | "unsupported"
-  | "unavailable"
-  | "modelDownload"
-  | "runtime"
-  | "image"
-  | "timeout";
-
-export class ScanError extends Error {
-  readonly code: ScanErrorCode;
-
-  constructor(code: ScanErrorCode, message: string) {
-    super(message);
-    this.name = "ScanError";
-    this.code = code;
-  }
-}
-
 /**
  * A scan can legitimately take a while on a slow phone the first time, when it
  * is also downloading tens of megabytes. After this, something has gone wrong that no
@@ -103,15 +68,6 @@ export function isScanningSupported(): boolean {
     typeof WebAssembly !== "undefined" &&
     typeof createImageBitmap === "function"
   );
-}
-
-/**
- * Whether this *instance* can: the browser supports it and the operator
- * installed the models.
- */
-export async function isScanningAvailable(): Promise<boolean> {
-  if (!isScanningSupported()) return false;
-  return probeOcrAvailable();
 }
 
 export class ReceiptScanner {

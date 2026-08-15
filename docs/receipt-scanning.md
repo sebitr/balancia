@@ -1,12 +1,19 @@
 # Receipt scanning
 
 Photograph a receipt, let Balancia read it, correct anything it got wrong,
-say who had what, and create the expense. The reading happens in the browser,
-on the device holding the photo. The image is not uploaded to be recognized,
-and there is no OCR API key to configure, because there is no OCR API.
+say who had what, and create the expense.
 
-Off by default. It needs ~47 MB of model files and one extra
-Content-Security-Policy token, and both of those are the operator's call.
+Off by default, and there are two readers. The **on-device** one is the
+default and the original: PP-OCRv5 runs in the browser, the image is not
+uploaded to be recognized, and there is no API key because there is no API.
+The optional **server-side** one sends the image to a provider the operator
+configures, which reads a crumpled or faded receipt far better than a 21 MB
+mobile model can — and which, pointed at the operator's own Ollama or vLLM,
+still keeps the image on their hardware.
+
+Both readers can be switched on at once, and then the person scanning picks
+per scan, against copy that says where the photograph is going. Neither is on
+until an operator turns it on.
 
 ## What it does, and what it does not
 
@@ -178,6 +185,65 @@ asyncify build _by name_, and given the jsep files it fails with `no available
 backend found`. An instance enabling both features therefore keeps both on
 disk, at a cost of about 25 MB. No browser ever loads both.
 
+## The server-side reader
+
+Off unless `RECEIPT_OCR_PROVIDER` names one. Three drivers, all behind the
+same `OcrProvider` contract in `src/lib/ocr/providers`, arranged the way
+`src/lib/storage` arranges its local and S3 drivers.
+
+| Setting                | What it does                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `RECEIPT_OCR_PROVIDER` | `none` (default), `anthropic`, `openai`, `gemini`                              |
+| `RECEIPT_OCR_API_KEY`  | Required unless the endpoint is a local one — then a base URL stands in for it |
+| `RECEIPT_OCR_BASE_URL` | Endpoint override. Any OpenAI-compatible server, including your own            |
+| `RECEIPT_OCR_MODEL`    | Required for `openai` and `gemini`; optional for `anthropic`                   |
+| `RECEIPT_OCR_LOCAL`    | `true` by default. Turn it off to read _only_ through the provider             |
+
+`openai` is the driver for the protocol rather than the vendor. Pointed at
+Ollama, vLLM or LM Studio it runs a vision model on the operator's own
+hardware, needs no key, and is very likely the most useful configuration this
+feature has — the accuracy of a modern vision model with none of the privacy
+cost. Pointed at a commercial endpoint it is the commercial driver. Balancia
+does not need to know which, and the interface names the endpoint by its host
+rather than calling it "OpenAI", because on most instances that would be a
+false statement about who receives the image.
+
+Only `anthropic` has a default model (`claude-opus-5`). The other two require
+`RECEIPT_OCR_MODEL`, and the schema refuses to start without it: model names
+on those endpoints belong to whoever is serving them, and a constant compiled
+in here would eventually be a 404 at somebody's first scan rather than an
+error at boot.
+
+### Turning off the WebAssembly reader
+
+An instance reading receipts only through a provider should set
+`RECEIPT_OCR_LOCAL=false`. It then downloads none of the ~47 MB, and —
+because `isWebAssemblyInferenceEnabled()` asks whether the _browser_ reader is
+in use rather than whether scanning is on — keeps the strict
+Content-Security-Policy. `'wasm-unsafe-eval'` is granted for a reader that
+runs, not for a feature that is enabled.
+
+### What it costs
+
+Every scan is an outbound call the operator pays for. A rate limit of 20 per
+ten minutes per address caps the damage from a stuck client; the model is the
+operator's choice, and a cheaper one is a line in `.env`.
+
+### The arithmetic check applies to every reader
+
+This is the part worth being explicit about. A vision model returns a
+structured receipt directly and skips `parser.ts` — but it does not skip
+`validation.ts`, and it does not skip the review screen. The
+parts-against-total reconciliation that caught a tax misread as `7785.10` is
+exactly the check that catches a model inventing a number, and the
+shared-charge residual in `assignment.ts` means a wrong tax line cannot
+corrupt a split even if nobody reads the warning.
+
+Amounts are the other half of it. Models are asked for the characters printed
+on the paper — `12,50`, `1'234.50`, `1 234,50` — and those go through the same
+`parseReceiptAmount` the on-device reader's output does. The decimal-separator
+rule stays in one tested place instead of being re-decided by a model.
+
 ## The model
 
 **PP-OCRv5 mobile**, detection and recognition, from the PaddleOCR project.
@@ -344,6 +410,12 @@ assignments, strategies and totals.
 
 ## Privacy
 
+The honest version of this section depends on which reader is in use, so it is
+written twice rather than once and hedged.
+
+**With the on-device reader** — the default, and the only one on an instance
+that has not configured a provider:
+
 - The image is never uploaded for recognition. There is no cloud OCR call,
   no third-party inference API, and no key for one.
 - The models are fetched from this instance's own origin. The worker's source
@@ -355,6 +427,27 @@ assignments, strategies and totals.
   of the receipt.
 - Nothing is persisted until the user confirms it, and what is persisted is an
   expense: amounts, a description and a date.
+
+**With a server-side provider**, three of those four stop being true, and the
+interface says so before the shutter rather than after:
+
+- The image _is_ uploaded — to this instance, which forwards it to the
+  provider. It is held in memory for the length of that call and never
+  written to storage; keeping the photograph with the expense remains the
+  separate checkbox it always was.
+- The provider's own retention, training and logging policy applies to that
+  image. Balancia cannot make promises on its behalf, and does not try to.
+- The credential lives on the server. It is never sent to the browser, and
+  the page's `connect-src 'self'` is unchanged — the browser still talks only
+  to this instance.
+- What does _not_ change: recognized text is still never logged, nothing is
+  persisted until someone confirms it, and what is persisted is an ordinary
+  expense.
+
+An operator who wants the accuracy without the third party points the
+`openai` driver at their own endpoint. Then the image goes to this instance
+and on to a machine they run, and the list above collapses back to the local
+one.
 
 ### Storing the receipt is a separate decision
 

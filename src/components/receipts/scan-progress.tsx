@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { APPROXIMATE_DOWNLOAD_MB } from "@/lib/ocr/config";
-import type { ScanProgress } from "@/lib/ocr/scanner";
+import type { ScanProgress } from "@/lib/ocr/types";
 
 /**
  * What the scanner is doing, said plainly.

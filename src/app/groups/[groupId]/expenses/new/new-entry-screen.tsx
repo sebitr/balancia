@@ -8,6 +8,8 @@ import { AddEntryDrawer } from "@/components/entries/add-entry-drawer";
 import type { DebtPair } from "@/components/entries/settle-blocks";
 import { requireGroupAccess } from "@/lib/actions";
 import {
+  configuredOcrProviderName,
+  isLocalReceiptOcrEnabled,
   isReceiptScanningEnabled,
   isSemanticCategorizationEnabled,
 } from "@/lib/env";
@@ -114,6 +116,10 @@ export async function NewEntryScreen({
       categoryMappings={categoryMappings}
       semanticCategorization={isSemanticCategorizationEnabled()}
       receiptScanning={isReceiptScanningEnabled()}
+      receiptOcrLocal={isLocalReceiptOcrEnabled()}
+      // The provider's *name*, so the interface can say where a photograph
+      // is going. Its key stays on the server and is never sent here.
+      receiptOcrProvider={configuredOcrProviderName()}
     />
   );
 }

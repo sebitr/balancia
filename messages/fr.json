@@ -912,6 +912,11 @@
     "scanReceipt": "Scanner un reçu",
     "title": "Scanner un reçu",
     "onDevice": "La reconnaissance se fait sur cet appareil. La photo n'est envoyée nulle part pour être lue.",
+    "reader": {
+      "local": "Lire sur cet appareil",
+      "remote": "Lire avec {provider}",
+      "remoteExplain": "La photo est envoyée à ce serveur, puis à {provider}, pour être lue. Seuls les montants que vous confirmez sont enregistrés."
+    },
     "takePhoto": "Prendre une photo",
     "choosePhoto": "Choisir une photo",
     "tips": "Posez le reçu à plat, cadrez-le en entier et photographiez-le bien en face. Vous pouvez aussi déposer une image ici.",
@@ -944,6 +949,7 @@
     },
     "progress": {
       "preparing": "Préparation du scanner",
+      "uploading": "Envoi de la photo pour lecture",
       "downloading": "Téléchargement des modèles de lecture",
       "detecting": "Repérage du texte",
       "reading": "Lecture du reçu",
@@ -957,7 +963,8 @@
       "runtime": "Le reçu n'a pas pu être lu. Essayez une autre photo, ou saisissez la dépense à la main.",
       "image": "Cette image n'a pas pu être ouverte. Essayez un JPEG ou un PNG.",
       "timeout": "La lecture du reçu a été trop longue et a été interrompue. Une photo plus petite aide généralement.",
-      "attachFailed": "La dépense est prête, mais la photo n'a pas pu être téléversée."
+      "attachFailed": "La dépense est prête, mais la photo n'a pas pu être téléversée.",
+      "provider": "Le lecteur est injoignable ou n'a pas pu lire cette photo. Réessayez, ou saisissez la dépense à la main."
     },
     "review": {
       "merchant": "Commerçant",

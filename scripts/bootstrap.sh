@@ -360,6 +360,96 @@ run_ts() {
 # cannot. The flag on its own is not enough: with the models missing the
 # browser renders no button and explains nothing, which is the silent failure
 # both feature docs warn about.
+# Which reader receipts are read by.
+#
+# Nested inside the receipt-scanning question rather than asked as its own
+# numbered one: it only matters to the operators who said yes, and the "3 of 7"
+# counter above stays honest with one name per question block.
+#
+# The two are not exclusive. An operator can have both and let each person
+# choose per scan, which is why the local answer does not rule out a provider
+# and the provider answer asks before turning local off.
+choose_receipt_reader() {
+  prose <<'TEXT'
+On this device: a ~47 MB model download now, and the photo is never
+uploaded to be read. It also relaxes the Content-Security-Policy with
+'wasm-unsafe-eval', which WebAssembly needs.
+
+Through a provider: no download and no CSP change, but the photo is
+sent by this server to whoever you configure. A provider reads a
+crumpled or faded receipt far better than the on-device model. Point
+the openai driver at your own Ollama or vLLM and it stays on your
+hardware.
+
+TEXT
+
+  if ask_yes_no 'Read receipts on the device (no upload)?' y; then
+    write_setting RECEIPT_OCR_LOCAL true \
+      'On-device receipt reading. Needs the models in public/models.'
+    install_models scripts/fetch-ocr-model.ts OCR "$ocr_sentinel"
+    ask_yes_no 'Also offer a server-side provider?' n || return 0
+  else
+    # Deferred: writing it now would be wrong if they decline a provider
+    # below and we have to put the on-device reader back.
+    prose <<'TEXT'
+Then a provider is required — receipt scanning needs a reader.
+
+TEXT
+  fi
+
+  local provider=''
+  while :; do
+    ask_line 'Provider (anthropic, gemini, openai)' anthropic
+    case $(lower "$reply") in
+      anthropic | gemini | openai) provider=$(lower "$reply"); break ;;
+      '') ;;
+      *) oops 'Pick one of anthropic, gemini or openai.' ;;
+    esac
+  done
+
+  # Only the anthropic driver has a default model. See src/lib/env.ts: naming
+  # one for the others here would be a 404 at the first scan the day it moves.
+  local model=''
+  if [ "$provider" = anthropic ]; then
+    ask_line 'Model (blank for the default)' ''
+    model=$reply
+  else
+    while :; do
+      ask_line 'Model (the vision model your endpoint serves)' ''
+      [ -n "$reply" ] && { model=$reply; break; }
+      oops 'A model is required for this provider.'
+    done
+  fi
+
+  ask_line 'Base URL (blank for the vendor default)' ''
+  local base_url=$reply
+
+  # A local endpoint usually wants no key, so an empty answer is allowed
+  # whenever a base URL was given.
+  local key=''
+  while :; do
+    ask_secret 'API key (blank if the endpoint needs none)'
+    key=$reply
+    if [ -n "$key" ] || [ -n "$base_url" ]; then
+      break
+    fi
+    oops 'A key is required unless you gave a base URL.'
+  done
+
+  write_setting RECEIPT_OCR_PROVIDER "$provider" \
+    'Server-side receipt reader. "none" turns it off.'
+  [ -n "$key" ] && write_setting RECEIPT_OCR_API_KEY "$key" \
+    'Credential for the reader above. Kept on this server.'
+  [ -n "$base_url" ] && write_setting RECEIPT_OCR_BASE_URL "$base_url" \
+    'Endpoint override — an OpenAI-compatible server, including your own.'
+  [ -n "$model" ] && write_setting RECEIPT_OCR_MODEL "$model" \
+    'Model the reader should use.'
+
+  # Now safe to record: they have a reader either way.
+  has_value RECEIPT_OCR_LOCAL || write_setting RECEIPT_OCR_LOCAL false \
+    'On-device reading off; receipts are read by the provider above.'
+}
+
 install_models() {
   _script=$1
   _label=$2
@@ -741,16 +831,16 @@ TEXT
     prose <<'TEXT'
 Photograph a receipt and have it read into an expense — merchant, date,
 line items and total — which you then correct and assign to people.
-Recognition runs in the browser against model files this instance
-serves: the image is never uploaded to be read, and there is no OCR
-service involved. Costs a ~47 MB download now, and relaxes the
-Content-Security-Policy with 'wasm-unsafe-eval'.
+There are two ways to read one, and the next question asks which: on
+the device holding the photo, or by this server through a provider you
+configure. Whichever you pick, nothing is saved until someone confirms
+it, and the split is computed the way every other expense's is.
 
 TEXT
     if ask_yes_no 'Enable receipt scanning?' n; then
       write_setting RECEIPT_SCANNING true \
-        'On-device receipt scanning. Needs the models in public/models.'
-      install_models scripts/fetch-ocr-model.ts OCR "$ocr_sentinel"
+        'Receipt scanning on. The reader is chosen by the settings below.'
+      choose_receipt_reader
     else
       write_setting RECEIPT_SCANNING false \
         'Receipt scanning off. See docs/receipt-scanning.md to turn it on.'
@@ -907,7 +997,8 @@ fi
 # renders no button and says nothing. Checked on every run, because the
 # download may have failed after the flag was written.
 if [ "$interactive" -eq 1 ]; then
-  if is_enabled RECEIPT_SCANNING && [ ! -e "$ocr_sentinel" ]; then
+  if is_enabled RECEIPT_SCANNING && is_enabled RECEIPT_OCR_LOCAL &&
+    [ ! -e "$ocr_sentinel" ]; then
     heading 'Receipt scanning is on, but its models are missing'
     prose <<'TEXT'
 RECEIPT_SCANNING is set, and there is nothing in public/models to read
@@ -953,6 +1044,31 @@ on_off() {
   if is_enabled "$1"; then printf 'on'; else printf 'off'; fi
 }
 
+# Which reader the summary reports, rather than a bare on/off — "on" stopped
+# being the interesting fact the moment there were two ways to read a receipt.
+receipt_reader_summary() {
+  if ! is_enabled RECEIPT_SCANNING; then
+    printf 'off'
+    return
+  fi
+
+  _provider=$(value_of RECEIPT_OCR_PROVIDER)
+  [ "$_provider" = none ] && _provider=''
+
+  if is_enabled RECEIPT_OCR_LOCAL; then
+    if [ -n "$_provider" ]; then
+      printf 'on-device, or %s' "$_provider"
+    else
+      printf 'on-device'
+    fi
+  elif [ -n "$_provider" ]; then
+    printf '%s' "$_provider"
+  else
+    # The schema refuses to boot in this state; say so rather than "on".
+    printf 'on, but no reader configured'
+  fi
+}
+
 summary() {
   printf '  %sThis instance%s\n\n' "$bold" "$reset"
   row 'Public address' "$(value_of APP_URL)"
@@ -965,7 +1081,7 @@ summary() {
     frankfurter) row 'Exchange rates' 'frankfurter' ;;
     *) row 'Exchange rates' 'off' ;;
   esac
-  row 'Receipt scanning' "$(on_off RECEIPT_SCANNING)"
+  row 'Receipt scanning' "$(receipt_reader_summary)"
   row 'Semantic categories' "$(on_off SEMANTIC_CATEGORIZATION)"
   if [ -n "$(value_of PUSH_VAPID_PUBLIC_KEY)" ]; then
     row 'Push notifications' 'on'

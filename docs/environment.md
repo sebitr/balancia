@@ -417,12 +417,15 @@ See [Categorization](categorization.md) for the whole design.
 `0` (default) | `1`.
 
 Reads a photographed receipt into an expense — merchant, date, line items and
-total — which you then correct and assign to people. Recognition runs in the
-_browser_, against model files served by your instance: the image is never
-uploaded to be read, and no third-party OCR service is involved.
+total — which you then correct and assign to people. This switch turns the
+feature on; `RECEIPT_OCR_LOCAL` and `RECEIPT_OCR_PROVIDER` below decide _how_ a
+receipt is read, and at least one of them has to be usable or the instance
+refuses to start.
 
-Off by default for the same two reasons as the semantic model, and neither of
-them is privacy:
+The on-device reader is the default. It runs in the _browser_ against model
+files served by your instance: the image is never uploaded to be read, and no
+third-party service is involved. It is off by default for the same two reasons
+as the semantic model, and neither of them is privacy:
 
 - it needs `'wasm-unsafe-eval'` in the Content-Security-Policy. Setting either
   this or `SEMANTIC_CATEGORIZATION` to `1` adds it, once.
@@ -436,6 +439,54 @@ RECEIPT_SCANNING=true
 With the variable set but the files missing, the browser makes one `HEAD`
 request, finds nothing, and no scan button is rendered. The expense form is
 unchanged.
+
+### `RECEIPT_OCR_LOCAL`
+
+`1` (default) | `0`.
+
+The on-device reader. Leaving it on is the behaviour receipt scanning has
+always had. Turn it off on an instance that reads only through a provider:
+nothing is downloaded, and the Content-Security-Policy stays strict, because
+`'wasm-unsafe-eval'` is granted for a reader that actually runs rather than for
+a feature that is enabled.
+
+Setting this to `0` with `RECEIPT_OCR_PROVIDER=none` while `RECEIPT_SCANNING=1`
+is refused at boot — that is a scan button with nothing behind it.
+
+### `RECEIPT_OCR_PROVIDER`
+
+`none` (default) | `anthropic` | `openai` | `gemini`.
+
+An optional server-side reader, for receipts the on-device model struggles
+with. **Your server** makes the call, never the browser, so the credential
+stays here and the page's `connect-src 'self'` is untouched.
+
+`openai` is the driver for the protocol rather than the vendor: with
+`RECEIPT_OCR_BASE_URL` pointed at Ollama, vLLM or LM Studio it runs a vision
+model on your own hardware and the image never leaves it.
+
+The image is held in memory for the length of the call and never written to
+storage. Keeping the photograph with the expense is the separate checkbox it
+always was.
+
+### `RECEIPT_OCR_API_KEY`
+
+Required when a provider is set, unless `RECEIPT_OCR_BASE_URL` is also set — a
+local endpoint usually wants no key, and an empty bearer is worse than none.
+
+### `RECEIPT_OCR_BASE_URL`
+
+Endpoint override. Anything speaking the provider's protocol, including your
+own server.
+
+### `RECEIPT_OCR_MODEL`
+
+**Required** for `openai` and `gemini`; optional for `anthropic`, which
+defaults to `claude-opus-5`. The other two have no default on purpose: model
+names on those endpoints belong to whoever serves them, and a constant baked
+in here would eventually be a 404 at your first scan instead of an error at
+boot. Set a cheaper model here if the default costs more than a scan is worth
+to you.
 
 Note that this and `SEMANTIC_CATEGORIZATION` install _different_ onnxruntime
 WebAssembly binaries, which are not interchangeable; enabling both costs about
