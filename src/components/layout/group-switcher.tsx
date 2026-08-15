@@ -42,7 +42,14 @@ import { cn } from "@/lib/utils";
  * group and where you stand in each — is fetched then, not now.
  */
 
-/** Sections a group has, so a switch can land on the one you were looking at. */
+/**
+ * Sections a switch can land on, so it keeps the screen you were looking at.
+ *
+ * `import` is deliberately absent: it is the one section that 404s outright
+ * where the actor cannot import, so carrying it across would drop an owner
+ * into a dead end in the group they are merely a member of. It falls back to
+ * that group's overview instead.
+ */
 const GROUP_SECTIONS = [
   "expenses",
   "members",
@@ -50,7 +57,6 @@ const GROUP_SECTIONS = [
   "balances",
   "activity",
   "recurring",
-  "import",
 ] as const;
 
 /**

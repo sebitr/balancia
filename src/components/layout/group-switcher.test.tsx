@@ -166,4 +166,10 @@ describe("equivalentPath", () => {
     expect(equivalentPath("/groups/g1/nowhere", "g1", "g2")).toBe("/groups/g2");
     expect(equivalentPath("/dashboard", "g1", "g2")).toBe("/groups/g2");
   });
+
+  it("does not carry across the one section that 404s without permission", () => {
+    // Importing is owner-only and answers `notFound` to everyone else, so an
+    // owner switching out of it would land in a dead end rather than a group.
+    expect(equivalentPath("/groups/g1/import", "g1", "g2")).toBe("/groups/g2");
+  });
 });
