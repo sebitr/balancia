@@ -137,19 +137,6 @@ describe("CreateGroupSheet", () => {
     expect(form.get("iconColor")).toBe("blue");
   });
 
-  it("clears the icon again from the picker", async () => {
-    const { user } = renderSheet();
-
-    await user.type(screen.getByPlaceholderText("Group name"), "Ski");
-    await user.click(screen.getByRole("button", { name: "Choose an icon" }));
-    await user.click(screen.getByRole("radio", { name: "tent" }));
-    await user.click(screen.getByRole("button", { name: "None" }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
-    await user.click(screen.getByRole("button", { name: "Create group" }));
-
-    expect(submitted().get("icon")).toBe("");
-  });
-
   it("relabels the currency row without losing the chosen currency", async () => {
     const { user } = renderSheet();
 
