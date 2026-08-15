@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { GroupNav } from "@/components/layout/group-nav";
+import { GroupSwitcher } from "@/components/layout/group-switcher";
 import { getCurrentActor } from "@/lib/security/actor";
 import {
   AuthenticationRequiredError,
@@ -56,6 +57,15 @@ export default async function GroupLayout({
         isGuest: access.actor.kind === "guest",
       }}
       bottomNav={<GroupNav groupId={access.groupId} />}
+      // The name is already resolved by the authorization above, so the header
+      // costs no query of its own; the switcher asks for the rest on opening.
+      leading={
+        <GroupSwitcher
+          groupId={access.groupId}
+          groupName={access.group.name}
+          isGuest={access.actor.kind === "guest"}
+        />
+      }
     >
       {children}
       {/* The add-entry drawer, when a navigation into it was intercepted. It

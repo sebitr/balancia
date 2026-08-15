@@ -103,6 +103,23 @@ export interface HomeOverview {
 }
 
 /**
+ * The figures one group's row shows, in the group's own currencies.
+ *
+ * A group's own currency is what its row shows — `CHF 210.00` stays CHF even
+ * where the header totals in EUR. The exception is a group holding balances in
+ * several currencies at once, which collapses to its converted net; without a
+ * rate to do that with, every figure is shown rather than one of them.
+ *
+ * Shared by the home list and the group switcher so the same group cannot read
+ * two ways on two screens.
+ */
+export function displayAmountsOf(position: GroupPosition): readonly Money[] {
+  return position.amounts.length > 1 && position.net
+    ? [position.net]
+    : position.amounts;
+}
+
+/**
  * Which section a group belongs under.
  *
  * A group holding both a debt and a credit in different currencies has no

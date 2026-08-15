@@ -24,7 +24,16 @@
     "add": "Ajouter",
     "people": "Personnes",
     "groupSections": "Sections du groupe",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "backToDashboard": "Retour au tableau de bord",
+    "yourGroups": "Vos groupes",
+    "youAreHere": "vous êtes ici",
+    "switcherSettled": "soldé",
+    "switcherYouOwe": "vous devez {amount}",
+    "switcherYouAreOwed": "on vous doit {amount}",
+    "switcherDashboard": "Tableau de bord",
+    "switcherAllGroups": "tous les groupes",
+    "switcherRetry": "Impossible de charger vos groupes. Réessayer."
   },
   "theme": {
     "toggle": "Changer de thème",

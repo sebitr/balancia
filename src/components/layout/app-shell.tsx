@@ -21,11 +21,18 @@ export function AppShell({
   actor,
   className,
   bottomNav,
+  leading,
 }: {
   children: ReactNode;
   actor: { label: string; email?: string; isGuest: boolean };
   className?: string;
   bottomNav?: ReactNode;
+  /**
+   * What sits at the head of the header. The wordmark, and its link home, is
+   * what a screen gets for saying nothing — a group replaces it with the way
+   * out of the group and the way across to another one.
+   */
+  leading?: ReactNode;
 }) {
   return (
     // Clipped, because a screen dragged towards the right edge must not push
@@ -34,21 +41,28 @@ export function AppShell({
     <div className="flex min-h-dvh flex-col overflow-x-clip">
       <header
         data-slot="app-header"
-        className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        // Above the bottom bar rather than level with it, so a panel hung from
+        // the header can dim the rest of the chrome without dimming the
+        // control that opened it.
+        className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
       >
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <Link
-            href={actor.isGuest ? "#" : "/dashboard"}
-            aria-disabled={actor.isGuest}
-            tabIndex={actor.isGuest ? -1 : undefined}
-            className={cn(
-              "rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
-              actor.isGuest && "pointer-events-none",
-            )}
-          >
-            <Wordmark />
-          </Link>
-          <div className="flex items-center gap-1">
+        {/* Positioned, so a leading control can anchor a panel to the header's
+            full width rather than to its own. */}
+        <div className="relative mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+          {leading ?? (
+            <Link
+              href={actor.isGuest ? "#" : "/dashboard"}
+              aria-disabled={actor.isGuest}
+              tabIndex={actor.isGuest ? -1 : undefined}
+              className={cn(
+                "rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+                actor.isGuest && "pointer-events-none",
+              )}
+            >
+              <Wordmark />
+            </Link>
+          )}
+          <div className="flex shrink-0 items-center gap-1">
             {/* Guests have no account, so nothing to notify and no bell. */}
             {!actor.isGuest && <NotificationBell />}
             <ThemeToggle />
