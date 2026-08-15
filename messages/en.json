@@ -24,7 +24,16 @@
     "add": "Add",
     "people": "People",
     "groupSections": "Group sections",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "backToDashboard": "Back to dashboard",
+    "yourGroups": "Your groups",
+    "youAreHere": "you are here",
+    "switcherSettled": "settled",
+    "switcherYouOwe": "you owe {amount}",
+    "switcherYouAreOwed": "you are owed {amount}",
+    "switcherDashboard": "Dashboard",
+    "switcherAllGroups": "all groups",
+    "switcherRetry": "Couldn't load your groups. Try again."
   },
   "theme": {
     "toggle": "Toggle theme",

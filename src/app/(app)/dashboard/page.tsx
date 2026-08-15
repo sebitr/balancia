@@ -19,6 +19,7 @@ import {
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
+  displayAmountsOf,
   loadHomeOverview,
   type GroupPosition,
 } from "@/modules/balances/overview";
@@ -40,18 +41,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
-/**
- * A group's own currency is what its row shows — `CHF 210.00` stays CHF even
- * where the header totals in EUR. The exception is a group holding balances in
- * several currencies at once, which collapses to its converted net; without a
- * rate to do that with, every figure is shown rather than one of them.
- */
+/** The group's own figures, as the serialisable pairs a row renders from. */
 function amountsOf(position: GroupPosition) {
-  const amounts =
-    position.amounts.length > 1 && position.net
-      ? [position.net]
-      : position.amounts;
-  return amounts.map((amount) => ({
+  return displayAmountsOf(position).map((amount) => ({
     minorUnits: amount.amount.toString(),
     currency: amount.currency,
   }));
