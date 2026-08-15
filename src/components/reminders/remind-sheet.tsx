@@ -415,7 +415,7 @@ export function RemindSheet({
           aria-label={t("messageLabel")}
           rows={4}
           onChange={(event) => setEdited(event.target.value)}
-          className="min-h-24 rounded-[14px] text-sm leading-[1.55]"
+          className="min-h-24 rounded-[14px] text-base leading-[1.55] md:text-sm"
         />
 
         <div className="flex items-center gap-2 border-t pt-3">
