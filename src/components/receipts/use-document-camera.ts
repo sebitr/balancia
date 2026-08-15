@@ -34,11 +34,7 @@ import { CornerTracker, type ScannerStatus } from "@/lib/doc-scan/tracking";
  */
 
 export type CameraFault =
-  | "unavailable"
-  | "denied"
-  | "notFound"
-  | "startFailed"
-  | "captureFailed";
+  "unavailable" | "denied" | "notFound" | "startFailed" | "captureFailed";
 
 export type DetectionState = "loading" | "ready" | "failed";
 
@@ -154,10 +150,7 @@ export function useDocumentCamera(): DocumentCameraHandle {
             detected !== null && isCredibleDocument(detected, frame)
               ? normalizeCorners(detected, frame)
               : null;
-          const state = trackerRef.current.update(
-            credible,
-            performance.now(),
-          );
+          const state = trackerRef.current.update(credible, performance.now());
           setCorners(state.corners);
           // Ready must additionally mean the whole page is in frame — a
           // half-visible page can hold perfectly still.

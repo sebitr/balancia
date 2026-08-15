@@ -55,9 +55,7 @@ describe("polygonArea", () => {
   it("is orientation-independent", () => {
     const clockwise = cornerList(page);
     const counterClockwise = [...clockwise].reverse();
-    expect(polygonArea(counterClockwise)).toBeCloseTo(
-      polygonArea(clockwise),
-    );
+    expect(polygonArea(counterClockwise)).toBeCloseTo(polygonArea(clockwise));
   });
 });
 
@@ -128,10 +126,7 @@ describe("isCredibleDocument", () => {
 
   it("rejects non-finite corners", () => {
     expect(
-      isCredibleDocument(
-        { ...page, topLeft: { x: Number.NaN, y: 0 } },
-        frame,
-      ),
+      isCredibleDocument({ ...page, topLeft: { x: Number.NaN, y: 0 } }, frame),
     ).toBe(false);
   });
 });
@@ -180,10 +175,7 @@ describe("smoothCorners and cornerMovement", () => {
   });
 
   it("measures mean displacement", () => {
-    const shifted = scaleCorners(
-      normalizeCorners(page, frame),
-      frame,
-    );
+    const shifted = scaleCorners(normalizeCorners(page, frame), frame);
     const moved = {
       topLeft: { x: shifted.topLeft.x + 4, y: shifted.topLeft.y },
       topRight: { x: shifted.topRight.x, y: shifted.topRight.y + 4 },
@@ -243,9 +235,7 @@ describe("coverProjection and projectToCover", () => {
     // left and right.
     expect(projection.scale).toBeCloseTo(400 / 1080);
     expect(projection.offsetY).toBeCloseTo(0);
-    expect(projection.offsetX).toBeCloseTo(
-      (300 - 1920 * (400 / 1080)) / 2,
-    );
+    expect(projection.offsetX).toBeCloseTo((300 - 1920 * (400 / 1080)) / 2);
     expect(projection.offsetX).toBeLessThan(0);
   });
 
@@ -261,11 +251,7 @@ describe("coverProjection and projectToCover", () => {
   it("maps the frame centre to the container centre", () => {
     const landscape: Size = { width: 1920, height: 1080 };
     const container: Size = { width: 300, height: 400 };
-    const centre = projectToCover(
-      { x: 0.5, y: 0.5 },
-      landscape,
-      container,
-    );
+    const centre = projectToCover({ x: 0.5, y: 0.5 }, landscape, container);
     expect(centre.x).toBeCloseTo(150);
     expect(centre.y).toBeCloseTo(200);
   });

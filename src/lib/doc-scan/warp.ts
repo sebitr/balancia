@@ -1,8 +1,4 @@
-import {
-  extractionSize,
-  type DocumentCorners,
-  type Size,
-} from "./geometry";
+import { extractionSize, type DocumentCorners, type Size } from "./geometry";
 
 /**
  * Perspective correction without OpenCV: a 4-point homography, solved
@@ -16,9 +12,15 @@ import {
 
 /** Row-major 3×3 projective transform. */
 export type Homography = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ];
 
 /**
@@ -120,7 +122,12 @@ export function warpPerspective(
       { x: size.width, y: size.height },
       { x: 0, y: size.height },
     ],
-    [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft],
+    [
+      corners.topLeft,
+      corners.topRight,
+      corners.bottomRight,
+      corners.bottomLeft,
+    ],
   );
   if (transform === null) return null;
 
