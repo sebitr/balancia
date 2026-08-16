@@ -8,11 +8,12 @@ import { cn } from "@/lib/utils";
  * The screen: everything between the header and the bottom bar, and the only
  * part of the app that moves when you navigate.
  *
- * Direction belongs to the navigation, not to the destination — a group
- * arrives from the right when you tapped into it and from the left when you
- * came back to it. So the link names the motion, via `transitionTypes` and the
- * constants in `./transitions`, and this maps that name onto a CSS class that
- * `globals.css` animates.
+ * What moves belongs to the navigation, not to the URL — a group arrives from
+ * the right when you tapped into it and from the left when you came back to
+ * it, and the same `/expenses/new` is a drawer over the group here and a
+ * drawer over an empty shell from the dashboard. So the link names the motion,
+ * via `transitionTypes` and the constants in `./transitions`, and this maps
+ * that name onto a CSS class that `globals.css` animates.
  *
  * Keyed by pathname. A `<ViewTransition>` in a layout normally never animates,
  * because layouts survive navigation and so never enter or exit; changing the
@@ -33,6 +34,11 @@ const DIRECTIONS = {
   pop: "pop",
   "switch-forward": "switch-forward",
   "switch-back": "switch-back",
+  // A drawer opening over the screen: the screen is not what moved, so it
+  // takes no animation at all rather than one that animates it to a
+  // standstill. "none" opts it out of the transition, leaving the drawer's own
+  // rise as the only motion on screen.
+  modal: "none",
   default: "none",
 };
 

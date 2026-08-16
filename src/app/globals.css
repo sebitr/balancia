@@ -229,53 +229,56 @@
  *
  *  Balancia is used one-handed, on a phone, usually standing up. The motion
  *  below is borrowed from iOS for one reason: it is the vocabulary the hand
- *  already knows. A screen arrives from the side you are travelling towards,
- *  the chrome holds still so you never lose your place, and the left edge is
- *  always a way back out.
+ *  already knows — and the point of a vocabulary is that different words mean
+ *  different things. So what moves depends on what has actually arrived:
  *
- *  Direction is carried by the link — see src/components/motion/transitions.ts
- *  — and applied by <Screen>. Navigations that carry no direction (the browser
- *  back button, router.refresh()) deliberately animate nothing.
+ *    a page      — somewhere else, stacked on where you were. It travels.
+ *    a section   — the same place, seen another way. It fades through.
+ *    a drawer    — a layer over what you were looking at. The screen holds
+ *                  still and the drawer's own rise is the whole motion.
+ *
+ *  Sliding all three sideways, which is what this used to do, told the eye
+ *  they were the same kind of move. Tapping a tab is not a journey, and a form
+ *  opening over a group is not a place you have gone to.
+ *
+ *  Which one a navigation is belongs to the link — see
+ *  src/components/motion/transitions.ts — and is applied by <Screen>.
+ *  Navigations that carry no direction (the browser back button,
+ *  router.refresh()) deliberately animate nothing.
  * ========================================================================== */
 
 :root {
   /* Leaves fast, settles slow: the curve UIKit uses for a navigation push. */
   --ease-screen: cubic-bezier(0.32, 0.72, 0, 1);
+  /* A fade has no distance to decelerate over, so it wants a plainer curve. */
+  --ease-fade: cubic-bezier(0.2, 0, 0, 1);
+
+  /* The edge push, and the swipe-back gesture that mirrors it. */
   --duration-screen: 360ms;
-  /* Peers are a shorter trip than depth: nothing has to be stacked. */
-  --duration-switch: 300ms;
+  /* The same move where there is no edge to come from — see below. */
+  --duration-depth: 240ms;
+  /* Fading through: the old one leaves before the new one arrives, rather
+     than the two dissolving into each other halfway. */
+  --duration-section-out: 90ms;
+  --duration-section-in: 190ms;
 
-  /* Wide viewports travel a fixed distance rather than their own width. The
-     screen here is a column with empty gutters either side, so a full-width
-     slide would not leave the viewport — it would park in the gutter, still
-     visible. It moves far enough to read as a direction and a short fade
-     covers the fact that it never actually exits. */
-  --screen-travel: 120px;
-  --screen-recede: -40px;
-  --screen-dim: 1;
-  --screen-fade: 160ms;
-  /* Sideways moves overlap heavily at this distance, so they cross while they
-     travel. On a phone they do not have to. */
-  --switch-dim: 0;
+  /* The screen underneath a push travels a quarter as far as the one on top.
+     That difference is the whole illusion of depth. Both this and the dimming
+     belong to the full-viewport push, which is the phone's and the swipe
+     gesture's; nothing else uses them. */
+  --screen-recede: -24vw;
+  --screen-dim: 0.6;
+
+  /* Just enough to say which way along the bar, and not enough to read as
+     travel. A section is not somewhere you go. */
+  --section-nudge: 10px;
 }
 
-/* Phone-sized: the whole gesture, opaque and edge to edge. */
-@media (max-width: 47.9375rem) {
-  :root {
-    --screen-travel: 100vw;
-    /* The screen underneath travels a quarter as far. That difference is the
-       whole illusion of depth. */
-    --screen-recede: -24vw;
-    --screen-dim: 0.6;
-    --screen-fade: 0s;
-    /* Edge to edge, the two screens never overlap: no fade to hide. */
-    --switch-dim: 1;
-  }
-}
-
+/* Depth, on a phone: the screen crosses the whole viewport, edge to edge, and
+   the one underneath recedes behind it. */
 @keyframes screen-from-edge {
   from {
-    translate: var(--screen-travel) 0;
+    translate: 100vw 0;
   }
   to {
     translate: 0 0;
@@ -286,7 +289,7 @@
     translate: 0 0;
   }
   to {
-    translate: var(--screen-travel) 0;
+    translate: 100vw 0;
   }
 }
 @keyframes screen-recede {
@@ -310,92 +313,146 @@
   }
 }
 
-/* Sideways: the direction is carried in as a variable rather than baked into
-   a keyframe, so one pair of keyframes serves both ways along the bar. */
-@keyframes screen-travel-out {
-  from {
-    translate: 0 0;
-    opacity: 1;
-  }
-  to {
-    translate: var(--slide-to) 0;
-    opacity: var(--switch-dim);
-  }
-}
-@keyframes screen-travel-in {
-  from {
-    translate: var(--slide-from) 0;
-    opacity: var(--switch-dim);
-  }
-  to {
-    translate: 0 0;
-    opacity: 1;
-  }
-}
-@keyframes screen-fade-in {
+/* Depth, where there is no edge to come from: both screens move along the
+   axis pointing at the reader. Going deeper they grow, because you are moving
+   into them; coming back they shrink. It is the same stack, seen end-on. */
+@keyframes depth-forward-in {
   from {
     opacity: 0;
+    scale: 0.965;
   }
   to {
     opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes depth-forward-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 1.035;
+  }
+}
+@keyframes depth-back-in {
+  from {
+    opacity: 0;
+    scale: 1.035;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes depth-back-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.965;
   }
 }
 
-/* Going deeper: the new screen slides in over the old, which recedes. */
-::view-transition-old(.push) {
-  animation: var(--duration-screen) var(--ease-screen) both screen-recede;
+/* A section, arriving after the one it replaces has gone. Which way it comes
+   from is a variable, so one pair of keyframes serves both ways along the
+   bar. */
+@keyframes section-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
-::view-transition-new(.push) {
-  animation:
-    var(--duration-screen) var(--ease-screen) both screen-from-edge,
-    var(--screen-fade) ease-out both screen-fade-in;
-  z-index: 1;
+@keyframes section-in {
+  from {
+    opacity: 0;
+    translate: var(--section-from) 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
-/* Coming back: the same move played backwards — the screen you are leaving
-   slides off, uncovering the one that was there all along. */
+/* ---- A page: somewhere else, stacked on where you were ------------------ */
+
+/* The default is the wide one, because it is the one that cannot travel. The
+   screen here is a column with empty gutters either side, so a sideways slide
+   would never leave the viewport — it would park in the gutter, still visible,
+   which reads as a twitch rather than as a journey. */
+::view-transition-old(.push) {
+  animation: var(--duration-depth) var(--ease-fade) both depth-forward-out;
+}
+::view-transition-new(.push) {
+  animation: var(--duration-depth) var(--ease-fade) both depth-forward-in;
+  z-index: 1;
+}
 ::view-transition-old(.pop) {
-  animation: var(--duration-screen) var(--ease-screen) both screen-to-edge;
+  animation: var(--duration-depth) var(--ease-fade) both depth-back-out;
   z-index: 1;
 }
 ::view-transition-new(.pop) {
-  animation: var(--duration-screen) var(--ease-screen) both screen-return;
+  animation: var(--duration-depth) var(--ease-fade) both depth-back-in;
+}
+
+/* Phone-sized, where the viewport has edges the screen can leave by and the
+   left one is a way back out. Here depth is the iOS push, whole and opaque —
+   the move the swipe-back gesture is already dragging by hand. */
+@media (max-width: 47.9375rem) {
+  ::view-transition-old(.push) {
+    animation: var(--duration-screen) var(--ease-screen) both screen-recede;
+  }
+  ::view-transition-new(.push) {
+    animation: var(--duration-screen) var(--ease-screen) both screen-from-edge;
+  }
+  ::view-transition-old(.pop) {
+    animation: var(--duration-screen) var(--ease-screen) both screen-to-edge;
+  }
+  ::view-transition-new(.pop) {
+    animation: var(--duration-screen) var(--ease-screen) both screen-return;
+  }
+}
+
+/* ---- A section: the same place, seen another way ------------------------ */
+
+/* Tabs on a bar are not a stack and not a filmstrip. Nothing is covered and
+   nothing travels; the old view goes, then the new one arrives with a nudge
+   from the side it lies on. The gap between the two is what keeps it from
+   reading as a dissolve. */
+::view-transition-old(.switch-forward),
+::view-transition-old(.switch-back) {
+  animation: var(--duration-section-out) linear both section-out;
+}
+::view-transition-new(.switch-forward),
+::view-transition-new(.switch-back) {
+  animation: var(--duration-section-in) var(--ease-fade)
+    var(--duration-section-out) both section-in;
+  z-index: 1;
+}
+::view-transition-new(.switch-forward) {
+  --section-from: var(--section-nudge);
+}
+::view-transition-new(.switch-back) {
+  --section-from: calc(-1 * var(--section-nudge));
 }
 
 /* A page root has no background of its own, so the screen on top would be
    see-through mid-flight. Painted onto the snapshot, not the element, so
    nothing changes when no transition is running. */
+::view-transition-old(.push),
 ::view-transition-new(.push),
 ::view-transition-old(.pop),
+::view-transition-new(.pop),
 ::view-transition-old(.switch-forward),
 ::view-transition-new(.switch-forward),
 ::view-transition-old(.switch-back),
 ::view-transition-new(.switch-back) {
   background-color: var(--background);
-}
-
-/* Sideways, between tabs: both screens travel together and at the same speed,
-   like a filmstrip advancing. Nothing recedes and nothing is covered — moving
-   along the bar does not put one screen on top of another, so borrowing the
-   push's parallax here would claim a depth that is not there.
-   Which way along the bar is a variable, so one pair of keyframes serves
-   both. */
-::view-transition-old(.switch-forward) {
-  --slide-to: calc(-1 * var(--screen-travel));
-  animation: var(--duration-switch) var(--ease-screen) both screen-travel-out;
-}
-::view-transition-new(.switch-forward) {
-  --slide-from: var(--screen-travel);
-  animation: var(--duration-switch) var(--ease-screen) both screen-travel-in;
-}
-
-::view-transition-old(.switch-back) {
-  --slide-to: var(--screen-travel);
-  animation: var(--duration-switch) var(--ease-screen) both screen-travel-out;
-}
-::view-transition-new(.switch-back) {
-  --slide-from: calc(-1 * var(--screen-travel));
-  animation: var(--duration-switch) var(--ease-screen) both screen-travel-in;
 }
 
 /* The chrome is what you navigate by. It does not go along for the ride. */

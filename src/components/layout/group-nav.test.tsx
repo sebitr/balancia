@@ -72,9 +72,9 @@ describe("GroupNav", () => {
     );
   });
 
-  it("pushes into Add, which is a form over the group rather than a tab", () => {
-    expect(directionFrom("/groups/g1", "Add")).toBe("push");
-    expect(directionFrom("/groups/g1/settings", "Add")).toBe("push");
+  it("moves nothing for Add, which is a drawer over the group rather than a tab", () => {
+    expect(directionFrom("/groups/g1", "Add")).toBe("modal");
+    expect(directionFrom("/groups/g1/settings", "Add")).toBe("modal");
   });
 
   it("resolves the current tab by the most specific match", () => {

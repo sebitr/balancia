@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { GroupIconTile } from "@/components/groups/group-icon";
 import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
 import { RelativeTime } from "./relative-time";
-import { PUSH } from "@/components/motion/transitions";
+import { MODAL } from "@/components/motion/transitions";
 
 /**
  * Which group the expense is going into, asked before the form rather than
@@ -114,7 +114,11 @@ export function AddExpenseSheet({
               <li key={group.id} className="border-t">
                 <Link
                   href={`/groups/${group.id}/expenses/new`}
-                  transitionTypes={PUSH}
+                  // What arrives is the entry drawer, rising from the bottom,
+                  // whether or not the route behind it was intercepted. The
+                  // group shell it opens over is not somewhere the reader has
+                  // travelled to, so it should not travel.
+                  transitionTypes={MODAL}
                   onClick={() => onOpenChange(false)}
                   className="flex items-center gap-3 py-[13px] transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
                 >

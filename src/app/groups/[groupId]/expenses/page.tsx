@@ -13,7 +13,7 @@ import {
   isCategorised,
   spreadBands,
 } from "@/modules/expenses/spread";
-import { PUSH } from "@/components/motion/transitions";
+import { MODAL } from "@/components/motion/transitions";
 import {
   Transactions,
   type BandView,
@@ -128,7 +128,7 @@ export default async function ExpensesPage({
             <Button asChild>
               <Link
                 href={`/groups/${groupId}/expenses/new`}
-                transitionTypes={PUSH}
+                transitionTypes={MODAL}
               >
                 <Plus aria-hidden="true" />
                 {t("addExpense")}

@@ -19,7 +19,7 @@ import {
   type CurrencyPosition,
 } from "@/modules/groups/overview";
 import { listRemindRecipients } from "@/modules/reminders/service";
-import { PUSH } from "@/components/motion/transitions";
+import { MODAL, PUSH } from "@/components/motion/transitions";
 
 /**
  * Group overview — where I stand, what this group is, who owes whom, and what
@@ -170,7 +170,7 @@ export default async function GroupOverviewPage({
               <Button asChild>
                 <Link
                   href={`/groups/${groupId}/expenses/new`}
-                  transitionTypes={PUSH}
+                  transitionTypes={MODAL}
                 >
                   <Plus aria-hidden="true" />
                   {t("addExpense")}

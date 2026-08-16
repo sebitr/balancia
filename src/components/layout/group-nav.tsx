@@ -12,8 +12,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  MODAL,
   POP,
-  PUSH,
   SWITCH_BACK,
   SWITCH_FORWARD,
 } from "@/components/motion/transitions";
@@ -77,14 +77,15 @@ function activeIndexOf(pathname: string, base: string): number {
 /**
  * The motion a tap on this tab should carry.
  *
- * "Add" opens a form over the group — somewhere deeper, not somewhere along
- * the bar. The rest are peers, so they slide the way the bar itself runs, and
- * which way that is depends on the tab being left. From a screen that sits on
- * no tab at all — a balance, an expense, the activity log — every tab is the
- * way back out, which is a pop.
+ * "Add" is intercepted into a drawer over the group, which rises from the
+ * bottom under its own steam; the group behind it has not gone anywhere, so it
+ * does not move. The rest are sections of the same place, and which way along
+ * the bar depends on the tab being left. From a screen that sits on no tab at
+ * all — a balance, an expense, the activity log — every tab is the way back
+ * out, which is a pop.
  */
 function directionFor(item: NavItem, index: number, activeIndex: number) {
-  if (item.primary) return PUSH;
+  if (item.primary) return MODAL;
   if (activeIndex === -1) return POP;
   return index > activeIndex ? SWITCH_FORWARD : SWITCH_BACK;
 }
