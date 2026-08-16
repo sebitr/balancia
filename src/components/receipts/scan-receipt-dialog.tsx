@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Camera, ImageIcon, Loader2, ScanLine } from "lucide-react";
+import { Camera, Loader2, ScanLine } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { formatMinorUnits } from "@/components/expenses/expense-form-logic";
 import { uploadReceipt } from "@/components/expenses/upload-receipt";
@@ -57,8 +57,15 @@ import { draftItems, draftTotal, toDraft, type ReceiptDraft } from "./draft";
  * The two file inputs sit outside the dialog rather than in it, so a caller
  * that already knows which one it wants — the add-entry card, whose Camera and
  * Upload buttons say exactly that — can fire one straight from the page. The
- * dialog then opens on the scan already running, instead of on a second screen
- * asking the same question again.
+ * dialog then opens on the scan already running.
+ *
+ * There is no screen here that asks camera-or-file. There used to be, and
+ * every way of reaching it was a dead end: it opened on a question the two
+ * buttons on the card had already answered, and it was also where the flow
+ * dumped you when the camera was cancelled or a scan came back with nothing —
+ * a modal offering the choice you had just made, in front of the form you were
+ * trying to get back to. Cancelling now closes the dialog, and a scan that
+ * fails says so in a toast over the form rather than in a dialog of its own.
  */
 
 /**
@@ -87,7 +94,15 @@ export interface ScannedExpense {
   readonly attachmentId?: string;
 }
 
-type Step = "capture" | "camera" | "scanning" | "review" | "assign";
+/**
+ * Where the flow is.
+ *
+ * Every one of these is a screen worth being in front of. The dialog is only
+ * ever opened onto one of them — the camera, or a scan already running — so
+ * there is no resting state to fall back to and no initial value that is ever
+ * rendered.
+ */
+type Step = "camera" | "scanning" | "review" | "assign";
 
 export function ScanReceiptDialog({
   groupId,
@@ -107,14 +122,15 @@ export function ScanReceiptDialog({
   defaultCurrency: string;
   onApply: (result: ScannedExpense) => void;
   /**
-   * Replaces the default "Scan a receipt" button. It is rendered with the two
-   * pickers as props, so it can open one itself rather than opening the dialog.
+   * Replaces the default pair of buttons. It is rendered with the two pickers
+   * as props, and like the default pair it opens one of them itself — nothing
+   * opens this dialog except a receipt on its way in.
    */
   trigger?: React.ComponentType<CaptureActions>;
 }) {
   const t = useTranslations("receiptScanner");
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>("capture");
+  const [step, setStep] = useState<Step>("scanning");
   const [progress, setProgress] = useState<ScanProgress>({
     stage: "preparing",
   });
@@ -144,6 +160,8 @@ export function ScanReceiptDialog({
   const [isPdf, setIsPdf] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
+  /** Which picker produced what is on screen, so "another photo" reopens it. */
+  const lastPicker = useRef<"camera" | "library">("library");
 
   /** Two ONNX sessions are hundreds of megabytes; do not keep them around. */
   const release = useCallback(() => {
@@ -159,7 +177,7 @@ export function ScanReceiptDialog({
   useEffect(() => release, [release]);
 
   const reset = () => {
-    setStep("capture");
+    setStep("scanning");
     setDraft(null);
     setAssignments([]);
     setStrategy("proportional");
@@ -215,7 +233,19 @@ export function ScanReceiptDialog({
   const recordScan = (outcome: "recognised" | "empty" | "failed") =>
     recordReceiptScanAction(outcome).catch(() => undefined);
 
-  const scan = async (file: File) => {
+  /**
+   * A scan that produced nothing usable.
+   *
+   * The dialog goes away and the reason is said over the form, because there
+   * is nothing left in here to look at — and the form is where the two
+   * buttons that start another attempt are.
+   */
+  const giveUp = (message: string) => {
+    toast.error(message);
+    onOpenChange(false);
+  };
+
+  const scan = async (file: File, kind: ReaderKind = readerKind) => {
     setError(null);
     setStep("scanning");
     setProgress({ stage: "preparing" });
@@ -235,7 +265,7 @@ export function ScanReceiptDialog({
     // A reader is built per scan rather than per dialog: switching between
     // them mid-session has to release whatever the last one was holding.
     readerRef.current?.dispose();
-    readerRef.current = createReader(readerKind, {
+    readerRef.current = createReader(kind, {
       groupId,
       fallbackCurrency: defaultCurrency,
     });
@@ -245,8 +275,7 @@ export function ScanReceiptDialog({
 
       if (parsed.items.length === 0 && parsed.total === undefined) {
         // Advice about framing and light is no help to someone holding a PDF.
-        setError(pdf ? t("errors.nothingFoundPdf") : t("errors.nothingFound"));
-        setStep("capture");
+        giveUp(pdf ? t("errors.nothingFoundPdf") : t("errors.nothingFound"));
         void recordScan("empty");
         return;
       }
@@ -260,8 +289,7 @@ export function ScanReceiptDialog({
       setStep("review");
       void recordScan("recognised");
     } catch (failure) {
-      setError(messageFor(failure));
-      setStep("capture");
+      giveUp(messageFor(failure));
       void recordScan("failed");
     }
   };
@@ -287,6 +315,7 @@ export function ScanReceiptDialog({
    * scan.
    */
   const openCamera = () => {
+    lastPicker.current = "camera";
     if (isLiveCameraSupported()) {
       setError(null);
       setStep("camera");
@@ -295,7 +324,25 @@ export function ScanReceiptDialog({
       cameraInput.current?.click();
     }
   };
-  const openUpload = () => libraryInput.current?.click();
+
+  const openUpload = () => {
+    lastPicker.current = "library";
+    libraryInput.current?.click();
+  };
+
+  /**
+   * Another go at the same receipt, from wherever this one came from.
+   *
+   * The reader asked for a photograph a moment ago and does not need asking
+   * again — reopening the picker they used is the whole of "try another".
+   */
+  const retry = () => {
+    if (lastPicker.current === "camera") {
+      openCamera();
+    } else {
+      openUpload();
+    }
+  };
 
   const total = draft ? draftTotal(draft) : null;
 
@@ -360,18 +407,33 @@ export function ScanReceiptDialog({
 
   return (
     <>
-      {Trigger && <Trigger camera={openCamera} upload={openUpload} />}
+      {Trigger ? (
+        <Trigger camera={openCamera} upload={openUpload} />
+      ) : (
+        /* The plain pair, for a caller that brings no card of its own. Each
+           opens its own picker, the way the card's two do — nothing here
+           opens the dialog by itself, because the dialog has nothing to show
+           until there is a receipt to read. */
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {/* A mouse has no camera behind it: on a fine pointer this would
+              open a picker that says "no camera available". */}
+          <Button
+            type="button"
+            variant="outline"
+            className="hidden pointer-coarse:inline-flex"
+            onClick={openCamera}
+          >
+            <Camera aria-hidden="true" />
+            {t("takePhoto")}
+          </Button>
+          <Button type="button" variant="outline" onClick={openUpload}>
+            <ScanLine aria-hidden="true" />
+            {t("choosePhoto")}
+          </Button>
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {!Trigger && (
-          <DialogTrigger asChild>
-            <Button type="button" variant="outline">
-              <ScanLine aria-hidden="true" />
-              {t("scanReceipt")}
-            </Button>
-          </DialogTrigger>
-        )}
-
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
@@ -392,11 +454,20 @@ export function ScanReceiptDialog({
            * The choice, offered only where there is one. An instance with a
            * provider and no models has nothing to ask about, and the header
            * above has already said where the photograph is going.
+           *
+           * It sits on the review screen because that is where the reason to
+           * change it appears: the other reader is worth trying when this one
+           * has just misread something, not before it has read anything. So
+           * changing it re-reads the receipt already in hand.
            */}
-          {step === "capture" && localAvailable && provider !== undefined && (
+          {step === "review" && localAvailable && provider !== undefined && (
             <RadioGroup
               value={readerKind}
-              onValueChange={(value) => setReaderKind(value as ReaderKind)}
+              onValueChange={(value) => {
+                const next = value as ReaderKind;
+                setReaderKind(next);
+                if (fileRef.current) void scan(fileRef.current, next);
+              }}
               className="gap-2"
             >
               <div className="flex items-center gap-2">
@@ -414,22 +485,18 @@ export function ScanReceiptDialog({
             </RadioGroup>
           )}
 
-          {step === "capture" && (
-            <CaptureStep
-              camera={openCamera}
-              upload={openUpload}
-              onDropped={(file) => void scan(file)}
-            />
-          )}
-
           {step === "camera" && (
             <DocumentCamera
               onCapture={(file) => void scan(file)}
               onFallback={() => {
-                setStep("capture");
+                // Closing first: the platform picker is what carries on from
+                // here, and it puts the dialog back itself once it has a file.
+                onOpenChange(false);
                 cameraInput.current?.click();
               }}
-              onCancel={() => setStep("capture")}
+              // Backing out of the camera is backing out of scanning, and what
+              // is behind this dialog is the form they were filling in.
+              onCancel={() => onOpenChange(false)}
             />
           )}
 
@@ -484,11 +551,7 @@ export function ScanReceiptDialog({
           <DialogFooter className="gap-2 sm:justify-between">
             {step === "review" && (
               <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setStep("capture")}
-                >
+                <Button type="button" variant="ghost" onClick={retry}>
                   {t("anotherPhoto")}
                 </Button>
                 <Button
@@ -548,70 +611,5 @@ export function ScanReceiptDialog({
         tabIndex={-1}
       />
     </>
-  );
-}
-
-/**
- * Whether a dropped file is worth trying to read.
- *
- * Deliberately generous about the type: a drag out of some mail clients
- * arrives as `application/octet-stream`, and refusing it there would look like
- * the drop target was broken. The name is the tiebreak, and `scan` sniffs the
- * bytes afterwards anyway.
- */
-function isScannable(file: File): boolean {
-  return (
-    file.type.startsWith("image/") ||
-    file.type === "application/pdf" ||
-    /\.pdf$/i.test(file.name)
-  );
-}
-
-function CaptureStep({
-  camera,
-  upload,
-  onDropped,
-}: CaptureActions & {
-  onDropped: (file: File) => void;
-}) {
-  const t = useTranslations("receiptScanner");
-  const [dragging, setDragging] = useState(false);
-
-  return (
-    <div
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(event) => {
-        event.preventDefault();
-        setDragging(false);
-        const file = event.dataTransfer.files?.[0];
-        if (file && isScannable(file)) onDropped(file);
-      }}
-      className={`space-y-4 rounded-lg border border-dashed p-6 text-center transition-colors ${
-        dragging ? "border-primary bg-muted" : ""
-      }`}
-    >
-      <div className="flex flex-col justify-center gap-2 sm:flex-row">
-        {/* A mouse has no camera behind it: on a fine pointer the button would
-            open a picker that says "no camera available", so it is not there. */}
-        <Button
-          type="button"
-          className="hidden pointer-coarse:inline-flex"
-          onClick={camera}
-        >
-          <Camera aria-hidden="true" />
-          {t("takePhoto")}
-        </Button>
-        <Button type="button" variant="outline" onClick={upload}>
-          <ImageIcon aria-hidden="true" />
-          {t("choosePhoto")}
-        </Button>
-      </div>
-
-      <p className="text-xs text-muted-foreground">{t("tips")}</p>
-    </div>
   );
 }

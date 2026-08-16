@@ -980,7 +980,6 @@
     "testBody": "Push notifications are working on this device."
   },
   "receiptScanner": {
-    "scanReceipt": "Scan receipt",
     "title": "Scan a receipt",
     "onDevice": "Recognition happens on this device. The photo is not sent anywhere to be read.",
     "reader": {
@@ -990,7 +989,6 @@
     },
     "takePhoto": "Take a photo",
     "choosePhoto": "Choose a photo or PDF",
-    "tips": "Lay the receipt flat, keep it all in frame, and shoot straight on. You can also drop an image or a PDF here.",
     "anotherPhoto": "Try another photo",
     "continue": "Continue",
     "back": "Back",
