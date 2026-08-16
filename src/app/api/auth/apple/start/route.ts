@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import { buildAuthorizationUrl, getAppleConfig } from "@/modules/auth/apple";
 import { createPendingSignIn } from "@/modules/auth/apple-state";
 import { setPendingAppleSignInCookie } from "@/modules/auth/cookies";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Starts the Apple sign-in ceremony.
@@ -25,6 +26,10 @@ import { setPendingAppleSignInCookie } from "@/modules/auth/cookies";
  */
 
 export async function GET() {
+  return trackRoute("/api/auth/apple/start", "GET", () => handleGet());
+}
+
+async function handleGet() {
   const config = getAppleConfig();
   if (!config) {
     // Not an error worth a status code: the button is not rendered on an

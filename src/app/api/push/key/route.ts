@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getVapidKeys } from "@/lib/push/send";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * The VAPID public key browsers need to subscribe.
@@ -13,7 +14,11 @@ import { getVapidKeys } from "@/lib/push/send";
  * `publicKey: null` means this instance has push switched off — the settings
  * page reads that as "offer in-app notifications only".
  */
-export function GET() {
+export async function GET() {
+  return trackRoute("/api/push/key", "GET", () => handleGet());
+}
+
+async function handleGet() {
   const keys = getVapidKeys();
   return NextResponse.json(
     { publicKey: keys?.publicKey ?? null },

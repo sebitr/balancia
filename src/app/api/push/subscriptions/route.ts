@@ -5,6 +5,7 @@ import { getClientIp, getCurrentUser } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/logger";
 import { isPushConfigured } from "@/lib/push/send";
+import { trackRoute } from "@/lib/metrics/http";
 import {
   deleteSubscription,
   InvalidSubscriptionError,
@@ -35,6 +36,12 @@ const deleteSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  return trackRoute("/api/push/subscriptions", "POST", () =>
+    handlePost(request),
+  );
+}
+
+async function handlePost(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
@@ -102,6 +109,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  return trackRoute("/api/push/subscriptions", "DELETE", () =>
+    handleDelete(request),
+  );
+}
+
+async function handleDelete(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(

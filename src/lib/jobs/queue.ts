@@ -25,6 +25,17 @@ export const QUEUES = {
   notificationsSweep: "notifications.sweep",
   /** Housekeeping: orphaned uploads, stale rate-limit windows, expired sessions. */
   maintenance: "maintenance.sweep",
+  /**
+   * Builds and — if an administrator switched it on — sends one aggregated
+   * anonymous usage report. Weekly, and a no-op on every instance that has not
+   * opted in, which is all of them by default.
+   */
+  telemetryReport: "telemetry.report",
+  /**
+   * Collector only: folds received reports into daily counts and deletes the
+   * raw payloads. Does nothing unless this deployment runs the receiver.
+   */
+  telemetryAggregate: "telemetry.aggregate",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

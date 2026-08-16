@@ -122,6 +122,9 @@ describe("message catalogues", () => {
       "notificationsPage.title",
       "notificationsPage.bell",
       "notificationSettings.title",
+      // The word is the same in French, and it is the menu entry as well as
+      // the page heading.
+      "nav.administration",
       // Two dates and an en dash: there is nothing in it to translate.
       "group.metaSpan",
       // Two placeholders and a comma, same in both.

@@ -4,6 +4,7 @@ import { authorizeGroup } from "@/lib/security/authorization";
 import { downloadAttachment } from "@/modules/attachments/service";
 import { ObjectNotFoundError } from "@/lib/storage";
 import { logger } from "@/lib/logger";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Receipt download.
@@ -14,6 +15,17 @@ import { logger } from "@/lib/logger";
  * execute in the app's origin. There is no publicly served uploads directory.
  */
 export async function GET(
+  request: Request,
+  context: RouteContext<"/api/groups/[groupId]/attachments/[attachmentId]">,
+) {
+  return trackRoute(
+    "/api/groups/[groupId]/attachments/[attachmentId]",
+    "GET",
+    () => handleGet(request, context),
+  );
+}
+
+async function handleGet(
   _request: Request,
   context: RouteContext<"/api/groups/[groupId]/attachments/[attachmentId]">,
 ) {

@@ -9,6 +9,7 @@ import {
   toWorkbook,
 } from "@/modules/exports/service";
 import { logger } from "@/lib/logger";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Group export download.
@@ -30,6 +31,15 @@ const CONTENT_TYPES = {
 } as const;
 
 export async function GET(
+  request: Request,
+  context: RouteContext<"/api/groups/[groupId]/export">,
+) {
+  return trackRoute("/api/groups/[groupId]/export", "GET", () =>
+    handleGet(request, context),
+  );
+}
+
+async function handleGet(
   request: Request,
   context: RouteContext<"/api/groups/[groupId]/export">,
 ) {

@@ -18,6 +18,7 @@ import {
 } from "@/lib/security/authorization";
 import { generateToken } from "@/lib/security/tokens";
 import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
+import { telemetry } from "@/lib/telemetry";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import type {
   AddParticipantInput,
@@ -149,7 +150,7 @@ export async function createGroup(
 ): Promise<CreatedGroup> {
   const db = options.db ?? getDb();
 
-  return db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     const [group] = await tx
       .insert(groups)
       .values({
@@ -237,6 +238,12 @@ export async function createGroup(
 
     return { id: group.id, participantId: participant.id };
   });
+
+  // Which of the two currency modes was chosen, after the group exists. The
+  // name, the description, the icon and everyone invited into it stay here.
+  await telemetry.groupCreated({ currencyMode: input.currencyMode });
+
+  return created;
 }
 
 export async function updateGroup(
@@ -651,7 +658,7 @@ export async function createInvitation(
   const db = options.db ?? getDb();
   const now = new Date();
 
-  return db.transaction(async (tx) => {
+  const invitation = await db.transaction(async (tx) => {
     const [participant] = await tx
       .select({
         id: participants.id,
@@ -729,6 +736,12 @@ export async function createInvitation(
 
     return { token: token.raw, invitationId: invitation.id, expiresAt };
   });
+
+  // That a guest link was made. Not for whom, not for how long, and — needless
+  // to say — not the token.
+  await telemetry.inviteCreated();
+
+  return invitation;
 }
 
 export async function revokeInvitation(

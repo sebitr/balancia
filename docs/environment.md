@@ -447,6 +447,110 @@ always has. See [Receipt scanning](receipt-scanning.md) for the whole design.
 
 ---
 
+## Telemetry
+
+Balancia collects no telemetry from a self-hosted installation by default. The
+variables below are the deployment's half of the decision; the other half is an
+administrator's, in Settings → Administration → Telemetry, and both switches
+there start off. **Effective state is the intersection: something happens only
+if both halves say so.** No value of any variable here starts sending data on
+its own. The whole design, and the exact list of fields, is in
+[Telemetry](telemetry.md).
+
+### `TELEMETRY_MODE`
+
+`opt-in` (default) | `local` | `off`.
+
+| Value    | Recorded locally                | Transmitted                       | Admin switches                |
+| -------- | ------------------------------- | --------------------------------- | ----------------------------- |
+| `opt-in` | only after an admin switches on | one report a week, if switched on | usable                        |
+| `local`  | only after an admin switches on | never                             | usable (send disabled)        |
+| `off`    | never                           | never                             | disabled, with a reason shown |
+
+`off` is the deployment-level kill switch: stored opt-ins are ignored, no
+counters are written, and no outbound request can be made whatever anyone
+clicks.
+
+### `TELEMETRY_CRASH_REPORTS`
+
+Default `true` — meaning "an administrator _may_ switch crash reports on", not
+that they are on. Set `false` to remove the option entirely.
+
+Crash reports are separate from usage statistics in every respect: separate
+setting, separate endpoint, separate default (off). What one contains is an
+error class name and a component — `PostgresError_23505`, `job` — and nothing
+else. Not the message, not the stack, not the request.
+
+### `TELEMETRY_ENDPOINT`
+
+Default `https://telemetry.balancia.app`. Must be HTTPS unless it points at
+localhost.
+
+**Deployment-level only, on purpose.** An endpoint that could be typed into the
+administration UI would let anyone who reached that form aim the server's own
+outbound requests at an address of their choosing — a request-forgery
+primitive, with the server's network position. A fork that wants its
+installations to report somewhere else sets this in the file only the operator
+can edit.
+
+The sender appends `/v1/report` or `/v1/crash`, so a collector behind a path
+prefix is configured as e.g.
+`https://collector.example.com/api/telemetry`.
+
+### `TELEMETRY_DEPLOYMENT`
+
+`docker-compose` | `docker` | `standalone` | `development`. Optional.
+
+Labels reports with how Balancia is being run. `compose.yaml` sets it;
+elsewhere it is detected (a container is recognised by `/.dockerenv`), and
+detection is allowed to answer nothing rather than guess.
+
+### `TELEMETRY_RECEIVER`
+
+Default `false`. Switches on the _collecting_ side: `POST /v1/report` and
+`POST /v1/crash` at `/api/telemetry/v1/…`.
+
+This is what the official collector runs, and it is the same application in a
+different role — which is what lets a fork collect its own without writing a
+server. While it is off, the routes answer **404**, not 403: an instance that
+is not collecting should not advertise that the endpoint would exist.
+
+---
+
+## Metrics
+
+### `METRICS_ENABLED`
+
+Default `false`. Exposes Prometheus metrics at `/api/metrics`: HTTP request
+durations and status classes by route template, Server Action durations and
+outcomes, background-job durations and failures by queue, database query
+latency, connection-pool usage, memory, CPU and uptime.
+
+These are **exact, local and never transmitted**. They are not telemetry and
+share none of its code; the only way they leave the server is an operator
+pointing their own scraper at them. See [Telemetry](telemetry.md#local-operational-metrics).
+
+### `METRICS_TOKEN`
+
+Optional bearer token required to read `/api/metrics`.
+
+Optional because an operator who publishes the app's port only to a private
+network has already answered the question. **If the port is reachable from
+anywhere else, set this.** Without it, metrics are readable by anyone who can
+reach the app: not financial data, but request rates, error rates and the
+version you are running.
+
+```bash
+METRICS_ENABLED=true
+METRICS_TOKEN=$(openssl rand -hex 32)
+```
+
+```bash
+curl -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:3000/api/metrics
+```
+
+---
+
 ## Logging and operations
 
 ### `LOG_LEVEL`

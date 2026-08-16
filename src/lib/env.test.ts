@@ -276,6 +276,90 @@ describe("environment validation", () => {
       } as unknown as NodeJS.ProcessEnv),
     ).toThrow(/placeholder/);
   });
+
+  describe("telemetry", () => {
+    it("permits an opt-in but enables nothing, on a bare configuration", () => {
+      // The default is a ceiling, not a state: `opt-in` means an administrator
+      // *may* switch reporting on, and until one does nothing is sent. The
+      // half of the decision that is actually "on" lives in the database and
+      // starts false; see src/lib/telemetry/settings.test.ts.
+      const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
+      expect(env.TELEMETRY_MODE).toBe("opt-in");
+      expect(env.TELEMETRY_RECEIVER).toBe(false);
+      expect(env.METRICS_ENABLED).toBe(false);
+      expect(env.METRICS_TOKEN).toBeUndefined();
+    });
+
+    it("defaults to the project's collector", () => {
+      const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
+      expect(env.TELEMETRY_ENDPOINT).toBe("https://telemetry.balancia.app");
+    });
+
+    it("accepts each mode and refuses anything else", () => {
+      for (const TELEMETRY_MODE of ["opt-in", "local", "off"]) {
+        expect(
+          parseEnv({
+            ...base,
+            TELEMETRY_MODE,
+          } as unknown as NodeJS.ProcessEnv).TELEMETRY_MODE,
+        ).toBe(TELEMETRY_MODE);
+      }
+
+      expect(() =>
+        parseEnv({
+          ...base,
+          TELEMETRY_MODE: "on",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/TELEMETRY_MODE/);
+    });
+
+    it("lets a fork redirect its installations", () => {
+      const env = parseEnv({
+        ...base,
+        TELEMETRY_ENDPOINT: "https://telemetry.example.org/collect",
+      } as unknown as NodeJS.ProcessEnv);
+      expect(env.TELEMETRY_ENDPOINT).toBe(
+        "https://telemetry.example.org/collect",
+      );
+    });
+
+    it("refuses to send reports over plain HTTP", () => {
+      expect(() =>
+        parseEnv({
+          ...base,
+          TELEMETRY_ENDPOINT: "http://telemetry.example.org",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/not HTTPS/);
+    });
+
+    it("allows a localhost endpoint, so a collector can be developed against", () => {
+      expect(() =>
+        parseEnv({
+          ...base,
+          TELEMETRY_ENDPOINT: "http://localhost:3000/api/telemetry",
+        } as unknown as NodeJS.ProcessEnv),
+      ).not.toThrow();
+    });
+
+    it("accepts an empty deployment label rather than failing to boot", () => {
+      // compose.yaml passes optional settings as `${VAR:-}`, so an unset one
+      // arrives as "" rather than as nothing.
+      const env = parseEnv({
+        ...base,
+        TELEMETRY_DEPLOYMENT: "",
+      } as unknown as NodeJS.ProcessEnv);
+      expect(env.TELEMETRY_DEPLOYMENT).toBeUndefined();
+    });
+
+    it("refuses a deployment label it does not know", () => {
+      expect(() =>
+        parseEnv({
+          ...base,
+          TELEMETRY_DEPLOYMENT: "balancia.example.com",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/TELEMETRY_DEPLOYMENT/);
+    });
+  });
 });
 
 /**

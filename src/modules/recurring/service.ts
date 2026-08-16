@@ -20,6 +20,7 @@ import {
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import { dispatchNotifications } from "@/modules/notifications/service";
 import { recordRecurringNotification } from "@/modules/notifications/events";
+import { telemetry } from "@/lib/telemetry";
 import type { ExchangeRateSource } from "@/modules/currencies/conversion";
 import { classifyRateSource } from "@/modules/currencies/rates";
 import {
@@ -170,7 +171,7 @@ export async function createRecurringExpense(
     on: input.startDate,
   });
 
-  return db.transaction(async (tx) => {
+  const templateId = await db.transaction(async (tx) => {
     const [template] = await tx
       .insert(recurringExpenses)
       .values({
@@ -216,6 +217,12 @@ export async function createRecurringExpense(
 
     return template.id;
   });
+
+  // How often it repeats — weekly, monthly, yearly. Not what it is for, not
+  // what it costs, and not when it starts.
+  await telemetry.recurringExpenseCreated({ frequency: input.frequency });
+
+  return templateId;
 }
 
 export async function setRecurringPaused(

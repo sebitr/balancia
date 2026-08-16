@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { isPushConfigured, sendPush } from "@/lib/push/send";
 import { listPushTargets } from "@/modules/notifications/subscriptions";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Sends a test notification to the caller's own devices.
@@ -13,6 +14,10 @@ import { listPushTargets } from "@/modules/notifications/subscriptions";
  * looking at the screen. It can only ever reach the caller's own devices.
  */
 export async function POST() {
+  return trackRoute("/api/push/test", "POST", () => handlePost());
+}
+
+async function handlePost() {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(

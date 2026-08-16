@@ -5,6 +5,7 @@ import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/logger";
 import { UnknownCurrencyError } from "@/modules/currencies/iso-4217";
 import { lookupRate } from "@/modules/currencies/rates";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Exchange-rate suggestion for the expense, settlement and recurring forms.
@@ -27,6 +28,10 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  return trackRoute("/api/rates", "GET", () => handleGet(request));
+}
+
+async function handleGet(request: Request) {
   const actor = await getCurrentActor();
   if (!actor) {
     return NextResponse.json(

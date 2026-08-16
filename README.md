@@ -4,8 +4,14 @@
 
 Balancia is a privacy-focused, self-hosted alternative to Splitwise. It tracks
 what a group spends, works out who owes whom, and runs entirely on a server you
-control — no third party in the middle of your money, no analytics, no
-telemetry.
+control — no third party in the middle of your money, and no analytics.
+
+Telemetry is off. An administrator can opt in to sending one anonymous report a
+week — the version, which features are switched on, and how much happened in
+ranges rather than counts — and can see the exact payload before deciding.
+Amounts, names, group names, receipts, identifiers, IP addresses and this
+instance's address are never part of it, and there is no installation
+identifier. See [docs/telemetry.md](docs/telemetry.md).
 
 ```bash
 ./scripts/bootstrap.sh && docker compose up -d --build

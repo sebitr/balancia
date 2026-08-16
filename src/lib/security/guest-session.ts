@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import { guestInvitations, guestSessions, participants } from "@/lib/db/schema";
+import { telemetry } from "@/lib/telemetry";
 import { generateToken, hashToken, isWellFormedToken } from "./tokens";
 
 /**
@@ -104,6 +105,10 @@ export async function redeemInvitation(
     .update(guestInvitations)
     .set({ lastUsedAt: now })
     .where(eq(guestInvitations.id, invitation.id));
+
+  // That somebody opened a guest link. Not which link, not which group, not
+  // the name on the participant it belongs to.
+  await telemetry.guestJoined();
 
   return {
     token: sessionToken.raw,

@@ -7,6 +7,7 @@ import {
   startPasskeyRegistration,
 } from "@/modules/auth/webauthn";
 import { logger } from "@/lib/logger";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Passkey registration ceremony for the signed-in user.
@@ -20,6 +21,10 @@ import { logger } from "@/lib/logger";
  */
 
 export async function GET() {
+  return trackRoute("/api/auth/passkey/register", "GET", () => handleGet());
+}
+
+async function handleGet() {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
@@ -49,6 +54,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  return trackRoute("/api/auth/passkey/register", "POST", () =>
+    handlePost(request),
+  );
+}
+
+async function handlePost(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(

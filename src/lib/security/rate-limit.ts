@@ -28,7 +28,11 @@ export type RateLimitBucket =
   | "upload"
   | "rateLookup"
   | "pushSubscribe"
-  | "pushTest";
+  | "pushTest"
+  | "telemetryCrash"
+  | "telemetryCrashTotal"
+  | "telemetryTest"
+  | "telemetryIngest";
 
 /**
  * Default policies.
@@ -55,6 +59,19 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // A test notification costs an outbound request to a push service, so it
     // is the one notification endpoint worth keeping on a short leash.
     pushTest: { limit: 5, windowSeconds: 600 },
+    // One report per error class per hour. The second occurrence of a failure
+    // adds nothing the first did not say, and an instance in a crash loop must
+    // not turn itself into a load generator.
+    telemetryCrash: { limit: 1, windowSeconds: 3600 },
+    // …and a ceiling across all classes, so a hundred *different* errors in an
+    // hour is still a handful of requests.
+    telemetryCrashTotal: { limit: 24, windowSeconds: 86_400 },
+    // "Send test report" in the administration UI, per administrator.
+    telemetryTest: { limit: 5, windowSeconds: 3600 },
+    // The collector's own limit, keyed by a salted hash of the source address
+    // rather than the address (see the telemetry ingest route). Generous: a
+    // NAT or a university may legitimately be many installations.
+    telemetryIngest: { limit: 60, windowSeconds: 3600 },
   };
 }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/security/actor";
 import { AuthError } from "@/modules/auth/service";
 import { deletePasskey, listPasskeys } from "@/modules/auth/webauthn";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Passkey management for the signed-in user.
@@ -11,6 +12,10 @@ import { deletePasskey, listPasskeys } from "@/modules/auth/webauthn";
  */
 
 export async function GET() {
+  return trackRoute("/api/auth/passkey", "GET", () => handleGet());
+}
+
+async function handleGet() {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
@@ -36,6 +41,10 @@ export async function GET() {
 }
 
 export async function DELETE(request: Request) {
+  return trackRoute("/api/auth/passkey", "DELETE", () => handleDelete(request));
+}
+
+async function handleDelete(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
