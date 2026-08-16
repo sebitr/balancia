@@ -265,8 +265,7 @@
     "activityTitle": "Activité"
   },
   "expensesList": {
-    "eyebrow": "Transactions · tout l'historique",
-    "spent": "dépensés",
+    "eyebrow": "Transactions",
     "emptyTitle": "Rien d'enregistré pour l'instant",
     "emptyDescription": "Ajoute ta première dépense pour commencer à suivre qui a payé quoi. La répartition apparaîtra dès qu'il y aura de quoi partager.",
     "addExpense": "Ajouter une dépense",
@@ -275,10 +274,6 @@
     "recurringBadge": "Récurrente",
     "settlementTitle": "{from} a payé {to}",
     "repayment": "Remboursement",
-    "heroCategories": "{count, plural, one {# catégorie} other {# catégories}}",
-    "heroRepaid": "{amount} remboursés",
-    "heroBackIn": "{amount} rentrés",
-    "heroFiltered": "{shown} sur {total, plural, one {# transaction} other {# transactions}}",
     "spreadNeedsOneCurrency": "La répartition demande une seule devise pour classer les catégories. Ce groupe équilibre en {count, plural, one {# devise} other {# devises}}, gardées séparées plutôt que converties à un taux que personne n'a choisi.",
     "spreadLabel": "Dépenses par catégorie",
     "uncategorised": "Sans catégorie",
@@ -289,7 +284,6 @@
     "kind_settlement": "Règlements",
     "filterBy": "N'afficher que {category}",
     "removeFilter": "Ne plus filtrer par {category}",
-    "clearFilters": "Tout effacer",
     "searchLabel": "Rechercher une transaction",
     "searchPlaceholder": "Rechercher une transaction",
     "clearSearch": "Effacer la recherche",

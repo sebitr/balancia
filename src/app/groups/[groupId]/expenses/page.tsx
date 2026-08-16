@@ -28,9 +28,11 @@ import {
  * person reading it — and the client island owns the filtering, which is the
  * only thing here that changes without the data changing.
  *
- * There is no page title. The eyebrow is the heading, the way the home
- * screen's position header does it: a number the reader came for beats a word
- * they already know.
+ * There is no page title beyond the eyebrow, and nothing above the list that
+ * summarises it. A headline total, a category count and a tally of what had
+ * been repaid all used to sit here, and each was a restatement of the rows
+ * directly underneath — bought at the price of the rows themselves, which on a
+ * phone started a third of the way down the screen.
  */
 export default async function ExpensesPage({
   params,
@@ -145,8 +147,8 @@ export default async function ExpensesPage({
    * the design draws. A `separate` group — the default — can hold several, and
    * there is no honest way to rank categories across them: the comparison the
    * spine invites would need an exchange rate nobody chose. So the spine
-   * appears only when there is one currency to measure in, and the hero shows
-   * the totals side by side when there is not.
+   * appears only when there is one currency to measure in, and the count of
+   * currencies goes across so the island can say why it is missing.
    *
    * It also needs something to divide. Until somebody files an expense under a
    * category the whole total sits in one bucket, and the spine becomes a single
@@ -170,30 +172,13 @@ export default async function ExpensesPage({
         }))
       : null;
 
-  const settled = settlements.reduce(
-    (totals, settlement) => sum(totals, settlement.currency, settlement.amount),
-    new Map<string, bigint>(),
-  );
-  const received = expenses
-    .filter((expense) => !isSpending(expense.direction))
-    .reduce(
-      (totals, expense) => sum(totals, expense.currency, expense.amount),
-      new Map<string, bigint>(),
-    );
-
   return (
     <Transactions
       groupId={groupId}
       eyebrow={<Eyebrow label={t("eyebrow")} />}
       bands={bands}
-      spreads={spreads.map((spread) => ({
-        currency: spread.currency,
-        total: spread.total.toString(),
-        categories: spread.categories.length,
-      }))}
+      currencies={spreads.length}
       rows={rows}
-      repaid={serialize(settled)}
-      backIn={serialize(received)}
     />
   );
 }
@@ -211,23 +196,4 @@ function Eyebrow({ label }: { label: string }) {
       {label}
     </h1>
   );
-}
-
-function sum(
-  totals: Map<string, bigint>,
-  currency: string,
-  amount: bigint,
-): Map<string, bigint> {
-  totals.set(currency, (totals.get(currency) ?? 0n) + amount);
-  return totals;
-}
-
-/** Minor units cross to the client as strings; bigint has no JSON form. */
-function serialize(
-  totals: ReadonlyMap<string, bigint>,
-): { currency: string; amount: string }[] {
-  return [...totals]
-    .filter(([, amount]) => amount !== 0n)
-    .map(([currency, amount]) => ({ currency, amount: amount.toString() }))
-    .sort((a, b) => (a.currency < b.currency ? -1 : 1));
 }

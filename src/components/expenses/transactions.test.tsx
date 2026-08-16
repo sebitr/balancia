@@ -6,8 +6,8 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
 import { Transactions, type BandView, type RowView } from "./transactions";
 
 /**
- * The spine is the filter, so these tests drive it the way a finger does and
- * then read the hero, the chips and the list back.
+ * The spine, the kind chips and the search are the filters, so these tests
+ * drive them the way a finger does and read the list back.
  *
  * `useSearchParams` is backed by the real URL rather than by a stand-in
  * setState: the component's only way to record a selection is
@@ -156,12 +156,10 @@ function renderList(rows: readonly RowView[] = ROWS, search = "") {
   return renderWithIntl(
     <Transactions
       groupId="g1"
-      eyebrow={<h1>Transactions · all time</h1>}
+      eyebrow={<h1>Transactions</h1>}
       bands={BANDS}
-      spreads={[{ currency: "EUR", total: "190910", categories: 7 }]}
+      currencies={1}
       rows={rows}
-      repaid={[{ currency: "EUR", amount: "74000" }]}
-      backIn={[{ currency: "EUR", amount: "12000" }]}
     />,
   );
 }
@@ -169,27 +167,22 @@ function renderList(rows: readonly RowView[] = ROWS, search = "") {
 const band = (name: string) =>
   screen.getByRole("button", { name: `Show only ${name}` });
 
+/** The same band once it is on: it names the press that would let go. */
+const pressedBand = (name: string) =>
+  screen.getByRole("button", { name: `Stop filtering by ${name}` });
+
 /** A kind chip, named by the label it wears. */
 const kind = (name: string) => screen.getByRole("button", { name });
 
-/**
- * The headline figure, scoped to the hero.
- *
- * A filtered total is often also a row's amount — selecting the one expense in
- * a category is the obvious case — so the figure has to be read where it is
- * claimed to be, not anywhere on the screen.
- */
-const heroTotal = () => within(screen.getByText("spent").closest("p")!);
-
 describe("Transactions", () => {
-  it("opens on everything, totalled and counted", () => {
+  it("opens on everything, with nothing above the list summarising it", () => {
     renderList();
 
-    expect(heroTotal().getByText("€1,909.10")).toBeVisible();
-    expect(
-      screen.getByText(/7 categories.+€740\.00 repaid.+€120\.00 back in/),
-    ).toBeVisible();
     expect(screen.getAllByRole("listitem")).toHaveLength(ROWS.length);
+    // No headline total and no count of what it covers: the list is the
+    // answer, and a figure over it was only ever a second telling.
+    expect(screen.queryByText("spent")).not.toBeInTheDocument();
+    expect(screen.queryByText(/7 categories/)).not.toBeInTheDocument();
   });
 
   it("narrows to one category when its band is tapped", async () => {
@@ -198,24 +191,22 @@ describe("Transactions", () => {
 
     await user.click(band("Travel"));
 
-    // The hero becomes that band's own spend, and counts what is left.
-    expect(heroTotal().getByText("€1,500.00")).toBeVisible();
-    expect(screen.getByText(/Travel.+2 of 7 transactions/)).toBeVisible();
     expect(screen.getByText("airbnb")).toBeVisible();
     expect(screen.queryByText("Migros")).not.toBeInTheDocument();
-    expect(band("Travel")).toHaveAttribute("aria-pressed", "true");
+    // Pressed, and now offering the way back out — the band is both.
+    expect(pressedBand("Travel")).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("holds several bands at once and sums them", async () => {
+  it("holds several bands at once, showing the union of them", async () => {
     const user = userEvent.setup();
     renderList();
 
     await user.click(band("Travel"));
     await user.click(band("Groceries"));
 
-    expect(heroTotal().getByText("€1,586.75")).toBeVisible();
-    expect(screen.getByText(/2 categories.+3 of 7 transactions/)).toBeVisible();
+    expect(screen.getByText("airbnb")).toBeVisible();
     expect(screen.getByText("Migros")).toBeVisible();
+    expect(screen.queryByText("Uber")).not.toBeInTheDocument();
   });
 
   it("records the selection in the URL, so the screen can be linked to", async () => {
@@ -240,32 +231,18 @@ describe("Transactions", () => {
     expect(screen.queryByText("airbnb")).not.toBeInTheDocument();
   });
 
-  it("takes a band back off with its chip", async () => {
+  it("takes a band back off by pressing it again", async () => {
     const user = userEvent.setup();
     renderList();
 
     await user.click(band("Travel"));
+    // The band is the whole control: pressed it filters, pressed again it
+    // says so, and lets go.
     await user.click(
       screen.getByRole("button", { name: "Stop filtering by Travel" }),
     );
 
-    expect(heroTotal().getByText("€1,909.10")).toBeVisible();
-    expect(screen.getByText("Migros")).toBeVisible();
-  });
-
-  it("offers Clear all only once there is more than one thing to clear", async () => {
-    const user = userEvent.setup();
-    renderList();
-
-    await user.click(band("Travel"));
-    expect(
-      screen.queryByRole("button", { name: "Clear all" }),
-    ).not.toBeInTheDocument();
-
-    await user.click(band("Groceries"));
-    await user.click(screen.getByRole("button", { name: "Clear all" }));
-
-    expect(heroTotal().getByText("€1,909.10")).toBeVisible();
+    expect(screen.getAllByRole("listitem")).toHaveLength(ROWS.length);
     expect(window.location.search).toBe("");
   });
 
@@ -405,31 +382,25 @@ describe("Transactions", () => {
 });
 
 describe("Transactions without a single currency", () => {
-  it("stands the totals side by side rather than inventing a rate", () => {
+  it("says why the spine is missing rather than leaving a gap", () => {
     window.history.replaceState(null, "", "/groups/g1/expenses");
     renderWithIntl(
       <Transactions
         groupId="g1"
-        eyebrow={<h1>Transactions · all time</h1>}
+        eyebrow={<h1>Transactions</h1>}
         bands={null}
-        spreads={[
-          { currency: "EUR", total: "190910", categories: 7 },
-          { currency: "USD", total: "9169", categories: 2 },
-        ]}
+        currencies={2}
         rows={ROWS}
-        repaid={[]}
-        backIn={[]}
       />,
     );
 
-    expect(screen.getByText("€1,909.10")).toBeVisible();
-    expect(screen.getByText("$91.69")).toBeVisible();
+    // The only line above the list that survived the headline figure, and the
+    // only one that answered a question the screen raises by itself.
     expect(screen.getByText(/The spread needs one currency/)).toBeVisible();
-    // No spine to rank categories in — but what does not need a rate to work
-    // is still here: the kind chips and the search.
     expect(
       screen.queryByRole("group", { name: "Spending by category" }),
     ).not.toBeInTheDocument();
+    // What does not need a rate to work is still here.
     expect(
       screen.getByRole("group", { name: "Filter by kind" }),
     ).toBeInTheDocument();

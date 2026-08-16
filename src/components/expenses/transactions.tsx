@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Amount, toneFor, type BalanceTone } from "@/components/money/amount";
-import { formatMoney, money } from "@/modules/currencies/money";
 import { UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
 import {
@@ -31,12 +30,16 @@ import { cn } from "@/lib/utils";
 /**
  * The transactions list, and the spread that filters it.
  *
- * One island rather than three, because the hero total, the chips, the bands
- * and the rows are four views of a single question — which transactions are we
- * looking at — and splitting them would mean lifting that answer into a store
- * only to push it back down again. Three things narrow it: the kind chips, the
- * category spine, and the search field. They intersect; each one only ever
- * takes rows away.
+ * One island rather than three, because the chips, the bands and the rows are
+ * three views of a single question — which transactions are we looking at —
+ * and splitting them would mean lifting that answer into a store only to push
+ * it back down again. Three things narrow it: the kind chips, the category
+ * spine, and the search field. They intersect; each one only ever takes rows
+ * away.
+ *
+ * Nothing here summarises the result. The bands are already a picture of the
+ * proportions, the rows are already the amounts, and a headline figure over
+ * the top of both was a third telling of the same facts.
  *
  * The answer lives in the URL. `useSearchParams` reads it and
  * `window.history.replaceState` writes it, which Next.js supports natively and
@@ -68,12 +71,6 @@ export interface RowView {
   readonly position: string | null;
   readonly revenue: boolean;
   readonly recurring: boolean;
-}
-
-export interface SpreadView {
-  readonly currency: string;
-  readonly total: string;
-  readonly categories: number;
 }
 
 const FILTER_PARAM = "cat";
@@ -144,26 +141,20 @@ const TONE_LABEL_KEYS = {
   neutral: "positionSettled",
 } as const;
 
-/** The design's padded middots, which read as pauses rather than punctuation. */
-const FACT_SEPARATOR = "  ·  ";
-
 export function Transactions({
   groupId,
   eyebrow,
   bands,
-  spreads,
+  currencies,
   rows,
-  repaid,
-  backIn,
 }: {
   groupId: string;
   eyebrow: ReactNode;
   /** Null when the group's spending spans more than one currency. */
   bands: readonly BandView[] | null;
-  spreads: readonly SpreadView[];
+  /** How many currencies the group balances in; more than one, no spine. */
+  currencies: number;
   rows: readonly RowView[];
-  repaid: readonly { currency: string; amount: string }[];
-  backIn: readonly { currency: string; amount: string }[];
 }) {
   const t = useTranslations("expensesList");
   const dates = useDateFormatter();
@@ -233,12 +224,6 @@ export function Transactions({
     write(next);
   };
 
-  const clearBands = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete(FILTER_PARAM);
-    write(next);
-  };
-
   const setQuery = (value: string) => {
     const next = new URLSearchParams(searchParams);
     if (value) {
@@ -295,42 +280,15 @@ export function Transactions({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         {eyebrow}
-        <Hero
-          active={active}
-          spreads={spreads}
-          repaid={repaid}
-          backIn={backIn}
-          shown={shown.length}
-          total={rows.length}
-          labelOf={labelOf}
-        />
-        {active.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5 pt-1">
-            {active.map((band) => (
-              <li key={band.key}>
-                <button
-                  type="button"
-                  onClick={() => toggleBand(band.key)}
-                  aria-label={t("removeFilter", { category: labelOf(band) })}
-                  className="inline-flex h-[26px] items-center gap-1.5 rounded-full bg-accent pr-1.5 pl-2.5 text-xs font-medium text-accent-foreground transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-                >
-                  {labelOf(band)}
-                  <X aria-hidden="true" className="size-[13px]" />
-                </button>
-              </li>
-            ))}
-            {active.length > 1 && (
-              <li>
-                <button
-                  type="button"
-                  onClick={clearBands}
-                  className="inline-flex h-[26px] items-center rounded-full border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-                >
-                  {t("clearFilters")}
-                </button>
-              </li>
-            )}
-          </ul>
+
+        {/* The one thing the old headline figure said that the screen cannot
+            say for itself: why there is no spine down the side. Everything
+            else it carried — the total, the category count, what had been
+            repaid — was a summary of the list directly beneath it. */}
+        {currencies > 1 && (
+          <p className="text-[0.78125rem] text-muted-foreground">
+            {t("spreadNeedsOneCurrency", { count: currencies })}
+          </p>
         )}
       </div>
 
@@ -396,7 +354,14 @@ export function Transactions({
                   type="button"
                   onClick={() => toggleBand(band.key)}
                   aria-pressed={isActive(band)}
-                  aria-label={t("filterBy", { category: labelOf(band) })}
+                  // The band is the only way in and out of a category filter
+                  // now that the chips below the total have gone, so it says
+                  // which of the two a press would be.
+                  aria-label={
+                    isActive(band)
+                      ? t("removeFilter", { category: labelOf(band) })
+                      : t("filterBy", { category: labelOf(band) })
+                  }
                   // The height is the share; the floor is what keeps a 1%
                   // category legible and tappable, and is also why the figure
                   // is printed on every band rather than read off its height.
@@ -492,124 +457,6 @@ export function Transactions({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * The figure the screen opens with, and the facts under it.
- *
- * Filtered, it becomes the sum of what is selected. Unfiltered in a group that
- * spends in several currencies, it becomes one figure per currency — never
- * their sum, which would need a rate nobody chose.
- */
-function Hero({
-  active,
-  spreads,
-  repaid,
-  backIn,
-  shown,
-  total,
-  labelOf,
-}: {
-  active: readonly BandView[];
-  spreads: readonly SpreadView[];
-  repaid: readonly { currency: string; amount: string }[];
-  backIn: readonly { currency: string; amount: string }[];
-  shown: number;
-  total: number;
-  labelOf: (band: BandView) => string;
-}) {
-  const t = useTranslations("expensesList");
-  const locale = useNumberLocale();
-  const single = spreads.length === 1 ? spreads[0] : null;
-
-  const formatted = (amount: string, currency: string) =>
-    formatMoney(money(BigInt(amount), currency), { locale });
-
-  if (!single) {
-    // No single currency to total in, so the totals stand side by side and the
-    // line underneath says why the spread is not there.
-    return (
-      <>
-        <ul className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
-          {spreads.map((spread) => (
-            <li key={spread.currency} className="flex items-baseline gap-2">
-              <Amount
-                minorUnits={spread.total}
-                currency={spread.currency}
-                className="text-2xl leading-none font-semibold tracking-[-0.03em]"
-              />
-              <span className="text-[0.8125rem] font-medium text-muted-foreground">
-                {t("spent")}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="text-[0.78125rem] text-muted-foreground">
-          {t("spreadNeedsOneCurrency", { count: spreads.length })}
-        </p>
-      </>
-    );
-  }
-
-  if (active.length > 0) {
-    const selected = active.reduce((sum, band) => sum + BigInt(band.total), 0n);
-    return (
-      <>
-        <Figure minorUnits={selected.toString()} currency={single.currency} />
-        <p className="text-[0.78125rem] text-muted-foreground">
-          {[
-            active.length === 1
-              ? labelOf(active[0])
-              : t("heroCategories", { count: active.length }),
-            t("heroFiltered", { shown, total }),
-          ].join(FACT_SEPARATOR)}
-        </p>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Figure minorUnits={single.total} currency={single.currency} />
-      <p className="text-[0.78125rem] text-muted-foreground">
-        {[
-          t("heroCategories", { count: single.categories }),
-          ...repaid.map((entry) =>
-            t("heroRepaid", {
-              amount: formatted(entry.amount, entry.currency),
-            }),
-          ),
-          ...backIn.map((entry) =>
-            t("heroBackIn", {
-              amount: formatted(entry.amount, entry.currency),
-            }),
-          ),
-        ].join(FACT_SEPARATOR)}
-      </p>
-    </>
-  );
-}
-
-function Figure({
-  minorUnits,
-  currency,
-}: {
-  minorUnits: string;
-  currency: string;
-}) {
-  const t = useTranslations("expensesList");
-  return (
-    <p className="flex flex-wrap items-baseline gap-x-2.5">
-      <Amount
-        minorUnits={minorUnits}
-        currency={currency}
-        className="text-[2.5rem] leading-none font-semibold tracking-[-0.03em]"
-      />
-      <span className="text-[0.8125rem] font-medium text-muted-foreground">
-        {t("spent")}
-      </span>
-    </p>
   );
 }
 
