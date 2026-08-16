@@ -5,13 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  House,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronRight, House } from "lucide-react";
 import {
   Popover,
   PopoverAnchor,
@@ -35,7 +29,8 @@ import { cn } from "@/lib/utils";
  * The wordmark that used to sit here linked to the dashboard, but it read as a
  * logo rather than as an exit, and every slot on the bottom bar is scoped to
  * the group you are trying to leave — so moving between two active groups cost
- * three taps. The arrow is one tap out; the name opens the rest.
+ * three taps. The name carries both errands now: it opens a panel holding
+ * every other group and, at its foot, the way back out to the dashboard.
  *
  * The name is already loaded by the group layout, so the header costs nothing
  * until the panel is opened. What the panel needs beyond the name — every
@@ -130,101 +125,99 @@ export function GroupSwitcher({
     );
   }
 
+  /*
+   * No back arrow. The way out of a group is the dashboard row at the foot of
+   * the panel below, which the same tap reaches — and an arrow beside the name
+   * only pushed it out of line with the screen underneath.
+   *
+   * The negative margin is that alignment: it pulls the trigger's own padding
+   * back over the header's, so the name starts on the column's edge, level
+   * with the heading of whatever screen is open.
+   */
   return (
-    <div className="flex min-w-0 items-center gap-0.5">
-      <Link
-        href="/dashboard"
-        transitionTypes={POP}
-        aria-label={t("backToDashboard")}
-        className="-ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger className="group/trigger -ml-2.5 inline-flex h-[34px] min-w-0 items-center gap-1.5 rounded-xl px-2.5 transition-colors duration-[140ms] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent motion-reduce:transition-none">
+        <span className="truncate text-base font-semibold tracking-[-0.01em]">
+          {groupName}
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          strokeWidth={2.2}
+          className="size-[15px] shrink-0 text-muted-foreground transition-transform duration-[160ms] group-data-[state=open]/trigger:rotate-180 motion-reduce:transition-none"
+        />
+      </PopoverTrigger>
+
+      {/* Anchored to the header row rather than to the name, so the panel
+          spans the header's width instead of the trigger's. It comes after
+          the trigger because the last anchor mounted is the one Radix keeps:
+          declared first, the trigger's own anchor would win instead. */}
+      <PopoverAnchor asChild>
+        <span aria-hidden="true" className="absolute inset-x-0 bottom-0" />
+      </PopoverAnchor>
+
+      <Scrim open={open} />
+
+      <PopoverContent
+        align="start"
+        alignOffset={12}
+        sideOffset={2}
+        collisionPadding={12}
+        aria-label={t("yourGroups")}
+        className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none"
       >
-        <ArrowLeft aria-hidden="true" className="size-[21px]" />
-      </Link>
+        <span className="px-3.5 pt-[11px] pb-[7px] text-[0.65625rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          {t("yourGroups")}
+        </span>
 
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="group/trigger inline-flex h-[34px] min-w-0 items-center gap-1.5 rounded-xl px-2.5 transition-colors duration-[140ms] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent motion-reduce:transition-none">
-          <span className="truncate text-base font-semibold tracking-[-0.01em]">
-            {groupName}
-          </span>
-          <ChevronDown
-            aria-hidden="true"
-            strokeWidth={2.2}
-            className="size-[15px] shrink-0 text-muted-foreground transition-transform duration-[160ms] group-data-[state=open]/trigger:rotate-180 motion-reduce:transition-none"
-          />
-        </PopoverTrigger>
+        {/* Six rows of groups before this scrolls; the way to the dashboard
+            below stays put rather than scrolling out of reach. */}
+        <div className="max-h-[min(21.75rem,50vh)] min-h-0 overflow-y-auto overscroll-contain">
+          {groups ? (
+            <GroupRows
+              groups={groups}
+              groupId={groupId}
+              groupName={groupName}
+              pathname={pathname}
+            />
+          ) : failed ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFailed(false);
+              }}
+              className="flex w-full items-center border-t px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+            >
+              {t("switcherRetry")}
+            </button>
+          ) : (
+            <LoadingRows />
+          )}
+        </div>
 
-        {/* Anchored to the header row rather than to the name, so the panel
-            spans the header's width instead of the trigger's. It comes after
-            the trigger because the last anchor mounted is the one Radix keeps:
-            declared first, the trigger's own anchor would win instead. */}
-        <PopoverAnchor asChild>
-          <span aria-hidden="true" className="absolute inset-x-0 bottom-0" />
-        </PopoverAnchor>
-
-        <Scrim open={open} />
-
-        <PopoverContent
-          align="start"
-          alignOffset={12}
-          sideOffset={2}
-          collisionPadding={12}
-          aria-label={t("yourGroups")}
-          className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none"
+        <Link
+          href="/dashboard"
+          transitionTypes={POP}
+          className="flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
         >
-          <span className="px-3.5 pt-[11px] pb-[7px] text-[0.65625rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-            {t("yourGroups")}
-          </span>
-
-          {/* Six rows of groups before this scrolls; the way to the dashboard
-              below stays put rather than scrolling out of reach. */}
-          <div className="max-h-[min(21.75rem,50vh)] min-h-0 overflow-y-auto overscroll-contain">
-            {groups ? (
-              <GroupRows
-                groups={groups}
-                groupId={groupId}
-                groupName={groupName}
-                pathname={pathname}
-              />
-            ) : failed ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setFailed(false);
-                }}
-                className="flex w-full items-center border-t px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              >
-                {t("switcherRetry")}
-              </button>
-            ) : (
-              <LoadingRows />
-            )}
-          </div>
-
-          <Link
-            href="/dashboard"
-            transitionTypes={POP}
-            className="flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-          >
-            <House
-              aria-hidden="true"
-              strokeWidth={1.9}
-              className="size-[17px] shrink-0 text-muted-foreground"
-            />
-            <span className="min-w-0 flex-1 text-[0.84375rem] font-medium">
-              {t("switcherDashboard")}
-              <span className="font-normal text-muted-foreground">
-                {" · "}
-                {t("switcherAllGroups")}
-              </span>
+          <House
+            aria-hidden="true"
+            strokeWidth={1.9}
+            className="size-[17px] shrink-0 text-muted-foreground"
+          />
+          <span className="min-w-0 flex-1 text-[0.84375rem] font-medium">
+            {t("switcherDashboard")}
+            <span className="font-normal text-muted-foreground">
+              {" · "}
+              {t("switcherAllGroups")}
             </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="size-[15px] shrink-0 text-muted-foreground"
-            />
-          </Link>
-        </PopoverContent>
-      </Popover>
-    </div>
+          </span>
+          <ChevronRight
+            aria-hidden="true"
+            className="size-[15px] shrink-0 text-muted-foreground"
+          />
+        </Link>
+      </PopoverContent>
+    </Popover>
   );
 }
 
