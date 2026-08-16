@@ -275,7 +275,6 @@
     "recurringBadge": "Recurring",
     "settlementTitle": "{from} paid {to}",
     "repayment": "Repayment",
-    "spreadNeedsOneCurrency": "The spread needs one currency to rank categories in. This group balances in {count, plural, one {# currency} other {# currencies}}, kept apart rather than converted at a rate nobody chose.",
     "spreadLabel": "Spending by category",
     "uncategorised": "Uncategorised",
     "bandRemainder": "{first} +{count}",

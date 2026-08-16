@@ -275,7 +275,6 @@
     "recurringBadge": "Récurrente",
     "settlementTitle": "{from} a payé {to}",
     "repayment": "Remboursement",
-    "spreadNeedsOneCurrency": "La répartition demande une seule devise pour classer les catégories. Ce groupe équilibre en {count, plural, one {# devise} other {# devises}}, gardées séparées plutôt que converties à un taux que personne n'a choisi.",
     "spreadLabel": "Dépenses par catégorie",
     "uncategorised": "Sans catégorie",
     "bandRemainder": "{first} +{count}",

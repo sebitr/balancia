@@ -158,7 +158,6 @@ function renderList(rows: readonly RowView[] = ROWS, search = "") {
       groupId="g1"
       eyebrow={<h1>Transactions</h1>}
       bands={BANDS}
-      currencies={1}
       rows={rows}
     />,
   );
@@ -382,21 +381,20 @@ describe("Transactions", () => {
 });
 
 describe("Transactions without a single currency", () => {
-  it("says why the spine is missing rather than leaving a gap", () => {
+  it("drops the spine without explaining itself above the list", () => {
     window.history.replaceState(null, "", "/groups/g1/expenses");
     renderWithIntl(
       <Transactions
         groupId="g1"
         eyebrow={<h1>Transactions</h1>}
         bands={null}
-        currencies={2}
         rows={ROWS}
       />,
     );
 
-    // The only line above the list that survived the headline figure, and the
-    // only one that answered a question the screen raises by itself.
-    expect(screen.getByText(/The spread needs one currency/)).toBeVisible();
+    // The list starts at the top: no standing note about exchange rates
+    // between the screen's name and the transactions themselves.
+    expect(screen.queryByText(/spread needs one currency/)).toBeNull();
     expect(
       screen.queryByRole("group", { name: "Spending by category" }),
     ).not.toBeInTheDocument();
