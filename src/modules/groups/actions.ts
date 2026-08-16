@@ -82,6 +82,11 @@ export async function updateGroupAction(
   const parsed = updateGroupSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") ?? "",
+    // The settings form owns the icon now, and always says what it should be.
+    // A caller that stays silent still leaves whatever is stored alone —
+    // `updateGroup` reads absent and empty as different things.
+    icon: formData.get("icon") ?? undefined,
+    iconColor: formData.get("iconColor") ?? undefined,
     timezone: formData.get("timezone"),
   });
   if (!parsed.success) {
