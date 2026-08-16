@@ -163,7 +163,22 @@ export async function registerUser(
   try {
     const [created] = await db
       .insert(users)
-      .values({ email, name, passwordHash })
+      .values({
+        email,
+        name,
+        passwordHash,
+        /*
+         * The first account on an instance is its administrator: on a
+         * self-hosted deployment, whoever registers first is the person who
+         * just ran `docker compose up`. Decided inside the INSERT so it cannot
+         * be a read-then-write race against a second registration, and so
+         * there is no separate "claim the instance" step to forget.
+         *
+         * It grants exactly one thing today — the telemetry settings — and
+         * nothing about anybody's groups. See src/lib/security/admin.ts.
+         */
+        isAdmin: sql<boolean>`NOT EXISTS (SELECT 1 FROM ${users})`,
+      })
       .returning({ id: users.id });
     userId = created.id;
   } catch (error) {

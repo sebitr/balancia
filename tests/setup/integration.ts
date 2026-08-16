@@ -30,6 +30,13 @@ const DOMAIN_TABLES = [
   "guest_invitations",
   "rate_limits",
   "exchange_rate_quotes",
+  "telemetry_counters",
+  "telemetry_reports",
+  "telemetry_daily_stats",
+  // Truncated like the rest: a test that switched telemetry on must not leave
+  // it on for the next one. Readers treat a missing row as "everything off",
+  // which is the same answer the migration's seeded row gives.
+  "instance_settings",
   "group_members",
   "participants",
   "groups",

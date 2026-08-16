@@ -268,6 +268,90 @@ const envSchema = z
     /** Model id. Each driver has a sensible default; this overrides it. */
     RECEIPT_OCR_MODEL: optionalString,
 
+    /**
+     * What this deployment permits telemetry to do at all.
+     *
+     * The switch an administrator sees in Settings → Administration is the
+     * *other* half of the decision, and it is off until somebody turns it on.
+     * This one is the operator's ceiling, and it can only ever subtract:
+     *
+     *   opt-in  (default) — an administrator may switch reporting on. Until
+     *                       one does, nothing is recorded and nothing is sent.
+     *   local             — counters are recorded and can be previewed on this
+     *                       instance, and nothing is ever transmitted.
+     *   off               — no telemetry machinery runs. Stored opt-ins are
+     *                       ignored, the switches are disabled and explained,
+     *                       and no outbound request can be made.
+     *
+     * Note what the default does not do: `opt-in` sends nothing. There is no
+     * value of this variable that turns telemetry on by itself, because
+     * configuration is not consent — see docs/telemetry.md.
+     */
+    TELEMETRY_MODE: z.enum(["opt-in", "local", "off"]).default("opt-in"),
+
+    /**
+     * Whether crash classifications may be sent, separately from usage.
+     *
+     * Also a ceiling rather than a switch: with this true and the
+     * administrator's crash setting off — its default — nothing is sent.
+     * Setting it false takes the decision away from the UI entirely.
+     */
+    TELEMETRY_CRASH_REPORTS: booleanish.default(true),
+
+    /**
+     * Where reports go.
+     *
+     * Deployment-level only, deliberately: an endpoint that could be typed
+     * into the administration UI would be a request forgery primitive pointed
+     * at the instance's own network, and no amount of validation in a form
+     * makes that a good trade. A fork redirects its installations here, in the
+     * file only the operator can edit.
+     */
+    TELEMETRY_ENDPOINT: z
+      .string()
+      .url("TELEMETRY_ENDPOINT must be an absolute URL")
+      .default("https://telemetry.balancia.app"),
+
+    /**
+     * How this instance is deployed, for the one coarse field that says so.
+     * Compose sets it; everywhere else it is detected, and detection is
+     * allowed to answer "unknown".
+     */
+    TELEMETRY_DEPLOYMENT: z.preprocess(
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? undefined : value,
+      z
+        .enum(["docker-compose", "docker", "standalone", "development"])
+        .optional(),
+    ),
+
+    /**
+     * Run the *collector*: accept reports from other installations.
+     *
+     * Off everywhere except the one deployment that is telemetry.balancia.app,
+     * where it is the whole job. With it off the receiving routes do not exist
+     * — they answer 404, not 403, so an instance does not advertise a
+     * collector it is not running.
+     */
+    TELEMETRY_RECEIVER: booleanish.default(false),
+
+    /**
+     * Prometheus metrics at /api/metrics, for the operator's own monitoring.
+     *
+     * Off by default and local always: these numbers are exact, unbucketed and
+     * about this installation only. Nothing in Balancia ever transmits them.
+     */
+    METRICS_ENABLED: booleanish.default(false),
+
+    /**
+     * Bearer token required to read /api/metrics.
+     *
+     * Optional, because a operator who publishes the port only to a private
+     * network has already answered the question. Without it and without such a
+     * network, the endpoint is readable by anyone who can reach the app.
+     */
+    METRICS_TOKEN: optionalString,
+
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
@@ -474,6 +558,27 @@ const envSchema = z
         message:
           'PUSH_VAPID_SUBJECT must be a "mailto:" address or an "https://" URL.',
       });
+    }
+
+    // A telemetry endpoint reached over plain HTTP would put the report — and
+    // more importantly the fact that this instance is talking to it at all —
+    // in front of every network in between. Localhost is exempt so a collector
+    // can be developed and tested against.
+    const endpoint = URL.parse(value.TELEMETRY_ENDPOINT);
+    if (endpoint) {
+      const endpointIsLocal =
+        endpoint.hostname === "localhost" ||
+        endpoint.hostname === "127.0.0.1" ||
+        endpoint.hostname === "[::1]";
+      if (endpoint.protocol !== "https:" && !endpointIsLocal) {
+        context.addIssue({
+          code: "custom",
+          path: ["TELEMETRY_ENDPOINT"],
+          message:
+            `TELEMETRY_ENDPOINT "${value.TELEMETRY_ENDPOINT}" is not HTTPS. ` +
+            "Reports may only be sent over TLS; use https:// or point it at localhost for testing.",
+        });
+      }
     }
 
     if (

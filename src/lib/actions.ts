@@ -17,6 +17,12 @@ import { UploadRejectedError } from "@/modules/attachments/service";
 import { ImportError } from "@/modules/imports/service";
 import { ReminderError } from "@/modules/reminders/service";
 import { RateLimitedError } from "@/lib/security/rate-limit";
+import { reportCrash } from "@/lib/telemetry/crash-reporter";
+import {
+  actionDuration,
+  actionOutcomes,
+  secondsSince,
+} from "@/lib/metrics/metrics";
 
 /**
  * Shared plumbing for Server Actions.
@@ -109,12 +115,21 @@ export async function runAction<T>(
   name: string,
   body: () => Promise<T>,
 ): Promise<ActionResult<T>> {
+  const startedAt = performance.now();
   try {
-    return actionOk(await body());
+    const result = actionOk(await body());
+    observe(name, "ok", startedAt);
+    return result;
   } catch (error) {
     if (isSafeError(error)) {
+      // A refusal the user is meant to see — a rate limit, a bad amount, no
+      // access. Counted apart from a failure, because an alert on "actions
+      // that went wrong" should not fire on somebody mistyping a percentage.
+      observe(name, "rejected", startedAt);
       return actionError(await describe(error));
     }
+
+    observe(name, "failed", startedAt);
     logger.error(
       {
         action: name,
@@ -125,7 +140,21 @@ export async function runAction<T>(
       },
       "Action failed",
     );
+
+    // The full error, with its stack, has just gone to this instance's own log
+    // where an administrator can read it. What may leave the instance — if,
+    // and only if, crash reports were switched on — is the class name and the
+    // word "server-action". Never awaited into the response path: the user is
+    // getting an error message either way, and they should not wait for a
+    // report to be sent first.
+    void reportCrash(error, "server-action");
+
     const t = await getTranslations("serverErrors");
     return actionError(t("generic"));
   }
+}
+
+function observe(name: string, outcome: string, startedAt: number): void {
+  actionDuration().observe(secondsSince(startedAt), { action: name });
+  actionOutcomes().increment({ action: name, outcome });
 }

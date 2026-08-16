@@ -537,8 +537,27 @@ Secrets, tokens and passwords are redacted before anything is written.
 docker compose exec db psql -U balancia -d balancia
 ```
 
-**No telemetry.** Balancia contacts no external service at runtime. There is no
-analytics, no error reporting, no update check.
+**No telemetry by default.** A stock installation contacts no external service
+at runtime: no analytics, no error reporting, no update check. An administrator
+may opt in, in Settings → Administration → Telemetry, to one anonymous report a
+week — the version, which features are on, and activity in ranges rather than
+counts, with no identifier for this installation and nothing about anyone using
+it. Both that switch and the separate crash-report switch start off, the exact
+payload is previewable before anything is sent, and
+
+```bash
+TELEMETRY_MODE=off
+```
+
+takes the decision away from the UI entirely. Full detail, including the
+complete field list and what is deliberately not collected:
+[Telemetry](telemetry.md).
+
+**Metrics, if you want them.** `METRICS_ENABLED=true` exposes Prometheus text at
+`/api/metrics` for your own monitoring: request and job durations, error rates,
+database latency and pool usage, memory and CPU. Exact, local, and never
+transmitted by Balancia. Set `METRICS_TOKEN` unless the published port is on a
+private network.
 
 **Stopping cleanly:**
 

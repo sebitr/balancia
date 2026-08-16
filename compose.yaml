@@ -79,6 +79,25 @@ x-app-environment: &app-environment
   APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
+  # Telemetry. Nothing is sent by default: "opt-in" means an administrator may
+  # switch anonymous statistics on from Settings → Administration → Telemetry,
+  # and until one does, nothing is recorded and nothing leaves the instance.
+  # Set to "local" to keep counters on this server only, or "off" to disable
+  # the machinery entirely and grey out the switches. See docs/telemetry.md.
+  TELEMETRY_MODE: ${TELEMETRY_MODE:-opt-in}
+  TELEMETRY_CRASH_REPORTS: ${TELEMETRY_CRASH_REPORTS:-true}
+  TELEMETRY_ENDPOINT: ${TELEMETRY_ENDPOINT:-https://telemetry.balancia.app}
+  # Labels reports with how this instance is deployed. It is this file.
+  TELEMETRY_DEPLOYMENT: ${TELEMETRY_DEPLOYMENT:-docker-compose}
+  # Run the collector — accept reports from other installations. This is what
+  # telemetry.balancia.app switches on, and what a fork switches on to collect
+  # its own. Off here, and the routes answer 404 while it is.
+  TELEMETRY_RECEIVER: ${TELEMETRY_RECEIVER:-false}
+  # Prometheus metrics at /api/metrics, for your own monitoring. Local always:
+  # Balancia never transmits them. Set a token unless the published port is on
+  # a private network — the app port below is reachable by whoever can reach it.
+  METRICS_ENABLED: ${METRICS_ENABLED:-false}
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
   # This stack runs a dedicated worker container, so the web process must not
   # also run one — two of them would generate every recurring expense twice.
   # It is forwarded rather than omitted so that `docker compose up app` alone

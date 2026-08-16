@@ -33,6 +33,8 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 22  | Automatic expense categorization (EN/FR)                | ✅     |
 | 23  | Notifications: in-app inbox and Web Push (opt-in)       | ✅     |
 | 24  | On-device receipt scanning (opt-in)                     | ✅     |
+| 25  | Privacy-preserving telemetry (off by default, opt-in)   | ✅     |
+| 26  | Local operational metrics (Prometheus, off by default)  | ✅     |
 
 ## Verification
 

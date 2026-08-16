@@ -78,6 +78,19 @@ x-dev-environment: &dev-environment
   APPLE_TEAM_ID: ${DEV_APPLE_TEAM_ID:-}
   APPLE_KEY_ID: ${DEV_APPLE_KEY_ID:-}
   APPLE_PRIVATE_KEY: ${DEV_APPLE_PRIVATE_KEY:-}
+  # Telemetry. "local" here rather than "opt-in": a development stack should
+  # never be able to send a report to the real collector by accident, and the
+  # local mode still exercises every part of the pipeline — recording,
+  # aggregating and the administration preview — up to the network call.
+  # Point DEV_TELEMETRY_ENDPOINT at a collector of your own to test sending.
+  TELEMETRY_MODE: ${DEV_TELEMETRY_MODE:-local}
+  TELEMETRY_CRASH_REPORTS: ${DEV_TELEMETRY_CRASH_REPORTS:-true}
+  TELEMETRY_ENDPOINT: ${DEV_TELEMETRY_ENDPOINT:-http://localhost:3000/api/telemetry}
+  TELEMETRY_DEPLOYMENT: development
+  # Switch on to develop against the collecting side; the routes 404 while off.
+  TELEMETRY_RECEIVER: ${DEV_TELEMETRY_RECEIVER:-false}
+  METRICS_ENABLED: ${DEV_METRICS_ENABLED:-true}
+  METRICS_TOKEN: ${DEV_METRICS_TOKEN:-}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

@@ -20,6 +20,7 @@ import {
   recordExpenseNotification,
 } from "@/modules/notifications/events";
 import { recordCategoryChoice } from "@/modules/categorization/service";
+import { telemetry } from "@/lib/telemetry";
 import {
   resolveConversion,
   type ExchangeRateSource,
@@ -230,7 +231,7 @@ export async function createExpense(
     on: input.expenseDate,
   });
 
-  const { expenseId, notificationIds } = await db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     const referenced = [
       ...input.payers.map((payer) => payer.participantId),
       ...input.splitEntries.map((entry) => entry.participantId),
@@ -328,12 +329,34 @@ export async function createExpense(
       ],
     });
 
-    return { expenseId: expense.id, notificationIds };
+    return {
+      expenseId: expense.id,
+      notificationIds,
+      // Carried out of the transaction for telemetry: two numbers and a
+      // boolean, decided here where the prepared expense is in scope.
+      converted: prepared.exchangeRate !== null,
+      shareCount: prepared.shares.length,
+    };
   });
+
+  const { expenseId, notificationIds } = created;
 
   // After the commit: pushing is a call to a third-party push service, and it
   // must not run inside a transaction that could still roll back.
   await dispatchNotifications(notificationIds);
+
+  // Also after the commit, and for a stronger version of the same reason: an
+  // expense must never fail to save because a counter could not be written.
+  // Four coarse facts about *how* the expense was entered — the description,
+  // the amount, the currency and everyone's name stay here.
+  await telemetry.expenseCreated({
+    splitMethod: input.splitMethod,
+    direction: input.direction ?? "out",
+    multiCurrency: created.converted,
+    hasReceipt: (input.attachmentIds?.length ?? 0) > 0,
+    participantCount: created.shareCount,
+  });
+
   return expenseId;
 }
 
@@ -476,6 +499,11 @@ export async function updateExpense(
   });
 
   await dispatchNotifications(notificationIds);
+
+  // Only which method the edit ended on: an edit that moved an amount, a date
+  // or a payer is indistinguishable here from one that fixed a typo, and that
+  // is the intended resolution.
+  await telemetry.expenseUpdated({ splitMethod: input.splitMethod });
 }
 
 export async function deleteExpense(

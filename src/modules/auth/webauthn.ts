@@ -14,6 +14,7 @@ import { getDb, type Database } from "@/lib/db/client";
 import { passkeys, users, webauthnChallenges } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { telemetry } from "@/lib/telemetry";
 import { AuthError, isUniqueViolation } from "./service";
 
 /**
@@ -200,6 +201,12 @@ export async function finishPasskeyRegistration(
         name: name?.trim() ? name.trim().slice(0, 80) : null,
       })
       .returning({ id: passkeys.id });
+
+    // That a passkey was registered on this instance. Not by whom, not on what
+    // device, and nothing from the credential — which is a public key with an
+    // identifier attached, and belongs to one person.
+    await telemetry.passkeyRegistered();
+
     return created;
   } catch (error) {
     if (isUniqueViolation(error)) {

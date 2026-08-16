@@ -14,3 +14,4 @@ export * from "./rates";
 export * from "./categorization";
 export * from "./notifications";
 export * from "./reminders";
+export * from "./telemetry";

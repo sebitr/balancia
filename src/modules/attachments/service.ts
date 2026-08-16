@@ -7,6 +7,7 @@ import { attachments } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { getStorage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
+import { telemetry } from "@/lib/telemetry";
 import {
   AuthorizationError,
   requirePermission,
@@ -133,6 +134,14 @@ export async function uploadAttachment(
         contentType: attachments.contentType,
         byteSize: attachments.byteSize,
       });
+
+    // Whether a receipt was a picture or a document, and nothing else. Not the
+    // file name — which is often a merchant and a date — not the size, not the
+    // checksum, and obviously not the file.
+    await telemetry.receiptAttached({
+      kind: detected.mime === "application/pdf" ? "pdf" : "image",
+    });
+
     return record;
   } catch (error) {
     // The row is the source of truth. If it fails, the blob is unreferenced

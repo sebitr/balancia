@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Liveness: is the process running and able to serve a request?
@@ -8,7 +9,11 @@ import { NextResponse } from "next/server";
  */
 export const dynamic = "force-dynamic";
 
-export function GET() {
+export async function GET() {
+  return trackRoute("/api/health/live", "GET", () => handleGet());
+}
+
+async function handleGet() {
   return NextResponse.json(
     { status: "ok" },
     { headers: { "Cache-Control": "no-store" } },

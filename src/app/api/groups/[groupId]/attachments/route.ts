@@ -8,6 +8,7 @@ import {
 } from "@/modules/attachments/service";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Receipt upload.
@@ -17,6 +18,15 @@ import { logger } from "@/lib/logger";
  * the uploaded file is trusted: not its name, not its Content-Type.
  */
 export async function POST(
+  request: Request,
+  context: RouteContext<"/api/groups/[groupId]/attachments">,
+) {
+  return trackRoute("/api/groups/[groupId]/attachments", "POST", () =>
+    handlePost(request, context),
+  );
+}
+
+async function handlePost(
   request: Request,
   context: RouteContext<"/api/groups/[groupId]/attachments">,
 ) {

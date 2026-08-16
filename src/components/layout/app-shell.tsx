@@ -24,7 +24,13 @@ export function AppShell({
   leading,
 }: {
   children: ReactNode;
-  actor: { label: string; email?: string; isGuest: boolean };
+  actor: {
+    label: string;
+    email?: string;
+    isGuest: boolean;
+    /** Instance administrator: adds the administration entry to the menu. */
+    isAdmin?: boolean;
+  };
   className?: string;
   bottomNav?: ReactNode;
   /**
@@ -70,6 +76,7 @@ export function AppShell({
               label={actor.label}
               email={actor.email}
               isGuest={actor.isGuest}
+              isAdmin={actor.isAdmin ?? false}
             />
           </div>
         </div>

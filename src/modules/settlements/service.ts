@@ -13,6 +13,7 @@ import { recordSettlementNotification } from "@/modules/notifications/events";
 import { resolveConversion } from "@/modules/currencies/conversion";
 import { money } from "@/modules/currencies/money";
 import { classifyRateSource } from "@/modules/currencies/rates";
+import { telemetry } from "@/lib/telemetry";
 import type { SettlementInput } from "@/modules/expenses/schemas";
 
 /**
@@ -77,7 +78,7 @@ export async function createSettlement(
     on: input.settledOn,
   });
 
-  const { settlementId, notificationIds } = await db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     await assertParticipants(tx, access.groupId, [
       input.fromParticipantId,
       input.toParticipantId,
@@ -140,11 +141,20 @@ export async function createSettlement(
       currency: input.currency,
     });
 
-    return { settlementId: settlement.id, notificationIds };
+    return {
+      settlementId: settlement.id,
+      notificationIds,
+      converted: conversion.frozenRate !== null,
+    };
   });
 
-  await dispatchNotifications(notificationIds);
-  return settlementId;
+  await dispatchNotifications(created.notificationIds);
+
+  // One boolean: whether the payment crossed a currency. Not who paid whom,
+  // not how much, not by what method.
+  await telemetry.settlementCreated({ multiCurrency: created.converted });
+
+  return created.settlementId;
 }
 
 export async function updateSettlement(

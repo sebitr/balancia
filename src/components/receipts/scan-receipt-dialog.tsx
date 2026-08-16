@@ -33,6 +33,7 @@ import {
 } from "@/modules/receipts";
 import { isLiveCameraSupported } from "@/lib/doc-scan/engine";
 import { looksLikePdf } from "@/lib/pdf/read-pdf";
+import { recordReceiptScanAction } from "@/modules/telemetry/actions";
 import { ItemAssignmentView, type Participant } from "./item-assignment";
 import { DocumentCamera } from "./document-camera";
 import { ReceiptReview } from "./receipt-review";
@@ -201,6 +202,19 @@ export function ScanReceiptDialog({
     }
   };
 
+  /**
+   * Tells the server that a scan happened, and how it went.
+   *
+   * One word from a list of three — never the image, the text, the merchant or
+   * the total, none of which leaves this device at any point. The server drops
+   * it unless telemetry is switched on, which it is not by default; the call is
+   * made either way so that the page does not have to be told whether this
+   * instance is recording. Failures are ignored on purpose: a counter is not
+   * worth an error message in front of somebody reading a receipt.
+   */
+  const recordScan = (outcome: "recognised" | "empty" | "failed") =>
+    recordReceiptScanAction(outcome).catch(() => undefined);
+
   const scan = async (file: File) => {
     setError(null);
     setStep("scanning");
@@ -233,6 +247,7 @@ export function ScanReceiptDialog({
         // Advice about framing and light is no help to someone holding a PDF.
         setError(pdf ? t("errors.nothingFoundPdf") : t("errors.nothingFound"));
         setStep("capture");
+        void recordScan("empty");
         return;
       }
 
@@ -243,9 +258,11 @@ export function ScanReceiptDialog({
         }),
       );
       setStep("review");
+      void recordScan("recognised");
     } catch (failure) {
       setError(messageFor(failure));
       setStep("capture");
+      void recordScan("failed");
     }
   };
 

@@ -64,6 +64,19 @@ export const users = pgTable(
     dateFormat: text("date_format"),
     /** How numbers are written ("comma-dot", "dot-comma", "space-comma"). */
     numberFormat: text("number_format"),
+    /**
+     * Instance administrator: the person who runs this installation.
+     *
+     * Distinct from `group_members.role`, which is about one group's expenses.
+     * This is about the deployment — today, whether anonymous telemetry is
+     * switched on for everybody. The first account created on an instance gets
+     * it, because on a self-hosted install that account is the operator; on an
+     * existing instance the migration gave it to the oldest account for the
+     * same reason. It is granted nowhere else, and there is no way to ask for
+     * it: an operator promotes a second administrator with one UPDATE
+     * (docs/telemetry.md).
+     */
+    isAdmin: boolean("is_admin").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

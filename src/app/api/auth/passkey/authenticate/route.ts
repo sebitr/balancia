@@ -11,6 +11,7 @@ import {
 import { createSession } from "@/modules/auth/sessions";
 import { setSessionCookie } from "@/modules/auth/cookies";
 import { logger } from "@/lib/logger";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Passkey sign-in ceremony.
@@ -23,6 +24,10 @@ import { logger } from "@/lib/logger";
  */
 
 export async function GET() {
+  return trackRoute("/api/auth/passkey/authenticate", "GET", () => handleGet());
+}
+
+async function handleGet() {
   try {
     const options = await startPasskeyAuthentication();
     return NextResponse.json(options, {
@@ -41,6 +46,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  return trackRoute("/api/auth/passkey/authenticate", "POST", () =>
+    handlePost(request),
+  );
+}
+
+async function handlePost(request: Request) {
   const ip = await getClientIp();
   const limit = await consumeRateLimit("signIn", ip);
   if (!limit.allowed) {

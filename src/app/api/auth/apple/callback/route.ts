@@ -18,6 +18,7 @@ import {
   signInWithApple,
 } from "@/modules/auth/service";
 import { applyStoredPreferences } from "@/i18n/cookie";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Where Apple sends the result.
@@ -83,6 +84,12 @@ function readFullName(raw: string | undefined): string | null {
 }
 
 export async function POST(request: Request) {
+  return trackRoute("/api/auth/apple/callback", "POST", () =>
+    handlePost(request),
+  );
+}
+
+async function handlePost(request: Request) {
   const ip = await getClientIp();
 
   const limit = await consumeRateLimit("signIn", ip);
@@ -207,5 +214,9 @@ export async function POST(request: Request) {
  * hand, and the sign-in page is a better answer than a 405.
  */
 export async function GET() {
+  return trackRoute("/api/auth/apple/callback", "GET", () => handleGet());
+}
+
+async function handleGet() {
   return backToSignIn();
 }

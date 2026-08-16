@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bell, LogOut, ShieldCheck, User } from "lucide-react";
+import {
+  Bell,
+  LogOut,
+  ShieldCheck,
+  SlidersHorizontal,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageMenuItems } from "@/components/i18n/language-switcher";
 import { InstallMenuItem } from "@/components/pwa/install-menu-item";
@@ -26,10 +32,17 @@ export function UserMenu({
   label,
   email,
   isGuest,
+  isAdmin = false,
 }: {
   label: string;
   email?: string;
   isGuest: boolean;
+  /**
+   * Whether to offer the administration entry. Presentation only — the page
+   * and every action behind it resolve the caller themselves, because a menu
+   * item that is not rendered is not a permission check.
+   */
+  isAdmin?: boolean;
 }) {
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
@@ -95,6 +108,14 @@ export function UserMenu({
             {t("security")}
           </Link>
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin/telemetry" transitionTypes={PUSH}>
+              <SlidersHorizontal aria-hidden="true" />
+              {t("administration")}
+            </Link>
+          </DropdownMenuItem>
+        )}
         {/* Renders nothing where the app is installed or uninstallable. */}
         <InstallMenuItem />
         <DropdownMenuSeparator />

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { logger } from "@/lib/logger";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Readiness: can this process actually serve traffic?
@@ -13,6 +14,10 @@ import { logger } from "@/lib/logger";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  return trackRoute("/api/health/ready", "GET", () => handleGet());
+}
+
+async function handleGet() {
   try {
     const db = getDb();
     const result = await db.execute(

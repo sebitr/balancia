@@ -33,7 +33,8 @@
     "switcherYouAreOwed": "on vous doit {amount}",
     "switcherDashboard": "Tableau de bord",
     "switcherAllGroups": "tous les groupes",
-    "switcherRetry": "Impossible de charger vos groupes. Réessayer."
+    "switcherRetry": "Impossible de charger vos groupes. Réessayer.",
+    "administration": "Administration"
   },
   "theme": {
     "toggle": "Changer de thème",
@@ -897,7 +898,9 @@
     "appleNotLinked": "Aucun compte Apple n'est associé à ce compte.",
     "appleFailed": "Cela n'a pas fonctionné. Apple n'a pas pu confirmer la connexion.",
     "appleExpired": "Cette connexion a pris trop de temps, ou a été lancée dans un autre navigateur. Réessaie.",
-    "unknownFormat": "Ce format de date ou de nombre n'est pas proposé par Balancia."
+    "unknownFormat": "Ce format de date ou de nombre n'est pas proposé par Balancia.",
+    "adminRequired": "Seul un administrateur de l’instance peut modifier ce réglage.",
+    "telemetryLocked": "La télémétrie est désactivée dans la configuration de ce déploiement."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",
@@ -1428,5 +1431,38 @@
     "unlinkBody": "Tu ne pourras plus te connecter avec Apple. Ton mot de passe et tes clés d'accès continuent de fonctionner.",
     "unlinkedToast": "Ton compte Apple n'est plus associé.",
     "unlinkFailed": "Ce compte Apple n'a pas pu être dissocié."
+  },
+  "adminTelemetry": {
+    "metaTitle": "Télémétrie",
+    "title": "Télémétrie",
+    "description": "Ce que cette installation partage, et avec qui. Les deux réglages sont désactivés tant que vous ne les activez pas, et rien n’est envoyé entre-temps.",
+    "switchesTitle": "Aider à améliorer Balancia",
+    "usageLabel": "Partager des statistiques anonymes d’utilisation",
+    "usageHelp": "Envoyer des statistiques anonymes sur cette installation de Balancia, comme la version de Balancia et les fonctionnalités utilisées. Un rapport par semaine.",
+    "usageNever": "Les montants des dépenses, les noms, les adresses e-mail, les noms de groupes, les reçus et les autres données financières ne sont jamais collectés.",
+    "crashLabel": "Partager des rapports d’erreur anonymes",
+    "crashHelp": "Envoyer la classe d’une erreur et la partie de Balancia d’où elle vient — jamais le message, la pile d’appels ni quoi que ce soit sur la requête.",
+    "modeLocal": "Ce déploiement enregistre les statistiques localement et ne les transmet jamais. Vous pouvez prévisualiser un rapport ci-dessous ; rien ne quitte ce serveur.",
+    "modeOff": "La télémétrie est désactivée dans la configuration de ce déploiement : ces réglages ne peuvent pas être modifiés.",
+    "savedOn": "Enregistré. Le partage est activé.",
+    "savedOff": "Enregistré. Le partage est désactivé.",
+    "saveFailed": "Ce réglage n’a pas pu être enregistré.",
+    "previewTitle": "Prévisualiser le rapport anonyme",
+    "previewHelp": "Exactement ce qui serait transmis, produit par le code qui l’envoie. Les décomptes sont des tranches, pas des nombres exacts, et il n’existe aucun identifiant de cette installation.",
+    "endpointLabel": "Destination",
+    "noEndpoint": "aucune configurée",
+    "lastSentLabel": "Dernier envoi",
+    "neverSent": "jamais",
+    "notCollectedTitle": "Jamais collecté",
+    "notCollectedAmounts": "Les montants, les devises des dépenses, les soldes et les remboursements.",
+    "notCollectedNames": "Les noms, adresses e-mail, noms de groupes, descriptions, notes et commentaires.",
+    "notCollectedReceipts": "Les images de reçus, le texte qui en est extrait et les noms de fichiers joints.",
+    "notCollectedIdentifiers": "Les identifiants de comptes, de groupes et de dépenses, les jetons de session et les clés d’accès.",
+    "notCollectedInstance": "L’adresse de cette instance, son nom d’hôte, son domaine et les adresses IP.",
+    "testButton": "Envoyer un rapport de test",
+    "testSending": "Envoi…",
+    "testHelp": "Envoie le rapport ci-dessus maintenant, pour vérifier qu’il atteint la destination. Rien n’est envoyé sans cette action.",
+    "testSent": "Rapport envoyé.",
+    "testFailed": "Le rapport n’a pas pu être envoyé."
   }
 }

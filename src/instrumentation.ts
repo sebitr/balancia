@@ -12,8 +12,46 @@
  * and read by nothing, so setting it did nothing at all and nothing was ever
  * pushed. See docs/notifications.md.
  */
+import type { Instrumentation } from "next";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+
+/**
+ * Server-side errors, on their way to being classified.
+ *
+ * Next.js calls this for every error it catches while rendering or serving —
+ * the one place that sees them all, which is why crash reporting hangs here
+ * rather than from a dozen try/catch blocks.
+ *
+ * Two of the three arguments are deliberately dropped. `request` carries the
+ * path, the query string and the headers; `context.routePath` is the route
+ * *file* (`/groups/[groupId]/expenses/[expenseId]`), which is a template with
+ * no values in it. Only the last is passed on, as a coarse component — and
+ * only when an administrator switched crash reports on, which is off by
+ * default. The error itself never leaves in any form but its class name.
+ */
+export const onRequestError: Instrumentation.onRequestError = async (
+  error,
+  _request,
+  context,
+) => {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  const { reportCrash } = await import("@/lib/telemetry/crash-reporter");
+  await reportCrash(error, componentFor(context.routeType));
+};
+
+/**
+ * A Server Action that reached here escaped `runAction`; the ones it catches
+ * are reported there and never rethrown, so nothing is counted twice.
+ */
+function componentFor(
+  routeType: Parameters<Instrumentation.onRequestError>[2]["routeType"],
+): "route-handler" | "server-action" | "render" {
+  if (routeType === "route") return "route-handler";
+  if (routeType === "action") return "server-action";
+  return "render";
+}
 
 export async function register(): Promise<void> {
   // `register` also runs in the Edge runtime, which has no database driver and

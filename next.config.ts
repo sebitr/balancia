@@ -24,6 +24,27 @@ const nextConfig: NextConfig = {
     remotePatterns: [],
   },
 
+  /**
+   * The collector's public paths.
+   *
+   * `POST /v1/report` and `POST /v1/crash` are the endpoints Balancia sends to
+   * (docs/telemetry.md); the handlers live under `/api/telemetry/v1/…`. The
+   * mapping is unconditional because rewrites are compiled into the build's
+   * route manifest — a list computed from an environment variable would be
+   * fixed at build time, which is exactly the wrong moment for a setting that
+   * decides what one image does at runtime.
+   *
+   * Mapping them everywhere costs nothing: the handler behind each path
+   * answers 404 unless `TELEMETRY_RECEIVER` is on, which it is not on any
+   * self-hosted installation. A rewrite to a 404 is a 404.
+   */
+  async rewrites() {
+    return [
+      { source: "/v1/report", destination: "/api/telemetry/v1/report" },
+      { source: "/v1/crash", destination: "/api/telemetry/v1/crash" },
+    ];
+  },
+
   experimental: {
     // Server Actions carry expense payloads with receipts already uploaded
     // separately, so a small limit is plenty and bounds request memory.

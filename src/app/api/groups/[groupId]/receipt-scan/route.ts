@@ -7,6 +7,7 @@ import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { getOcrProvider, OcrProviderError } from "@/lib/ocr/providers";
 import { serializeParsedReceipt } from "@/lib/ocr/serialize";
+import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Reading a receipt through the operator's configured provider.
@@ -43,6 +44,15 @@ const READABLE_TYPES = new Set([
 ]);
 
 export async function POST(
+  request: Request,
+  context: RouteContext<"/api/groups/[groupId]/receipt-scan">,
+) {
+  return trackRoute("/api/groups/[groupId]/receipt-scan", "POST", () =>
+    handlePost(request, context),
+  );
+}
+
+async function handlePost(
   request: Request,
   context: RouteContext<"/api/groups/[groupId]/receipt-scan">,
 ) {

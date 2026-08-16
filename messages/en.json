@@ -33,7 +33,8 @@
     "switcherYouAreOwed": "you are owed {amount}",
     "switcherDashboard": "Dashboard",
     "switcherAllGroups": "all groups",
-    "switcherRetry": "Couldn't load your groups. Try again."
+    "switcherRetry": "Couldn't load your groups. Try again.",
+    "administration": "Administration"
   },
   "theme": {
     "toggle": "Toggle theme",
@@ -897,7 +898,9 @@
     "appleNotLinked": "There is no Apple account linked to this account.",
     "appleFailed": "That did not work. Apple could not confirm the sign-in.",
     "appleExpired": "That sign-in took too long, or was started in another browser. Try again.",
-    "unknownFormat": "That is not a date or number format Balancia offers."
+    "unknownFormat": "That is not a date or number format Balancia offers.",
+    "adminRequired": "Only an instance administrator can change this.",
+    "telemetryLocked": "Telemetry is switched off in this deployment’s configuration."
   },
   "serverValidation": {
     "checkForm": "Check the form.",
@@ -1428,5 +1431,38 @@
     "unlinkBody": "You will no longer be able to sign in with Apple. Your password and any passkeys keep working.",
     "unlinkedToast": "Your Apple account is no longer linked.",
     "unlinkFailed": "That Apple account could not be unlinked."
+  },
+  "adminTelemetry": {
+    "metaTitle": "Telemetry",
+    "title": "Telemetry",
+    "description": "What this installation shares, and with whom. Both switches are off until you turn them on, and nothing is sent in the meantime.",
+    "switchesTitle": "Help improve Balancia",
+    "usageLabel": "Share anonymous usage statistics",
+    "usageHelp": "Send anonymous statistics about this Balancia installation, such as the Balancia version and which features are being used. One report a week.",
+    "usageNever": "Expense amounts, names, email addresses, group names, receipts and other financial data are never collected.",
+    "crashLabel": "Share anonymous crash reports",
+    "crashHelp": "Send the class of an error and the part of Balancia it came from — never the message, the stack trace or anything about the request.",
+    "modeLocal": "This deployment records statistics locally and never transmits them. You can preview a report below; nothing leaves this server.",
+    "modeOff": "Telemetry is switched off in this deployment’s configuration, so these switches cannot be moved.",
+    "savedOn": "Saved. Sharing is on.",
+    "savedOff": "Saved. Sharing is off.",
+    "saveFailed": "That setting could not be saved.",
+    "previewTitle": "Preview anonymous usage report",
+    "previewHelp": "Exactly what would be transmitted, built by the same code that sends it. Counts are ranges, not exact numbers, and there is no identifier for this installation.",
+    "endpointLabel": "Endpoint",
+    "noEndpoint": "none configured",
+    "lastSentLabel": "Last sent",
+    "neverSent": "never",
+    "notCollectedTitle": "Never collected",
+    "notCollectedAmounts": "Amounts, currencies of individual expenses, balances and settlements.",
+    "notCollectedNames": "Names, email addresses, group names, descriptions, notes and comments.",
+    "notCollectedReceipts": "Receipt images, the text read from them and attachment file names.",
+    "notCollectedIdentifiers": "User, group and expense identifiers, session tokens and passkeys.",
+    "notCollectedInstance": "This instance’s address, hostname, domain and IP addresses.",
+    "testButton": "Send test report",
+    "testSending": "Sending…",
+    "testHelp": "Sends the report above now, so you can confirm it reaches the endpoint. Nothing is sent unless you press it.",
+    "testSent": "Report sent.",
+    "testFailed": "The report could not be sent."
   }
 }
