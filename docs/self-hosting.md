@@ -33,6 +33,8 @@ Run from a terminal, it also asks which optional features to switch on:
 | Semantic categorizing | `SEMANTIC_CATEGORIZATION` | Downloads the embedding model                  |
 | Push notifications    | `PUSH_VAPID_*`            | Generates the VAPID pair                       |
 | Outgoing email        | `SMTP_*`                  |                                                |
+| Telemetry             | `TELEMETRY_MODE`          | Switches nothing on — see below                |
+| Metrics               | `METRICS_ENABLED`         | Generates `METRICS_TOKEN`                      |
 
 Every answer is written, including the no's, so the second run asks nothing.
 The two model downloads need Node; on a host that has only Docker, one is
@@ -54,6 +56,19 @@ offers the next free one, and checks every port you propose in turn. A
 type; behind a proxy only `APP_PORT` changes, and the proxy has to be pointed
 at it. Whichever of `ss`, `netstat` and `lsof` the host has is what answers the
 question; on a host with none of them nothing is checked and nothing is asked.
+
+The telemetry question is the one that cannot switch a feature on. Balancia
+sends nothing until an administrator turns it on inside the application, and
+the question only writes whether they are allowed to: yes leaves the choice on
+the administration page, no removes it for good. It is asked anyway, because an
+operator who is never told the feature exists has not decided anything about
+it. [Telemetry](telemetry.md) is the long version.
+
+The metrics question is the opposite — it switches an endpoint on — so it
+defaults to no, and answering yes generates a `METRICS_TOKEN` because the app's
+port is published. If `METRICS_ENABLED` is set later by hand and no token is
+set, a re-run offers to generate one; declining leaves it open, which is the
+right answer only when that port is on a private network.
 
 Nothing has to be answered interactively. With no terminal on stdin — CI, a
 pipe — or with `--defaults`, it writes the secrets and leaves every optional

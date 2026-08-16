@@ -14,9 +14,11 @@ same `.env`, next to `compose.yaml`. For local development without Docker, use
 
 Run from a terminal, `bootstrap.sh` also asks about the optional features and
 writes the answers: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
-`RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio and the
-`SMTP_*` group. Anything it writes can be edited here afterwards; nothing here
-has to go through it.
+`RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
+`SMTP_*` group, `TELEMETRY_MODE` and `METRICS_ENABLED` — the last two written
+to their defaults, `opt-in` and `false`, when the answers are yes and no.
+Anything it writes can be edited here afterwards; nothing here has to go
+through it.
 
 ---
 
@@ -556,21 +558,26 @@ setting, separate endpoint, separate default (off). What one contains is an
 error class name and a component — `PostgresError_23505`, `job` — and nothing
 else. Not the message, not the stack, not the request.
 
-### `TELEMETRY_ENDPOINT`
+### Where reports go — not a setting
 
-Default `https://telemetry.balancia.app`. Must be HTTPS unless it points at
-localhost.
+There is deliberately no variable for the destination. It is a constant,
+`https://telemetry.balancia.app`, in `src/lib/telemetry/endpoint.ts`.
 
-**Deployment-level only, on purpose.** An endpoint that could be typed into the
-administration UI would let anyone who reached that form aim the server's own
-outbound requests at an address of their choosing — a request-forgery
-primitive, with the server's network position. A fork that wants its
-installations to report somewhere else sets this in the file only the operator
-can edit.
+Configuration answers whether anything is sent — `TELEMETRY_MODE`, and the
+administrator's switch, both of which default to sending nothing. It does not
+answer to whom. Two reasons:
 
-The sender appends `/v1/report` or `/v1/crash`, so a collector behind a path
-prefix is configured as e.g.
-`https://collector.example.com/api/telemetry`.
+- An address that could be set from the administration UI would be
+  server-side request forgery with this server's network position; one that
+  could be set from the environment is a step away from the same thing, and is
+  one more lever for anyone who talks their way onto the box.
+- Every claim in [Telemetry](telemetry.md) is about a specific recipient. If
+  the recipient were configurable, each of those claims would silently be
+  "…unless somebody changed it", and a reader would have to check the
+  environment before believing any of them.
+
+A fork edits that one line — which under the AGPL it is building from source to
+do anyway. See [Telemetry §14](telemetry.md).
 
 ### `TELEMETRY_DEPLOYMENT`
 

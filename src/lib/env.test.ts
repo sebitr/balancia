@@ -290,11 +290,6 @@ describe("environment validation", () => {
       expect(env.METRICS_TOKEN).toBeUndefined();
     });
 
-    it("defaults to the project's collector", () => {
-      const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
-      expect(env.TELEMETRY_ENDPOINT).toBe("https://telemetry.balancia.app");
-    });
-
     it("accepts each mode and refuses anything else", () => {
       for (const TELEMETRY_MODE of ["opt-in", "local", "off"]) {
         expect(
@@ -313,32 +308,17 @@ describe("environment validation", () => {
       ).toThrow(/TELEMETRY_MODE/);
     });
 
-    it("lets a fork redirect its installations", () => {
+    it("offers no way to say where reports go", () => {
+      // The destination is a constant, not a setting: an address that could be
+      // set here would make every claim in docs/telemetry.md conditional on
+      // nobody having set it. `endpoint.test.ts` holds the constant itself.
+      expect(ENV_VARIABLE_NAMES).not.toContain("TELEMETRY_ENDPOINT");
+
       const env = parseEnv({
         ...base,
-        TELEMETRY_ENDPOINT: "https://telemetry.example.org/collect",
+        TELEMETRY_ENDPOINT: "https://collector.example.org",
       } as unknown as NodeJS.ProcessEnv);
-      expect(env.TELEMETRY_ENDPOINT).toBe(
-        "https://telemetry.example.org/collect",
-      );
-    });
-
-    it("refuses to send reports over plain HTTP", () => {
-      expect(() =>
-        parseEnv({
-          ...base,
-          TELEMETRY_ENDPOINT: "http://telemetry.example.org",
-        } as unknown as NodeJS.ProcessEnv),
-      ).toThrow(/not HTTPS/);
-    });
-
-    it("allows a localhost endpoint, so a collector can be developed against", () => {
-      expect(() =>
-        parseEnv({
-          ...base,
-          TELEMETRY_ENDPOINT: "http://localhost:3000/api/telemetry",
-        } as unknown as NodeJS.ProcessEnv),
-      ).not.toThrow();
+      expect(env).not.toHaveProperty("TELEMETRY_ENDPOINT");
     });
 
     it("accepts an empty deployment label rather than failing to boot", () => {
@@ -430,6 +410,65 @@ describe("configuration reaches the containers", () => {
       unknown,
       "compose.yaml forwards variables nothing reads; delete them or add them to the schema",
     ).toEqual([]);
+  });
+});
+
+/**
+ * The wizard, read as text: the list it counts with, and the blocks it asks.
+ *
+ * Every question is written the same way — the guard that decides whether to
+ * ask, and the heading on the line after it — so the two can be paired without
+ * running the script.
+ */
+function bootstrapQuestions(): { counted: string[]; asked: string[] } {
+  const source = readFileSync(
+    path.join(process.cwd(), "scripts", "bootstrap.sh"),
+    "utf8",
+  );
+
+  const list = /^question_keys='([^']*)'/m.exec(source);
+  expect(list, "scripts/bootstrap.sh should define question_keys").not.toBe(
+    null,
+  );
+
+  return {
+    counted: list![1].split(/\s+/).filter(Boolean),
+    asked: [
+      ...source.matchAll(
+        /if ! has_value ([A-Z][A-Z0-9_]*); then\n\s*question /g,
+      ),
+    ].map((match) => match[1]),
+  };
+}
+
+describe("the setup wizard", () => {
+  /**
+   * `question_keys` exists only so the prompts can say "3 of 7", which means
+   * it is the one part of a new question that nothing else needs — and so the
+   * part that gets left behind. The symptom is small and entirely in front of
+   * the operator: a wizard that counts to 9/7 and asks two questions after it
+   * claimed to be finished.
+   */
+  it("counts the questions it actually asks", () => {
+    const { counted, asked } = bootstrapQuestions();
+
+    expect(
+      asked,
+      "question_keys and the question blocks have drifted apart; the numbering " +
+        "in the prompts is taken from the list, not from the blocks",
+    ).toEqual(counted);
+  });
+
+  /**
+   * A key here that the schema does not accept is a question whose answer is
+   * written into `.env` and then ignored — and `has_value` would never match
+   * it, so it would be asked again on every single run.
+   */
+  it("asks about settings that exist", () => {
+    const { counted } = bootstrapQuestions();
+    const known = new Set<string>(ENV_VARIABLE_NAMES);
+
+    expect(counted.filter((key) => !known.has(key))).toEqual([]);
   });
 });
 

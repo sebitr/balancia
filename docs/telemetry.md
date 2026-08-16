@@ -253,11 +253,12 @@ It is off. If somebody switched it on:
   refusing to move.
 
 - **At the network**, if you trust nothing in this repository: Balancia's only
-  outbound connections are to `TELEMETRY_ENDPOINT` (never, unless opted in),
-  your SMTP server, the browser vendors' push services, an exchange-rate
+  outbound connections are to `telemetry.balancia.app` (never, unless opted
+  in), your SMTP server, the browser vendors' push services, an exchange-rate
   provider, and a receipt-OCR provider if you configured one — each of them
   switched on by you. A default-deny egress policy leaves the application
-  working.
+  working, and blocking that one host is enough to be certain about telemetry
+  whatever the settings say.
 
 ---
 
@@ -267,12 +268,19 @@ See [Environment reference](environment.md#telemetry) for the full text of each
 variable.
 
 ```bash
-TELEMETRY_MODE=opt-in                              # opt-in | local | off
-TELEMETRY_CRASH_REPORTS=true                       # may an admin enable them
-TELEMETRY_ENDPOINT=https://telemetry.balancia.app  # deployment-level only
-TELEMETRY_DEPLOYMENT=docker-compose                # optional label
-TELEMETRY_RECEIVER=false                           # run the collector
+TELEMETRY_MODE=opt-in            # opt-in | local | off
+TELEMETRY_CRASH_REPORTS=true     # may an admin enable them
+TELEMETRY_DEPLOYMENT=docker-compose  # optional label
+TELEMETRY_RECEIVER=false         # run the collector
 ```
+
+**There is no endpoint setting.** The destination is the constant
+`https://telemetry.balancia.app` in `src/lib/telemetry/endpoint.ts`.
+Configuration decides whether anything is sent, never to whom — an address
+that could be set from a form or an environment file would be a
+request-forgery lever pointed at your own network, and it would make every
+statement in this document conditional on nobody having changed it. A fork
+edits that line (§14).
 
 **Precedence, in one sentence:** the environment can only ever subtract, so
 effective = (deployment allows) AND (administrator enabled), and the
@@ -282,6 +290,13 @@ administrator's half defaults to false.
 server and the preview works, and nothing is ever transmitted. It is what the
 development stack uses, and what an operator who wants the numbers for
 themselves can use.
+
+`scripts/bootstrap.sh` asks for `TELEMETRY_MODE` on a first run, and the
+question is worded to say what it is: one that cannot switch a feature on. Yes
+writes `opt-in` and leaves the administrator the choice; no writes `off` and
+takes it away. It is asked rather than defaulted silently because an operator
+who is never told the feature exists has not consented to anything — the
+question is the disclosure, and the default it writes sends nothing either way.
 
 ---
 
@@ -397,6 +412,13 @@ Protect it: the app's port is published by `compose.yaml`, so set
 matching `Authorization: Bearer` are refused when the token is set; with
 metrics off, the route answers 404.
 
+`scripts/bootstrap.sh` asks about this one too, defaulting to no, and generates
+a token when the answer is yes. Because `METRICS_ENABLED` is more often set by
+hand afterwards than answered in the wizard, a re-run also checks for the
+combination the schema has to allow but rarely means — metrics on, token empty
+— and offers to generate one. Declining is a valid answer, and the only one
+that is right when the port is on a private network.
+
 Balancia does not ship an OpenTelemetry exporter. An operator who runs a
 collector can scrape this endpoint, or add an exporter in a fork — but nothing
 in a default installation talks to an observability backend, and adding an SDK
@@ -408,11 +430,14 @@ that could would have made this document's first paragraph harder to say.
 
 An opted-in instance makes exactly these requests, and no others:
 
-| When                                             | Request                               |
-| ------------------------------------------------ | ------------------------------------- |
-| Weekly, if usage statistics are on               | `POST {TELEMETRY_ENDPOINT}/v1/report` |
-| On an error, if crash reports are on, throttled  | `POST {TELEMETRY_ENDPOINT}/v1/crash`  |
-| When an administrator presses "send test report" | `POST {TELEMETRY_ENDPOINT}/v1/report` |
+| When                                             | Request                                         |
+| ------------------------------------------------ | ----------------------------------------------- |
+| Weekly, if usage statistics are on               | `POST https://telemetry.balancia.app/v1/report` |
+| On an error, if crash reports are on, throttled  | `POST https://telemetry.balancia.app/v1/crash`  |
+| When an administrator presses "send test report" | `POST https://telemetry.balancia.app/v1/report` |
+
+One host, compiled in, no setting that changes it — so this table is the whole
+of what an opted-in instance can reach, and it stays true without a caveat.
 
 `Content-Type: application/json`. Five-second timeout. **No retries** — a
 failed weekly report is simply not sent, and the next one is a week away; a
@@ -478,14 +503,19 @@ upgrades, and telemetry must never be the reason one starts failing.
 
 Balancia is AGPL-3.0-or-later, and this was built to be easy to change.
 
-**Redirect it** — one variable, no code:
+**Redirect it** — one line, in `src/lib/telemetry/endpoint.ts`:
 
-```bash
-TELEMETRY_ENDPOINT=https://telemetry.example.org
+```ts
+export const TELEMETRY_ENDPOINT = "https://telemetry.example.org";
 ```
 
+Deliberately a constant rather than a setting. A fork is building from source
+anyway, so nothing is lost by refusing to make it a runtime option — and what
+is gained is that the upstream promises above hold without "…unless somebody
+changed it" attached to each one.
+
 **Collect it yourself** — run a Balancia instance with `TELEMETRY_RECEIVER=true`
-and point your installations at it. The collector is the same image.
+and point that constant at it. The collector is the same image.
 
 **Disable it for every installation of your fork** — ship
 `TELEMETRY_MODE=off`, or change the default in `src/lib/env.ts`. One line, and
