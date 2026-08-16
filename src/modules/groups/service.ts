@@ -459,6 +459,20 @@ export async function addParticipant(
   });
 }
 
+/**
+ * Renames a participant, and sets the email a placeholder can be reached at.
+ *
+ * Once someone has an account, both of those stop being the group's business.
+ * Their name is their own — nobody else in the group gets to relabel a real
+ * person — and their email is the address they sign in with, which lives in
+ * their account and nowhere else. So an account holder's row is editable by
+ * exactly one person, themselves, and only the display name they carry inside
+ * this group moves; `input.email` is dropped on the floor rather than written.
+ *
+ * A row with no account behind it is the opposite case: it is a label someone
+ * typed for a person who is not on the app, and whoever manages participants
+ * owns both halves of it.
+ */
 export async function updateParticipant(
   access: GroupAccess,
   participantId: string,
@@ -469,11 +483,37 @@ export async function updateParticipant(
   const db = options.db ?? getDb();
 
   await db.transaction(async (tx) => {
+    const [target] = await tx
+      .select({ userId: participants.userId })
+      .from(participants)
+      .where(
+        and(
+          eq(participants.id, participantId),
+          eq(participants.groupId, access.groupId),
+        ),
+      )
+      .limit(1);
+
+    if (!target) {
+      throw new AuthorizationError(
+        "That participant is not part of this group.",
+        "notInGroup",
+      );
+    }
+
+    const hasAccount = target.userId !== null;
+    if (hasAccount && participantId !== access.participantId) {
+      throw new AuthorizationError(
+        "Only they can change the name and email on their own account.",
+        "notYourAccount",
+      );
+    }
+
     const updated = await tx
       .update(participants)
       .set({
         displayName: input.displayName,
-        email: input.email || null,
+        ...(hasAccount ? {} : { email: input.email || null }),
         updatedAt: new Date(),
       })
       // Scoped by group: a participant ID from another group updates nothing.
@@ -512,7 +552,7 @@ export async function removeParticipant(
   participantId: string,
   options: { db?: Database } = {},
 ): Promise<void> {
-  requirePermission(access, "manageParticipants");
+  requirePermission(access, "removeParticipants");
   const db = options.db ?? getDb();
 
   await db.transaction(async (tx) => {
@@ -616,7 +656,7 @@ export async function restoreParticipant(
   participantId: string,
   options: { db?: Database } = {},
 ): Promise<void> {
-  requirePermission(access, "manageParticipants");
+  requirePermission(access, "removeParticipants");
   const db = options.db ?? getDb();
 
   await db.transaction(async (tx) => {

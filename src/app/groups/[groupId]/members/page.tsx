@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { PeopleCard, type PersonView } from "@/components/members/people-card";
+import { inReadingOrder } from "@/components/members/reading-order";
 import { requireGroupAccess } from "@/lib/actions";
 import { loadGroupBalances } from "@/modules/balances/service";
 import {
@@ -65,7 +66,7 @@ export default async function MembersPage({
     }
   }
 
-  const people: PersonView[] = participants.map((participant) => ({
+  const unordered: PersonView[] = participants.map((participant) => ({
     id: participant.id,
     name: participant.displayName,
     email: participant.email ?? "",
@@ -83,7 +84,24 @@ export default async function MembersPage({
     balances: outstanding.get(participant.id) ?? [],
   }));
 
-  const t = await getTranslations("membersPage");
+  const [t, locale] = await Promise.all([
+    getTranslations("membersPage"),
+    getLocale(),
+  ]);
+  const people = inReadingOrder(unordered, access.participantId, locale);
+
+  /*
+   * The intro promises whatever this reader can actually do, which is three
+   * different sentences: the owner renames, invites and removes; a member fixes
+   * names and is told who to ask about the rest; a guest is reading a list.
+   * Promising all three to everyone would have two thirds of the group tapping
+   * rows to find out the offer was not theirs.
+   */
+  const intro = access.permissions.manageInvitations
+    ? "intro"
+    : access.permissions.manageParticipants
+      ? "introMember"
+      : "introReadOnly";
 
   return (
     <div className="flex flex-col gap-[18px]">
@@ -91,15 +109,17 @@ export default async function MembersPage({
         <h1 className="font-heading text-[1.6875rem] leading-[1.15] font-semibold tracking-[-0.025em]">
           {t("title")}
         </h1>
-        <p className="text-pretty text-muted-foreground">{t("intro")}</p>
+        <p className="text-pretty text-muted-foreground">{t(intro)}</p>
         <Summary people={people} />
       </div>
 
       <PeopleCard
         groupId={access.groupId}
         people={people}
+        viewerId={access.participantId}
         canManage={access.permissions.manageParticipants}
         canInvite={access.permissions.manageInvitations}
+        canRemove={access.permissions.removeParticipants}
       />
 
       <p className="text-xs text-pretty text-muted-foreground">
