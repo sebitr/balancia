@@ -6,6 +6,7 @@ import { Camera, ImageIcon, Loader2, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -19,11 +20,12 @@ import {
 import { formatMinorUnits } from "@/components/expenses/expense-form-logic";
 import { uploadReceipt } from "@/components/expenses/upload-receipt";
 import {
-  ReceiptScanner,
+  createReader,
   ScanError,
+  type ReaderKind,
+  type ReceiptReader,
   type ScanProgress,
-} from "@/lib/ocr/scanner";
-import { parseReceipt } from "@/modules/receipts";
+} from "@/lib/ocr/reader";
 import {
   assignReceipt,
   type ItemAssignment,
@@ -93,8 +95,14 @@ export function ScanReceiptDialog({
   defaultCurrency,
   onApply,
   trigger,
+  localAvailable,
+  provider,
 }: {
   groupId: string;
+  /** Whether the on-device reader can run here. */
+  localAvailable: boolean;
+  /** The configured server-side reader, named, or undefined for none. */
+  provider?: string;
   participants: readonly Participant[];
   defaultCurrency: string;
   onApply: (result: ScannedExpense) => void;
@@ -118,7 +126,18 @@ export function ScanReceiptDialog({
   const [keepImage, setKeepImage] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  const scannerRef = useRef<ReceiptScanner | null>(null);
+  /**
+   * Which reader to use.
+   *
+   * On this device wherever that is possible, because it is the only reader
+   * that promises the photograph goes nowhere. An instance with no models
+   * installed has only the provider, and starts on it.
+   */
+  const [readerKind, setReaderKind] = useState<ReaderKind>(
+    localAvailable ? "local" : "remote",
+  );
+
+  const readerRef = useRef<ReceiptReader | null>(null);
   const fileRef = useRef<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   /** Whether what was scanned was a document rather than a photograph. */
@@ -128,8 +147,8 @@ export function ScanReceiptDialog({
 
   /** Two ONNX sessions are hundreds of megabytes; do not keep them around. */
   const release = useCallback(() => {
-    scannerRef.current?.dispose();
-    scannerRef.current = null;
+    readerRef.current?.dispose();
+    readerRef.current = null;
     setImageUrl((current) => {
       if (current) URL.revokeObjectURL(current);
       return null;
@@ -176,6 +195,8 @@ export function ScanReceiptDialog({
         return t("errors.pdf");
       case "timeout":
         return t("errors.timeout");
+      case "provider":
+        return t("errors.provider");
       default:
         return t("errors.runtime");
     }
@@ -211,13 +232,16 @@ export function ScanReceiptDialog({
       return url;
     });
 
-    scannerRef.current ??= new ReceiptScanner();
+    // A reader is built per scan rather than per dialog: switching between
+    // them mid-session has to release whatever the last one was holding.
+    readerRef.current?.dispose();
+    readerRef.current = createReader(readerKind, {
+      groupId,
+      fallbackCurrency: defaultCurrency,
+    });
 
     try {
-      const result = await scannerRef.current.scan(file, setProgress);
-      const parsed = parseReceipt(result, {
-        fallbackCurrency: defaultCurrency,
-      });
+      const parsed = await readerRef.current.read(file, setProgress);
 
       if (parsed.items.length === 0 && parsed.total === undefined) {
         // Advice about framing and light is no help to someone holding a PDF.
@@ -351,13 +375,43 @@ export function ScanReceiptDialog({
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
-            <DialogDescription>{t("onDevice")}</DialogDescription>
+            <DialogDescription>
+              {readerKind === "local"
+                ? t("onDevice")
+                : t("reader.remoteExplain", { provider: provider ?? "" })}
+            </DialogDescription>
           </DialogHeader>
 
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
+          )}
+
+          {/*
+           * The choice, offered only where there is one. An instance with a
+           * provider and no models has nothing to ask about, and the header
+           * above has already said where the photograph is going.
+           */}
+          {step === "capture" && localAvailable && provider !== undefined && (
+            <RadioGroup
+              value={readerKind}
+              onValueChange={(value) => setReaderKind(value as ReaderKind)}
+              className="gap-2"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="local" id="reader-local" />
+                <Label htmlFor="reader-local" className="font-normal">
+                  {t("reader.local")}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="remote" id="reader-remote" />
+                <Label htmlFor="reader-remote" className="font-normal">
+                  {t("reader.remote", { provider })}
+                </Label>
+              </div>
+            </RadioGroup>
           )}
 
           {step === "capture" && (

@@ -417,12 +417,15 @@ See [Categorization](categorization.md) for the whole design.
 `0` (default) | `1`.
 
 Reads a photographed receipt into an expense — merchant, date, line items and
-total — which you then correct and assign to people. Recognition runs in the
-_browser_, against model files served by your instance: the image is never
-uploaded to be read, and no third-party OCR service is involved.
+total — which you then correct and assign to people. This switch turns the
+feature on; `RECEIPT_OCR_LOCAL` and `RECEIPT_OCR_PROVIDER` below decide _how_ a
+receipt is read, and at least one of them has to be usable or the instance
+refuses to start.
 
-Off by default for the same two reasons as the semantic model, and neither of
-them is privacy:
+The on-device reader is the default. It runs in the _browser_ against model
+files served by your instance: the image is never uploaded to be read, and no
+third-party service is involved. It is off by default for the same two reasons
+as the semantic model, and neither of them is privacy:
 
 - it needs `'wasm-unsafe-eval'` in the Content-Security-Policy. Setting either
   this or `SEMANTIC_CATEGORIZATION` to `1` adds it, once.
@@ -436,6 +439,78 @@ RECEIPT_SCANNING=true
 With the variable set but the files missing, the browser makes one `HEAD`
 request, finds nothing, and no scan button is rendered. The expense form is
 unchanged.
+
+### `RECEIPT_OCR_LOCAL`
+
+`1` (default) | `0`.
+
+The on-device reader. Leaving it on is the behaviour receipt scanning has
+always had. Turn it off on an instance that reads only through a provider:
+nothing is downloaded, and the Content-Security-Policy stays strict, because
+`'wasm-unsafe-eval'` is granted for a reader that actually runs rather than for
+a feature that is enabled.
+
+Setting this to `0` with `RECEIPT_OCR_PROVIDER=none` while `RECEIPT_SCANNING=1`
+is refused at boot — that is a scan button with nothing behind it.
+
+One consequence of the strict policy: pdf.js compiles WebAssembly for JBIG2 and
+JPEG 2000 images, which a few document scanners emit, so a PDF containing one
+cannot be drawn on a provider-only instance. Reading a PDF's _text_ needs no
+codec, so emailed invoices — the common case — are unaffected. Set this back to
+`1` if your receipts arrive as JBIG2 scans.
+
+### `RECEIPT_OCR_PROVIDER`
+
+`none` (default) | `anthropic` | `openai` | `gemini` | `mistral`.
+
+An optional server-side reader. Not a replacement for the on-device one, which
+since PP-OCRv6 tiny reads an ordinary receipt well and costs nothing per scan;
+this is for what a 6 MB model cannot do — handwriting, unusual layouts, scripts
+outside its dictionary — and for getting structure back rather than text a
+parser has to interpret. **Your server** makes the call, never the browser, so
+the credential stays here and the page's `connect-src 'self'` is untouched.
+
+A PDF is never sent: the browser reads its text layer when it has one and draws
+its first page when it does not, so what reaches the provider is always an
+image. A text PDF is therefore answered on the device even when a provider is
+selected — exact, and free.
+
+`openai` is the driver for the protocol rather than the vendor: with
+`RECEIPT_OCR_BASE_URL` pointed at Ollama, vLLM or LM Studio it runs a vision
+model on your own hardware and the image never leaves it. On current
+open-weight document models that is also the most accurate and by far the
+cheapest option — see the comparison in docs/receipt-scanning.md.
+
+`mistral` is a purpose-built document endpoint priced per page rather than per
+token, which makes the bill predictable. It has two generations in service at
+$4 and $2 per 1,000 pages; the default tracks the newer, dearer one, and the
+newer features are aimed at invoices and forms rather than receipts. See
+docs/receipt-scanning.md.
+
+The image is held in memory for the length of the call and never written to
+storage. Keeping the photograph with the expense is the separate checkbox it
+always was.
+
+### `RECEIPT_OCR_API_KEY`
+
+Required when a provider is set, unless `RECEIPT_OCR_BASE_URL` is also set — a
+local endpoint usually wants no key, and an empty bearer is worse than none.
+
+### `RECEIPT_OCR_BASE_URL`
+
+Endpoint override. Anything speaking the provider's protocol, including your
+own server.
+
+### `RECEIPT_OCR_MODEL`
+
+**Required** for `openai` and `gemini`. Defaulted for `anthropic`
+(`claude-opus-5`) and `mistral` (`mistral-ocr-latest`). The other two have no
+default on purpose: model
+names on those endpoints belong to whoever serves them, and a constant baked
+in here would eventually be a 404 at your first scan instead of an error at
+boot. Set a cheaper model here if the default costs more than a scan is worth
+to you — `claude-opus-5` is in the most expensive band of the options compared
+in docs/receipt-scanning.md.
 
 Note that this and `SEMANTIC_CATEGORIZATION` install _different_ onnxruntime
 WebAssembly binaries, which are not interchangeable; enabling both costs about

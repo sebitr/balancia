@@ -499,6 +499,10 @@ const READ_AS_DERIVED_FIELD: Readonly<Record<string, string>> = {
   // survives only in prose.
   SEMANTIC_CATEGORIZATION: "isSemanticCategorizationEnabled",
   RECEIPT_SCANNING: "isReceiptScanningEnabled",
+  // Same again: `proxy.ts` needs it per request to decide whether the CSP has
+  // to allow WebAssembly, so it is read through an accessor rather than off
+  // the parsed object.
+  RECEIPT_OCR_LOCAL: "isLocalReceiptOcrEnabled",
 };
 
 /**

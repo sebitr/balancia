@@ -253,9 +253,10 @@ It is off. If somebody switched it on:
 
 - **At the network**, if you trust nothing in this repository: Balancia's only
   outbound connections are to `TELEMETRY_ENDPOINT` (never, unless opted in),
-  your SMTP server, the browser vendors' push services, and an exchange-rate
-  provider — each configured by you. A default-deny egress policy leaves the
-  application working.
+  your SMTP server, the browser vendors' push services, an exchange-rate
+  provider, and a receipt-OCR provider if you configured one — each of them
+  switched on by you. A default-deny egress policy leaves the application
+  working.
 
 ---
 

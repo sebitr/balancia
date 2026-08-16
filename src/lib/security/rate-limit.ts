@@ -26,6 +26,7 @@ export type RateLimitBucket =
   | "guestRedeem"
   | "passwordReset"
   | "upload"
+  | "receiptScan"
   | "rateLookup"
   | "pushSubscribe"
   | "pushTest"
@@ -50,6 +51,10 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     passwordReset: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     guestRedeem: { limit: 20, windowSeconds: 600 },
     upload: { limit: 60, windowSeconds: 600 },
+    // Tighter than `upload`, because each one is an outbound call the
+    // operator is billed for. Enough to scan a dinner's worth of receipts and
+    // retry the ones that came out wrong; not enough to run up a bill.
+    receiptScan: { limit: 20, windowSeconds: 600 },
     // Generous: a form re-asks whenever the currency or date changes, and the
     // answers are cached, so this only has to stop outright abuse.
     rateLookup: { limit: 240, windowSeconds: 600 },

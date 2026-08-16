@@ -63,6 +63,14 @@ x-dev-environment: &dev-environment
   # `pnpm ocr:install` on the host is enough — unlike the production stack,
   # which needs the models mounted or baked into the image.
   RECEIPT_SCANNING: ${DEV_RECEIPT_SCANNING:-false}
+  # Which reader: the browser one by default, a provider instead or as well.
+  # Handy here for pointing at a vision model running on the host —
+  # DEV_RECEIPT_OCR_BASE_URL=http://host.docker.internal:11434/v1
+  RECEIPT_OCR_LOCAL: ${DEV_RECEIPT_OCR_LOCAL:-true}
+  RECEIPT_OCR_PROVIDER: ${DEV_RECEIPT_OCR_PROVIDER:-none}
+  RECEIPT_OCR_API_KEY: ${DEV_RECEIPT_OCR_API_KEY:-}
+  RECEIPT_OCR_BASE_URL: ${DEV_RECEIPT_OCR_BASE_URL:-}
+  RECEIPT_OCR_MODEL: ${DEV_RECEIPT_OCR_MODEL:-}
   # Sign in with Apple. Unset by default; setting these also means setting
   # DEV_APP_URL, because the schema refuses the combination of Apple sign-in
   # and a localhost APP_URL that Apple would never redirect to.

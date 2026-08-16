@@ -10,9 +10,15 @@ import { BalanceList } from "@/components/groups/balance-list";
 import { PositionCard } from "@/components/groups/position-card";
 import { StatStrip } from "@/components/groups/stat-strip";
 import { SinceLastOpened } from "@/components/activity/since-last-opened";
+import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
 import { requireGroupAccess } from "@/lib/actions";
 import { listGroupActivity } from "@/modules/activity/service";
-import { loadGroupOverview, markGroupOpened } from "@/modules/groups/overview";
+import { countContributions } from "@/modules/guests/service";
+import {
+  loadGroupOverview,
+  markGroupOpened,
+  type CurrencyPosition,
+} from "@/modules/groups/overview";
 import { listRemindRecipients } from "@/modules/reminders/service";
 import { PUSH } from "@/components/motion/transitions";
 
@@ -31,17 +37,48 @@ const BALANCE_ROWS = 5;
 /** Four is enough to say "this moved"; the full history is a tap away. */
 const ACTIVITY_ROWS = 4;
 
+/**
+ * The position the guest widget names.
+ *
+ * That widget puts one amount inside a sentence, so a group kept in several
+ * currencies has to pick: the largest, which is the one worth losing sleep
+ * over. Null when there is nothing to name yet.
+ */
+function strongestPosition(
+  positions: readonly CurrencyPosition[],
+): CurrencyPosition | null {
+  const magnitude = (value: bigint) => (value < 0n ? -value : value);
+  let strongest: CurrencyPosition | null = null;
+  for (const position of positions) {
+    if (
+      !strongest ||
+      magnitude(position.amount) > magnitude(strongest.amount)
+    ) {
+      strongest = position;
+    }
+  }
+  return strongest;
+}
+
 export default async function GroupOverviewPage({
   params,
 }: PageProps<"/groups/[groupId]">) {
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [overview, activity, recipients] = await Promise.all([
-    loadGroupOverview(access),
-    listGroupActivity(access.groupId, { limit: ACTIVITY_ROWS }),
-    listRemindRecipients(access),
-  ]);
+  const isGuest = access.role === "guest";
+
+  const [overview, activity, recipients, contributionCount] = await Promise.all(
+    [
+      loadGroupOverview(access),
+      listGroupActivity(access.groupId, { limit: ACTIVITY_ROWS }),
+      listRemindRecipients(access),
+      // Only the guest widget names this number, so only a guest pays for it.
+      isGuest && access.participantId
+        ? countContributions(access.participantId)
+        : Promise.resolve(0),
+    ],
+  );
 
   const t = await getTranslations("group");
   const dates = await getDateFormatter();
@@ -57,6 +94,7 @@ export default async function GroupOverviewPage({
   }
 
   const empty = overview.expenseCount === 0;
+  const guestPosition = isGuest ? strongestPosition(overview.positions) : null;
 
   const meta = [
     t("metaPeople", { count: overview.participantCount }),
@@ -86,9 +124,7 @@ export default async function GroupOverviewPage({
           {access.group.archivedAt && (
             <Badge variant="secondary">{t("archived")}</Badge>
           )}
-          {access.role === "guest" && (
-            <Badge variant="outline">{t("guest")}</Badge>
-          )}
+          {isGuest && <Badge variant="outline">{t("guest")}</Badge>}
         </div>
         {/* Who is in it, how much is in it, and how long it has been running —
             the line that replaced an avatar stack, because it survives a group
@@ -206,6 +242,23 @@ export default async function GroupOverviewPage({
           lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
           groupId={groupId}
           now={now.toISOString()}
+        />
+      )}
+
+      {/* Last, and only for a guest: what they would lose by closing this
+          browser is the note to leave them on, not the one to open with. */}
+      {isGuest && (
+        <GuestAccountWidget
+          groupName={access.group.name}
+          balance={
+            guestPosition
+              ? {
+                  minorUnits: guestPosition.amount.toString(),
+                  currency: guestPosition.currency,
+                }
+              : null
+          }
+          contributionCount={contributionCount}
         />
       )}
     </div>

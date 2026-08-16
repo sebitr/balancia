@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
-  GUEST_COOKIE_NAME,
   InvalidInvitationError,
   redeemInvitation,
 } from "@/lib/security/guest-session";
+import { setGuestCookie } from "@/modules/auth/cookies";
 import { getDb } from "@/lib/db/client";
 import { recordActivity } from "@/modules/activity/service";
 import { getEnv } from "@/lib/env";
@@ -20,7 +19,7 @@ import { logger } from "@/lib/logger";
  *   1. Rate limit by client IP, so a link cannot be brute-forced.
  *   2. Exchange the invitation token for a guest session token.
  *   3. Set the session as an HttpOnly cookie.
- *   4. Redirect (303) to the group URL, which contains no token.
+ *   4. Redirect (303) to the invite screen, which contains no token.
  *
  * After the redirect the invitation token is not in the address bar, not in
  * history, and not in any referrer sent to a third party. It is never logged:
@@ -55,14 +54,7 @@ export async function GET(
       actorLabel: redeemed.context.displayName,
     });
 
-    const cookieStore = await cookies();
-    cookieStore.set(GUEST_COOKIE_NAME, redeemed.token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: env.appOrigin.startsWith("https://"),
-      path: "/",
-      expires: redeemed.expiresAt,
-    });
+    await setGuestCookie(redeemed.token, redeemed.expiresAt);
 
     logger.info(
       {
@@ -72,11 +64,12 @@ export async function GET(
       "Guest invitation redeemed",
     );
 
-    // 303 so the browser issues a fresh GET to a token-free URL.
-    return NextResponse.redirect(
-      new URL(`/groups/${redeemed.context.groupId}`, env.appOrigin),
-      { status: 303 },
-    );
+    // 303 so the browser issues a fresh GET to a token-free URL. That URL is
+    // the invite screen rather than the group: it is the first thing the guest
+    // sees, and it reads the session from the cookie, so the token stops here.
+    return NextResponse.redirect(new URL("/invite", env.appOrigin), {
+      status: 303,
+    });
   } catch (error) {
     if (error instanceof InvalidInvitationError) {
       return NextResponse.redirect(
