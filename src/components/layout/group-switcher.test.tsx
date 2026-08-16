@@ -82,16 +82,16 @@ async function openPanel() {
 }
 
 describe("GroupSwitcher", () => {
-  it("gives a member the way out and the way sideways", () => {
+  it("puts the way out and the way sideways behind the name alone", () => {
     renderHeader();
 
-    const back = screen.getByRole("link", { name: "Back to dashboard" });
-    expect(back).toHaveAttribute("href", "/dashboard");
-    // Leaving a group is a move back up, not a move deeper.
-    expect(back).toHaveAttribute("data-transition", "pop");
     expect(
       screen.getByRole("button", { name: "Annecy weekend" }),
     ).toBeInTheDocument();
+    // No back arrow beside it: the header holds one control, so the name can
+    // start on the same edge as the screen below. Leaving happens in the panel
+    // — covered below, along with the direction it travels in.
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("leaves a guest the name alone, with nothing to reach", () => {

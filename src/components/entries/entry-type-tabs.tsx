@@ -13,9 +13,10 @@ import type { EntryType } from "./entry-logic";
  * who picked the wrong one should be able to fix it without losing what they
  * already typed.
  *
- * The active ring is coloured per type — coral for spending, green for money
- * in, plain white for a repayment — so the amount below is never the first
- * place you learn which mode you are in.
+ * The selected tab is a filled pill and nothing more. It used to carry a ring
+ * coloured per type as well, which drew a second edge a millimetre inside the
+ * first and read as a seam rather than as emphasis; the fill and the weight
+ * already say which of three it is.
  *
  * Its corners are derived rather than eyeballed: a rounded box inset by `p`
  * inside another only looks concentric when the inner radius is the outer one
@@ -23,12 +24,6 @@ import type { EntryType } from "./entry-logic";
  */
 
 const TYPES: readonly EntryType[] = ["expense", "income", "settle"];
-
-const ACTIVE_RING: Record<EntryType, string> = {
-  expense: "shadow-[inset_0_0_0_1px] shadow-primary/50",
-  income: "shadow-[inset_0_0_0_1px] shadow-positive/50",
-  settle: "shadow-[inset_0_0_0_1px] shadow-white/20",
-};
 
 export function EntryTypeTabs({
   value,
@@ -57,10 +52,7 @@ export function EntryTypeTabs({
             className={cn(
               "h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",
               active
-                ? cn(
-                    "bg-accent font-semibold text-foreground",
-                    ACTIVE_RING[type],
-                  )
+                ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground",
             )}
           >
