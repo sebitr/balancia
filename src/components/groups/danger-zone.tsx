@@ -75,21 +75,24 @@ export function DangerZone({
   };
 
   return (
-    <Card className="border-destructive/30">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{t("title")}</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("title")}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+      {/* Each row explains itself on the left and acts on the right. Nothing
+          here is destructive to look at — only the one button that is. */}
+      <CardContent className="flex flex-col gap-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-sm font-medium">
               {archived ? t("restoreTitle") : t("archiveTitle")}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
               {archived ? t("restoreBody") : t("archiveBody")}
             </p>
           </div>
           <Button
+            className="shrink-0"
             variant="outline"
             size="sm"
             onClick={() => void onToggleArchive()}
@@ -106,14 +109,16 @@ export function DangerZone({
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <div>
+        <div className="flex items-start justify-between gap-3 border-t pt-3.5">
+          <div className="min-w-0">
             <p className="text-sm font-medium">{t("deleteTitle")}</p>
-            <p className="text-sm text-muted-foreground">{t("deleteBody")}</p>
+            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
+              {t("deleteBody")}
+            </p>
           </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
+              <Button variant="destructive" size="sm" className="shrink-0">
                 <Trash2 aria-hidden="true" />
                 {t("delete")}
               </Button>

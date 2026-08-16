@@ -134,6 +134,41 @@ export async function listGroupsForUser(
   return rows;
 }
 
+/** What a group calls itself: the fields its settings screen edits. */
+export interface GroupProfile {
+  readonly name: string;
+  readonly description: string | null;
+  readonly icon: string | null;
+  readonly iconColor: string | null;
+}
+
+/**
+ * The group's own description of itself, for the screen that edits it.
+ *
+ * `GroupAccess` deliberately does not carry these: it is resolved on every
+ * authorized request in the app, and three columns nobody else reads have no
+ * business being fetched for all of them. The caller has already authorized
+ * the group — this only reads it.
+ */
+export async function getGroupProfile(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<GroupProfile | null> {
+  const db = options.db ?? getDb();
+  const [group] = await db
+    .select({
+      name: groups.name,
+      description: groups.description,
+      icon: groups.icon,
+      iconColor: groups.iconColor,
+    })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+
+  return group ?? null;
+}
+
 export interface CreatedGroup {
   readonly id: string;
   readonly participantId: string;
