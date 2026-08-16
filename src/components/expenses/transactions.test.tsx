@@ -151,8 +151,8 @@ const ROWS: RowView[] = [
   }),
 ];
 
-function renderList(rows: readonly RowView[] = ROWS) {
-  window.history.replaceState(null, "", "/groups/g1/expenses");
+function renderList(rows: readonly RowView[] = ROWS, search = "") {
+  window.history.replaceState(null, "", `/groups/g1/expenses${search}`);
   return renderWithIntl(
     <Transactions
       groupId="g1"
@@ -168,6 +168,9 @@ function renderList(rows: readonly RowView[] = ROWS) {
 
 const band = (name: string) =>
   screen.getByRole("button", { name: `Show only ${name}` });
+
+/** A kind chip, named by the label it wears. */
+const kind = (name: string) => screen.getByRole("button", { name });
 
 /**
  * The headline figure, scoped to the hero.
@@ -326,6 +329,79 @@ describe("Transactions", () => {
       within(band("Restaurants & Drinks")).getByText("5.8%"),
     ).toBeInTheDocument();
   });
+
+  it("holds several kinds at once rather than swapping between them", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(kind("Expenses"));
+    await user.click(kind("Settlements"));
+
+    expect(kind("Expenses")).toHaveAttribute("aria-pressed", "true");
+    expect(kind("Settlements")).toHaveAttribute("aria-pressed", "true");
+    // Spending and the repayment stand together; the revenue row is the one
+    // left out, which is what proves the pair filters rather than clears.
+    expect(screen.getByText("Seb paid Padi")).toBeVisible();
+    expect(screen.getByText("airbnb")).toBeVisible();
+    expect(screen.queryByText("Airbnb refund")).not.toBeInTheDocument();
+    expect(window.location.search).toBe("?kind=expense&kind=settlement");
+  });
+
+  it("returns to everything when the last kind is switched back off", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(kind("Revenue"));
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("Airbnb refund")).toBeVisible();
+
+    await user.click(kind("Revenue"));
+    expect(screen.getAllByRole("listitem")).toHaveLength(ROWS.length);
+    expect(window.location.search).toBe("");
+  });
+
+  it("narrows with the bands rather than fighting them", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(kind("Expenses"));
+    await user.click(band("Travel"));
+
+    // Travel holds two rows, and one of them is the refund — so the pair of
+    // filters has to intersect to leave one.
+    expect(screen.getByText("airbnb")).toBeVisible();
+    expect(screen.queryByText("Airbnb refund")).not.toBeInTheDocument();
+  });
+
+  it("drops the chip for a kind the group has never recorded", () => {
+    renderList(ROWS.filter((row) => !row.revenue));
+
+    expect(kind("Expenses")).toBeInTheDocument();
+    expect(kind("Settlements")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Revenue" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows no row at all when only one kind was ever recorded", () => {
+    const spending = ROWS.filter(
+      (row) => row.kind === "expense" && !row.revenue,
+    );
+    renderList(spending);
+
+    expect(
+      screen.queryByRole("group", { name: "Filter by kind" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(spending.length);
+  });
+
+  it("ignores a kind in the URL that this group cannot show", () => {
+    const withoutRevenue = ROWS.filter((row) => !row.revenue);
+    renderList(withoutRevenue, "?kind=revenue");
+
+    // A link built in a group that had revenue must not empty this one.
+    expect(screen.getAllByRole("listitem")).toHaveLength(withoutRevenue.length);
+  });
 });
 
 describe("Transactions without a single currency", () => {
@@ -349,8 +425,14 @@ describe("Transactions without a single currency", () => {
     expect(screen.getByText("€1,909.10")).toBeVisible();
     expect(screen.getByText("$91.69")).toBeVisible();
     expect(screen.getByText(/The spread needs one currency/)).toBeVisible();
-    // No spine, so nothing to filter by — but the search still works.
-    expect(screen.queryByRole("group")).not.toBeInTheDocument();
+    // No spine to rank categories in — but what does not need a rate to work
+    // is still here: the kind chips and the search.
+    expect(
+      screen.queryByRole("group", { name: "Spending by category" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Filter by kind" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toBeVisible();
   });
 });

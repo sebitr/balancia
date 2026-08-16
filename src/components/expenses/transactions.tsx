@@ -32,9 +32,11 @@ import { cn } from "@/lib/utils";
  * The transactions list, and the spread that filters it.
  *
  * One island rather than three, because the hero total, the chips, the bands
- * and the rows are four views of a single question — which categories are we
+ * and the rows are four views of a single question — which transactions are we
  * looking at — and splitting them would mean lifting that answer into a store
- * only to push it back down again.
+ * only to push it back down again. Three things narrow it: the kind chips, the
+ * category spine, and the search field. They intersect; each one only ever
+ * takes rows away.
  *
  * The answer lives in the URL. `useSearchParams` reads it and
  * `window.history.replaceState` writes it, which Next.js supports natively and
@@ -76,6 +78,25 @@ export interface SpreadView {
 
 const FILTER_PARAM = "cat";
 const QUERY_PARAM = "q";
+const KIND_PARAM = "kind";
+
+/**
+ * The three things a row can be, in the order the chips stand in.
+ *
+ * Fixed rather than derived, so a group that has never recorded revenue still
+ * puts Settlements on the right: the chip that is missing is removed, and the
+ * ones that remain do not shuffle to fill the gap. A reader who learned where
+ * a chip lives keeps it there when the group's contents change.
+ */
+const KINDS = ["expense", "revenue", "settlement"] as const;
+
+type EntryKind = (typeof KINDS)[number];
+
+/** Income is stored as an expense running backwards, and filters as its own. */
+function kindOf(row: RowView): EntryKind {
+  if (row.kind === "settlement") return "settlement";
+  return row.revenue ? "revenue" : "expense";
+}
 
 /**
  * Ink for each band, chosen per theme rather than taken from the mock.
@@ -157,6 +178,24 @@ export function Transactions({
   const active = (bands ?? []).filter((band) => selected.includes(band.key));
   const isActive = (band: BandView) => selected.includes(band.key);
 
+  /*
+   * Which chips exist is counted over everything the group has recorded, not
+   * over what the search field or the spine has left standing. Counted over
+   * the visible rows instead, the row would lose a chip the moment that chip
+   * did its job — and searching would make chips appear and vanish under the
+   * reader's thumb while they typed.
+   */
+  const present = KINDS.filter((kind) =>
+    rows.some((row) => kindOf(row) === kind),
+  );
+  const wantedKinds = new Set(
+    searchParams
+      .getAll(KIND_PARAM)
+      .filter((kind): kind is EntryKind =>
+        (present as readonly string[]).includes(kind),
+      ),
+  );
+
   const write = (next: URLSearchParams) => {
     const search = next.toString();
     window.history.replaceState(
@@ -174,6 +213,23 @@ export function Transactions({
       ? on.filter((value) => value !== key)
       : [...on, key];
     for (const value of wanted) next.append(FILTER_PARAM, value);
+    write(next);
+  };
+
+  /*
+   * Several chips can be on at once, and each one widens what is shown rather
+   * than replacing it — Expenses and Settlements together is a real question
+   * ("what has actually moved?") that one-at-a-time chips cannot ask. None on
+   * therefore means all, which is also what the last chip turning off returns
+   * the reader to.
+   */
+  const toggleKind = (kind: EntryKind) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(KIND_PARAM);
+    for (const value of KINDS) {
+      const on = wantedKinds.has(value);
+      if (value === kind ? !on : on) next.append(KIND_PARAM, value);
+    }
     write(next);
   };
 
@@ -213,6 +269,7 @@ export function Transactions({
   const needle = query.trim().toLowerCase();
 
   const shown = rows.filter((row) => {
+    if (wantedKinds.size > 0 && !wantedKinds.has(kindOf(row))) return false;
     if (wanted && (row.category === null || !wanted.has(row.category))) {
       return false;
     }
@@ -231,7 +288,8 @@ export function Transactions({
 
   // Replayed on every filter change, because the list the reader is looking at
   // is a different list — the animation is what says so.
-  const signature = active.map((band) => band.key).join("|") || "all";
+  const signature =
+    [...active.map((band) => band.key), ...wantedKinds].join("|") || "all";
 
   return (
     <div className="flex flex-col gap-4">
@@ -275,6 +333,45 @@ export function Transactions({
           </ul>
         )}
       </div>
+
+      {/* One chip per kind the group actually holds, and none at all when it
+          holds only one: a row whose every chip says the same thing as the
+          list underneath it is a control that can only be switched off. What
+          is below simply moves up.
+
+          Full width, above the spine rather than beside it: three labels do
+          not fit the list's own column once the spine has taken its 80px, and
+          the truncation that would follow lands on exactly the word that
+          tells the chips apart. */}
+      {present.length > 1 && (
+        <div
+          role="group"
+          aria-label={t("kindFilterLabel")}
+          className="flex gap-2"
+        >
+          {present.map((kind) => {
+            const on = wantedKinds.has(kind);
+            return (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => toggleKind(kind)}
+                aria-pressed={on}
+                // Equal shares of the row, so the set reads as one control
+                // rather than as a sentence of different lengths.
+                className={cn(
+                  "h-[34px] flex-1 rounded-full px-3 text-[0.8125rem] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                  on
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(`kind_${kind}`)}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex gap-3.5">
         {bands && (
@@ -332,6 +429,10 @@ export function Transactions({
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* One chip per kind the group actually holds, and none at all when
+              it holds only one: a row whose every chip says the same thing as
+              the list underneath it is a control that can only be switched
+              off. The search field takes the space back. */}
           <div className="relative">
             <Search
               aria-hidden="true"
