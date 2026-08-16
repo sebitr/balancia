@@ -15,10 +15,11 @@ same `.env`, next to `compose.yaml`. For local development without Docker, use
 Run from a terminal, `bootstrap.sh` also asks about the optional features and
 writes the answers: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
 `RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
-`SMTP_*` group, `TELEMETRY_MODE` and `METRICS_ENABLED` — the last two written
-to their defaults, `opt-in` and `false`, when the answers are yes and no.
-Anything it writes can be edited here afterwards; nothing here has to go
-through it.
+`SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`, and
+`METRICS_ENABLED`. Telemetry is asked as one question with two answers —
+whether an administrator may turn it on, and whether it starts on — and writes
+both variables. Anything it writes can be edited here afterwards; nothing here
+has to go through it.
 
 ---
 
@@ -528,10 +529,12 @@ always has. See [Receipt scanning](receipt-scanning.md) for the whole design.
 
 Balancia collects no telemetry from a self-hosted installation by default. The
 variables below are the deployment's half of the decision; the other half is an
-administrator's, in Settings → Administration → Telemetry, and both switches
-there start off. **Effective state is the intersection: something happens only
-if both halves say so.** No value of any variable here starts sending data on
-its own. The whole design, and the exact list of fields, is in
+administrator's, in Settings → Administration → Telemetry. **Effective state is
+the intersection: something happens only if both halves say so.**
+`TELEMETRY_MODE` and `TELEMETRY_CRASH_REPORTS` are ceilings and can only ever
+subtract. `TELEMETRY_DEFAULT` is the one variable here that is a state: it
+decides where the switches start, and stops applying to a switch the moment an
+administrator moves it. The whole design, and the exact list of fields, is in
 [Telemetry](telemetry.md).
 
 ### `TELEMETRY_MODE`
@@ -557,6 +560,37 @@ Crash reports are separate from usage statistics in every respect: separate
 setting, separate endpoint, separate default (off). What one contains is an
 error class name and a component — `PostgresError_23505`, `job` — and nothing
 else. Not the message, not the stack, not the request.
+
+### `TELEMETRY_DEFAULT`
+
+Default `false`. Where both switches start, until an administrator moves one.
+
+This is the only telemetry variable that is a state rather than a ceiling, and
+it is the weakest kind of state: `usage_reporting_changed_at` and
+`crash_reporting_changed_at` are null until somebody moves the matching switch,
+and this applies only while they are. The first time an administrator answers
+— including answering "off" — their answer is stored with a timestamp and this
+variable stops applying to that switch, on this installation and every upgrade
+after. The two switches are tracked separately, so turning usage reporting off
+leaves the default standing for crash reports.
+
+It can only promote a switch, never suppress one: a switch stored as on stays
+on with `TELEMETRY_DEFAULT=false`.
+
+| Combination                                      | Result on a fresh install               |
+| ------------------------------------------------ | --------------------------------------- |
+| `TELEMETRY_DEFAULT=false` (default)              | nothing recorded, nothing sent          |
+| `TELEMETRY_DEFAULT=true`                         | usage and crash reporting both on       |
+| `TELEMETRY_DEFAULT=true`, `TELEMETRY_MODE=local` | counters recorded here, nothing sent    |
+| `TELEMETRY_DEFAULT=true`, `TELEMETRY_MODE=off`   | nothing recorded, nothing sent          |
+| `TELEMETRY_DEFAULT=true`, crash reports `false`  | usage reporting on, crash reporting off |
+
+It exists because a switch that can only be found in an administration page is
+one most operators never find, so the honest description of the previous
+behaviour was not "opt-in" but "off unless somebody goes looking".
+`scripts/bootstrap.sh` asks the question out loud, which is what makes a
+default defensible; what would not be defensible is a default nobody was told
+about.
 
 ### Where reports go — not a setting
 

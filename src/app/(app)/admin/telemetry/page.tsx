@@ -57,8 +57,8 @@ export default async function TelemetryAdminPage() {
         </CardHeader>
         <CardContent>
           <TelemetrySettingsForm
-            usageEnabled={settings.stored.usageReportingEnabled}
-            crashEnabled={settings.stored.crashReportingEnabled}
+            usageEnabled={settings.usageEnabled}
+            crashEnabled={settings.crashEnabled}
             usageLocked={settings.usageLocked}
             crashLocked={settings.crashLocked}
             canSend={settings.transmitting}

@@ -46,16 +46,29 @@ than software that sends nothing, because it spends trust it did not earn.
 Nothing about an upgrade changes this: the switches are stored, both default to
 false, and a migration never sets either.
 
+The table above is what an install does when nobody has said otherwise. A
+deployment can start with the switches on by setting `TELEMETRY_DEFAULT=true`
+(§8), which `scripts/bootstrap.sh` asks about; the first four rows then read
+"on from first run", and the last two are separate settings and unaffected.
+
 There are two authorities and they are not equals:
 
-- The **deployment** sets a ceiling with `TELEMETRY_MODE`. It can forbid. It
-  cannot switch anything on.
-- The **administrator** sets the state within that ceiling, in the UI.
+- The **deployment** sets a ceiling with `TELEMETRY_MODE`, which can only ever
+  forbid, and the position the switches start in with `TELEMETRY_DEFAULT`.
+- The **administrator** sets the state within that ceiling, in the UI. Their
+  answer is stored with a timestamp and is the answer from then on — the
+  deployment's default is never consulted for that switch again, including
+  when the answer is "off".
 
 Effective state is the intersection. This is why an operator can hand out
-`TELEMETRY_MODE=off` in a fleet and know it holds whatever anyone clicks, and
-why no environment file can quietly start reporting on somebody else's
-instance.
+`TELEMETRY_MODE=off` in a fleet and know it holds whatever anyone clicks.
+
+What this document stopped promising when `TELEMETRY_DEFAULT` was added, since
+it is a weaker claim than the one that used to be here: an environment file
+_can_ start an instance with reporting on. What it cannot do is override an
+administrator who has answered, or survive one answering afterwards. If someone
+else set this installation up for you, the administration page shows the live
+state rather than the configured one, and turning a switch off there is final.
 
 ---
 
@@ -237,7 +250,8 @@ off. Being able to see what _would_ be sent before deciding is the point.
 
 ## 7. Turning telemetry off
 
-It is off. If somebody switched it on:
+It is off unless somebody asked for it — an administrator moving the switch, or
+a deployment setting `TELEMETRY_DEFAULT=true` (§8). Either way:
 
 - **In the UI** — Settings → Administration → Telemetry, and move the switch
   back. Switching usage statistics off also **deletes the local counters**, so
@@ -270,6 +284,7 @@ variable.
 ```bash
 TELEMETRY_MODE=opt-in            # opt-in | local | off
 TELEMETRY_CRASH_REPORTS=true     # may an admin enable them
+TELEMETRY_DEFAULT=false          # where both switches start
 TELEMETRY_DEPLOYMENT=docker-compose  # optional label
 TELEMETRY_RECEIVER=false         # run the collector
 ```
@@ -282,21 +297,26 @@ request-forgery lever pointed at your own network, and it would make every
 statement in this document conditional on nobody having changed it. A fork
 edits that line (§14).
 
-**Precedence, in one sentence:** the environment can only ever subtract, so
-effective = (deployment allows) AND (administrator enabled), and the
-administrator's half defaults to false.
+**Precedence, in one sentence:** effective = (the mode allows) AND (the switch
+is on), where the switch is what an administrator stored, or `TELEMETRY_DEFAULT`
+while none has answered.
 
 `TELEMETRY_MODE=local` is the middle setting: counters are recorded on this
 server and the preview works, and nothing is ever transmitted. It is what the
 development stack uses, and what an operator who wants the numbers for
 themselves can use.
 
-`scripts/bootstrap.sh` asks for `TELEMETRY_MODE` on a first run, and the
-question is worded to say what it is: one that cannot switch a feature on. Yes
-writes `opt-in` and leaves the administrator the choice; no writes `off` and
-takes it away. It is asked rather than defaulted silently because an operator
-who is never told the feature exists has not consented to anything — the
-question is the disclosure, and the default it writes sends nothing either way.
+`scripts/bootstrap.sh` asks about telemetry on a first run, as one question
+with two answers. The first decides whether an administrator may turn it on at
+all: yes writes `TELEMETRY_MODE=opt-in`, no writes `off` and takes the choice
+away for good. The second decides where the switches start and writes
+`TELEMETRY_DEFAULT`. It defaults to no, so pressing Enter through the whole
+wizard still produces an instance that records nothing and sends nothing.
+
+It is asked rather than defaulted silently because an operator who is never
+told the feature exists has not consented to anything. The question is the
+disclosure, and that is exactly what makes a default acceptable here — and
+what would make a silent one not.
 
 ---
 
@@ -676,8 +696,9 @@ public pages with [Umami](https://umami.is) at the same address.
 
 ### One consent, not two
 
-There is no second switch and no environment variable. The administrator's
-telemetry opt-in (§2) is the whole of it:
+There is no second switch and no setting of its own. Whatever decides the
+weekly report decides this too — the administrator's telemetry switch, and
+`TELEMETRY_DEFAULT` for where it starts (§2):
 
 | Telemetry              | Weekly report | Public-page counts |
 | ---------------------- | ------------- | ------------------ |
@@ -691,8 +712,9 @@ break it. The gate is therefore _transmitting_, not _recording_ — the same
 question the weekly report asks before it sends.
 
 With telemetry off, no script tag is rendered, no request is made, and there is
-nothing for a reader to opt out of. That is every self-hosted installation
-until an administrator decides otherwise.
+nothing for a reader to opt out of. That is every self-hosted installation that
+has not asked for otherwise — either an administrator moving the switch, or the
+deployment answering yes to the wizard's telemetry question.
 
 ### Where the counts go
 

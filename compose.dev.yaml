@@ -87,6 +87,9 @@ x-dev-environment: &dev-environment
   # the address as an argument, so its tests need no such change.
   TELEMETRY_MODE: ${DEV_TELEMETRY_MODE:-local}
   TELEMETRY_CRASH_REPORTS: ${DEV_TELEMETRY_CRASH_REPORTS:-true}
+  # Left off in development even though the mode above is `local`: a developer
+  # should have to ask for counters to start being written.
+  TELEMETRY_DEFAULT: ${DEV_TELEMETRY_DEFAULT:-false}
   TELEMETRY_DEPLOYMENT: development
   # Switch on to develop against the collecting side; the routes 404 while off.
   TELEMETRY_RECEIVER: ${DEV_TELEMETRY_RECEIVER:-false}

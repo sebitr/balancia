@@ -283,9 +283,10 @@ const envSchema = z
      *                       ignored, the switches are disabled and explained,
      *                       and no outbound request can be made.
      *
-     * Note what the default does not do: `opt-in` sends nothing. There is no
-     * value of this variable that turns telemetry on by itself, because
-     * configuration is not consent — see docs/telemetry.md.
+     * Note what the default does not do: `opt-in` sends nothing on its own.
+     * It is a ceiling — it decides what an administrator is *allowed* to turn
+     * on. The variable that decides where the switches start is
+     * `TELEMETRY_DEFAULT` below; see docs/telemetry.md.
      */
     TELEMETRY_MODE: z.enum(["opt-in", "local", "off"]).default("opt-in"),
 
@@ -297,6 +298,27 @@ const envSchema = z
      * Setting it false takes the decision away from the UI entirely.
      */
     TELEMETRY_CRASH_REPORTS: booleanish.default(true),
+
+    /**
+     * The position both telemetry switches start in.
+     *
+     * The one telemetry variable that is a state rather than a ceiling, and it
+     * is deliberately the weakest kind: it applies only while nobody has
+     * answered. `setTelemetrySetting` stamps a timestamp on every write, so
+     * the first time an administrator moves a switch their answer replaces
+     * this for good — including an administrator who moves it back off.
+     *
+     * It exists because the alternative was worse in practice. A switch that
+     * can only be found in Settings → Administration → Telemetry is a switch
+     * most operators never see, so the honest description of the old default
+     * was not "opt-in" but "off, permanently, by obscurity". The setup wizard
+     * asks this out loud, which is what makes a default defensible.
+     *
+     * Still bounded by everything above it: `true` with `TELEMETRY_MODE=off`
+     * sends nothing, and `true` with `TELEMETRY_CRASH_REPORTS=false` starts
+     * usage reporting on and crash reporting off.
+     */
+    TELEMETRY_DEFAULT: booleanish.default(false),
 
     /**
      * How this instance is deployed, for the one coarse field that says so.

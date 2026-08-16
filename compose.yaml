@@ -86,6 +86,7 @@ x-app-environment: &app-environment
   # the machinery entirely and grey out the switches. See docs/telemetry.md.
   TELEMETRY_MODE: ${TELEMETRY_MODE:-opt-in}
   TELEMETRY_CRASH_REPORTS: ${TELEMETRY_CRASH_REPORTS:-true}
+  TELEMETRY_DEFAULT: ${TELEMETRY_DEFAULT:-false}
   # There is no endpoint setting: where reports go is a constant in
   # src/lib/telemetry/endpoint.ts. This file decides whether anything is sent,
   # never to whom.
