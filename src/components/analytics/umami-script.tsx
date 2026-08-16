@@ -1,8 +1,9 @@
 import { headers } from "next/headers";
-import { readUmamiConfig } from "@/lib/analytics/umami";
+import { publicPageAnalytics } from "@/lib/analytics/umami";
 
 /**
- * The tracker tag, for the public pages only.
+ * The tracker tag, for the public pages only, and only once an administrator
+ * has switched telemetry on.
  *
  * Mounted in `src/app/page.tsx` and `src/app/(auth)/layout.tsx` — the landing
  * page and the sign-in/registration screens. Not in the root layout, and not
@@ -16,15 +17,15 @@ import { readUmamiConfig } from "@/lib/analytics/umami";
  *   `groups/[groupId]/layout.tsx` when a signed-out reader opens a group
  *   link, and `/register/done?group={id}` by registration. Both are public
  *   pages with a group identifier in the query string. Without this the
- *   identifier goes to the analytics host; with it the tracker reports
- *   `/sign-in` and stops.
+ *   identifier goes to the collector; with it the tracker reports `/sign-in`
+ *   and stops.
  *
  * `data-do-not-track` — honours the browser's Do Not Track signal. It costs a
  *   little accuracy on a number nothing depends on.
  */
 export async function UmamiScript() {
-  const config = readUmamiConfig();
-  if (!config) return null;
+  const analytics = await publicPageAnalytics();
+  if (!analytics) return null;
 
   // Set by `proxy.ts` on every request it matches, which is every page route.
   // Without it the Content-Security-Policy blocks the tag: `'strict-dynamic'`
@@ -35,9 +36,9 @@ export async function UmamiScript() {
   return (
     <script
       defer
-      src={config.scriptUrl}
+      src={analytics.scriptUrl}
       nonce={nonce}
-      data-website-id={config.websiteId}
+      data-website-id={analytics.websiteId}
       data-exclude-search="true"
       data-do-not-track="true"
     />

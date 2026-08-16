@@ -5,6 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const headers = vi.hoisted(() => vi.fn());
 vi.mock("next/headers", () => ({ headers }));
 
+// The component asks one question — "should the public pages be counted?" —
+// and `umami.test.ts` is where that question's own rules are tested. Mocked
+// here so these assertions are about the tag, and so they keep working once
+// the website ID is filled in.
+const publicPageAnalytics = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics/umami", () => ({ publicPageAnalytics }));
+
 const { UmamiScript } = await import("./umami-script");
 
 /**
@@ -89,28 +96,31 @@ describe("where the tracker is mounted", () => {
     if (!/no\s+analytics/i.test(landing)) return;
     expect(
       landing,
-      "src/app/page.tsx claims there are no analytics; it must read " +
-        "readUmamiConfig() so the claim is only made when it is true",
-    ).toMatch(/readUmamiConfig\(\)/);
+      "src/app/page.tsx claims there are no analytics; it must call " +
+        "publicPageAnalytics() so the claim is only made when it is true",
+    ).toMatch(/publicPageAnalytics\(\)/);
   });
 });
 
 describe("the tag it renders", () => {
   afterEach(() => {
-    delete process.env.UMAMI_SCRIPT_URL;
-    delete process.env.UMAMI_WEBSITE_ID;
     vi.clearAllMocks();
   });
 
   const configure = (): void => {
-    process.env.UMAMI_SCRIPT_URL = "https://analytics.example.com/script.js";
-    process.env.UMAMI_WEBSITE_ID = "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93";
+    publicPageAnalytics.mockResolvedValue({
+      scriptUrl: "https://telemetry.balancia.app/script.js",
+      websiteId: "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93",
+      origin: "https://telemetry.balancia.app",
+    });
     headers.mockResolvedValue(new Headers({ "x-nonce": "abc123" }));
   };
 
-  it("renders nothing at all on an unconfigured instance", async () => {
-    // Which is every self-hosted install that did not ask for this. Nothing
-    // is fetched, so there is no third-party request to block.
+  it("renders nothing at all while telemetry is off", async () => {
+    // Which is every self-hosted install until an administrator says
+    // otherwise. Nothing is fetched, so there is no third-party request to
+    // block and nothing for a reader to opt out of.
+    publicPageAnalytics.mockResolvedValue(null);
     headers.mockResolvedValue(new Headers());
     expect(await UmamiScript()).toBeNull();
     expect(headers).not.toHaveBeenCalled();
@@ -139,10 +149,10 @@ describe("the tag it renders", () => {
     expect(element?.props.nonce).toBe("abc123");
   });
 
-  it("points at the configured script and website", async () => {
+  it("points at the compiled-in script and the configured website", async () => {
     configure();
     const element = await UmamiScript();
-    expect(element?.props.src).toBe("https://analytics.example.com/script.js");
+    expect(element?.props.src).toBe("https://telemetry.balancia.app/script.js");
     expect(element?.props["data-website-id"]).toBe(
       "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93",
     );

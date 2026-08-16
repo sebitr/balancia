@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UmamiScript } from "@/components/analytics/umami-script";
-import { readUmamiConfig } from "@/lib/analytics/umami";
+import { publicPageAnalytics } from "@/lib/analytics/umami";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getEnv } from "@/lib/env";
 
@@ -32,10 +32,10 @@ export default async function LandingPage() {
     redirect("/dashboard");
   }
   const env = getEnv();
-  // Read here as well as in <UmamiScript /> because the copy below makes a
-  // claim about it, and a claim that does not track the configuration is just
-  // a wrong claim.
-  const analytics = readUmamiConfig();
+  // Asked here as well as in <UmamiScript /> because the copy below makes a
+  // claim about it, and a claim that does not track the actual state is just a
+  // wrong claim. Same function, so the two cannot disagree.
+  const analytics = await publicPageAnalytics();
 
   /*
    * Claims, not slogans: every line here is something the application does,
@@ -231,8 +231,8 @@ export default async function LandingPage() {
                 <>
                   The application itself sends nothing to third-party services
                   and includes no telemetry. This page and the sign-in screens
-                  are counted by the analytics server this instance&rsquo;s
-                  operator runs; no page inside the application is.
+                  are counted at telemetry.balancia.app; no page inside the
+                  application is.
                 </>
               ) : (
                 <>

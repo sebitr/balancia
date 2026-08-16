@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isWebAssemblyInferenceEnabled } from "@/lib/env";
-import { readUmamiConfig } from "@/lib/analytics/umami";
+import { umamiDestination } from "@/lib/analytics/umami";
 import { APPLE_CALLBACK_PATH } from "@/modules/auth/apple-paths";
 
 /**
@@ -41,9 +41,15 @@ function buildCsp(nonce: string, isDevelopment: boolean): string {
   // compilation and nothing else; it is not `unsafe-eval`.
   const localInference = isWebAssemblyInferenceEnabled();
 
-  // The operator's own Umami, when they have configured one. Null on a default
-  // install, which is what keeps the comment on `connect-src` true there.
-  const umami = readUmamiConfig();
+  // Where public-page counts would go, if any are sent. Deliberately the
+  // compiled-in destination rather than the live telemetry state: this runs on
+  // every request and must not read the database, and a permission is not a
+  // request. The directive is therefore a superset of when the tag actually
+  // renders — it allows a connection that only an opted-in instance makes.
+  //
+  // Being a superset is also what removes a race: the policy does not have to
+  // be recomputed when an administrator moves the telemetry switch.
+  const umami = umamiDestination();
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
@@ -65,10 +71,11 @@ function buildCsp(nonce: string, isDevelopment: boolean): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'", "data:"],
-    // Balancia talks to its own origin, and — only where an operator has
-    // configured one — to the Umami they chose. That host is derived from
-    // UMAMI_SCRIPT_URL rather than set separately, so the address the tracker
-    // posts to and the address this admits cannot drift apart.
+    // Balancia talks to its own origin, and — on a build that carries a
+    // website ID — to the collector that counts the public pages. That host is
+    // derived from the compiled-in script URL rather than stated separately,
+    // so the address the tracker posts to and the address this admits cannot
+    // drift apart.
     "connect-src": [
       "'self'",
       ...(umami ? [umami.origin] : []),

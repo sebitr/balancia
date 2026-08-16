@@ -1,128 +1,159 @@
-import { describe, expect, it } from "vitest";
-import { readUmamiConfig, umamiConfigError } from "./umami";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ENV_VARIABLE_NAMES } from "@/lib/env";
+
+const getEffectiveTelemetry = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/telemetry/settings", () => ({ getEffectiveTelemetry }));
+
+const {
+  publicPageAnalytics,
+  umamiDestination,
+  UMAMI_SCRIPT_URL,
+  UMAMI_WEBSITE_ID,
+} = await import("./umami");
 
 /**
- * The settings, and the two ways they are usually wrong.
+ * The destination, and the consent that decides whether it hears anything.
  *
- * Analytics that are half-configured are worse than analytics that are off,
- * because both look identical from the outside: an empty dashboard, no error,
- * and no reason to suspect the configuration rather than the traffic.
+ * The assertions about the constant look almost too small to write down. They
+ * are here because it is the only thing that answers "who is being told", and
+ * every promise in `docs/telemetry.md` §17 is a promise about that one
+ * hostname. A change to it is a change to all of them, and should have to walk
+ * past a failing test to happen quietly.
  */
 
-const SCRIPT = "https://analytics.example.com/script.js";
 const ID = "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93";
 
-const env = (over: Record<string, string> = {}): NodeJS.ProcessEnv =>
-  ({ ...over }) as NodeJS.ProcessEnv;
+const telemetry = (over: Record<string, unknown> = {}) => ({
+  recording: true,
+  transmitting: true,
+  crashReporting: false,
+  ...over,
+});
 
-describe("reading the configuration", () => {
-  it("is off when neither setting is given", () => {
-    expect(readUmamiConfig(env())).toBeNull();
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("the tracker's address", () => {
+  it("is the project's own collector", () => {
+    expect(UMAMI_SCRIPT_URL).toBe("https://telemetry.balancia.app/script.js");
   });
 
-  it("is off when the variables are present but empty", () => {
-    // compose.yaml passes optional settings through as `${VAR:-}`, so on an
-    // instance that configured nothing both arrive as empty strings rather
-    // than not at all.
+  it("is HTTPS, with no room for it not to be", () => {
+    // Not a validated setting but a literal, so this is a statement about the
+    // source rather than about a parser.
+    expect(new URL(UMAMI_SCRIPT_URL).protocol).toBe("https:");
+  });
+
+  it("is one host and nothing else", () => {
+    const url = new URL(UMAMI_SCRIPT_URL);
+    expect(url.hostname).toBe("telemetry.balancia.app");
+    expect(url.search).toBe("");
+    expect(url.username).toBe("");
+    expect(url.password).toBe("");
+  });
+
+  it("is the same host telemetry already reports to", () => {
+    // The claim this protects is the one an operator can act on: blocking one
+    // hostname stops everything Balancia would send, page counts included.
+    expect(new URL(UMAMI_SCRIPT_URL).hostname).toBe("telemetry.balancia.app");
+  });
+
+  it("cannot be changed by configuration", () => {
+    // The property that makes the documentation unconditional: there is no
+    // variable an operator, or anyone who reaches the box, can set to point an
+    // instance's page views somewhere else — nor one that turns them on.
     expect(
-      readUmamiConfig(env({ UMAMI_SCRIPT_URL: "", UMAMI_WEBSITE_ID: "" })),
-    ).toBeNull();
-  });
-
-  it("reads both values and derives the origin from the script URL", () => {
-    const config = readUmamiConfig(
-      env({ UMAMI_SCRIPT_URL: SCRIPT, UMAMI_WEBSITE_ID: ID }),
-    );
-    expect(config).toEqual({
-      scriptUrl: SCRIPT,
-      websiteId: ID,
-      origin: "https://analytics.example.com",
-    });
-  });
-
-  it("keeps a port in the derived origin", () => {
-    // The origin goes into connect-src, where a missing port is a blocked
-    // request rather than a loose one.
-    const config = readUmamiConfig(
-      env({
-        UMAMI_SCRIPT_URL: "https://analytics.example.com:8443/script.js",
-        UMAMI_WEBSITE_ID: ID,
-      }),
-    );
-    expect(config?.origin).toBe("https://analytics.example.com:8443");
-  });
-
-  it("stays off rather than half-on when the configuration is invalid", () => {
-    // The schema refuses to boot on these, so this is the belt to that
-    // braces: `proxy.ts` reads the raw environment on every request and must
-    // never widen the policy on the strength of a value nothing accepted.
-    expect(
-      readUmamiConfig(
-        env({ UMAMI_SCRIPT_URL: "not-a-url", UMAMI_WEBSITE_ID: ID }),
-      ),
-    ).toBeNull();
-    expect(
-      readUmamiConfig(env({ UMAMI_SCRIPT_URL: SCRIPT, UMAMI_WEBSITE_ID: "" })),
-    ).toBeNull();
+      ENV_VARIABLE_NAMES.filter((name) => name.startsWith("UMAMI")),
+    ).toEqual([]);
   });
 });
 
-describe("what startup rejects", () => {
-  it("accepts nothing at all", () => {
-    expect(umamiConfigError(undefined, undefined)).toBeNull();
-    expect(umamiConfigError("", "")).toBeNull();
+describe("the destination", () => {
+  it("is nothing at all until a website ID is compiled in", () => {
+    // Shipped state. A placeholder that looked plausible would send real page
+    // views to a website that does not exist, so empty is the safe direction.
+    expect(UMAMI_WEBSITE_ID).toBe("");
+    expect(umamiDestination()).toBeNull();
   });
 
-  it("accepts a complete pair", () => {
-    expect(umamiConfigError(SCRIPT, ID)).toBeNull();
+  it("reports the script and the origin derived from it, once there is one", () => {
+    expect(umamiDestination(ID)).toEqual({
+      scriptUrl: "https://telemetry.balancia.app/script.js",
+      websiteId: ID,
+      origin: "https://telemetry.balancia.app",
+    });
   });
 
-  it("names the missing half, either way round", () => {
-    expect(umamiConfigError(SCRIPT, undefined)?.path).toBe("UMAMI_WEBSITE_ID");
-    expect(umamiConfigError(undefined, ID)?.path).toBe("UMAMI_SCRIPT_URL");
-  });
-
-  it("refuses a relative or malformed URL", () => {
-    expect(umamiConfigError("/script.js", ID)?.path).toBe("UMAMI_SCRIPT_URL");
-    expect(umamiConfigError("analytics.example.com", ID)?.message).toMatch(
-      /absolute URL/,
-    );
-  });
-
-  it("refuses plain HTTP outside localhost", () => {
-    // `upgrade-insecure-requests` rewrites it to https:// on a real install,
-    // so this would be a script that silently never loads.
-    expect(
-      umamiConfigError("http://analytics.example.com/script.js", ID)?.message,
-    ).toMatch(/HTTPS/);
-  });
-
-  it("permits plain HTTP on localhost, where a dev Umami lives", () => {
-    for (const url of [
-      "http://localhost:3001/script.js",
-      "http://127.0.0.1:3001/script.js",
-      "http://umami.localhost/script.js",
-    ]) {
-      expect(umamiConfigError(url, ID), url).toBeNull();
-    }
-  });
-
-  it("refuses a scheme that is not http or https", () => {
-    expect(umamiConfigError("ftp://analytics.example.com/s.js", ID)).not.toBe(
-      null,
-    );
-  });
-
-  it("refuses a website ID that is not the UUID Umami issues", () => {
+  it("refuses an ID that is not the UUID Umami issues", () => {
     // The failure this prevents is silent: Umami takes the request and the
-    // data lands under no website.
-    expect(umamiConfigError(SCRIPT, "balancia")?.path).toBe("UMAMI_WEBSITE_ID");
-    expect(umamiConfigError(SCRIPT, ID.slice(0, -1))?.path).toBe(
-      "UMAMI_WEBSITE_ID",
-    );
+    // data lands under no website, so the symptom is a week of no data.
+    expect(umamiDestination("balancia")).toBeNull();
+    expect(umamiDestination(ID.slice(0, -1))).toBeNull();
+    expect(umamiDestination(`${ID}${ID}`)).toBeNull();
   });
 
   it("tolerates surrounding whitespace, which a pasted value carries", () => {
-    expect(umamiConfigError(` ${SCRIPT} `, ` ${ID} `)).toBeNull();
+    expect(umamiDestination(` ${ID} `)?.websiteId).toBe(ID);
+  });
+
+  it("does not ask about consent, because proxy.ts calls it per request", () => {
+    umamiDestination(ID);
+    expect(getEffectiveTelemetry).not.toHaveBeenCalled();
+  });
+});
+
+describe("what the public pages actually render", () => {
+  /**
+   * The gate, exercised with a website ID passed in — the shipped constant is
+   * empty, so calling it bare would return null before the telemetry check and
+   * every assertion here would pass for the wrong reason.
+   *
+   * There is no second opt-in and no environment variable: the administrator's
+   * telemetry switch is the whole of it, so an instance that has not opted in
+   * loads no tracker and makes no request.
+   */
+  it("is nothing while telemetry is off", async () => {
+    getEffectiveTelemetry.mockResolvedValue(telemetry({ transmitting: false }));
+    expect(await publicPageAnalytics(ID)).toBeNull();
+  });
+
+  it("is nothing in local mode, where recording happens but nothing leaves", async () => {
+    // TELEMETRY_MODE=local promises that nothing is transmitted. Loading a
+    // third-party tracker there would break exactly that promise, which is why
+    // the gate is `transmitting` and not `recording`.
+    getEffectiveTelemetry.mockResolvedValue(
+      telemetry({ recording: true, transmitting: false }),
+    );
+    expect(await publicPageAnalytics(ID)).toBeNull();
+  });
+
+  it("is the destination once an administrator has opted in", async () => {
+    getEffectiveTelemetry.mockResolvedValue(telemetry({ transmitting: true }));
+    expect(await publicPageAnalytics(ID)).toEqual({
+      scriptUrl: "https://telemetry.balancia.app/script.js",
+      websiteId: ID,
+      origin: "https://telemetry.balancia.app",
+    });
+  });
+
+  it("asks about consent on every call rather than caching its own answer", async () => {
+    // getEffectiveTelemetry has a few seconds of its own caching. A second
+    // layer here would mean a switch that appears not to take effect.
+    getEffectiveTelemetry.mockResolvedValue(telemetry());
+    await publicPageAnalytics(ID);
+    await publicPageAnalytics(ID);
+    expect(getEffectiveTelemetry).toHaveBeenCalledTimes(2);
+  });
+
+  it("is nothing on the shipped build, which has no website ID yet", async () => {
+    getEffectiveTelemetry.mockResolvedValue(telemetry());
+    expect(await publicPageAnalytics()).toBeNull();
+  });
+
+  it("never asks the database when there is no destination to gate", async () => {
+    getEffectiveTelemetry.mockResolvedValue(telemetry());
+    await publicPageAnalytics();
+    expect(getEffectiveTelemetry).not.toHaveBeenCalled();
   });
 });
