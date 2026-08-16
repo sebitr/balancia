@@ -983,7 +983,6 @@
     "testBody": "Les notifications push fonctionnent sur cet appareil."
   },
   "receiptScanner": {
-    "scanReceipt": "Scanner un reçu",
     "title": "Scanner un reçu",
     "onDevice": "La reconnaissance se fait sur cet appareil. La photo n'est envoyée nulle part pour être lue.",
     "reader": {
@@ -993,7 +992,6 @@
     },
     "takePhoto": "Prendre une photo",
     "choosePhoto": "Choisir une photo ou un PDF",
-    "tips": "Pose le ticket à plat, cadre-le entièrement et photographie-le bien en face. Tu peux aussi déposer une image ou un PDF ici.",
     "anotherPhoto": "Essayer une autre photo",
     "continue": "Continuer",
     "back": "Retour",
