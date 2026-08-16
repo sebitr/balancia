@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createGroup, registerAndSignIn } from "./helpers";
+import { createGroup, expectToast, registerAndSignIn } from "./helpers";
 
 /**
  * Mobile viewport behaviour. Runs on the Pixel 7 project.
@@ -38,10 +38,8 @@ test("the add-expense form is usable at a phone width", async ({ page }) => {
   await page.getByLabel("Amount").fill("5.00");
   await page.getByRole("button", { name: "Add expense" }).click();
 
-  // The dialog confirms in place; the list is a navigation away.
-  await expect(
-    page.getByRole("heading", { name: "Expense added" }),
-  ).toBeVisible();
+  // The drawer leaves and confirms in a toast; the list is a navigation away.
+  await expectToast(page, "Expense added");
   await page.goto(`/groups/${groupId}/expenses`);
   await expect(page.getByText("Snack")).toBeVisible();
 

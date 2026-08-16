@@ -3,6 +3,7 @@ import {
   addParticipant,
   createGroup,
   createInviteLink,
+  expectToast,
   registerAndSignIn,
   TEST_PASSWORD,
   uniqueEmail,
@@ -60,10 +61,8 @@ test("invite a guest and participate through the secure link", async ({
   await guestPage.getByLabel("Description").fill("Guest lunch");
   await guestPage.getByLabel("Amount").fill("24.00");
   await guestPage.getByRole("button", { name: "Add expense" }).click();
-  // The composer confirms in place rather than navigating away.
-  await expect(
-    guestPage.getByRole("heading", { name: "Expense added" }),
-  ).toBeVisible();
+  // The composer closes and confirms in a toast over the group.
+  await expectToast(guestPage, "Expense added");
   await guestPage.goto(`/groups/${groupId}/expenses`);
   await expect(guestPage.getByText("Guest lunch")).toBeVisible();
 
@@ -169,9 +168,7 @@ test("a guest keeps their group and expenses by creating an account", async ({
   await guestPage.getByLabel("Description").fill("Groceries and firewood");
   await guestPage.getByLabel("Amount").fill("40.00");
   await guestPage.getByRole("button", { name: "Add expense" }).click();
-  await expect(
-    guestPage.getByRole("heading", { name: "Expense added" }),
-  ).toBeVisible();
+  await expectToast(guestPage, "Expense added");
 
   // The overview says what is at stake, and offers the way out of it.
   await guestPage.goto(`/groups/${groupId}`);
