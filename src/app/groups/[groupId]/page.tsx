@@ -2,7 +2,6 @@ import Link from "next/link";
 import { after } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { Plus, Receipt, Upload, Users } from "lucide-react";
-import { getDateFormatter } from "@/i18n/preferences";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -81,7 +80,6 @@ export default async function GroupOverviewPage({
   );
 
   const t = await getTranslations("group");
-  const dates = await getDateFormatter();
   const now = new Date();
 
   // Read during the render, used after it: the value the reader has just been
@@ -96,17 +94,6 @@ export default async function GroupOverviewPage({
   const empty = overview.expenseCount === 0;
   const guestPosition = isGuest ? strongestPosition(overview.positions) : null;
 
-  const meta = [
-    t("metaPeople", { count: overview.participantCount }),
-    t("metaExpenses", { count: overview.expenseCount }),
-    overview.span
-      ? t("metaSpan", {
-          first: dates.plain(overview.span.first),
-          last: dates.plain(overview.span.last),
-        })
-      : null,
-  ].filter((part): part is string => part !== null);
-
   const remindedAt = new Map(
     recipients.map((recipient) => [
       recipient.participantId,
@@ -116,23 +103,21 @@ export default async function GroupOverviewPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-1">
+      {/* No visible title and no meta line: the switcher in the top bar
+          already names the group, and counting people, expenses and days told
+          the reader nothing they could act on. The heading stays for anyone
+          navigating by structure, as on the dashboard. */}
+      <h1 className="sr-only">{access.group.name}</h1>
+
+      {/* What survives on screen is the state nothing else here reports. */}
+      {(access.group.archivedAt || isGuest) && (
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-heading text-2xl font-semibold tracking-[-0.02em]">
-            {access.group.name}
-          </h1>
           {access.group.archivedAt && (
             <Badge variant="secondary">{t("archived")}</Badge>
           )}
           {isGuest && <Badge variant="outline">{t("guest")}</Badge>}
         </div>
-        {/* Who is in it, how much is in it, and how long it has been running —
-            the line that replaced an avatar stack, because it survives a group
-            of twelve and says more. */}
-        <p className="text-[0.8125rem] text-muted-foreground">
-          {meta.join(" · ")}
-        </p>
-      </header>
+      )}
 
       {/* Before the first expense there is no position and no shape to frame:
           the empty state below is the whole screen, and a card of zeroes above
