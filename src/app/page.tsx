@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { UmamiScript } from "@/components/analytics/umami-script";
+import { publicPageAnalytics } from "@/lib/analytics/umami";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getEnv } from "@/lib/env";
 
@@ -30,6 +32,10 @@ export default async function LandingPage() {
     redirect("/dashboard");
   }
   const env = getEnv();
+  // Asked here as well as in <UmamiScript /> because the copy below makes a
+  // claim about it, and a claim that does not track the actual state is just a
+  // wrong claim. Same function, so the two cannot disagree.
+  const analytics = await publicPageAnalytics();
 
   /*
    * Claims, not slogans: every line here is something the application does,
@@ -83,6 +89,10 @@ export default async function LandingPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* Only reached by a signed-out reader — a session redirects to
+          /dashboard above — so what this can report is that somebody looked
+          at the front page. See src/lib/analytics/umami.ts. */}
+      <UmamiScript />
       <header className="border-b">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-4">
           <Wordmark />
@@ -208,11 +218,28 @@ export default async function LandingPage() {
             <h2 className="font-heading text-2xl font-semibold tracking-tight">
               Your instance, your data
             </h2>
+            {/* The claim has to follow the configuration. On an instance whose
+                operator has set UMAMI_*, "no analytics" is being said by a
+                page that is at that moment loading an analytics script — so
+                the sentence changes, and says exactly which pages are counted
+                and which are not. */}
             <p className="max-w-2xl text-pretty text-muted-foreground">
               Balancia is free software under the AGPL-3.0-or-later licence. It
               runs from one Docker Compose file with PostgreSQL and a background
-              worker, sends nothing to third-party services, and includes no
-              analytics or telemetry.
+              worker.{" "}
+              {analytics ? (
+                <>
+                  The application itself sends nothing to third-party services
+                  and includes no telemetry. This page and the sign-in screens
+                  are counted at telemetry.balancia.app; no page inside the
+                  application is.
+                </>
+              ) : (
+                <>
+                  It sends nothing to third-party services, and includes no
+                  analytics or telemetry.
+                </>
+              )}
             </p>
             <p className="max-w-2xl text-pretty text-muted-foreground">
               Leaving is as easy as arriving: every group exports to CSV, Excel

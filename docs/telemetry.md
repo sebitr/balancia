@@ -34,13 +34,14 @@ than software that sends nothing, because it spends trust it did not earn.
 
 ## 2. Defaults
 
-|                                            | Self-hosted default                        |
-| ------------------------------------------ | ------------------------------------------ |
-| Anonymous usage statistics                 | **off**                                    |
-| Anonymous crash reports                    | **off**                                    |
-| Local product counters                     | not recorded until usage statistics are on |
-| Local operational metrics (`/api/metrics`) | **off**, and never transmitted             |
-| Collector (`TELEMETRY_RECEIVER`)           | **off** — routes answer 404                |
+|                                            | Self-hosted default                           |
+| ------------------------------------------ | --------------------------------------------- |
+| Anonymous usage statistics                 | **off**                                       |
+| Anonymous crash reports                    | **off**                                       |
+| Local product counters                     | not recorded until usage statistics are on    |
+| Public-page counts (§17)                   | **off** — follows the usage-statistics switch |
+| Local operational metrics (`/api/metrics`) | **off**, and never transmitted                |
+| Collector (`TELEMETRY_RECEIVER`)           | **off** — routes answer 404                   |
 
 Nothing about an upgrade changes this: the switches are stored, both default to
 false, and a migration never sets either.
@@ -638,6 +639,104 @@ all. The trade is stated here rather than smoothed over.
 
 ---
 
+## 17. Page counts on the public pages
+
+Alongside the weekly report, an opted-in instance counts views of its four
+public pages with [Umami](https://umami.is) at the same address.
+
+### One consent, not two
+
+There is no second switch and no environment variable. The administrator's
+telemetry opt-in (§2) is the whole of it:
+
+| Telemetry              | Weekly report | Public-page counts |
+| ---------------------- | ------------- | ------------------ |
+| Off — the default      | no            | **no**             |
+| `TELEMETRY_MODE=local` | no            | **no**             |
+| Switched on            | yes           | yes                |
+
+`local` mode gets its own row because it is the interesting one: the promise
+there is that nothing leaves the server, so a tracker that phoned home would
+break it. The gate is therefore _transmitting_, not _recording_ — the same
+question the weekly report asks before it sends.
+
+With telemetry off, no script tag is rendered, no request is made, and there is
+nothing for a reader to opt out of. That is every self-hosted installation
+until an administrator decides otherwise.
+
+### Where the counts go
+
+`https://telemetry.balancia.app/script.js`, compiled into
+`src/lib/analytics/umami.ts`. Not a setting, for the reason the report's
+endpoint is not one (§8): an address that can be set is a lever, and it would
+make every statement here conditional on nobody having changed it. Because it
+is the same host the weekly report already uses, the network-level check stays
+one hostname —
+
+> blocking that one host is enough to be certain about everything Balancia
+> would send, page counts included.
+
+The website ID sits on the next line — `022fe040-…`, which is not a secret:
+Umami puts it in a `data-website-id` attribute, so it is in the page source of
+every page that loads the tracker. It identifies a dashboard, not a visitor. A
+fork replaces both lines, or deletes the ID, which leaves a build that renders
+no tag and widens no policy.
+
+### Where the tracker runs
+
+| Page             | Tracker              |
+| ---------------- | -------------------- |
+| `/`              | when telemetry is on |
+| `/sign-in`       | when telemetry is on |
+| `/register`      | when telemetry is on |
+| `/register/done` | when telemetry is on |
+| Everything else  | **never**            |
+
+The boundary is not a setting either. Balancia's URLs name groups and expenses
+— `/groups/{groupId}/expenses/{expenseId}` — and a page view carries the URL.
+There is no configuration of Umami, or of any analytics product, that makes
+that safe to send anywhere. So the tracker is not on those pages, and
+`src/components/analytics/umami-script.test.tsx` fails the build if the
+component is imported anywhere but the landing page and the auth layout.
+
+Two attributes on the tag are load-bearing rather than decorative:
+
+- **`data-exclude-search`** — two of the four public pages carry a group ID in
+  the query string: `/sign-in?next=/groups/{id}`, written by
+  `groups/[groupId]/layout.tsx` when a signed-out reader opens a group link,
+  and `/register/done?group={id}` after registration. Without this the tracker
+  would report the whole query.
+- **`data-do-not-track`** — honours the browser's signal, at the cost of
+  accuracy on a number nothing depends on.
+
+The script tag carries the request nonce, because `'strict-dynamic'` in the CSP
+means host allowlists in `script-src` are ignored entirely. The only directive
+that changes is `connect-src`, and the host it gains is derived from the script
+URL rather than stated separately, so the address the tracker posts to and the
+address the policy admits cannot disagree. That directive is present on any
+build carrying a website ID, whether or not telemetry is on — a permission is
+not a request, and `proxy.ts` runs on every request and must not read the
+database to decide a header.
+
+### What this costs, said plainly
+
+This is the one thing an opted-in instance sends that is **not** covered by the
+guarantees in §16. The weekly report has no identifier of any kind; Umami
+derives a visitor ID by hashing the IP address together with the user agent and
+a rotating salt. No cookie is set and no IP is stored, but that hash is a
+pseudonym lasting about a day.
+
+It is a defensible trade for four pages that contain no expenses, no groups and
+no accounts, and it would not be defensible one page further in — which is
+exactly why the table above stops where it does. An administrator who wants the
+weekly report but not this should say so; there is currently one switch, and
+splitting it is the obvious next change if anyone asks.
+
+The landing page says which of the two states it is in, in its own copy, rather
+than leaving a reader to check the network tab.
+
+---
+
 ## Where the code lives
 
 | Path                             | What it is                                                |
@@ -654,4 +753,5 @@ all. The trade is stated here rather than smoothed over.
 | `src/lib/telemetry/receiver.ts`  | The collecting side                                       |
 | `src/lib/telemetry/settings.ts`  | Deployment ceiling × administrator switch                 |
 | `src/lib/metrics/`               | Local Prometheus metrics — unrelated to the above         |
+| `src/lib/analytics/umami.ts`     | Public-page counts, gated on the same opt-in (§17)        |
 | `src/app/(app)/admin/telemetry/` | The administration page                                   |

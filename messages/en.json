@@ -467,7 +467,7 @@
       }
     },
     "selfHostTitle": "Your instance, your data",
-    "selfHostBody": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, sends nothing to third-party services, and includes no analytics or telemetry.",
+    "selfHostBody": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and the application sends nothing to third-party services and includes no telemetry.",
     "footerTagline": "Balancia — shared expenses, fairly balanced.",
     "footerLicence": "AGPL-3.0-or-later. Modified network versions must offer source."
   },
