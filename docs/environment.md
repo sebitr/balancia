@@ -14,9 +14,11 @@ same `.env`, next to `compose.yaml`. For local development without Docker, use
 
 Run from a terminal, `bootstrap.sh` also asks about the optional features and
 writes the answers: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
-`RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio and the
-`SMTP_*` group. Anything it writes can be edited here afterwards; nothing here
-has to go through it.
+`RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
+`SMTP_*` group, `TELEMETRY_MODE` and `METRICS_ENABLED` — the last two written
+to their defaults, `opt-in` and `false`, when the answers are yes and no.
+Anything it writes can be edited here afterwards; nothing here has to go
+through it.
 
 ---
 

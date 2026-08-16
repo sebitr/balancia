@@ -290,6 +290,13 @@ server and the preview works, and nothing is ever transmitted. It is what the
 development stack uses, and what an operator who wants the numbers for
 themselves can use.
 
+`scripts/bootstrap.sh` asks for `TELEMETRY_MODE` on a first run, and the
+question is worded to say what it is: one that cannot switch a feature on. Yes
+writes `opt-in` and leaves the administrator the choice; no writes `off` and
+takes it away. It is asked rather than defaulted silently because an operator
+who is never told the feature exists has not consented to anything — the
+question is the disclosure, and the default it writes sends nothing either way.
+
 ---
 
 ## 9. Retention
@@ -403,6 +410,13 @@ Protect it: the app's port is published by `compose.yaml`, so set
 `METRICS_TOKEN` unless that port is on a private network. Requests without a
 matching `Authorization: Bearer` are refused when the token is set; with
 metrics off, the route answers 404.
+
+`scripts/bootstrap.sh` asks about this one too, defaulting to no, and generates
+a token when the answer is yes. Because `METRICS_ENABLED` is more often set by
+hand afterwards than answered in the wizard, a re-run also checks for the
+combination the schema has to allow but rarely means — metrics on, token empty
+— and offers to generate one. Declining is a valid answer, and the only one
+that is right when the port is on a private network.
 
 Balancia does not ship an OpenTelemetry exporter. An operator who runs a
 collector can scrape this endpoint, or add an exporter in a fork — but nothing

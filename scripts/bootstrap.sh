@@ -48,7 +48,7 @@ semantic_sentinel="$root_dir/public/models/Xenova/paraphrase-multilingual-MiniLM
 # a list as well as in the code so the prompts can say "3 of 7" — a wizard that
 # will not say how long it is stays longer than it should. One name per
 # question block; adding a block means adding a name.
-question_keys='APP_URL ALLOW_REGISTRATION EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST'
+question_keys='APP_URL ALLOW_REGISTRATION EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED'
 
 # ── Presentation ────────────────────────────────────────────────────────────
 
@@ -1035,6 +1035,66 @@ TEXT
         'No outgoing email: no address verification, no password recovery.'
     fi
   fi
+
+  # ── Telemetry ─────────────────────────────────────────────────────────────
+  #
+  # The one question here that cannot switch a feature on. Telemetry is off
+  # until an administrator turns it on in the application, and this only
+  # decides whether they are allowed to — so "yes" changes nothing about what
+  # this instance sends today, and "no" takes the choice away for good.
+  #
+  # It is asked anyway, because an operator who is never told the feature
+  # exists cannot have decided anything about it.
+  if ! has_value TELEMETRY_MODE; then
+    question 'Telemetry'
+    prose <<'TEXT'
+Balancia sends nothing, and answering yes here does not change that. An
+administrator can later turn on one anonymous report a week from Settings
+→ Administration → Telemetry, where the exact payload is shown before
+anything is sent: the version, which features are on, and how much
+happened in ranges rather than counts.
+
+Amounts, names, group names, receipts, identifiers and this instance's
+address are never in it, and there is nothing that identifies this
+installation across reports. It can only ever reach
+telemetry.balancia.app, which is compiled in rather than configurable.
+
+Answer no to remove the choice from the administration page entirely.
+
+TEXT
+    if ask_yes_no 'Let an administrator turn telemetry on later?' y; then
+      write_setting TELEMETRY_MODE opt-in \
+        'Off until an administrator opts in. "local" records counters here and never sends; "off" forbids both.'
+    else
+      write_setting TELEMETRY_MODE off \
+        'No telemetry, whatever the administration page says. "opt-in" restores the choice.'
+    fi
+  fi
+
+  # ── Metrics ───────────────────────────────────────────────────────────────
+  if ! has_value METRICS_ENABLED; then
+    question 'Metrics'
+    prose <<'TEXT'
+Prometheus metrics at /api/metrics for your own monitoring: request and
+job durations, error rates, database latency, memory and CPU. These are
+exact and local — Balancia never transmits them, and the only way they
+leave this server is a scraper you point at them.
+
+The app's port is published, so a token is generated to protect them.
+
+TEXT
+    if ask_yes_no 'Expose Prometheus metrics?' n; then
+      write_setting METRICS_ENABLED true \
+        'Prometheus metrics at /api/metrics. Local only; nothing transmits them.'
+      if ! has_value METRICS_TOKEN; then
+        write_setting METRICS_TOKEN "$(random_alnum 48)" \
+          'Bearer token for /api/metrics. Clear it only if the port is on a private network.'
+      fi
+    else
+      write_setting METRICS_ENABLED false \
+        'No metrics endpoint. Set to true to expose /api/metrics.'
+    fi
+  fi
 fi
 
 # ── Repairs ─────────────────────────────────────────────────────────────────
@@ -1066,6 +1126,27 @@ to infer with. Without the files categorization uses its built-in rules.
 TEXT
     if ask_yes_no 'Install it now, ~150 MB?' y; then
       install_models scripts/fetch-semantic-model.ts 'categorization' "$semantic_sentinel"
+    fi
+  fi
+
+  # Metrics say nothing about anyone's money, but they do say how many people
+  # use this instance and how much of it is failing, and the app's port is
+  # published. The schema allows an empty token because a scrape target on a
+  # private network has no use for one; it cannot tell which of the two this
+  # is, so the question gets asked here instead. Checked on every run, because
+  # METRICS_ENABLED is more often set by hand afterwards than answered above.
+  if is_enabled METRICS_ENABLED && [ -z "$(value_of METRICS_TOKEN)" ]; then
+    heading 'Metrics are exposed without a token'
+    prose <<'TEXT'
+METRICS_ENABLED is set and METRICS_TOKEN is empty, so anything that can
+reach /api/metrics can read them: user and group counts, request rates,
+error rates, memory. Leave it as it is only if that port is on a private
+network your monitoring reaches and nothing else does.
+
+TEXT
+    if ask_yes_no 'Generate a token for it?' y; then
+      write_setting METRICS_TOKEN "$(random_alnum 48)" \
+        'Bearer token for /api/metrics. Clear it only if the port is on a private network.'
     fi
   fi
 fi
@@ -1116,6 +1197,20 @@ receipt_reader_summary() {
   fi
 }
 
+# Telemetry is off in all three of these states, and stays off until an
+# administrator says otherwise — there is not even an account yet at this
+# point. So the line reports the ceiling the mode sets rather than a state,
+# which is the only thing an operator has actually decided here.
+telemetry_summary() {
+  case $(value_of TELEMETRY_MODE) in
+    off) printf 'off' ;;
+    local) printf 'off, and nothing may be sent' ;;
+    # Empty too: the schema's default is opt-in, so an .env written by hand
+    # without the line behaves the same way as one that answered yes.
+    *) printf 'off, an administrator may enable' ;;
+  esac
+}
+
 summary() {
   printf '  %sThis instance%s\n\n' "$bold" "$reset"
   row 'Public address' "$(value_of APP_URL)"
@@ -1139,6 +1234,16 @@ summary() {
     row 'Outgoing email' "$(value_of SMTP_HOST)"
   else
     row 'Outgoing email' 'off'
+  fi
+  row 'Telemetry' "$(telemetry_summary)"
+  if is_enabled METRICS_ENABLED; then
+    if [ -n "$(value_of METRICS_TOKEN)" ]; then
+      row 'Metrics' 'on, token required'
+    else
+      row 'Metrics' 'on, unprotected'
+    fi
+  else
+    row 'Metrics' 'off'
   fi
 }
 

@@ -414,6 +414,65 @@ describe("configuration reaches the containers", () => {
 });
 
 /**
+ * The wizard, read as text: the list it counts with, and the blocks it asks.
+ *
+ * Every question is written the same way — the guard that decides whether to
+ * ask, and the heading on the line after it — so the two can be paired without
+ * running the script.
+ */
+function bootstrapQuestions(): { counted: string[]; asked: string[] } {
+  const source = readFileSync(
+    path.join(process.cwd(), "scripts", "bootstrap.sh"),
+    "utf8",
+  );
+
+  const list = /^question_keys='([^']*)'/m.exec(source);
+  expect(list, "scripts/bootstrap.sh should define question_keys").not.toBe(
+    null,
+  );
+
+  return {
+    counted: list![1].split(/\s+/).filter(Boolean),
+    asked: [
+      ...source.matchAll(
+        /if ! has_value ([A-Z][A-Z0-9_]*); then\n\s*question /g,
+      ),
+    ].map((match) => match[1]),
+  };
+}
+
+describe("the setup wizard", () => {
+  /**
+   * `question_keys` exists only so the prompts can say "3 of 7", which means
+   * it is the one part of a new question that nothing else needs — and so the
+   * part that gets left behind. The symptom is small and entirely in front of
+   * the operator: a wizard that counts to 9/7 and asks two questions after it
+   * claimed to be finished.
+   */
+  it("counts the questions it actually asks", () => {
+    const { counted, asked } = bootstrapQuestions();
+
+    expect(
+      asked,
+      "question_keys and the question blocks have drifted apart; the numbering " +
+        "in the prompts is taken from the list, not from the blocks",
+    ).toEqual(counted);
+  });
+
+  /**
+   * A key here that the schema does not accept is a question whose answer is
+   * written into `.env` and then ignored — and `has_value` would never match
+   * it, so it would be asked again on every single run.
+   */
+  it("asks about settings that exist", () => {
+    const { counted } = bootstrapQuestions();
+    const known = new Set<string>(ENV_VARIABLE_NAMES);
+
+    expect(counted.filter((key) => !known.has(key))).toEqual([]);
+  });
+});
+
+/**
  * The same text with its comments removed.
  *
  * Prose that mentions a setting is not code that acts on it, and the whole
