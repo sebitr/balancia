@@ -100,7 +100,7 @@ export function AddExpenseSheet({
             onChange={(event) => setQuery(event.target.value)}
             aria-label={t("pickerSearchLabel")}
             placeholder={t("pickerSearchPlaceholder")}
-            className="h-10 rounded-xl pl-9 text-[0.9375rem]"
+            className="h-10 rounded-xl pl-9 text-base md:text-[0.9375rem]"
           />
         </div>
 

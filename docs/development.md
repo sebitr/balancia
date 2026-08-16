@@ -309,3 +309,12 @@ ceremony. Page data comes from Server Components.
 **The service worker** never caches authentication endpoints, receipts or
 mutations, and there is no offline data entry. That is deliberate: queueing
 financial writes would need conflict resolution this product does not have.
+
+**Form controls never go below 16px on a phone.** Safari on iOS zooms the page
+in when a field smaller than that takes focus, and it does not zoom back out
+afterwards — the layout is left scaled up until the reader pinches out by hand.
+So anything typed into or picked from — `<input>`, `<textarea>`, `<select>` —
+carries `text-base`, and its real size comes back at `md:` and up:
+`text-base md:text-sm`. `Input` and `Textarea` already do this, so a call site
+only has to keep it when it overrides the size. Buttons and Radix triggers are
+exempt; the browser only zooms for controls it can put a caret or a picker in.

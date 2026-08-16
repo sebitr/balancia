@@ -232,7 +232,7 @@ export function RecurringForm({
             onChange={(event) =>
               setFrequency(event.target.value as typeof frequency)
             }
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-sm"
           >
             <option value="weekly">{t("weekly")}</option>
             <option value="monthly">{t("monthly")}</option>
@@ -259,7 +259,7 @@ export function RecurringForm({
             id="recurring-weekday"
             value={weekday}
             onChange={(event) => setWeekday(event.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-sm"
           >
             {weekdays.map((day) => (
               <option key={day.value} value={day.value}>
@@ -315,7 +315,7 @@ export function RecurringForm({
           id="recurring-payer"
           value={payerId}
           onChange={(event) => setPayerId(event.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-sm"
         >
           {participants.map((participant) => (
             <option key={participant.id} value={participant.id}>

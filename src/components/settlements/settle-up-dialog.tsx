@@ -172,7 +172,7 @@ export function SettleUpDialog({
               id="settle-from"
               value={fromId}
               onChange={(event) => setFromId(event.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-sm"
             >
               {participants.map((participant) => (
                 <option key={participant.id} value={participant.id}>
@@ -188,7 +188,7 @@ export function SettleUpDialog({
               id="settle-to"
               value={toId}
               onChange={(event) => setToId(event.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-sm"
             >
               {participants.map((participant) => (
                 <option key={participant.id} value={participant.id}>

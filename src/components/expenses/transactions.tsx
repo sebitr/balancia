@@ -345,7 +345,7 @@ export function Transactions({
               placeholder={t("searchPlaceholder")}
               // The platform's own clear affordance is hidden: it sits where
               // ours does and only one of them tells the URL about it.
-              className="h-[34px] rounded-xl pr-9 pl-[34px] text-[0.8125rem] [&::-webkit-search-cancel-button]:hidden"
+              className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-[0.8125rem] [&::-webkit-search-cancel-button]:hidden"
             />
             {query !== "" && (
               <button

@@ -49,7 +49,7 @@ const EXPIRIES: readonly {
 const EYEBROW =
   "text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase";
 const FIELD =
-  "h-[42px] rounded-lg border-input bg-[color-mix(in_oklch,var(--input)_30%,transparent)] px-3 text-sm";
+  "h-[42px] rounded-lg border-input bg-[color-mix(in_oklch,var(--input)_30%,transparent)] px-3 text-base md:text-sm";
 
 export function PersonRow({
   groupId,
