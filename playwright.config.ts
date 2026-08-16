@@ -45,7 +45,22 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `pnpm start --port ${PORT}`,
+    /*
+     * The standalone server, which is what the Docker image runs — not
+     * `next start`, which prints on every run that it "does not work with
+     * output: standalone".
+     *
+     * `next build` leaves the two asset trees outside the bundle, so they are
+     * staged in exactly as the Dockerfile copies them. Without that the app
+     * boots and serves HTML with no CSS or icons behind it. The `rm` keeps a
+     * second run from nesting `static/static`.
+     */
+    command: [
+      "rm -rf .next/standalone/.next/static .next/standalone/public",
+      "cp -r .next/static .next/standalone/.next/static",
+      "cp -r public .next/standalone/public",
+      "node .next/standalone/server.js",
+    ].join(" && "),
     url: `${baseURL}/api/health/ready`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

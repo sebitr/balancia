@@ -38,7 +38,11 @@ test("the add-expense form is usable at a phone width", async ({ page }) => {
   await page.getByLabel("Amount").fill("5.00");
   await page.getByRole("button", { name: "Add expense" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}/expenses$`));
+  // The dialog confirms in place; the list is a navigation away.
+  await expect(
+    page.getByRole("heading", { name: "Expense added" }),
+  ).toBeVisible();
+  await page.goto(`/groups/${groupId}/expenses`);
   await expect(page.getByText("Snack")).toBeVisible();
 
   const overflows = await page.evaluate(
