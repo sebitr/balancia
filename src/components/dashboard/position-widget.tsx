@@ -26,6 +26,10 @@ import { cn } from "@/lib/utils";
  * the two totals underneath say the same thing in a form a screen reader can
  * read, and the sign of the headline figure is carried by its colour and the
  * arrows below it rather than by colour alone.
+ *
+ * Every figure here is rounded to whole units. This is an answer to "roughly
+ * where do I stand?", and centimes on a five-digit total are noise; the exact
+ * amount is a tap away, inside the group that owes it.
  */
 
 interface Figure {
@@ -119,6 +123,7 @@ export function PositionWidget({
       <Amount
         minorUnits={(netUnits < 0n ? -netUnits : netUnits).toString()}
         currency={net.currency}
+        fractionDigits={0}
         className={cn(
           "text-[2.875rem] leading-none font-semibold tracking-[-0.035em]",
           positive ? "text-positive" : "text-negative",
@@ -321,7 +326,7 @@ function TintedTotal({
       )}
     >
       <Icon aria-hidden="true" className="size-3.5 shrink-0" />
-      <Amount minorUnits={minorUnits} currency={currency} />
+      <Amount minorUnits={minorUnits} currency={currency} fractionDigits={0} />
     </span>
   );
 }

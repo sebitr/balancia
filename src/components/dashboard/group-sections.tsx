@@ -20,6 +20,9 @@ import { PUSH } from "@/components/motion/transitions";
  *
  * Direction is carried by the section label, so each amount's own word moves
  * into `sr-only` rather than being dropped — colour is never the only signal.
+ *
+ * Amounts are rounded to whole units, as they are in the widget above: this
+ * list is scanned, not reconciled, and the group's own screen has the centimes.
  */
 
 export interface GroupRowView {
@@ -97,6 +100,7 @@ export function GroupList({
                   key={amount.currency}
                   minorUnits={amount.minorUnits}
                   currency={amount.currency}
+                  fractionDigits={0}
                   showLabel={false}
                   className="text-base [&>svg]:size-[15px]"
                 />

@@ -41,7 +41,8 @@ describe("GroupList", () => {
   it("keeps the amount's direction as a word for a screen reader", () => {
     renderWithIntl(<GroupList groups={[row()]} now={NOW} />);
 
-    expect(screen.getByText("€100.00")).toBeVisible();
+    // Whole units: the list is scanned, and the centimes are inside the group.
+    expect(screen.getByText("€100")).toBeVisible();
     // The section label carries the direction visually, so the row's own word
     // is present but not shown — colour is never the only signal.
     const word = screen.getByText("owes");
@@ -91,6 +92,6 @@ describe("GroupList", () => {
       />,
     );
 
-    expect(screen.getByText("CHF 210.00")).toBeVisible();
+    expect(screen.getByText("CHF 210")).toBeVisible();
   });
 });

@@ -243,6 +243,11 @@ export function multiplyMoney(value: Money, factor: Decimal | string): Money {
  * The amount is handed to Intl as a decimal *string* (supported since the
  * Intl.NumberFormat v3 proposal, available in Node 20+ and every browser we
  * target), so a large balance is never routed through a float.
+ *
+ * `fractionDigits` narrows the display only — the amount itself is untouched,
+ * and Intl does the rounding on the decimal string. Passing 0 is how a screen
+ * that reads as a summary shows whole units; anything a person is checking to
+ * the centime keeps the currency's own precision.
  */
 export function formatMoney(
   value: Money,
@@ -251,15 +256,17 @@ export function formatMoney(
     /** "symbol" (default), "code", "name" or "none" for a bare number. */
     display?: "symbol" | "code" | "name" | "none";
     signDisplay?: Intl.NumberFormatOptions["signDisplay"];
+    /** Digits after the separator; defaults to the currency's exponent. */
+    fractionDigits?: number;
   } = {},
 ): string {
   const { locale, display = "symbol", signDisplay } = options;
-  const exponent = currencyExponent(value.currency);
+  const digits = options.fractionDigits ?? currencyExponent(value.currency);
   const decimalText = toMajorString(value);
   if (display === "none") {
     return new Intl.NumberFormat(locale, {
-      minimumFractionDigits: exponent,
-      maximumFractionDigits: exponent,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
       signDisplay,
     }).format(decimalText as unknown as number);
   }
@@ -267,8 +274,8 @@ export function formatMoney(
     style: "currency",
     currency: value.currency,
     currencyDisplay: display === "symbol" ? "narrowSymbol" : display,
-    minimumFractionDigits: exponent,
-    maximumFractionDigits: exponent,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
     signDisplay,
   }).format(decimalText as unknown as number);
 }

@@ -210,4 +210,17 @@ describe("formatMoney", () => {
       formatMoney(money(-1050n, "EUR"), { locale: "en-US", display: "none" }),
     ).toBe("-10.50");
   });
+
+  it("rounds to whole units when asked for no decimals", () => {
+    expect(
+      formatMoney(money(2533331n, "CHF"), {
+        locale: "en-US",
+        fractionDigits: 0,
+      }),
+    ).toContain("25,333");
+    // Rounded for the reader, not truncated: the centimes still carry.
+    expect(
+      formatMoney(money(1060n, "EUR"), { locale: "en-US", fractionDigits: 0 }),
+    ).toContain("11");
+  });
 });
