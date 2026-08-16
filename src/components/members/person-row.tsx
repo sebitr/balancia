@@ -34,7 +34,38 @@ import type { PersonView } from "./people-card";
  * you have to hit is a smaller target than the row it sits on — so the panel is
  * a sibling of the button rather than a child of it, which keeps the toggle
  * free of nested interactive elements.
+ *
+ * How much of that panel exists depends on who is reading, and the row can
+ * therefore collapse to nothing but a name. Three rules decide it, and they are
+ * gathered in `openings` below so the answer is in one place rather than spread
+ * across four `&&`s in the markup.
  */
+
+/**
+ * What this reader may actually do about this person.
+ *
+ * Once someone has an account, their name and email are theirs: only they can
+ * change the display name they carry in this group, and their email moves in
+ * their account settings, not here. Access and removal belong to the owner
+ * alone — a member runs the money, not the door. A row with no account behind
+ * it is just a label, and whoever manages participants owns all of it.
+ */
+function openings(
+  person: PersonView,
+  can: { isSelf: boolean; manage: boolean; invite: boolean; remove: boolean },
+) {
+  const hasAccount = person.access === "account";
+  return {
+    /** Their display name in this group. */
+    name: hasAccount ? can.isSelf : can.manage,
+    /** The email a person without an account can be reached at. */
+    email: !hasAccount && can.manage,
+    /** The whole access block — invite links, and who has one. */
+    access: can.invite,
+    /** Taking them out of the group. The owner never appears here. */
+    remove: can.remove && !person.isOwner,
+  };
+}
 
 /** Expiries offered when issuing a link, as days. `null` never expires. */
 const EXPIRIES: readonly {
@@ -60,8 +91,10 @@ export function PersonRow({
   onReveal,
   onDismissReveal,
   onAskRemove,
+  isSelf,
   canManage,
   canInvite,
+  canRemove,
 }: {
   groupId: string;
   person: PersonView;
@@ -71,12 +104,22 @@ export function PersonRow({
   onReveal: (url: string) => void;
   onDismissReveal: () => void;
   onAskRemove: () => void;
+  isSelf: boolean;
   canManage: boolean;
   canInvite: boolean;
+  canRemove: boolean;
 }) {
   const t = useTranslations("membersPage");
   const dates = useDateFormatter();
-  const expandable = canManage || canInvite;
+  const may = openings(person, {
+    isSelf,
+    manage: canManage,
+    invite: canInvite,
+    remove: canRemove,
+  });
+  // Nothing to open is nothing to tap: a row with an empty panel behind it
+  // stays a plain line rather than a control that answers with a blank.
+  const expandable = may.name || may.email || may.access || may.remove;
 
   const meta =
     person.access === "account"
@@ -159,8 +202,7 @@ export function PersonRow({
           onReveal={onReveal}
           onDismissReveal={onDismissReveal}
           onAskRemove={onAskRemove}
-          canManage={canManage}
-          canInvite={canInvite}
+          may={may}
         />
       )}
     </div>
@@ -191,7 +233,8 @@ function Pill({
 }
 
 /**
- * The open half of a row: rename, access, remove.
+ * The open half of a row: rename, access, remove — whichever of the three this
+ * reader is entitled to, per `may`.
  *
  * Mounted only while open, which is what resets the name and email drafts — a
  * half-typed rename is not something to carry back after closing the row and
@@ -204,8 +247,7 @@ function PersonPanel({
   onReveal,
   onDismissReveal,
   onAskRemove,
-  canManage,
-  canInvite,
+  may,
 }: {
   groupId: string;
   person: PersonView;
@@ -213,8 +255,7 @@ function PersonPanel({
   onReveal: (url: string) => void;
   onDismissReveal: () => void;
   onAskRemove: () => void;
-  canManage: boolean;
-  canInvite: boolean;
+  may: ReturnType<typeof openings>;
 }) {
   const router = useRouter();
   const t = useTranslations("membersPage");
@@ -229,7 +270,8 @@ function PersonPanel({
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const dirty = name.trim() !== person.name || email.trim() !== person.email;
+  const dirty =
+    name.trim() !== person.name || (may.email && email.trim() !== person.email);
   const nameId = `person-name-${person.id}`;
   const emailId = `person-email-${person.id}`;
   const expiryId = `person-expiry-${person.id}`;
@@ -321,11 +363,13 @@ function PersonPanel({
 
   return (
     <div className="flex flex-col gap-4 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] px-3.5 pt-0.5 pb-[18px] motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
-      {canManage && (
+      {may.name && (
         <div className="flex flex-col gap-2.5">
           <span className={EYEBROW}>{t("details")}</span>
           <label htmlFor={nameId} className="flex flex-col gap-1.5">
-            <span className="text-[0.8125rem] font-medium">{t("name")}</span>
+            <span className="text-[0.8125rem] font-medium">
+              {may.email ? t("name") : t("nameHere")}
+            </span>
             <Input
               id={nameId}
               value={name}
@@ -334,23 +378,33 @@ function PersonPanel({
               className={FIELD}
             />
           </label>
-          <label htmlFor={emailId} className="flex flex-col gap-1.5">
-            <span className="flex items-baseline gap-1.5 text-[0.8125rem] font-medium">
-              {t("email")}
-              <span className="text-xs font-normal text-muted-foreground">
-                {tCommon("optional")}
-              </span>
+          {/* Outside the label, which would otherwise read the whole hint out
+              as the field's name. Only their own row reaches this branch, so
+              the sentence is addressed to them rather than about them. */}
+          {!may.email && (
+            <span className="text-xs text-pretty text-muted-foreground">
+              {t("emailInAccount")}
             </span>
-            <Input
-              id={emailId}
-              type="email"
-              inputMode="email"
-              value={email}
-              placeholder="name@example.com"
-              onChange={(event) => setEmail(event.target.value)}
-              className={FIELD}
-            />
-          </label>
+          )}
+          {may.email && (
+            <label htmlFor={emailId} className="flex flex-col gap-1.5">
+              <span className="flex items-baseline gap-1.5 text-[0.8125rem] font-medium">
+                {t("email")}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {tCommon("optional")}
+                </span>
+              </span>
+              <Input
+                id={emailId}
+                type="email"
+                inputMode="email"
+                value={email}
+                placeholder="name@example.com"
+                onChange={(event) => setEmail(event.target.value)}
+                className={FIELD}
+              />
+            </label>
+          )}
           {dirty && (
             <span className="flex gap-2 pt-0.5">
               <Button
@@ -379,95 +433,98 @@ function PersonPanel({
         </div>
       )}
 
-      <div
-        className={cn(
-          "flex flex-col gap-2.5",
-          canManage && "border-t border-border pt-3.5",
-        )}
-      >
-        <span className={EYEBROW}>{t("access")}</span>
+      {may.access && (
+        <div
+          className={cn(
+            "flex flex-col gap-2.5",
+            may.name && "border-t border-border pt-3.5",
+          )}
+        >
+          <span className={EYEBROW}>{t("access")}</span>
 
-        {revealUrl ? (
-          <div className="flex flex-col gap-2.5 rounded-[14px] border border-[color-mix(in_oklch,var(--primary)_30%,transparent)] bg-[color-mix(in_oklch,var(--primary)_8%,transparent)] p-3 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0">
-            <span className="flex items-start gap-2">
-              <ShieldAlert
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0 text-primary"
-              />
-              <span className="flex flex-col gap-0.5">
-                <span className="font-semibold">{t("copyNow")}</span>
-                <span className="text-[0.8125rem] text-pretty text-muted-foreground">
-                  {t("copyWarning", { name: person.name })}
+          {revealUrl ? (
+            <div className="flex flex-col gap-2.5 rounded-[14px] border border-[color-mix(in_oklch,var(--primary)_30%,transparent)] bg-[color-mix(in_oklch,var(--primary)_8%,transparent)] p-3 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0">
+              <span className="flex items-start gap-2">
+                <ShieldAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-primary"
+                />
+                <span className="flex flex-col gap-0.5">
+                  <span className="font-semibold">{t("copyNow")}</span>
+                  <span className="text-[0.8125rem] text-pretty text-muted-foreground">
+                    {t("copyWarning", { name: person.name })}
+                  </span>
                 </span>
               </span>
-            </span>
-            <span className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 overflow-x-auto rounded-[10px] bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)] p-2.5 font-mono text-xs whitespace-nowrap">
-                {revealUrl}
-              </code>
+              <span className="flex items-center gap-2">
+                <code className="min-w-0 flex-1 overflow-x-auto rounded-[10px] bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)] p-2.5 font-mono text-xs whitespace-nowrap">
+                  {revealUrl}
+                </code>
+                <Button
+                  size="icon"
+                  aria-label={t("copyLink")}
+                  className="size-[42px] shrink-0"
+                  onClick={() => void onCopy()}
+                >
+                  {copied ? (
+                    <Check aria-hidden="true" />
+                  ) : (
+                    <Copy aria-hidden="true" />
+                  )}
+                </Button>
+              </span>
               <Button
-                size="icon"
-                aria-label={t("copyLink")}
-                className="size-[42px] shrink-0"
-                onClick={() => void onCopy()}
+                variant="ghost"
+                className="h-8 self-start px-2.5 font-semibold text-primary"
+                onClick={onDismissReveal}
               >
-                {copied ? (
-                  <Check aria-hidden="true" />
-                ) : (
-                  <Copy aria-hidden="true" />
-                )}
+                {t("copiedIt")}
               </Button>
-            </span>
-            <Button
-              variant="ghost"
-              className="h-8 self-start px-2.5 font-semibold text-primary"
-              onClick={onDismissReveal}
-            >
-              {t("copiedIt")}
-            </Button>
-          </div>
-        ) : person.access === "account" ? (
-          <p className="text-pretty text-muted-foreground">
-            {/* Four phrasings rather than one assembled from fragments: an
+            </div>
+          ) : person.access === "account" ? (
+            <p className="text-pretty text-muted-foreground">
+              {/* Four phrasings rather than one assembled from fragments: an
                 owner reads a clause nobody else does, and naming the address
                 someone signs in with only works when there is one. */}
-            {person.email
-              ? person.isOwner
-                ? t("accountOwnerEmail", {
-                    name: person.name,
-                    email: person.email,
-                  })
-                : t("accountEmail", { name: person.name, email: person.email })
-              : person.isOwner
-                ? t("accountOwner", { name: person.name })
-                : t("account", { name: person.name })}
-          </p>
-        ) : person.access === "link" && person.link ? (
-          <div className="flex flex-col gap-2.5">
-            <span className="flex items-center gap-2 rounded-lg border border-border bg-[color-mix(in_oklch,var(--card)_70%,transparent)] px-3 py-2.5">
-              <Link2
-                aria-hidden="true"
-                className="size-4 shrink-0 text-primary"
-              />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[0.8125rem] font-medium">
-                  {t("linkIsLive")}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {[
-                    t("linkCreated", {
-                      date: dates.at(person.link.createdAt),
-                    }),
-                    person.link.expiresAt
-                      ? t("linkExpires", {
-                          date: dates.at(person.link.expiresAt),
-                        })
-                      : t("linkNeverExpires"),
-                  ].join(" · ")}
+              {person.email
+                ? person.isOwner
+                  ? t("accountOwnerEmail", {
+                      name: person.name,
+                      email: person.email,
+                    })
+                  : t("accountEmail", {
+                      name: person.name,
+                      email: person.email,
+                    })
+                : person.isOwner
+                  ? t("accountOwner", { name: person.name })
+                  : t("account", { name: person.name })}
+            </p>
+          ) : person.access === "link" && person.link ? (
+            <div className="flex flex-col gap-2.5">
+              <span className="flex items-center gap-2 rounded-lg border border-border bg-[color-mix(in_oklch,var(--card)_70%,transparent)] px-3 py-2.5">
+                <Link2
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-primary"
+                />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[0.8125rem] font-medium">
+                    {t("linkIsLive")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {[
+                      t("linkCreated", {
+                        date: dates.at(person.link.createdAt),
+                      }),
+                      person.link.expiresAt
+                        ? t("linkExpires", {
+                            date: dates.at(person.link.expiresAt),
+                          })
+                        : t("linkNeverExpires"),
+                    ].join(" · ")}
+                  </span>
                 </span>
               </span>
-            </span>
-            {canInvite && (
               <span className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
@@ -491,21 +548,19 @@ function PersonPanel({
                   {t("revoke")}
                 </Button>
               </span>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            <p className="text-pretty text-muted-foreground">
-              {t("noAccessBlurb", { name: person.name })}
-            </p>
-            {canInvite && (
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              <p className="text-pretty text-muted-foreground">
+                {t("noAccessBlurb", { name: person.name })}
+              </p>
               <span className="flex flex-wrap items-end gap-2">
                 <label htmlFor={expiryId} className="flex flex-col gap-1.5">
                   <span className="text-[0.8125rem] font-medium">
                     {t("expires")}
                   </span>
                   {/* Native, like every other select in the app: a phone's own
-                      picker beats a listbox that has to be scrolled. */}
+                    picker beats a listbox that has to be scrolled. */}
                   <select
                     id={expiryId}
                     value={expiry}
@@ -539,12 +594,12 @@ function PersonPanel({
                   {t("createLink")}
                 </Button>
               </span>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
 
-      {canManage && !person.isOwner && (
+      {may.remove && (
         <div className="flex flex-col gap-1.5 border-t border-border pt-3.5">
           <Button
             variant="destructive"

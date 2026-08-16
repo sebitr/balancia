@@ -60,13 +60,18 @@ const UNDO_WINDOW = 6000;
 export function PeopleCard({
   groupId,
   people,
+  viewerId,
   canManage,
   canInvite,
+  canRemove,
 }: {
   groupId: string;
   people: readonly PersonView[];
+  /** The reader's own participant row, so their row can offer what only they may do. */
+  viewerId: string | null;
   canManage: boolean;
   canInvite: boolean;
+  canRemove: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("membersPage");
@@ -144,8 +149,10 @@ export function PeopleCard({
             onReveal={(url) => setReveal({ id: person.id, url })}
             onDismissReveal={() => setReveal(null)}
             onAskRemove={() => setConfirmId(person.id)}
+            isSelf={person.id === viewerId}
             canManage={canManage}
             canInvite={canInvite}
+            canRemove={canRemove}
           />
         ))}
 

@@ -96,10 +96,30 @@ const OWNER = person({
   access: "account",
 });
 
-function render(people: PersonView[]) {
+/** The owner's view, which is the only one that sees every control. */
+function render(
+  people: PersonView[],
+  props: Partial<React.ComponentProps<typeof PeopleCard>> = {},
+) {
   return renderWithIntl(
-    <PeopleCard groupId="g1" people={people} canManage canInvite />,
+    <PeopleCard
+      groupId="g1"
+      people={people}
+      viewerId="seb"
+      canManage
+      canInvite
+      canRemove
+      {...props}
+    />,
   );
+}
+
+/** What a member — someone who joined a group they do not own — is offered. */
+function renderAsMember(
+  people: PersonView[],
+  viewerId: string | null = "member",
+) {
+  return render(people, { viewerId, canInvite: false, canRemove: false });
 }
 
 beforeEach(() => {
@@ -236,5 +256,82 @@ describe("PeopleCard", () => {
     expect(
       screen.queryByRole("button", { name: /Remove from group/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not offer the owner someone else's name or email to edit", async () => {
+    const user = userEvent.setup();
+    const member = person({
+      id: "member",
+      name: "Amélie",
+      email: "amelie@example.com",
+      access: "account",
+    });
+    render([OWNER, member]);
+
+    // Their access and their place in the group are the owner's to change.
+    await user.click(screen.getByRole("button", { name: /Amélie/ }));
+    expect(screen.getByText("Access")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /Remove from group/ }),
+    ).toBeVisible();
+    // The name they go by and the address they sign in with are not.
+    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    // The label carries an "optional" qualifier, hence the loose match.
+    expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
+  });
+
+  it("lets an account holder rename themselves, but not restate their email", async () => {
+    const user = userEvent.setup();
+    const me = person({
+      id: "member",
+      name: "Amélie",
+      email: "amelie@example.com",
+      access: "account",
+    });
+    renderAsMember([OWNER, me]);
+
+    await user.click(screen.getByRole("button", { name: /Amélie/ }));
+    expect(screen.getByLabelText("Your name in this group")).toHaveValue(
+      "Amélie",
+    );
+    expect(
+      screen.getByText(/email address changes in your account settings/),
+    ).toBeVisible();
+    // The label carries an "optional" qualifier, hence the loose match.
+    expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
+  });
+
+  it("keeps access and removal off a non-owner's screen", async () => {
+    const user = userEvent.setup();
+    renderAsMember([OWNER, person()]);
+
+    // Someone without an account is still theirs to name...
+    await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    expect(screen.getByLabelText("Name")).toBeVisible();
+    expect(screen.getByLabelText(/Email/)).toBeVisible();
+    // ...but the invite link and the door are the owner's.
+    expect(screen.queryByText("Access")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create invite link" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Remove from group/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("leaves a row unopenable when there is nothing behind it", () => {
+    // A guest: no account of their own, and nobody else's row to manage.
+    render([OWNER, person()], {
+      viewerId: "guest",
+      canManage: false,
+      canInvite: false,
+      canRemove: false,
+    });
+
+    expect(screen.queryAllByRole("button", { expanded: false })).toHaveLength(
+      0,
+    );
+    expect(screen.getByText("Seb")).toBeVisible();
+    expect(screen.getByText("Cyril")).toBeVisible();
   });
 });

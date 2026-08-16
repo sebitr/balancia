@@ -48,6 +48,12 @@ export interface GroupPermissions {
   readonly uploadReceipt: boolean;
   readonly manageRecurring: boolean;
   readonly manageParticipants: boolean;
+  /**
+   * Taking someone out of the group, and putting them back. Separate from
+   * `manageParticipants` because adding a name is housekeeping while removing
+   * one reaches into everyone's balances — the owner keeps that one.
+   */
+  readonly removeParticipants: boolean;
   readonly manageInvitations: boolean;
   readonly manageGroupSettings: boolean;
   readonly importData: boolean;
@@ -117,6 +123,7 @@ const GUEST_PERMISSIONS: GroupPermissions = {
   uploadReceipt: true,
   manageRecurring: true,
   manageParticipants: false,
+  removeParticipants: false,
   manageInvitations: false,
   manageGroupSettings: false,
   importData: false,
@@ -125,6 +132,16 @@ const GUEST_PERMISSIONS: GroupPermissions = {
   transferOwnership: false,
 };
 
+/**
+ * A member is anyone who joined a group someone else owns. They run the money
+ * side of it in full, and none of the door: who is let in, whose link is live
+ * and who stops being in the group at all is the owner's alone. A member is
+ * still someone the owner invited, not a co-owner.
+ *
+ * `manageParticipants` stays, because adding a name — the person who paid for
+ * dinner and is not on the app — is part of recording expenses, not part of
+ * administering the group.
+ */
 const MEMBER_PERMISSIONS: GroupPermissions = {
   viewGroup: true,
   addExpense: true,
@@ -133,7 +150,8 @@ const MEMBER_PERMISSIONS: GroupPermissions = {
   uploadReceipt: true,
   manageRecurring: true,
   manageParticipants: true,
-  manageInvitations: true,
+  removeParticipants: false,
+  manageInvitations: false,
   manageGroupSettings: false,
   importData: true,
   exportData: true,
@@ -149,6 +167,7 @@ const OWNER_PERMISSIONS: GroupPermissions = {
   uploadReceipt: true,
   manageRecurring: true,
   manageParticipants: true,
+  removeParticipants: true,
   manageInvitations: true,
   manageGroupSettings: true,
   importData: true,
