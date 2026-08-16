@@ -273,7 +273,7 @@
     "paymentBadge": "Remboursement",
     "revenueBadge": "Revenu",
     "recurringBadge": "Récurrente",
-    "settlementTitle": "{from} a payé {to}",
+    "settlementTitle": "{from} a remboursé {to}",
     "repayment": "Remboursement",
     "spreadLabel": "Dépenses par catégorie",
     "uncategorised": "Sans catégorie",
