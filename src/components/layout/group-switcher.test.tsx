@@ -82,24 +82,24 @@ async function openPanel() {
 }
 
 describe("GroupSwitcher", () => {
-  it("puts the way out and the way sideways behind the name alone", () => {
+  it("puts home behind the mark and the other groups behind the name", () => {
     renderHeader();
 
+    const home = screen.getByRole("link", { name: "Balancia home" });
+    expect(home).toHaveAttribute("href", "/dashboard");
+    // Leaving a group is a move back up, not a move deeper.
+    expect(home).toHaveAttribute("data-transition", "pop");
     expect(
       screen.getByRole("button", { name: "Annecy weekend" }),
     ).toBeInTheDocument();
-    // No back arrow beside it: the header holds one control, so the name can
-    // start on the same edge as the screen below. Leaving happens in the panel
-    // — covered below, along with the direction it travels in.
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("leaves a guest the name alone, with nothing to reach", () => {
+  it("leaves a guest the mark and the name, with nothing to reach", () => {
     renderHeader({ isGuest: true });
 
     expect(screen.getByText("Annecy weekend")).toBeInTheDocument();
-    // A guest has no dashboard behind the group, so neither control is here —
-    // and nothing is left for the keyboard to land on.
+    // A guest has no dashboard behind the group, so the mark is decoration
+    // rather than a way out — and nothing is left for the keyboard to land on.
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
