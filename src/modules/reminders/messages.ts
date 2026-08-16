@@ -20,8 +20,16 @@ export interface Draft {
 }
 
 /**
- * Order matters: the caption counts a draft's position in this list ("Draft 4
- * of 20"), so inserting one in the middle renumbers the rest.
+ * Order matters: `positionOf` counts a draft's place in this list, so inserting
+ * one in the middle renumbers the rest. New drafts are therefore appended
+ * within their tone rather than slotted in where they read best.
+ *
+ * A tone is worth having only if it has enough sentences that the reroll never
+ * comes back around to one the sender just dismissed. Every draft below obeys
+ * the same grammar as well as the same manners: `{amount}` is never the subject
+ * of a verb, because it is a phrase — "€148.00", or "€148.00 and ¥1,400" — and
+ * a sentence built to agree with a plural breaks on the single-currency case
+ * (and, in French, on the participle too).
  */
 export const DRAFTS: readonly Draft[] = [
   { key: "gentle1", tone: "gentle" },
@@ -31,6 +39,13 @@ export const DRAFTS: readonly Draft[] = [
   { key: "gentle5", tone: "gentle" },
   { key: "gentle6", tone: "gentle" },
   { key: "gentle7", tone: "gentle" },
+  { key: "gentle8", tone: "gentle" },
+  { key: "gentle9", tone: "gentle" },
+  { key: "gentle10", tone: "gentle" },
+  { key: "gentle11", tone: "gentle" },
+  { key: "gentle12", tone: "gentle" },
+  { key: "gentle13", tone: "gentle" },
+  { key: "gentle14", tone: "gentle" },
   { key: "dry1", tone: "dry" },
   { key: "dry2", tone: "dry" },
   { key: "dry3", tone: "dry" },
@@ -38,12 +53,25 @@ export const DRAFTS: readonly Draft[] = [
   { key: "dry5", tone: "dry" },
   { key: "dry6", tone: "dry" },
   { key: "dry7", tone: "dry" },
+  { key: "dry8", tone: "dry" },
+  { key: "dry9", tone: "dry" },
+  { key: "dry10", tone: "dry" },
+  { key: "dry11", tone: "dry" },
+  { key: "dry12", tone: "dry" },
+  { key: "dry13", tone: "dry" },
+  { key: "dry14", tone: "dry" },
   { key: "cheeky1", tone: "cheeky" },
   { key: "cheeky2", tone: "cheeky" },
   { key: "cheeky3", tone: "cheeky" },
   { key: "cheeky4", tone: "cheeky" },
   { key: "cheeky5", tone: "cheeky" },
   { key: "cheeky6", tone: "cheeky" },
+  { key: "cheeky7", tone: "cheeky" },
+  { key: "cheeky8", tone: "cheeky" },
+  { key: "cheeky9", tone: "cheeky" },
+  { key: "cheeky10", tone: "cheeky" },
+  { key: "cheeky11", tone: "cheeky" },
+  { key: "cheeky12", tone: "cheeky" },
 ];
 
 /** Gentle is what an unconfigured group sends. Cheeky is opted into. */
@@ -51,11 +79,6 @@ export const DEFAULT_TONE: RemindTone = "gentle";
 
 export function draftsOf(tone: RemindTone): Draft[] {
   return DRAFTS.filter((draft) => draft.tone === tone);
-}
-
-/** Where a draft sits in the library, 1-based, for the "Draft 4 of 20" line. */
-export function positionOf(key: string): number {
-  return DRAFTS.findIndex((draft) => draft.key === key) + 1;
 }
 
 /**

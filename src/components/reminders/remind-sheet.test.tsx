@@ -65,12 +65,8 @@ describe("choosing who to remind", () => {
       }),
     ]);
 
-    expect(
-      screen.getByText("Notifications on · arrives in Balancia"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("No app yet · goes through your share sheet"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Notification")).toBeInTheDocument();
+    expect(screen.getByText("Share sheet")).toBeInTheDocument();
   });
 
   /**
@@ -81,9 +77,8 @@ describe("choosing who to remind", () => {
   it("does not quietly push to somebody who muted the group", () => {
     render([recipient({ channel: "share", muted: true })]);
 
-    expect(
-      screen.getByText("Reminders muted · goes through your share sheet"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Muted")).toBeInTheDocument();
+    expect(screen.queryByText("Notification")).not.toBeInTheDocument();
   });
 
   it("preselects everyone who can be reminded", () => {
@@ -163,6 +158,31 @@ describe("choosing who to remind", () => {
       screen.getByRole("button", { name: /write the message/i }),
     ).toBeDisabled();
   });
+
+  /**
+   * The figure follows the selection, not the list: unticking somebody has to
+   * change the total, or the sheet would keep quoting money nobody is about to
+   * be asked for.
+   */
+  it("counts what the selection is owed, not what the group is", async () => {
+    const user = userEvent.setup();
+    render([
+      recipient(),
+      recipient({
+        participantId: "padi",
+        name: "Padi",
+        debts: [{ amount: "10000", currency: "EUR" }],
+      }),
+    ]);
+
+    expect(screen.getByText("2 people owe you €248.00.")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("checkbox")[1]);
+    expect(screen.getByText("1 person owes you €148.00.")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("checkbox")[0]);
+    expect(screen.getByText("Choose who to remind.")).toBeInTheDocument();
+  });
 });
 
 describe("writing the message", () => {
@@ -225,7 +245,10 @@ describe("writing the message", () => {
       screen.getByRole("button", { name: /write the message/i }),
     );
 
-    expect(screen.getByText("Jonas · sent one by one")).toBeInTheDocument();
+    // Singular: one person to ask, however many currencies they owe in.
+    expect(
+      screen.getByText("Jonas owes you · Portugal, March"),
+    ).toBeInTheDocument();
   });
 
   it("names the channel on the button that will do the sending", async () => {
@@ -254,7 +277,12 @@ describe("writing the message", () => {
     ).toBeInTheDocument();
   });
 
-  it("counts the draft against the whole library", async () => {
+  /**
+   * The link goes out with every reminder, but it is not part of the text
+   * being edited: keeping it beside the box rather than inside it is what
+   * stops a sender typing past the end and pushing the URL out of sight.
+   */
+  it("shows the group link beside the draft, not inside it", async () => {
     const user = userEvent.setup();
     render([recipient()]);
 
@@ -262,7 +290,11 @@ describe("writing the message", () => {
       screen.getByRole("button", { name: /write the message/i }),
     );
 
-    expect(screen.getByText(/Draft \d+ of 20/)).toBeInTheDocument();
+    const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: /the message to send/i,
+    });
+    expect(draft.value).not.toContain("/groups/g1");
+    expect(screen.getByText(/\/groups\/g1$/)).toBeInTheDocument();
   });
 
   it("goes back without losing who was chosen", async () => {
