@@ -944,7 +944,7 @@
     "settlementDeleted": "{actor} a supprimé un paiement de {amount} avec {counterpart}",
     "recurringGenerated": "{description} · {amount} a été ajoutée automatiquement",
     "importCompleted": "Import terminé : {imported} ajoutées, {skipped} ignorées, {failed} en échec",
-    "reminderBody": "{amount} depuis {group}. Touche pour voir le détail et rembourser."
+    "reminderTitle": "{amount} depuis {group}"
   },
   "notificationsPage": {
     "metaTitle": "Notifications",

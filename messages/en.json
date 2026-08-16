@@ -944,7 +944,7 @@
     "settlementDeleted": "{actor} removed a payment of {amount} with {counterpart}",
     "recurringGenerated": "{description} · {amount} was added automatically",
     "importCompleted": "Import finished: {imported} added, {skipped} skipped, {failed} not imported",
-    "reminderBody": "{amount} from {group}. Tap for the breakdown and settle up."
+    "reminderTitle": "{amount} from {group}"
   },
   "notificationsPage": {
     "metaTitle": "Notifications",

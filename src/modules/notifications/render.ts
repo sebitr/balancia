@@ -13,6 +13,10 @@ import type {
  * entry it corresponds to should not be able to drift into saying different
  * things about the same event. The caller supplies the translator, which is
  * how the same row renders in English on the phone and in French in the tab.
+ *
+ * Every kind splits the same way: the title is the short line that survives a
+ * lock screen's truncation, and the body is the sentence. Nothing that only
+ * exists in the title may matter, because it is the half that gets cut.
  */
 
 /** Just enough of next-intl's translator to render these strings. */
@@ -188,18 +192,26 @@ export function renderNotification(
       };
 
     /*
-     * The only kind whose title is not the group name. Someone wrote this
-     * sentence and chose to send it; it is the notification, and burying it
-     * under a group name would turn a message into a system event. The line
-     * beneath it stays translated, because the facts are ours to phrase.
+     * The only kind whose title is not the group name, and the only one whose
+     * body is not ours to phrase.
+     *
+     * Someone wrote this sentence and chose to send it, so it is the
+     * notification — but a title is one line that gets cut mid-word, and these
+     * sentences are written to be read whole. It goes in the body, where a
+     * lock screen gives it three or four lines and shows it in full.
+     *
+     * The title carries what the reader needs before deciding to open
+     * anything: how much, and which group. That is also what makes a reminder
+     * legible among the notifications either side of it, whose titles are
+     * group names too.
      */
     case "reminder":
       return {
-        title: payload.message,
-        body: t("reminderBody", {
+        title: t("reminderTitle", {
           amount: debtOf(payload, locale, amountLocale),
           group: payload.groupName,
         }),
+        body: payload.message,
         url,
         // One outstanding nudge per group: a second reminder replaces the
         // first on the lock screen rather than stacking beside it.
