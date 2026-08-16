@@ -81,10 +81,10 @@ function activeIndexOf(pathname: string, base: string): number {
  * underneath stays put — `screenPath` is what keeps it there, and a direction
  * here would only describe motion that no longer happens.
  *
- * The rest are peers, so they slide the way the bar itself runs, and which way
- * that is depends on the tab being left. From a screen that sits on no tab at
- * all — a balance, an expense, the activity log — every tab is the way back
- * out, which is a pop.
+ * The rest are sections of the same place: they fade through, nudged the way
+ * the bar itself runs, and which way that is depends on the tab being left.
+ * From a screen that sits on no tab at all — a balance, an expense, the
+ * activity log — every tab is the way back out, which is a pop.
  */
 function directionFor(
   item: NavItem,

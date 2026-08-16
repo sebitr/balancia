@@ -9,10 +9,11 @@ import { screenPath } from "./transitions";
  * The screen: everything between the header and the bottom bar, and the only
  * part of the app that moves when you navigate.
  *
- * Direction belongs to the navigation, not to the destination — a group
+ * What moves belongs to the navigation, not to the destination — a group
  * arrives from the right when you tapped into it and from the left when you
- * came back to it. So the link names the motion, via `transitionTypes` and the
- * constants in `./transitions`, and this maps that name onto a CSS class that
+ * came back to it, and a peer on the tab bar does not arrive from anywhere at
+ * all. So the link names the motion, via `transitionTypes` and the constants
+ * in `./transitions`, and this maps that name onto a CSS class that
  * `globals.css` animates.
  *
  * Keyed by pathname. A `<ViewTransition>` in a layout normally never animates,

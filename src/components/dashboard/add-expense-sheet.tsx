@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { GroupIconTile } from "@/components/groups/group-icon";
 import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
 import { RelativeTime } from "./relative-time";
-import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Which group the expense is going into, asked before the form rather than
@@ -114,7 +113,12 @@ export function AddExpenseSheet({
               <li key={group.id} className="border-t">
                 <Link
                   href={`/groups/${group.id}/expenses/new`}
-                  transitionTypes={PUSH}
+                  // No direction, for the same reason the bar's own Add has
+                  // none: what arrives is the entry drawer, rising from the
+                  // bottom. This is the one route into it that `screenPath`
+                  // cannot hold still on its own — coming from the dashboard,
+                  // the screen underneath really does change — so the absence
+                  // here is doing work rather than waiting to be filled in.
                   onClick={() => onOpenChange(false)}
                   className="flex items-center gap-3 py-[13px] transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
                 >
