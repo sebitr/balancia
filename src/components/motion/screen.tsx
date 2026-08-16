@@ -3,6 +3,7 @@
 import { ViewTransition, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { screenPath } from "./transitions";
 
 /**
  * The screen: everything between the header and the bottom bar, and the only
@@ -21,12 +22,13 @@ import { cn } from "@/lib/utils";
  * page also means a page added later is carried along without being asked to
  * remember anything.
  *
- * Two things deliberately do not move it. A change of search params keeps the
- * pathname, so filtering a list does not re-enter the screen. And a navigation
+ * Three things deliberately do not move it. A change of search params keeps
+ * the pathname, so filtering a list does not re-enter the screen. A navigation
  * carrying no direction animates nothing at all: `router.refresh()` runs here
  * whenever a push notification lands on an open tab, and a screen that slid
  * sideways every time somebody else recorded an expense would be claiming a
- * navigation that never happened.
+ * navigation that never happened. And a path that opens *over* the screen
+ * rather than replacing it keys to the screen underneath — see `screenPath`.
  */
 const DIRECTIONS = {
   push: "push",
@@ -68,7 +70,7 @@ export function Screen({
 
   return (
     <ViewTransition
-      key={pathname}
+      key={screenPath(pathname)}
       enter={DIRECTIONS}
       exit={DIRECTIONS}
       default="none"
