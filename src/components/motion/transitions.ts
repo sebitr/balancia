@@ -33,27 +33,44 @@ export const SWITCH_FORWARD: string[] = ["switch-forward"];
 export const SWITCH_BACK: string[] = ["switch-back"];
 
 /**
- * Paths that are a layer over the screen rather than a screen of their own.
+ * Paths that can be a layer over a screen rather than a screen of their own,
+ * each capturing the part of itself that says where it may be opened from.
  *
  * Only the add-entry drawer, which is intercepted into the group's `@entry`
  * slot: the URL becomes `/groups/<id>/expenses/new`, but `children` goes on
- * rendering the group underneath, which is the whole point of intercepting it.
+ * rendering whatever was underneath, which is the whole point of intercepting
+ * it. `(.)` only intercepts from the same segment level, so the drawer is a
+ * layer when it was opened from inside `/groups/<id>` and a screen in its own
+ * right when it was reached from anywhere else — a link on the dashboard, or a
+ * cold load of the URL.
  */
 const OVERLAYS = [/^(\/groups\/[^/]+)\/expenses\/new$/];
 
+/** Whether `path` is `root` itself or something inside it. */
+function isUnder(path: string, root: string): boolean {
+  return path === root || path.startsWith(`${root}/`);
+}
+
 /**
- * Which screen a path is showing, ignoring anything opened over it.
+ * Which screen a path is showing, given the last screen it was reached from.
  *
  * `<Screen>` is keyed on this rather than on the pathname, because opening a
  * drawer is not a navigation between screens. Keyed on the raw pathname, the
- * group behind the drawer exited and re-entered on the way in and back out
- * again on the way out — it ran the push animation under a sheet that was
- * sliding up over it, and remounted, so it came back scrolled to the top.
+ * screen behind the drawer exited and re-entered on the way in and back out
+ * again on the way out — it ran an animation under a sheet that was rising
+ * over it, and remounted, so it came back scrolled to the top.
+ *
+ * `from` is what makes this the screen you were actually on. Deriving the
+ * screen from the overlay's own URL instead put the drawer over `/groups/<id>`
+ * wherever it was opened, so the overview held still and every other screen in
+ * the group — the transactions list above all — went on sliding, now to a path
+ * it had never been on.
  */
-export function screenPath(pathname: string): string {
+export function screenPath(pathname: string, from: string | null): string {
   for (const overlay of OVERLAYS) {
-    const beneath = pathname.replace(overlay, "$1");
-    if (beneath !== pathname) return beneath;
+    const opensFrom = overlay.exec(pathname)?.[1];
+    if (opensFrom === undefined) continue;
+    return from !== null && isUnder(from, opensFrom) ? from : pathname;
   }
   return pathname;
 }

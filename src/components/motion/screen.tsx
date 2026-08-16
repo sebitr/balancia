@@ -1,6 +1,6 @@
 "use client";
 
-import { ViewTransition, type ReactNode } from "react";
+import { useState, ViewTransition, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { screenPath } from "./transitions";
@@ -49,6 +49,21 @@ export function Screen({
 }) {
   const pathname = usePathname();
 
+  // The screen last shown, so a path that opens over one knows which.
+  //
+  // Adjusted during render rather than from an effect: an effect runs after
+  // the commit, so the screen would remount for a frame before being told not
+  // to — which is the remount this exists to prevent. React re-runs the
+  // component immediately on a set during its own render, before anything is
+  // painted, so the key is right on the first commit.
+  const [shown, setShown] = useState(() => ({
+    path: pathname,
+    key: screenPath(pathname, null),
+  }));
+  if (shown.path !== pathname) {
+    setShown({ path: pathname, key: screenPath(pathname, shown.key) });
+  }
+
   // The column carries its own padding rather than inheriting it from <main>,
   // so the snapshot taken of it covers the whole screen. Padding left outside
   // would be a band the arriving screen does not paint, showing the departing
@@ -71,7 +86,7 @@ export function Screen({
 
   return (
     <ViewTransition
-      key={screenPath(pathname)}
+      key={shown.key}
       enter={DIRECTIONS}
       exit={DIRECTIONS}
       default="none"

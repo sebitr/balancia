@@ -64,29 +64,84 @@ async function readScreen(
   });
 }
 
-test("the group holds still under the add-entry drawer", async ({ page }) => {
+/** Opens the drawer, closes it again, and reports what the screen did. */
+async function openAndCloseDrawer(page: Page): Promise<{
+  opening: Awaited<ReturnType<typeof readScreen>>;
+  closing: Awaited<ReturnType<typeof readScreen>>;
+}> {
+  const drawer = page.getByRole("dialog", { name: "Add expense" });
+
+  await watchScreen(page);
+  await page.getByRole("link", { name: "Add", exact: true }).click();
+  await expect(drawer).toBeVisible();
+  await page.waitForTimeout(600);
+  const opening = await readScreen(page);
+
+  await watchScreen(page);
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(drawer).toBeHidden();
+  await page.waitForTimeout(900);
+  const closing = await readScreen(page);
+
+  return { opening, closing };
+}
+
+const STILL = { transitions: 0, remounted: false, animated: 0 };
+
+/**
+ * The bottom bar is on every screen in the group, so the drawer opens over
+ * whichever one you were reading — and every one of them has to hold still.
+ * The overview alone passed while the transactions list underneath still slid,
+ * because the screen it was keyed to was the group's own path rather than the
+ * path it was actually on.
+ */
+test("every group screen holds still under the add-entry drawer", async ({
+  page,
+}) => {
   await registerAndSignIn(page);
   const groupId = await createGroup(page, { name: "Motion" });
   await addParticipant(page, groupId, "Blaise");
-  await page.goto(`/groups/${groupId}`);
 
-  // Opening. The drawer rises over the group; the group does nothing.
+  for (const path of ["", "/expenses", "/balances", "/members"]) {
+    await page.goto(`/groups/${groupId}${path}`);
+    const { opening, closing } = await openAndCloseDrawer(page);
+
+    expect(opening, `opening over /groups/<id>${path}`).toEqual(STILL);
+    expect(closing, `closing over /groups/<id>${path}`).toEqual(STILL);
+    await expect(page).toHaveURL(new RegExp(`/groups/${groupId}${path}$`));
+  }
+});
+
+/**
+ * The same URL, reached from outside the group, is not a drawer at all.
+ *
+ * `(.)` only intercepts within the group, so the dashboard's picker lands on
+ * the standalone page — a screen in its own right, which must not be pinned to
+ * the dashboard the way the drawer is pinned to the group behind it.
+ *
+ * Only the remount is asserted. This navigation crosses from the `(app)` shell
+ * into the group's, so `<Screen>` is torn down with its layout and no view
+ * transition runs at all — which is true either side of this change, and not
+ * this test's business.
+ */
+test("reaching the same form from the dashboard is a screen of its own", async ({
+  page,
+}) => {
+  await registerAndSignIn(page);
+  const groupId = await createGroup(page, { name: "Motion outside" });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Add expense" }).click();
+  const picker = page.getByRole("dialog", { name: "Add to which group?" });
+  await expect(picker).toBeVisible();
+
   await watchScreen(page);
-  await page.getByRole("link", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Add expense" })).toBeVisible();
+  await picker.getByRole("link", { name: /Motion outside/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}/expenses/new$`));
   await page.waitForTimeout(600);
 
-  const opening = await readScreen(page);
-  expect(opening).toEqual({ transitions: 0, remounted: false, animated: 0 });
-
-  // Closing. Likewise — the screen underneath was never left.
-  await watchScreen(page);
-  await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog", { name: "Add expense" })).toBeHidden();
-  await page.waitForTimeout(900);
-
-  const closing = await readScreen(page);
-  expect(closing).toEqual({ transitions: 0, remounted: false, animated: 0 });
+  const arrived = await readScreen(page);
+  expect(arrived.remounted).toBe(true);
 });
 
 /**
