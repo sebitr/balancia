@@ -60,9 +60,13 @@ export function RemindButton({
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
+        {/* The sheet closes from the X in the step's own header, where the
+            design puts it, so the floating one would be a second control on
+            top of the first. */}
         <SheetContent
           side="bottom"
-          className="max-h-[90svh] gap-0 overflow-y-auto rounded-t-[22px] bg-card px-0 pt-2.5 pb-4"
+          showCloseButton={false}
+          className="mx-auto max-h-[90svh] max-w-[390px] gap-0 overflow-y-auto rounded-t-[28px] bg-background px-5 pt-2.5 pb-[22px] data-[side=bottom]:border-t-0"
         >
           {/* The step's own heading is the sheet's title — a second, hidden
               one would only make a screen reader say it twice. */}
