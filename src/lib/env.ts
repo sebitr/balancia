@@ -299,20 +299,6 @@ const envSchema = z
     TELEMETRY_CRASH_REPORTS: booleanish.default(true),
 
     /**
-     * Where reports go.
-     *
-     * Deployment-level only, deliberately: an endpoint that could be typed
-     * into the administration UI would be a request forgery primitive pointed
-     * at the instance's own network, and no amount of validation in a form
-     * makes that a good trade. A fork redirects its installations here, in the
-     * file only the operator can edit.
-     */
-    TELEMETRY_ENDPOINT: z
-      .string()
-      .url("TELEMETRY_ENDPOINT must be an absolute URL")
-      .default("https://telemetry.balancia.app"),
-
-    /**
      * How this instance is deployed, for the one coarse field that says so.
      * Compose sets it; everywhere else it is detected, and detection is
      * allowed to answer "unknown".
@@ -558,27 +544,6 @@ const envSchema = z
         message:
           'PUSH_VAPID_SUBJECT must be a "mailto:" address or an "https://" URL.',
       });
-    }
-
-    // A telemetry endpoint reached over plain HTTP would put the report — and
-    // more importantly the fact that this instance is talking to it at all —
-    // in front of every network in between. Localhost is exempt so a collector
-    // can be developed and tested against.
-    const endpoint = URL.parse(value.TELEMETRY_ENDPOINT);
-    if (endpoint) {
-      const endpointIsLocal =
-        endpoint.hostname === "localhost" ||
-        endpoint.hostname === "127.0.0.1" ||
-        endpoint.hostname === "[::1]";
-      if (endpoint.protocol !== "https:" && !endpointIsLocal) {
-        context.addIssue({
-          code: "custom",
-          path: ["TELEMETRY_ENDPOINT"],
-          message:
-            `TELEMETRY_ENDPOINT "${value.TELEMETRY_ENDPOINT}" is not HTTPS. ` +
-            "Reports may only be sent over TLS; use https:// or point it at localhost for testing.",
-        });
-      }
     }
 
     if (

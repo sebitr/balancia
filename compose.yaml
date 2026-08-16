@@ -86,7 +86,9 @@ x-app-environment: &app-environment
   # the machinery entirely and grey out the switches. See docs/telemetry.md.
   TELEMETRY_MODE: ${TELEMETRY_MODE:-opt-in}
   TELEMETRY_CRASH_REPORTS: ${TELEMETRY_CRASH_REPORTS:-true}
-  TELEMETRY_ENDPOINT: ${TELEMETRY_ENDPOINT:-https://telemetry.balancia.app}
+  # There is no endpoint setting: where reports go is a constant in
+  # src/lib/telemetry/endpoint.ts. This file decides whether anything is sent,
+  # never to whom.
   # Labels reports with how this instance is deployed. It is this file.
   TELEMETRY_DEPLOYMENT: ${TELEMETRY_DEPLOYMENT:-docker-compose}
   # Run the collector — accept reports from other installations. This is what

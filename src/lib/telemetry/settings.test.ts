@@ -5,6 +5,7 @@ import {
   type StoredTelemetrySettings,
   type TelemetryPolicy,
 } from "./settings";
+import { TELEMETRY_ENDPOINT } from "./endpoint";
 
 /**
  * Precedence between the deployment and the administrator.
@@ -18,7 +19,7 @@ import {
 const policy = (over: Partial<TelemetryPolicy> = {}): TelemetryPolicy => ({
   mode: "opt-in",
   crashReportsAllowed: true,
-  endpoint: "https://telemetry.balancia.app",
+  endpoint: TELEMETRY_ENDPOINT,
   ...over,
 });
 
@@ -125,12 +126,17 @@ describe("the deployment's half", () => {
 });
 
 describe("the endpoint", () => {
-  it("comes from the deployment and is passed through unchanged", () => {
-    const settings = resolveTelemetry(
-      policy({ endpoint: "https://telemetry.example.org/collect" }),
-      stored({ usageReportingEnabled: true }),
-    );
-    expect(settings.endpoint).toBe("https://telemetry.example.org/collect");
+  it("is the compiled-in constant, whatever the switches say", () => {
+    // `resolveTelemetry` is pure and takes the policy it is given; what the
+    // application passes is always the constant, which `telemetryPolicy`
+    // supplies and `endpoint.test.ts` pins.
+    for (const mode of ["opt-in", "local", "off"] as const) {
+      const settings = resolveTelemetry(
+        policy({ mode }),
+        stored({ usageReportingEnabled: true }),
+      );
+      expect(settings.endpoint, mode).toBe(TELEMETRY_ENDPOINT);
+    }
   });
 
   it("is reported even when nothing may be sent, so the page can show it", () => {

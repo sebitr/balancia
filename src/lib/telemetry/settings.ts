@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { instanceSettings } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
+import { TELEMETRY_ENDPOINT } from "./endpoint";
 
 /**
  * Who decides whether telemetry happens, and in what order.
@@ -67,14 +68,20 @@ export const DEFAULT_STORED_SETTINGS: StoredTelemetrySettings = {
   lastReportStatus: null,
 };
 
-/** Reads the deployment's half. Falls back to "off" if the environment is unusable. */
+/**
+ * Reads the deployment's half. Falls back to "off" if the environment is
+ * unusable.
+ *
+ * The endpoint is not part of what it reads: it is a constant, so the only
+ * question configuration answers is whether anything may be sent at all.
+ */
 export function telemetryPolicy(): TelemetryPolicy {
   try {
     const env = getEnv();
     return {
       mode: env.TELEMETRY_MODE,
       crashReportsAllowed: env.TELEMETRY_CRASH_REPORTS,
-      endpoint: env.TELEMETRY_ENDPOINT,
+      endpoint: TELEMETRY_ENDPOINT,
     };
   } catch {
     // Telemetry is the last thing that should keep a misconfigured instance

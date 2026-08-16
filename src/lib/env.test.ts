@@ -290,11 +290,6 @@ describe("environment validation", () => {
       expect(env.METRICS_TOKEN).toBeUndefined();
     });
 
-    it("defaults to the project's collector", () => {
-      const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
-      expect(env.TELEMETRY_ENDPOINT).toBe("https://telemetry.balancia.app");
-    });
-
     it("accepts each mode and refuses anything else", () => {
       for (const TELEMETRY_MODE of ["opt-in", "local", "off"]) {
         expect(
@@ -313,32 +308,17 @@ describe("environment validation", () => {
       ).toThrow(/TELEMETRY_MODE/);
     });
 
-    it("lets a fork redirect its installations", () => {
+    it("offers no way to say where reports go", () => {
+      // The destination is a constant, not a setting: an address that could be
+      // set here would make every claim in docs/telemetry.md conditional on
+      // nobody having set it. `endpoint.test.ts` holds the constant itself.
+      expect(ENV_VARIABLE_NAMES).not.toContain("TELEMETRY_ENDPOINT");
+
       const env = parseEnv({
         ...base,
-        TELEMETRY_ENDPOINT: "https://telemetry.example.org/collect",
+        TELEMETRY_ENDPOINT: "https://collector.example.org",
       } as unknown as NodeJS.ProcessEnv);
-      expect(env.TELEMETRY_ENDPOINT).toBe(
-        "https://telemetry.example.org/collect",
-      );
-    });
-
-    it("refuses to send reports over plain HTTP", () => {
-      expect(() =>
-        parseEnv({
-          ...base,
-          TELEMETRY_ENDPOINT: "http://telemetry.example.org",
-        } as unknown as NodeJS.ProcessEnv),
-      ).toThrow(/not HTTPS/);
-    });
-
-    it("allows a localhost endpoint, so a collector can be developed against", () => {
-      expect(() =>
-        parseEnv({
-          ...base,
-          TELEMETRY_ENDPOINT: "http://localhost:3000/api/telemetry",
-        } as unknown as NodeJS.ProcessEnv),
-      ).not.toThrow();
+      expect(env).not.toHaveProperty("TELEMETRY_ENDPOINT");
     });
 
     it("accepts an empty deployment label rather than failing to boot", () => {
