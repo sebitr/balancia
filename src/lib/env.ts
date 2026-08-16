@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { umamiConfigError } from "@/lib/analytics/umami";
 
 /**
  * Runtime configuration, validated once at startup.
@@ -352,6 +353,25 @@ const envSchema = z
      */
     METRICS_TOKEN: optionalString,
 
+    /**
+     * Umami analytics on the public pages, for the operator's own dashboard.
+     *
+     * Not part of telemetry and not routed through it. Telemetry is Balancia
+     * asking this instance for a weekly summary, which is why its address is
+     * compiled in; this is the operator pointing their own landing page at
+     * their own Umami, which is why it is theirs to set. Off unless both this
+     * and the website ID are given.
+     *
+     * The script is mounted on `/`, `/sign-in`, `/register` and
+     * `/register/done` and nowhere else, so what it can report is the path of
+     * a page with no session behind it. Every other page in Balancia names a
+     * group or an expense in its URL. See docs/telemetry.md §17.
+     */
+    UMAMI_SCRIPT_URL: optionalString,
+
+    /** The UUID Umami shows for the website. Required whenever the URL is set. */
+    UMAMI_WEBSITE_ID: optionalString,
+
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
@@ -468,6 +488,22 @@ const envSchema = z
         code: "custom",
         path: ["SMTP_FROM"],
         message: "SMTP_FROM is required when SMTP_HOST is configured",
+      });
+    }
+
+    // Analytics that are half-configured collect nothing and say nothing about
+    // it: Umami accepts a request with no website ID and drops it, and a
+    // script URL with no ID never loads at all. The rules live next to the
+    // reader in src/lib/analytics/umami.ts, which proxy.ts also calls.
+    const umamiIssue = umamiConfigError(
+      value.UMAMI_SCRIPT_URL,
+      value.UMAMI_WEBSITE_ID,
+    );
+    if (umamiIssue) {
+      context.addIssue({
+        code: "custom",
+        path: [umamiIssue.path],
+        message: umamiIssue.message,
       });
     }
 

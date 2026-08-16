@@ -638,6 +638,67 @@ all. The trade is stated here rather than smoothed over.
 
 ---
 
+## 17. Umami on the public pages, and why it is not telemetry
+
+An operator may point their landing page at their own [Umami](https://umami.is)
+by setting `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID`. Off unless both are set,
+which is every default install.
+
+This document is about telemetry, so the first thing to say is what the
+difference is. **Telemetry is Balancia asking your instance for something.**
+That is why its address is compiled in (§8), why an administrator has to
+consent (§2), and why the payload is bucketed and previewable (§6). **Umami is
+your instance reporting to a server you run.** Nobody but you sees it, so the
+address is yours to choose and there is no consent for Balancia to ask for —
+the same shape as `SMTP_HOST`. The two share no code.
+
+### Where it runs
+
+| Page             | Tracker |
+| ---------------- | ------- |
+| `/`              | yes     |
+| `/sign-in`       | yes     |
+| `/register`      | yes     |
+| `/register/done` | yes     |
+| Everything else  | **no**  |
+
+The boundary is not a setting. Balancia's URLs name groups and expenses —
+`/groups/{groupId}/expenses/{expenseId}` — and a page view carries the URL.
+There is no configuration of Umami, or of any analytics product, that makes
+that safe to send to a third party. So the tracker is not on those pages, and
+`src/components/analytics/umami-script.test.tsx` fails the build if the
+component is imported anywhere but the landing page and the auth layout.
+
+Two attributes on the tag are load-bearing rather than decorative:
+
+- **`data-exclude-search`** — two of the four public pages carry a group ID in
+  the query string: `/sign-in?next=/groups/{id}`, written by
+  `groups/[groupId]/layout.tsx` when a signed-out reader opens a group link,
+  and `/register/done?group={id}` after registration. Without this the tracker
+  would report the whole query.
+- **`data-do-not-track`** — honours the browser's signal, at the cost of
+  accuracy on a number nothing depends on.
+
+The script tag carries the request nonce, because `'strict-dynamic'` in the CSP
+means host allowlists in `script-src` are ignored entirely. The only directive
+that changes is `connect-src`, and the host it gains is derived from
+`UMAMI_SCRIPT_URL` rather than configured separately, so the address the
+tracker posts to and the address the policy admits cannot disagree.
+
+### What this costs, said plainly
+
+Turning it on means visitors to your instance are counted by a third party you
+chose. Umami sets no cookie and stores no IP address, but it derives its
+visitor ID by hashing the IP together with the user agent and a rotating salt.
+That is a pseudonym that lasts about a day — weaker than the guarantee in §16,
+where there is no identifier of any kind. It is a defensible trade for a
+landing page and not one for an expense ledger, which is the whole reason for
+the table above.
+
+Whether your visitors are told is your privacy policy's job, not Balancia's.
+
+---
+
 ## Where the code lives
 
 | Path                             | What it is                                                |
@@ -654,4 +715,5 @@ all. The trade is stated here rather than smoothed over.
 | `src/lib/telemetry/receiver.ts`  | The collecting side                                       |
 | `src/lib/telemetry/settings.ts`  | Deployment ceiling × administrator switch                 |
 | `src/lib/metrics/`               | Local Prometheus metrics — unrelated to the above         |
+| `src/lib/analytics/umami.ts`     | Umami settings — also unrelated to the above (§17)        |
 | `src/app/(app)/admin/telemetry/` | The administration page                                   |

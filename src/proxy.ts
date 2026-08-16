@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isWebAssemblyInferenceEnabled } from "@/lib/env";
+import { readUmamiConfig } from "@/lib/analytics/umami";
 import { APPLE_CALLBACK_PATH } from "@/modules/auth/apple-paths";
 
 /**
@@ -40,10 +41,19 @@ function buildCsp(nonce: string, isDevelopment: boolean): string {
   // compilation and nothing else; it is not `unsafe-eval`.
   const localInference = isWebAssemblyInferenceEnabled();
 
+  // The operator's own Umami, when they have configured one. Null on a default
+  // install, which is what keeps the comment on `connect-src` true there.
+  const umami = readUmamiConfig();
+
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     // 'strict-dynamic' lets Next's own bootstrap load its chunks; the nonce is
     // what actually authorizes the first script.
+    //
+    // Note what is *not* here: the Umami host. Under 'strict-dynamic' browsers
+    // ignore host allowlists in this directive entirely, and the tracker tag
+    // carries the nonce like everything else. Listing the host would suggest
+    // it was doing something.
     "script-src": [
       "'self'",
       `'nonce-${nonce}'`,
@@ -55,8 +65,15 @@ function buildCsp(nonce: string, isDevelopment: boolean): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'", "data:"],
-    // No third-party endpoints: Balancia talks only to its own origin.
-    "connect-src": ["'self'", ...(isDevelopment ? ["ws:", "wss:"] : [])],
+    // Balancia talks to its own origin, and — only where an operator has
+    // configured one — to the Umami they chose. That host is derived from
+    // UMAMI_SCRIPT_URL rather than set separately, so the address the tracker
+    // posts to and the address this admits cannot drift apart.
+    "connect-src": [
+      "'self'",
+      ...(umami ? [umami.origin] : []),
+      ...(isDevelopment ? ["ws:", "wss:"] : []),
+    ],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
     "frame-ancestors": ["'none'"],

@@ -156,6 +156,10 @@ APP_URL=https://balancia.example.com
 # Optional: close sign-ups on a private instance.
 # ALLOW_REGISTRATION=false
 
+# Optional: your own Umami, on the landing and sign-up pages only.
+# UMAMI_SCRIPT_URL=https://analytics.example.com/script.js
+# UMAMI_WEBSITE_ID=6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93
+
 # Optional: Sign in with Apple. See the walkthrough below.
 # APPLE_CLIENT_ID=com.example.balancia.web
 # APPLE_TEAM_ID=A1B2C3D4E5

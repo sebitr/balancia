@@ -98,6 +98,12 @@ x-app-environment: &app-environment
   # a private network — the app port below is reachable by whoever can reach it.
   METRICS_ENABLED: ${METRICS_ENABLED:-false}
   METRICS_TOKEN: ${METRICS_TOKEN:-}
+  # Your own Umami, on the public pages only — the landing page and the
+  # sign-up screens, never a page whose URL names a group. Not telemetry: this
+  # address is yours to choose because the server is yours. Off unless both
+  # are set; see docs/telemetry.md §17.
+  UMAMI_SCRIPT_URL: ${UMAMI_SCRIPT_URL:-}
+  UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
   # This stack runs a dedicated worker container, so the web process must not
   # also run one — two of them would generate every recurring expense twice.
   # It is forwarded rather than omitted so that `docker compose up app` alone

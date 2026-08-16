@@ -1116,6 +1116,29 @@ receipt_reader_summary() {
   fi
 }
 
+# The analytics host, or off — the same shape as the SMTP row, and for the
+# same reason: naming where something goes says more than "on".
+#
+# There is no question for this above, deliberately. The wizard asks about the
+# features an ordinary self-hoster decides between; Umami needs a server and a
+# website ID you already have, which puts it with S3 and Sign in with Apple —
+# configured in .env by someone who came looking for it. What the summary is
+# for is the other half of that: an operator who did set it sees it confirmed
+# here, rather than finding out from the network tab.
+umami_summary() {
+  _script=$(value_of UMAMI_SCRIPT_URL)
+  if [ -z "$_script" ] || [ -z "$(value_of UMAMI_WEBSITE_ID)" ]; then
+    printf 'off'
+    return
+  fi
+
+  # Host only. The path is /script.js on every install and the origin is the
+  # part that answers "who is being told".
+  _host=${_script#*://}
+  _host=${_host%%/*}
+  printf 'public pages → %s' "$_host"
+}
+
 summary() {
   printf '  %sThis instance%s\n\n' "$bold" "$reset"
   row 'Public address' "$(value_of APP_URL)"
@@ -1140,6 +1163,7 @@ summary() {
   else
     row 'Outgoing email' 'off'
   fi
+  row 'Analytics' "$(umami_summary)"
 }
 
 # An empty APP_URL means nothing has been answered yet — an unattended run, or

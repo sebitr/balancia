@@ -469,7 +469,7 @@
       }
     },
     "selfHostTitle": "Ton instance, tes données",
-    "selfHostBody": "Balancia est un logiciel libre sous licence AGPL-3.0-or-later. Il s'exécute à partir d'un seul fichier Docker Compose avec PostgreSQL et un worker en arrière-plan, n'envoie rien à des services tiers et ne contient ni analytics ni télémétrie.",
+    "selfHostBody": "Balancia est un logiciel libre sous licence AGPL-3.0-or-later. Il s'exécute à partir d'un seul fichier Docker Compose avec PostgreSQL et un worker en arrière-plan, et l'application n'envoie rien à des services tiers et ne contient aucune télémétrie.",
     "footerTagline": "Balancia — dépenses partagées, équitablement réparties.",
     "footerLicence": "AGPL-3.0-or-later. Toute version réseau modifiée doit proposer son code source."
   },

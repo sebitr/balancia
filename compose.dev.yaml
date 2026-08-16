@@ -91,6 +91,11 @@ x-dev-environment: &dev-environment
   TELEMETRY_RECEIVER: ${DEV_TELEMETRY_RECEIVER:-false}
   METRICS_ENABLED: ${DEV_METRICS_ENABLED:-true}
   METRICS_TOKEN: ${DEV_METRICS_TOKEN:-}
+  # Empty by default: development should not report into anyone's dashboard.
+  # Point these at a local Umami to work on the tag itself — http://localhost
+  # is accepted, and only there.
+  UMAMI_SCRIPT_URL: ${DEV_UMAMI_SCRIPT_URL:-}
+  UMAMI_WEBSITE_ID: ${DEV_UMAMI_WEBSITE_ID:-}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 
