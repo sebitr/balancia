@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { registerAndSignIn } from "./helpers";
 
 /**
@@ -13,9 +13,30 @@ import { registerAndSignIn } from "./helpers";
  * it, including the report the preview renders.
  */
 
+/**
+ * Signs in as an account that is definitely not the instance administrator.
+ *
+ * The first account created on an instance *is* the administrator, and against
+ * a fresh database this file's tests may be the ones that create it — which is
+ * exactly what happened the first time CI ran them. So register a throwaway
+ * account first: whichever of the two is the instance's first, the one left
+ * signed in is not.
+ */
+async function signInAsOrdinaryParticipant(page: Page): Promise<void> {
+  await registerAndSignIn(page);
+
+  // Signing out matters as well as registering twice: `/register` sends a
+  // signed-in browser away, so the second registration needs a signed-out one.
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).toHaveURL("/");
+
+  await registerAndSignIn(page);
+}
+
 test.describe("telemetry administration", () => {
   test("is not offered to an ordinary participant", async ({ page }) => {
-    await registerAndSignIn(page);
+    await signInAsOrdinaryParticipant(page);
 
     await page.getByRole("button", { name: "Account menu" }).click();
 
@@ -28,7 +49,7 @@ test.describe("telemetry administration", () => {
   });
 
   test("is not reachable by typing its address", async ({ page }) => {
-    await registerAndSignIn(page);
+    await signInAsOrdinaryParticipant(page);
 
     await page.goto("/admin/telemetry");
 
