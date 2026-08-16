@@ -27,3 +27,29 @@ export const SWITCH_FORWARD: string[] = ["switch-forward"];
 
 /** Sideways, to a tab further back: the same filmstrip, wound the other way. */
 export const SWITCH_BACK: string[] = ["switch-back"];
+
+/**
+ * Paths that are a layer over the screen rather than a screen of their own.
+ *
+ * Only the add-entry drawer, which is intercepted into the group's `@entry`
+ * slot: the URL becomes `/groups/<id>/expenses/new`, but `children` goes on
+ * rendering the group underneath, which is the whole point of intercepting it.
+ */
+const OVERLAYS = [/^(\/groups\/[^/]+)\/expenses\/new$/];
+
+/**
+ * Which screen a path is showing, ignoring anything opened over it.
+ *
+ * `<Screen>` is keyed on this rather than on the pathname, because opening a
+ * drawer is not a navigation between screens. Keyed on the raw pathname, the
+ * group behind the drawer exited and re-entered on the way in and back out
+ * again on the way out — it ran the push animation under a sheet that was
+ * sliding up over it, and remounted, so it came back scrolled to the top.
+ */
+export function screenPath(pathname: string): string {
+  for (const overlay of OVERLAYS) {
+    const beneath = pathname.replace(overlay, "$1");
+    if (beneath !== pathname) return beneath;
+  }
+  return pathname;
+}

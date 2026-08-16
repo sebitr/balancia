@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import {
   POP,
-  PUSH,
   SWITCH_BACK,
   SWITCH_FORWARD,
 } from "@/components/motion/transitions";
@@ -75,16 +74,24 @@ function activeIndexOf(pathname: string, base: string): number {
 }
 
 /**
- * The motion a tap on this tab should carry.
+ * The motion a tap on this tab should carry, or none.
  *
- * "Add" opens a form over the group — somewhere deeper, not somewhere along
- * the bar. The rest are peers, so they slide the way the bar itself runs, and
- * which way that is depends on the tab being left. From a screen that sits on
- * no tab at all — a balance, an expense, the activity log — every tab is the
- * way back out, which is a pop.
+ * "Add" carries none: it opens a drawer *over* the group rather than going
+ * anywhere, and the sheet's own rise is the whole animation. The screen
+ * underneath stays put — `screenPath` is what keeps it there, and a direction
+ * here would only describe motion that no longer happens.
+ *
+ * The rest are peers, so they slide the way the bar itself runs, and which way
+ * that is depends on the tab being left. From a screen that sits on no tab at
+ * all — a balance, an expense, the activity log — every tab is the way back
+ * out, which is a pop.
  */
-function directionFor(item: NavItem, index: number, activeIndex: number) {
-  if (item.primary) return PUSH;
+function directionFor(
+  item: NavItem,
+  index: number,
+  activeIndex: number,
+): string[] | undefined {
+  if (item.primary) return undefined;
   if (activeIndex === -1) return POP;
   return index > activeIndex ? SWITCH_FORWARD : SWITCH_BACK;
 }

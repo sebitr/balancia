@@ -72,9 +72,14 @@ describe("GroupNav", () => {
     );
   });
 
-  it("pushes into Add, which is a form over the group rather than a tab", () => {
-    expect(directionFrom("/groups/g1", "Add")).toBe("push");
-    expect(directionFrom("/groups/g1/settings", "Add")).toBe("push");
+  /**
+   * Add opens a drawer over the screen it was tapped from, and a drawer is
+   * not a navigation: the screen underneath must not move at all, in either
+   * direction, so the link carries no type for `<Screen>` to animate.
+   */
+  it("moves the screen in no direction at all for Add", () => {
+    expect(directionFrom("/groups/g1", "Add")).toBeNull();
+    expect(directionFrom("/groups/g1/settings", "Add")).toBeNull();
   });
 
   it("resolves the current tab by the most specific match", () => {
