@@ -10,16 +10,26 @@ import { TELEMETRY_ENDPOINT } from "./endpoint";
  *
  * Two authorities, and they are not equals:
  *
- *  - The **deployment** sets a ceiling with `TELEMETRY_MODE`. It can forbid,
- *    and it can allow, but it cannot switch anything on.
+ *  - The **deployment** sets a ceiling with `TELEMETRY_MODE`, and the position
+ *    the switches start in with `TELEMETRY_DEFAULT`. The ceiling can forbid
+ *    and it can allow; the default applies only while nobody has decided.
  *  - The **administrator** sets the state within that ceiling, from Settings →
- *    Administration → Telemetry. Both switches are off until somebody moves
- *    them, on every installation, on every upgrade.
+ *    Administration → Telemetry. The moment a switch is moved, that answer is
+ *    stored with a timestamp and the deployment's default stops being
+ *    consulted for it — on this installation and on every upgrade after.
  *
- * Effective state is the *intersection*: a thing happens only if both say so.
- * That is why an operator can hand out `TELEMETRY_MODE=off` and know it holds
- * whatever anyone clicks, and why nobody can arrange an environment file that
- * silently starts sending data on somebody else's instance.
+ * Effective state is the *intersection*: a thing happens only if the ceiling
+ * allows it and the switch is on. That is why an operator can hand out
+ * `TELEMETRY_MODE=off` and know it holds whatever anyone clicks.
+ *
+ * What `TELEMETRY_DEFAULT` gave up, stated plainly because it is a weaker
+ * promise than this file used to make: an environment file *can* now start an
+ * instance with telemetry on. What it cannot do is override an administrator
+ * who has answered, or survive one answering afterwards. The setup wizard asks
+ * the question out loud for exactly that reason — a default nobody was told
+ * about would be the thing worth objecting to, not the default itself.
+ *
+ * See docs/telemetry.md.
  */
 
 export type TelemetryMode = "opt-in" | "local" | "off";
@@ -28,6 +38,12 @@ export type TelemetryMode = "opt-in" | "local" | "off";
 export interface TelemetryPolicy {
   readonly mode: TelemetryMode;
   readonly crashReportsAllowed: boolean;
+  /**
+   * The position both switches start in, until somebody moves one. Bounded by
+   * the two settings above like any other state: `true` here with the mode
+   * `off` still sends nothing.
+   */
+  readonly defaultEnabled: boolean;
   readonly endpoint: string;
 }
 
@@ -45,6 +61,24 @@ export interface StoredTelemetrySettings {
 /** What the rest of the application asks about. */
 export interface EffectiveTelemetry {
   readonly mode: TelemetryMode;
+  /**
+   * Where the usage switch actually stands: what an administrator stored, or
+   * the deployment's default while none has decided. This is what the
+   * administration page must render — the stored column on its own would show
+   * "off" on an instance that is reporting.
+   */
+  readonly usageEnabled: boolean;
+  /** The crash switch's position, by the same rule. */
+  readonly crashEnabled: boolean;
+  /**
+   * True while nobody has moved this switch, so the position above came from
+   * the deployment's default rather than from somebody choosing it. The two
+   * are different facts about consent — "on because the deployment asked for
+   * it" is not "on because an administrator turned it on" — and only this can
+   * tell them apart, since the position alone cannot.
+   */
+  readonly usageUndecided: boolean;
+  readonly crashUndecided: boolean;
   /** Product counters are written to this instance's own database. */
   readonly recording: boolean;
   /** The weekly report may be transmitted. */
@@ -81,13 +115,20 @@ export function telemetryPolicy(): TelemetryPolicy {
     return {
       mode: env.TELEMETRY_MODE,
       crashReportsAllowed: env.TELEMETRY_CRASH_REPORTS,
+      defaultEnabled: env.TELEMETRY_DEFAULT,
       endpoint: TELEMETRY_ENDPOINT,
     };
   } catch {
     // Telemetry is the last thing that should keep a misconfigured instance
     // from starting, and "we could not read the configuration" resolves to
-    // "send nothing" rather than to a guess.
-    return { mode: "off", crashReportsAllowed: false, endpoint: "" };
+    // "send nothing" rather than to a guess. That has to include the default:
+    // an unreadable environment must not be read as one that asked for this.
+    return {
+      mode: "off",
+      crashReportsAllowed: false,
+      defaultEnabled: false,
+      endpoint: "",
+    };
   }
 }
 
@@ -100,10 +141,34 @@ export function resolveTelemetry(
   stored: StoredTelemetrySettings,
 ): EffectiveTelemetry {
   const off = policy.mode === "off";
-  const usageOn = !off && stored.usageReportingEnabled;
+
+  // The timestamp is what separates "nobody has decided" from "decided: no".
+  // It is null on a fresh row and set by `setTelemetrySetting` on every write,
+  // so it answers the only question the default needs to ask, and it answers
+  // it per switch — an administrator who turns usage reporting off has said
+  // nothing about crash reports.
+  const usageUndecided = stored.usageReportingChangedAt === null;
+  const crashUndecided = stored.crashReportingChangedAt === null;
+
+  // An OR rather than "default if undecided, stored otherwise", so the
+  // deployment's default can only ever *promote* a switch that nobody has
+  // touched. It cannot suppress one that is stored as on, which matters
+  // because "enabled with no timestamp" is a state the schema permits even
+  // though `setTelemetrySetting` never writes it — a row restored from an
+  // older backup, or edited by hand, would otherwise be silently ignored.
+  const usageEnabled =
+    stored.usageReportingEnabled || (usageUndecided && policy.defaultEnabled);
+  const crashEnabled =
+    stored.crashReportingEnabled || (crashUndecided && policy.defaultEnabled);
+
+  const usageOn = !off && usageEnabled;
 
   return {
     mode: policy.mode,
+    usageEnabled,
+    crashEnabled,
+    usageUndecided,
+    crashUndecided,
     // `local` records exactly as `opt-in` does. The difference is entirely in
     // what happens afterwards, which is nothing.
     recording: usageOn,
@@ -115,7 +180,7 @@ export function resolveTelemetry(
       !off &&
       policy.mode === "opt-in" &&
       policy.crashReportsAllowed &&
-      stored.crashReportingEnabled,
+      crashEnabled,
     usageLocked: off,
     crashLocked: off || !policy.crashReportsAllowed,
     endpoint: policy.endpoint,

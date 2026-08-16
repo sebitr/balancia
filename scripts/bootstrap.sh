@@ -1038,18 +1038,19 @@ TEXT
 
   # ── Telemetry ─────────────────────────────────────────────────────────────
   #
-  # The one question here that cannot switch a feature on. Telemetry is off
-  # until an administrator turns it on in the application, and this only
-  # decides whether they are allowed to — so "yes" changes nothing about what
-  # this instance sends today, and "no" takes the choice away for good.
+  # Two answers from one question: whether telemetry is permitted at all, and
+  # where the switches start. They are asked together because they are one
+  # decision to an operator — and because a second `if ! has_value` block would
+  # be added to question_keys, counted up front, and then skipped whenever the
+  # first answer is no. That is how the "N of M" counter goes wrong.
   #
-  # It is asked anyway, because an operator who is never told the feature
-  # exists cannot have decided anything about it.
+  # It is asked at all because an operator who is never told the feature exists
+  # cannot have decided anything about it, and because a switch reachable only
+  # from an administration page is one most operators never find.
   if ! has_value TELEMETRY_MODE; then
     question 'Telemetry'
     prose <<'TEXT'
-Balancia sends nothing, and answering yes here does not change that. An
-administrator can later turn on one anonymous report a week from Settings
+An administrator can turn on one anonymous report a week, from Settings
 → Administration → Telemetry, where the exact payload is shown before
 anything is sent: the version, which features are on, and how much
 happened in ranges rather than counts.
@@ -1059,15 +1060,30 @@ address are never in it, and there is nothing that identifies this
 installation across reports. It can only ever reach
 telemetry.balancia.app, which is compiled in rather than configurable.
 
-Answer no to remove the choice from the administration page entirely.
+The first question decides whether it is permitted at all — answer no to
+remove the choice from the administration page for good. The second
+decides where the switch starts, and an administrator can move it from
+that page whenever they like.
 
 TEXT
     if ask_yes_no 'Let an administrator turn telemetry on later?' y; then
       write_setting TELEMETRY_MODE opt-in \
-        'Off until an administrator opts in. "local" records counters here and never sends; "off" forbids both.'
+        'What is permitted, not what is on. "local" records counters here and never sends; "off" forbids both.'
+      if ask_yes_no 'Start with it switched on?' n; then
+        write_setting TELEMETRY_DEFAULT true \
+          'Both switches start on. The first time an administrator moves one, their answer replaces this for good.'
+      else
+        write_setting TELEMETRY_DEFAULT false \
+          'Both switches start off, until an administrator turns them on in the application.'
+      fi
     else
       write_setting TELEMETRY_MODE off \
         'No telemetry, whatever the administration page says. "opt-in" restores the choice.'
+      # Written even though the mode already forbids everything, so that an
+      # operator who later changes the mode to opt-in does not find that this
+      # instance started reporting on its own.
+      write_setting TELEMETRY_DEFAULT false \
+        'Both switches start off. Moot while the mode above is off.'
     fi
   fi
 
@@ -1197,18 +1213,27 @@ receipt_reader_summary() {
   fi
 }
 
-# Telemetry is off in all three of these states, and stays off until an
-# administrator says otherwise — there is not even an account yet at this
-# point. So the line reports the ceiling the mode sets rather than a state,
-# which is the only thing an operator has actually decided here.
+# The mode is a ceiling and TELEMETRY_DEFAULT is where the switches start, so
+# an honest line needs both. This used to be able to say "off" in every case,
+# because nothing could be on before an administrator existed; with a default
+# that no longer holds, and a summary that under-reported what an operator had
+# just agreed to would be the worst line in the script.
 telemetry_summary() {
-  case $(value_of TELEMETRY_MODE) in
-    off) printf 'off' ;;
-    local) printf 'off, and nothing may be sent' ;;
-    # Empty too: the schema's default is opt-in, so an .env written by hand
-    # without the line behaves the same way as one that answered yes.
-    *) printf 'off, an administrator may enable' ;;
-  esac
+  if is_enabled TELEMETRY_DEFAULT; then
+    case $(value_of TELEMETRY_MODE) in
+      off) printf 'off' ;;
+      local) printf 'recorded here from first run, and nothing may be sent' ;;
+      *) printf 'on from first run, an administrator may turn it off' ;;
+    esac
+  else
+    case $(value_of TELEMETRY_MODE) in
+      off) printf 'off' ;;
+      local) printf 'off, and nothing may be sent' ;;
+      # Empty too: the schema's default is opt-in, so an .env written by hand
+      # without the line behaves the same way as one that answered yes.
+      *) printf 'off, an administrator may enable' ;;
+    esac
+  fi
 }
 
 summary() {
