@@ -115,6 +115,16 @@ export function renderNotification(
      * themselves — always follow `locale`.
      */
     numberLocale?: string;
+    /**
+     * The app's name, joined to the titles that are otherwise only a group
+     * name. Set on a lock screen, where a bare "Chalet" arrives among cards
+     * from every other app and says nothing about which one it came from; left
+     * unset in the inbox, where the answer is the page the reader is on.
+     *
+     * Not a translated string: it is the product's name, and it is the same
+     * name in every language.
+     */
+    brand?: string;
   } = {},
 ): RenderedNotification {
   const amountLocale = options.numberLocale ?? locale;
@@ -123,9 +133,11 @@ export function renderNotification(
   const url = urlFor(entry);
   const tag = `${entry.entityType}:${entry.entityId ?? entry.groupId}`;
 
-  // The group is the title on every kind: it is the context a person needs
-  // first when a notification arrives without the app open.
-  const title = payload.groupName;
+  // The group is the title on every kind but one: it is the context a person
+  // needs first when a notification arrives without the app open.
+  const title = options.brand
+    ? `${payload.groupName} - ${options.brand}`
+    : payload.groupName;
 
   switch (payload.kind) {
     case "expense": {

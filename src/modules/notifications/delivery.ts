@@ -28,6 +28,17 @@ import type { NotificationEntry, NotificationPayload } from "./types";
 const CONCURRENCY = 8;
 
 /**
+ * What the lock screen calls us.
+ *
+ * A push card carries the group name and nothing else about where it came
+ * from, sitting among cards from every other app on the phone. iOS draws its
+ * own attribution line under the title from the manifest's `short_name`, but
+ * Android and desktop do not, and none of it is ours to control — so the title
+ * says it too. Matches the manifest and the service worker's fallback.
+ */
+const BRAND = "Balancia";
+
+/**
  * The sweep ignores anything newer than this, so it never races the fast path
  * for a notification that was queued a second ago.
  */
@@ -214,7 +225,7 @@ async function pushClaimed(
       row,
       notificationTranslator(locale) as Translate,
       locale,
-      { numberLocale: numberLocaleByUser.get(row.userId) },
+      { numberLocale: numberLocaleByUser.get(row.userId), brand: BRAND },
     );
     const payload = JSON.stringify({
       title: rendered.title,
