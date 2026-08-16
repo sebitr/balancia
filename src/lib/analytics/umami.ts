@@ -49,18 +49,21 @@ export const UMAMI_SCRIPT_URL = "https://telemetry.balancia.app/script.js";
 /**
  * Which website in that Umami these counts belong to.
  *
- * **Empty, and nothing is sent while it is.** The collector's Umami issues
- * this UUID; until it is pasted here the tag is never rendered and the CSP is
- * never widened, whatever the telemetry switch says. That is the safe
- * direction to be wrong in — a placeholder that looked plausible would send
- * real page views to a website that does not exist, and the symptom would be
- * a week of wondering why the dashboard is empty.
+ * Not a secret, and not treated as one: Umami puts this value in a
+ * `data-website-id` attribute, so it is in the page source of every page that
+ * loads the tracker and readable by anyone who opens the inspector. What it
+ * identifies is a dashboard, not a visitor.
  *
  * It lives here rather than in the environment because it is the other half
  * of "who is being told". Both halves in one file is what lets the
- * documentation say where page views go without qualifying it.
+ * documentation say where page views go without qualifying it, and what lets
+ * a fork replace the destination by editing two adjacent lines.
+ *
+ * Empty is a working state, and the safe one: with no website to report to,
+ * the tag is never rendered and the Content-Security-Policy is never widened,
+ * whatever the telemetry switch says.
  */
-export const UMAMI_WEBSITE_ID = "";
+export const UMAMI_WEBSITE_ID = "022fe040-106c-41b1-a017-b33516835810";
 
 /**
  * Umami website IDs are UUIDs. Checked so that a mistyped constant fails a

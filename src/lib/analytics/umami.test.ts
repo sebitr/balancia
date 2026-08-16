@@ -21,7 +21,7 @@ const {
  * past a failing test to happen quietly.
  */
 
-const ID = "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93";
+const ID = "022fe040-106c-41b1-a017-b33516835810";
 
 const telemetry = (over: Record<string, unknown> = {}) => ({
   recording: true,
@@ -70,19 +70,23 @@ describe("the tracker's address", () => {
 });
 
 describe("the destination", () => {
-  it("is nothing at all until a website ID is compiled in", () => {
-    // Shipped state. A placeholder that looked plausible would send real page
-    // views to a website that does not exist, so empty is the safe direction.
-    expect(UMAMI_WEBSITE_ID).toBe("");
-    expect(umamiDestination()).toBeNull();
-  });
-
-  it("reports the script and the origin derived from it, once there is one", () => {
-    expect(umamiDestination(ID)).toEqual({
+  it("is the website compiled in beside the address", () => {
+    // Pinned for the same reason the address is: these two lines together are
+    // the whole answer to "who is being told", and moving either should have
+    // to walk past a failing test.
+    expect(UMAMI_WEBSITE_ID).toBe(ID);
+    expect(umamiDestination()).toEqual({
       scriptUrl: "https://telemetry.balancia.app/script.js",
       websiteId: ID,
       origin: "https://telemetry.balancia.app",
     });
+  });
+
+  it("is nothing when there is no website to report to", () => {
+    // A fork that deletes the ID rather than replacing it gets a build that
+    // renders no tag and widens no policy, which is the right way round.
+    expect(umamiDestination("")).toBeNull();
+    expect(umamiDestination("   ")).toBeNull();
   });
 
   it("refuses an ID that is not the UUID Umami issues", () => {
@@ -105,17 +109,14 @@ describe("the destination", () => {
 
 describe("what the public pages actually render", () => {
   /**
-   * The gate, exercised with a website ID passed in — the shipped constant is
-   * empty, so calling it bare would return null before the telemetry check and
-   * every assertion here would pass for the wrong reason.
-   *
-   * There is no second opt-in and no environment variable: the administrator's
-   * telemetry switch is the whole of it, so an instance that has not opted in
-   * loads no tracker and makes no request.
+   * The gate, called exactly as the pages call it. There is no second opt-in
+   * and no environment variable: the administrator's telemetry switch is the
+   * whole of it, so an instance that has not opted in loads no tracker and
+   * makes no request.
    */
   it("is nothing while telemetry is off", async () => {
     getEffectiveTelemetry.mockResolvedValue(telemetry({ transmitting: false }));
-    expect(await publicPageAnalytics(ID)).toBeNull();
+    expect(await publicPageAnalytics()).toBeNull();
   });
 
   it("is nothing in local mode, where recording happens but nothing leaves", async () => {
@@ -125,12 +126,12 @@ describe("what the public pages actually render", () => {
     getEffectiveTelemetry.mockResolvedValue(
       telemetry({ recording: true, transmitting: false }),
     );
-    expect(await publicPageAnalytics(ID)).toBeNull();
+    expect(await publicPageAnalytics()).toBeNull();
   });
 
   it("is the destination once an administrator has opted in", async () => {
     getEffectiveTelemetry.mockResolvedValue(telemetry({ transmitting: true }));
-    expect(await publicPageAnalytics(ID)).toEqual({
+    expect(await publicPageAnalytics()).toEqual({
       scriptUrl: "https://telemetry.balancia.app/script.js",
       websiteId: ID,
       origin: "https://telemetry.balancia.app",
@@ -141,19 +142,16 @@ describe("what the public pages actually render", () => {
     // getEffectiveTelemetry has a few seconds of its own caching. A second
     // layer here would mean a switch that appears not to take effect.
     getEffectiveTelemetry.mockResolvedValue(telemetry());
-    await publicPageAnalytics(ID);
-    await publicPageAnalytics(ID);
+    await publicPageAnalytics();
+    await publicPageAnalytics();
     expect(getEffectiveTelemetry).toHaveBeenCalledTimes(2);
   });
 
-  it("is nothing on the shipped build, which has no website ID yet", async () => {
-    getEffectiveTelemetry.mockResolvedValue(telemetry());
-    expect(await publicPageAnalytics()).toBeNull();
-  });
-
   it("never asks the database when there is no destination to gate", async () => {
+    // Ordering, not an optimisation: a fork that removed the website ID must
+    // not query on a stranger's page view to discover it has nowhere to send.
     getEffectiveTelemetry.mockResolvedValue(telemetry());
-    await publicPageAnalytics();
+    expect(await publicPageAnalytics("")).toBeNull();
     expect(getEffectiveTelemetry).not.toHaveBeenCalled();
   });
 });

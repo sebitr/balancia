@@ -676,8 +676,11 @@ one hostname —
 > blocking that one host is enough to be certain about everything Balancia
 > would send, page counts included.
 
-The website ID beside it is empty in the published source, and nothing is sent
-while it is. A fork edits both lines.
+The website ID sits on the next line — `022fe040-…`, which is not a secret:
+Umami puts it in a `data-website-id` attribute, so it is in the page source of
+every page that loads the tracker. It identifies a dashboard, not a visitor. A
+fork replaces both lines, or deletes the ID, which leaves a build that renders
+no tag and widens no policy.
 
 ### Where the tracker runs
 

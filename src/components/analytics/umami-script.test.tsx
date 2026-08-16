@@ -110,7 +110,7 @@ describe("the tag it renders", () => {
   const configure = (): void => {
     publicPageAnalytics.mockResolvedValue({
       scriptUrl: "https://telemetry.balancia.app/script.js",
-      websiteId: "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93",
+      websiteId: "022fe040-106c-41b1-a017-b33516835810",
       origin: "https://telemetry.balancia.app",
     });
     headers.mockResolvedValue(new Headers({ "x-nonce": "abc123" }));
@@ -154,7 +154,7 @@ describe("the tag it renders", () => {
     const element = await UmamiScript();
     expect(element?.props.src).toBe("https://telemetry.balancia.app/script.js");
     expect(element?.props["data-website-id"]).toBe(
-      "6f8b3a1c-2d4e-4f60-9a71-8c5d2e0f4b93",
+      "022fe040-106c-41b1-a017-b33516835810",
     );
     expect(element?.props.defer).toBe(true);
   });
