@@ -1,55 +1,73 @@
 # Receipt scanning
 
 Photograph a receipt, let Balancia read it, correct anything it got wrong,
-say who had what, and create the expense. The reading happens in the browser,
-on the device holding the photo. The image is not uploaded to be recognized,
-and there is no OCR API key to configure, because there is no OCR API.
+say who had what, and create the expense.
 
-Off by default. It needs ~32 MB of model files and one extra
+Off by default, and there are two readers.
+
+The **on-device** one is the default and the original: PP-OCRv6 tiny runs in
+the browser, the image is not uploaded to be recognized, and there is no API
+key because there is no API. It needs ~32 MB of model files and one extra
 Content-Security-Policy token, and both of those are the operator's call. A
-PDF that carries its own text — most emailed invoices — is read without either,
-though the feature switch still governs whether any of this appears at all.
+PDF that carries its own text — most emailed invoices — is read without either.
+
+The optional **server-side** one sends the image to a provider the operator
+configures. It is not here because the on-device reader is bad — since v6 tiny
+it is [measurably good](#why-tiny), and it is free. It is here because a
+vision model returns _structure_ where the on-device path returns text boxes
+that a parser then has to interpret, and because some receipts are beyond a
+6 MB model whatever its benchmark score: handwriting, unusual layouts, scripts
+outside the recognizer's dictionary. Pointed at the operator's own Ollama or
+vLLM, it keeps the image on their hardware while still doing that.
+
+Both readers can be switched on at once, and then the person scanning picks
+per scan, against copy that says where the photograph is going. Neither is on
+until an operator turns it on.
 
 ## What it does, and what it does not
 
 ```
 camera, photo library, or a PDF
         │
-        ├─────────────────────────────┐
-        │                             │ a PDF that carries its own text
-        │                             ▼
-        │                       pdf.js text layer ──► boxes ──┐
-        │                       (no model, no download)       │
-        ▼                                                     │
-  preprocessing        resize, EXIF rotation, contrast        │
-        │              (a scanned PDF is drawn to pixels here)│
-        ▼                                                     │
-  Web Worker ───────────────────────────────────────────────┐ │
-        │                                                   │ │
-        ▼                                                   │ │
-  onnxruntime-web    WebGPU if available, WebAssembly if not│ │
-        │                                                   │ │
-        ▼                                                   │ │
-  PP-OCRv6 detection ──► boxes                              │ │
-        │                                                   │ │
-        ▼                                                   │ │
-  PP-OCRv6 recognition ─► text + confidence                 │ │
-        │                                                   │ │
-        └───────────────────────────────────────────────────┘ │
-        │                                                     │
-        ├─────────────────────────────────────────────────────┘
-        ▼
-  parser               merchant, date, items, totals
-        │
-        ▼
-  validation           do the numbers reconcile?
-        │
-        ▼
-  you review and correct every value
-        │
-        ▼
-  item assignment ──► Balancia's ordinary exact split
+        ├──────────────────────────────────┐ a PDF carrying its own text.
+        │                                  │ Read here whichever reader is
+        │                                  ▼ chosen, and never uploaded.
+        │                            pdf.js text layer
+        ▼                                  │
+  which reader?   chosen per scan          │
+        │         (a scanned PDF is drawn  │
+        │          to pixels either way)   │
+        │                                  │
+        ├──────────────────┐               │
+        │ on this device   │ with a provider
+        ▼                  ▼               │
+  preprocessing      POST to this server   │
+        │                  │               │
+        ▼                  ▼               │
+  Web Worker         the operator's        │
+  onnxruntime-web    configured provider   │
+  PP-OCRv6 det+rec         │               │
+        │                  │               │
+        ▼                  │               │
+      boxes ◄──────────────┼───────────────┘
+        │                  │
+        ▼                  │  structure already,
+  parser                   │  so no parsing needed
+        │                  │
+        └────────┬─────────┘
+                 ▼
+           validation      do the numbers reconcile?
+                 │
+                 ▼
+        you review and correct every value
+                 │
+                 ▼
+        item assignment ──► Balancia's ordinary exact split
 ```
+
+Note where the two paths rejoin. A provider skips the parser, because it
+returns fields rather than text boxes — but it does **not** skip validation,
+and it does not skip you.
 
 The expense that comes out is an ordinary expense. It carries no trace of
 having been scanned, the server recomputes its split with the same domain code
@@ -298,6 +316,167 @@ asyncify build _by name_, and given the jsep files it fails with `no available
 backend found`. An instance enabling both features therefore keeps both on
 disk, at a cost of about 25 MB. No browser ever loads both.
 
+## The server-side reader
+
+Off unless `RECEIPT_OCR_PROVIDER` names one. Four drivers, all behind the
+same `OcrProvider` contract in `src/lib/ocr/providers`, arranged the way
+`src/lib/storage` arranges its local and S3 drivers.
+
+Three of them post a chat completion to a general vision model. `mistral` is
+the exception: a purpose-built document endpoint priced per page rather than
+per token, which makes a bill predictable. It is handed the same JSON Schema
+the `anthropic` driver uses and its answer goes through the same conversion.
+
+| Setting                | What it does                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `RECEIPT_OCR_PROVIDER` | `none` (default), `anthropic`, `openai`, `gemini`                              |
+| `RECEIPT_OCR_API_KEY`  | Required unless the endpoint is a local one — then a base URL stands in for it |
+| `RECEIPT_OCR_BASE_URL` | Endpoint override. Any OpenAI-compatible server, including your own            |
+| `RECEIPT_OCR_MODEL`    | Required for `openai` and `gemini`; optional for `anthropic`                   |
+| `RECEIPT_OCR_LOCAL`    | `true` by default. Turn it off to read _only_ through the provider             |
+
+`openai` is the driver for the protocol rather than the vendor. Pointed at
+Ollama, vLLM or LM Studio it runs a vision model on the operator's own
+hardware, needs no key, and is very likely the most useful configuration this
+feature has — the accuracy of a modern vision model with none of the privacy
+cost. Pointed at a commercial endpoint it is the commercial driver. Balancia
+does not need to know which, and the interface names the endpoint by its host
+rather than calling it "OpenAI", because on most instances that would be a
+false statement about who receives the image.
+
+`anthropic` defaults to `claude-opus-5` and `mistral` to `mistral-ocr-latest`
+(a product name rather than a version, so it does not go stale). The other two require
+`RECEIPT_OCR_MODEL`, and the schema refuses to start without it: model names
+on those endpoints belong to whoever is serving them, and a constant compiled
+in here would eventually be a 404 at somebody's first scan rather than an
+error at boot.
+
+### Which one to pick
+
+Read the caveats before the table, because they are load-bearing.
+
+**There is no independent receipt benchmark.** Almost every published
+comparison of these tools comes from a vendor that ranks itself first. The
+numbers below are from document-parsing benchmarks — [OmniDocBench
+1.5](https://github.com/opendatalab/OmniDocBench) and
+[olmOCR-Bench](https://www.llamaindex.ai/blog/omnidocbench-is-saturated-what-s-next-for-ocr-benchmarks)
+— which measure turning a page into faithful markdown. That is a _proxy_ for
+reading a crumpled thermal receipt into fields, not a measurement of it. A
+model that parses a two-column paper beautifully can still put the tax on the
+wrong line. Treat the table as a shortlist, not a ranking, and try two on your
+own receipts.
+
+Figures are August 2026 and will date.
+
+| Option                                                               | Accuracy signal                                | Cost per 1,000 scans       |
+| -------------------------------------------------------------------- | ---------------------------------------------- | -------------------------- |
+| **No provider at all** — PP-OCRv6 tiny on the device                 | loses no line items on blurry restaurant shots | nothing                    |
+| **Self-hosted PaddleOCR-VL-1.5 or GLM-OCR**, via the `openai` driver | >94% on OmniDocBench 1.5                       | electricity                |
+| **Self-hosted dots.ocr** (3B), via the `openai` driver               | 0.032 edit distance — best in that set         | electricity                |
+| Gemini 2.5 Flash-Lite, via `gemini`                                  | —                                              | ~$0.33                     |
+| GPT-5.4-nano, via `openai`                                           | —                                              | ~$1.67 (~$0.84 batched)    |
+| Mistral OCR, via `mistral`                                           | 72.0% on olmOCR-Bench, on the pre-4 generation | $2–$4 flat, halved batched |
+| Gemini 3 Pro, via `gemini`                                           | 90.3% on OmniDocBench                          | flagship band              |
+| Flagship chat models, incl. this driver's `claude-opus-5` default    | —                                              | $16–$33                    |
+
+**The first row is not a joke entry.** Since PP-OCRv6 tiny the on-device reader
+is good enough that many instances need nothing else — see [why this
+model](#why-tiny) for the measurements. Read the rest of this table as
+answering "what if that is not enough for my receipts", not "what should I use".
+
+**If you do want a provider, the recommendation is the self-hosted rows**, and
+they are not a compromise. A 0.9B document model scores above every hosted
+flagship on the parsing benchmarks, runs in 2–4 GB of VRAM on a consumer GPU,
+costs nothing per scan, and — the part that matters here — the receipt never
+leaves the operator's hardware, so the privacy paragraph above stays true in
+its strongest form. Serve it with vLLM or Ollama and point the `openai` driver
+at it:
+
+```bash
+RECEIPT_OCR_PROVIDER=openai
+RECEIPT_OCR_BASE_URL=http://localhost:11434/v1
+RECEIPT_OCR_MODEL=<the model your server serves>
+RECEIPT_OCR_LOCAL=false   # optional: no 32 MB download, strict CSP
+```
+
+If you would rather not run a GPU, Gemini 2.5 Flash-Lite is the cheap hosted
+option and Mistral OCR is the predictable one — a flat page rate with no token
+arithmetic to do, which is worth something when you are budgeting for a
+household rather than a company.
+
+Mistral has two generations in service, and the price difference between them
+is the whole cost story for that driver:
+
+| Model                | Per 1,000 pages | What the newer one adds                                |
+| -------------------- | --------------- | ------------------------------------------------------ |
+| `mistral-ocr-4-1`    | $4              | Structural block labels, block-level confidence scores |
+| `mistral-ocr-4-0`    | $4              | Bounding boxes                                         |
+| the pre-4 generation | $2              | —                                                      |
+
+The Batch API halves whichever you pick. `mistral-ocr-latest` is the default
+and tracks the newest, so it is also the dearest — name a model explicitly to
+take the cheaper one. Receipts are small, single-page and unstructured
+compared to the invoices and forms those newer features target, so the $2
+generation is worth trying first: on a receipt, block labels and confidence
+scores are extra data this pipeline does not read.
+
+The dated snapshot id for the older generation moves as Mistral retires
+versions, so check it against their current model list rather than trusting a
+constant written here.
+
+**Note the last row.** The `anthropic` driver defaults to `claude-opus-5`,
+which sits in the most expensive band on this table — roughly one to three
+cents a scan. That is a deliberate default (if you pick Claude, you get the
+capable one) and it is one line to change:
+
+```bash
+RECEIPT_OCR_MODEL=<a cheaper model>
+```
+
+Sources: [OmniDocBench](https://github.com/opendatalab/OmniDocBench),
+[LlamaIndex on benchmark saturation](https://www.llamaindex.ai/blog/omnidocbench-is-saturated-what-s-next-for-ocr-benchmarks),
+[open-weight OCR VLMs compared](https://www.spheron.network/blog/best-open-source-ocr-vlm-self-host-gpu-cloud-2026/),
+[per-page LLM OCR costs](https://docuocr.com/blog/which-llm-is-cheapest-for-ocr),
+[Mistral OCR pricing](https://www.aimadetools.com/blog/mistral-ocr-4-complete-guide/).
+
+### Turning off the WebAssembly reader
+
+An instance reading receipts only through a provider should set
+`RECEIPT_OCR_LOCAL=false`. It then downloads none of the ~32 MB, and —
+because `isWebAssemblyInferenceEnabled()` asks whether the _browser_ reader is
+in use rather than whether scanning is on — keeps the strict
+Content-Security-Policy. `'wasm-unsafe-eval'` is granted for a reader that
+runs, not for a feature that is enabled.
+
+There is one thing the strict policy costs, and it is worth stating plainly.
+pdf.js compiles WebAssembly for JBIG2 and JPEG 2000 images — formats a few
+document scanners emit — so a PDF containing one cannot be drawn to a page
+image on such an instance. Reading a PDF's _text layer_ uses no codec, and a
+photograph uses none either, so the common cases are unaffected. If your
+receipts arrive as JBIG2 scans, leave `RECEIPT_OCR_LOCAL=true`; you can still
+send everything to the provider.
+
+### What it costs
+
+Every scan is an outbound call the operator pays for. A rate limit of 20 per
+ten minutes per address caps the damage from a stuck client; the model is the
+operator's choice, and a cheaper one is a line in `.env`.
+
+### The arithmetic check applies to every reader
+
+This is the part worth being explicit about. A vision model returns a
+structured receipt directly and skips `parser.ts` — but it does not skip
+`validation.ts`, and it does not skip the review screen. The
+parts-against-total reconciliation that caught a tax misread as `7785.10` is
+exactly the check that catches a model inventing a number, and the
+shared-charge residual in `assignment.ts` means a wrong tax line cannot
+corrupt a split even if nobody reads the warning.
+
+Amounts are the other half of it. Models are asked for the characters printed
+on the paper — `12,50`, `1'234.50`, `1 234,50` — and those go through the same
+`parseReceiptAmount` the on-device reader's output does. The decimal-separator
+rule stays in one tested place instead of being re-decided by a model.
+
 ## The model
 
 **PP-OCRv6 tiny**, detection and recognition, from the PaddleOCR project.
@@ -514,6 +693,12 @@ assignments, strategies and totals.
 
 ## Privacy
 
+The honest version of this section depends on which reader is in use, so it is
+written twice rather than once and hedged.
+
+**With the on-device reader** — the default, and the only one on an instance
+that has not configured a provider:
+
 - The image is never uploaded for recognition. There is no cloud OCR call,
   no third-party inference API, and no key for one.
 - The models are fetched from this instance's own origin. The worker's source
@@ -526,10 +711,31 @@ assignments, strategies and totals.
 - Nothing is persisted until the user confirms it, and what is persisted is an
   expense: amounts, a description and a date.
 
+**With a server-side provider**, three of those four stop being true, and the
+interface says so before the shutter rather than after:
+
+- The image _is_ uploaded — to this instance, which forwards it to the
+  provider. It is held in memory for the length of that call and never
+  written to storage; keeping the photograph with the expense remains the
+  separate checkbox it always was.
+- The provider's own retention, training and logging policy applies to that
+  image. Balancia cannot make promises on its behalf, and does not try to.
+- The credential lives on the server. It is never sent to the browser, and
+  the page's `connect-src 'self'` is unchanged — the browser still talks only
+  to this instance.
+- What does _not_ change: recognized text is still never logged, nothing is
+  persisted until someone confirms it, and what is persisted is an ordinary
+  expense.
+
+An operator who wants the accuracy without the third party points the
+`openai` driver at their own endpoint. Then the image goes to this instance
+and on to a machine they run, and the list above collapses back to the local
+one.
+
 ### Storing the receipt is a separate decision
 
-Recognition is local. Storage is not, and the interface says so rather than
-letting the first fact imply the second:
+Reading a receipt and keeping it are two decisions, and the interface refuses
+to let either imply the other. On the default reader:
 
 > Recognition happens on this device. The photo is not sent anywhere to be
 > read.
@@ -541,6 +747,11 @@ Tick the box and the copy changes to say the image will be uploaded and stored
 with the expense on this server — through the ordinary attachment flow,
 unchanged, the same one the paperclip button has always used.
 
+Select a provider and the first line changes too, to name the server and the
+provider the photograph is going to. The checkbox is unaffected: sending an
+image to be _read_ still says nothing about whether it is _kept_, which is the
+whole point of asking twice.
+
 ## Offline and caching
 
 The models are cached by the service worker on first use, `CacheFirst`, in
@@ -551,6 +762,10 @@ manifest is unchanged by this feature.
 
 So the first scan needs the network and later scans do not — including with no
 connection at all, since everything after the image is local.
+
+That is a property of the on-device reader only. A provider is a network call
+by definition, so scanning through one offline fails, and the reader choice is
+the thing that decides which of the two an operator gets.
 
 The cache name carries a version because the files are served from stable
 paths. An operator installing newer models bumps `MODEL_CACHE` in

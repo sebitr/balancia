@@ -58,6 +58,18 @@ x-app-environment: &app-environment
   # it is not enough on its own: the models have to be inside the container
   # too. See the commented-out volume on the app service below.
   RECEIPT_SCANNING: ${RECEIPT_SCANNING:-false}
+  # Which reader. The browser one is the default and needs the models above;
+  # turn it off on an instance that reads only through a provider, and the
+  # relaxed CSP and the mount below both stop being necessary.
+  RECEIPT_OCR_LOCAL: ${RECEIPT_OCR_LOCAL:-true}
+  # Optional server-side reader: anthropic, openai or gemini, or "none".
+  # RECEIPT_OCR_BASE_URL points the openai driver at anything speaking the same
+  # protocol — an Ollama or vLLM server on your own network needs no key.
+  # This server makes the call, not the browser. See docs/receipt-scanning.md.
+  RECEIPT_OCR_PROVIDER: ${RECEIPT_OCR_PROVIDER:-none}
+  RECEIPT_OCR_API_KEY: ${RECEIPT_OCR_API_KEY:-}
+  RECEIPT_OCR_BASE_URL: ${RECEIPT_OCR_BASE_URL:-}
+  RECEIPT_OCR_MODEL: ${RECEIPT_OCR_MODEL:-}
   # Sign in with Apple. Off unless all four are set. Needs a paid Apple
   # Developer account and a public HTTPS APP_URL registered with Apple; the
   # private key is the .p8 contents, with newlines written as \n.

@@ -13,9 +13,15 @@ import { extractionSize, type DocumentCorners, type Size } from "./geometry";
 /** Row-major 3×3 projective transform. */
 // prettier-ignore
 export type Homography = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ];
 
 /**

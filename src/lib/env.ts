@@ -213,11 +213,60 @@ const envSchema = z
      * `public/models` (`pnpm ocr:install`).
      *
      * Receipts can already be attached without it; this only adds reading
-     * them. The image is never uploaded for recognition — the models run in
-     * the browser against files this instance serves. See
+     * them. How they are read is the next two settings' business. See
      * docs/receipt-scanning.md.
      */
     RECEIPT_SCANNING: booleanish.default(false),
+
+    /**
+     * The on-device reader: PP-OCRv6 tiny in the browser, against models this
+     * instance serves. On by default, because it is what receipt scanning has
+     * always meant here and it is the only reader that needs no third party.
+     *
+     * Turning it off is for an instance that reads receipts exclusively
+     * through `RECEIPT_OCR_PROVIDER`. That instance runs no WebAssembly of its
+     * own, so it keeps the strict Content-Security-Policy and needs none of
+     * the ~32 MB under `public/models`.
+     *
+     * One consequence worth knowing: pdf.js compiles WebAssembly for JBIG2 and
+     * JPEG 2000 images, which a few scanners emit. Such a PDF cannot be drawn
+     * on an instance with the strict policy. A PDF's *text* needs no codec, so
+     * the common emailed-invoice case is unaffected either way.
+     */
+    RECEIPT_OCR_LOCAL: booleanish.default(true),
+
+    /**
+     * An optional server-side reader.
+     *
+     * Not a replacement for the on-device one, which since PP-OCRv6 tiny reads
+     * an ordinary receipt well and costs nothing. This is for what a 6 MB
+     * model cannot do: it returns structure directly instead of boxes a parser
+     * has to interpret, and it copes with handwriting, unusual layouts and
+     * scripts outside the recognizer's dictionary.
+     *
+     * This is the one place Balancia will send a receipt image somewhere to be
+     * read, it is off by default, and the person scanning chooses it per scan
+     * against an interface that says where the photograph is going. The call
+     * is made by this server, never the browser, so the key stays here and the
+     * page's `connect-src 'self'` is untouched.
+     *
+     * `openai` is also the driver for anything speaking the same protocol —
+     * set `RECEIPT_OCR_BASE_URL` at Ollama, vLLM or LM Studio and the image
+     * never leaves the operator's own hardware. That is the cheapest and most
+     * private option, and on current open-weight document models the most
+     * accurate one too; see docs/receipt-scanning.md.
+     *
+     * `mistral` is the odd one: a per-page-priced document endpoint rather
+     * than a general vision model.
+     */
+    RECEIPT_OCR_PROVIDER: z
+      .enum(["none", "anthropic", "openai", "gemini", "mistral"])
+      .default("none"),
+    RECEIPT_OCR_API_KEY: optionalString,
+    /** Base URL override. Anything OpenAI-compatible, including a local one. */
+    RECEIPT_OCR_BASE_URL: optionalString,
+    /** Model id. Each driver has a sensible default; this overrides it. */
+    RECEIPT_OCR_MODEL: optionalString,
 
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
@@ -271,6 +320,63 @@ const envSchema = z
           });
         }
       }
+    }
+
+    /*
+     * A remote reader needs credentials, unless it is a local endpoint — an
+     * Ollama or vLLM server on the operator's own network usually wants no key
+     * at all, so a base URL is accepted in place of one.
+     */
+    if (
+      value.RECEIPT_OCR_PROVIDER !== "none" &&
+      !value.RECEIPT_OCR_API_KEY &&
+      !value.RECEIPT_OCR_BASE_URL
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["RECEIPT_OCR_API_KEY"],
+        message:
+          `RECEIPT_OCR_API_KEY is required when RECEIPT_OCR_PROVIDER is "${value.RECEIPT_OCR_PROVIDER}". ` +
+          "Set RECEIPT_OCR_BASE_URL instead if the endpoint is a local one that needs no key.",
+      });
+    }
+
+    /*
+     * Only the Anthropic and Mistral drivers carry a default model. On the
+     * other two the
+     * model name belongs to whoever is serving the endpoint — an operator's
+     * own Ollama, or an API whose version suffixes move — and a constant
+     * compiled in here would eventually be a 404 at somebody's first scan
+     * rather than an error at boot. This is that error at boot.
+     */
+    if (
+      (value.RECEIPT_OCR_PROVIDER === "openai" ||
+        value.RECEIPT_OCR_PROVIDER === "gemini") &&
+      !value.RECEIPT_OCR_MODEL
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["RECEIPT_OCR_MODEL"],
+        message:
+          `RECEIPT_OCR_MODEL is required when RECEIPT_OCR_PROVIDER is "${value.RECEIPT_OCR_PROVIDER}" — ` +
+          "name the vision model the endpoint serves. The anthropic and mistral drivers have defaults.",
+      });
+    }
+
+    // Scanning switched on with both readers switched off renders a button
+    // that cannot do anything. Say so at boot rather than at the first scan.
+    if (
+      value.RECEIPT_SCANNING &&
+      !value.RECEIPT_OCR_LOCAL &&
+      value.RECEIPT_OCR_PROVIDER === "none"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["RECEIPT_OCR_LOCAL"],
+        message:
+          "RECEIPT_SCANNING is on but has no reader: RECEIPT_OCR_LOCAL is off and " +
+          'RECEIPT_OCR_PROVIDER is "none". Turn one of them on, or turn scanning off.',
+      });
     }
 
     if (value.SMTP_HOST && !value.SMTP_FROM) {
@@ -500,17 +606,78 @@ export function isReceiptScanningEnabled(
 }
 
 /**
+ * Whether the browser-side receipt reader is switched on.
+ *
+ * Defaults to true, so an instance that predates the provider setting keeps
+ * the behaviour it has always had. Read the same way as the flags above, and
+ * for the same reason.
+ */
+export function isLocalReceiptOcrEnabled(
+  source: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = (source.RECEIPT_OCR_LOCAL ?? "").trim();
+  return raw === "" ? true : TRUTHY.includes(raw.toLowerCase());
+}
+
+/**
+ * What to call the configured server-side reader, on screen.
+ *
+ * The interface promises to say where a photograph is going, so this has to
+ * be true rather than tidy. Two of the drivers are one vendor each and can be
+ * named. The third is a protocol, not a vendor: `openai` pointed at a base
+ * URL is usually the operator's own Ollama or vLLM, and calling that "OpenAI"
+ * would be a false statement about who receives the image — so it is named by
+ * its host instead.
+ *
+ * Returns `undefined` when no provider is configured, which is what makes the
+ * choice disappear from the interface rather than appearing greyed out.
+ */
+export function configuredOcrProviderName(
+  source: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  const provider = (source.RECEIPT_OCR_PROVIDER ?? "").trim().toLowerCase();
+  const baseUrl = (source.RECEIPT_OCR_BASE_URL ?? "").trim();
+
+  switch (provider) {
+    case "anthropic":
+      return "Claude";
+    case "gemini":
+      return "Gemini";
+    case "mistral":
+      return "Mistral OCR";
+    case "openai": {
+      if (!baseUrl) return "OpenAI";
+      try {
+        return new URL(baseUrl).host;
+      } catch {
+        // A base URL that will not parse is a misconfiguration the schema
+        // reports elsewhere; say something neutral rather than nothing.
+        return "the configured reader";
+      }
+    }
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Whether anything in this instance needs to compile WebAssembly.
  *
  * Both optional local-inference features run on onnxruntime-web, and both need
  * the same one CSP token. Asking the question once here means the policy has a
  * single reason to be relaxed, and adding a third such feature does not mean
  * remembering to touch `proxy.ts`.
+ *
+ * Receipt scanning only counts when its *browser* reader is the one doing the
+ * work. An instance reading receipts through `RECEIPT_OCR_PROVIDER` alone
+ * compiles nothing, and would otherwise have had its policy relaxed for a
+ * model it never loads.
  */
 export function isWebAssemblyInferenceEnabled(
   source: NodeJS.ProcessEnv = process.env,
 ): boolean {
   return (
-    isSemanticCategorizationEnabled(source) || isReceiptScanningEnabled(source)
+    isSemanticCategorizationEnabled(source) ||
+    (isReceiptScanningEnabled(source) && isLocalReceiptOcrEnabled(source))
   );
 }

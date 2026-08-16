@@ -980,6 +980,11 @@
     "scanReceipt": "Scan receipt",
     "title": "Scan a receipt",
     "onDevice": "Recognition happens on this device. The photo is not sent anywhere to be read.",
+    "reader": {
+      "local": "Read on this device",
+      "remote": "Read with {provider}",
+      "remoteExplain": "The photo is sent to this server, and on to {provider}, to be read. A PDF that carries its own text is read on this device and not sent. Only the amounts you confirm are saved."
+    },
     "takePhoto": "Take a photo",
     "choosePhoto": "Choose a photo or PDF",
     "tips": "Lay the receipt flat, keep it all in frame, and shoot straight on. You can also drop an image or a PDF here.",
@@ -1015,6 +1020,7 @@
     },
     "progress": {
       "preparing": "Preparing the scanner",
+      "uploading": "Sending the photo to be read",
       "downloading": "Downloading the receipt models",
       "detecting": "Finding the text",
       "reading": "Reading the receipt",
@@ -1031,7 +1037,8 @@
       "pdf": "That PDF could not be opened. It may be damaged. Try a photo of the receipt instead.",
       "pdfPassword": "That PDF is password-protected. Remove the password, or take a photo of the receipt instead.",
       "timeout": "Reading the receipt took too long and was stopped. A smaller photo usually helps.",
-      "attachFailed": "The expense is ready, but the photo could not be uploaded."
+      "attachFailed": "The expense is ready, but the photo could not be uploaded.",
+      "provider": "The reader could not be reached, or could not read that photo. Try again, or enter the expense by hand."
     },
     "review": {
       "merchant": "Merchant",

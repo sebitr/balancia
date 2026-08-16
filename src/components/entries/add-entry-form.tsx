@@ -129,6 +129,10 @@ export interface AddEntryFormProps {
   frequentCategories?: readonly ExpenseCategory[];
   semanticCategorization?: boolean;
   receiptScanning?: boolean;
+  /** Whether the on-device reader is switched on (`RECEIPT_OCR_LOCAL`). */
+  receiptOcrLocal?: boolean;
+  /** The configured server-side reader, named. Never a key. */
+  receiptOcrProvider?: string;
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
   /** Leaves for the group, whatever the drawer was opened over. */
@@ -148,6 +152,8 @@ export function AddEntryForm({
   frequentCategories = NO_FREQUENT,
   semanticCategorization = false,
   receiptScanning = false,
+  receiptOcrLocal = true,
+  receiptOcrProvider,
   onClose,
   onBackToGroup,
 }: AddEntryFormProps) {
@@ -664,6 +670,8 @@ export function AddEntryForm({
             {type === "expense" && !scan && receiptScanning && (
               <ScanReceiptEntry
                 enabled={receiptScanning}
+                localEnabled={receiptOcrLocal}
+                provider={receiptOcrProvider}
                 groupId={groupId}
                 participants={members.map((member) => ({
                   id: member.id,

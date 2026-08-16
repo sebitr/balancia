@@ -28,3 +28,21 @@ merged. Splitting them apart afterwards cost far more than branching would have.
 
 Keep a branch to one topic. If a second, unrelated thing needs doing, it gets
 its own branch.
+
+# Adding a setting touches six files
+
+A new environment variable is never one edit. It lands in:
+
+1. `src/lib/env.ts` — schema entry, any `superRefine` rule, and an accessor if
+   `proxy.ts` needs it per request without parsing the whole schema
+2. `.env.example` — with the prose an operator reads before setting it
+3. `compose.yaml` and `compose.dev.yaml` — the forwarded lists; a value set in
+   `.env` and not named there reaches the container as nothing
+4. `scripts/bootstrap.sh` — the question, the repairs section, and the summary
+5. `docs/environment.md`, plus whichever feature doc the setting belongs to
+
+`src/lib/env.test.ts` catches two of those on its own: a variable the compose
+files do not forward, and a variable nothing in `src/` or `scripts/` reads
+(comments do not count as reading it). It does **not** catch a missing
+bootstrap question or a doc that still describes the old behaviour — those are
+on you, and the wizard is the one most often forgotten.

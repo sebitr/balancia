@@ -98,6 +98,8 @@ export function ExpenseForm({
   categoryMappings = NO_MAPPINGS,
   semanticCategorization = false,
   receiptScanning = false,
+  receiptOcrLocal = true,
+  receiptOcrProvider,
 }: {
   groupId: string;
   participants: readonly ExpenseFormParticipant[];
@@ -111,6 +113,10 @@ export function ExpenseForm({
   semanticCategorization?: boolean;
   /** Whether the operator installed the optional OCR models. */
   receiptScanning?: boolean;
+  /** Whether the on-device reader is switched on (`RECEIPT_OCR_LOCAL`). */
+  receiptOcrLocal?: boolean;
+  /** The configured server-side reader, named. Never a key. */
+  receiptOcrProvider?: string;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
@@ -381,6 +387,8 @@ export function ExpenseForm({
         // exists would overwrite a split somebody may have adjusted by hand.
         <ScanReceiptEntry
           enabled={receiptScanning}
+          localEnabled={receiptOcrLocal}
+          provider={receiptOcrProvider}
           groupId={groupId}
           participants={participants}
           defaultCurrency={defaultCurrency}
