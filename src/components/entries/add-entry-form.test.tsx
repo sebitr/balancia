@@ -20,14 +20,14 @@ import { AddEntryDrawer } from "./add-entry-drawer";
  * service layer's problem and is tested there; this is about the form.
  */
 
-const { createExpense, createSettlement, createRecurring, upload } = vi.hoisted(
-  () => ({
+const { createExpense, createSettlement, createRecurring, upload, success } =
+  vi.hoisted(() => ({
     createExpense: vi.fn(),
     createSettlement: vi.fn(),
     createRecurring: vi.fn(),
     upload: vi.fn(),
-  }),
-);
+    success: vi.fn(),
+  }));
 
 vi.mock("@/modules/expenses/actions", () => ({
   createExpenseAction: createExpense,
@@ -41,6 +41,12 @@ vi.mock("@/components/expenses/upload-receipt", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
+}));
+// The confirmation is a toast now, and a toast needs a `<Toaster />` mounted
+// somewhere above it to render. What matters here is that it was raised, and
+// with what.
+vi.mock("sonner", () => ({
+  toast: { success: (...args: unknown[]) => success(...args), error: vi.fn() },
 }));
 // The classifier reaches for a web worker and WebAssembly; neither exists in
 // jsdom, and none of these tests are about categorisation.
@@ -75,6 +81,7 @@ function renderForm(
   createSettlement.mockClear();
   createRecurring.mockClear();
   upload.mockClear();
+  success.mockClear();
 
   createExpense.mockResolvedValue({ ok: true, data: { expenseId: "e1" } });
   createSettlement.mockResolvedValue({
@@ -245,7 +252,7 @@ describe("the default expense path", () => {
         currency: "CHF",
       }),
     );
-    expect(screen.getByText("Expense added")).toBeInTheDocument();
+    expect(success).toHaveBeenCalledWith("Expense added", expect.anything());
   });
 
   it("asks for a description before saving", async () => {
@@ -490,7 +497,7 @@ describe("income", () => {
       "g1",
       expect.objectContaining({ direction: "in", amount: "240000" }),
     );
-    expect(screen.getByText("Income added")).toBeInTheDocument();
+    expect(success).toHaveBeenCalledWith("Income added", expect.anything());
   });
 
   /** "Mine only" is an entry that moves nobody — so there is nothing to split. */
@@ -593,7 +600,7 @@ describe("settlement", () => {
         paymentMethod: "TWINT",
       }),
     );
-    expect(screen.getByText("Payment recorded")).toBeInTheDocument();
+    expect(success).toHaveBeenCalledWith("Payment recorded", expect.anything());
   });
 
   it("says so when there is nothing outstanding", async () => {
@@ -654,12 +661,19 @@ describe("recurrence", () => {
       }),
     );
     expect(createExpense).not.toHaveBeenCalled();
-    expect(screen.getByText("Recurring entry saved")).toBeInTheDocument();
+    expect(success).toHaveBeenCalledWith(
+      "Recurring entry saved",
+      expect.anything(),
+    );
   });
 });
 
 describe("after saving", () => {
-  it("offers another entry, and clears the last one", async () => {
+  /**
+   * The drawer gets out of the way and says so from outside it, rather than
+   * holding the group behind a confirmation screen.
+   */
+  it("says what was saved, and leaves", async () => {
     const user = userEvent.setup();
     renderForm();
 
@@ -667,10 +681,12 @@ describe("after saving", () => {
     await user.type(screen.getByLabelText("Description"), "Dinner");
     await user.click(screen.getByRole("button", { name: "Add expense" }));
 
-    await user.click(screen.getByRole("button", { name: "Add another" }));
-
-    expect(screen.getByLabelText("Description")).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Add expense" })).toBeDisabled();
+    expect(success).toHaveBeenCalledWith("Expense added", {
+      description: expect.stringMatching(/^Dinner · CHF.84\.60$/),
+    });
+    expect(
+      screen.queryByRole("button", { name: "Add expense" }),
+    ).not.toBeInTheDocument();
   });
 });
 

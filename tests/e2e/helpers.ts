@@ -7,6 +7,19 @@ import { expect, type Page } from "@playwright/test";
  * repeated against the same database without cleanup.
  */
 
+/**
+ * A toast, by what it says.
+ *
+ * Matched on the toast element rather than on the text anywhere on the page:
+ * "Expense added" is also the sort of thing a list behind it could be showing,
+ * and the point of the assertion is that the confirmation appeared.
+ */
+export async function expectToast(page: Page, text: string): Promise<void> {
+  await expect(
+    page.locator("[data-sonner-toast]").filter({ hasText: text }),
+  ).toBeVisible();
+}
+
 export function uniqueEmail(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10_000)}@example.test`;
 }

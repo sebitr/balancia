@@ -1,12 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
-import { addParticipant, createGroup, registerAndSignIn } from "./helpers";
+import {
+  addParticipant,
+  createGroup,
+  expectToast,
+  registerAndSignIn,
+} from "./helpers";
 
 /**
- * Adding an entry ends on a confirmation inside the dialog rather than a
- * navigation, so "was it saved?" is asked of the dialog, not the URL.
+ * Adding an entry closes the drawer and confirms in a toast over the group, so
+ * "was it saved?" is asked of the toast rather than of the URL.
  */
-async function expectEntrySaved(page: Page, heading: string): Promise<void> {
-  await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+async function expectEntrySaved(page: Page, title: string): Promise<void> {
+  await expectToast(page, title);
 }
 
 /**
@@ -189,4 +194,45 @@ test("configures a recurring expense", async ({ page }) => {
 
   await expect(page.getByText("Rent")).toBeVisible();
   await expect(page.getByText(/Every month on day 1/)).toBeVisible();
+});
+
+/**
+ * The drawer, opened the way people actually open it, and closed by saving.
+ *
+ * Every other test here lands on `/expenses/new` directly, which renders the
+ * standalone page rather than the intercepted drawer. The bottom bar's Add is
+ * the intercepted one, and the whole point of intercepting is that leaving
+ * *pops* the modal's history entry. Confirming with a screen that pushed
+ * `/groups/<id>` instead left the drawer sitting behind the group in the back
+ * stack, so the next back gesture — the ordinary way out of anything on a
+ * phone — opened it again over a group the reader had just come back to.
+ */
+test("saving from the intercepted drawer leaves the group uncovered", async ({
+  page,
+}) => {
+  await registerAndSignIn(page);
+  const groupId = await createGroup(page, { name: "Intercepted" });
+  await addParticipant(page, groupId, "Blaise");
+
+  await page.goto(`/groups/${groupId}`);
+  await page.getByRole("link", { name: "Add", exact: true }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Add expense" });
+  await expect(drawer).toBeVisible();
+
+  await page.getByLabel("Description").fill("Taxi");
+  await page.getByLabel("Amount").fill("30.00");
+  await page.getByRole("button", { name: "Add expense" }).click();
+
+  // No confirmation screen: the drawer leaves, and says what it saved from
+  // outside itself.
+  await expectEntrySaved(page, "Expense added");
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
+  await expect(drawer).toBeHidden();
+  await expect(page.getByText("added an expense: Taxi")).toBeVisible();
+
+  // And going back from the group leaves it, rather than reopening the form.
+  await page.goBack();
+  await expect(drawer).toBeHidden();
+  await expect(page).not.toHaveURL(/\/expenses\/new$/);
 });

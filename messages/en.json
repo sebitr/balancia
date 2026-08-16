@@ -1341,9 +1341,7 @@
       "expenseAdded": "Expense added",
       "incomeAdded": "Income added",
       "recurringSaved": "Recurring entry saved",
-      "paymentRecorded": "Payment recorded",
-      "addAnother": "Add another",
-      "backToGroup": "Back to group"
+      "paymentRecorded": "Payment recorded"
     },
     "errors": {
       "amountRequired": "Enter an amount first.",

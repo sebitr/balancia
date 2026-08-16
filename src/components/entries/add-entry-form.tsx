@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { CalendarDays, Loader2, Repeat, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,6 @@ import {
   summariseSplit,
   type EntryType,
 } from "./entry-logic";
-import { EntrySaved } from "./entry-saved";
 import { EntryTypeTabs } from "./entry-type-tabs";
 import { ScanBanner, ScanCard, ReceiptItems } from "./receipt-blocks";
 import {
@@ -135,8 +135,14 @@ export interface AddEntryFormProps {
   receiptOcrProvider?: string;
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
-  /** Leaves for the group, whatever the drawer was opened over. */
-  onBackToGroup?: () => void;
+  /**
+   * Dismisses it too, but on a saved entry.
+   *
+   * Separate from `onClose` because the group behind is now out of date, and
+   * only the shell knows when the drawer has finished leaving — which is the
+   * earliest a refresh can be aimed at the group rather than at this route.
+   */
+  onSaved?: () => void;
 }
 
 export function AddEntryForm({
@@ -155,7 +161,7 @@ export function AddEntryForm({
   receiptOcrLocal = true,
   receiptOcrProvider,
   onClose,
-  onBackToGroup,
+  onSaved,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
@@ -214,10 +220,6 @@ export function AddEntryForm({
   const [sheet, setSheet] = useState<OpenSheet>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<{
-    key: ReturnType<typeof confirmationKey>;
-    summary: string;
-  } | null>(null);
 
   const country = countryForTimezone(timezone);
   const countryMethods = useMemo(() => methodsForCountry(country), [country]);
@@ -437,29 +439,6 @@ export function AddEntryForm({
     setBannerVisible(true);
   };
 
-  const reset = () => {
-    setSaved(null);
-    setError(null);
-    setDescription("");
-    setCategory("");
-    setCategoryChosen(false);
-    setMethod("equal");
-    setValues({});
-    setByItem(false);
-    setIncludedIds(members.map((member) => member.id));
-    setScan(null);
-    setBannerVisible(false);
-    setAttachments([]);
-    setRecurrence((current) => ({ ...current, enabled: false }));
-    // In settle the amount is re-seeded from the pair rather than zeroed:
-    // the debt is still there, and blanking it just means retyping it.
-    if (isSettle && selectedPair) {
-      takePair(selectedPair);
-    } else {
-      setAmountText("");
-    }
-  };
-
   const onSubmit = async () => {
     setError(null);
     if (!totalMinor.ok) {
@@ -491,11 +470,15 @@ export function AddEntryForm({
         setError(result.error ?? t("errors.saveFailed"));
         return;
       }
-      setSaved({
-        key: confirmationKey(type, recurrence.enabled),
-        summary: describeSaved(),
+      // The confirmation follows the reader back to the group rather than
+      // holding the drawer open in front of it: what they wanted to see is the
+      // entry landing in the list, and the toast says the same thing without
+      // standing between them and it.
+      toast.success(t(`saved.${confirmationKey(type, recurrence.enabled)}`), {
+        description: describeSaved(),
       });
-      router.refresh();
+      if (onSaved) onSaved();
+      else router.refresh();
     } finally {
       setPending(false);
     }
@@ -634,297 +617,280 @@ export function AddEntryForm({
         )}
       </header>
 
-      {saved ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4">
-          <EntrySaved
-            titleKey={saved.key}
-            summary={saved.summary}
-            onAddAnother={reset}
-            onBackToGroup={
-              onBackToGroup ?? (() => router.push(`/groups/${groupId}`))
-            }
+      {/* Rows overflow rather than compress: a scroll container whose
+          children may shrink turns a long member list into a row of
+          squashed avatars instead of a scroll. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 [&>*]:shrink-0">
+        <EntryTypeTabs value={type} onChange={changeType} />
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {isSettle && (
+          <OutstandingList
+            pairs={outstanding}
+            selectedIndex={pairIndex}
+            onSelect={selectPair}
           />
-        </div>
-      ) : (
-        <>
-          {/* Rows overflow rather than compress: a scroll container whose
-              children may shrink turns a long member list into a row of
-              squashed avatars instead of a scroll. */}
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 [&>*]:shrink-0">
-            <EntryTypeTabs value={type} onChange={changeType} />
+        )}
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+        {type === "expense" && !scan && receiptScanning && (
+          <ScanReceiptEntry
+            enabled={receiptScanning}
+            localEnabled={receiptOcrLocal}
+            provider={receiptOcrProvider}
+            groupId={groupId}
+            participants={members.map((member) => ({
+              id: member.id,
+              displayName: member.displayName,
+            }))}
+            defaultCurrency={currency}
+            onApply={applyScan}
+            trigger={ScanCard}
+          />
+        )}
 
-            {isSettle && (
-              <OutstandingList
-                pairs={outstanding}
-                selectedIndex={pairIndex}
-                onSelect={selectPair}
+        {scan && bannerVisible && (
+          <ScanBanner
+            merchant={scan.description}
+            itemCount={Object.keys(scan.splitValues).length}
+            onDismiss={() => setBannerVisible(false)}
+          />
+        )}
+
+        <AmountCard
+          label={amountLabel}
+          amountText={amountText}
+          currency={currency}
+          baseCurrency={baseCurrency}
+          needsRate={needsRate}
+          rate={rate}
+          onRateChange={setRate}
+          date={date}
+          positive={isIncome}
+          currencyLocked={isSettle}
+          onAmountChange={(next) =>
+            setAmountText(sanitiseAmount(next, currency))
+          }
+          onOpenCurrency={() => setSheet("currency")}
+          locale={locale}
+        />
+
+        {!isSettle && (
+          <RowCard>
+            <Row>
+              {/* Borderless on purpose: the card is already the field's
+                  edge, and an input that draws its own box inside one is
+                  two boxes saying the same thing. */}
+              <input
+                id="entry-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder={t("labels.description")}
+                aria-label={t("labels.description")}
+                maxLength={200}
+                autoComplete="off"
+                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
-            )}
+            </Row>
 
-            {type === "expense" && !scan && receiptScanning && (
-              <ScanReceiptEntry
-                enabled={receiptScanning}
-                localEnabled={receiptOcrLocal}
-                provider={receiptOcrProvider}
-                groupId={groupId}
-                participants={members.map((member) => ({
-                  id: member.id,
-                  displayName: member.displayName,
-                }))}
-                defaultCurrency={currency}
-                onApply={applyScan}
-                trigger={ScanCard}
-              />
-            )}
-
-            {scan && bannerVisible && (
-              <ScanBanner
-                merchant={scan.description}
-                itemCount={Object.keys(scan.splitValues).length}
-                onDismiss={() => setBannerVisible(false)}
-              />
-            )}
-
-            <AmountCard
-              label={amountLabel}
-              amountText={amountText}
-              currency={currency}
-              baseCurrency={baseCurrency}
-              needsRate={needsRate}
-              rate={rate}
-              onRateChange={setRate}
-              date={date}
-              positive={isIncome}
-              currencyLocked={isSettle}
-              onAmountChange={(next) =>
-                setAmountText(sanitiseAmount(next, currency))
+            <RowButton
+              icon={categoryGlyph}
+              label={t("category.title")}
+              value={
+                hasGlyph(effectiveCategory)
+                  ? tCategories(effectiveCategory)
+                  : t("category.add")
               }
-              onOpenCurrency={() => setSheet("currency")}
-              locale={locale}
-            />
-
-            {!isSettle && (
-              <RowCard>
-                <Row>
-                  {/* Borderless on purpose: the card is already the field's
-                      edge, and an input that draws its own box inside one is
-                      two boxes saying the same thing. */}
-                  <input
-                    id="entry-description"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    placeholder={t("labels.description")}
-                    aria-label={t("labels.description")}
-                    maxLength={200}
-                    autoComplete="off"
-                    className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-                  />
-                </Row>
-
-                <RowButton
-                  icon={categoryGlyph}
-                  label={t("category.title")}
-                  value={
-                    hasGlyph(effectiveCategory)
-                      ? tCategories(effectiveCategory)
-                      : t("category.add")
-                  }
-                  muted={effectiveCategory === ""}
-                  tag={
-                    !categoryChosen && detectedCategory !== "" ? (
-                      <span className="shrink-0 rounded-full bg-payer/15 px-2 py-0.5 text-[11px] font-semibold text-payer">
-                        {t("category.detectedTag")}
-                      </span>
-                    ) : null
-                  }
-                  onClick={() => setSheet("category")}
-                />
-              </RowCard>
-            )}
-
-            {isIncome && (
-              <RowCard role="radiogroup" aria-label={t("income.belongsTo")}>
-                <CreditOption
-                  selected={credit === "shared"}
-                  onSelect={() => setCredit("shared")}
-                  title={t("income.shared")}
-                  hint={t("income.sharedHint", {
-                    count: effectiveIncluded.length,
-                    amount: eachFormatted ?? amountFormatted,
-                  })}
-                />
-                <CreditOption
-                  selected={credit === "mine"}
-                  onSelect={() => setCredit("mine")}
-                  title={t("income.mine", { name: payerName })}
-                  hint={t("income.mineHint")}
-                />
-              </RowCard>
-            )}
-
-            <RowCard>
-              <Row className="relative">
-                <CalendarDays
-                  aria-hidden="true"
-                  className="size-[18px] shrink-0 text-muted-foreground"
-                />
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                  {dateLabel}
-                </span>
-                {/* The native picker, made invisible over its own label: one
-                    control, the platform's own calendar, and no second date
-                    implementation. */}
-                <input
-                  type="date"
-                  // The field's name, not its value: "Aujourd'hui" is what the
-                  // date happens to be today, and is useless as a label
-                  // tomorrow.
-                  aria-label={t("date.label")}
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  className="absolute inset-0 size-full opacity-0"
-                />
-              </Row>
-
-              {/* A settlement happened once, on a day. Nothing about it can
-                  recur, so the card is the date row and nothing else. */}
-              {!isSettle && (
-                <label
-                  htmlFor={repeatsId}
-                  className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2"
-                >
-                  <Repeat
-                    aria-hidden="true"
-                    className="size-[18px] shrink-0 text-muted-foreground"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold">
-                      {t("repeat.label")}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {recurrence.enabled && upcomingLabel !== ""
-                        ? t("repeat.next", { dates: upcomingLabel })
-                        : t("repeat.schedule")}
-                    </span>
+              muted={effectiveCategory === ""}
+              tag={
+                !categoryChosen && detectedCategory !== "" ? (
+                  <span className="shrink-0 rounded-full bg-payer/15 px-2 py-0.5 text-[11px] font-semibold text-payer">
+                    {t("category.detectedTag")}
                   </span>
-                  <Switch
-                    id={repeatsId}
-                    // The row is the tap target, but its subline would
-                    // otherwise be read out as part of the switch's name.
-                    aria-label={t("repeat.label")}
-                    checked={recurrence.enabled}
-                    onCheckedChange={(next) =>
-                      setRecurrence((current) => ({
-                        ...current,
-                        enabled: next,
-                      }))
-                    }
-                  />
-                </label>
-              )}
+                ) : null
+              }
+              onClick={() => setSheet("category")}
+            />
+          </RowCard>
+        )}
 
-              {!isSettle && recurrence.enabled && (
-                <RowButton
-                  label={t("repeat.title")}
-                  value={repeatLabel}
-                  // Aligned with the text of the rows above rather than with
-                  // their icons: a second repeat glyph would only say the same
-                  // thing twice.
-                  className="pl-[46px]"
-                  onClick={() => setSheet("recur")}
-                />
-              )}
-            </RowCard>
+        {isIncome && (
+          <RowCard role="radiogroup" aria-label={t("income.belongsTo")}>
+            <CreditOption
+              selected={credit === "shared"}
+              onSelect={() => setCredit("shared")}
+              title={t("income.shared")}
+              hint={t("income.sharedHint", {
+                count: effectiveIncluded.length,
+                amount: eachFormatted ?? amountFormatted,
+              })}
+            />
+            <CreditOption
+              selected={credit === "mine"}
+              onSelect={() => setCredit("mine")}
+              title={t("income.mine", { name: payerName })}
+              hint={t("income.mineHint")}
+            />
+          </RowCard>
+        )}
 
-            {!isSettle && !(isIncome && credit === "mine") && (
-              <SplitSummaryRow
-                payerName={payerName}
-                amountFormatted={amountFormatted}
-                summary={summary}
-                received={isIncome}
-                onOpen={() => setSheet("split")}
-              />
-            )}
+        <RowCard>
+          <Row className="relative">
+            <CalendarDays
+              aria-hidden="true"
+              className="size-[18px] shrink-0 text-muted-foreground"
+            />
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+              {dateLabel}
+            </span>
+            {/* The native picker, made invisible over its own label: one
+                control, the platform's own calendar, and no second date
+                implementation. */}
+            <input
+              type="date"
+              // The field's name, not its value: "Aujourd'hui" is what the
+              // date happens to be today, and is useless as a label
+              // tomorrow.
+              aria-label={t("date.label")}
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="absolute inset-0 size-full opacity-0"
+            />
+          </Row>
 
-            {scan && !isSettle && (
-              <ReceiptItems
-                items={receiptRows(scan, members, currency, locale)}
-                onSplitByItem={() => setSheet("split")}
-              />
-            )}
-
-            {isSettle && (
-              <PaymentMethodRow
-                methods={countryMethods}
-                value={paymentMethod}
-                country={country}
-                onSelect={setPaymentMethod}
-                onOpenAll={() => setSheet("method")}
-              />
-            )}
-
-            {isSettle && selectedPair && (
-              <p className="text-[13px] text-muted-foreground">
-                {paymentMethod || countryMethods[0]
-                  ? t("settle.outcome", {
-                      from: selectedPair.fromName,
-                      to: selectedPair.toName,
-                      amount: amountFormatted,
-                      method: resolvedMethodLabel(),
-                    })
-                  : t("settle.outcomeNoMethod", {
-                      from: selectedPair.fromName,
-                      to: selectedPair.toName,
-                      amount: amountFormatted,
-                    })}
-              </p>
-            )}
-
-            {!isSettle && (
-              <AttachFile
-                groupId={groupId}
-                files={attachments}
-                onAttached={(file) =>
-                  setAttachments((current) => [...current, file])
-                }
-                onRemove={(id) =>
-                  setAttachments((current) =>
-                    current.filter((file) => file.id !== id),
-                  )
-                }
-                // A recurring template has no attachment of its own to carry,
-                // so say so where the files are rather than after the entry has
-                // been saved without them.
-                note={recurrence.enabled ? t("attach.notRepeating") : null}
-              />
-            )}
-          </div>
-
-          {/* One button, and it is the only thing this footer is for. Cancel
-              is the scrim, the X and a downward swipe — three ways out that
-              cost no room. */}
-          <footer className="shrink-0 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <Button
-              type="button"
-              size="lg"
-              className="h-13 w-full"
-              disabled={!canSave || pending}
-              onClick={onSubmit}
+          {/* A settlement happened once, on a day. Nothing about it can
+              recur, so the card is the date row and nothing else. */}
+          {!isSettle && (
+            <label
+              htmlFor={repeatsId}
+              className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2"
             >
-              {pending && (
-                <Loader2 aria-hidden="true" className="animate-spin" />
-              )}
-              {t(`actions.${primaryActionKey(type, recurrence.enabled)}`)}
-            </Button>
-          </footer>
-        </>
-      )}
+              <Repeat
+                aria-hidden="true"
+                className="size-[18px] shrink-0 text-muted-foreground"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">
+                  {t("repeat.label")}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {recurrence.enabled && upcomingLabel !== ""
+                    ? t("repeat.next", { dates: upcomingLabel })
+                    : t("repeat.schedule")}
+                </span>
+              </span>
+              <Switch
+                id={repeatsId}
+                // The row is the tap target, but its subline would
+                // otherwise be read out as part of the switch's name.
+                aria-label={t("repeat.label")}
+                checked={recurrence.enabled}
+                onCheckedChange={(next) =>
+                  setRecurrence((current) => ({
+                    ...current,
+                    enabled: next,
+                  }))
+                }
+              />
+            </label>
+          )}
+
+          {!isSettle && recurrence.enabled && (
+            <RowButton
+              label={t("repeat.title")}
+              value={repeatLabel}
+              // Aligned with the text of the rows above rather than with
+              // their icons: a second repeat glyph would only say the same
+              // thing twice.
+              className="pl-[46px]"
+              onClick={() => setSheet("recur")}
+            />
+          )}
+        </RowCard>
+
+        {!isSettle && !(isIncome && credit === "mine") && (
+          <SplitSummaryRow
+            payerName={payerName}
+            amountFormatted={amountFormatted}
+            summary={summary}
+            received={isIncome}
+            onOpen={() => setSheet("split")}
+          />
+        )}
+
+        {scan && !isSettle && (
+          <ReceiptItems
+            items={receiptRows(scan, members, currency, locale)}
+            onSplitByItem={() => setSheet("split")}
+          />
+        )}
+
+        {isSettle && (
+          <PaymentMethodRow
+            methods={countryMethods}
+            value={paymentMethod}
+            country={country}
+            onSelect={setPaymentMethod}
+            onOpenAll={() => setSheet("method")}
+          />
+        )}
+
+        {isSettle && selectedPair && (
+          <p className="text-[13px] text-muted-foreground">
+            {paymentMethod || countryMethods[0]
+              ? t("settle.outcome", {
+                  from: selectedPair.fromName,
+                  to: selectedPair.toName,
+                  amount: amountFormatted,
+                  method: resolvedMethodLabel(),
+                })
+              : t("settle.outcomeNoMethod", {
+                  from: selectedPair.fromName,
+                  to: selectedPair.toName,
+                  amount: amountFormatted,
+                })}
+          </p>
+        )}
+
+        {!isSettle && (
+          <AttachFile
+            groupId={groupId}
+            files={attachments}
+            onAttached={(file) =>
+              setAttachments((current) => [...current, file])
+            }
+            onRemove={(id) =>
+              setAttachments((current) =>
+                current.filter((file) => file.id !== id),
+              )
+            }
+            // A recurring template has no attachment of its own to carry,
+            // so say so where the files are rather than after the entry has
+            // been saved without them.
+            note={recurrence.enabled ? t("attach.notRepeating") : null}
+          />
+        )}
+      </div>
+
+      {/* One button, and it is the only thing this footer is for. Cancel
+          is the scrim, the X and a downward swipe — three ways out that
+          cost no room. */}
+      <footer className="shrink-0 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <Button
+          type="button"
+          size="lg"
+          className="h-13 w-full"
+          disabled={!canSave || pending}
+          onClick={onSubmit}
+        >
+          {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
+          {t(`actions.${primaryActionKey(type, recurrence.enabled)}`)}
+        </Button>
+      </footer>
 
       <Sheet
         open={sheet !== null}

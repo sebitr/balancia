@@ -33,25 +33,34 @@ export function AddEntryDrawer({
   ...form
 }: AddEntryFormProps & {
   /**
-   * Where dismissal leads.
+   * Where leaving leads — saved or dismissed, it is the same way out.
    *
    * `back` pops the intercepted route, returning to whatever the drawer opened
    * over. `group` is for the standalone route, arrived at by a link or a
    * refresh, where there is no such thing behind to go back to.
+   *
+   * Saving used to push `/groups/<id>` instead of popping, on the grounds that
+   * "back to group" should mean the group. It left `/expenses/new` sitting in
+   * the history behind it, so the next back gesture — which on a phone is how
+   * you leave anything — reopened the form over the group.
    */
   dismissTo: "back" | "group";
 }) {
   const router = useRouter();
-  const [exit, setExit] = useState<null | "dismiss" | "group">(null);
+  const [exit, setExit] = useState<null | "dismiss" | "saved">(null);
 
   useEffect(() => {
     if (exit === null) return;
     const timer = setTimeout(() => {
-      if (exit === "dismiss" && dismissTo === "back") {
+      if (dismissTo === "back") {
         router.back();
-        return;
+      } else {
+        router.push(`/groups/${form.groupId}`);
       }
-      router.push(`/groups/${form.groupId}`);
+      // After the navigation, not before it: what is now stale is the group
+      // behind, and refreshing while still on `/expenses/new` would only
+      // refetch the drawer's own route.
+      if (exit === "saved") router.refresh();
     }, EXIT_MS);
     return () => clearTimeout(timer);
   }, [exit, dismissTo, form.groupId, router]);
@@ -90,9 +99,9 @@ export function AddEntryDrawer({
         <AddEntryForm
           {...form}
           onClose={() => setExit("dismiss")}
-          // "Back to group" means the group, even when the drawer was opened
-          // from somewhere else in it and `back` would land on that instead.
-          onBackToGroup={() => setExit("group")}
+          // A saved entry leaves the same way a dismissed one does — the
+          // confirmation is a toast, which outlives the drawer.
+          onSaved={() => setExit("saved")}
         />
       </SheetContent>
     </Sheet>

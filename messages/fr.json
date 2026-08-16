@@ -1341,9 +1341,7 @@
       "expenseAdded": "Dépense ajoutée",
       "incomeAdded": "Revenu ajouté",
       "recurringSaved": "Écriture récurrente enregistrée",
-      "paymentRecorded": "Paiement enregistré",
-      "addAnother": "En ajouter une autre",
-      "backToGroup": "Retour au groupe"
+      "paymentRecorded": "Paiement enregistré"
     },
     "errors": {
       "amountRequired": "Saisis d'abord un montant.",
