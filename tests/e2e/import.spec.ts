@@ -21,7 +21,7 @@ test("imports a Splitwise CSV with a preview step", async ({ page }) => {
 
   // Preview: counts and the people found in the file.
   await expect(page.getByText("4 expenses")).toBeVisible();
-  await expect(page.getByText("1 payments")).toBeVisible();
+  await expect(page.getByText("1 payment", { exact: true })).toBeVisible();
   await expect(page.getByText("EUR").first()).toBeVisible();
   for (const name of ["Ada", "Blaise", "Grace"]) {
     await expect(page.getByText(name, { exact: true })).toBeVisible();
@@ -39,8 +39,12 @@ test("imports a Splitwise CSV with a preview step", async ({ page }) => {
 
   // The expenses are really there.
   await page.goto(`/groups/${groupId}/expenses`);
-  await expect(page.getByText("Groceries")).toBeVisible();
-  await expect(page.getByText("Museum tickets")).toBeVisible();
+  // By row, not by text: "Groceries" is also a category, so it appears in the
+  // filter chips as well as on the expense it was imported as.
+  await expect(page.getByRole("link", { name: /Groceries/ })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Museum tickets/ }),
+  ).toBeVisible();
 });
 
 test("re-importing the same file adds nothing", async ({ page }) => {
