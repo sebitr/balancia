@@ -145,8 +145,8 @@ export default async function ExpensesPage({
    * the design draws. A `separate` group — the default — can hold several, and
    * there is no honest way to rank categories across them: the comparison the
    * spine invites would need an exchange rate nobody chose. So the spine
-   * appears only when there is one currency to measure in, and the count of
-   * currencies goes across so the island can say why it is missing.
+   * appears only when there is one currency to measure in, and simply is not
+   * there when there is not.
    *
    * It also needs something to divide. Until somebody files an expense under a
    * category the whole total sits in one bucket, and the spine becomes a single
@@ -175,7 +175,6 @@ export default async function ExpensesPage({
       groupId={groupId}
       eyebrow={<Eyebrow label={t("eyebrow")} />}
       bands={bands}
-      currencies={spreads.length}
       rows={rows}
     />
   );

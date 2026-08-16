@@ -145,15 +145,12 @@ export function Transactions({
   groupId,
   eyebrow,
   bands,
-  currencies,
   rows,
 }: {
   groupId: string;
   eyebrow: ReactNode;
   /** Null when the group's spending spans more than one currency. */
   bands: readonly BandView[] | null;
-  /** How many currencies the group balances in; more than one, no spine. */
-  currencies: number;
   rows: readonly RowView[];
 }) {
   const t = useTranslations("expensesList");
@@ -278,19 +275,7 @@ export function Transactions({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        {eyebrow}
-
-        {/* The one thing the old headline figure said that the screen cannot
-            say for itself: why there is no spine down the side. Everything
-            else it carried — the total, the category count, what had been
-            repaid — was a summary of the list directly beneath it. */}
-        {currencies > 1 && (
-          <p className="text-[0.78125rem] text-muted-foreground">
-            {t("spreadNeedsOneCurrency", { count: currencies })}
-          </p>
-        )}
-      </div>
+      {eyebrow}
 
       {/* One chip per kind the group actually holds, and none at all when it
           holds only one: a row whose every chip says the same thing as the
