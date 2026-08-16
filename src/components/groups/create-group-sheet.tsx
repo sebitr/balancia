@@ -314,7 +314,7 @@ function IdentityRow({
           maxLength={2000}
           autoFocus
           placeholder={t("descriptionOptional")}
-          className="min-h-17 resize-none rounded-[14px] border-0 bg-foreground/5 px-4 py-3 text-[15px] inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary"
+          className="min-h-17 resize-none rounded-[14px] border-0 bg-foreground/5 px-4 py-3 text-base inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary md:text-[15px]"
         />
       ) : (
         <button
@@ -427,7 +427,7 @@ function Participants({
           autoComplete="off"
           aria-label={t("addPerson")}
           placeholder={t("addPerson")}
-          className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-[15px]"
         />
         <button
           type="button"

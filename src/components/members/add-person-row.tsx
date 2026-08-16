@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
  */
 
 const FIELD =
-  "h-[42px] rounded-lg border-input bg-[color-mix(in_oklch,var(--input)_30%,transparent)] px-3 text-sm";
+  "h-[42px] rounded-lg border-input bg-[color-mix(in_oklch,var(--input)_30%,transparent)] px-3 text-base md:text-sm";
 
 export function AddPersonRow({
   groupId,

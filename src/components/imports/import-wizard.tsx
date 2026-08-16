@@ -210,7 +210,7 @@ export function ImportWizard({ groupId }: { groupId: string }) {
                         [sourceName]: event.target.value,
                       }))
                     }
-                    className="h-9 min-w-48 rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    className="h-9 min-w-48 rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-sm"
                   >
                     <option value={CREATE_PARTICIPANT}>{t("addAsNew")}</option>
                     {preview.groupParticipants.map((participant) => (
