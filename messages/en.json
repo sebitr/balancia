@@ -369,6 +369,9 @@
         "created": "created the group",
         "updated": "updated the group",
         "archived": "archived the group"
+      },
+      "reminder": {
+        "sent": "sent a reminder"
       }
     }
   },
