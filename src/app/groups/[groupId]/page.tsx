@@ -19,7 +19,7 @@ import {
   type CurrencyPosition,
 } from "@/modules/groups/overview";
 import { listRemindRecipients } from "@/modules/reminders/service";
-import { MODAL, PUSH } from "@/components/motion/transitions";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Group overview — where I stand, what this group is, who owes whom, and what
@@ -168,10 +168,9 @@ export default async function GroupOverviewPage({
                filled, so the order to do things in survives a narrow column. */
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <Button asChild>
-                <Link
-                  href={`/groups/${groupId}/expenses/new`}
-                  transitionTypes={MODAL}
-                >
+                {/* No direction, like the bar's own Add: this opens a drawer
+                    over the group rather than going anywhere. */}
+                <Link href={`/groups/${groupId}/expenses/new`}>
                   <Plus aria-hidden="true" />
                   {t("addExpense")}
                 </Link>

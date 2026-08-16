@@ -13,7 +13,6 @@ import {
   isCategorised,
   spreadBands,
 } from "@/modules/expenses/spread";
-import { MODAL } from "@/components/motion/transitions";
 import {
   Transactions,
   type BandView,
@@ -126,10 +125,9 @@ export default async function ExpensesPage({
           description={t("emptyDescription")}
           action={
             <Button asChild>
-              <Link
-                href={`/groups/${groupId}/expenses/new`}
-                transitionTypes={MODAL}
-              >
+              {/* No direction, like the bar's own Add: this opens a drawer
+                  over the list rather than going anywhere. */}
+              <Link href={`/groups/${groupId}/expenses/new`}>
                 <Plus aria-hidden="true" />
                 {t("addExpense")}
               </Link>

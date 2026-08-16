@@ -3,17 +3,18 @@
 import { ViewTransition, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { screenPath } from "./transitions";
 
 /**
  * The screen: everything between the header and the bottom bar, and the only
  * part of the app that moves when you navigate.
  *
- * What moves belongs to the navigation, not to the URL — a group arrives from
- * the right when you tapped into it and from the left when you came back to
- * it, and the same `/expenses/new` is a drawer over the group here and a
- * drawer over an empty shell from the dashboard. So the link names the motion,
- * via `transitionTypes` and the constants in `./transitions`, and this maps
- * that name onto a CSS class that `globals.css` animates.
+ * What moves belongs to the navigation, not to the destination — a group
+ * arrives from the right when you tapped into it and from the left when you
+ * came back to it, and a peer on the tab bar does not arrive from anywhere at
+ * all. So the link names the motion, via `transitionTypes` and the constants
+ * in `./transitions`, and this maps that name onto a CSS class that
+ * `globals.css` animates.
  *
  * Keyed by pathname. A `<ViewTransition>` in a layout normally never animates,
  * because layouts survive navigation and so never enter or exit; changing the
@@ -22,23 +23,19 @@ import { cn } from "@/lib/utils";
  * page also means a page added later is carried along without being asked to
  * remember anything.
  *
- * Two things deliberately do not move it. A change of search params keeps the
- * pathname, so filtering a list does not re-enter the screen. And a navigation
+ * Three things deliberately do not move it. A change of search params keeps
+ * the pathname, so filtering a list does not re-enter the screen. A navigation
  * carrying no direction animates nothing at all: `router.refresh()` runs here
  * whenever a push notification lands on an open tab, and a screen that slid
  * sideways every time somebody else recorded an expense would be claiming a
- * navigation that never happened.
+ * navigation that never happened. And a path that opens *over* the screen
+ * rather than replacing it keys to the screen underneath — see `screenPath`.
  */
 const DIRECTIONS = {
   push: "push",
   pop: "pop",
   "switch-forward": "switch-forward",
   "switch-back": "switch-back",
-  // A drawer opening over the screen: the screen is not what moved, so it
-  // takes no animation at all rather than one that animates it to a
-  // standstill. "none" opts it out of the transition, leaving the drawer's own
-  // rise as the only motion on screen.
-  modal: "none",
   default: "none",
 };
 
@@ -74,7 +71,7 @@ export function Screen({
 
   return (
     <ViewTransition
-      key={pathname}
+      key={screenPath(pathname)}
       enter={DIRECTIONS}
       exit={DIRECTIONS}
       default="none"

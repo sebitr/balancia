@@ -12,7 +12,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  MODAL,
   POP,
   SWITCH_BACK,
   SWITCH_FORWARD,
@@ -75,17 +74,24 @@ function activeIndexOf(pathname: string, base: string): number {
 }
 
 /**
- * The motion a tap on this tab should carry.
+ * The motion a tap on this tab should carry, or none.
  *
- * "Add" is intercepted into a drawer over the group, which rises from the
- * bottom under its own steam; the group behind it has not gone anywhere, so it
- * does not move. The rest are sections of the same place, and which way along
- * the bar depends on the tab being left. From a screen that sits on no tab at
- * all — a balance, an expense, the activity log — every tab is the way back
- * out, which is a pop.
+ * "Add" carries none: it opens a drawer *over* the group rather than going
+ * anywhere, and the sheet's own rise is the whole animation. The screen
+ * underneath stays put — `screenPath` is what keeps it there, and a direction
+ * here would only describe motion that no longer happens.
+ *
+ * The rest are sections of the same place: they fade through, nudged the way
+ * the bar itself runs, and which way that is depends on the tab being left.
+ * From a screen that sits on no tab at all — a balance, an expense, the
+ * activity log — every tab is the way back out, which is a pop.
  */
-function directionFor(item: NavItem, index: number, activeIndex: number) {
-  if (item.primary) return MODAL;
+function directionFor(
+  item: NavItem,
+  index: number,
+  activeIndex: number,
+): string[] | undefined {
+  if (item.primary) return undefined;
   if (activeIndex === -1) return POP;
   return index > activeIndex ? SWITCH_FORWARD : SWITCH_BACK;
 }

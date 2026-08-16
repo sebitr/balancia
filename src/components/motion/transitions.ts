@@ -4,15 +4,16 @@
  * matching animation lives in `globals.css` and is selected by `<Screen>`.
  *
  * Which one a link is cannot be worked out by the router: it is a judgement
- * about what the destination *is* to the reader, and the same URL can be two
- * different things depending on where it was tapped from. Three kinds, and
- * they deliberately do not look alike:
+ * about what the destination *is* to the reader. Two kinds, and they
+ * deliberately do not look alike:
  *
  *   depth   — PUSH and POP, a page stacked on the one before it. It travels.
  *   section — the SWITCH pair, a peer on the group's tab bar or another
  *             group in the switcher. It fades through, going nowhere.
- *   layer   — MODAL, something that opens over what you were looking at and
- *             brings its own motion. The screen underneath does not move.
+ *
+ * There is deliberately no third kind for a drawer. Something that opens
+ * *over* the screen has not navigated between screens at all, so it carries no
+ * direction and `screenPath` below keeps it on the same key — see `<Screen>`.
  */
 
 /** Deeper: a page on top of the one you left, which recedes behind it. */
@@ -32,14 +33,27 @@ export const SWITCH_FORWARD: string[] = ["switch-forward"];
 export const SWITCH_BACK: string[] = ["switch-back"];
 
 /**
- * Over the top: a drawer or a sheet, which carries its own animation.
+ * Paths that are a layer over the screen rather than a screen of their own.
  *
- * The screen behind stays exactly where it was, because it is still the thing
- * you are looking at — that is what makes the layer read as a layer. Sliding
- * it sideways as well put two motions on screen at once, each claiming a
- * different thing had happened.
- *
- * `<Screen>` maps this onto React's `"none"`, which opts the screen out of the
- * transition altogether rather than animating it to a standstill.
+ * Only the add-entry drawer, which is intercepted into the group's `@entry`
+ * slot: the URL becomes `/groups/<id>/expenses/new`, but `children` goes on
+ * rendering the group underneath, which is the whole point of intercepting it.
  */
-export const MODAL: string[] = ["modal"];
+const OVERLAYS = [/^(\/groups\/[^/]+)\/expenses\/new$/];
+
+/**
+ * Which screen a path is showing, ignoring anything opened over it.
+ *
+ * `<Screen>` is keyed on this rather than on the pathname, because opening a
+ * drawer is not a navigation between screens. Keyed on the raw pathname, the
+ * group behind the drawer exited and re-entered on the way in and back out
+ * again on the way out — it ran the push animation under a sheet that was
+ * sliding up over it, and remounted, so it came back scrolled to the top.
+ */
+export function screenPath(pathname: string): string {
+  for (const overlay of OVERLAYS) {
+    const beneath = pathname.replace(overlay, "$1");
+    if (beneath !== pathname) return beneath;
+  }
+  return pathname;
+}
