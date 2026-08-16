@@ -47,11 +47,17 @@ describe("PositionWidget", () => {
   it("leads with the net figure and decomposes it into two totals", () => {
     renderWidget();
 
-    expect(screen.getByText("€412.60")).toBeVisible();
+    expect(screen.getByText("€413")).toBeVisible();
     expect(screen.getByText("Owed to you")).toBeVisible();
-    expect(screen.getByText("€560.40")).toBeVisible();
+    expect(screen.getByText("€560")).toBeVisible();
     expect(screen.getByText("You owe")).toBeVisible();
-    expect(screen.getByText("€147.80")).toBeVisible();
+    expect(screen.getByText("€148")).toBeVisible();
+  });
+
+  it("shows whole units — this is a position, not a statement", () => {
+    renderWidget();
+
+    expect(screen.queryByText(/412\.60|560\.40|147\.80/)).toBeNull();
   });
 
   it("holds both actions, and fills only one of them", () => {
@@ -79,7 +85,7 @@ describe("PositionWidget", () => {
       screen.queryByText("Converted to EUR at today's rates"),
     ).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /€412.60/ }));
+    await userEvent.click(screen.getByRole("button", { name: /€413/ }));
 
     expect(
       await screen.findByText("Converted to EUR at today's rates"),
@@ -89,7 +95,7 @@ describe("PositionWidget", () => {
   it("dates the disclosure when the rates are not today's", async () => {
     renderWidget({ ratesAsOf: "2026-08-11" });
 
-    await userEvent.click(screen.getByRole("button", { name: /€412.60/ }));
+    await userEvent.click(screen.getByRole("button", { name: /€413/ }));
 
     expect(
       await screen.findByText("Converted to EUR at rates from 2026-08-11"),
@@ -125,9 +131,9 @@ describe("PositionWidget", () => {
       screen.getByText("Rates unavailable — showing each group's own currency"),
     ).toBeVisible();
     // Several honest figures rather than one invented one.
-    expect(screen.getByText("CHF 210.00")).toBeVisible();
-    expect(screen.getByText("€248.00")).toBeVisible();
-    expect(screen.getByText("€100.00")).toBeVisible();
+    expect(screen.getByText("CHF 210")).toBeVisible();
+    expect(screen.getByText("€248")).toBeVisible();
+    expect(screen.getByText("€100")).toBeVisible();
   });
 
   it("shows neither a figure nor a total for an account holding no balance", () => {

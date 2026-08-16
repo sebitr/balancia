@@ -30,18 +30,21 @@ export function Amount({
   className,
   display = "symbol",
   signDisplay,
+  fractionDigits,
 }: {
   minorUnits: string;
   currency: string;
   className?: string;
   display?: "symbol" | "code" | "none";
   signDisplay?: Intl.NumberFormatOptions["signDisplay"];
+  /** Digits after the separator; defaults to the currency's own precision. */
+  fractionDigits?: number;
 }) {
   const locale = useNumberLocale();
   const value = money(BigInt(minorUnits), currency);
   return (
     <span className={cn("tabular-nums", className)}>
-      {formatMoney(value, { locale, display, signDisplay })}
+      {formatMoney(value, { locale, display, signDisplay, fractionDigits })}
     </span>
   );
 }
@@ -84,12 +87,15 @@ export function BalanceAmount({
   className,
   showLabel = true,
   size = "default",
+  fractionDigits,
 }: {
   minorUnits: string;
   currency: string;
   className?: string;
   showLabel?: boolean;
   size?: "default" | "large" | "small";
+  /** Digits after the separator; defaults to the currency's own precision. */
+  fractionDigits?: number;
 }) {
   const locale = useNumberLocale();
   const t = useTranslations("money");
@@ -111,7 +117,7 @@ export function BalanceAmount({
     >
       <Icon aria-hidden="true" className="size-4 shrink-0" />
       <span className="tabular-nums">
-        {formatMoney(money(magnitude, currency), { locale })}
+        {formatMoney(money(magnitude, currency), { locale, fractionDigits })}
       </span>
       {showLabel && (
         <span className="text-sm font-normal text-muted-foreground">
