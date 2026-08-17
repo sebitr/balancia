@@ -124,7 +124,7 @@ licensed under the same terms. There is no CLA.
 If you add a dependency, check its licence is compatible and note it in the PR.
 **Dependencies with a paid tier, usage threshold or commercial gate are not
 acceptable** — a self-hosted application must not depend on someone else's
-pricing page. The audit table in the README should stay accurate.
+pricing page. Keep the policy in [docs/licensing.md](docs/licensing.md) accurate.
 
 ## Code of conduct
 

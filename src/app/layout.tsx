@@ -7,6 +7,7 @@ import { FormatPreferencesProvider } from "@/i18n/format-context";
 import { resolveFormatPreferences } from "@/i18n/preferences";
 import { CurrencyFavoritesProvider } from "@/components/money/currency-favorites";
 import { resolveCurrencyFavorites } from "@/modules/currencies/preferences";
+import { getEnv } from "@/lib/env";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
@@ -30,7 +31,9 @@ const instrumentSerif = Instrument_Serif({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
+  const env = getEnv();
   return {
+    metadataBase: new URL(env.appOrigin),
     title: {
       default: "Balancia",
       template: "%s · Balancia",
@@ -38,6 +41,11 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     applicationName: "Balancia",
     manifest: "/manifest.webmanifest",
+    robots: {
+      index: false,
+      follow: false,
+      noarchive: true,
+    },
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",

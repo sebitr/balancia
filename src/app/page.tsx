@@ -56,35 +56,60 @@ export async function generateMetadata(): Promise<Metadata> {
   const env = getEnv();
   const title = t("title");
   const description = t("description");
-  const socialTitle = locale === "fr" ? title : `${title} · Balancia`;
+  const isFrench = locale === "fr";
+  const socialTitle = isFrench ? title : `${title} · Balancia`;
   const socialImage = new URL("/icons/icon-512.png", env.appOrigin).toString();
 
   return {
-    title: locale === "fr" ? { absolute: title } : title,
+    title: isFrench ? { absolute: title } : title,
     description,
     alternates: { canonical: env.appOrigin },
+    keywords: [
+      "shared expense tracker",
+      "split expenses with friends",
+      "self-hosted Splitwise alternative",
+      "self-hosted tricount alternative",
+      "open-source expense splitter",
+      "multi-currency expense sharing",
+      "roommate expense tracker",
+    ],
     openGraph: {
       type: "website",
       url: env.appOrigin,
       siteName: "Balancia",
-      locale: locale === "fr" ? "fr_FR" : "en_US",
+      locale: isFrench ? "fr_FR" : "en_US",
       title: socialTitle,
       description,
-      images: [
-        {
-          url: socialImage,
-          width: 512,
-          height: 512,
-          alt: "Balancia",
-          type: "image/png",
-        },
-      ],
+      ...(isFrench
+        ? {
+            images: [
+              {
+                url: socialImage,
+                width: 512,
+                height: 512,
+                alt: "Balancia",
+                type: "image/png",
+              },
+            ],
+          }
+        : {}),
     },
     twitter: {
-      card: "summary",
+      card: isFrench ? "summary" : "summary_large_image",
       title: socialTitle,
       description,
-      images: [socialImage],
+      ...(isFrench ? { images: [socialImage] } : {}),
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
   };
 }

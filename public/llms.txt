@@ -4,7 +4,9 @@
 > It runs on a hosted instance with a free account, or self-hosted on your own
 > server under the AGPL-3.0-or-later licence.
 
+Official website: https://balancia.app
 Source: https://github.com/sebitr/balancia
+Licence: AGPL-3.0-or-later
 
 ## What it does
 
@@ -26,6 +28,8 @@ Source: https://github.com/sebitr/balancia
 - Imports an existing Splitwise CSV export or JSON backup, with a preview before
   anything is written and no duplicates on re-runs.
 - Exports any group as JSON, CSV or an Excel workbook.
+- Data portability is a product promise: a group can leave at any time with its
+  records in reusable formats. Receipts can be downloaded separately.
 
 ## Common use cases
 
@@ -37,6 +41,17 @@ Source: https://github.com/sebitr/balancia
 - Jointly owned things — a car, a boat, a family holiday house — with recurring
   costs and, when rented out, revenue to split.
 - Clubs, teams and bands tracking subs and fees in, costs out.
+
+## Who it is for
+
+Balancia is for groups that want precise shared-expense calculations and a clear
+record of who paid, who owes and how to settle. It is especially useful when
+data ownership, self-hosting, guest participation without accounts, several
+payers on one expense, recurring costs or multiple currencies matter.
+
+It is not a bank, payment processor, accounting ledger or legally binding debt
+service. It records informal expenses and suggested repayments but does not move
+money.
 
 ## Privacy
 
@@ -57,8 +72,16 @@ Three steps:
 The bootstrap script generates instance secrets and asks which optional features
 to enable. Docker Compose builds and starts PostgreSQL, the app and its worker.
 
+The operator is responsible for HTTPS, updates, monitoring and tested backups.
+Balancia is an installable progressive web app, not a native App Store or Play
+Store application. It does not accept expense entries while offline.
+
 ## Docs
 
+- Documentation index: https://github.com/sebitr/balancia/blob/main/docs/README.md
+- Frequently asked questions: https://github.com/sebitr/balancia/blob/main/docs/faq.md
+- Balancia vs Splitwise: https://github.com/sebitr/balancia/blob/main/docs/compare-splitwise.md
+- Balancia vs tricount: https://github.com/sebitr/balancia/blob/main/docs/compare-tricount.md
 - Self-hosting: https://github.com/sebitr/balancia/blob/main/docs/self-hosting.md
 - Environment reference: https://github.com/sebitr/balancia/blob/main/docs/environment.md
 - Backup and restore: https://github.com/sebitr/balancia/blob/main/docs/backup-and-restore.md
@@ -66,4 +89,6 @@ to enable. Docker Compose builds and starts PostgreSQL, the app and its worker.
 - Architecture: https://github.com/sebitr/balancia/blob/main/docs/architecture.md
 - Implementation status: https://github.com/sebitr/balancia/blob/main/docs/implementation-status.md
 - Security: https://github.com/sebitr/balancia/blob/main/SECURITY.md
+- Financial correctness: https://github.com/sebitr/balancia/blob/main/docs/financial-correctness.md
+- Support: https://github.com/sebitr/balancia/blob/main/SUPPORT.md
 - Licence (AGPL-3.0-or-later): https://github.com/sebitr/balancia/blob/main/LICENSE

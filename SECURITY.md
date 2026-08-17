@@ -5,8 +5,8 @@
 **Please do not open a public issue for a security problem.**
 
 Report it privately through
-[GitHub's private vulnerability reporting](https://github.com/your-org/balancia/security/advisories/new),
-or by email to `security@example.com`.
+[GitHub's private vulnerability reporting](https://github.com/sebitr/balancia/security/advisories/new).
+Do not include vulnerability details in an issue or Discussion.
 
 Please include:
 
