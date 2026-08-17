@@ -106,7 +106,7 @@ export default async function MembersPage({
   return (
     <div className="flex flex-col gap-[18px]">
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.6875rem] leading-[1.15] font-semibold tracking-[-0.025em]">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">
           {t("title")}
         </h1>
         <p className="text-pretty text-muted-foreground">{t(intro)}</p>
