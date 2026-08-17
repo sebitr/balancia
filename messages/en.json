@@ -1257,9 +1257,6 @@
     "shortcuts": "Shortcuts",
     "recurring": "Recurring expenses",
     "import": "Import from Splitwise",
-    "convertedNote": "Everything is converted into {currency} at the rate recorded with each expense.",
-    "separateNote": "Each currency keeps its own balance. Nothing is converted.",
-    "modeFixed": "The mode is fixed once a group exists — changing it would reinterpret every amount already recorded.",
     "ownerOnly": "Only the group owner can change these settings.",
     "export": "Export",
     "exportIntro": "Your data, in a format you can open anywhere. The file is built on this server and sent straight to you.",
@@ -1272,7 +1269,7 @@
     "jsonSub": "The complete record — every amount exactly as stored.",
     "exportNote": "Receipts are not in these files — download them from each expense.",
     "exportStarted": "{format} file is on its way.",
-    "currencyMode": "Currency mode",
+    "currencyMode": "Currency mode: {mode}",
     "currencyModeSeparate": "Multi currency",
     "currencyModeConverted": "Converted to {currency}",
     "currencyModeFixed": "Fixed"
