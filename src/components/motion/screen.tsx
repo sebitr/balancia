@@ -73,7 +73,10 @@ export function Screen({
       data-slot="screen"
       className={cn(
         "mx-auto min-h-full w-full max-w-3xl px-4 py-6",
-        inset && "pb-28",
+        // Clears the fixed group navigation, its raised Add button, and the
+        // iOS PWA home-indicator area. Pages without a bottom bar keep the
+        // regular `py-6` inset above.
+        inset && "pb-[calc(8rem+env(safe-area-inset-bottom))]",
       )}
     >
       {children}

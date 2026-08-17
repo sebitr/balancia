@@ -127,11 +127,11 @@ export function isCategorised(spread: CategorySpread): boolean {
 }
 
 /**
- * How many categories get a colour of their own.
+ * How many distinct category colours the design system provides.
  *
  * Five, because five is how many `--chart-*` tokens the design system has.
- * Categorical colour is a vocabulary, not a scale — inventing a sixth would
- * either repeat one of the five or land outside the palette.
+ * A caller showing more than five categories cycles through that vocabulary;
+ * the category label and glyph remain the primary identifiers.
  */
 export const RANKED_BANDS = 5;
 
@@ -154,13 +154,18 @@ export interface SpreadBand {
 }
 
 /**
- * The categories ranked into bands: the top five, then everything else as one.
+ * The categories ranked into bands: the requested number, then everything
+ * else as one. Five named bands is the default because it uses every category
+ * colour once; a height-aware caller can request more or fewer.
  *
- * The remainder exists because the palette runs out, not because those
- * categories are unimportant — it keeps its combined total and its share, and
- * the caller labels it after the largest category inside it.
+ * The remainder exists when the caller's available slots run out, not because
+ * those categories are unimportant — it keeps its combined total and its
+ * share, and the caller labels it after the largest category inside it.
  */
-export function spreadBands(spread: CategorySpread): SpreadBand[] {
+export function spreadBands(
+  spread: CategorySpread,
+  rankedBandCount = RANKED_BANDS,
+): SpreadBand[] {
   /**
    * Rounded half-up rather than truncated: a band holding 5.767% of the spend
    * prints "5.8%", and truncation would print "5.7%" — a tenth the reader
@@ -172,17 +177,18 @@ export function spreadBands(spread: CategorySpread): SpreadBand[] {
       ? 0
       : Number((total * 2000n + spread.total) / (spread.total * 2n));
 
+  const rankedCount = Math.max(1, Math.floor(rankedBandCount));
   const ranked = spread.categories
-    .slice(0, RANKED_BANDS)
+    .slice(0, rankedCount)
     .map((entry, index): SpreadBand => ({
       key: categoryKeyOf(entry.category),
       categories: [categoryKeyOf(entry.category)],
       total: entry.total,
       share: shareOf(entry.total),
-      rank: index + 1,
+      rank: (index % RANKED_BANDS) + 1,
     }));
 
-  const rest = spread.categories.slice(RANKED_BANDS);
+  const rest = spread.categories.slice(rankedCount);
   if (rest.length === 0) return ranked;
 
   const total = rest.reduce((sum, entry) => sum + entry.total, 0n);

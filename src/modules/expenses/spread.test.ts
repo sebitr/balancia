@@ -204,6 +204,22 @@ describe("spreadBands", () => {
     expect(bands[5].categories).toEqual(["c5"]);
   });
 
+  it("can expose more categories when a taller spine has room", () => {
+    const bands = spreadBands(spreadOf(7), 7);
+
+    expect(bands).toHaveLength(7);
+    expect(bands.map((band) => band.key)).toEqual([
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+    ]);
+    expect(bands.map((band) => band.rank)).toEqual([1, 2, 3, 4, 5, 1, 2]);
+  });
+
   it("measures shares in tenths of a percent, from the totals themselves", () => {
     const spread = categoryTotals(
       [

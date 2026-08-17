@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
-import { UNCATEGORISED } from "@/modules/expenses/spread";
+import { RANKED_BANDS, UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
 import {
   CATEGORY_GLYPHS,
@@ -123,6 +123,49 @@ const RAIL_STYLES: readonly string[] = [
 ];
 
 const REMAINDER_STYLE = "bg-muted text-foreground";
+const BAND_MIN_HEIGHT = 72;
+const BAND_GAP = 3;
+
+/**
+ * Fit as many named categories as the measured spine can carry.
+ *
+ * One slot is reserved for a remainder whenever every category cannot fit.
+ * Totals, rather than already-rounded shares, are added so the remainder's
+ * printed percentage stays exact.
+ */
+export function fitBandsToHeight(
+  bands: readonly BandView[],
+  height: number | null,
+): BandView[] {
+  const capacity =
+    height === null
+      ? RANKED_BANDS + 1
+      : Math.max(
+          2,
+          Math.floor((height + BAND_GAP) / (BAND_MIN_HEIGHT + BAND_GAP)),
+        );
+  if (bands.length <= capacity) return [...bands];
+
+  const visible = bands.slice(0, capacity - 1);
+  const rest = bands.slice(capacity - 1);
+  const grandTotal = bands.reduce((sum, band) => sum + BigInt(band.total), 0n);
+  const restTotal = rest.reduce((sum, band) => sum + BigInt(band.total), 0n);
+  const share =
+    grandTotal === 0n
+      ? 0
+      : Number((restTotal * 2000n + grandTotal) / (grandTotal * 2n));
+
+  return [
+    ...visible,
+    {
+      key: rest[0].key,
+      categories: rest.flatMap((band) => band.categories),
+      total: restTotal.toString(),
+      share,
+      rank: null,
+    },
+  ];
+}
 
 const TONE_STYLES: Record<BalanceTone, string> = {
   positive: "text-positive",
@@ -159,13 +202,35 @@ export function Transactions({
   const locale = useNumberLocale();
   const searchParams = useSearchParams();
   const categoryLabel = useCategoryLabel();
+  const spineRef = useRef<HTMLDivElement>(null);
+  const [spineHeight, setSpineHeight] = useState<number | null>(null);
+  const visibleBands = bands ? fitBandsToHeight(bands, spineHeight) : null;
 
-  const selected = searchParams.getAll(FILTER_PARAM);
+  useEffect(() => {
+    const spine = spineRef.current;
+    if (!spine) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const height = entry?.contentRect.height ?? 0;
+      if (height > 0) setSpineHeight(height);
+    });
+    observer.observe(spine);
+    return () => observer.disconnect();
+  }, [bands]);
+
+  const categoryOrder = bands?.flatMap((band) => band.categories) ?? [];
+  const availableCategories = new Set(categoryOrder);
+  const selected = new Set(
+    searchParams
+      .getAll(FILTER_PARAM)
+      .filter((category) => availableCategories.has(category)),
+  );
   const query = searchParams.get(QUERY_PARAM) ?? "";
 
-  /** Only keys that name a band today: a stale link narrows nothing. */
-  const active = (bands ?? []).filter((band) => selected.includes(band.key));
-  const isActive = (band: BandView) => selected.includes(band.key);
+  const isActive = (band: BandView) =>
+    band.categories.every((category) => selected.has(category));
+  const hasSelection = (band: BandView) =>
+    band.categories.some((category) => selected.has(category));
 
   /*
    * Which chips exist is counted over everything the group has recorded, not
@@ -194,14 +259,18 @@ export function Transactions({
     );
   };
 
-  const toggleBand = (key: string) => {
+  const toggleBand = (band: BandView) => {
     const next = new URLSearchParams(searchParams);
-    const on = next.getAll(FILTER_PARAM);
     next.delete(FILTER_PARAM);
-    const wanted = on.includes(key)
-      ? on.filter((value) => value !== key)
-      : [...on, key];
-    for (const value of wanted) next.append(FILTER_PARAM, value);
+    const wanted = new Set(selected);
+    const remove = isActive(band);
+    for (const category of band.categories) {
+      if (remove) wanted.delete(category);
+      else wanted.add(category);
+    }
+    for (const category of categoryOrder) {
+      if (wanted.has(category)) next.append(FILTER_PARAM, category);
+    }
     write(next);
   };
 
@@ -245,10 +314,7 @@ export function Transactions({
       : lead;
   };
 
-  const wanted =
-    active.length === 0
-      ? null
-      : new Set(active.flatMap((band) => band.categories));
+  const wanted = selected.size === 0 ? null : selected;
   const needle = query.trim().toLowerCase();
 
   const shown = rows.filter((row) => {
@@ -263,16 +329,17 @@ export function Transactions({
 
   /** Which colour a row's rail takes, from the band its category sits in. */
   const railOf = (category: string | null): string => {
-    if (category === null || !bands) return "bg-border";
-    const band = bands.find((band) => band.categories.includes(category));
+    if (category === null || !visibleBands) return "bg-border";
+    const band = visibleBands.find((band) =>
+      band.categories.includes(category),
+    );
     if (!band) return "bg-border";
     return band.rank === null ? "bg-muted" : RAIL_STYLES[band.rank - 1];
   };
 
   // Replayed on every filter change, because the list the reader is looking at
   // is a different list — the animation is what says so.
-  const signature =
-    [...active.map((band) => band.key), ...wantedKinds].join("|") || "all";
+  const signature = [...selected, ...wantedKinds].join("|") || "all";
 
   return (
     <div className="flex flex-col gap-4">
@@ -318,27 +385,28 @@ export function Transactions({
       )}
 
       <div className="flex gap-3.5">
-        {bands && (
+        {visibleBands && (
           <div
+            ref={spineRef}
             role="group"
             aria-label={t("spreadLabel")}
-            // A measured height, and it sticks: the spine is a proportion, and
+            // It fills the viewport between the heading and bottom navigation,
+            // and it sticks: the spine is a proportion, and
             // a proportion drawn down the side of a list is only readable if
             // the whole of it is in view at once. Left to grow with the list it
             // would put a 79% band a thousand pixels tall next to a 3% one
             // nobody would ever scroll to.
-            // `min-h-fit` is the guard on a short viewport: the bands have a
-            // floor of their own, and the column growing past its measured
-            // height is better than clipping the last one in half.
-            className="sticky top-[4.5rem] flex h-[calc(100dvh-12rem)] max-h-[30rem] min-h-fit w-20 shrink-0 flex-col gap-[3px] self-start"
+            // ResizeObserver groups enough lower categories into a remainder
+            // to preserve every band's minimum readable, tappable height.
+            className="sticky top-[4.5rem] flex h-[calc(100dvh-12rem)] w-20 shrink-0 flex-col gap-[3px] self-start overflow-hidden"
           >
-            {bands.map((band) => {
-              const dimmed = active.length > 0 && !isActive(band);
+            {visibleBands.map((band) => {
+              const dimmed = selected.size > 0 && !hasSelection(band);
               return (
                 <button
                   key={band.key}
                   type="button"
-                  onClick={() => toggleBand(band.key)}
+                  onClick={() => toggleBand(band)}
                   aria-pressed={isActive(band)}
                   // The band is the only way in and out of a category filter
                   // now that the chips below the total have gone, so it says
@@ -353,7 +421,7 @@ export function Transactions({
                   // is printed on every band rather than read off its height.
                   style={{ flexGrow: band.share }}
                   className={cn(
-                    // The floor is 60px rather than the mock's 46: its labels
+                    // The floor is 72px rather than the mock's 46: its labels
                     // were hand-shortened ("Restaurants"), ours come from the
                     // catalogue in full ("Restaurants & Drinks") and wrap to a
                     // second line. 46px clipped the percentage — the one number

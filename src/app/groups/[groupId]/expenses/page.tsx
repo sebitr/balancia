@@ -27,11 +27,10 @@ import {
  * person reading it — and the client island owns the filtering, which is the
  * only thing here that changes without the data changing.
  *
- * There is no page title beyond the eyebrow, and nothing above the list that
- * summarises it. A headline total, a category count and a tally of what had
- * been repaid all used to sit here, and each was a restatement of the rows
- * directly underneath — bought at the price of the rows themselves, which on a
- * phone started a third of the way down the screen.
+ * There is no summary beyond the page title. A headline total, a category
+ * count and a tally of what had been repaid all used to sit here, and each was
+ * a restatement of the rows directly underneath — bought at the price of the
+ * rows themselves, which on a phone started a third of the way down the screen.
  */
 export default async function ExpensesPage({
   params,
@@ -118,7 +117,7 @@ export default async function ExpensesPage({
   if (rows.length === 0) {
     return (
       <div className="space-y-4">
-        <Eyebrow label={t("eyebrow")} />
+        <PageTitle label={t("eyebrow")} />
         <EmptyState
           icon={Receipt}
           title={t("emptyTitle")}
@@ -161,7 +160,7 @@ export default async function ExpensesPage({
   const single = spreads.length === 1 ? spreads[0] : null;
   const bands: BandView[] | null =
     single && isCategorised(single)
-      ? spreadBands(single).map((band) => ({
+      ? spreadBands(single, single.categories.length).map((band) => ({
           key: band.key,
           categories: [...band.categories],
           total: band.total.toString(),
@@ -173,7 +172,7 @@ export default async function ExpensesPage({
   return (
     <Transactions
       groupId={groupId}
-      eyebrow={<Eyebrow label={t("eyebrow")} />}
+      eyebrow={<PageTitle label={t("eyebrow")} />}
       bands={bands}
       rows={rows}
     />
@@ -181,15 +180,15 @@ export default async function ExpensesPage({
 }
 
 /**
- * The screen's heading, which is also its eyebrow.
+ * The screen's heading.
  *
  * Rendered here rather than inside the island so the words that name the
  * screen are in the server's HTML, and so the island cannot accidentally
  * become the only thing that says what this page is.
  */
-function Eyebrow({ label }: { label: string }) {
+function PageTitle({ label }: { label: string }) {
   return (
-    <h1 className="text-[0.6875rem] font-semibold tracking-[0.08em] text-primary uppercase">
+    <h1 className="font-heading text-2xl font-semibold tracking-tight">
       {label}
     </h1>
   );

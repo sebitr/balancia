@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
-import { Transactions, type BandView, type RowView } from "./transactions";
+import {
+  fitBandsToHeight,
+  Transactions,
+  type BandView,
+  type RowView,
+} from "./transactions";
 
 /**
  * The spine, the kind chips and the search are the filters, so these tests
@@ -71,12 +76,35 @@ const BANDS: BandView[] = [
   },
   {
     key: "utilities",
-    categories: ["utilities", "transport"],
-    total: "6240",
-    share: 33,
-    rank: null,
+    categories: ["utilities"],
+    total: "3990",
+    share: 21,
+    rank: 1,
+  },
+  {
+    key: "transport",
+    categories: ["transport"],
+    total: "2250",
+    share: 12,
+    rank: 2,
   },
 ];
+
+describe("fitBandsToHeight", () => {
+  it("shows more categories on a tall spine and groups them on a short one", () => {
+    expect(fitBandsToHeight(BANDS, 600)).toHaveLength(7);
+
+    const short = fitBandsToHeight(BANDS, 297);
+    expect(short).toHaveLength(4);
+    expect(short[3].categories).toEqual([
+      "groceries",
+      "shopping",
+      "utilities",
+      "transport",
+    ]);
+    expect(short[3].total).toBe("20400");
+  });
+});
 
 function row(overrides: Partial<RowView> = {}): RowView {
   return {
@@ -218,7 +246,7 @@ describe("Transactions", () => {
     expect(window.location.search).toBe("?cat=travel&cat=groceries");
   });
 
-  it("groups the categories the palette ran out for behind one band", async () => {
+  it("groups the categories that do not fit behind one band", async () => {
     const user = userEvent.setup();
     renderList();
 
@@ -228,6 +256,7 @@ describe("Transactions", () => {
     expect(screen.getByText("Internet")).toBeVisible();
     expect(screen.getByText("Uber")).toBeVisible();
     expect(screen.queryByText("airbnb")).not.toBeInTheDocument();
+    expect(window.location.search).toBe("?cat=utilities&cat=transport");
   });
 
   it("takes a band back off by pressing it again", async () => {
