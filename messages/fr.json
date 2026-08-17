@@ -94,6 +94,10 @@
       "signIn": "Se connecter avec Apple",
       "signUp": "S'inscrire avec Apple",
       "continue": "Continuer avec Apple"
+    },
+    "notices": {
+      "emailVerified": "Ton adresse e-mail est confirmée. Connecte-toi pour continuer.",
+      "emailChanged": "Ta nouvelle adresse e-mail est confirmée. Utilise-la pour te connecter désormais."
     }
   },
   "expenses": {
@@ -325,6 +329,19 @@
     "formatsSaved": "Préférences de format enregistrées",
     "formatsFailed": "Ces préférences n'ont pas pu être enregistrées."
   },
+  "emailChange": {
+    "title": "Adresse e-mail",
+    "intro": "C'est avec elle que tu te connectes, et c'est là que Balancia t'écrit. La changer demande une confirmation depuis la nouvelle adresse.",
+    "currentLabel": "Adresse actuelle",
+    "newLabel": "Nouvelle adresse",
+    "placeholder": "toi@exemple.com",
+    "submit": "Envoyer une confirmation",
+    "resubmit": "Envoyer à une autre adresse",
+    "sentBody": "Un lien de confirmation est en route vers <email></email>. Ton adresse changera quand tu l'ouvriras ; d'ici là, continue d'utiliser l'actuelle. Ton adresse actuelle a été prévenue de cette demande.",
+    "confirmedNotice": "Ton adresse e-mail a été modifiée. Utilise la nouvelle pour te connecter désormais.",
+    "takenNotice": "Quelqu'un d'autre a enregistré cette adresse avant que tu la confirmes : rien n'a changé.",
+    "invalidNotice": "Ce lien de confirmation n'est plus valide. Demandes-en un nouveau ci-dessous."
+  },
   "activity": {
     "empty": "Il ne s'est encore rien passé dans ce groupe.",
     "someone": "Quelqu'un",
@@ -534,6 +551,33 @@
       "mismatch": "Les mots de passe ne correspondent pas"
     },
     "createFailed": "Ce compte n'a pas pu être créé."
+  },
+  "forgotPassword": {
+    "metaTitle": "Réinitialiser le mot de passe",
+    "title": "Mot de passe oublié ?",
+    "subtitle": "Indique l'adresse de ton compte, et un lien pour choisir un nouveau mot de passe partira aussitôt.",
+    "email": "E-mail",
+    "submit": "Envoyer le lien",
+    "sentTitle": "Consulte ta boîte mail",
+    "sentBody": "Si <email></email> correspond à un compte, un lien pour choisir un nouveau mot de passe est en route. Il est valable une heure.",
+    "backToSignIn": "Retour à la connexion",
+    "unavailableTitle": "La récupération de mot de passe est indisponible",
+    "unavailableBody": "Cette instance n'a pas de serveur mail configuré : elle ne peut pas envoyer de lien de réinitialisation. Demande à l'administrateur de définir un nouveau mot de passe pour toi."
+  },
+  "resetPassword": {
+    "metaTitle": "Choisir un nouveau mot de passe",
+    "title": "Choisis un nouveau mot de passe",
+    "subtitle": "Choisis le mot de passe de ton compte. Tous les appareils où tu es connecté seront déconnectés.",
+    "password": "Nouveau mot de passe",
+    "passwordHint": "Au moins 10 caractères.",
+    "confirmPassword": "Confirme le mot de passe",
+    "submit": "Enregistrer le nouveau mot de passe",
+    "doneTitle": "Mot de passe modifié",
+    "doneBody": "Ton nouveau mot de passe est enregistré, et tous les appareils où tu étais connecté ont été déconnectés.",
+    "goToSignIn": "Aller à la connexion",
+    "noTokenTitle": "Ce lien est incomplet",
+    "noTokenBody": "Cette page a besoin du lien reçu par e-mail. Demandes-en un nouveau et ouvre-le depuis ta boîte mail.",
+    "askAgain": "Demander un nouveau lien"
   },
   "invite": {
     "metaTitle": "Tu as été invité",
@@ -885,7 +929,11 @@
     "verifySubject": "Confirme ton adresse e-mail Balancia",
     "verifyBody": "Bienvenue sur Balancia.\n\nConfirme cette adresse pour finaliser la création de ton compte :\n{url}\n\nLe lien est valable 24 heures.",
     "resetSubject": "Réinitialise ton mot de passe Balancia",
-    "resetBody": "Quelqu'un a demandé la réinitialisation du mot de passe de ton compte Balancia.\n\nUtilise ce lien dans l'heure qui vient :\n{url}\n\nSi ce n'était pas toi, tu peux ignorer ce message — rien n'a été modifié."
+    "resetBody": "Quelqu'un a demandé la réinitialisation du mot de passe de ton compte Balancia.\n\nUtilise ce lien dans l'heure qui vient :\n{url}\n\nSi ce n'était pas toi, tu peux ignorer ce message — rien n'a été modifié.",
+    "emailChangeSubject": "Confirme ta nouvelle adresse e-mail Balancia",
+    "emailChangeBody": "Quelqu'un a demandé à déplacer un compte Balancia vers cette adresse.\n\nConfirme-la avec ce lien dans les 2 heures qui viennent :\n{url}\n\nD'ici là, le compte garde son ancienne adresse. Si ce n'était pas toi, tu peux ignorer ce message.",
+    "emailChangeNoticeSubject": "L'adresse e-mail de ton compte Balancia va changer",
+    "emailChangeNoticeBody": "Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par {email}.\n\nRien n'a encore changé : le changement ne prendra effet qu'une fois cette adresse confirmée, et celle-ci cessera alors de fonctionner.\n\nSi ce n'était pas toi, connecte-toi et change ton mot de passe tout de suite — la personne qui a fait la demande est dans ton compte."
   },
   "serverErrors": {
     "generic": "Une erreur est survenue sur le serveur. Rien n'a été modifié.",
@@ -894,13 +942,13 @@
     "nameRequired": "Saisis ton nom.",
     "emailTaken": "Cette adresse e-mail est déjà enregistrée. Essaie plutôt de te connecter.",
     "emailUnverified": "Confirme ton adresse e-mail avant de te connecter. Le lien t'a été envoyé par e-mail.",
-    "mailNotConfigured": "La récupération de mot de passe nécessite l'e-mail, qui n'est pas configuré sur cette instance. Contacte l'administrateur.",
+    "mailNotConfigured": "Cela nécessite l'e-mail, qui n'est pas configuré sur cette instance. Contacte l'administrateur.",
     "noPassword": "Ce compte n'a pas de mot de passe défini.",
     "wrongPassword": "Ton mot de passe actuel est incorrect.",
     "invalidCredentials": "Cette combinaison d'adresse e-mail et de mot de passe n'a pas fonctionné.",
     "resetLinkInvalid": "Ce lien de réinitialisation n'est plus valide. Demandes-en un nouveau.",
     "confirmLinkInvalid": "Ce lien de confirmation n'est plus valide. Connecte-toi pour en demander un autre.",
-    "signInRequired": "Connecte-toi pour changer ton mot de passe.",
+    "signInRequired": "Connecte-toi pour modifier ton compte.",
     "noGroupAccess": "Tu n'as pas accès à ce groupe.",
     "notInGroup": "Cet élément ne fait pas partie de ce groupe.",
     "notYourAccount": "Seule cette personne peut modifier le nom et l’e-mail de son compte.",
@@ -923,7 +971,9 @@
     "appleExpired": "Cette connexion a pris trop de temps, ou a été lancée dans un autre navigateur. Réessaie.",
     "unknownFormat": "Ce format de date ou de nombre n'est pas proposé par Balancia.",
     "adminRequired": "Seul un administrateur de l’instance peut modifier ce réglage.",
-    "telemetryLocked": "La télémétrie est désactivée dans la configuration de ce déploiement."
+    "telemetryLocked": "La télémétrie est désactivée dans la configuration de ce déploiement.",
+    "emailChangeLinkInvalid": "Ce lien de confirmation n'est plus valide. Demandes-en un nouveau depuis ton profil.",
+    "emailUnchanged": "C'est déjà l'adresse de ce compte."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",

@@ -12,6 +12,7 @@ import {
   AuthError,
   changePassword,
   registerUser,
+  requestEmailChange,
   requestPasswordReset,
   resetPassword,
   signInWithPassword,
@@ -196,7 +197,7 @@ export async function requestPasswordResetAction(
     if (!limit.allowed) {
       throw new RateLimitedError(limit.retryAfterSeconds);
     }
-    await requestPasswordReset(parsed.data.email);
+    await requestPasswordReset(parsed.data.email, { locale: context.locale });
   });
 }
 
@@ -221,6 +222,42 @@ export async function resetPasswordAction(
         "resetLinkInvalid",
       );
     }
+  });
+}
+
+/**
+ * Asks for the account's email address to be changed.
+ *
+ * Rate limited on the account, not the client address: what is being spent
+ * here is mail sent to an inbox chosen by the caller, and the caller is signed
+ * in, so there is a better key available than an IP shared by a household.
+ *
+ * Returns the normalized address so the screen can echo back where the
+ * confirmation went, rather than whatever casing was typed.
+ */
+export async function requestEmailChangeAction(
+  input: unknown,
+): Promise<ActionResult<{ email: string }>> {
+  const parsed = z.object({ email: z.email("email") }).safeParse(input);
+  if (!parsed.success) {
+    return validationError(parsed.error.issues[0]?.message);
+  }
+
+  const context = await requestContext();
+  return runAction("auth.requestEmailChange", async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new AuthError("Sign in to change your account.", "signInRequired");
+    }
+
+    const limit = await consumeRateLimit("emailChange", user.userId);
+    if (!limit.allowed) {
+      throw new RateLimitedError(limit.retryAfterSeconds);
+    }
+
+    const email = parsed.data.email.trim().toLowerCase();
+    await requestEmailChange(user.userId, email, { locale: context.locale });
+    return { email };
   });
 }
 

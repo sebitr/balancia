@@ -38,8 +38,8 @@ import { emailTranslator } from "@/i18n/emails";
  *    stored, logged or returned.
  *  - Sign-in failures are indistinguishable from each other, and take the same
  *    time whether or not the account exists.
- *  - Email verification and password reset use single-use hashed tokens with
- *    a short lifetime, and a reset ends every existing session.
+ *  - Email verification, password reset and email change use single-use hashed
+ *    tokens with a short lifetime, and a reset ends every existing session.
  *  - Without SMTP the instance still works; the flows that need email are
  *    simply not offered.
  */
@@ -61,6 +61,8 @@ export type AuthErrorCode =
   | "invalidCredentials"
   | "resetLinkInvalid"
   | "confirmLinkInvalid"
+  | "emailChangeLinkInvalid"
+  | "emailUnchanged"
   | "signInRequired"
   | "appleNoEmail"
   | "appleEmailTaken"
@@ -84,6 +86,12 @@ const INVALID_CREDENTIALS = "That email and password combination did not work.";
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+/**
+ * Shorter than a verification, longer than a reset. The person is at their
+ * keyboard and has just asked for this, but the confirmation may have to
+ * travel to an inbox they only read on another device.
+ */
+const EMAIL_CHANGE_TTL_MS = 2 * 60 * 60 * 1000;
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -744,11 +752,14 @@ export async function saveUserFormatPreferences(
     .where(eq(users.id, userId));
 }
 
+type VerificationPurpose =
+  "email_verification" | "password_reset" | "email_change";
+
 async function issueVerificationToken(
   userId: string,
-  purpose: "email_verification" | "password_reset",
+  purpose: VerificationPurpose,
   ttlMs: number,
-  options: { db?: Database } = {},
+  options: { db?: Database; newEmail?: string } = {},
 ): Promise<string> {
   const db = options.db ?? getDb();
   const token = generateToken();
@@ -769,17 +780,24 @@ async function issueVerificationToken(
     userId,
     purpose,
     tokenHash: token.hash,
+    newEmail: options.newEmail ?? null,
     expiresAt: new Date(Date.now() + ttlMs),
   });
 
   return token.raw;
 }
 
+interface ConsumedToken {
+  readonly userId: string;
+  /** Only ever set on an `email_change`. */
+  readonly newEmail: string | null;
+}
+
 async function consumeVerificationToken(
   rawToken: string,
-  purpose: "email_verification" | "password_reset",
+  purpose: VerificationPurpose,
   options: { db?: Database } = {},
-): Promise<string | null> {
+): Promise<ConsumedToken | null> {
   if (!isWellFormedToken(rawToken)) return null;
   const db = options.db ?? getDb();
 
@@ -796,9 +814,12 @@ async function consumeVerificationToken(
         gt(verificationTokens.expiresAt, new Date()),
       ),
     )
-    .returning({ userId: verificationTokens.userId });
+    .returning({
+      userId: verificationTokens.userId,
+      newEmail: verificationTokens.newEmail,
+    });
 
-  return row?.userId ?? null;
+  return row ?? null;
 }
 
 export async function sendVerificationEmail(
@@ -831,17 +852,17 @@ export async function verifyEmail(
   options: { db?: Database } = {},
 ): Promise<boolean> {
   const db = options.db ?? getDb();
-  const userId = await consumeVerificationToken(
+  const consumed = await consumeVerificationToken(
     rawToken,
     "email_verification",
     { db },
   );
-  if (!userId) return false;
+  if (!consumed) return false;
 
   await db
     .update(users)
     .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
-    .where(eq(users.id, userId));
+    .where(eq(users.id, consumed.userId));
   return true;
 }
 
@@ -853,7 +874,11 @@ export async function verifyEmail(
  */
 export async function requestPasswordReset(
   email: string,
-  options: { db?: Database } = {},
+  options: {
+    db?: Database;
+    /** Language the person was reading when they asked. */
+    locale?: string | null;
+  } = {},
 ): Promise<void> {
   const env = getEnv();
   if (!env.smtpEnabled) {
@@ -887,8 +912,10 @@ export async function requestPasswordReset(
     { db },
   );
 
-  // The account's own language, so a reset mail reads the same as the app.
-  const t = emailTranslator(row.locale);
+  // The account's own language, so a reset mail reads the same as the app —
+  // falling back to the language the request was made in, which for an account
+  // that has never touched the switcher is the only signal there is.
+  const t = emailTranslator(row.locale ?? options.locale);
   await sendMail({
     to: row.email,
     subject: t("resetSubject"),
@@ -906,10 +933,11 @@ export async function resetPassword(
   assertPasswordPolicy(newPassword);
   const db = options.db ?? getDb();
 
-  const userId = await consumeVerificationToken(rawToken, "password_reset", {
+  const consumed = await consumeVerificationToken(rawToken, "password_reset", {
     db,
   });
-  if (!userId) return false;
+  if (!consumed) return false;
+  const { userId } = consumed;
 
   const passwordHash = await hashPassword(newPassword);
   await db
@@ -958,6 +986,153 @@ export async function changePassword(
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+}
+
+/**
+ * Starts a change of the account's email address.
+ *
+ * Two messages go out, and both matter:
+ *
+ *  - to the *new* address, a link that is the only thing which can complete
+ *    the change. Nothing moves until someone proves they read that inbox, so a
+ *    typo costs a bounced mail rather than an account nobody can sign in to.
+ *  - to the *old* address, a notice that the change was asked for. Sent at
+ *    request time rather than on completion, because its whole purpose is to
+ *    reach the account holder while there is still something to be done about
+ *    it — the address it lands in is the one that still works.
+ *
+ * The notice is sent first for the same reason: if delivery fails, the request
+ * fails, and the token that was issued a moment earlier is simply never mailed
+ * to anyone. A change is never made quietly.
+ *
+ * An instance without SMTP cannot do either, so it does not offer the flow at
+ * all — the same answer password recovery gives.
+ */
+export async function requestEmailChange(
+  userId: string,
+  newEmail: string,
+  options: {
+    db?: Database;
+    /** Language the person was reading when they asked. */
+    locale?: string | null;
+  } = {},
+): Promise<void> {
+  const env = getEnv();
+  if (!env.smtpEnabled) {
+    throw new AuthError(
+      "Changing your email address needs email, which is not configured on this instance. Ask the administrator for help.",
+      "mailNotConfigured",
+    );
+  }
+
+  const db = options.db ?? getDb();
+  const email = normalizeEmail(newEmail);
+
+  const [current] = await db
+    .select({ email: users.email, name: users.name, locale: users.locale })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!current) {
+    throw new AuthError("Sign in to change your account.", "signInRequired");
+  }
+
+  if (normalizeEmail(current.email) === email) {
+    throw new AuthError(
+      "That is already the address on this account.",
+      "emailUnchanged",
+    );
+  }
+
+  /*
+   * Reported now rather than after a round trip through an inbox, where the
+   * only honest thing left to say would be "that link did not work". It tells
+   * a signed-in reader nothing that registration does not already tell an
+   * anonymous one — see the `emailTaken` refusal in `registerUser`.
+   */
+  const [taken] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(sql`lower(${users.email})`, email))
+    .limit(1);
+  if (taken) {
+    throw new AuthError(
+      "That email address is already registered. Try signing in instead.",
+      "emailTaken",
+    );
+  }
+
+  const token = await issueVerificationToken(
+    userId,
+    "email_change",
+    EMAIL_CHANGE_TTL_MS,
+    { db, newEmail: email },
+  );
+
+  // Both messages are for the same person, so both are written in the account's
+  // language — or, failing a stored one, in the language they are reading now.
+  const t = emailTranslator(current.locale ?? options.locale);
+  await sendMail({
+    to: current.email,
+    subject: t("emailChangeNoticeSubject"),
+    text: t("emailChangeNoticeBody", { email }),
+  });
+  await sendMail({
+    to: email,
+    subject: t("emailChangeSubject"),
+    text: t("emailChangeBody", {
+      url: `${env.appOrigin}/confirm-email?token=${token}`,
+    }),
+  });
+
+  logger.info({ userId }, "Email change requested");
+}
+
+export type EmailChangeOutcome = "changed" | "taken" | "invalid";
+
+/**
+ * Completes it.
+ *
+ * Reached from a link, so it cannot assume a session: the person may well be
+ * reading their new inbox on a device this instance has never seen. The token
+ * is the whole of the authorization, which is why it is single-use, expires in
+ * hours, and carries the target address itself — the address is not something
+ * the request gets to choose.
+ *
+ * The address arrives verified, because clicking the link is the proof that
+ * `sendVerificationEmail` would otherwise ask for separately.
+ */
+export async function confirmEmailChange(
+  rawToken: string,
+  options: { db?: Database } = {},
+): Promise<EmailChangeOutcome> {
+  const db = options.db ?? getDb();
+
+  const consumed = await consumeVerificationToken(rawToken, "email_change", {
+    db,
+  });
+  if (!consumed?.newEmail) return "invalid";
+  const { userId, newEmail } = consumed;
+
+  try {
+    await db
+      .update(users)
+      .set({
+        email: newEmail,
+        emailVerifiedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  } catch (error) {
+    // Somebody else registered the address while this link sat in an inbox.
+    // The unique index is the authority; the check at request time was only
+    // ever a courtesy.
+    if (isUniqueViolation(error)) return "taken";
+    throw error;
+  }
+
+  logger.info({ userId }, "Email change confirmed");
+  return "changed";
 }
 
 export async function getUserById(

@@ -49,10 +49,13 @@ export function SignInForm({
    * callback is a redirect, so the page it lands on has to carry the message.
    */
   initialError = null,
+  /** The same, for something that went right — a confirmed address. */
+  initialNotice = null,
 }: {
   mailEnabled: boolean;
   appleEnabled?: boolean;
   initialError?: string | null;
+  initialNotice?: string | null;
 }) {
   const router = useRouter();
   const t = useTranslations("auth.signIn");
@@ -113,6 +116,12 @@ export function SignInForm({
         </h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
+
+      {initialNotice && !formError && (
+        <Alert>
+          <AlertDescription>{initialNotice}</AlertDescription>
+        </Alert>
+      )}
 
       {formError && (
         <Alert variant="destructive">

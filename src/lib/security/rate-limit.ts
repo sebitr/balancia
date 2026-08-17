@@ -25,6 +25,7 @@ export type RateLimitBucket =
   | "signUp"
   | "guestRedeem"
   | "passwordReset"
+  | "emailChange"
   | "upload"
   | "receiptScan"
   | "rateLookup"
@@ -49,6 +50,10 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
     signUp: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     passwordReset: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    // Keyed by account rather than by address: each attempt mails a stranger's
+    // inbox on a signed-in person's say-so, so the ceiling belongs to whoever
+    // is asking. Room for a typo and a correction, not for a mail campaign.
+    emailChange: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     guestRedeem: { limit: 20, windowSeconds: 600 },
     upload: { limit: 60, windowSeconds: 600 },
     // Tighter than `upload`, because each one is an outbound call the
