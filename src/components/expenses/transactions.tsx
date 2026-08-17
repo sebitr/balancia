@@ -6,14 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDateFormatter } from "@/i18n/format-context";
 import { useNumberLocale } from "@/i18n/format-context";
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  ChevronRight,
-  Minus,
-  Search,
-  X,
-} from "lucide-react";
+import { ChevronRight, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
@@ -173,10 +166,10 @@ const TONE_STYLES: Record<BalanceTone, string> = {
   neutral: "text-neutral-balance",
 };
 
-const TONE_ICONS: Record<BalanceTone, typeof ArrowDownLeft> = {
-  positive: ArrowDownLeft,
-  negative: ArrowUpRight,
-  neutral: Minus,
+const TONE_SIGNS: Record<BalanceTone, string> = {
+  positive: "+",
+  negative: "−",
+  neutral: "−",
 };
 
 const TONE_LABEL_KEYS = {
@@ -642,7 +635,7 @@ function TypeBadge({ kind }: { kind: "revenue" | "settlement" | "recurring" }) {
 /**
  * What the row left the reader holding.
  *
- * Three redundant cues, as everywhere else money carries a sign: the arrow,
+ * Three redundant cues, as everywhere else money carries a sign: the sign,
  * the colour, and the word — hidden from the eye, not from a screen reader —
  * so the meaning survives greyscale and colour blindness.
  */
@@ -657,7 +650,7 @@ function Position({
 }) {
   const t = useTranslations("expensesList");
   const resolved = tone ?? toneFor(minorUnits);
-  const Icon = TONE_ICONS[resolved];
+  const sign = TONE_SIGNS[resolved];
   const magnitude =
     BigInt(minorUnits) < 0n ? -BigInt(minorUnits) : BigInt(minorUnits);
 
@@ -668,7 +661,12 @@ function Position({
         TONE_STYLES[resolved],
       )}
     >
-      <Icon aria-hidden="true" className="size-[11px] shrink-0" />
+      <span
+        aria-hidden="true"
+        className="w-[11px] shrink-0 text-center leading-none font-semibold"
+      >
+        {sign}
+      </span>
       <Amount minorUnits={magnitude.toString()} currency={currency} />
       <span className="sr-only">{t(TONE_LABEL_KEYS[resolved])}</span>
     </span>

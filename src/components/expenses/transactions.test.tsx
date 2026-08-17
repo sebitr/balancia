@@ -307,6 +307,20 @@ describe("Transactions", () => {
     expect(screen.getByText("you owe")).toBeInTheDocument();
   });
 
+  it("uses plus and minus signs for positive and negative positions", () => {
+    renderList([
+      row({ id: "back", title: "Back", position: "1250" }),
+      row({ id: "owed", title: "Owed", position: "-1250" }),
+    ]);
+
+    expect(
+      within(screen.getByText("Back").closest("li")!).getByText("+"),
+    ).toBeVisible();
+    expect(
+      within(screen.getByText("Owed").closest("li")!).getByText("−"),
+    ).toBeVisible();
+  });
+
   it("does not offer a settlement as something to open", () => {
     renderList();
 

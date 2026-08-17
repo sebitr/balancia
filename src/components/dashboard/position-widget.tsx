@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { ArrowDownLeft, ArrowUpRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
  * The proportional rule is decorative and hidden from assistive technology;
  * the two totals underneath say the same thing in a form a screen reader can
  * read, and the sign of the headline figure is carried by its colour and the
- * arrows below it rather than by colour alone.
+ * signs below it rather than by colour alone.
  *
  * Every figure here is rounded to whole units. This is an answer to "roughly
  * where do I stand?", and centimes on a five-digit total are noise; the exact
@@ -317,7 +317,7 @@ function TintedTotal({
   currency: string;
   tone: "positive" | "negative";
 }) {
-  const Icon = tone === "positive" ? ArrowDownLeft : ArrowUpRight;
+  const sign = tone === "positive" ? "+" : "−";
   return (
     <span
       className={cn(
@@ -325,7 +325,12 @@ function TintedTotal({
         tone === "positive" ? "text-positive" : "text-negative",
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      <span
+        aria-hidden="true"
+        className="w-3.5 shrink-0 text-center leading-none font-semibold"
+      >
+        {sign}
+      </span>
       <Amount minorUnits={minorUnits} currency={currency} fractionDigits={0} />
     </span>
   );
