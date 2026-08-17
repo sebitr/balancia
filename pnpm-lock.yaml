@@ -90,8 +90,8 @@ importers:
         specifier: ^7.85.0
         version: 7.85.0(react@19.2.8)
       react-theme-switch-animation:
-        specifier: ^1.2.0
-        version: 1.2.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: ^1.3.0
+        version: 1.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
@@ -5601,12 +5601,12 @@ packages:
       '@types/react':
         optional: true
 
-  react-theme-switch-animation@1.2.0:
-    resolution: {integrity: sha512-EdBMzUduFngRYN+eL1vOFfCYKFhwLxIELrbcy3tiLRUTuyHQiI26T542G1iu7YWkMd8r6qCmvHdqyL3Ascyvpw==}
+  react-theme-switch-animation@1.3.0:
+    resolution: {integrity: sha512-N76XbipyoaLpGc67I3bSrggwtBpLmi+flHwzF+NqOKKTBbeAxiX9DO0Xi8Jt6mEDsqDzfHZniL0QxDKnRen2DA==}
     engines: {node: '>=18.17.0'}
     peerDependencies:
-      react: ^17.0.0 || ^18.0.0
-      react-dom: ^17.0.0 || ^18.0.0
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
 
   react@19.2.8:
     resolution: {integrity: sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw==}
@@ -11642,7 +11642,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.18
 
-  react-theme-switch-animation@1.2.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  react-theme-switch-animation@1.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
