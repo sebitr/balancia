@@ -1,4 +1,5 @@
 import type { CurrencyMode } from "@/modules/currencies/conversion";
+import { moneyForGroup } from "@/modules/currencies/display";
 import { isSpending, type EntryDirection } from "./direction";
 
 /**
@@ -70,18 +71,12 @@ export function categoryTotals(
   entries: readonly SpreadEntry[],
   group: { mode: CurrencyMode; baseCurrency: string | null },
 ): CategorySpread[] {
-  const converts = group.mode === "converted";
   const byCurrency = new Map<string, Map<string | null, bigint>>();
 
   for (const entry of entries) {
     if (!isSpending(entry.direction)) continue;
 
-    const amount = converts
-      ? (entry.convertedAmount ?? entry.amount)
-      : entry.amount;
-    const currency = converts
-      ? (entry.convertedCurrency ?? group.baseCurrency ?? entry.currency)
-      : entry.currency;
+    const { amount, currency } = moneyForGroup(entry, group);
 
     const bucket = byCurrency.get(currency) ?? new Map<string | null, bigint>();
     bucket.set(entry.category, (bucket.get(entry.category) ?? 0n) + amount);

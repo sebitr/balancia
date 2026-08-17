@@ -8,6 +8,10 @@ import { listExpenses } from "@/modules/expenses/service";
 import { listSettlements } from "@/modules/settlements/service";
 import { isSpending, signOf } from "@/modules/expenses/direction";
 import {
+  allocationForGroup,
+  moneyForGroup,
+} from "@/modules/currencies/display";
+import {
   categoryKeyOf,
   categoryTotals,
   isCategorised,
@@ -46,9 +50,14 @@ export default async function ExpensesPage({
 
   const t = await getTranslations("expensesList");
   const self = access.participantId;
+  const displayGroup = {
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+  };
 
   /**
-   * What this expense left the reader holding, in the expense's own currency.
+   * What this expense left the reader holding, in the currency the group uses
+   * for balances and list amounts.
    *
    * Paid minus owed, signed by direction — income is spending run backwards,
    * so the person who received the money is the one who now owes. Taken from
@@ -59,10 +68,18 @@ export default async function ExpensesPage({
     if (!self) return null;
     const paid = expense.payers
       .filter((payer) => payer.participantId === self)
-      .reduce((sum, payer) => sum + payer.amount, 0n);
+      .reduce(
+        (sum, payer) =>
+          sum + allocationForGroup(payer, access.group.currencyMode),
+        0n,
+      );
     const owed = expense.shares
       .filter((share) => share.participantId === self)
-      .reduce((sum, share) => sum + share.amount, 0n);
+      .reduce(
+        (sum, share) =>
+          sum + allocationForGroup(share, access.group.currencyMode),
+        0n,
+      );
     if (paid === 0n && owed === 0n) return null;
     return (signOf(expense.direction) * (paid - owed)).toString();
   }
@@ -71,45 +88,51 @@ export default async function ExpensesPage({
   // remember a trip — but a settlement is a repayment, not spending, and says
   // so with its own badge, its own neutral rail and no category.
   const rows: RowView[] = [
-    ...expenses.map((expense): RowView => ({
-      kind: "expense",
-      id: expense.id,
-      date: expense.expenseDate,
-      createdAt: expense.createdAt.toISOString(),
-      title: expense.description,
-      amount: expense.amount.toString(),
-      currency: expense.currency,
-      category: categoryKeyOf(expense.category),
-      position: positionOf(expense),
-      // Income keeps its amount positive in the database; the badge is what
-      // says which way it went.
-      revenue: !isSpending(expense.direction),
-      recurring: expense.recurringExpenseId !== null,
-    })),
-    ...settlements.map((settlement): RowView => ({
-      kind: "settlement",
-      id: settlement.id,
-      date: settlement.settledOn,
-      createdAt: settlement.createdAt.toISOString(),
-      title: t("settlementTitle", {
-        from: settlement.fromName,
-        to: settlement.toName,
-      }),
-      amount: settlement.amount.toString(),
-      currency: settlement.currency,
-      category: null,
-      // A repayment clears a position rather than creating one, so it is
-      // shown neutrally — and only to the two people it names. Which of
-      // them paid is already the row's title.
-      position:
-        self &&
-        (settlement.fromParticipantId === self ||
-          settlement.toParticipantId === self)
-          ? settlement.amount.toString()
-          : null,
-      revenue: false,
-      recurring: false,
-    })),
+    ...expenses.map((expense): RowView => {
+      const display = moneyForGroup(expense, displayGroup);
+      return {
+        kind: "expense",
+        id: expense.id,
+        date: expense.expenseDate,
+        createdAt: expense.createdAt.toISOString(),
+        title: expense.description,
+        amount: display.amount.toString(),
+        currency: display.currency,
+        category: categoryKeyOf(expense.category),
+        position: positionOf(expense),
+        // Income keeps its amount positive in the database; the badge is what
+        // says which way it went.
+        revenue: !isSpending(expense.direction),
+        recurring: expense.recurringExpenseId !== null,
+      };
+    }),
+    ...settlements.map((settlement): RowView => {
+      const display = moneyForGroup(settlement, displayGroup);
+      return {
+        kind: "settlement",
+        id: settlement.id,
+        date: settlement.settledOn,
+        createdAt: settlement.createdAt.toISOString(),
+        title: t("settlementTitle", {
+          from: settlement.fromName,
+          to: settlement.toName,
+        }),
+        amount: display.amount.toString(),
+        currency: display.currency,
+        category: null,
+        // A repayment clears a position rather than creating one, so it is
+        // shown neutrally — and only to the two people it names. Which of
+        // them paid is already the row's title.
+        position:
+          self &&
+          (settlement.fromParticipantId === self ||
+            settlement.toParticipantId === self)
+            ? display.amount.toString()
+            : null,
+        revenue: false,
+        recurring: false,
+      };
+    }),
   ].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
     return a.createdAt < b.createdAt ? 1 : -1;
@@ -155,8 +178,7 @@ export default async function ExpensesPage({
    * until there is a division to draw, and the list takes the width back.
    */
   const spreads = categoryTotals(expenses, {
-    mode: access.group.currencyMode,
-    baseCurrency: access.group.baseCurrency,
+    ...displayGroup,
   });
   const single = spreads.length === 1 ? spreads[0] : null;
   const bands: BandView[] | null =
