@@ -112,8 +112,13 @@ describe("GroupSettingsForm", () => {
   it("says what the currency mode is, and offers nothing to change it", () => {
     renderForm();
 
-    expect(screen.getByText("Currency mode")).toBeInTheDocument();
-    expect(screen.getByText("Multi currency")).toBeInTheDocument();
-    expect(screen.getByText("Fixed")).toBeInTheDocument();
+    const title = screen.getByText("Currency mode: Multi currency");
+
+    expect(title.nextElementSibling).toHaveTextContent("Fixed");
+    expect(
+      screen.queryByText("Each currency keeps its own balance.", {
+        exact: false,
+      }),
+    ).not.toBeInTheDocument();
   });
 });
