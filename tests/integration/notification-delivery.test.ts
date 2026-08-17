@@ -162,6 +162,44 @@ describe("push delivery", () => {
     expect(body.toString("utf8")).not.toContain("Dinner");
   });
 
+  /**
+   * Safari writes "from Balancia" under any title it is given and the others
+   * write nothing, so the same notification has to leave with two different
+   * titles — and one person can be holding both kinds of device.
+   *
+   * The bodies are ciphertext, so the titles are compared by the one thing
+   * that survives encryption: length. Nothing here pads, so the gap between
+   * the two payloads is exactly the suffix the Chrome device's title carries
+   * and the Safari one does not.
+   */
+  it("names the app to Chrome and leaves Safari to name it itself", async () => {
+    const { member, notificationId } = await setup();
+    await subscribe(member.actor.userId, "https://web.push.apple.com/safari");
+    await subscribe(
+      member.actor.userId,
+      "https://fcm.googleapis.com/fcm/send/c",
+    );
+
+    const report = await deliverNotifications([notificationId]);
+
+    expect(report).toMatchObject({ claimed: 1, sent: 2 });
+
+    const byEndpoint = new Map(
+      fetchMock.mock.calls.map(([url, init]) => [
+        url as string,
+        Buffer.from((init as RequestInit).body as Uint8Array).length,
+      ]),
+    );
+    expect([...byEndpoint.keys()].sort()).toEqual([
+      "https://fcm.googleapis.com/fcm/send/c",
+      "https://web.push.apple.com/safari",
+    ]);
+
+    const safari = byEndpoint.get("https://web.push.apple.com/safari")!;
+    const chrome = byEndpoint.get("https://fcm.googleapis.com/fcm/send/c")!;
+    expect(chrome - safari).toBe(" - Balancia".length);
+  });
+
   it("pushes a notification at most once, however often delivery runs", async () => {
     const { member, notificationId } = await setup();
     await subscribe(member.actor.userId, "https://push.example.test/abc");

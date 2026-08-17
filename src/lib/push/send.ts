@@ -21,6 +21,32 @@ export interface PushTarget extends SubscriptionKeys {
   readonly endpoint: string;
 }
 
+/**
+ * Whether this endpoint's browser prints the web app's name for us.
+ *
+ * Safari does — on iOS and on macOS both, drawing a line under the title from
+ * the manifest's `short_name`, which no push field can suppress. Chrome,
+ * Edge and Firefox draw no such line, so on those a card that does not name
+ * the app in its own title does not name it at all.
+ *
+ * Read from the push service rather than a user agent, because a user agent is
+ * not something a push has: the subscription is all the sender has to go on.
+ * The mapping is exact — a `web.push.apple.com` endpoint is issued to WebKit
+ * and to nothing else.
+ *
+ * An endpoint that will not parse is treated as naming nothing, which is the
+ * side that leaves a title complete rather than a card unattributed.
+ */
+export function drawsOwnAttribution(endpoint: string): boolean {
+  let hostname: string;
+  try {
+    hostname = new URL(endpoint).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return hostname === "push.apple.com" || hostname.endsWith(".push.apple.com");
+}
+
 export type PushOutcome =
   /** Accepted for delivery. */
   | { readonly status: "sent" }

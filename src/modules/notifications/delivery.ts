@@ -7,7 +7,12 @@ import { logger } from "@/lib/logger";
 import { notificationTranslator, resolveLocale } from "@/i18n/emails";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { isNumberFormat, numberLocale } from "@/i18n/format";
-import { isPushConfigured, sendPush, type PushOutcome } from "@/lib/push/send";
+import {
+  drawsOwnAttribution,
+  isPushConfigured,
+  sendPush,
+  type PushOutcome,
+} from "@/lib/push/send";
 import { renderNotification, type Translate } from "./render";
 import type { NotificationEntry, NotificationPayload } from "./types";
 
@@ -28,13 +33,13 @@ import type { NotificationEntry, NotificationPayload } from "./types";
 const CONCURRENCY = 8;
 
 /**
- * What the lock screen calls us.
+ * What the lock screen calls us, where the browser will not say it itself.
  *
  * A push card carries the group name and nothing else about where it came
- * from, sitting among cards from every other app on the phone. iOS draws its
- * own attribution line under the title from the manifest's `short_name`, but
- * Android and desktop do not, and none of it is ours to control — so the title
- * says it too. Matches the manifest and the service worker's fallback.
+ * from, sitting among cards from every other app on the phone — so the title
+ * says it, except on the browsers that already do (see
+ * `drawsOwnAttribution`). Matches the manifest's `short_name` and the service
+ * worker's fallback title.
  */
 const BRAND = "Balancia";
 
@@ -210,6 +215,12 @@ async function pushClaimed(
     readonly outcome: PushOutcome;
   }
 
+  /** One notification, rendered and ready for a particular kind of browser. */
+  interface Message {
+    readonly payload: string;
+    readonly topic: string;
+  }
+
   const tasks: (() => Promise<SendResult>)[] = [];
   let withoutDevices = 0;
 
@@ -221,25 +232,49 @@ async function pushClaimed(
     }
 
     const locale = localeByUser.get(row.userId) ?? DEFAULT_LOCALE;
-    const rendered = renderNotification(
-      row,
-      notificationTranslator(locale) as Translate,
-      locale,
-      { numberLocale: numberLocaleByUser.get(row.userId), brand: BRAND },
-    );
-    const payload = JSON.stringify({
-      title: rendered.title,
-      body: rendered.body,
-      url: rendered.url,
-      tag: rendered.tag,
-      notificationId: row.id,
-    });
-    const topic = pushTopic(rendered.tag);
+    const translate = notificationTranslator(locale) as Translate;
+
+    const build = (brand: string | undefined): Message => {
+      const rendered = renderNotification(row, translate, locale, {
+        numberLocale: numberLocaleByUser.get(row.userId),
+        brand,
+      });
+      return {
+        payload: JSON.stringify({
+          title: rendered.title,
+          body: rendered.body,
+          url: rendered.url,
+          tag: rendered.tag,
+          notificationId: row.id,
+        }),
+        topic: pushTopic(rendered.tag),
+      };
+    };
+
+    /*
+     * The same notification, titled twice.
+     *
+     * Safari already writes "from Balancia" beneath whatever title it is
+     * given, so a title that says it too says it twice; every other browser
+     * writes nothing, so a title that leaves it out leaves the card
+     * unattributed. One reader can hold both kinds of device at once, which is
+     * why this is decided per endpoint and not per person.
+     *
+     * Built on demand and kept: most readers have devices of one kind, and
+     * rendering the variant nobody is subscribed to would be work for nothing.
+     */
+    let plain: Message | undefined;
+    let branded: Message | undefined;
 
     for (const device of userDevices) {
+      const message = drawsOwnAttribution(device.endpoint)
+        ? (plain ??= build(undefined))
+        : (branded ??= build(BRAND));
       tasks.push(async () => ({
         subscriptionId: device.id,
-        outcome: await sendPush(device, payload, { topic }),
+        outcome: await sendPush(device, message.payload, {
+          topic: message.topic,
+        }),
       }));
     }
   }
