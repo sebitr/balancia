@@ -44,6 +44,22 @@ export interface GroupBalances {
    * rows the balances are, so asking for it costs no extra query.
    */
   readonly contributions: ReadonlyMap<string, Contribution>;
+  /**
+   * Repayments involving the requested participant, kept as positive
+   * magnitudes. Paying moves their position up; receiving moves it down.
+   */
+  readonly settlementsFor: ReadonlyMap<
+    string,
+    { readonly paid: bigint; readonly received: bigint }
+  >;
+  /**
+   * Spending facts retained for the overview's period picker. These are the
+   * exact normalized rows already used by the balance engine, with the group
+   * calendar date added; no second money query or conversion path is needed.
+   */
+  readonly spendingFacts: readonly (BalanceInputExpense & {
+    readonly expenseDate: string;
+  })[];
 }
 
 export async function loadGroupBalances(
@@ -79,6 +95,7 @@ export async function loadGroupBalances(
     .select({
       id: expenses.id,
       direction: expenses.direction,
+      expenseDate: expenses.expenseDate,
       currency: expenses.currency,
       convertedCurrency: expenses.convertedCurrency,
     })
@@ -158,6 +175,14 @@ export async function loadGroupBalances(
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
+  const spendingFacts = expenseRows.map((row) => ({
+    id: row.id,
+    direction: row.direction,
+    expenseDate: row.expenseDate,
+    currency: converts ? (group.baseCurrency as string) : row.currency,
+    payers: payersByExpense.get(row.id) ?? [],
+    shares: sharesByExpense.get(row.id) ?? [],
+  }));
 
   const engineSettlements: BalanceInputSettlement[] = settlementRows.map(
     (row) => ({
@@ -191,6 +216,34 @@ export async function loadGroupBalances(
     suggestionsByCurrency.set(entry.currency, simplifyDebts(entry.balances));
   }
 
+  const settlementsFor = new Map<string, { paid: bigint; received: bigint }>();
+  if (options.contributionsFor) {
+    for (const settlement of engineSettlements) {
+      if (
+        settlement.fromParticipantId !== options.contributionsFor &&
+        settlement.toParticipantId !== options.contributionsFor
+      ) {
+        continue;
+      }
+      const running = settlementsFor.get(settlement.currency) ?? {
+        paid: 0n,
+        received: 0n,
+      };
+      settlementsFor.set(settlement.currency, {
+        paid:
+          running.paid +
+          (settlement.fromParticipantId === options.contributionsFor
+            ? settlement.amount
+            : 0n),
+        received:
+          running.received +
+          (settlement.toParticipantId === options.contributionsFor
+            ? settlement.amount
+            : 0n),
+      });
+    }
+  }
+
   return {
     currencies,
     suggestionsByCurrency,
@@ -199,5 +252,7 @@ export async function loadGroupBalances(
     contributions: options.contributionsFor
       ? contributionsOf(engineExpenses, options.contributionsFor)
       : new Map(),
+    settlementsFor,
+    spendingFacts,
   };
 }

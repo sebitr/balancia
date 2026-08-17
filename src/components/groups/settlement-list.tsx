@@ -1,0 +1,249 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { ArrowRight, Banknote } from "lucide-react";
+import { Amount } from "@/components/money/amount";
+import { RemindButton } from "@/components/reminders/remind-button";
+import { SettleUpDialog } from "@/components/settlements/settle-up-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  openOnContent,
+} from "@/components/ui/sheet";
+import type { RemindRecipient } from "@/modules/reminders/types";
+import { PUSH } from "@/components/motion/transitions";
+import { cn } from "@/lib/utils";
+
+export interface SettlementSuggestionView {
+  readonly fromParticipantId: string;
+  readonly fromName: string;
+  readonly toParticipantId: string;
+  readonly toName: string;
+  readonly currency: string;
+  readonly minorUnits: string;
+  readonly fromIsSelf: boolean;
+  readonly toIsSelf: boolean;
+}
+
+interface ParticipantOption {
+  readonly id: string;
+  readonly displayName: string;
+}
+
+/** Explicit transfers; net balances remain in the section above. */
+export function SettlementList({
+  suggestions,
+  groupId,
+  groupName,
+  senderName,
+  recipients,
+  participants,
+  currencyMode,
+  baseCurrency,
+}: {
+  suggestions: readonly SettlementSuggestionView[];
+  groupId: string;
+  groupName: string;
+  senderName: string;
+  recipients: readonly RemindRecipient[];
+  participants: readonly ParticipantOption[];
+  currencyMode: "separate" | "converted";
+  baseCurrency: string | null;
+}) {
+  const t = useTranslations("group");
+  const [active, setActive] = useState<SettlementSuggestionView | null>(null);
+
+  if (suggestions.length === 0) return null;
+
+  const form = (
+    suggestion: SettlementSuggestionView,
+    trigger: React.ReactNode,
+  ) => (
+    <SettleUpDialog
+      key={`${suggestion.fromParticipantId}-${suggestion.toParticipantId}-${suggestion.currency}-${suggestion.minorUnits}`}
+      groupId={groupId}
+      participants={participants}
+      currencyMode={currencyMode}
+      baseCurrency={baseCurrency}
+      defaultCurrency={baseCurrency ?? suggestion.currency}
+      initialFromId={suggestion.fromParticipantId}
+      initialToId={suggestion.toParticipantId}
+      initialAmountMinor={suggestion.minorUnits}
+      initialCurrency={suggestion.currency}
+      trigger={trigger}
+    />
+  );
+
+  const activeRecipients = active
+    ? recipients.filter(
+        (recipient) => recipient.participantId === active.fromParticipantId,
+      )
+    : [];
+
+  return (
+    <>
+      <section
+        aria-labelledby="suggested-settlements"
+        className="flex flex-col gap-2.5"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="suggested-settlements" className="text-sm font-medium">
+            {t("suggestedSettlements")}
+          </h2>
+          <Link
+            href={`/groups/${groupId}/balances`}
+            transitionTypes={PUSH}
+            className="-my-2 rounded-lg px-2 py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {t("viewAll")}
+          </Link>
+        </div>
+
+        <ul className="overflow-hidden rounded-2xl bg-card ring-1 ring-border">
+          {suggestions.map((suggestion, index) => {
+            const key = `${suggestion.fromParticipantId}-${suggestion.toParticipantId}-${suggestion.currency}-${index}`;
+            const row = (
+              <button
+                type="button"
+                onClick={
+                  suggestion.fromIsSelf
+                    ? undefined
+                    : () => setActive(suggestion)
+                }
+                className="grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+              >
+                <SettlementPeople suggestion={suggestion} />
+                <Amount
+                  minorUnits={suggestion.minorUnits}
+                  currency={suggestion.currency}
+                  display="code"
+                  className="shrink-0 text-[0.90625rem] font-semibold"
+                />
+              </button>
+            );
+
+            return (
+              <li key={key} className="border-t first:border-t-0">
+                {suggestion.fromIsSelf ? form(suggestion, row) : row}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <Sheet
+        open={active !== null}
+        onOpenChange={(open) => !open && setActive(null)}
+      >
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          onOpenAutoFocus={openOnContent}
+          className="mx-auto max-w-[430px] gap-0 rounded-t-[26px] bg-background px-5 pt-2.5 pb-7 data-[side=bottom]:border-t-0"
+        >
+          <span
+            aria-hidden="true"
+            className="mx-auto mb-5 block h-1 w-[38px] rounded-full bg-foreground/20"
+          />
+          {active && (
+            <>
+              <SheetTitle className="text-xl font-semibold tracking-[-0.02em]">
+                {t("settlementDetailTitle", {
+                  from: active.fromIsSelf ? t("you") : active.fromName,
+                  to: active.toIsSelf ? t("you") : active.toName,
+                })}
+              </SheetTitle>
+              <SheetDescription className="mt-1 text-[0.8125rem]">
+                {t("settlementDetailDescription")}
+              </SheetDescription>
+
+              <div className="mt-5 flex items-center gap-3 rounded-2xl bg-foreground/[0.05] p-4">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-primary">
+                  <Banknote aria-hidden="true" className="size-[18px]" />
+                </span>
+                <Amount
+                  minorUnits={active.minorUnits}
+                  currency={active.currency}
+                  display="code"
+                  className="text-xl font-semibold tracking-[-0.02em]"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2">
+                {form(
+                  active,
+                  <Button className="h-[46px] w-full rounded-[13px] font-semibold">
+                    {t("recordPayment")}
+                  </Button>,
+                )}
+                {active.toIsSelf && activeRecipients.length > 0 && (
+                  <RemindButton
+                    groupId={groupId}
+                    groupName={groupName}
+                    senderName={senderName}
+                    recipients={activeRecipients}
+                    label={t("sendReminder")}
+                    variant="outline"
+                    className="h-[46px] w-full rounded-[13px] font-semibold"
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+function SettlementPeople({
+  suggestion,
+}: {
+  suggestion: SettlementSuggestionView;
+}) {
+  const t = useTranslations("group");
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <Person
+        name={suggestion.fromIsSelf ? t("you") : suggestion.fromName}
+        self={suggestion.fromIsSelf}
+      />
+      <ArrowRight
+        aria-hidden="true"
+        className="size-3.5 shrink-0 text-muted-foreground"
+      />
+      <Person
+        name={suggestion.toIsSelf ? t("you") : suggestion.toName}
+        self={suggestion.toIsSelf}
+      />
+    </span>
+  );
+}
+
+function Person({ name, self }: { name: string; self: boolean }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <Avatar className="size-7 shrink-0">
+        <AvatarFallback
+          className={cn(
+            "text-[0.6875rem] font-semibold",
+            self
+              ? "bg-primary/15 text-primary"
+              : "bg-accent text-accent-foreground",
+          )}
+        >
+          {name.trim().charAt(0).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <span className="max-w-[5.5rem] truncate text-[0.8125rem] font-medium">
+        {name}
+      </span>
+    </span>
+  );
+}

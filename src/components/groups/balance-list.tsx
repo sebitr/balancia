@@ -1,17 +1,14 @@
 import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { BalanceAmount } from "@/components/money/amount";
+import { Amount, toneFor } from "@/components/money/amount";
 import { PUSH } from "@/components/motion/transitions";
+import { cn } from "@/lib/utils";
 
 /**
- * Who owes whom, in reading order: the reader, then the people owed money,
- * then the people who owe it.
- *
- * Only open positions appear. A settled member adds nothing to a list whose
- * subject is outstanding debt, and on a large group they would crowd out the
- * rows worth reading — which is also why the list stops at five and hands the
- * rest to the balances screen.
+ * Everyone's net position, most negative first. The centred comparison bar is
+ * deliberately secondary to the signed, locale-formatted amount: it makes the
+ * group's shape glanceable without turning a precise debt into a chart guess.
  */
 
 export interface BalanceRowView {
@@ -29,78 +26,166 @@ export function BalanceList({
   rows,
   groupId,
   limit,
-  now,
+  participantCount,
 }: {
   rows: readonly BalanceRowView[];
   groupId: string;
   limit: number;
-  /** Pinned by the server so "just now" cannot disagree after hydration. */
-  now: string;
+  participantCount?: number;
 }) {
   const t = useTranslations("group");
-  const format = useFormatter();
-  const shown = rows.slice(0, limit);
+  const grouped = new Map<
+    string,
+    {
+      participantId: string;
+      name: string;
+      isSelf: boolean;
+      balances: BalanceRowView[];
+    }
+  >();
+  for (const row of rows) {
+    const person = grouped.get(row.participantId) ?? {
+      participantId: row.participantId,
+      name: row.name,
+      isSelf: row.isSelf,
+      balances: [],
+    };
+    person.balances.push(row);
+    grouped.set(row.participantId, person);
+  }
+  const shown = [...grouped.values()].slice(0, limit);
+  const people = participantCount ?? grouped.size;
+  const largestByCurrency = new Map<string, bigint>();
+  for (const row of rows) {
+    const amount = BigInt(row.minorUnits);
+    const magnitude = amount < 0n ? -amount : amount;
+    const largest = largestByCurrency.get(row.currency) ?? 0n;
+    if (magnitude > largest) largestByCurrency.set(row.currency, magnitude);
+  }
 
   return (
-    <section aria-labelledby="who-owes-whom" className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <h2
-          id="who-owes-whom"
-          className="text-sm font-medium text-muted-foreground"
-        >
-          {t("whoOwesWhom")}
-        </h2>
-        <Link
-          href={`/groups/${groupId}/balances`}
-          transitionTypes={PUSH}
-          className="-my-2 shrink-0 rounded-[10px] px-2 py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          {t("allBalances")}
-        </Link>
-      </div>
+    <section
+      aria-labelledby="everyone-balances"
+      className="flex flex-col gap-2.5"
+    >
+      <h2 id="everyone-balances" className="text-sm font-medium">
+        {t("everyoneBalances")}
+      </h2>
 
-      <ul className="overflow-hidden rounded-[14px] ring-1 ring-border">
-        {shown.map((row) => (
-          <li key={`${row.participantId}-${row.currency}`}>
+      <ul className="overflow-hidden rounded-2xl bg-card ring-1 ring-border">
+        {shown.map((person) => (
+          <li key={person.participantId} className="border-t first:border-t-0">
             <Link
               href={`/groups/${groupId}/members`}
               transitionTypes={PUSH}
-              className="flex min-h-11 items-center justify-between gap-3 border-t px-3 py-[11px] transition-colors first:border-t-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+              className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_minmax(68px,0.85fr)_auto] items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
             >
               <span className="flex min-w-0 items-center gap-2.5">
-                <Avatar className="size-[26px]">
-                  <AvatarFallback className="bg-accent text-[0.6875rem] font-semibold text-accent-foreground">
-                    {row.name.trim().charAt(0).toUpperCase()}
+                <Avatar className="size-7">
+                  <AvatarFallback
+                    className={cn(
+                      "text-[0.6875rem] font-semibold",
+                      person.isSelf
+                        ? "bg-primary/15 text-primary"
+                        : "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    {person.name.trim().charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm font-medium">
-                    {row.isSelf ? t("you") : row.name}
-                  </span>
-                  {/* Deliberately not a read receipt: it records that the
-                      asking happened, which is all the system can know. */}
-                  {row.remindedAt && (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {t("remindedAt", {
-                        when: format.relativeTime(
-                          new Date(row.remindedAt),
-                          new Date(now),
-                        ),
-                      })}
-                    </span>
-                  )}
+                <span className="truncate text-sm font-medium">
+                  {person.isSelf ? t("you") : person.name}
                 </span>
               </span>
 
-              <BalanceAmount
-                minorUnits={row.minorUnits}
-                currency={row.currency}
-                className="shrink-0 text-sm [&>svg]:size-[15px]"
-              />
+              <span className="flex flex-col gap-2">
+                {person.balances.map((balance) => (
+                  <ComparisonBar
+                    key={balance.currency}
+                    minorUnits={balance.minorUnits}
+                    largest={largestByCurrency.get(balance.currency) ?? 0n}
+                  />
+                ))}
+              </span>
+
+              <span className="flex shrink-0 flex-col gap-1 text-right text-[0.90625rem] font-semibold tabular-nums">
+                {person.balances.map((balance) => (
+                  <BalanceValue key={balance.currency} row={balance} />
+                ))}
+              </span>
             </Link>
           </li>
         ))}
+
+        {people > limit && (
+          <li className="border-t">
+            <Link
+              href={`/groups/${groupId}/balances`}
+              transitionTypes={PUSH}
+              className="flex min-h-11 items-center justify-center px-3 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              {t("viewAllPeople", { count: people })}
+            </Link>
+          </li>
+        )}
       </ul>
     </section>
+  );
+}
+
+function BalanceValue({ row }: { row: BalanceRowView }) {
+  const t = useTranslations("group");
+  return (
+    <span
+      className={cn(
+        toneFor(row.minorUnits) === "positive" && "text-positive",
+        toneFor(row.minorUnits) === "negative" && "text-negative",
+        toneFor(row.minorUnits) === "neutral" && "text-neutral-balance",
+      )}
+    >
+      <Amount
+        minorUnits={row.minorUnits}
+        currency={row.currency}
+        display="code"
+        signDisplay="exceptZero"
+      />
+      <span className="sr-only">
+        {BigInt(row.minorUnits) > 0n
+          ? t("balanceReceives")
+          : BigInt(row.minorUnits) < 0n
+            ? t("balanceOwes")
+            : t("balanceSettled")}
+      </span>
+    </span>
+  );
+}
+
+function ComparisonBar({
+  minorUnits,
+  largest,
+}: {
+  minorUnits: string;
+  largest: bigint;
+}) {
+  const value = BigInt(minorUnits);
+  const magnitude = value < 0n ? -value : value;
+  const width = largest === 0n ? 0 : Number((magnitude * 50n) / largest);
+
+  return (
+    <span
+      aria-hidden="true"
+      className="relative h-[3px] w-full overflow-hidden rounded-full bg-foreground/[0.09]"
+    >
+      <span className="absolute inset-y-0 left-1/2 w-px bg-foreground/20" />
+      {value !== 0n && (
+        <span
+          className={cn(
+            "absolute inset-y-0",
+            value < 0n ? "right-1/2 bg-negative" : "left-1/2 bg-positive",
+          )}
+          style={{ width: `${width}%` }}
+        />
+      )}
+    </span>
   );
 }
