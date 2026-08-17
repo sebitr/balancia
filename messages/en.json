@@ -500,6 +500,287 @@
     "footerTagline": "Balancia — shared expenses, fairly balanced.",
     "footerLicence": "AGPL-3.0-or-later. Modified network versions must offer source."
   },
+  "marketing": {
+    "meta": {
+      "title": "Shared expenses, fairly balanced",
+      "description": "Balancia is free, open-source software for splitting shared expenses with friends, flatmates, couples, families, clubs and teams — hosted or self-hosted."
+    },
+    "header": {
+      "home": "Balancia home",
+      "navigation": "Main navigation",
+      "github": "GitHub",
+      "signIn": "Sign in",
+      "createAccount": "Create account"
+    },
+    "hero": {
+      "eyebrow": "Self-hosted shared expenses",
+      "titleLine1": "Everyone paid",
+      "titleLine2": "something.",
+      "titleAccent": "Balancia works out the rest.",
+      "lead": "Dinner, rent, the trip nobody kept a spreadsheet for. Add what you spent and Balancia tells each person exactly where they stand — in the currency they paid in, on a server you control.",
+      "createAccount": "Create your account",
+      "readSource": "Read the source",
+      "reassurance": "Free account, no card. Or clone the repository and run the whole thing yourself.",
+      "trust": {
+        "noAds": "No ads",
+        "noPaywall": "Nothing behind a paywall",
+        "guests": "Guests need no account"
+      }
+    },
+    "demo": {
+      "groupName": "Weekend in Lisbon",
+      "groupMeta": "{count, plural, one {# person} other {# people}} · {currency}",
+      "live": "Live",
+      "expenseName": "Dinner at Ramiro",
+      "changeHint": "change anything below",
+      "amountAriaLabel": "Expense amount",
+      "paidBy": "Paid by",
+      "split": "Split",
+      "splitModeAriaLabel": "Split method",
+      "modes": {
+        "equal": "Equal",
+        "shares": "Shares",
+        "percentage": "Percentage"
+      },
+      "people": {
+        "sam": { "name": "Sam" },
+        "mina": { "name": "Mina" },
+        "theo": { "name": "Théo" },
+        "ada": { "name": "Ada" }
+      },
+      "splitNotes": {
+        "empty": "Type an amount to see the split.",
+        "equalExact": "{total} ÷ 4 is {share} each, exactly.",
+        "equalRemainder": "{total} ÷ 4 leaves {count, plural, one {# cent} other {# cents}} over. It goes to {names}, and the parts still add to the total.",
+        "shares": "Sam 3 shares, Mina 2, Théo 2, Ada 1 — {allocations}.",
+        "percentage": "40 / 25 / 25 / 10 — {allocations}."
+      },
+      "balancesTitle": "Where everyone stands",
+      "totalSpent": "{amount} spent",
+      "paidAmount": "paid {amount}",
+      "getsBack": "gets back",
+      "owes": "owes",
+      "settledUp": "settled up",
+      "settledIn": "Settled in {count, plural, one {# payment} other {# payments}}",
+      "everyoneSettled": "Everyone is settled up",
+      "transfer": "{from} pays {to} {amount}"
+    },
+    "features": {
+      "eyebrow": "What it does",
+      "title": "The things that usually go wrong. None of them here.",
+      "items": {
+        "splits": {
+          "title": "Splits that always add up",
+          "body": "Equal, exact, percentage or share-based. Amounts are whole minor units, so allocations sum to the total exactly — every time."
+        },
+        "payers": {
+          "title": "Several payers, no workarounds",
+          "body": "When two people cover one bill, record it once. Balances follow who actually paid what."
+        },
+        "currency": {
+          "title": "Multi-currency, two ways",
+          "body": "Keep each currency balanced separately, or convert everything into one base currency at a rate frozen when you record it."
+        },
+        "passkeys": {
+          "title": "Passkeys and guest links",
+          "body": "Sign in with a passkey or a password. Invite people who do not want an account through a revocable link."
+        },
+        "receipts": {
+          "title": "Receipts kept private",
+          "body": "Attach photos or PDFs. They live in your own storage, behind authorization — never in a public folder."
+        },
+        "recurring": {
+          "title": "Recurring expenses",
+          "body": "Rent, subscriptions, the shared internet bill. Generated on schedule in your group's own timezone."
+        },
+        "revenue": {
+          "title": "Revenue and settlements, not only spending",
+          "body": "Add income — a deposit returned, a refund, a shared payout — and split it the same four ways, on a schedule if it repeats. Repayments are recorded as settlements, and the group's suggested payments are worked out for you."
+        }
+      }
+    },
+    "useCases": {
+      "eyebrow": "Who it's for",
+      "title": "If money keeps moving between the same few people, this is for you.",
+      "intro": "Six situations people tend to arrive with. Each one leans on a different part of Balancia.",
+      "items": {
+        "trip": {
+          "title": "Organising a trip with friends",
+          "body": "Flights booked months ago, a villa deposit one person fronted, dinners paid by whoever's card was closest, half of it in another currency. Add each cost as it happens and Balancia keeps every currency straight, then suggests the payments that clear the whole trip when you get home."
+        },
+        "flat": {
+          "title": "Sharing a flat",
+          "body": "Rent, electricity, internet and the weekly shop, month after month. Set the repeating ones up once and they appear on schedule. When somebody moves out mid-month, an exact-amount split handles the awkward part."
+        },
+        "partner": {
+          "title": "Living costs with a partner",
+          "body": "Two incomes that aren't the same size, and a fifty-fifty split that never felt right. Give the shared pot a percentage or a share ratio instead — 60/40, or three shares to two — and every expense follows it without a conversation each time."
+        },
+        "event": {
+          "title": "A wedding, a stag do, a group gift",
+          "body": "One or two people carry the big bookings while a dozen others owe a share. Guests join the group through a link, so nobody has to make an account for a single weekend — and when the venue returns the deposit, that comes back in as income and reduces what everyone owes."
+        },
+        "ownership": {
+          "title": "Something you own together",
+          "body": "A car between siblings, a boat between friends, a holiday house in the family. Insurance and maintenance recur; when you rent the place out, that revenue is recorded and split the same way the costs are. Receipts stay attached to the expense they belong to."
+        },
+        "club": {
+          "title": "A club, a team, a band",
+          "body": "Kit and pitch fees going out, subs and gig money coming in. Record both sides in one group, split payouts by shares when they aren't equal, and export the year as an Excel workbook for whoever keeps the books."
+        }
+      }
+    },
+    "comparison": {
+      "eyebrow": "Coming from Splitwise",
+      "title": "Bring the group with you.",
+      "body": "Upload a Splitwise CSV export or JSON backup and Balancia shows you exactly what it will create before writing anything. Run the same file twice and nothing is duplicated. You do not have to start from an empty group.",
+      "steps": {
+        "upload": "Upload the export you already have.",
+        "preview": "Read the preview — every group, person and expense it will create.",
+        "map": "Map the people to accounts, and import."
+      },
+      "link": "How the import works",
+      "beforeLabel": "What you're used to",
+      "afterLabel": "With Balancia",
+      "rows": {
+        "hosting": {
+          "before": "Your history sits on a company's servers.",
+          "after": "It sits on a server you or someone you trust runs."
+        },
+        "features": {
+          "before": "Useful features drift behind an upgrade.",
+          "after": "Every feature is in the repository, under AGPL-3.0."
+        },
+        "accounts": {
+          "before": "Everyone has to sign up before they can be in a group.",
+          "after": "Guests join through a link you can revoke."
+        },
+        "export": {
+          "before": "Getting your data out is an afterthought.",
+          "after": "Any group downloads as JSON, CSV or Excel."
+        }
+      }
+    },
+    "selfHosting": {
+      "eyebrow": "Your instance, your data",
+      "title": "Nobody sits between you and your money.",
+      "body": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and requires no third-party services. Telemetry exists only to help improve the tool, is off by default on self-hosted instances, and never includes personal data or amounts.",
+      "bodyAnalytics": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and requires no third-party services. Telemetry never includes personal data or amounts. On this instance, an administrator has enabled anonymous counts for the public landing and sign-in screens; no page inside the application is counted.",
+      "exportBody": "Leaving is as easy as arriving: every group exports to CSV, Excel or JSON from its settings, and a self-hosted instance keeps its database and receipts on disks you own.",
+      "guide": "Self-hosting guide",
+      "install": {
+        "title": "The whole installation",
+        "copy": "Copy",
+        "copied": "Copied",
+        "steps": {
+          "1": "Downloads the source and opens the project.",
+          "2": "Generates secrets and asks which optional features you want.",
+          "3": "Builds and starts PostgreSQL, the app and its worker."
+        }
+      },
+      "facts": {
+        "license": "Licence",
+        "runtime": "Runtime",
+        "runtimeValue": "PostgreSQL 18, one worker",
+        "services": "External services",
+        "servicesValue": "None required",
+        "telemetry": "Telemetry",
+        "telemetryValue": "Off by default when self-hosted"
+      },
+      "licenseNote": "The AGPL adds one obligation: run a modified version as a network service and you must offer its users the source. That protects the people trusting your instance with their financial history."
+    },
+    "status": {
+      "eyebrow": "Where it stands",
+      "title": "Young software, kept honest.",
+      "body": "Everything on this page exists in the repository today. What is finished, what is partial and what has not been started is written down rather than implied — including the parts that are not built yet.",
+      "link": "Read the implementation status"
+    },
+    "faq": {
+      "eyebrow": "Questions",
+      "title": "Before you sign up.",
+      "items": {
+        "free": {
+          "question": "Is it actually free?",
+          "answer": "Yes. An account on this instance costs nothing and no feature is held back. The software itself is free under AGPL-3.0-or-later, so you can also run your own copy and never depend on this one."
+        },
+        "accounts": {
+          "question": "Do the people I split with need an account?",
+          "answer": "No. Invite them through a revocable link. Guests can view the group, add and edit expenses, settle up and upload receipts, but never manage people, links or the group itself."
+        },
+        "export": {
+          "question": "Can I get my data back out?",
+          "answer": "Any group downloads as JSON — the complete record, amounts exactly as stored — or as CSV or an Excel workbook, from its settings page."
+        },
+        "currency": {
+          "question": "What happens with different currencies?",
+          "answer": "Keep each currency balanced on its own, or convert into one base currency at a rate frozen when the expense is recorded, so historical expenses are never silently recalculated. Daily rates can be filled in from the European Central Bank's published figures; that is off by default."
+        },
+        "privacy": {
+          "question": "Is anything about my spending sent anywhere?",
+          "answer": "No. Telemetry never carries personal data or amounts — it exists only to help improve the tool, and on a self-hosted instance it is off by default. Even the category guessing runs locally, with no AI service involved. Optional integrations only make network requests when an administrator enables them."
+        },
+        "selfHost": {
+          "question": "How hard is it to run myself?",
+          "answer": "Three commands: clone the repository, run the bootstrap script, then bring it up with Docker Compose. PostgreSQL, migrations, the app and its worker all start together. Reverse-proxy examples for Caddy, Traefik and nginx are in the docs."
+        }
+      }
+    },
+    "cta": {
+      "title": "Start with tonight's dinner.",
+      "titleAccent": "Sort out the trip later.",
+      "body": "A group takes a minute to set up, and the people in it do not need accounts.",
+      "createAccount": "Create your account",
+      "haveAccount": "I already have an account →",
+      "contributorBody": "Rather build than sign up? Issues and pull requests are welcome.",
+      "contribute": "Contribute on GitHub",
+      "registrationClosed": "Registration is closed on this instance. Ask the administrator for an account, or use a guest invitation link if you have one."
+    },
+    "footer": {
+      "taglineLine1": "Shared expenses,",
+      "taglineLine2": "fairly balanced.",
+      "runIt": "Run it",
+      "buildIt": "Build on it",
+      "trustIt": "Trust it",
+      "links": {
+        "selfHosting": "Self-hosting",
+        "environment": "Environment reference",
+        "backup": "Backup and restore",
+        "migration": "Data migration",
+        "architecture": "Architecture",
+        "development": "Development",
+        "contributing": "Contributing",
+        "status": "Implementation status",
+        "security": "Security",
+        "license": "AGPL-3.0 licence",
+        "receiptScanning": "Receipt scanning",
+        "source": "Source on GitHub"
+      },
+      "bottomTagline": "Balancia — shared expenses, fairly balanced.",
+      "bottomLicense": "AGPL-3.0-or-later. Modified network versions must offer source."
+    },
+    "seo": {
+      "alternateName": "Balancia — shared expenses, fairly balanced",
+      "applicationSubCategory": "Shared expense splitting",
+      "operatingSystem": "Web browser, self-hostable via Docker",
+      "description": "Balancia is free, open-source software for splitting shared expenses in a group. It handles equal, exact, percentage and share-based splits, several payers on one bill, multiple currencies, recurring expenses, income and settlements. It can be used on a hosted instance with a free account, or self-hosted on your own server under the AGPL-3.0-or-later licence.",
+      "offerDescription": "Free account on the hosted instance. No paid tier, no feature held back.",
+      "keywords": "split expenses with friends, share costs on a trip, roommate expense splitting, open source Splitwise alternative, self-hosted expense splitter, group holiday costs, shared household bills",
+      "audience": "Groups sharing costs: friends travelling together, flatmates, couples, families, clubs and teams, and people who prefer to self-host their own tools",
+      "features": {
+        "splits": "Split a bill equally, by exact amounts, by percentage or by shares",
+        "payers": "Record several people paying for one bill",
+        "currency": "Split costs on a trip in multiple currencies",
+        "recurring": "Recurring expenses such as rent, utilities and subscriptions",
+        "income": "Record income, refunds and shared payouts, not only spending",
+        "settlements": "Settle up with deterministic suggested payments that clear the group",
+        "guests": "Invite people without accounts through revocable guest links",
+        "import": "Import an existing Splitwise CSV export or JSON backup",
+        "export": "Export any group as JSON, CSV or an Excel workbook",
+        "receipts": "Attach receipts as photos or PDFs, kept behind authorization",
+        "selfHost": "Self-host with Docker Compose and PostgreSQL"
+      }
+    }
+  },
   "notFound": {
     "title": "Not found",
     "body": "This page does not exist, or you do not have access to it.",

@@ -48,6 +48,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-marketing-plum: var(--marketing-plum);
+  --color-marketing-plum-raised: var(--marketing-plum-raised);
+  --color-marketing-cream: var(--marketing-cream);
+  --color-marketing-cream-deep: var(--marketing-cream-deep);
+  --color-marketing-soft: var(--marketing-soft);
+  --color-marketing-row: var(--marketing-row);
+  --color-marketing-primary-hover: var(--marketing-primary-hover);
+  --color-marketing-link: var(--marketing-link);
+  --color-marketing-link-hover: var(--marketing-link-hover);
+  --color-marketing-label: var(--marketing-label);
+  --color-marketing-dark-muted: var(--marketing-dark-muted);
+  --color-marketing-dark-dim: var(--marketing-dark-dim);
+  --color-marketing-dark-trust: var(--marketing-dark-trust);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -132,6 +145,21 @@
   --group-accent-amber: oklch(0.55 0.11 70);
   --group-accent-plum: oklch(0.47 0.085 319);
   --group-accent-blue: oklch(0.51 0.14 250);
+
+  /* Marketing-only surface steps that have no product-shell counterpart. */
+  --marketing-plum: oklch(0.226 0.072 319);
+  --marketing-plum-raised: oklch(0.27 0.068 319);
+  --marketing-cream: oklch(0.977 0.007 85);
+  --marketing-cream-deep: oklch(0.96 0.01 85);
+  --marketing-soft: oklch(0.96 0.012 82);
+  --marketing-row: oklch(0.94 0.008 82);
+  --marketing-primary-hover: oklch(0.78 0.15 30);
+  --marketing-link: oklch(0.62 0.16 30);
+  --marketing-link-hover: oklch(0.5 0.14 30);
+  --marketing-label: oklch(0.48 0.14 30);
+  --marketing-dark-muted: oklch(0.82 0.03 319);
+  --marketing-dark-dim: oklch(0.72 0.035 319);
+  --marketing-dark-trust: oklch(0.86 0.02 319);
 }
 
 .dark {
@@ -221,6 +249,77 @@
     font-family: var(--font-serif);
     font-weight: 400;
     letter-spacing: -0.02em;
+  }
+}
+
+/* The marketing page has a fixed art direction and does not inherit the
+   signed-in product shell's light/dark theme. Descendant token overrides keep
+   the brand bands plum and cream in either system theme. */
+.marketing-page {
+  --background: var(--marketing-cream);
+  --foreground: var(--marketing-plum);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--marketing-plum);
+  --primary: oklch(0.712 0.168 30);
+  --primary-foreground: var(--marketing-plum);
+  --secondary: oklch(0.9 0.018 319);
+  --secondary-foreground: oklch(0.33 0.088 319);
+  --muted: oklch(0.937 0.016 82);
+  --muted-foreground: oklch(0.5 0.03 319);
+  --border: oklch(0.9 0.012 82);
+  --input: oklch(0.88 0.016 82);
+  --ring: oklch(0.712 0.168 30);
+  --positive: oklch(0.654 0.13 167);
+  --negative: oklch(0.639 0.18 32);
+  --neutral-balance: oklch(0.62 0.035 319);
+}
+
+.marketing-page ::selection {
+  background: var(--primary);
+  color: var(--marketing-plum);
+}
+
+.marketing-page :is(a, button, input, summary):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.marketing-page summary::-webkit-details-marker {
+  display: none;
+}
+
+.marketing-command-scroll {
+  scrollbar-color: oklch(1 0 0 / 22%) transparent;
+  scrollbar-width: thin;
+}
+
+.marketing-command-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.marketing-command-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: oklch(1 0 0 / 22%);
+}
+
+@keyframes marketing-pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.marketing-pulse-slow {
+  animation: marketing-pulse-dot 2.4s ease-in-out infinite;
+}
+
+.marketing-pulse-fast {
+  animation: marketing-pulse-dot 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-pulse-slow,
+  .marketing-pulse-fast {
+    animation: none;
   }
 }
 
