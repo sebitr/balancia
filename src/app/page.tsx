@@ -56,30 +56,49 @@ export async function generateMetadata(): Promise<Metadata> {
   const env = getEnv();
   const title = t("title");
   const description = t("description");
+  const isFrench = locale === "fr";
+  const socialTitle = isFrench ? title : `${title} · Balancia`;
+  const socialImage = new URL("/icons/icon-512.png", env.appOrigin).toString();
+
   return {
-    title,
+    title: isFrench ? { absolute: title } : title,
     description,
     alternates: { canonical: env.appOrigin },
     keywords: [
       "shared expense tracker",
       "split expenses with friends",
       "self-hosted Splitwise alternative",
+      "self-hosted tricount alternative",
       "open-source expense splitter",
       "multi-currency expense sharing",
       "roommate expense tracker",
     ],
     openGraph: {
-      title: `${title} · Balancia`,
-      description,
+      type: "website",
       url: env.appOrigin,
       siteName: "Balancia",
-      locale: locale === "fr" ? "fr_FR" : "en_US",
-      type: "website",
+      locale: isFrench ? "fr_FR" : "en_US",
+      title: socialTitle,
+      description,
+      ...(isFrench
+        ? {
+            images: [
+              {
+                url: socialImage,
+                width: 512,
+                height: 512,
+                alt: "Balancia",
+                type: "image/png",
+              },
+            ],
+          }
+        : {}),
     },
     twitter: {
-      card: "summary_large_image",
-      title: `${title} · Balancia`,
+      card: isFrench ? "summary" : "summary_large_image",
+      title: socialTitle,
       description,
+      ...(isFrench ? { images: [socialImage] } : {}),
     },
     robots: {
       index: true,
@@ -99,9 +118,10 @@ export default async function LandingPage() {
   if (await getCurrentUser()) redirect("/dashboard");
 
   const env = getEnv();
-  const [t, analytics] = await Promise.all([
+  const [t, analytics, locale] = await Promise.all([
     getTranslations("marketing"),
     publicPageAnalytics(),
+    getLocale(),
   ]);
 
   const features = [
@@ -127,7 +147,11 @@ export default async function LandingPage() {
       t("features.items.recurring.title"),
       t("features.items.recurring.body"),
     ],
-    ["07", t("features.items.revenue.title"), t("features.items.revenue.body")],
+    [
+      "07",
+      t("features.items.repayments.title"),
+      t("features.items.repayments.body"),
+    ],
   ];
 
   const useCases = [
@@ -146,7 +170,7 @@ export default async function LandingPage() {
     [t("comparison.rows.export.before"), t("comparison.rows.export.after")],
   ];
 
-  const faqItems = [
+  const defaultFaqItems = [
     [t("faq.items.free.question"), t("faq.items.free.answer")],
     [t("faq.items.accounts.question"), t("faq.items.accounts.answer")],
     [t("faq.items.export.question"), t("faq.items.export.answer")],
@@ -154,6 +178,19 @@ export default async function LandingPage() {
     [t("faq.items.privacy.question"), t("faq.items.privacy.answer")],
     [t("faq.items.selfHost.question"), t("faq.items.selfHost.answer")],
   ];
+  const frenchFaqItems = [
+    [t("faq.items.free.question"), t("faq.items.free.answer")],
+    [t("faq.items.accounts.question"), t("faq.items.accounts.answer")],
+    [t("faq.items.sharing.question"), t("faq.items.sharing.answer")],
+    [t("faq.items.unequal.question"), t("faq.items.unequal.answer")],
+    [t("faq.items.currency.question"), t("faq.items.currency.answer")],
+    [t("faq.items.splitwise.question"), t("faq.items.splitwise.answer")],
+    [t("faq.items.openSource.question"), t("faq.items.openSource.answer")],
+    [t("faq.items.selfHost.question"), t("faq.items.selfHost.answer")],
+    [t("faq.items.devices.question"), t("faq.items.devices.answer")],
+    [t("faq.items.comparison.question"), t("faq.items.comparison.answer")],
+  ];
+  const faqItems = locale === "fr" ? frenchFaqItems : defaultFaqItems;
 
   const featureList = [
     t("seo.features.splits"),
@@ -179,6 +216,7 @@ export default async function LandingPage() {
     "@graph": [
       {
         "@type": "SoftwareApplication",
+        "@id": `${env.appOrigin}/#software`,
         name: "Balancia",
         alternateName: t("seo.alternateName"),
         applicationCategory: "FinanceApplication",
@@ -201,9 +239,21 @@ export default async function LandingPage() {
           "@type": "Audience",
           audienceType: t("seo.audience"),
         },
+        inLanguage: locale,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${env.appOrigin}/#website`,
+        name: "Balancia",
+        alternateName: t("seo.alternateName"),
+        url: env.appOrigin,
+        description: t("meta.description"),
+        inLanguage: locale,
       },
       {
         "@type": "FAQPage",
+        "@id": `${env.appOrigin}/#faq`,
+        inLanguage: locale,
         mainEntity: faqItems.map(([question, answer]) => ({
           "@type": "Question",
           name: question,
@@ -318,9 +368,7 @@ export default async function LandingPage() {
                 {t("hero.eyebrow")}
               </p>
               <h1 className="mt-[18px] text-[clamp(40px,5.4vw,68px)] leading-[1.02] font-semibold tracking-[-0.035em] text-balance">
-                {t("hero.titleLine1")}
-                <br />
-                {t("hero.titleLine2")}
+                {t("hero.titleLine1")} {t("hero.titleLine2")}
                 <span className="font-editorial mt-1.5 block text-primary">
                   {t("hero.titleAccent")}
                 </span>
