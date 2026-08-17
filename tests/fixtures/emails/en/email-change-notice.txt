@@ -1,0 +1,10 @@
+Subject: The email address on your Balancia account is being changed
+
+Someone asked to change your Balancia account email to sebastien@trosset.net.
+
+Nothing has changed yet. The new address has to be confirmed first, and this one stops working as soon as it is.
+
+If it wasn't you, reset your password now — whoever asked for this has access to your account:
+https://balancia.app/forgot-password
+
+No action needed if you asked for this change.

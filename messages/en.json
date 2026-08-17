@@ -939,14 +939,49 @@
     "edit": "Edit"
   },
   "emails": {
-    "verifySubject": "Confirm your Balancia email address",
-    "verifyBody": "Welcome to Balancia.\n\nConfirm this address to finish setting up your account:\n{url}\n\nThe link works for 24 hours.",
-    "resetSubject": "Reset your Balancia password",
-    "resetBody": "Someone asked to reset the password for your Balancia account.\n\nUse this link within the next hour:\n{url}\n\nIf it wasn't you, you can ignore this message — nothing has changed.",
-    "emailChangeSubject": "Confirm your new Balancia email address",
-    "emailChangeBody": "Someone asked to move a Balancia account to this address.\n\nConfirm it with this link within the next 2 hours:\n{url}\n\nUntil then the account keeps its old address. If it wasn't you, you can ignore this message.",
-    "emailChangeNoticeSubject": "The email address on your Balancia account is being changed",
-    "emailChangeNoticeBody": "Someone asked to change the email address on your Balancia account to {email}.\n\nNothing has happened yet: the change only takes effect once that address is confirmed, and this one stops working when it does.\n\nIf it wasn't you, sign in and change your password now — whoever asked is in your account."
+    "fallbackLabel": "Or paste this link into your browser",
+    "verify": {
+      "subject": "Confirm your Balancia email address",
+      "title": "Confirm your email address",
+      "preheader": "Confirm your email address to finish setting up Balancia.",
+      "display": "Welcome to Balancia.",
+      "body": "Confirm this address to finish setting up your account.",
+      "button": "Confirm this address",
+      "closing": "This link works for 24 hours.",
+      "text": "Welcome to Balancia.\n\nConfirm this address to finish setting up your account:\n{url}\n\nThis link works for 24 hours."
+    },
+    "reset": {
+      "subject": "Reset your Balancia password",
+      "title": "Reset your Balancia password",
+      "preheader": "Set a new password — the link works for the next hour.",
+      "lead": "Someone asked to reset the password for your Balancia account.",
+      "sub": "The link below works for the next hour.",
+      "button": "Set a new password",
+      "closing": "If you didn't ask for this, you can ignore this email. Your password hasn't changed.",
+      "text": "Someone asked to reset the password for your Balancia account.\n\nSet a new password:\n{url}\n\nThe link works for the next hour. If you didn't ask for this, you can ignore this email. Your password hasn't changed."
+    },
+    "emailChange": {
+      "subject": "Confirm your new Balancia email address",
+      "title": "Confirm this address for your Balancia account",
+      "preheader": "Confirm this address to move a Balancia account to it. The link works for 2 hours.",
+      "lead": "Someone asked to move a Balancia account to this address.",
+      "sub": "Confirm it to finish the change.",
+      "button": "Confirm this address",
+      "closing": "This link works for 2 hours. Until then the account keeps its old address. If it wasn't you, you can ignore this email.",
+      "text": "Someone asked to move a Balancia account to this address.\n\nConfirm it to finish the change:\n{url}\n\nThis link works for 2 hours. Until then the account keeps its old address. If it wasn't you, you can ignore this email."
+    },
+    "emailChangeNotice": {
+      "subject": "The email address on your Balancia account is being changed",
+      "title": "Someone asked to change your Balancia email address",
+      "preheader": "Someone asked to change your Balancia account email. Nothing has changed yet.",
+      "lead": "Someone asked to change your Balancia account email to <strong>{email}</strong>.",
+      "sub": "Nothing has changed yet. The new address has to be confirmed first, and this one stops working as soon as it is.",
+      "warningTitle": "If it wasn't you",
+      "warningBody": "Reset your password now. Whoever asked for this has access to your account.",
+      "warningLink": "Reset your password",
+      "closing": "No action needed if you asked for this change.",
+      "text": "Someone asked to change your Balancia account email to {email}.\n\nNothing has changed yet. The new address has to be confirmed first, and this one stops working as soon as it is.\n\nIf it wasn't you, reset your password now — whoever asked for this has access to your account:\n{url}\n\nNo action needed if you asked for this change."
+    }
   },
   "serverErrors": {
     "generic": "Something went wrong on the server. Nothing was changed.",

@@ -1,0 +1,8 @@
+Subject: Confirme ton adresse e-mail Balancia
+
+Bienvenue sur Balancia.
+
+Confirme cette adresse pour finaliser la création de ton compte :
+https://balancia.app/verify-email?token=OQAWX41O13F2eGwQR9_FP6KpFdng9IvEYhXTsAOIoIE
+
+Ce lien est valable 24 heures.
