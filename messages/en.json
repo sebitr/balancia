@@ -593,7 +593,7 @@
           "title": "Recurring expenses",
           "body": "Rent, subscriptions, the shared internet bill. Generated on schedule in your group's own timezone."
         },
-        "revenue": {
+        "repayments": {
           "title": "Revenue and settlements, not only spending",
           "body": "Add income — a deposit returned, a refund, a shared payout — and split it the same four ways, on a schedule if it repeats. Repayments are recorded as settlements, and the group's suggested payments are worked out for you."
         }
@@ -707,6 +707,14 @@
           "question": "Do the people I split with need an account?",
           "answer": "No. Invite them through a revocable link. Guests can view the group, add and edit expenses, settle up and upload receipts, but never manage people, links or the group itself."
         },
+        "sharing": {
+          "question": "How do I split an expense between several people?",
+          "answer": "Add the amount, choose who paid and select the people included. You can split the expense equally, enter exact amounts, assign percentages or use custom shares. Balances update automatically."
+        },
+        "unequal": {
+          "question": "Can I split an expense unequally?",
+          "answer": "Yes. Enter the exact amount for each person, assign percentages or use weighted shares, such as three shares for one person and two for another. Balancia always keeps the total exact."
+        },
         "export": {
           "question": "Can I get my data back out?",
           "answer": "Any group downloads as JSON — the complete record, amounts exactly as stored — or as CSV or an Excel workbook, from its settings page."
@@ -719,9 +727,25 @@
           "question": "Is anything about my spending sent anywhere?",
           "answer": "No. Telemetry never carries personal data or amounts — it exists only to help improve the tool, and on a self-hosted instance it is off by default. Even the category guessing runs locally, with no AI service involved. Optional integrations only make network requests when an administrator enables them."
         },
+        "splitwise": {
+          "question": "Can I import my data from Splitwise?",
+          "answer": "Yes. Balancia accepts a Splitwise group CSV export or JSON backup. It previews the import before bringing in expenses, settlements, currencies and people. Final shares are preserved as exact amounts, but the original split-method label and historical exchange rates are not recreated."
+        },
+        "openSource": {
+          "question": "Is Balancia open source?",
+          "answer": "Yes. Balancia's source code is public at github.com/sebitr/balancia under the AGPL-3.0-or-later licence, where the community can inspect, audit and improve it."
+        },
         "selfHost": {
           "question": "How hard is it to run myself?",
           "answer": "Three commands: clone the repository, run the bootstrap script, then bring it up with Docker Compose. PostgreSQL, migrations, the app and its worker all start together. Reverse-proxy examples for Caddy, Traefik and nginx are in the docs."
+        },
+        "devices": {
+          "question": "Does Balancia work on iPhone and Android?",
+          "answer": "Yes. Balancia works in a modern browser on desktop, iPhone, iPad and Android. You can also add the progressive web app to your home screen so that it opens like a regular app. It is not distributed through the App Store or Play Store."
+        },
+        "comparison": {
+          "question": "How is Balancia different from Splitwise and Tricount?",
+          "answer": "Balancia is an open-source, self-hostable alternative to Splitwise and Tricount. Its differences include guest participation without an account, progressive web app installation, four split methods, multi-currency groups and Splitwise data import. Features and offers from each service may change."
         }
       }
     },
