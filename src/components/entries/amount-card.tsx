@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { cn } from "@/lib/utils";
+import { currencyEntry } from "@/modules/currencies/catalog";
 import { convertMoney, formatMoney, money } from "@/modules/currencies/money";
 import { parseAmountToMinor } from "@/components/expenses/expense-form-logic";
 
@@ -72,6 +73,7 @@ export function AmountCard({
   const t = useTranslations("addEntry.amount");
 
   const empty = amountText === "" || Number.parseFloat(amountText) === 0;
+  const flag = currencyEntry(currency, locale)?.flag;
   const parsed = parseAmountToMinor(amountText || "0", currency);
   const converted =
     needsRate && baseCurrency && parsed.ok && rate.trim() !== ""
@@ -123,15 +125,25 @@ export function AmountCard({
         {/* A settlement is denominated by the debt it clears, so there is
             nothing to choose and the pill states the currency instead. */}
         {currencyLocked ? (
-          <span className="inline-flex h-10 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold text-muted-foreground">
+          <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted-foreground">
+            {flag && (
+              <span aria-hidden="true" className="text-base leading-none">
+                {flag}
+              </span>
+            )}
             {currency}
           </span>
         ) : (
           <button
             type="button"
             onClick={onOpenCurrency}
-            className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full border border-white/14 bg-white/8 px-3 text-[13px] font-semibold transition-colors active:bg-white/14"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-3 text-[13px] font-semibold transition-colors active:bg-white/14"
           >
+            {flag && (
+              <span aria-hidden="true" className="text-base leading-none">
+                {flag}
+              </span>
+            )}
             {currency}
             <ChevronDown aria-hidden="true" className="size-[13px]" />
           </button>
