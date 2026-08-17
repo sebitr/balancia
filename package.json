@@ -2,7 +2,15 @@
   "name": "balancia",
   "version": "0.1.0",
   "private": true,
-  "description": "Privacy-focused, self-hosted shared expense tracking. Shared expenses. Fairly balanced.",
+  "description": "Open-source, privacy-first shared expense tracker and self-hosted Splitwise alternative.",
+  "homepage": "https://balancia.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebitr/balancia.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sebitr/balancia/issues"
+  },
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "tsx scripts/copy-pdf-assets.ts && next dev",

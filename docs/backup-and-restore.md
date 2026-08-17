@@ -110,7 +110,7 @@ docker compose start app worker
 
 ```bash
 # 1. Get the code and pick the version the backup came from.
-git clone https://github.com/your-org/balancia.git && cd balancia
+git clone https://github.com/sebitr/balancia.git && cd balancia
 git checkout v1.2.3
 
 # 2. Restore secrets and configuration FIRST — the database container
@@ -214,7 +214,7 @@ throwaway stack and check it:
 
 ```bash
 mkdir /tmp/balancia-drill && cd /tmp/balancia-drill
-git clone https://github.com/your-org/balancia.git .
+git clone https://github.com/sebitr/balancia.git .
 # follow the restore steps above, but with a distinct project name:
 docker compose -p balancia-drill up -d --build
 curl -fsS http://localhost:3001/api/health/ready

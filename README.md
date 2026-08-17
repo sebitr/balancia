@@ -1,162 +1,112 @@
-# Balancia
+<p align="center">
+  <img src="./public/icons/icon-192.png" alt="Balancia logo" width="96" height="96">
+</p>
 
-**Shared expenses. Fairly balanced.**
+<h1 align="center">Balancia</h1>
 
-Balancia is a privacy-focused, self-hosted alternative to Splitwise. It tracks
-what a group spends, works out who owes whom, and runs entirely on a server you
-control — no third party in the middle of your money, and no analytics.
+<p align="center">
+  <strong>Shared expenses, fairly balanced — on a server you control.</strong>
+</p>
 
-Telemetry is off. An administrator can opt in to sending one anonymous report a
-week — the version, which features are switched on, and how much happened in
-ranges rather than counts — and can see the exact payload before deciding.
-Amounts, names, group names, receipts, identifiers, IP addresses and this
-instance's address are never part of it, and there is no installation
-identifier. See [docs/telemetry.md](docs/telemetry.md).
+<p align="center">
+  A free, privacy-first expense splitter for trips, households, couples,
+  families, clubs and teams. Use the hosted app or self-host it with Docker.
+</p>
 
-```bash
-./scripts/bootstrap.sh && docker compose up -d --build
-```
+<p align="center">
+  <a href="https://balancia.app"><strong>Try Balancia</strong></a>
+  ·
+  <a href="#quick-start">Self-host</a>
+  ·
+  <a href="./docs/compare-splitwise.md">Compare with Splitwise</a>
+  ·
+  <a href="./docs/faq.md">FAQ</a>
+  ·
+  <a href="./docs/README.md">Docs</a>
+</p>
 
-That is the whole installation. The first command generates this instance's own
-secrets into a `.env` and asks which optional features you want — receipt
-scanning, exchange-rate suggestions, push, email — writing the answers, and
-downloading anything they need, before the second command brings up PostgreSQL
-18, applies migrations, and starts the web app and a background worker. Every
-question has a default, and with no terminal to ask on it asks nothing.
+<p align="center">
+  <a href="https://github.com/sebitr/balancia/actions/workflows/ci.yml"><img src="https://github.com/sebitr/balancia/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/sebitr/balancia" alt="AGPL-3.0-or-later licence"></a>
+  <a href="https://github.com/sebitr/balancia/pulls"><img src="https://img.shields.io/badge/contributions-welcome-5b255f" alt="Contributions welcome"></a>
+</p>
 
----
+<p align="center">
+  <img src="./docs/assets/balancia-mobile-overview.jpg" alt="Balancia mobile group overview showing exactly who owes whom and the payment needed to settle up" width="390">
+</p>
 
-## What it does
+Balancia is an open-source, self-hosted alternative to Splitwise. Add what each
+person paid, choose how to divide it, and Balancia calculates who owes whom.
+Every feature is available without a paid tier, guests can participate without
+creating an account, and a self-hosted instance keeps its database and receipts
+on infrastructure you control.
 
-- **Splits that always add up.** Equal, exact amount, percentage or
-  share-based. Money is stored as integer minor units and allocated with a
-  largest-remainder algorithm, so parts sum to the total exactly — every time,
-  in every currency.
-- **Several payers per expense.** When two people cover one bill, record it
-  once; balances follow who actually paid what.
-- **Multi-currency, two ways.** Keep each currency balanced separately, or
-  convert everything into one base currency at a rate frozen when you record
-  it. Historical expenses are never silently recalculated. Daily rates can be
-  filled in for you from the European Central Bank's published figures — off by
-  default, because a self-hosted instance should decide for itself whether to
-  talk to anyone.
-- **Passkeys and passwords.** Sign in with a passkey (WebAuthn) or an email and
-  password. Both are implemented in this repository — no third-party auth
-  service is involved. Sign in with Apple can be switched on as a third option;
-  it is off by default, because it is the only one that talks to somebody
-  else's server and it needs an Apple Developer account to set up.
-- **Guest participation without an account.** Invite someone through a
-  revocable link. They can view the group, add and edit expenses, settle up and
-  upload receipts — but never manage people, links or the group itself.
-- **Receipts kept private.** Images and PDFs live in your own storage behind
-  authorization checks. There is no publicly served uploads directory.
-- **Recurring expenses.** Rent, subscriptions, the shared internet bill —
-  generated on schedule in the group's own timezone, idempotently.
-- **Splitwise import.** Upload a CSV export or JSON backup, preview exactly what
-  will happen, map the people, then import. Re-importing the same file never
-  duplicates anything.
-- **Categories that fill themselves in.** A card descriptor like `MIGROS 1234`
-  is groceries, `SNCF CONNECT` is transport, `LOYER AOÛT` is housing — in
-  English and French, from rules that run on your own instance with no AI
-  service anywhere. When it is not sure it says so and offers a shortlist, and
-  it remembers what you pick.
-- **Export, in three formats.** Any group downloads as JSON (the complete
-  record, amounts exactly as stored), CSV, or an Excel workbook. Leaving is as
-  easy as arriving.
-- **Installable PWA.** Works as an app on a phone, with an honest offline
-  screen. It does not pretend to accept expenses while offline.
+## Why people choose Balancia
 
-## Screens
+| Fair by design                                                                       | Your data stays yours                                                             | Easy for the whole group                                                       |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Equal, exact, percentage and share-based splits always add up to the original total. | Self-host with Docker Compose. No third-party service is required at runtime.     | Invite guests with a revocable link. They can participate without registering. |
+| Record several payers on one bill and settle each currency precisely.                | Receipts stay behind authorization; exports are available as JSON, CSV and Excel. | Import an existing Splitwise CSV export or JSON backup with a preview first.   |
 
-The group overview answers, at a glance: total spending, who owes, who should
-receive, which currencies are involved, recent activity, and a one-tap way to
-add an expense. On a phone that is a bottom navigation bar; on a laptop it is
-the same layout, wider.
+### A good fit for
 
----
+- Friends sharing travel costs in one or several currencies
+- Flatmates splitting rent, utilities and groceries
+- Couples using an uneven split such as 60/40
+- Families, clubs, teams and bands with recurring costs or shared income
+- People who want a transparent, inspectable and self-hosted expense tracker
 
-## Why AGPL-3.0-or-later
+### Know before you choose it
 
-Balancia is licensed under the **GNU Affero General Public License, version 3 or
-later**. See [LICENSE](LICENSE).
+- Balancia is young software maintained by a small open-source project.
+- It is an installable web app (PWA), not an App Store or Play Store download.
+- It shows a clear offline screen but does not accept financial entries offline.
+- Self-hosters are responsible for HTTPS, updates, monitoring and backups.
 
-The AGPL is the GPL plus one extra obligation, and that obligation is the whole
-point for software like this:
+See the [full project status](./docs/implementation-status.md) and the
+[Balancia vs Splitwise guide](./docs/compare-splitwise.md) for a candid decision
+guide.
 
-> **If you run a modified version of Balancia as a network service, you must
-> offer the users of that service the complete corresponding source code of your
-> modified version.**
+## Features
 
-Ordinary open-source licences — and even the plain GPL — do not require this.
-Someone could take Balancia, improve it, run it as a hosted service for other
-people, and never share the improvements, because they never _distributed_ the
-software. The AGPL closes that gap.
+- **Splits that always add up.** Divide an expense equally, by exact amounts,
+  by percentage or by weighted shares. Money is stored as integer minor units,
+  so rounding never creates or loses value.
+- **Several payers on one expense.** Record the bill once even when two or more
+  people paid it.
+- **Multi-currency groups.** Balance currencies separately or convert into one
+  base currency using a rate frozen when the expense is recorded.
+- **Suggested settlements.** See the deterministic set of payments that clears
+  what the group owes.
+- **Recurring expenses and income.** Schedule rent, subscriptions, utilities,
+  refunds, returned deposits or shared payouts in the group's timezone.
+- **Guest access without an account.** A revocable invitation lets a guest view
+  the group, add expenses, settle up and upload receipts.
+- **Private receipt storage.** Attach images and PDFs to expenses. Files remain
+  in the instance's local or S3-compatible storage behind authorization checks.
+- **Splitwise migration.** Preview and import a Splitwise CSV export or JSON
+  backup. Re-running the same file does not create duplicates.
+- **Complete exports.** Download a group as JSON, CSV or an Excel workbook.
+- **Passkeys and passwords.** Authentication is implemented in this repository;
+  no third-party identity service is required.
+- **Local categorization and receipt scanning.** Optional models run on the
+  instance. Expense data is not sent to an external AI service.
+- **English and French.** Language, date format, number format and currency
+  preferences are independent.
 
-Concretely:
+## Quick start
 
-| What you do                                             | What you owe                                                                             |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Run Balancia unmodified, for yourself or your household | Nothing. Use it freely.                                                                  |
-| Modify it and run it privately, with no other users     | Nothing. Private changes stay private.                                                   |
-| Modify it and let other people use it over a network    | You must offer those users the source of your modified version, under AGPL-3.0-or-later. |
-| Distribute Balancia, modified or not                    | The usual GPL obligations: source, licence and notices.                                  |
+### Try the hosted app
 
-"Offer the source" means a prominent way for a user of your instance to get it —
-a link in your instance's interface is the usual approach.
+Open **[balancia.app](https://balancia.app)**. The hosted instance is free, asks
+for no payment card and does not reserve features for a paid plan.
 
-The licence protects the people who _use_ your instance, which for expense
-tracking is exactly who needs protecting: they are trusting your server with
-their financial history.
+### Self-host with Docker
 
-### Dependency licence audit
-
-Every production dependency was checked for AGPL compatibility. Reproduce it:
+You need Git and Docker with the Compose plugin:
 
 ```bash
-pnpm licenses list --prod
-```
-
-The result at the time of writing, across ~491 transitive packages:
-
-| Licence                                | Packages | Compatible with AGPL-3.0-or-later                    |
-| -------------------------------------- | -------- | ---------------------------------------------------- |
-| MIT                                    | 414      | Yes — permissive                                     |
-| Apache-2.0                             | 37       | Yes — permissive, explicitly GPLv3-compatible        |
-| ISC                                    | 21       | Yes — permissive                                     |
-| BSD-2/3-Clause                         | 13       | Yes — permissive                                     |
-| BlueOak-1.0.0, 0BSD, MIT-0, Python-2.0 | 5        | Yes — permissive                                     |
-| CC-BY-4.0                              | 1        | Yes — `caniuse-lite`, a build-time data file         |
-| SIL Open Font License                  | 1        | Yes — the Geist font; OFL covers the font files only |
-| **LGPL-3.0-or-later**                  | **1**    | **Yes — see below**                                  |
-
-**The one copyleft dependency, and why it is not a problem.**
-`@img/sharp-libvips-*` is the native libvips binary behind `sharp`, which
-Next.js pulls in as an optional dependency for image optimisation. It is
-LGPL-3.0-or-later.
-
-LGPL-3.0 is explicitly compatible with GPL-3.0, and AGPL-3.0 is compatible with
-GPL-3.0, so combining it with AGPL-3.0-or-later code is permitted. The LGPL's
-distinctive obligation is that recipients must be able to replace the library:
-that is satisfied here, because it ships as a separate, dynamically loaded
-binary in `node_modules` that anyone can swap, and Balancia's own source is
-available regardless.
-
-**No dependency has a paid tier, usage threshold, licence key or commercial
-gate.** Authentication — including password hashing, sessions and the WebAuthn
-state machine — is implemented in this repository rather than delegated to an
-auth vendor. The one exception is the WebAuthn _protocol_ implementation
-(`@simplewebauthn/server`, MIT, no commercial offering), which handles CBOR
-decoding, COSE key parsing and signature verification. Hand-rolling that would
-be a security liability, not an independence win.
-
----
-
-## Getting started
-
-### Run it locally with Docker
-
-```bash
-git clone https://github.com/your-org/balancia.git
+git clone https://github.com/sebitr/balancia.git
 cd balancia
 ./scripts/bootstrap.sh
 docker compose up -d --build
@@ -164,121 +114,71 @@ docker compose up -d --build
 
 Open <http://localhost:3000> and create the first account.
 
-Nothing here ships with a fixed shared secret. `bootstrap.sh` generates the
-database password and instance secret into a `.env`, and never overwrites
-values that are already there — so it is safe to re-run, and safe to chain in
-front of every `up`. **Back that file up:** it is the only copy.
+The bootstrap script generates unique secrets into `.env`, asks which optional
+features to enable, and is safe to run again. Docker Compose starts PostgreSQL,
+applies migrations, and launches the web app and its background worker.
 
-It also asks, once, which optional features to switch on, and writes every
-answer including the no's — so a second run has nothing left to ask. Answering
-yes to receipt scanning or semantic categorization downloads the model files
-they need there and then, using Node if the host has it and a throwaway
-container if it does not. `--defaults` skips the questions entirely.
+For a public domain, upgrades, reverse proxies and production responsibilities,
+read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
+database and receipt storage together; the
+[backup guide](./docs/backup-and-restore.md) provides exact commands.
 
-### Run it on a domain
+## Privacy and trust
 
-Put Balancia behind an HTTPS reverse proxy and set a handful of variables. See
-**[docs/self-hosting.md](docs/self-hosting.md)** for Caddy, Traefik and nginx
-examples.
+Balancia has no advertising and requires no third-party runtime service.
+Telemetry is off by default for self-hosted instances. If an administrator opts
+in, the instance sends one anonymous, inspectable report each week; it never
+contains amounts, names, receipts, group data, identifiers, IP addresses or the
+instance address. Optional network integrations only run when an administrator
+enables them.
 
-The minimum for a domain install:
+Financial correctness is treated as a product requirement:
 
-```bash
-APP_URL=https://balancia.example.com
-```
+- Monetary values use integer minor units, never floating-point numbers.
+- Every allocation must sum exactly to the expense total.
+- Every set of balances must sum to zero or it is refused.
+- Exchange rates are decimal values frozen with the expense.
+- Property-based tests exercise JPY, EUR, KWD and randomized edge cases.
 
-Passkeys require HTTPS (browsers refuse WebAuthn on plain HTTP outside
-localhost), and Balancia refuses to start with an internally inconsistent
-passkey configuration rather than failing later at the prompt.
-
-### Develop on it
-
-See **[docs/development.md](docs/development.md)**. Everything in containers,
-nothing to install but Docker:
-
-```bash
-docker compose -f compose.dev.yaml up --build
-```
-
-Or on the host, which is faster:
-
-```bash
-pnpm install
-cp .env.example .env.local     # set DATABASE_URL and AUTH_SECRET
-pnpm db:migrate
-pnpm db:seed                   # optional sample data
-pnpm dev
-```
-
----
+Read the [security model](./SECURITY.md), [telemetry design](./docs/telemetry.md),
+[financial correctness notes](./docs/financial-correctness.md) and
+[dependency licence policy](./docs/licensing.md).
 
 ## Documentation
 
-| Guide                                                  | What it covers                            |
-| ------------------------------------------------------ | ----------------------------------------- |
-| [Architecture](docs/architecture.md)                   | How the system is put together and why    |
-| [Development](docs/development.md)                     | Local setup, tests, project layout        |
-| [Self-hosting](docs/self-hosting.md)                   | Docker, reverse proxies, upgrades         |
-| [Environment reference](docs/environment.md)           | Every configuration variable              |
-| [Backup and restore](docs/backup-and-restore.md)       | Database, receipts, secrets               |
-| [Data migration](docs/data-migration.md)               | Importing from Splitwise                  |
-| [Categorization](docs/categorization.md)               | How categories are guessed, and extended  |
-| [Receipt scanning](docs/receipt-scanning.md)           | On-device OCR, parsing, splitting by item |
-| [Security](SECURITY.md)                                | Reporting a vulnerability, security model |
-| [Contributing](CONTRIBUTING.md)                        | How to propose a change                   |
-| [Implementation status](docs/implementation-status.md) | What is built, what is not                |
+Start with the **[documentation index](./docs/README.md)**, or go directly to:
 
----
+| I want to…                              | Read                                                                                                                               |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Decide whether Balancia is right for me | [FAQ](./docs/faq.md) · [Balancia vs Splitwise](./docs/compare-splitwise.md)                                                        |
+| Install or operate an instance          | [Self-hosting](./docs/self-hosting.md) · [Environment](./docs/environment.md) · [Backup and restore](./docs/backup-and-restore.md) |
+| Move existing data                      | [Splitwise migration](./docs/data-migration.md)                                                                                    |
+| Understand privacy and correctness      | [Security](./SECURITY.md) · [Telemetry](./docs/telemetry.md) · [Financial correctness](./docs/financial-correctness.md)            |
+| Work on the code                        | [Development](./docs/development.md) · [Architecture](./docs/architecture.md) · [Contributing](./CONTRIBUTING.md)                  |
+| Check what is complete                  | [Implementation status](./docs/implementation-status.md)                                                                           |
 
 ## Technology
 
-Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 ·
-shadcn/ui · PostgreSQL 18 · Drizzle ORM · pg-boss · Serwist · Vitest ·
-fast-check · Playwright.
+Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL 18 · Drizzle
+ORM · pg-boss · Serwist · Vitest · fast-check · Playwright.
 
-No Redis. No microservices. No external services of any kind at runtime.
+No Redis and no microservice fleet: one web app, one worker and PostgreSQL.
 
-## Financial correctness
+## Community and support
 
-Money is the part of this application that must not be approximately right:
-
-- Amounts are **integer minor units** in PostgreSQL `bigint` and TypeScript
-  `bigint`. No floating point touches a monetary value, anywhere.
-- JSON boundaries carry amounts as **strings**, because JSON numbers cannot
-  represent large integers safely.
-- Exchange rates are PostgreSQL `numeric`, multiplied with a decimal library,
-  rounded once, deterministically.
-- Currencies with **0, 2 and 3 decimal places** are all handled correctly.
-- Allocations use a **largest-remainder** algorithm with stable ordering, so the
-  parts always sum to the total and the same inputs always produce the same
-  split. Any one-minor-unit rounding difference is shown in the interface, not
-  hidden.
-- The balance engine guarantees that **all balances sum to zero**, and refuses
-  to display a figure if that invariant is ever violated.
-
-These properties are covered by property-based tests (fast-check) that hammer
-them with randomised inputs, not just examples.
-
----
-
-## Contributing
-
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
-Please read [SECURITY.md](SECURITY.md) before reporting anything
-security-related; do not open a public issue for a vulnerability.
+- Have a question? Start a [GitHub Discussion](https://github.com/sebitr/balancia/discussions).
+- Found a bug? [Open a bug report](https://github.com/sebitr/balancia/issues/new?template=bug_report.yml).
+- Have an idea? [Open a feature request](https://github.com/sebitr/balancia/issues/new?template=feature_request.yml).
+- Want to contribute? Read [CONTRIBUTING.md](./CONTRIBUTING.md).
+- Found a vulnerability? Follow [SECURITY.md](./SECURITY.md); do not open a
+  public issue.
 
 ## Licence
 
-Copyright (C) 2026 Balancia contributors.
+Balancia is licensed under
+[AGPL-3.0-or-later](./LICENSE). You may use, inspect, modify and redistribute it.
+If you run a modified version as a network service, you must offer its users the
+corresponding source code. See [the plain-language licence guide](./docs/licensing.md)
+for common scenarios.
 
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU Affero General Public License as published by the Free
-Software Foundation, either version 3 of the License, or (at your option) any
-later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>.
+Copyright © 2026 Balancia contributors.

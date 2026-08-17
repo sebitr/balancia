@@ -7,7 +7,7 @@ container, and PostgreSQL. No Redis, no message broker, no external services.
 ## Quick start
 
 ```bash
-git clone https://github.com/your-org/balancia.git
+git clone https://github.com/sebitr/balancia.git
 cd balancia
 ./scripts/bootstrap.sh
 docker compose up -d --build
