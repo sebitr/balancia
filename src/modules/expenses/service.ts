@@ -69,11 +69,13 @@ export interface ExpenseSummary {
     participantId: string;
     displayName: string;
     amount: bigint;
+    convertedAmount: bigint | null;
   }[];
   readonly shares: readonly {
     participantId: string;
     displayName: string;
     amount: bigint;
+    convertedAmount: bigint | null;
   }[];
   readonly attachmentCount: number;
   readonly recurringExpenseId: string | null;
@@ -629,6 +631,7 @@ export async function listExpenses(
         expenseId: expensePayers.expenseId,
         participantId: expensePayers.participantId,
         amount: expensePayers.amount,
+        convertedAmount: expensePayers.convertedAmount,
         displayName: participants.displayName,
       })
       .from(expensePayers)
@@ -639,6 +642,7 @@ export async function listExpenses(
         expenseId: expenseShares.expenseId,
         participantId: expenseShares.participantId,
         amount: expenseShares.amount,
+        convertedAmount: expenseShares.convertedAmount,
         displayName: participants.displayName,
       })
       .from(expenseShares)
@@ -698,6 +702,7 @@ export async function getExpense(
       .select({
         participantId: expensePayers.participantId,
         amount: expensePayers.amount,
+        convertedAmount: expensePayers.convertedAmount,
         displayName: participants.displayName,
       })
       .from(expensePayers)
@@ -707,6 +712,7 @@ export async function getExpense(
       .select({
         participantId: expenseShares.participantId,
         amount: expenseShares.amount,
+        convertedAmount: expenseShares.convertedAmount,
         displayName: participants.displayName,
       })
       .from(expenseShares)

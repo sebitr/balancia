@@ -68,7 +68,7 @@ export interface RowView {
   readonly currency: string;
   /** The band key this row filters under; null for a settlement. */
   readonly category: string | null;
-  /** Signed minor units, in the row's own currency; null when it is not ours. */
+  /** Signed minor units, in the row's display currency; null when it is not ours. */
   readonly position: string | null;
   readonly revenue: boolean;
   readonly recurring: boolean;
