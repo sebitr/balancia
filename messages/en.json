@@ -982,7 +982,7 @@
   "exchangeRate": {
     "label": "Exchange rate — 1 {from} in {to}",
     "looking": "Looking up the rate for {date}…",
-    "suggested": "Suggested by {provider}, priced {date}. Edit it if you have a better rate, such as the one your bank charged.",
+    "suggested": "Rate on {date}.",
     "quotes": "{provider} quotes {rate} for {date}.",
     "useThat": "Use that instead"
   },
@@ -1672,7 +1672,7 @@
     },
     "amount": {
       "zero": "0.00",
-      "rateFrozen": "This rate is frozen with the entry. Changing rates later never rewrites what is already recorded.",
+      "rateFrozen": "Frozen for this transaction. It won’t update automatically.",
       "inBaseCurrency": "In the group's base currency"
     },
     "date": {

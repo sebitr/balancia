@@ -982,7 +982,7 @@
   "exchangeRate": {
     "label": "Taux de change — 1 {from} en {to}",
     "looking": "Recherche du taux pour le {date}…",
-    "suggested": "Suggéré par {provider}, coté le {date}. Modifie-le si tu disposes d'un meilleur taux, par exemple celui appliqué par ta banque.",
+    "suggested": "Taux au {date}.",
     "quotes": "{provider} cote {rate} pour le {date}.",
     "useThat": "Utiliser ce taux"
   },
@@ -1672,7 +1672,7 @@
     },
     "amount": {
       "zero": "0.00",
-      "rateFrozen": "Ce taux est figé avec l'écriture. Un changement de taux ne réécrit jamais ce qui est déjà enregistré.",
+      "rateFrozen": "Figé pour cette opération. Il ne sera pas mis à jour automatiquement.",
       "inBaseCurrency": "Dans la devise de base du groupe"
     },
     "date": {
