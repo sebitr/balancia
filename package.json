@@ -2,7 +2,7 @@
   "name": "balancia",
   "version": "0.1.0",
   "private": true,
-  "description": "Open-source, privacy-first shared expense tracker and self-hosted Splitwise alternative.",
+  "description": "Open-source, privacy-first shared expense tracker and self-hosted Splitwise or tricount alternative.",
   "homepage": "https://balancia.app",
   "repository": {
     "type": "git",

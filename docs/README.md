@@ -11,6 +11,7 @@ useful guide.
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | [Frequently asked questions](faq.md)              | Short, direct answers about cost, privacy, accounts, currencies, migration and limitations |
 | [Balancia vs Splitwise](compare-splitwise.md)     | Deciding between a self-hosted open-source tool and a managed service                      |
+| [Balancia vs tricount](compare-tricount.md)       | Comparing data control and complete exports with native apps and offline entry             |
 | [Implementation status](implementation-status.md) | What is complete, what is limited and what comes next                                      |
 
 ## Running Balancia

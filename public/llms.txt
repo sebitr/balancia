@@ -28,6 +28,8 @@ Licence: AGPL-3.0-or-later
 - Imports an existing Splitwise CSV export or JSON backup, with a preview before
   anything is written and no duplicates on re-runs.
 - Exports any group as JSON, CSV or an Excel workbook.
+- Data portability is a product promise: a group can leave at any time with its
+  records in reusable formats. Receipts can be downloaded separately.
 
 ## Common use cases
 
@@ -79,6 +81,7 @@ Store application. It does not accept expense entries while offline.
 - Documentation index: https://github.com/sebitr/balancia/blob/main/docs/README.md
 - Frequently asked questions: https://github.com/sebitr/balancia/blob/main/docs/faq.md
 - Balancia vs Splitwise: https://github.com/sebitr/balancia/blob/main/docs/compare-splitwise.md
+- Balancia vs tricount: https://github.com/sebitr/balancia/blob/main/docs/compare-tricount.md
 - Self-hosting: https://github.com/sebitr/balancia/blob/main/docs/self-hosting.md
 - Environment reference: https://github.com/sebitr/balancia/blob/main/docs/environment.md
 - Backup and restore: https://github.com/sebitr/balancia/blob/main/docs/backup-and-restore.md

@@ -22,6 +22,18 @@ the database and receipts on infrastructure you choose.
 Read [Balancia vs Splitwise](compare-splitwise.md) for a fair comparison,
 including the responsibilities that come with self-hosting.
 
+## Is Balancia a tricount alternative?
+
+Yes. Both products record group expenses, divide costs and calculate how to
+settle up. Balancia is designed for people who want open-source software,
+self-hosting, complete JSON/CSV/Excel exports or control over how currencies
+are balanced. tricount is a managed mobile service with native apps and offline
+expense entry.
+
+Balancia does not currently import tricount data directly. Read
+[Balancia vs tricount](compare-tricount.md) for the feature, privacy and
+migration differences.
+
 ## Is Balancia free?
 
 Yes. [balancia.app](https://balancia.app) offers free accounts without asking
@@ -95,6 +107,9 @@ Yes. Any group can be downloaded as:
 Self-hosters also control the PostgreSQL database and receipt storage directly.
 Receipts are not yet bundled into the group export and must be downloaded
 separately.
+
+This portability is intentional: you should be able to leave Balancia without
+losing access to the records you created or needing a paid export feature.
 
 ## Does Balancia send expense data to an AI service?
 

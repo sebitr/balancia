@@ -83,3 +83,5 @@ Splitwise is a trademark of Splitwise, Inc. Balancia is not affiliated with,
 endorsed by or sponsored by Splitwise, Inc. The comparison is provided to help
 people choose a deployment and data-ownership model, not to imply equivalence
 between every feature of the two products.
+
+Also see [Balancia vs tricount](compare-tricount.md).

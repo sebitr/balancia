@@ -18,7 +18,9 @@
   ·
   <a href="#quick-start">Self-host</a>
   ·
-  <a href="./docs/compare-splitwise.md">Compare with Splitwise</a>
+  <a href="./docs/compare-splitwise.md">vs Splitwise</a>
+  ·
+  <a href="./docs/compare-tricount.md">vs tricount</a>
   ·
   <a href="./docs/faq.md">FAQ</a>
   ·
@@ -35,18 +37,18 @@
   <img src="./docs/assets/balancia-mobile-overview.jpg" alt="Balancia mobile group overview showing exactly who owes whom and the payment needed to settle up" width="390">
 </p>
 
-Balancia is an open-source, self-hosted alternative to Splitwise. Add what each
-person paid, choose how to divide it, and Balancia calculates who owes whom.
-Every feature is available without a paid tier, guests can participate without
-creating an account, and a self-hosted instance keeps its database and receipts
-on infrastructure you control.
+Balancia is an open-source, self-hosted alternative to Splitwise and tricount.
+Add what each person paid, choose how to divide it, and Balancia calculates who
+owes whom. Every feature is available without a paid tier, guests can
+participate without creating an account, and a self-hosted instance keeps its
+database and receipts on infrastructure you control.
 
 ## Why people choose Balancia
 
-| Fair by design                                                                       | Your data stays yours                                                             | Easy for the whole group                                                       |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Equal, exact, percentage and share-based splits always add up to the original total. | Self-host with Docker Compose. No third-party service is required at runtime.     | Invite guests with a revocable link. They can participate without registering. |
-| Record several payers on one bill and settle each currency precisely.                | Receipts stay behind authorization; exports are available as JSON, CSV and Excel. | Import an existing Splitwise CSV export or JSON backup with a preview first.   |
+| Fair by design                                                                       | Your data stays yours                                                                  | Easy for the whole group                                                       |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Equal, exact, percentage and share-based splits always add up to the original total. | Self-host with Docker Compose. No third-party service is required at runtime.          | Invite guests with a revocable link. They can participate without registering. |
+| Record several payers on one bill and settle each currency precisely.                | Leave anytime: export every group as JSON, CSV or Excel. Download receipts separately. | Import an existing Splitwise CSV export or JSON backup with a preview first.   |
 
 ### A good fit for
 
@@ -63,9 +65,9 @@ on infrastructure you control.
 - It shows a clear offline screen but does not accept financial entries offline.
 - Self-hosters are responsible for HTTPS, updates, monitoring and backups.
 
-See the [full project status](./docs/implementation-status.md) and the
-[Balancia vs Splitwise guide](./docs/compare-splitwise.md) for a candid decision
-guide.
+See the [full project status](./docs/implementation-status.md),
+[Balancia vs Splitwise](./docs/compare-splitwise.md) and
+[Balancia vs tricount](./docs/compare-tricount.md) for candid decision guides.
 
 ## Features
 
@@ -86,7 +88,9 @@ guide.
   in the instance's local or S3-compatible storage behind authorization checks.
 - **Splitwise migration.** Preview and import a Splitwise CSV export or JSON
   backup. Re-running the same file does not create duplicates.
-- **Complete exports.** Download a group as JSON, CSV or an Excel workbook.
+- **Leave with your data anytime.** Download every group as complete JSON, broad
+  compatibility CSV or an Excel workbook. Balancia does not depend on lock-in
+  to keep people using it; receipts can be downloaded separately.
 - **Passkeys and passwords.** Authentication is implemented in this repository;
   no third-party identity service is required.
 - **Local categorization and receipt scanning.** Optional models run on the
@@ -150,7 +154,7 @@ Start with the **[documentation index](./docs/README.md)**, or go directly to:
 
 | I want to…                              | Read                                                                                                                               |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Decide whether Balancia is right for me | [FAQ](./docs/faq.md) · [Balancia vs Splitwise](./docs/compare-splitwise.md)                                                        |
+| Decide whether Balancia is right for me | [FAQ](./docs/faq.md) · [vs Splitwise](./docs/compare-splitwise.md) · [vs tricount](./docs/compare-tricount.md)                     |
 | Install or operate an instance          | [Self-hosting](./docs/self-hosting.md) · [Environment](./docs/environment.md) · [Backup and restore](./docs/backup-and-restore.md) |
 | Move existing data                      | [Splitwise migration](./docs/data-migration.md)                                                                                    |
 | Understand privacy and correctness      | [Security](./SECURITY.md) · [Telemetry](./docs/telemetry.md) · [Financial correctness](./docs/financial-correctness.md)            |
