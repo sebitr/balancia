@@ -926,14 +926,49 @@
     "edit": "Modifier"
   },
   "emails": {
-    "verifySubject": "Confirme ton adresse e-mail Balancia",
-    "verifyBody": "Bienvenue sur Balancia.\n\nConfirme cette adresse pour finaliser la création de ton compte :\n{url}\n\nLe lien est valable 24 heures.",
-    "resetSubject": "Réinitialise ton mot de passe Balancia",
-    "resetBody": "Quelqu'un a demandé la réinitialisation du mot de passe de ton compte Balancia.\n\nUtilise ce lien dans l'heure qui vient :\n{url}\n\nSi ce n'était pas toi, tu peux ignorer ce message — rien n'a été modifié.",
-    "emailChangeSubject": "Confirme ta nouvelle adresse e-mail Balancia",
-    "emailChangeBody": "Quelqu'un a demandé à déplacer un compte Balancia vers cette adresse.\n\nConfirme-la avec ce lien dans les 2 heures qui viennent :\n{url}\n\nD'ici là, le compte garde son ancienne adresse. Si ce n'était pas toi, tu peux ignorer ce message.",
-    "emailChangeNoticeSubject": "L'adresse e-mail de ton compte Balancia va changer",
-    "emailChangeNoticeBody": "Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par {email}.\n\nRien n'a encore changé : le changement ne prendra effet qu'une fois cette adresse confirmée, et celle-ci cessera alors de fonctionner.\n\nSi ce n'était pas toi, connecte-toi et change ton mot de passe tout de suite — la personne qui a fait la demande est dans ton compte."
+    "fallbackLabel": "Ou colle ce lien dans ton navigateur",
+    "verify": {
+      "subject": "Confirme ton adresse e-mail Balancia",
+      "title": "Confirme ton adresse e-mail",
+      "preheader": "Confirme ton adresse e-mail pour finaliser ton compte Balancia.",
+      "display": "Bienvenue sur Balancia.",
+      "body": "Confirme cette adresse pour finaliser la création de ton compte.",
+      "button": "Confirmer cette adresse",
+      "closing": "Ce lien est valable 24 heures.",
+      "text": "Bienvenue sur Balancia.\n\nConfirme cette adresse pour finaliser la création de ton compte :\n{url}\n\nCe lien est valable 24 heures."
+    },
+    "reset": {
+      "subject": "Réinitialise ton mot de passe Balancia",
+      "title": "Réinitialise ton mot de passe Balancia",
+      "preheader": "Choisis un nouveau mot de passe — le lien est valable une heure.",
+      "lead": "Quelqu'un a demandé la réinitialisation du mot de passe de ton compte Balancia.",
+      "sub": "Le lien ci-dessous est valable pendant une heure.",
+      "button": "Choisir un nouveau mot de passe",
+      "closing": "Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet e-mail. Ton mot de passe n'a pas changé.",
+      "text": "Quelqu'un a demandé la réinitialisation du mot de passe de ton compte Balancia.\n\nChoisis un nouveau mot de passe :\n{url}\n\nLe lien est valable une heure. Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet e-mail. Ton mot de passe n'a pas changé."
+    },
+    "emailChange": {
+      "subject": "Confirme ta nouvelle adresse e-mail Balancia",
+      "title": "Confirme cette adresse pour ton compte Balancia",
+      "preheader": "Confirme cette adresse pour y déplacer un compte Balancia. Le lien est valable 2 heures.",
+      "lead": "Quelqu'un a demandé à déplacer un compte Balancia vers cette adresse.",
+      "sub": "Confirme-la pour finaliser le changement.",
+      "button": "Confirmer cette adresse",
+      "closing": "Ce lien est valable 2 heures. D'ici là, le compte garde son ancienne adresse. Si ce n'était pas toi, tu peux ignorer cet e-mail.",
+      "text": "Quelqu'un a demandé à déplacer un compte Balancia vers cette adresse.\n\nConfirme-la pour finaliser le changement :\n{url}\n\nCe lien est valable 2 heures. D'ici là, le compte garde son ancienne adresse. Si ce n'était pas toi, tu peux ignorer cet e-mail."
+    },
+    "emailChangeNotice": {
+      "subject": "L'adresse e-mail de ton compte Balancia va changer",
+      "title": "Quelqu'un a demandé à changer ton adresse e-mail Balancia",
+      "preheader": "Quelqu'un a demandé à changer l'adresse e-mail de ton compte Balancia. Rien n'a encore changé.",
+      "lead": "Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par <strong>{email}</strong>.",
+      "sub": "Rien n'a encore changé. La nouvelle adresse doit d'abord être confirmée, et celle-ci cessera de fonctionner dès que ce sera fait.",
+      "warningTitle": "Si ce n'était pas toi",
+      "warningBody": "Réinitialise ton mot de passe tout de suite. La personne à l'origine de cette demande a accès à ton compte.",
+      "warningLink": "Réinitialiser ton mot de passe",
+      "closing": "Aucune action n'est nécessaire si tu es à l'origine de ce changement.",
+      "text": "Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par {email}.\n\nRien n'a encore changé. La nouvelle adresse doit d'abord être confirmée, et celle-ci cessera de fonctionner dès que ce sera fait.\n\nSi ce n'était pas toi, réinitialise ton mot de passe tout de suite — la personne à l'origine de cette demande a accès à ton compte :\n{url}\n\nAucune action n'est nécessaire si tu es à l'origine de ce changement."
+    }
   },
   "serverErrors": {
     "generic": "Une erreur est survenue sur le serveur. Rien n'a été modifié.",

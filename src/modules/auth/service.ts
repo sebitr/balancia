@@ -26,7 +26,12 @@ import {
   type CreatedSession,
 } from "./sessions";
 import { sendMail } from "./mailer";
-import { emailTranslator } from "@/i18n/emails";
+import {
+  renderEmailChangeEmail,
+  renderEmailChangeNoticeEmail,
+  renderPasswordResetEmail,
+  renderVerifyEmail,
+} from "./emails/templates";
 
 /**
  * Authentication service.
@@ -837,11 +842,10 @@ export async function sendVerificationEmail(
     options,
   );
 
-  const t = emailTranslator(options.locale);
   await sendMail({
     to: email,
-    subject: t("verifySubject"),
-    text: t("verifyBody", {
+    ...renderVerifyEmail({
+      locale: options.locale,
       url: `${env.appOrigin}/verify-email?token=${token}`,
     }),
   });
@@ -912,14 +916,13 @@ export async function requestPasswordReset(
     { db },
   );
 
-  // The account's own language, so a reset mail reads the same as the app —
-  // falling back to the language the request was made in, which for an account
-  // that has never touched the switcher is the only signal there is.
-  const t = emailTranslator(row.locale ?? options.locale);
   await sendMail({
     to: row.email,
-    subject: t("resetSubject"),
-    text: t("resetBody", {
+    ...renderPasswordResetEmail({
+      // The account's own language, so a reset mail reads the same as the app —
+      // falling back to the language the request was made in, which for an
+      // account that has never touched the switcher is the only signal there is.
+      locale: row.locale ?? options.locale,
       url: `${env.appOrigin}/reset-password?token=${token}`,
     }),
   });
@@ -1071,16 +1074,27 @@ export async function requestEmailChange(
 
   // Both messages are for the same person, so both are written in the account's
   // language — or, failing a stored one, in the language they are reading now.
-  const t = emailTranslator(current.locale ?? options.locale);
+  const locale = current.locale ?? options.locale;
   await sendMail({
     to: current.email,
-    subject: t("emailChangeNoticeSubject"),
-    text: t("emailChangeNoticeBody", { email }),
+    ...renderEmailChangeNoticeEmail({
+      locale,
+      newEmail: email,
+      /*
+       * Recovery, not a change-password screen: there is no such screen, and
+       * this is the better answer anyway. The link mails *this* address — the
+       * one the account still has, and the one whoever asked for the change
+       * cannot read — and completing the reset ends every session, which puts
+       * them out. A password form behind a session they may already hold would
+       * not.
+       */
+      recoverUrl: `${env.appOrigin}/forgot-password`,
+    }),
   });
   await sendMail({
     to: email,
-    subject: t("emailChangeSubject"),
-    text: t("emailChangeBody", {
+    ...renderEmailChangeEmail({
+      locale,
       url: `${env.appOrigin}/confirm-email?token=${token}`,
     }),
   });

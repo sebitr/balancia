@@ -1,0 +1,8 @@
+Subject: Confirm your Balancia email address
+
+Welcome to Balancia.
+
+Confirm this address to finish setting up your account:
+https://balancia.app/verify-email?token=OQAWX41O13F2eGwQR9_FP6KpFdng9IvEYhXTsAOIoIE
+
+This link works for 24 hours.

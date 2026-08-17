@@ -1,0 +1,8 @@
+Subject: Confirme ta nouvelle adresse e-mail Balancia
+
+Quelqu'un a demandé à déplacer un compte Balancia vers cette adresse.
+
+Confirme-la pour finaliser le changement :
+https://balancia.app/confirm-email?token=rXk7XUERrBUbxb0TFTynNgtu1BPnlHfpVJhOHwCfYIc
+
+Ce lien est valable 2 heures. D'ici là, le compte garde son ancienne adresse. Si ce n'était pas toi, tu peux ignorer cet e-mail.
