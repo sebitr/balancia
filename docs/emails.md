@@ -23,10 +23,12 @@ the flows behind them is offered there.
 
 ```
 src/modules/auth/emails/
-  tokens.ts      the palette and the font stacks
+  tokens.ts      the palette and the font stacks, derived from the theme
   layout.ts      the shared skeleton: card, header bar, button, panels
   templates.ts   the four emails, as arrangements of that skeleton
+src/lib/color/oklch.ts  OKLCH → sRGB, and the contrast maths
 messages/{en,fr}.json   every word, under `emails.*`
+public/email/mark.png   the header mark, written by `pnpm icons`
 tests/fixtures/emails/  the rendered output, checked in
 ```
 
@@ -64,14 +66,18 @@ in the clients most likely to be reading it.
 
 The specifics:
 
-- **No images.** The wordmark is live text and the brand dot is a `<div>`, so
-  image blocking cannot erase the header. In Outlook the dot renders square;
-  that is accepted.
+- **One image, and the header survives without it.** The Balancia mark is a
+  PNG served from the instance's own origin, because Gmail and Outlook drop
+  inline SVG and strip `data:` URIs. The wordmark beside it stays live text, so
+  a client with images off — which is most of them, on first open — still shows
+  a branded bar. The mark is therefore decorative and carries an empty `alt`;
+  giving it `alt="Balancia"` would make a screen reader say the name twice.
 - **No web fonts.** Arial stands in for Instrument Sans, Georgia for Instrument
   Serif. The tight letter-spacing on large text is what carries the typography
   across the substitution.
-- **No JavaScript, no external stylesheets.** Both are stripped, and their
-  presence counts against deliverability.
+- **No JavaScript, no external stylesheets, and nothing fetched from a third
+  party.** The only request an email makes is for the mark, from the same
+  origin its links point at.
 - **The `<head>` block carries only media queries and the link colour.** Several
   clients drop it outright, so nothing that positions or colours an element may
   live there. Everything else is inlined on the element it styles.
@@ -86,15 +92,28 @@ per language, so a well-meaning modernisation fails in CI.
 ## Colours
 
 Email clients support neither `oklch()` nor CSS custom properties, so
-`tokens.ts` is the one place in the codebase where a colour is written a second
-time. If a token in `src/app/globals.css` moves, move the matching value there
-by hand.
+`tokens.ts` holds literal hex. Every value is nonetheless derived from
+`src/app/globals.css` rather than chosen, and `tokens.test.ts` re-derives all
+of them on every run — move a token and the test names the constant that no
+longer follows from it.
 
-Three of the values are not a straight conversion of their token, and the
-difference is deliberate — a near-grey secondary and a lighter destructive both
-read badly through a mail client's own contrast handling, and the link colour is
-`--primary` darkened until body text on the light fills meets WCAG AA. Raw coral
-does not, so it is never used for text. The reasoning is in `tokens.ts`.
+Most are a straight conversion of the light theme's token. Three are computed,
+because the role has no token of its own:
+
+| Value             | Rule                                                                |
+| ----------------- | ------------------------------------------------------------------- |
+| `link`            | `--primary`, darkened until 14px text on the cream panel reaches AA |
+| `destructiveTint` | `--destructive` at 8% over `--card`                                 |
+| `destructiveInk`  | `--destructive`, darkened to AAA on that tint                       |
+
+Only lightness moves; hue and chroma are left alone, so what comes out is
+recognisably the token rather than a second colour that happens to pass. Coral
+at `--primary` is a fill — as body copy on white it is 2.8:1 — which is why
+`link` exists and why raw coral never carries text.
+
+The same file also asserts WCAG AA for every text-on-background pairing the
+emails actually use, so "darkened until it passes" stays true rather than
+becoming a comment about something that used to be the case.
 
 ## Testing before a release
 
@@ -107,6 +126,9 @@ inversion, and that is the assumption most worth re-checking.
 
 Each file is around 6KB. Gmail clips a message at roughly 100KB, which would cut
 the button off the bottom; the tests fail well before that.
+
+Check the header with images blocked, too. It should read as a plum bar with
+"Balancia" in it, missing only the mark.
 
 ## Local delivery
 

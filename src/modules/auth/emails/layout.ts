@@ -1,4 +1,4 @@
-import { fonts, palette } from "./tokens";
+import { fonts, MARK, palette } from "./tokens";
 
 /**
  * The shared skeleton every transactional email is assembled from.
@@ -15,11 +15,13 @@ import { fonts, palette } from "./tokens";
  *  - Buttons are a padded `<td bgcolor>` with an `<a display:block>` filling
  *    it. Never an `<img>`, which image blocking would erase, and never a
  *    `<button>`, which does nothing in a mail client.
- *  - No JavaScript, no external stylesheets, no web fonts, no images.
+ *  - No JavaScript, no external stylesheets, no web fonts. The single image is
+ *    the header mark, which is decorative and beside live text, so a client
+ *    with images off loses a glyph rather than the sender's name.
  *
  * Rewriting any of that into something modern breaks the email in the clients
- * most likely to be reading it. The rendered output is diffed against the
- * design references in `tests/fixtures/emails`, which is what stops it drifting.
+ * most likely to be reading it. The rendered output is checked against the
+ * fixtures in `tests/fixtures/emails`, which is what stops it drifting.
  */
 
 /**
@@ -124,7 +126,7 @@ export function button(href: string, label: string): string {
   const linkStyle =
     `display:block;padding:14px 28px;font-family:${fonts.sans};font-size:16px;` +
     `font-weight:bold;line-height:20px;mso-line-height-rule:exactly;` +
-    `color:${palette.ink};text-decoration:none;border-radius:12px`;
+    `color:${palette.primaryInk};text-decoration:none;border-radius:12px`;
   return [
     `            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>`,
     `              <td bgcolor="${palette.primary}" align="center" style="background:${palette.primary};border-radius:12px">`,
@@ -189,19 +191,30 @@ export function divider(): string {
   return `            <div style="height:1px;background:${palette.ground};font-size:0;line-height:0">&nbsp;</div>`;
 }
 
-/** The plum bar. Live text, not an image, so image blocking cannot erase it. */
-function headerBar(): string {
+/**
+ * The plum bar: the mark, then the wordmark.
+ *
+ * The wordmark stays live text rather than joining the image. It is the half
+ * that carries the name, so a client with images off — which is most of them,
+ * on first open — still shows a branded header rather than an empty bar, and
+ * the text scales with the reader's own settings. The mark is therefore purely
+ * decorative and takes an empty `alt`; giving it `alt="Balancia"` would make a
+ * screen reader say the name twice.
+ *
+ * `display:block` on the image is what stops clients that treat it as inline
+ * text adding a descender's worth of space under it.
+ */
+function headerBar(origin: string): string {
   const wordmarkStyle =
     `font-family:${fonts.sans};font-size:19px;font-weight:bold;` +
     `letter-spacing:-0.3px;color:${palette.wrapper};` +
     `mso-line-height-rule:exactly;line-height:22px`;
+  const markSrc = escapeHtml(`${origin}${MARK.path}`);
   return [
     `        <tr>`,
     `          <td width="${CARD_WIDTH}" class="pad" style="width:${CARD_WIDTH}px;background:${palette.ink};padding:22px 32px;border-radius:14px 14px 0 0">`,
     `            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>`,
-    // The dot is decorative and carries no meaning, so it stays a div rather
-    // than becoming an image that needs alt text. Outlook renders it square.
-    `              <td width="12" style="width:12px;padding-right:10px" valign="middle"><div style="width:12px;height:12px;background:${palette.primary};border-radius:12px;font-size:0;line-height:0">&nbsp;</div></td>`,
+    `              <td width="${MARK.width}" style="width:${MARK.width}px;padding-right:10px" valign="middle"><img src="${markSrc}" width="${MARK.width}" height="${MARK.height}" alt="" style="display:block;width:${MARK.width}px;height:${MARK.height}px;border:0;outline:none;text-decoration:none"></td>`,
     `              <td valign="middle" style="${wordmarkStyle}">Balancia</td>`,
     `            </tr></table>`,
     `          </td>`,
@@ -211,6 +224,8 @@ function headerBar(): string {
 
 export interface DocumentOptions {
   readonly lang: string;
+  /** The instance's public origin, which the header mark is served from. */
+  readonly origin: string;
   readonly title: string;
   /** The ~85 characters a client shows next to the subject in the list. */
   readonly preheader: string;
@@ -255,7 +270,7 @@ ${mediaRules.join("\n")}
   <tr>
     <td align="center" style="padding:32px 16px">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${CARD_WIDTH}" class="wrap" style="width:${CARD_WIDTH}px;max-width:${CARD_WIDTH}px;background:${palette.wrapper};border-collapse:collapse">
-${headerBar()}
+${headerBar(options.origin)}
 ${options.rows.join("\n")}
       </table>
     </td>

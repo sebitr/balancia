@@ -3,44 +3,48 @@
  *
  * Literal hex, because email clients support neither `oklch()` nor custom
  * properties — so these cannot read `src/app/globals.css` the way the rest of
- * the interface does, and are the one place in the codebase where a colour is
- * written twice. If a token in globals.css moves, the matching value here has
- * to be moved with it by hand.
+ * the interface does. Every value is nonetheless *derived* from it rather than
+ * chosen here, and `tokens.test.ts` re-derives all of them from that file on
+ * every run: move a token and the test names the value that no longer follows.
  *
- * Most of these are the sRGB conversion of their token. Three are not, and the
- * difference is deliberate rather than drift:
+ * Most are a straight conversion of the light theme's token. Three are
+ * computed, because the role has no token of its own and picking a colour by
+ * eye is how a palette stops being the theme's:
  *
- *  - `mutedInk` is far more saturated than `--muted-foreground` converts to
- *    (chroma 0.107 against 0.03). A near-grey reads as washed-out at 12–15px on
- *    a white card in an email client that has applied its own contrast.
- *  - `destructive` is darker and more orange than `--destructive` converts to,
- *    which is what carries it over the tinted panel it sits on.
- *  - `link` is `--primary` darkened until body-size text on the light fills
- *    meets WCAG AA. Raw coral does not, so it is never used for text.
+ *  - `link` is `--primary` taken down in lightness until 14px text on the
+ *    cream panel reaches WCAG AA. Coral as a fill is a button; the same coral
+ *    as body copy is 2.8:1, so it is never used for text.
+ *  - `destructiveTint` is `--destructive` at 8% over `--card`.
+ *  - `destructiveInk` is `--destructive` taken down until it reaches AAA on
+ *    that tint — far enough below the title to keep the panel's hierarchy,
+ *    still recognisably the same red.
  *
- * Values and rationale come from the design handoff; see docs/emails.md.
+ * Hue and chroma are never touched, only lightness, so what comes out is the
+ * token and not a second colour that happens to pass.
  */
 export const palette = {
   /** `--border`. Page ground, hairlines, the card's own border. */
-  ground: "#EDE3D6",
-  /** `--background`. Card wrapper and the link-fallback panel. */
-  wrapper: "#FBF7F1",
+  ground: "#E2DDD5",
+  /** `--background`. Card wrapper, the link-fallback panel, the wordmark. */
+  wrapper: "#FAF7F2",
   /** `--card`. The body cells. */
   surface: "#FFFFFF",
-  /** `--foreground`. Headings, body copy, the button label, the header bar. */
+  /** `--foreground`. Headings, body copy, the header bar. */
   ink: "#2A0E31",
-  /** Secondary copy and labels. See the note above. */
-  mutedInk: "#7A4A85",
-  /** `--primary`. Button fill and the brand dot. */
-  primary: "#F97361",
-  /** `--primary`, darkened for AA on the light fills. */
-  link: "#B04A32",
-  /** Warning title and link. See the note above. */
-  destructive: "#A32B14",
-  /** `--destructive` at roughly 8%. The warning panel's fill. */
-  destructiveTint: "#FAEDEA",
-  /** Warning body copy, dark enough to read on the tint. */
-  destructiveInk: "#5C2A2A",
+  /** `--muted-foreground`. Secondary copy and labels. */
+  mutedInk: "#6B5E6E",
+  /** `--primary`. Button fill and the dot in the mark. */
+  primary: "#F97360",
+  /** `--primary-foreground`. The button's label — plum on coral, not white. */
+  primaryInk: "#2A0E31",
+  /** `--primary`, darkened for AA. See above. */
+  link: "#C64435",
+  /** `--destructive`. The warning panel's title and link. */
+  destructive: "#C51B32",
+  /** `--destructive` at 8% over `--card`. */
+  destructiveTint: "#FAEDEF",
+  /** `--destructive`, darkened for AAA on that tint. */
+  destructiveInk: "#A50017",
 } as const;
 
 /**
@@ -53,4 +57,20 @@ export const fonts = {
   sans: "Arial,Helvetica,sans-serif",
   serif: "Georgia,'Times New Roman',serif",
   mono: "'Courier New',Courier,monospace",
+} as const;
+
+/**
+ * The Balancia mark, served from the instance's own origin.
+ *
+ * An image rather than the inline SVG the interface uses, because Gmail and
+ * Outlook drop inline SVG entirely. It is decorative — the wordmark beside it
+ * is live text — so it carries an empty `alt` and an image-blocking client
+ * loses nothing but the glyph.
+ *
+ * Written by `pnpm icons`, drawn at 2× for a 24px slot.
+ */
+export const MARK = {
+  path: "/email/mark.png",
+  width: 24,
+  height: 24,
 } as const;

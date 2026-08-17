@@ -32,18 +32,22 @@ export function renderAll(locale: string): Record<string, RenderedEmail> {
   return {
     "reset-password-email": renderPasswordResetEmail({
       locale,
+      origin: ORIGIN,
       url: `${ORIGIN}/reset-password?token=${SAMPLE.resetToken}`,
     }),
     "verify-email": renderVerifyEmail({
       locale,
+      origin: ORIGIN,
       url: `${ORIGIN}/verify-email?token=${SAMPLE.verifyToken}`,
     }),
     "confirm-new-email": renderEmailChangeEmail({
       locale,
+      origin: ORIGIN,
       url: `${ORIGIN}/confirm-email?token=${SAMPLE.changeToken}`,
     }),
     "email-change-notice": renderEmailChangeNoticeEmail({
       locale,
+      origin: ORIGIN,
       newEmail: SAMPLE.newEmail,
       recoverUrl: `${ORIGIN}/forgot-password`,
     }),

@@ -9,20 +9,25 @@ inline styles is exactly the drift they exist to catch.
 
 ## Provenance
 
-The English files reproduce the design handoff's reference HTML.
-`reset-password-email.html`, `verify-email.html` and `confirm-new-email.html`
-are byte-identical to it.
+These follow the design handoff's structure, spacing, type scale and copy. Two
+things are deliberately not the handoff's:
 
-`email-change-notice.html` differs in one place, deliberately. The reference
-offers "Change your password" pointing at a placeholder
-`https://balancia.app/settings/password`. Balancia has no change-password
-screen, and password recovery is the better answer anyway: it mails the address
-the account still has — the one whoever asked for the change cannot read — and
-completing a reset ends every session, which puts them out. So the panel reads
-"Reset your password" and points at `/forgot-password`.
+**Colours come from the theme.** The handoff supplied hand-tuned hex which it
+described as converted from the Balancia OKLCH tokens; three of the values were
+not, in fact, that conversion. Every colour here is derived from
+`src/app/globals.css` instead, with the three roles that have no token of their
+own computed by a stated rule. `src/modules/auth/emails/tokens.test.ts` holds
+that in place.
 
-The sample tokens and the sample address are the handoff's, kept so these stay
-diffable against those files.
+**The warning panel points at recovery.** The handoff offers "Change your
+password" at a placeholder `https://balancia.app/settings/password`. Balancia
+has no change-password screen, and recovery is the better answer anyway: it
+mails the address the account still has — the one whoever asked for the change
+cannot read — and completing a reset ends every session, which puts them out.
+So the panel reads "Reset your password" and points at `/forgot-password`.
+
+The sample tokens and the sample address are the handoff's, kept so the
+structure stays diffable against those files.
 
 ## What is here
 

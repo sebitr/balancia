@@ -51,6 +51,7 @@ const type = {
  */
 function linkEmail(options: {
   locale: string | null | undefined;
+  origin: string;
   url: string;
   /** The `<title>`, which is not the subject line: shorter, and rarely seen. */
   title: string;
@@ -123,6 +124,7 @@ function linkEmail(options: {
 
   return emailDocument({
     lang: resolveLocale(options.locale),
+    origin: options.origin,
     title: options.title,
     preheader: options.preheader,
     linkColor: palette.link,
@@ -134,6 +136,8 @@ function linkEmail(options: {
 /** Welcome, and confirm the address the account was created with. */
 export function renderVerifyEmail(input: {
   locale: string | null | undefined;
+  /** The instance's public origin, which the header mark is served from. */
+  origin: string;
   url: string;
 }): RenderedEmail {
   const t = emailTranslator(input.locale);
@@ -144,6 +148,7 @@ export function renderVerifyEmail(input: {
     text: t("verify.text", { url: input.url }),
     html: linkEmail({
       locale: input.locale,
+      origin: input.origin,
       url: input.url,
       title: t("verify.title"),
       preheader: t("verify.preheader"),
@@ -161,6 +166,8 @@ export function renderVerifyEmail(input: {
 /** Set a new password after forgetting the old one. */
 export function renderPasswordResetEmail(input: {
   locale: string | null | undefined;
+  /** The instance's public origin, which the header mark is served from. */
+  origin: string;
   url: string;
 }): RenderedEmail {
   const t = emailTranslator(input.locale);
@@ -171,6 +178,7 @@ export function renderPasswordResetEmail(input: {
     text: t("reset.text", { url: input.url }),
     html: linkEmail({
       locale: input.locale,
+      origin: input.origin,
       url: input.url,
       title: t("reset.title"),
       preheader: t("reset.preheader"),
@@ -193,6 +201,8 @@ export function renderPasswordResetEmail(input: {
 /** Sent to the address an account is being moved *to*. */
 export function renderEmailChangeEmail(input: {
   locale: string | null | undefined;
+  /** The instance's public origin, which the header mark is served from. */
+  origin: string;
   url: string;
 }): RenderedEmail {
   const t = emailTranslator(input.locale);
@@ -203,6 +213,7 @@ export function renderEmailChangeEmail(input: {
     text: t("emailChange.text", { url: input.url }),
     html: linkEmail({
       locale: input.locale,
+      origin: input.origin,
       url: input.url,
       title: t("emailChange.title"),
       preheader: t("emailChange.preheader"),
@@ -231,6 +242,8 @@ export function renderEmailChangeEmail(input: {
  */
 export function renderEmailChangeNoticeEmail(input: {
   locale: string | null | undefined;
+  /** The instance's public origin, which the header mark is served from. */
+  origin: string;
   newEmail: string;
   /** Where someone who did not ask for this should go. */
   recoverUrl: string;
@@ -283,6 +296,7 @@ export function renderEmailChangeNoticeEmail(input: {
     }),
     html: emailDocument({
       lang: resolveLocale(input.locale),
+      origin: input.origin,
       title: t("emailChangeNotice.title"),
       preheader: t("emailChangeNotice.preheader"),
       // The whole email's accent, so the one link in it is not coral on a

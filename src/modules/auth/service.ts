@@ -846,6 +846,7 @@ export async function sendVerificationEmail(
     to: email,
     ...renderVerifyEmail({
       locale: options.locale,
+      origin: env.appOrigin,
       url: `${env.appOrigin}/verify-email?token=${token}`,
     }),
   });
@@ -923,6 +924,7 @@ export async function requestPasswordReset(
       // falling back to the language the request was made in, which for an
       // account that has never touched the switcher is the only signal there is.
       locale: row.locale ?? options.locale,
+      origin: env.appOrigin,
       url: `${env.appOrigin}/reset-password?token=${token}`,
     }),
   });
@@ -1079,6 +1081,7 @@ export async function requestEmailChange(
     to: current.email,
     ...renderEmailChangeNoticeEmail({
       locale,
+      origin: env.appOrigin,
       newEmail: email,
       /*
        * Recovery, not a change-password screen: there is no such screen, and
@@ -1095,6 +1098,7 @@ export async function requestEmailChange(
     to: email,
     ...renderEmailChangeEmail({
       locale,
+      origin: env.appOrigin,
       url: `${env.appOrigin}/confirm-email?token=${token}`,
     }),
   });
