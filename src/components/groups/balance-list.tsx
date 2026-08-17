@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Amount, toneFor } from "@/components/money/amount";
+import { toneFor } from "@/components/money/balance-tone";
+import { Amount } from "@/components/money/amount";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 

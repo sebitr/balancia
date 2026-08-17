@@ -15,7 +15,8 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Amount, toneFor, type BalanceTone } from "@/components/money/amount";
+import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
+import { Amount } from "@/components/money/amount";
 import { UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
 import {

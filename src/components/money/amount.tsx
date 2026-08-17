@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { cn } from "@/lib/utils";
 import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
@@ -47,15 +48,6 @@ export function Amount({
       {formatMoney(value, { locale, display, signDisplay, fractionDigits })}
     </span>
   );
-}
-
-export type BalanceTone = "positive" | "negative" | "neutral";
-
-export function toneFor(minorUnits: string): BalanceTone {
-  const value = BigInt(minorUnits);
-  if (value > 0n) return "positive";
-  if (value < 0n) return "negative";
-  return "neutral";
 }
 
 const TONE_STYLES: Record<BalanceTone, string> = {
