@@ -38,7 +38,13 @@ function getTransporter(): Transporter | null {
 export interface MailMessage {
   readonly to: string;
   readonly subject: string;
+  /**
+   * The plain-text body. Never optional, and never a stub: it is what a reader
+   * who has switched HTML off actually gets, and what several clients index.
+   */
   readonly text: string;
+  /** The HTML body, sent as the alternative part. */
+  readonly html?: string;
 }
 
 export async function sendMail(message: MailMessage): Promise<void> {
@@ -53,11 +59,15 @@ export async function sendMail(message: MailMessage): Promise<void> {
   }
 
   try {
+    // Both parts in one multipart/alternative message: the client picks. A
+    // text-only send is still valid, which is what keeps this usable for
+    // anything that has no design attached to it.
     await transport.sendMail({
       from: env.SMTP_FROM,
       to: message.to,
       subject: message.subject,
       text: message.text,
+      ...(message.html ? { html: message.html } : {}),
     });
     logger.info({ subject: message.subject }, "Sent email");
   } catch (error) {

@@ -17,6 +17,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { MARK, palette } from "@/modules/auth/emails/tokens";
 
 /** Plum ground, cream ink, coral dot — the "app icon" tile on the brand page. */
 const GROUND = "#2a0e31";
@@ -33,14 +34,20 @@ const DOT = "#f97361";
  *  - `compact` is for browser-tab sizes. The brand notes warn the rule and pan
  *    merge below 20px, so the glyph is pushed out to the edge of the tile and
  *    the keyline dropped — at 16px every pixel of margin costs legibility.
+ *  - `email` is the mark alone on a transparent ground, for the header bar of
+ *    the transactional emails — which cannot use the inline SVG the interface
+ *    uses, because Gmail and Outlook drop inline SVG. It takes its colours
+ *    from the email palette, which is derived from the theme tokens; the
+ *    constants above are the same three tokens, hand-written, and predate it.
  */
-type Variant = "tile" | "maskable" | "compact" | "badge";
+type Variant = "tile" | "maskable" | "compact" | "badge" | "email";
 
 const LAYOUT: Record<Variant, { scale: number; radius: number }> = {
   tile: { scale: 0.515, radius: 0.22 },
   maskable: { scale: 0.4, radius: 0 },
   compact: { scale: 0.78, radius: 0.16 },
   badge: { scale: 0.86, radius: 0 },
+  email: { scale: 1, radius: 0 },
 };
 
 /**
@@ -72,6 +79,22 @@ function markSvg(size: number, variant: Variant): string {
       <circle cx="16" cy="4.5" r="4.4" fill="#ffffff"/>
       <rect x="0" y="14.75" width="32" height="4.5" rx="2.25" fill="#ffffff"/>
       <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>`;
+  }
+
+  // The mark alone, on nothing. It sits on the plum header bar of an email,
+  // so the rule and pan take the cream the wordmark beside them uses, and the
+  // ground stays transparent rather than being baked in — a client that shifts
+  // that bar for dark mode then carries the glyph with it.
+  if (variant === "email") {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <g transform="translate(${n(offset)} ${n(offset)}) scale(${n(glyph / 32)})">
+    <g transform="translate(2.4 2.6) scale(0.85)">
+      <circle cx="16" cy="4.5" r="4.4" fill="${palette.primary}"/>
+      <rect x="0" y="14.75" width="32" height="4.5" rx="2.25" fill="${palette.wrapper}"/>
+      <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="${palette.wrapper}"/>
     </g>
   </g>
 </svg>`;
@@ -165,6 +188,17 @@ async function main(): Promise<void> {
     );
     console.log(`Wrote public/icons/${target.name}`);
   }
+
+  // The transactional emails' header mark, at 2× for its 24px slot. Served
+  // from the instance's own origin, so the path is load-bearing: it is built
+  // into every message this instance has ever sent. See emails/tokens.ts.
+  const emailDir = path.join(root, "public", "email");
+  await mkdir(emailDir, { recursive: true });
+  await writeFile(
+    path.join(emailDir, path.basename(MARK.path)),
+    await renderPng(MARK.width * 2, "email"),
+  );
+  console.log(`Wrote public${MARK.path}`);
 
   // iOS home screen. Safari ignores the manifest icons and takes this one.
   await writeFile(

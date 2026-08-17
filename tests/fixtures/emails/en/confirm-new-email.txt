@@ -1,0 +1,8 @@
+Subject: Confirm your new Balancia email address
+
+Someone asked to move a Balancia account to this address.
+
+Confirm it to finish the change:
+https://balancia.app/confirm-email?token=rXk7XUERrBUbxb0TFTynNgtu1BPnlHfpVJhOHwCfYIc
+
+This link works for 2 hours. Until then the account keeps its old address. If it wasn't you, you can ignore this email.
