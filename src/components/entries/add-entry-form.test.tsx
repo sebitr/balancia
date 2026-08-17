@@ -853,6 +853,13 @@ describe("the category picker", () => {
 });
 
 describe("the currency picker", () => {
+  it("shows the selected currency's flag in the amount chip", () => {
+    renderForm();
+
+    const currency = screen.getByRole("button", { name: "CHF" });
+    expect(within(currency).getByText("🇨🇭")).toBeInTheDocument();
+  });
+
   /** The same rule as the category sheet: the list first, the keyboard later. */
   it("opens on the currency list rather than in the search field", async () => {
     const user = userEvent.setup();
