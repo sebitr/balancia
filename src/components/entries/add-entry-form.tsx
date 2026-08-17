@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
-import { CalendarDays, Loader2, Repeat, X } from "lucide-react";
+import { AlignLeft, CalendarDays, Loader2, Repeat, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -682,6 +682,10 @@ export function AddEntryForm({
         {!isSettle && (
           <RowCard>
             <Row>
+              <AlignLeft
+                aria-hidden="true"
+                className="size-[18px] shrink-0 text-muted-foreground"
+              />
               {/* Borderless on purpose: the card is already the field's
                   edge, and an input that draws its own box inside one is
                   two boxes saying the same thing. */}

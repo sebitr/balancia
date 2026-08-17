@@ -145,6 +145,16 @@ function fileInput(): HTMLInputElement {
 }
 
 describe("the drawer", () => {
+  it("marks the description field with a decorative glyph", () => {
+    renderForm();
+
+    const description = screen.getByRole("textbox", { name: "Description" });
+    const glyph = description.previousElementSibling;
+
+    expect(glyph?.tagName).toBe("svg");
+    expect(glyph).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("is titled by what it is about to add", async () => {
     const user = userEvent.setup();
     renderForm();
