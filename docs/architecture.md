@@ -99,7 +99,9 @@ Redis — background jobs are queued in PostgreSQL through pg-boss.
   passkey-only), `sessions` (random token, only its SHA-256 hash stored),
   `passkeys` (WebAuthn credential, public key and signature counter),
   `webauthn_challenges` (server-issued, single-use, five-minute lifetime),
-  `verification_tokens` (email confirmation and password reset, hashed) and
+  `verification_tokens` (email confirmation, password reset and email change,
+  hashed; an email change carries its target address on the token rather than
+  on the account, so an unconfirmed request leaves nothing behind) and
   `oauth_identities` (an external provider's stable subject, unique per
   provider, so an account can have a password, passkeys, an Apple link, or any
   combination).
@@ -167,7 +169,15 @@ largest creditor) that is presentation-only: it never alters recorded history.
   check for route handlers, and cookies are `HttpOnly`, `SameSite=Lax`,
   `Secure` when the public URL is HTTPS.
 - Rate limiting: PostgreSQL-backed fixed-window limiter on sign-in,
-  registration and guest-token redemption.
+  registration, password reset, email change and guest-token redemption. The
+  email-change bucket is keyed by account rather than by client address,
+  because what it spends is mail to an inbox the caller chose.
+- Account recovery and email change: single-use hashed tokens, opened from a
+  link, spent by a route handler so the token is consumed exactly once and does
+  not survive into the address bar. A reset ends every session; an email change
+  is announced to the old address at request time, before it can take effect,
+  and only completes when the new address is confirmed. Neither is offered on
+  an instance with no SMTP configured.
 - Strict security headers + CSP via `proxy.ts` (Next 16's middleware
   replacement).
 - Uploads: content-sniffed MIME allowlist (JPEG/PNG/WebP/GIF/PDF), size

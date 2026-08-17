@@ -29,6 +29,7 @@ import {
 export const verificationPurposeEnum = pgEnum("verification_purpose", [
   "email_verification",
   "password_reset",
+  "email_change",
 ]);
 
 export const oauthProviderEnum = pgEnum("oauth_provider", ["apple"]);
@@ -255,8 +256,8 @@ export const webauthnChallenges = pgTable(
 );
 
 /**
- * Single-use tokens for email verification and password reset. Hashed, like
- * everything else that grants access.
+ * Single-use tokens for email verification, password reset and email change.
+ * Hashed, like everything else that grants access.
  */
 export const verificationTokens = pgTable(
   "verification_tokens",
@@ -267,6 +268,16 @@ export const verificationTokens = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     purpose: verificationPurposeEnum("purpose").notNull(),
     tokenHash: text("token_hash").notNull(),
+    /**
+     * The address an `email_change` is *to*, lowercased. Null for every other
+     * purpose.
+     *
+     * Kept on the token rather than in a `pending_email` column on the user,
+     * so a request that is never confirmed leaves nothing behind on the
+     * account, and so the single-live-token-per-purpose rule that already
+     * governs this table is what supersedes an earlier request.
+     */
+    newEmail: text("new_email"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
