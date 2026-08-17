@@ -216,12 +216,7 @@ function CurrencyRow({
           {entry.flag}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-px">
-          <span
-            className={cn(
-              "flex items-center gap-1.5 text-[15px] font-semibold tracking-[0.01em]",
-              selected && "text-primary",
-            )}
-          >
+          <span className="flex items-center gap-1.5 text-[15px] font-semibold tracking-[0.01em] text-foreground">
             {entry.code}
             {entry.symbol && (
               <span className="text-[13px] font-medium text-muted-foreground">
