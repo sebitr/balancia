@@ -193,7 +193,7 @@ export function SplitSheet({
             return (
               <li
                 key={member.id}
-                className="flex items-center gap-3 border-b border-white/8 p-3 last:border-b-0"
+                className="flex h-15 items-center gap-3 border-b border-white/8 p-3 last:border-b-0"
               >
                 <MemberAvatar
                   name={member.displayName}

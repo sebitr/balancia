@@ -327,6 +327,21 @@ describe("the split sheet", () => {
     expect(split.getByLabelText("Shares for Seb")).toBeInTheDocument();
   });
 
+  it("keeps split rows the same height in every method", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "84.60");
+    await openSplit(user);
+
+    const split = sheet("Payment and split");
+    for (const method of ["Equally", "Shares", "Exact", "Percent"]) {
+      await user.click(split.getByRole("button", { name: method }));
+      for (const row of split.getAllByRole("listitem")) {
+        expect(row).toHaveClass("h-15");
+      }
+    }
+  });
+
   /** Who paid is one of many, and reports itself as such. */
   it("offers the payer as a choice rather than three toggles", async () => {
     const user = userEvent.setup();
