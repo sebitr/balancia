@@ -59,9 +59,22 @@
     "getsBack": "gets back",
     "owes": "owes",
     "settledUp": "settled up",
-    "settledUpBadge": "Settled up",
-    "commonCurrencies": "Common",
-    "allCurrencies": "All currencies"
+    "settledUpBadge": "Settled up"
+  },
+  "currencyPicker": {
+    "back": "Back",
+    "fieldLabel": "Currency",
+    "fieldValue": "Currency: {code} {name}",
+    "searchPlaceholder": "Search a currency or a country",
+    "searchLabel": "Search a currency",
+    "clear": "Clear",
+    "favorites": "Favourites",
+    "allCurrencies": "All currencies",
+    "results": "{count, plural, one {# result} other {# results}}",
+    "favorite": "Add {code} to favourites",
+    "unfavorite": "Remove {code} from favourites",
+    "emptyTitle": "No currency found",
+    "emptyBody": "Try the code (CHF) or the name of the country."
   },
   "timezoneSelect": {
     "search": "Search timezones",
@@ -1361,12 +1374,7 @@
       }
     },
     "currency": {
-      "title": "Currency",
-      "groupBase": "Group base: {currency}",
-      "search": "Search by code or name",
-      "noMatch": "No currency matches that.",
-      "done": "Done",
-      "base": "Base"
+      "title": "Currency"
     },
     "category": {
       "add": "Add a category",

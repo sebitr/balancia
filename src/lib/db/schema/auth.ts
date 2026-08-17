@@ -57,6 +57,19 @@ export const users = pgTable(
      */
     preferredCurrency: text("preferred_currency"),
     /**
+     * Currencies this account has starred, in the order it starred them —
+     * most recently added last, which is the order the picker pins them in.
+     *
+     * Empty is the ordinary state of a new account, not an error: the picker
+     * then shows no favourites section and the reader builds one by starring
+     * rows. Per account rather than per group on purpose — where somebody
+     * spends money does not change with which group they are looking at.
+     */
+    favoriteCurrencies: text("favorite_currencies")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    /**
      * How dates are written ("dmy", "mdy", "ymd"). Null means "not chosen
      * yet", which follows the reader's language and region. Kept apart from
      * `locale` because notation and language are separate choices: English in
@@ -92,6 +105,14 @@ export const users = pgTable(
     check(
       "users_preferred_currency_format",
       sql`${table.preferredCurrency} IS NULL OR ${table.preferredCurrency} ~ '^[A-Z]{3}$'`,
+    ),
+    // A bound rather than a format: a CHECK cannot look inside an array
+    // without a subquery, so the codes themselves are validated by
+    // `sanitiseFavoriteCurrencies` on every path that writes them. What the
+    // column can enforce on its own is that nothing writes an unbounded list.
+    check(
+      "users_favorite_currencies_bounded",
+      sql`cardinality(${table.favoriteCurrencies}) <= 12`,
     ),
     // "auto" is expressed as NULL rather than stored, so there is one way to
     // say "no choice" and the column cannot disagree with itself.

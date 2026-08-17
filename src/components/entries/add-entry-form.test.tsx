@@ -728,22 +728,66 @@ describe("the amount field", () => {
     await enterAmount(user, "1200.50");
     await user.click(screen.getByRole("button", { name: "CHF" }));
 
-    const currency = sheet("Currency");
-    await user.click(currency.getByRole("button", { name: /^JPY/ }));
-    await user.click(currency.getByRole("button", { name: "Done" }));
+    // Picking is the whole interaction: there is nothing to confirm after it.
+    await user.click(sheet("Currency").getByRole("button", { name: /^JPY/ }));
 
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("1200");
   });
 
-  /** The one people convert *to* should not be a hundred rows down. */
-  it("puts the group's own currency first, and marks it", async () => {
+  /**
+   * The list is one screen for the whole app, so it is the alphabet plus
+   * whatever this reader has starred — not a per-group reordering. A group's
+   * own currency earns its place by being the one already chosen, which the
+   * row says with a check and a tint wherever it sits.
+   */
+  it("marks the currency already chosen", async () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("button", { name: "CHF" }));
 
-    const rows = sheet("Currency").getAllByRole("button");
-    expect(rows[0]).toHaveTextContent("CHF");
-    expect(rows[0]).toHaveTextContent("Base");
+    const chosen = sheet("Currency").getByRole("button", { name: /^CHF/ });
+    expect(chosen).toHaveAttribute("aria-current", "true");
+  });
+
+  /**
+   * Search is the way past a hundred and fifty rows, and it has to reach the
+   * ones nobody knows the code of. Accents are not typed on a phone keyboard
+   * in a hurry, so they cannot be required either.
+   */
+  it("finds a currency by its country, accents and all", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+
+    const currency = sheet("Currency");
+    await user.type(
+      currency.getByRole("textbox", { name: "Search a currency" }),
+      "united states",
+    );
+
+    expect(currency.getByRole("button", { name: /^USD/ })).toBeInTheDocument();
+    expect(currency.queryByRole("button", { name: /^JPY/ })).toBeNull();
+  });
+
+  /** Starring is not choosing: it must not pick the row it is sitting in. */
+  it("keeps a star from selecting the currency it belongs to", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+
+    const currency = sheet("Currency");
+    await user.click(
+      currency.getByRole("button", { name: "Add JPY to favourites" }),
+    );
+
+    // Still open, and still on the currency it came in with.
+    expect(
+      currency.getByRole("button", { name: "Remove JPY from favourites" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(currency.getByRole("button", { name: /^CHF/ })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 });
 
@@ -808,7 +852,7 @@ describe("the currency picker", () => {
     await user.click(screen.getAllByRole("button", { name: /CHF/ })[0]);
 
     const search = screen.getByRole("textbox", {
-      name: "Search by code or name",
+      name: "Search a currency",
     });
     expect(search).not.toHaveFocus();
     expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
@@ -817,6 +861,6 @@ describe("the currency picker", () => {
 
     await user.type(search, "yen");
     expect(search).toHaveFocus();
-    expect(screen.getByRole("button", { name: /JPY/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^JPY/ })).toBeInTheDocument();
   });
 });

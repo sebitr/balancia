@@ -156,11 +156,11 @@ test("records a multi-currency expense in a converted group", async ({
   await page.getByLabel("Description").fill("Duty free");
   await page.getByLabel("Amount").fill("110.00");
 
-  // Currency is a sheet now, opened from the button beside the amount.
+  // Currency is a sheet now, opened from the button beside the amount. Picking
+  // a row is the whole interaction: there is nothing to confirm after it.
   await page.getByRole("button", { name: "EUR", exact: true }).click();
-  await page.getByLabel("Search by code or name").fill("USD");
-  await page.getByRole("button", { name: /USD/ }).first().click();
-  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("textbox", { name: "Search a currency" }).fill("USD");
+  await page.getByRole("button", { name: /^USD/ }).first().click();
 
   // A foreign currency must ask for a rate before it can be saved.
   const rateField = page.getByLabel(/Exchange rate/);

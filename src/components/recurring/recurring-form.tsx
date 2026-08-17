@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CurrencySelect } from "@/components/money/currency-select";
+import { CurrencyField } from "@/components/money/currency-field";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { createRecurringAction } from "@/modules/recurring/actions";
 import {
@@ -202,11 +202,12 @@ export function RecurringForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="recurring-currency">{t("currency")}</Label>
-          <CurrencySelect
+          <CurrencyField
             id="recurring-currency"
             value={currency}
             onChange={setCurrency}
-            className="sm:w-44"
+            label={t("currency")}
+            className="sm:w-56"
           />
         </div>
       </div>

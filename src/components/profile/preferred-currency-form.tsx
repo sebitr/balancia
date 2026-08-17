@@ -1,10 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CurrencySelect } from "@/components/money/currency-select";
+import { CurrencyField } from "@/components/money/currency-field";
 import { Label } from "@/components/ui/label";
 import { setPreferredCurrencyAction } from "@/modules/profile/actions";
 
@@ -24,11 +24,19 @@ export function PreferredCurrencyForm({
   const router = useRouter();
   const t = useTranslations("profile");
   const [isPending, startTransition] = useTransition();
+  // The picker states what is chosen rather than merely starting there, so the
+  // row has to show the new currency the moment it is picked — and go back to
+  // the old one if the save is refused, rather than claiming a choice the
+  // account did not keep.
+  const [currency, setCurrency] = useState(defaultValue ?? "EUR");
 
-  const choose = (currency: string) => {
+  const choose = (chosen: string) => {
+    const previous = currency;
+    setCurrency(chosen);
     startTransition(async () => {
-      const result = await setPreferredCurrencyAction(currency);
+      const result = await setPreferredCurrencyAction(chosen);
       if (!result.ok) {
+        setCurrency(previous);
         toast.error(result.error ?? t("currencyFailed"));
         return;
       }
@@ -40,11 +48,12 @@ export function PreferredCurrencyForm({
   return (
     <div className="space-y-2">
       <Label htmlFor="preferred-currency">{t("currencyLabel")}</Label>
-      <CurrencySelect
+      <CurrencyField
         id="preferred-currency"
-        defaultValue={defaultValue ?? "EUR"}
+        value={currency}
         disabled={isPending}
         onChange={choose}
+        label={t("currencyLabel")}
         className="max-w-sm"
       />
       <p className="text-xs text-muted-foreground">{t("currencyHelp")}</p>

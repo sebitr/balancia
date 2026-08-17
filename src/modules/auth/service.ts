@@ -32,6 +32,7 @@ import {
   renderPasswordResetEmail,
   renderVerifyEmail,
 } from "./emails/templates";
+import { sanitiseFavoriteCurrencies } from "@/modules/currencies/favorites";
 
 /**
  * Authentication service.
@@ -723,6 +724,43 @@ export async function getUserPreferredCurrency(
     .where(eq(users.id, userId))
     .limit(1);
   return row?.preferredCurrency ?? null;
+}
+
+/**
+ * The currencies this account has starred, in its own order.
+ *
+ * Sanitised on the way out as well as on the way in: a code can be withdrawn
+ * from the supported list long after somebody starred it, and a picker that
+ * pins a currency it can no longer offer is worse than one that quietly
+ * forgets it.
+ */
+export async function getUserFavoriteCurrencies(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<string[]> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ favoriteCurrencies: users.favoriteCurrencies })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return sanitiseFavoriteCurrencies(row?.favoriteCurrencies ?? []);
+}
+
+/** Replaces the whole list — the client owns the order, so it sends all of it. */
+export async function saveUserFavoriteCurrencies(
+  userId: string,
+  favoriteCurrencies: readonly string[],
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(users)
+    .set({
+      favoriteCurrencies: sanitiseFavoriteCurrencies(favoriteCurrencies),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
 }
 
 /** Stores it. `null` clears the choice and restores the derived default. */

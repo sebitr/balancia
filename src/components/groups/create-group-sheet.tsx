@@ -2,13 +2,14 @@
 
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CurrencySelect } from "@/components/money/currency-select";
+import { CurrencyPicker } from "@/components/money/currency-picker";
+import { currencyEntry } from "@/modules/currencies/catalog";
 import { TimezoneSelect } from "@/components/groups/timezone-select";
 import { GroupIconPicker } from "@/components/groups/group-icon-picker";
 import { GroupIconTile } from "@/components/groups/group-icon";
@@ -21,9 +22,6 @@ import {
 } from "@/modules/groups/icons";
 import type { CurrencyMode } from "@/modules/currencies/conversion";
 import { cn } from "@/lib/utils";
-
-/** The four offered without opening the full list. */
-const QUICK_CURRENCIES = ["CHF", "EUR", "USD", "GBP"] as const;
 
 interface Member {
   readonly name: string;
@@ -61,7 +59,7 @@ export function CreateGroupSheet({
   const t = useTranslations("groupForm");
   const nameId = useId();
 
-  const [view, setView] = useState<"form" | "icon">("form");
+  const [view, setView] = useState<"form" | "icon" | "currency">("form");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [descOpen, setDescOpen] = useState(false);
@@ -174,7 +172,7 @@ export function CreateGroupSheet({
                 mode={mode}
                 onMode={setMode}
                 currency={currency}
-                onCurrency={setCurrency}
+                onOpenCurrency={() => setView("currency")}
                 timezone={timezone}
                 onTimezone={setChosenZone}
               />
@@ -219,7 +217,7 @@ export function CreateGroupSheet({
               </button>
             </footer>
           </form>
-        ) : (
+        ) : view === "icon" ? (
           <GroupIconPicker
             name={name}
             onName={setName}
@@ -227,6 +225,24 @@ export function CreateGroupSheet({
             color={color}
             onIcon={setIcon}
             onColor={setColor}
+            onBack={() => setView("form")}
+          />
+        ) : (
+          // The same sheet, showing the list instead of the form. Not a second
+          // sheet over the first: the currency is a field of this form, and
+          // stacking a modal on a modal to edit one is how a phone runs out of
+          // room to close things.
+          <CurrencyPicker
+            value={currency}
+            // Mirrors the row that opened it, which says different things
+            // depending on whether the group converts.
+            title={
+              mode === "separate" ? t("defaultCurrency") : t("baseCurrency")
+            }
+            onSelect={(code) => {
+              setCurrency(code);
+              setView("form");
+            }}
             onBack={() => setView("form")}
           />
         )}
@@ -454,14 +470,14 @@ function Currencies({
   mode,
   onMode,
   currency,
-  onCurrency,
+  onOpenCurrency,
   timezone,
   onTimezone,
 }: {
   mode: CurrencyMode;
   onMode: (mode: CurrencyMode) => void;
   currency: string;
-  onCurrency: (code: string) => void;
+  onOpenCurrency: () => void;
   timezone: string;
   onTimezone: (zone: string) => void;
 }) {
@@ -528,37 +544,12 @@ function Currencies({
         })}
       </div>
 
-      <div className="mt-1.5 flex flex-col gap-1.5">
-        <span className="text-[13px] font-medium">
-          {mode === "separate" ? t("defaultCurrency") : t("baseCurrency")}
-        </span>
-        <div className="flex gap-1.5">
-          {QUICK_CURRENCIES.map((code) => {
-            const selected = code === currency;
-            return (
-              <button
-                key={code}
-                type="button"
-                onClick={() => onCurrency(code)}
-                aria-pressed={selected}
-                className={cn(
-                  "h-10 flex-1 rounded-xl text-[13px] font-semibold transition-colors duration-150",
-                  selected
-                    ? "bg-primary/14 text-primary inset-ring inset-ring-primary/55"
-                    : "text-foreground/85 inset-ring inset-ring-foreground/10",
-                )}
-              >
-                {code}
-              </button>
-            );
-          })}
-          {/* The full searchable list, for the other hundred and fifty. */}
-          <CurrencyOverflow
-            value={currency}
-            onValueChange={onCurrency}
-            label={t("moreCurrencies")}
-          />
-        </div>
+      <div className="mt-1.5">
+        <CurrencyRow
+          value={currency}
+          label={mode === "separate" ? t("defaultCurrency") : t("baseCurrency")}
+          onOpen={onOpenCurrency}
+        />
       </div>
 
       <div className="mt-1.5">
@@ -569,44 +560,41 @@ function Currencies({
 }
 
 /**
- * The escape hatch from the four quick currencies.
+ * The currency, as one row that opens the list.
  *
- * The app's own currency select is a native `<select>` carrying the full ISO
- * list, so it is laid transparent over a chip: the platform's picker opens,
- * and the chip is free to be styled like its four neighbours. Once a currency
- * from outside the four is chosen, the chip shows it rather than the arrow.
+ * It replaced four chips and an overflow arrow. Four was never the number:
+ * whichever four were picked, a fifth of the people opening this sheet were
+ * looking for the fifth, and for them the row of chips was a row of wrong
+ * answers to tap past. One row that says what is chosen and opens a search is
+ * the same tap for everybody.
  */
-function CurrencyOverflow({
+function CurrencyRow({
   value,
-  onValueChange,
   label,
+  onOpen,
 }: {
   value: string;
-  onValueChange: (code: string) => void;
   label: string;
+  onOpen: () => void;
 }) {
-  const beyondQuick = !(QUICK_CURRENCIES as readonly string[]).includes(value);
+  const locale = useLocale();
+  const entry = currencyEntry(value, locale);
 
   return (
-    <div className="relative size-10 shrink-0">
-      <span
-        aria-hidden="true"
-        className={cn(
-          "pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl text-[13px] font-semibold transition-colors duration-150",
-          beyondQuick
-            ? "bg-primary/14 text-primary inset-ring inset-ring-primary/55"
-            : "text-muted-foreground inset-ring inset-ring-foreground/10",
-        )}
-      >
-        {beyondQuick ? value : <ChevronRight className="size-4" />}
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex h-12 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-foreground/4"
+    >
+      <span className="text-[13px] text-muted-foreground">{label}</span>
+      <span className="flex flex-1 items-center justify-end gap-1.5 text-sm font-medium">
+        <span aria-hidden="true" className="text-base leading-none">
+          {entry?.flag}
+        </span>
+        {value}
+        <ChevronRight aria-hidden="true" className="size-3.5 opacity-50" />
       </span>
-      <CurrencySelect
-        value={value}
-        onChange={onValueChange}
-        aria-label={label}
-        className="absolute inset-0 size-full opacity-0"
-      />
-    </div>
+    </button>
   );
 }
 

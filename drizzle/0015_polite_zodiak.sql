@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "favorite_currencies" text[] DEFAULT '{}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_favorite_currencies_bounded" CHECK (cardinality("users"."favorite_currencies") <= 12);

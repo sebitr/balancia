@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NumericField } from "./numeric-field";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CurrencySelect } from "@/components/money/currency-select";
+import { CurrencyField } from "@/components/money/currency-field";
 import { formatMinorUnits } from "@/components/expenses/expense-form-logic";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { validateReceipt, type ReceiptIssue } from "@/modules/receipts";
@@ -157,10 +157,11 @@ export function ReceiptReview({
 
       <div className="space-y-2">
         <Label htmlFor="receipt-currency">{t("currency")}</Label>
-        <CurrencySelect
+        <CurrencyField
           id="receipt-currency"
           value={draft.currency}
           onChange={(currency) => update({ currency })}
+          label={t("currency")}
           className="sm:w-64"
         />
       </div>

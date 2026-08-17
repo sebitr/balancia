@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CurrencySelect } from "@/components/money/currency-select";
+import { CurrencyField } from "@/components/money/currency-field";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { createSettlementAction } from "@/modules/expenses/actions";
 import {
@@ -212,11 +212,12 @@ export function SettleUpDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="settle-currency">{t("currency")}</Label>
-              <CurrencySelect
+              <CurrencyField
                 id="settle-currency"
                 value={currency}
                 onChange={setCurrency}
-                className="sm:w-44"
+                label={t("currency")}
+                className="sm:w-56"
               />
             </div>
           </div>
