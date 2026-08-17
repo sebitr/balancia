@@ -116,9 +116,9 @@ describe("GroupSettingsForm", () => {
 
     expect(title.nextElementSibling).toHaveTextContent("Fixed");
     expect(
-      screen.queryByText("Each currency keeps its own balance.", {
+      screen.getByText("Each currency keeps its own balance.", {
         exact: false,
       }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
   });
 });
