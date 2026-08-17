@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { UmamiScript } from "@/components/analytics/umami-script";
 import { Wordmark } from "@/components/brand/wordmark";
+import { MarketingLanguageSwitcher } from "@/components/i18n/language-switcher";
 import { InstallCopyButton, SplitDemo } from "@/components/marketing/SplitDemo";
 import { INSTALL_COMMANDS } from "@/components/marketing/install-commands";
 import { publicPageAnalytics } from "@/lib/analytics/umami";
@@ -220,7 +221,7 @@ export default async function LandingPage() {
       />
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-marketing-plum text-marketing-cream">
-        <div className="mx-auto flex h-[68px] w-full max-w-[1120px] items-center justify-between gap-4 px-6">
+        <div className="mx-auto flex h-[68px] w-full max-w-[1120px] items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
           <a
             href="#top"
             className="text-marketing-cream no-underline"
@@ -233,8 +234,9 @@ export default async function LandingPage() {
           </a>
           <nav
             aria-label={t("header.navigation")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5 sm:gap-2"
           >
+            <MarketingLanguageSwitcher />
             <a
               href={GITHUB}
               target="_blank"
@@ -256,7 +258,7 @@ export default async function LandingPage() {
             {env.ALLOW_REGISTRATION && (
               <Link
                 href="/register"
-                className="inline-flex h-9 items-center rounded-[10px] bg-primary px-3.5 text-sm font-semibold text-primary-foreground no-underline transition-colors hover:bg-marketing-primary-hover"
+                className="inline-flex h-11 w-[82px] shrink-0 items-center justify-center rounded-[10px] bg-primary px-2 text-center text-[13px] leading-[1.05] font-semibold text-primary-foreground no-underline transition-colors hover:bg-marketing-primary-hover min-[721px]:h-9 min-[721px]:w-auto min-[721px]:px-3.5 min-[721px]:text-sm min-[721px]:leading-normal"
               >
                 {t("header.createAccount")}
               </Link>
