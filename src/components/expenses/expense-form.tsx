@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CurrencySelect } from "@/components/money/currency-select";
+import { CurrencyField } from "@/components/money/currency-field";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
 import { ReceiptUploader } from "@/components/expenses/receipt-uploader";
 import {
@@ -431,10 +431,11 @@ export function ExpenseForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="currency">{t("currency")}</Label>
-          <CurrencySelect
+          <CurrencyField
             id="currency"
             value={currency}
             onChange={setCurrency}
+            label={t("currency")}
             className="sm:w-56"
           />
         </div>

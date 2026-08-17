@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
+  saveUserFavoriteCurrencies,
   saveUserFormatPreferences,
   saveUserPreferredCurrency,
 } from "@/modules/auth/service";
@@ -35,6 +36,31 @@ export async function setPreferredCurrencyAction(
   return runAction("setPreferredCurrency", async () => {
     await saveUserPreferredCurrency(user.userId, value === "" ? null : value);
     revalidatePath("/dashboard");
+  });
+}
+
+/**
+ * The currencies starred in the picker.
+ *
+ * Fire-and-forget from the client's point of view: the star has already
+ * flipped on screen by the time this runs, and a failure leaves the reader
+ * with a list that is right for this session and wrong on their next device.
+ * That is the correct trade for a display preference — blocking a tap on a
+ * round trip to remember a favourite would be worse than losing one.
+ *
+ * The whole list is sent rather than one code, because its order is the
+ * reader's and the server has no way to reconstruct it from a toggle.
+ */
+export async function setFavoriteCurrenciesAction(
+  favorites: readonly string[],
+): Promise<ActionResult> {
+  const t = await getTranslations("serverErrors");
+
+  const user = await getCurrentUser();
+  if (!user) return actionError(t("signedInRequired"));
+
+  return runAction("setFavoriteCurrencies", async () => {
+    await saveUserFavoriteCurrencies(user.userId, favorites);
   });
 }
 

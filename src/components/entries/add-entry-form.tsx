@@ -51,7 +51,7 @@ import {
 import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
 import { CategorySheet } from "./category-sheet";
-import { CurrencySheet } from "./currency-sheet";
+import { CurrencyPicker } from "@/components/money/currency-picker";
 import {
   confirmationKey,
   directionOf,
@@ -903,7 +903,17 @@ export function AddEntryForm({
           // category chips, the currency list, who is in the split — and none
           // of them wants a keyboard over it before anybody has asked to type.
           onOpenAutoFocus={openOnContent}
-          className="max-h-[86vh] gap-0 overflow-y-auto rounded-t-[26px] px-4 pt-3.5 pb-5"
+          className={cn(
+            "gap-0 rounded-t-[26px]",
+            // The currency list is the one sheet here that is a whole screen
+            // rather than a card: it fills the height it is given, scrolls its
+            // own list inside a fixed header and search field, and lays out its
+            // own padding. The others are as tall as they need to be and scroll
+            // as one piece.
+            sheet === "currency"
+              ? "h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] overflow-hidden p-0"
+              : "max-h-[86vh] overflow-y-auto px-4 pt-3.5 pb-5",
+          )}
         >
           {sheet === "split" && (
             <SplitSheet
@@ -956,17 +966,18 @@ export function AddEntryForm({
           )}
 
           {sheet === "currency" && (
-            <CurrencySheet
+            <CurrencyPicker
               value={currency}
-              baseCurrency={baseCurrency}
+              title={t("currency.title")}
               // What is already typed has to survive the new currency's rules:
               // 84.60 picked up again as yen is ¥84, not an amount the server
               // will refuse.
               onSelect={(code) => {
                 setCurrency(code);
                 setAmountText((current) => sanitiseAmount(current, code));
+                setSheet(null);
               }}
-              onDone={() => setSheet(null)}
+              onBack={() => setSheet(null)}
             />
           )}
 

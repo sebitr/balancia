@@ -59,9 +59,22 @@
     "getsBack": "récupère",
     "owes": "doit",
     "settledUp": "soldé",
-    "settledUpBadge": "Soldé",
-    "commonCurrencies": "Courantes",
-    "allCurrencies": "Toutes les devises"
+    "settledUpBadge": "Soldé"
+  },
+  "currencyPicker": {
+    "back": "Retour",
+    "fieldLabel": "Devise",
+    "fieldValue": "Devise : {code} {name}",
+    "searchPlaceholder": "Rechercher une devise ou un pays",
+    "searchLabel": "Rechercher une devise",
+    "clear": "Effacer",
+    "favorites": "Favoris",
+    "allCurrencies": "Toutes les devises",
+    "results": "{count, plural, one {# résultat} other {# résultats}}",
+    "favorite": "Ajouter {code} aux favoris",
+    "unfavorite": "Retirer {code} des favoris",
+    "emptyTitle": "Aucune devise trouvée",
+    "emptyBody": "Essaie le code (CHF) ou le nom du pays."
   },
   "timezoneSelect": {
     "search": "Rechercher un fuseau horaire",
@@ -1326,12 +1339,7 @@
       }
     },
     "currency": {
-      "title": "Devise",
-      "groupBase": "Base du groupe : {currency}",
-      "search": "Rechercher par code ou par nom",
-      "noMatch": "Aucune devise ne correspond.",
-      "done": "Terminé",
-      "base": "Base"
+      "title": "Devise"
     },
     "category": {
       "add": "Ajouter une catégorie",

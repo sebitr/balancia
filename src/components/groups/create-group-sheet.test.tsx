@@ -141,7 +141,6 @@ describe("CreateGroupSheet", () => {
     const { user } = renderSheet();
 
     await user.type(screen.getByPlaceholderText("Group name"), "Roadtrip");
-    await user.click(screen.getByRole("button", { name: "EUR" }));
     expect(screen.getByText("Base currency")).toBeInTheDocument();
 
     await user.click(
@@ -153,7 +152,30 @@ describe("CreateGroupSheet", () => {
 
     const form = submitted();
     expect(form.get("currencyMode")).toBe("separate");
-    expect(form.get("baseCurrency")).toBe("EUR");
+    expect(form.get("baseCurrency")).toBe("CHF");
+  });
+
+  /**
+   * The currency list replaced four chips, so it is now the only way to answer
+   * this question — and it answers it inside the same sheet rather than in a
+   * second one stacked on top.
+   */
+  it("chooses a currency in its own view of the same sheet", async () => {
+    const { user } = renderSheet();
+
+    await user.type(screen.getByPlaceholderText("Group name"), "Roadtrip");
+    await user.click(screen.getByRole("button", { name: /Base currency/ }));
+
+    // One sheet, showing the list where the form was.
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    const search = screen.getByRole("textbox", { name: "Search a currency" });
+    await user.type(search, "japan");
+    await user.click(screen.getByRole("button", { name: /^JPY/ }));
+
+    // Selection returns to the form, with the answer on the row.
+    expect(screen.getByPlaceholderText("Group name")).toHaveValue("Roadtrip");
+    await user.click(screen.getByRole("button", { name: "Create group" }));
+    expect(submitted().get("baseCurrency")).toBe("JPY");
   });
 
   it("keeps the description out of the way until it is asked for", async () => {

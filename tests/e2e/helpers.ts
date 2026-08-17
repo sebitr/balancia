@@ -67,8 +67,13 @@ export async function createGroup(
   }
 
   if (options.baseCurrency) {
+    // The currency is one row that opens the full list in the same sheet.
+    await page.getByRole("button", { name: /currency/i }).click();
     await page
-      .getByRole("button", { name: options.baseCurrency, exact: true })
+      .getByRole("textbox", { name: "Search a currency" })
+      .fill(options.baseCurrency);
+    await page
+      .getByRole("button", { name: new RegExp(`^${options.baseCurrency}`) })
       .click();
   }
 

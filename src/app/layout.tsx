@@ -5,6 +5,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { FormatPreferencesProvider } from "@/i18n/format-context";
 import { resolveFormatPreferences } from "@/i18n/preferences";
+import { CurrencyFavoritesProvider } from "@/components/money/currency-favorites";
+import { resolveCurrencyFavorites } from "@/modules/currencies/preferences";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
@@ -60,6 +62,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Dates and numbers are written the way this reader writes them, which is a
   // separate choice from the language above.
   const formats = await resolveFormatPreferences();
+  // Starred currencies, for every picker below. One value per reader, so it is
+  // resolved here rather than in each of the seven forms that opens one.
+  const favorites = await resolveCurrencyFavorites();
 
   return (
     <html
@@ -85,7 +90,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               timeZone: formats.timeZone,
             }}
           >
-            <Providers>{children}</Providers>
+            <CurrencyFavoritesProvider
+              initial={favorites.favorites}
+              persist={favorites.persist}
+            >
+              <Providers>{children}</Providers>
+            </CurrencyFavoritesProvider>
             {/* Above every shell, not inside one: the gesture counts how many
                 of our own screens are behind this one, and moving between a
                 group and the home screen swaps one shell for the other.
