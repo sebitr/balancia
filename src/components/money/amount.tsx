@@ -5,7 +5,7 @@ import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { cn } from "@/lib/utils";
 import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
-import { ArrowDownLeft, ArrowUpRight, Minus } from "lucide-react";
+import { Minus } from "lucide-react";
 
 /**
  * Money display primitives.
@@ -63,10 +63,10 @@ const TONE_LABEL_KEYS = {
   neutral: "settledUp",
 } as const;
 
-const TONE_ICONS: Record<BalanceTone, typeof ArrowDownLeft> = {
-  positive: ArrowDownLeft,
-  negative: ArrowUpRight,
-  neutral: Minus,
+const TONE_SIGNS: Record<BalanceTone, string> = {
+  positive: "+",
+  negative: "−",
+  neutral: "−",
 };
 
 /**
@@ -92,7 +92,7 @@ export function BalanceAmount({
   const locale = useNumberLocale();
   const t = useTranslations("money");
   const tone = toneFor(minorUnits);
-  const Icon = TONE_ICONS[tone];
+  const sign = TONE_SIGNS[tone];
   const label = t(TONE_LABEL_KEYS[tone]);
   const magnitude =
     BigInt(minorUnits) < 0n ? -BigInt(minorUnits) : BigInt(minorUnits);
@@ -107,7 +107,12 @@ export function BalanceAmount({
         className,
       )}
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0" />
+      <span
+        aria-hidden="true"
+        className="w-4 shrink-0 text-center leading-none font-semibold"
+      >
+        {sign}
+      </span>
       <span className="tabular-nums">
         {formatMoney(money(magnitude, currency), { locale, fractionDigits })}
       </span>

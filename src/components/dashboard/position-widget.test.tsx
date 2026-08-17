@@ -54,6 +54,13 @@ describe("PositionWidget", () => {
     expect(screen.getByText("€148")).toBeVisible();
   });
 
+  it("marks incoming and outgoing totals with plus and minus signs", () => {
+    renderWidget();
+
+    expect(screen.getByText("+")).toBeVisible();
+    expect(screen.getByText("−")).toBeVisible();
+  });
+
   it("shows whole units — this is a position, not a statement", () => {
     renderWidget();
 

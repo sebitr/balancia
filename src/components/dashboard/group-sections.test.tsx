@@ -50,6 +50,29 @@ describe("GroupList", () => {
     expect(word).toHaveClass("sr-only");
   });
 
+  it("uses minus and plus signs for owing and owed amounts", () => {
+    renderWithIntl(
+      <GroupList
+        groups={[
+          row(),
+          row({
+            id: "g2",
+            name: "Lisbon, March",
+            amounts: [{ minorUnits: "24800", currency: "EUR" }],
+          }),
+        ]}
+        now={NOW}
+      />,
+    );
+
+    expect(
+      within(screen.getByText("Flatshare").closest("li")!).getByText("−"),
+    ).toBeVisible();
+    expect(
+      within(screen.getByText("Lisbon, March").closest("li")!).getByText("+"),
+    ).toBeVisible();
+  });
+
   it("draws an amount the same size whichever way it points", () => {
     const { container } = renderWithIntl(
       <GroupList
