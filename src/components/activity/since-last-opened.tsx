@@ -1,10 +1,6 @@
-import Link from "next/link";
-import { getFormatter, getTranslations } from "next-intl/server";
-import { cn } from "@/lib/utils";
-import { getDateFormatter } from "@/i18n/preferences";
+import { getTranslations } from "next-intl/server";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
-import { PUSH } from "@/components/motion/transitions";
 
 /**
  * What changed while the reader was away.
@@ -22,8 +18,6 @@ import { PUSH } from "@/components/motion/transitions";
 export async function SinceLastOpened({
   entries,
   lastOpenedAt,
-  groupId,
-  now,
 }: {
   entries: readonly ActivityEntry[];
   /** Null on a first visit, when everything counts as new. */
@@ -34,66 +28,42 @@ export async function SinceLastOpened({
 }) {
   const t = await getTranslations("activity");
   const tGroup = await getTranslations("group");
-  const format = await getFormatter();
-  const dates = await getDateFormatter();
   const translate = t as unknown as ActivityTranslate;
   const boundary = lastOpenedAt ? new Date(lastOpenedAt) : null;
+  const unseen = entries.filter(
+    (entry) => boundary === null || entry.createdAt > boundary,
+  );
+
+  if (unseen.length === 0) return null;
 
   return (
     <section
       aria-labelledby="since-last-opened"
       className="flex flex-col gap-2.5"
     >
-      <h2
-        id="since-last-opened"
-        className="text-sm font-medium text-muted-foreground"
-      >
-        {tGroup("sinceYouLastOpened")}
+      <h2 id="since-last-opened" className="text-sm font-medium">
+        {tGroup("sinceYourLastVisit")}
       </h2>
 
-      <ol className="flex flex-col gap-2">
-        {entries.map((entry) => {
-          const unseen = boundary === null || entry.createdAt > boundary;
-          return (
-            <li
-              key={entry.id}
-              className="flex items-start gap-2 text-[0.8125rem]"
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "mt-[7px] size-[5px] shrink-0 rounded-full",
-                  unseen ? "bg-primary" : "bg-border",
-                )}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="font-medium">{actorOf(entry, translate)}</span>{" "}
-                <span className="text-muted-foreground">
-                  {describeActivity(entry, translate)}
-                </span>
-              </span>
-              <time
-                dateTime={entry.createdAt.toISOString()}
-                title={dates.at(entry.createdAt, {
-                  style: "long",
-                  time: "short",
-                })}
-                className="shrink-0 text-xs text-muted-foreground"
-              >
-                {format.relativeTime(entry.createdAt, new Date(now))}
-              </time>
-            </li>
-          );
-        })}
+      <ol className="flex flex-col gap-2.5 rounded-2xl px-3.5 py-3 ring-1 ring-border">
+        {unseen.map((entry) => (
+          <li
+            key={entry.id}
+            className="flex min-w-0 items-start gap-2.5 text-[0.84375rem] leading-snug"
+          >
+            <span
+              aria-hidden="true"
+              className="mt-[6px] size-[5px] shrink-0 rounded-full bg-primary"
+            />
+            <span className="min-w-0 flex-1 text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {actorOf(entry, translate)}
+              </span>{" "}
+              {describeActivity(entry, translate)}
+            </span>
+          </li>
+        ))}
       </ol>
-
-      <Link
-        href={`/groups/${groupId}/activity`}
-        transitionTypes={PUSH}
-        className="-my-1 self-start rounded-md py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-      >
-        {tGroup("showEarlierActivity")}
-      </Link>
     </section>
   );
 }

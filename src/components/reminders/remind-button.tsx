@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RemindSheet } from "./remind-sheet";
 import type { RemindRecipient } from "@/modules/reminders/types";
+import { cn } from "@/lib/utils";
 
 /**
  * The entry point to the Remind flow, and the memory of having used it.
@@ -21,11 +22,18 @@ export function RemindButton({
   groupName,
   senderName,
   recipients,
+  label,
+  variant = "outline",
+  className,
 }: {
   groupId: string;
   groupName: string;
   senderName: string;
   recipients: readonly RemindRecipient[];
+  /** Overview cards can name one person or say "all" more precisely. */
+  label?: string;
+  variant?: "default" | "outline";
+  className?: string;
 }) {
   const t = useTranslations("remind");
   const [open, setOpen] = useState(false);
@@ -39,7 +47,7 @@ export function RemindButton({
         aria-disabled="true"
         disabled
         size="lg"
-        className="h-9 rounded-xl px-3.5 text-sm font-medium"
+        className={cn("h-9 rounded-xl px-3.5 text-sm font-medium", className)}
       >
         <Check aria-hidden="true" className="size-4" />
         {t("reminded")}
@@ -50,13 +58,13 @@ export function RemindButton({
   return (
     <>
       <Button
-        variant="outline"
+        variant={variant}
         size="lg"
         onClick={() => setOpen(true)}
-        className="h-9 rounded-xl px-3.5 text-sm font-medium"
+        className={cn("h-9 rounded-xl px-3.5 text-sm font-medium", className)}
       >
         <Bell aria-hidden="true" className="size-4" />
-        {t("action")}
+        {label ?? t("action")}
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>

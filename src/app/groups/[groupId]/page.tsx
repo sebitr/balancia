@@ -1,25 +1,23 @@
-import Link from "next/link";
 import { after } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { Plus, Receipt, Upload, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { BalanceList } from "@/components/groups/balance-list";
-import { PositionCard } from "@/components/groups/position-card";
-import { StatStrip } from "@/components/groups/stat-strip";
+import { GroupEmptyState } from "@/components/groups/group-empty-state";
+import { PositionHero } from "@/components/groups/position-hero";
+import { SettlementList } from "@/components/groups/settlement-list";
+import { SpendingCard } from "@/components/groups/spending-card";
 import { SinceLastOpened } from "@/components/activity/since-last-opened";
 import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
 import { requireGroupAccess } from "@/lib/actions";
 import { listGroupActivity } from "@/modules/activity/service";
 import { countContributions } from "@/modules/guests/service";
+import { listParticipants } from "@/modules/groups/service";
 import {
   loadGroupOverview,
   markGroupOpened,
   type CurrencyPosition,
 } from "@/modules/groups/overview";
 import { listRemindRecipients } from "@/modules/reminders/service";
-import { PUSH } from "@/components/motion/transitions";
 
 /**
  * Group overview — where I stand, what this group is, who owes whom, and what
@@ -33,8 +31,8 @@ import { PUSH } from "@/components/motion/transitions";
 
 /** The balance list stops here and hands the rest to the balances screen. */
 const BALANCE_ROWS = 5;
-/** Four is enough to say "this moved"; the full history is a tap away. */
-const ACTIVITY_ROWS = 4;
+/** Enough history to find the useful lines beyond a burst of recent edits. */
+const ACTIVITY_ROWS = 12;
 
 /**
  * The position the guest widget names.
@@ -66,21 +64,21 @@ export default async function GroupOverviewPage({
   const access = await requireGroupAccess(groupId);
 
   const isGuest = access.role === "guest";
+  const now = new Date();
 
-  const [overview, activity, recipients, contributionCount] = await Promise.all(
-    [
-      loadGroupOverview(access),
+  const [overview, activity, recipients, contributionCount, participants] =
+    await Promise.all([
+      loadGroupOverview(access, { now }),
       listGroupActivity(access.groupId, { limit: ACTIVITY_ROWS }),
       listRemindRecipients(access),
       // Only the guest widget names this number, so only a guest pays for it.
       isGuest && access.participantId
         ? countContributions(access.participantId)
         : Promise.resolve(0),
-    ],
-  );
+      listParticipants(access.groupId),
+    ]);
 
   const t = await getTranslations("group");
-  const now = new Date();
 
   // Read during the render, used after it: the value the reader has just been
   // shown is the boundary, and it may only move once they have seen it.
@@ -94,15 +92,17 @@ export default async function GroupOverviewPage({
   const empty = overview.expenseCount === 0;
   const guestPosition = isGuest ? strongestPosition(overview.positions) : null;
 
-  const remindedAt = new Map(
-    recipients.map((recipient) => [
-      recipient.participantId,
-      recipient.lastRemindedAt,
-    ]),
-  );
+  const senderName =
+    access.actor.kind === "guest"
+      ? access.actor.displayName
+      : access.actor.name;
+  const participantOptions = participants.map((participant) => ({
+    id: participant.id,
+    displayName: participant.displayName,
+  }));
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-[26px]">
       {/* No visible title and no meta line: the switcher in the top bar
           already names the group, and counting people, expenses and days told
           the reader nothing they could act on. The heading stays for anyone
@@ -119,114 +119,107 @@ export default async function GroupOverviewPage({
         </div>
       )}
 
-      {/* Before the first expense there is no position and no shape to frame:
-          the empty state below is the whole screen, and a card of zeroes above
-          it would only compete for the reader's first glance. */}
-      {!empty && access.participantId && (
-        <PositionCard
-          positions={overview.positions.map((position) => ({
-            currency: position.currency,
-            minorUnits: position.amount.toString(),
-            counterparties: position.counterparties.map((party) => ({
-              name: party.name,
-              minorUnits: party.amount.toString(),
-            })),
-          }))}
+      {empty ? (
+        <GroupEmptyState
           groupId={groupId}
-          groupName={access.group.name}
-          senderName={
-            access.actor.kind === "guest"
-              ? access.actor.displayName
-              : access.actor.name
-          }
-          recipients={recipients}
+          canImport={access.permissions.importData}
+          canInvite={access.permissions.manageInvitations}
         />
-      )}
+      ) : (
+        <>
+          {access.participantId && (
+            <PositionHero
+              positions={overview.positions.map((position) => ({
+                currency: position.currency,
+                minorUnits: position.amount.toString(),
+                counterparties: position.counterparties.map((party) => ({
+                  participantId: party.participantId,
+                  name: party.name,
+                  minorUnits: party.amount.toString(),
+                })),
+                breakdown: {
+                  paid: position.breakdown.paid.toString(),
+                  share: position.breakdown.share.toString(),
+                  settlementsPaid:
+                    position.breakdown.settlementsPaid.toString(),
+                  settlementsReceived:
+                    position.breakdown.settlementsReceived.toString(),
+                  otherAdjustments:
+                    position.breakdown.otherAdjustments.toString(),
+                },
+              }))}
+              groupId={groupId}
+              groupName={access.group.name}
+              senderName={senderName}
+              recipients={recipients}
+              participants={participantOptions}
+              currencyMode={access.group.currencyMode}
+              baseCurrency={access.group.baseCurrency}
+              canArchive={
+                access.permissions.manageGroupSettings &&
+                access.group.archivedAt === null
+              }
+            />
+          )}
 
-      {!empty && (
-        <StatStrip
-          stats={overview.stats.map((stat) => ({
-            currency: stat.currency,
-            groupSpent: stat.groupSpent.toString(),
-            youPaid: stat.youPaid.toString(),
-            yourShare: stat.yourShare.toString(),
-          }))}
-        />
-      )}
+          {overview.rows.length > 0 && (
+            <BalanceList
+              rows={overview.rows.map((row) => ({
+                participantId: row.participantId,
+                name: row.name,
+                currency: row.currency,
+                minorUnits: row.amount.toString(),
+                isSelf: row.isSelf,
+                remindedAt: null,
+              }))}
+              groupId={groupId}
+              limit={BALANCE_ROWS}
+              participantCount={overview.participantCount}
+            />
+          )}
 
-      {empty && (
-        <EmptyState
-          icon={Receipt}
-          title={t("noExpensesTitle")}
-          description={
-            overview.participantCount > 1
-              ? t("noExpensesDescription")
-              : t("noExpensesDescriptionSolo")
-          }
-          action={
-            /* Stacked and full width on a phone; only the primary action is
-               filled, so the order to do things in survives a narrow column. */
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <Button asChild>
-                {/* No direction, like the bar's own Add: this opens a drawer
-                    over the group rather than going anywhere. */}
-                <Link href={`/groups/${groupId}/expenses/new`}>
-                  <Plus aria-hidden="true" />
-                  {t("addExpense")}
-                </Link>
-              </Button>
-              {access.permissions.manageParticipants && (
-                <Button asChild variant="outline">
-                  <Link
-                    href={`/groups/${groupId}/members`}
-                    transitionTypes={PUSH}
-                  >
-                    <Users aria-hidden="true" />
-                    {t("addPeople")}
-                  </Link>
-                </Button>
-              )}
-              {access.permissions.importData && (
-                <Button asChild variant="outline">
-                  <Link
-                    href={`/groups/${groupId}/import`}
-                    transitionTypes={PUSH}
-                  >
-                    <Upload aria-hidden="true" />
-                    {t("importFromSplitwise")}
-                  </Link>
-                </Button>
-              )}
-            </div>
-          }
-        />
-      )}
+          <SettlementList
+            suggestions={overview.suggestions.map((suggestion) => ({
+              fromParticipantId: suggestion.fromParticipantId,
+              fromName: suggestion.fromName,
+              toParticipantId: suggestion.toParticipantId,
+              toName: suggestion.toName,
+              currency: suggestion.currency,
+              minorUnits: suggestion.amount.toString(),
+              fromIsSelf: suggestion.fromIsSelf,
+              toIsSelf: suggestion.toIsSelf,
+            }))}
+            groupId={groupId}
+            groupName={access.group.name}
+            senderName={senderName}
+            recipients={recipients}
+            participants={participantOptions}
+            currencyMode={access.group.currencyMode}
+            baseCurrency={access.group.baseCurrency}
+          />
 
-      {overview.rows.length > 0 && (
-        <BalanceList
-          rows={overview.rows.map((row) => ({
-            participantId: row.participantId,
-            name: row.name,
-            currency: row.currency,
-            minorUnits: row.amount.toString(),
-            isSelf: row.isSelf,
-            remindedAt: remindedAt.get(row.participantId) ?? null,
-          }))}
-          groupId={groupId}
-          limit={BALANCE_ROWS}
-          now={now.toISOString()}
-        />
-      )}
+          {activity.length > 0 && (
+            <SinceLastOpened
+              entries={activity}
+              lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
+              groupId={groupId}
+              now={now.toISOString()}
+            />
+          )}
 
-      {/* Omitted rather than shown empty: a heading over nothing is worse than
-          no heading. */}
-      {activity.length > 0 && (
-        <SinceLastOpened
-          entries={activity}
-          lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
-          groupId={groupId}
-          now={now.toISOString()}
-        />
+          <SpendingCard
+            groupId={groupId}
+            periods={overview.spendingPeriods.map((period) => ({
+              key: period.key,
+              stats: period.stats.map((stat) => ({
+                currency: stat.currency,
+                groupSpent: stat.groupSpent.toString(),
+                youPaid: stat.youPaid.toString(),
+                yourShare: stat.yourShare.toString(),
+              })),
+            }))}
+          />
+        </>
       )}
 
       {/* Last, and only for a guest: what they would lose by closing this

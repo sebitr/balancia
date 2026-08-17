@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { counterpartiesOf, orderBalanceRows } from "./overview";
+import {
+  counterpartiesOf,
+  orderBalanceRows,
+  spendingPeriodsOf,
+} from "./overview";
 import type { CurrencyBalances } from "@/modules/balances/engine";
 
 const NAMES = new Map([
@@ -25,8 +29,8 @@ function balances(entries: readonly [string, bigint][]): CurrencyBalances {
   };
 }
 
-describe("ordering who owes whom", () => {
-  it("puts the reader first, then creditors, then debtors", () => {
+describe("ordering everyone's balances", () => {
+  it("puts the most negative balance first and the most positive last", () => {
     const rows = orderBalanceRows(
       balances([
         ["padi", -4000n],
@@ -39,14 +43,14 @@ describe("ordering who owes whom", () => {
     );
 
     expect(rows.map((row) => row.participantId)).toEqual([
-      "me",
-      "jonas",
       "amelie",
       "padi",
+      "me",
+      "jonas",
     ]);
   });
 
-  it("ranks each group by size, not by sign", () => {
+  it("sorts by signed position rather than magnitude", () => {
     const rows = orderBalanceRows(
       balances([
         ["padi", -1000n],
@@ -57,14 +61,10 @@ describe("ordering who owes whom", () => {
       null,
     );
 
-    expect(rows.map((row) => row.amount)).toEqual([9000n, -8000n, -1000n]);
+    expect(rows.map((row) => row.amount)).toEqual([-8000n, -1000n, 9000n]);
   });
 
-  /**
-   * A settled member is not news on a screen about open debts, and on a big
-   * group they would push the rows that matter past the five-row cap.
-   */
-  it("drops people who are square, including the reader", () => {
+  it("keeps settled people in the group comparison", () => {
     const rows = orderBalanceRows(
       balances([
         ["me", 0n],
@@ -75,7 +75,11 @@ describe("ordering who owes whom", () => {
       "me",
     );
 
-    expect(rows.map((row) => row.participantId)).toEqual(["jonas"]);
+    expect(rows.map((row) => row.participantId)).toEqual([
+      "me",
+      "quiet",
+      "jonas",
+    ]);
   });
 
   it("marks the reader's own row and names everyone else", () => {
@@ -88,8 +92,59 @@ describe("ordering who owes whom", () => {
       "me",
     );
 
-    expect(rows[0]).toMatchObject({ isSelf: true, name: "Seb" });
-    expect(rows[1]).toMatchObject({ isSelf: false, name: "Padi" });
+    expect(rows[0]).toMatchObject({ isSelf: false, name: "Padi" });
+    expect(rows[1]).toMatchObject({ isSelf: true, name: "Seb" });
+  });
+});
+
+describe("spending periods", () => {
+  const expense = (
+    id: string,
+    expenseDate: string,
+    amount: bigint,
+    payer: string,
+    share: bigint,
+  ) => ({
+    id,
+    expenseDate,
+    currency: "EUR",
+    direction: "out" as const,
+    payers: [{ participantId: payer, amount }],
+    shares: [{ participantId: "me", amount: share }],
+  });
+
+  it("keeps month and last-settlement views on the group calendar", () => {
+    const periods = spendingPeriodsOf(
+      [
+        expense("june", "2026-06-10", 30000n, "me", 15000n),
+        expense("july", "2026-07-12", 10000n, "me", 5000n),
+        expense("august", "2026-08-14", 20000n, "other", 10000n),
+      ],
+      "me",
+      "Europe/Zurich",
+      "2026-08-10",
+      new Date("2026-08-17T12:00:00Z"),
+    );
+
+    const thisMonth = periods.find((period) => period.key === "thisMonth");
+    const lastMonth = periods.find((period) => period.key === "lastMonth");
+    const since = periods.find(
+      (period) => period.key === "sinceLastSettlement",
+    );
+    const allTime = periods.find((period) => period.key === "allTime");
+
+    expect(thisMonth?.stats[0]).toMatchObject({
+      groupSpent: 20000n,
+      youPaid: 0n,
+      yourShare: 10000n,
+    });
+    expect(lastMonth?.stats[0]).toMatchObject({
+      groupSpent: 10000n,
+      youPaid: 10000n,
+      yourShare: 5000n,
+    });
+    expect(since?.stats).toEqual(thisMonth?.stats);
+    expect(allTime?.stats[0].groupSpent).toBe(60000n);
   });
 });
 

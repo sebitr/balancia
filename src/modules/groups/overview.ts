@@ -1,12 +1,16 @@
 import "server-only";
 import { and, count, eq, isNull, max, min } from "drizzle-orm";
+import { DateTime } from "luxon";
 import { getDb, type Database } from "@/lib/db/client";
-import { expenses, participants } from "@/lib/db/schema";
+import { expenses, participants, settlements } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import { loadGroupBalances } from "@/modules/balances/service";
-import type {
+import {
+  contributionsOf,
+  totalSpendByCurrency,
+  type BalanceInputExpense,
   CurrencyBalances,
-  RepaymentSuggestion,
+  type RepaymentSuggestion,
 } from "@/modules/balances/engine";
 
 /**
@@ -37,6 +41,15 @@ export interface CurrencyPosition {
   readonly amount: bigint;
   /** Ordered by amount, descending. Empty when the user is square. */
   readonly counterparties: readonly PositionCounterparty[];
+  /** The explainable components behind the resulting balance. */
+  readonly breakdown: {
+    readonly paid: bigint;
+    readonly share: bigint;
+    readonly settlementsPaid: bigint;
+    readonly settlementsReceived: bigint;
+    /** Income, reimbursements and any other signed remainder. */
+    readonly otherAdjustments: bigint;
+  };
 }
 
 /** The three figures the stat strip shows, for one currency. */
@@ -45,6 +58,14 @@ export interface CurrencyStats {
   readonly groupSpent: bigint;
   readonly youPaid: bigint;
   readonly yourShare: bigint;
+}
+
+export type SpendingPeriodKey =
+  "thisMonth" | "lastMonth" | "sinceLastSettlement" | "allTime";
+
+export interface SpendingPeriod {
+  readonly key: SpendingPeriodKey;
+  readonly stats: readonly CurrencyStats[];
 }
 
 /** One line of "who owes whom". */
@@ -57,15 +78,28 @@ export interface BalanceRow {
   readonly isSelf: boolean;
 }
 
+/** One simplified transfer instruction, deliberately separate from balances. */
+export interface SettlementSuggestion {
+  readonly fromParticipantId: string;
+  readonly fromName: string;
+  readonly toParticipantId: string;
+  readonly toName: string;
+  readonly currency: string;
+  readonly amount: bigint;
+  readonly fromIsSelf: boolean;
+  readonly toIsSelf: boolean;
+}
+
 export interface GroupOverview {
   readonly participantCount: number;
   readonly expenseCount: number;
   /** First and last expense dates, as plain `YYYY-MM-DD`. Null with no expenses. */
   readonly span: { readonly first: string; readonly last: string } | null;
   readonly positions: readonly CurrencyPosition[];
-  readonly stats: readonly CurrencyStats[];
+  readonly spendingPeriods: readonly SpendingPeriod[];
   /** Every member with a balance, already ordered. The screen caps the list. */
   readonly rows: readonly BalanceRow[];
+  readonly suggestions: readonly SettlementSuggestion[];
   /** When the reader last opened this group. Null on a first visit. */
   readonly lastOpenedAt: Date | null;
 }
@@ -110,12 +144,10 @@ export function counterpartiesOf(
 }
 
 /**
- * "Who owes whom", in reading order: the reader first, then the people owed
- * money, then the people who owe it, each by descending magnitude.
- *
- * Settled members are dropped. A row saying someone is square adds nothing to
- * a list whose subject is open debts, and on a large group it would crowd out
- * the rows that matter.
+ * Everyone's balances in comparison order: most negative first, then settled,
+ * then positive. Keeping zero rows is important here — this is a group view,
+ * not merely an outstanding-debt list, and a settled person still belongs in
+ * the comparison.
  */
 export function orderBalanceRows(
   entry: CurrencyBalances,
@@ -130,21 +162,70 @@ export function orderBalanceRows(
     isSelf: balance.participantId === selfParticipantId,
   }));
 
-  const byMagnitude = (a: BalanceRow, b: BalanceRow) => {
-    const left = a.amount < 0n ? -a.amount : a.amount;
-    const right = b.amount < 0n ? -b.amount : b.amount;
-    return right > left ? 1 : right < left ? -1 : 0;
-  };
+  return rows.sort((a, b) =>
+    a.amount < b.amount ? -1 : a.amount > b.amount ? 1 : 0,
+  );
+}
 
-  const self = rows.filter((row) => row.isSelf && row.amount !== 0n);
-  const creditors = rows
-    .filter((row) => !row.isSelf && row.amount > 0n)
-    .sort(byMagnitude);
-  const debtors = rows
-    .filter((row) => !row.isSelf && row.amount < 0n)
-    .sort(byMagnitude);
+interface DatedExpense extends BalanceInputExpense {
+  readonly expenseDate: string;
+}
 
-  return [...self, ...creditors, ...debtors];
+/** Four quiet spending views, all derived from the already-normalized facts. */
+export function spendingPeriodsOf(
+  facts: readonly DatedExpense[],
+  selfParticipantId: string | null,
+  timezone: string,
+  lastSettlement: string | null,
+  now: Date,
+): SpendingPeriod[] {
+  const localNow = DateTime.fromJSDate(now, { zone: timezone });
+  const thisMonth = localNow.startOf("month");
+  const nextMonth = thisMonth.plus({ months: 1 });
+  const lastMonth = thisMonth.minus({ months: 1 });
+
+  const ranges: readonly {
+    key: SpendingPeriodKey;
+    from: string | null;
+    to: string | null;
+  }[] = [
+    {
+      key: "thisMonth",
+      from: thisMonth.toISODate(),
+      to: nextMonth.toISODate(),
+    },
+    {
+      key: "lastMonth",
+      from: lastMonth.toISODate(),
+      to: thisMonth.toISODate(),
+    },
+    { key: "sinceLastSettlement", from: lastSettlement, to: null },
+    { key: "allTime", from: null, to: null },
+  ];
+
+  const currencies = [...new Set(facts.map((fact) => fact.currency))].sort();
+
+  return ranges.map(({ key, from, to }) => {
+    const selected = facts.filter(
+      (fact) =>
+        (from === null || fact.expenseDate >= from) &&
+        (to === null || fact.expenseDate < to),
+    );
+    const group = totalSpendByCurrency(selected);
+    const mine = selfParticipantId
+      ? contributionsOf(selected, selfParticipantId)
+      : new Map();
+
+    return {
+      key,
+      stats: currencies.map((currency) => ({
+        currency,
+        groupSpent: group.get(currency) ?? 0n,
+        youPaid: mine.get(currency)?.paid ?? 0n,
+        yourShare: mine.get(currency)?.share ?? 0n,
+      })),
+    };
+  });
 }
 
 /**
@@ -156,70 +237,112 @@ export function orderBalanceRows(
  */
 export async function loadGroupOverview(
   access: Pick<GroupAccess, "groupId" | "group" | "participantId">,
-  options: { db?: Database } = {},
+  options: { db?: Database; now?: Date } = {},
 ): Promise<GroupOverview> {
   const db = options.db ?? getDb();
   const self = access.participantId;
 
-  const [balances, [shape], [me], [people]] = await Promise.all([
-    loadGroupBalances(access, { db, contributionsFor: self }),
-    db
-      .select({
-        expenseCount: count(expenses.id),
-        first: min(expenses.expenseDate),
-        last: max(expenses.expenseDate),
-      })
-      .from(expenses)
-      .where(
-        and(eq(expenses.groupId, access.groupId), isNull(expenses.deletedAt)),
-      ),
-    self
-      ? db
-          .select({ lastOpenedAt: participants.lastOpenedAt })
-          .from(participants)
-          .where(eq(participants.id, self))
-          .limit(1)
-      : Promise.resolve([]),
-    db
-      .select({ activeCount: count(participants.id) })
-      .from(participants)
-      .where(
-        and(
-          eq(participants.groupId, access.groupId),
-          isNull(participants.removedAt),
+  const [balances, [shape], [me], [people], [latestSettlement]] =
+    await Promise.all([
+      loadGroupBalances(access, { db, contributionsFor: self }),
+      db
+        .select({
+          expenseCount: count(expenses.id),
+          first: min(expenses.expenseDate),
+          last: max(expenses.expenseDate),
+        })
+        .from(expenses)
+        .where(
+          and(eq(expenses.groupId, access.groupId), isNull(expenses.deletedAt)),
         ),
-      ),
-  ]);
+      self
+        ? db
+            .select({ lastOpenedAt: participants.lastOpenedAt })
+            .from(participants)
+            .where(eq(participants.id, self))
+            .limit(1)
+        : Promise.resolve([]),
+      db
+        .select({ activeCount: count(participants.id) })
+        .from(participants)
+        .where(
+          and(
+            eq(participants.groupId, access.groupId),
+            isNull(participants.removedAt),
+          ),
+        ),
+      db
+        .select({ settledOn: max(settlements.settledOn) })
+        .from(settlements)
+        .where(
+          and(
+            eq(settlements.groupId, access.groupId),
+            isNull(settlements.deletedAt),
+          ),
+        ),
+    ]);
 
   const positions: CurrencyPosition[] = [];
-  const stats: CurrencyStats[] = [];
   const rows: BalanceRow[] = [];
+  const suggestions: SettlementSuggestion[] = [];
 
   for (const entry of balances.currencies) {
     const contribution = balances.contributions.get(entry.currency);
-    stats.push({
-      currency: entry.currency,
-      groupSpent: balances.totalSpend.get(entry.currency) ?? 0n,
-      youPaid: contribution?.paid ?? 0n,
-      yourShare: contribution?.share ?? 0n,
-    });
+    const settlement = balances.settlementsFor.get(entry.currency);
 
     rows.push(...orderBalanceRows(entry, balances.participantNames, self));
+    suggestions.push(
+      ...(balances.suggestionsByCurrency.get(entry.currency) ?? []).map(
+        (suggestion) => ({
+          fromParticipantId: suggestion.fromParticipantId,
+          fromName:
+            balances.participantNames.get(suggestion.fromParticipantId) ?? "",
+          toParticipantId: suggestion.toParticipantId,
+          toName:
+            balances.participantNames.get(suggestion.toParticipantId) ?? "",
+          currency: suggestion.currency,
+          amount: suggestion.amount,
+          fromIsSelf: suggestion.fromParticipantId === self,
+          toIsSelf: suggestion.toParticipantId === self,
+        }),
+      ),
+    );
 
     if (!self) continue;
     const mine = entry.balances.find(
       (balance) => balance.participantId === self,
     );
+    const amount = mine?.amount ?? 0n;
+    const paid = contribution?.paid ?? 0n;
+    const share = contribution?.share ?? 0n;
+    const settlementsPaid = settlement?.paid ?? 0n;
+    const settlementsReceived = settlement?.received ?? 0n;
+    const explained = paid - share + settlementsPaid - settlementsReceived;
     positions.push({
       currency: entry.currency,
-      amount: mine?.amount ?? 0n,
+      amount,
       counterparties: counterpartiesOf(
         balances.suggestionsByCurrency.get(entry.currency) ?? [],
         self,
         balances.participantNames,
       ),
+      breakdown: {
+        paid,
+        share,
+        settlementsPaid,
+        settlementsReceived,
+        otherAdjustments: amount - explained,
+      },
     });
   }
+
+  const spendingPeriods = spendingPeriodsOf(
+    balances.spendingFacts,
+    self,
+    access.group.timezone,
+    latestSettlement?.settledOn ?? null,
+    options.now ?? new Date(),
+  );
 
   return {
     participantCount: people?.activeCount ?? 0,
@@ -229,8 +352,9 @@ export async function loadGroupOverview(
         ? { first: shape.first, last: shape.last }
         : null,
     positions,
-    stats,
+    spendingPeriods,
     rows,
+    suggestions,
     lastOpenedAt: me?.lastOpenedAt ?? null,
   };
 }
