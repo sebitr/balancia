@@ -110,7 +110,6 @@ export function PersonRow({
   canRemove: boolean;
 }) {
   const t = useTranslations("membersPage");
-  const dates = useDateFormatter();
   const may = openings(person, {
     isSelf,
     manage: canManage,
@@ -123,16 +122,11 @@ export function PersonRow({
 
   const meta =
     person.access === "account"
-      ? [person.email, t("metaJoined", { date: dates.at(person.joinedAt) })]
-          .filter(Boolean)
-          .join(" · ")
+      ? person.email
       : person.access === "link" && person.link
-        ? [
-            t("metaLinkCreated", { date: dates.at(person.link.createdAt) }),
-            person.link.lastUsedAt
-              ? t("metaOpened", { date: dates.at(person.link.lastUsedAt) })
-              : t("metaNotOpened"),
-          ].join(" · ")
+        ? person.link.lastUsedAt
+          ? t("metaNoAccountJoined")
+          : t("metaNoAccountInvited")
         : t("metaNoAccount");
 
   const summary = (
@@ -152,7 +146,7 @@ export function PersonRow({
           {person.access === "link" && (
             <Pill tone="primary">
               <Link2 aria-hidden="true" className="size-[11px]" />
-              {t("linkLive")}
+              {t("guest")}
             </Pill>
           )}
           {person.access === "none" && (
@@ -378,14 +372,6 @@ function PersonPanel({
               className={FIELD}
             />
           </label>
-          {/* Outside the label, which would otherwise read the whole hint out
-              as the field's name. Only their own row reaches this branch, so
-              the sentence is addressed to them rather than about them. */}
-          {!may.email && (
-            <span className="text-xs text-pretty text-muted-foreground">
-              {t("emailInAccount")}
-            </span>
-          )}
           {may.email && (
             <label htmlFor={emailId} className="flex flex-col gap-1.5">
               <span className="flex items-baseline gap-1.5 text-[0.8125rem] font-medium">

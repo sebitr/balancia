@@ -41,7 +41,6 @@ export interface PersonView {
   readonly isOwner: boolean;
   /** `account` signs in, `link` holds a live invite, `none` has neither. */
   readonly access: "account" | "link" | "none";
-  readonly joinedAt: string;
   readonly link: {
     readonly createdAt: string;
     readonly expiresAt: string | null;
