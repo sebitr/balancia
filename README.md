@@ -37,7 +37,7 @@
   <img src="./docs/assets/balancia-mobile-overview.jpg" alt="Balancia mobile group overview showing exactly who owes whom and the payment needed to settle up" width="390">
 </p>
 
-Balancia is an open-source, self-hosted alternative to Splitwise and tricount.
+Balancia is an open-source, self-hosted alternative to Splitwise and Tricount.
 Add what each person paid, choose how to divide it, and Balancia calculates who
 owes whom. Every feature is available without a paid tier, guests can
 participate without creating an account, and a self-hosted instance keeps its
