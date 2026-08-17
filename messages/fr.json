@@ -500,6 +500,287 @@
     "footerTagline": "Balancia — dépenses partagées, équitablement réparties.",
     "footerLicence": "AGPL-3.0-or-later. Toute version réseau modifiée doit proposer son code source."
   },
+  "marketing": {
+    "meta": {
+      "title": "Dépenses partagées, équitablement réparties",
+      "description": "Balancia est un logiciel libre et gratuit pour partager les dépenses entre amis, colocataires, couples, familles, clubs et équipes — en ligne ou auto-hébergé."
+    },
+    "header": {
+      "home": "Accueil Balancia",
+      "navigation": "Navigation principale",
+      "github": "GitHub",
+      "signIn": "Se connecter",
+      "createAccount": "Créer un compte"
+    },
+    "hero": {
+      "eyebrow": "Dépenses partagées, auto-hébergées",
+      "titleLine1": "Tout le monde a",
+      "titleLine2": "payé quelque chose.",
+      "titleAccent": "Balancia calcule le reste.",
+      "lead": "Le dîner, le loyer, ce voyage pour lequel personne n'a tenu de tableau. Ajoute ce que tu as dépensé et Balancia indique exactement où en est chaque personne — dans la devise utilisée, sur un serveur que tu contrôles.",
+      "createAccount": "Crée ton compte",
+      "readSource": "Voir le code source",
+      "reassurance": "Compte gratuit, sans carte bancaire. Ou clone le dépôt et fais tout tourner toi-même.",
+      "trust": {
+        "noAds": "Sans publicité",
+        "noPaywall": "Aucune fonction payante",
+        "guests": "Aucun compte requis pour les invités"
+      }
+    },
+    "demo": {
+      "groupName": "Week-end à Lisbonne",
+      "groupMeta": "{count, plural, one {# personne} other {# personnes}} · {currency}",
+      "live": "En direct",
+      "expenseName": "Dîner chez Ramiro",
+      "changeHint": "modifie les choix ci-dessous",
+      "amountAriaLabel": "Montant de la dépense",
+      "paidBy": "Payé par",
+      "split": "Répartition",
+      "splitModeAriaLabel": "Méthode de répartition",
+      "modes": {
+        "equal": "Égale",
+        "shares": "Parts",
+        "percentage": "Pourcentage"
+      },
+      "people": {
+        "sam": { "name": "Sam" },
+        "mina": { "name": "Mina" },
+        "theo": { "name": "Théo" },
+        "ada": { "name": "Ada" }
+      },
+      "splitNotes": {
+        "empty": "Saisis un montant pour voir la répartition.",
+        "equalExact": "{total} ÷ 4 donne exactement {share} par personne.",
+        "equalRemainder": "{total} ÷ 4 laisse {count, plural, one {# centime} other {# centimes}}. Le surplus va à {names}, et la somme des parts reste exacte.",
+        "shares": "Sam 3 parts, Mina 2, Théo 2, Ada 1 — {allocations}.",
+        "percentage": "40 % · 25 % · 25 % · 10 % — {allocations}."
+      },
+      "balancesTitle": "Situation de chacun",
+      "totalSpent": "{amount} dépensés",
+      "paidAmount": "a payé {amount}",
+      "getsBack": "à recevoir",
+      "owes": "à payer",
+      "settledUp": "à jour",
+      "settledIn": "Soldé en {count, plural, one {# paiement} other {# paiements}}",
+      "everyoneSettled": "Tout le monde est à jour",
+      "transfer": "{from} paie {amount} à {to}"
+    },
+    "features": {
+      "eyebrow": "Ce que fait Balancia",
+      "title": "Les choses qui dérapent d'habitude. Pas ici.",
+      "items": {
+        "splits": {
+          "title": "Des répartitions qui tombent toujours juste",
+          "body": "Parts égales, montants exacts, pourcentages ou parts pondérées. Les montants sont des unités mineures entières : leur somme correspond donc exactement au total, à chaque fois."
+        },
+        "payers": {
+          "title": "Plusieurs payeurs, sans bricolage",
+          "body": "Quand deux personnes règlent une même note, saisis-la une seule fois. Les soldes suivent qui a réellement payé quoi."
+        },
+        "currency": {
+          "title": "Multidevise, au choix",
+          "body": "Garde chaque devise équilibrée séparément, ou convertis tout dans une devise de référence à un taux figé au moment de la saisie."
+        },
+        "passkeys": {
+          "title": "Clés d'accès et liens invités",
+          "body": "Connecte-toi avec une clé d'accès ou un mot de passe. Invite les personnes qui ne veulent pas de compte via un lien révocable."
+        },
+        "receipts": {
+          "title": "Des reçus qui restent privés",
+          "body": "Joins des photos ou des PDF. Ils restent dans ton propre stockage, protégés par les autorisations — jamais dans un dossier public."
+        },
+        "recurring": {
+          "title": "Dépenses récurrentes",
+          "body": "Loyer, abonnements, facture internet partagée. Elles sont générées à la date prévue dans le fuseau horaire de ton groupe."
+        },
+        "revenue": {
+          "title": "Recettes et remboursements, pas seulement dépenses",
+          "body": "Ajoute un revenu — une caution rendue, un remboursement, un versement partagé — et répartis-le des quatre mêmes façons, de manière récurrente si nécessaire. Les remboursements sont enregistrés comme paiements et les règlements suggérés du groupe sont calculés pour toi."
+        }
+      }
+    },
+    "useCases": {
+      "eyebrow": "À qui cela s'adresse",
+      "title": "Si l'argent circule toujours entre les mêmes personnes, Balancia est fait pour vous.",
+      "intro": "Six situations qui amènent souvent les gens ici. Chacune s'appuie sur une facette différente de Balancia.",
+      "items": {
+        "trip": {
+          "title": "Organiser un voyage entre amis",
+          "body": "Des vols réservés des mois plus tôt, une caution avancée par une personne, des dîners payés par la carte la plus proche, dont la moitié dans une autre devise. Ajoute chaque coût au fur et à mesure : Balancia garde les devises en ordre, puis suggère les paiements qui soldent le voyage une fois de retour."
+        },
+        "flat": {
+          "title": "Partager un appartement",
+          "body": "Loyer, électricité, internet et courses de la semaine, mois après mois. Configure une fois les dépenses répétitives et elles apparaissent à la date prévue. Si quelqu'un déménage en milieu de mois, une répartition en montants exacts règle la partie délicate."
+        },
+        "partner": {
+          "title": "Partager les frais en couple",
+          "body": "Deux revenus différents et un partage moitié-moitié qui n'a jamais semblé juste. Donne plutôt un pourcentage ou un ratio de parts au budget commun — 60/40, ou trois parts contre deux — et chaque dépense le suit sans devoir en reparler."
+        },
+        "event": {
+          "title": "Un mariage, un enterrement de vie, un cadeau commun",
+          "body": "Une ou deux personnes avancent les grosses réservations pendant qu'une douzaine d'autres doivent leur part. Les invités rejoignent le groupe par un lien, sans créer de compte pour un seul week-end — et quand le lieu rend la caution, elle revient comme revenu et réduit ce que chacun doit."
+        },
+        "ownership": {
+          "title": "Quelque chose que vous possédez ensemble",
+          "body": "Une voiture entre frères et sœurs, un bateau entre amis, une maison de vacances familiale. Assurance et entretien se répètent ; lorsque le bien est loué, le revenu est enregistré et réparti comme les coûts. Les reçus restent joints à la dépense concernée."
+        },
+        "club": {
+          "title": "Un club, une équipe, un groupe de musique",
+          "body": "Matériel et location du terrain en sortie, cotisations et cachets en entrée. Enregistre les deux côtés dans un seul groupe, répartis les versements en parts s'ils diffèrent et exporte l'année dans un classeur Excel pour la personne qui tient les comptes."
+        }
+      }
+    },
+    "comparison": {
+      "eyebrow": "Tu viens de Splitwise",
+      "title": "Emporte ton groupe avec toi.",
+      "body": "Importe un export CSV ou une sauvegarde JSON de Splitwise : Balancia te montre exactement ce qui sera créé avant toute écriture. Le même fichier peut être relancé sans rien dupliquer. Tu n'as pas besoin de repartir d'un groupe vide.",
+      "steps": {
+        "upload": "Importe l'export que tu possèdes déjà.",
+        "preview": "Lis l'aperçu — chaque groupe, personne et dépense qui sera créé.",
+        "map": "Associe les personnes aux comptes, puis importe."
+      },
+      "link": "Comprendre l'importation",
+      "beforeLabel": "Ce que tu connais",
+      "afterLabel": "Avec Balancia",
+      "rows": {
+        "hosting": {
+          "before": "Ton historique se trouve sur les serveurs d'une entreprise.",
+          "after": "Il se trouve sur un serveur géré par toi ou par une personne de confiance."
+        },
+        "features": {
+          "before": "Les fonctions utiles finissent derrière un abonnement.",
+          "after": "Chaque fonction est dans le dépôt, sous licence AGPL-3.0."
+        },
+        "accounts": {
+          "before": "Tout le monde doit s'inscrire avant de rejoindre un groupe.",
+          "after": "Les invités arrivent par un lien que tu peux révoquer."
+        },
+        "export": {
+          "before": "Récupérer tes données vient après coup.",
+          "after": "Tout groupe se télécharge en JSON, CSV ou Excel."
+        }
+      }
+    },
+    "selfHosting": {
+      "eyebrow": "Ton instance, tes données",
+      "title": "Personne ne s'interpose entre toi et ton argent.",
+      "body": "Balancia est un logiciel libre sous licence AGPL-3.0-or-later. Un seul fichier Docker Compose lance PostgreSQL et un worker en arrière-plan, sans imposer de service tiers. La télémétrie sert uniquement à améliorer l'outil, reste désactivée par défaut en auto-hébergement et ne contient jamais de données personnelles ni de montants.",
+      "bodyAnalytics": "Balancia est un logiciel libre sous licence AGPL-3.0-or-later. Un seul fichier Docker Compose lance PostgreSQL et un worker en arrière-plan, sans imposer de service tiers. La télémétrie ne contient jamais de données personnelles ni de montants. Sur cette instance, un administrateur a activé le comptage anonyme des pages publiques d'accueil et de connexion ; aucune page interne à l'application n'est comptée.",
+      "exportBody": "Partir est aussi simple qu'arriver : chaque groupe s'exporte en CSV, Excel ou JSON depuis ses réglages, et une instance auto-hébergée conserve sa base de données et ses reçus sur tes propres disques.",
+      "guide": "Guide d'auto-hébergement",
+      "install": {
+        "title": "Toute l'installation",
+        "copy": "Copier",
+        "copied": "Copié",
+        "steps": {
+          "1": "Télécharge le code source et ouvre le projet.",
+          "2": "Génère les secrets et demande quelles options activer.",
+          "3": "Construit et démarre PostgreSQL, l'application et son worker."
+        }
+      },
+      "facts": {
+        "license": "Licence",
+        "runtime": "Exécution",
+        "runtimeValue": "PostgreSQL 18, un worker",
+        "services": "Services externes",
+        "servicesValue": "Aucun n'est requis",
+        "telemetry": "Télémétrie",
+        "telemetryValue": "Désactivée par défaut en auto-hébergement"
+      },
+      "licenseNote": "L'AGPL ajoute une obligation : si tu exploites une version modifiée comme service réseau, tu dois proposer son code source aux utilisateurs. Elle protège ainsi les personnes qui confient leur historique financier à ton instance."
+    },
+    "status": {
+      "eyebrow": "Où en est le projet",
+      "title": "Un jeune logiciel qui joue cartes sur table.",
+      "body": "Tout ce que décrit cette page existe aujourd'hui dans le dépôt. Ce qui est terminé, partiel ou pas encore commencé est écrit plutôt que sous-entendu — y compris les éléments qui ne sont pas encore construits.",
+      "link": "Lire l'état d'implémentation"
+    },
+    "faq": {
+      "eyebrow": "Questions",
+      "title": "Avant de t'inscrire.",
+      "items": {
+        "free": {
+          "question": "Est-ce vraiment gratuit ?",
+          "answer": "Oui. Un compte sur cette instance ne coûte rien et aucune fonction n'est réservée. Le logiciel est lui-même libre sous licence AGPL-3.0-or-later : tu peux aussi faire tourner ta propre copie sans jamais dépendre de celle-ci."
+        },
+        "accounts": {
+          "question": "Les personnes avec qui je partage doivent-elles avoir un compte ?",
+          "answer": "Non. Invite-les avec un lien révocable. Les invités peuvent voir le groupe, ajouter et modifier des dépenses, rembourser et joindre des reçus, mais jamais gérer les personnes, les liens ou le groupe lui-même."
+        },
+        "export": {
+          "question": "Puis-je récupérer mes données ?",
+          "answer": "Tout groupe se télécharge depuis ses réglages en JSON — l'enregistrement complet avec les montants tels qu'ils sont stockés — ou en CSV et en classeur Excel."
+        },
+        "currency": {
+          "question": "Que se passe-t-il avec plusieurs devises ?",
+          "answer": "Garde chaque devise équilibrée séparément, ou convertis-les dans une devise de référence à un taux figé lors de la saisie, afin que les dépenses passées ne soient jamais recalculées en silence. Les taux quotidiens publiés par la Banque centrale européenne peuvent être proposés ; cette option est désactivée par défaut."
+        },
+        "privacy": {
+          "question": "Des informations sur mes dépenses sont-elles envoyées ailleurs ?",
+          "answer": "Non. La télémétrie ne transporte jamais de données personnelles ni de montants — elle sert seulement à améliorer l'outil et reste désactivée par défaut en auto-hébergement. Même la catégorisation s'exécute localement, sans service d'IA. Les intégrations facultatives n'accèdent au réseau que si un administrateur les active."
+        },
+        "selfHost": {
+          "question": "Est-ce difficile à héberger soi-même ?",
+          "answer": "Trois commandes suffisent : cloner le dépôt, lancer le script de préparation, puis démarrer avec Docker Compose. PostgreSQL, les migrations, l'application et son worker démarrent ensemble. La documentation contient des exemples de proxy inverse pour Caddy, Traefik et nginx."
+        }
+      }
+    },
+    "cta": {
+      "title": "Commence par le dîner de ce soir.",
+      "titleAccent": "Règle le voyage plus tard.",
+      "body": "Créer un groupe prend une minute, et ses participants n'ont pas besoin de compte.",
+      "createAccount": "Crée ton compte",
+      "haveAccount": "J'ai déjà un compte →",
+      "contributorBody": "Tu préfères construire que t'inscrire ? Issues et pull requests sont les bienvenues.",
+      "contribute": "Contribuer sur GitHub",
+      "registrationClosed": "Les inscriptions sont fermées sur cette instance. Demande un compte à l'administrateur, ou utilise un lien d'invitation si tu en as un."
+    },
+    "footer": {
+      "taglineLine1": "Dépenses partagées,",
+      "taglineLine2": "équitablement réparties.",
+      "runIt": "L'exécuter",
+      "buildIt": "Le développer",
+      "trustIt": "Lui faire confiance",
+      "links": {
+        "selfHosting": "Auto-hébergement",
+        "environment": "Référence de configuration",
+        "backup": "Sauvegarde et restauration",
+        "migration": "Migration des données",
+        "architecture": "Architecture",
+        "development": "Développement",
+        "contributing": "Contribution",
+        "status": "État d'implémentation",
+        "security": "Sécurité",
+        "license": "Licence AGPL-3.0",
+        "receiptScanning": "Lecture des reçus",
+        "source": "Code source sur GitHub"
+      },
+      "bottomTagline": "Balancia — dépenses partagées, équitablement réparties.",
+      "bottomLicense": "AGPL-3.0-or-later. Toute version réseau modifiée doit proposer son code source."
+    },
+    "seo": {
+      "alternateName": "Balancia — dépenses partagées, équitablement réparties",
+      "applicationSubCategory": "Répartition de dépenses partagées",
+      "operatingSystem": "Navigateur web, auto-hébergeable avec Docker",
+      "description": "Balancia est un logiciel libre et gratuit pour répartir les dépenses d'un groupe. Il gère les parts égales, les montants exacts, les pourcentages et les parts pondérées, plusieurs payeurs pour une note, plusieurs devises, les dépenses récurrentes, les revenus et les remboursements. Il s'utilise avec un compte gratuit sur une instance en ligne ou sur ton propre serveur sous licence AGPL-3.0-or-later.",
+      "offerDescription": "Compte gratuit sur l'instance en ligne. Aucun forfait payant et aucune fonction réservée.",
+      "keywords": "partager dépenses entre amis, répartir frais voyage, dépenses colocataires, alternative libre à Splitwise, partage de dépenses auto-hébergé, frais vacances en groupe, factures communes",
+      "audience": "Groupes qui partagent des coûts : amis en voyage, colocataires, couples, familles, clubs et équipes, ainsi que les personnes qui préfèrent héberger leurs propres outils",
+      "features": {
+        "splits": "Répartir une note à parts égales, par montants exacts, pourcentages ou parts pondérées",
+        "payers": "Enregistrer plusieurs personnes qui paient une même note",
+        "currency": "Partager les coûts d'un voyage dans plusieurs devises",
+        "recurring": "Programmer des dépenses récurrentes comme le loyer, les factures et les abonnements",
+        "income": "Enregistrer des revenus, remboursements et versements partagés, pas seulement des dépenses",
+        "settlements": "Solder un groupe grâce à des paiements suggérés déterministes",
+        "guests": "Inviter des personnes sans compte avec des liens révocables",
+        "import": "Importer un export CSV ou une sauvegarde JSON de Splitwise",
+        "export": "Exporter tout groupe en JSON, CSV ou dans un classeur Excel",
+        "receipts": "Joindre des reçus en photo ou PDF derrière une autorisation",
+        "selfHost": "S'auto-héberger avec Docker Compose et PostgreSQL"
+      }
+    }
+  },
   "notFound": {
     "title": "Page introuvable",
     "body": "Cette page n'existe pas, ou tu n'y as pas accès.",
