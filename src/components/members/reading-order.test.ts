@@ -14,7 +14,6 @@ function person(id: string, name: string, isOwner = false): PersonView {
     email: "",
     isOwner,
     access: "none",
-    joinedAt: "2026-07-02T10:00:00.000Z",
     link: null,
     balances: [],
   };

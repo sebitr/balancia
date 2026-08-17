@@ -81,7 +81,6 @@ function person(overrides: Partial<PersonView> = {}): PersonView {
     email: "",
     isOwner: false,
     access: "none",
-    joinedAt: "2026-07-02T10:00:00.000Z",
     link: null,
     balances: [],
     ...overrides,
@@ -141,15 +140,25 @@ describe("PeopleCard", () => {
           lastUsedAt: null,
         },
       }),
+      person({
+        id: "padi",
+        name: "Padi",
+        access: "link",
+        link: {
+          createdAt: "2026-08-12T09:00:00.000Z",
+          expiresAt: null,
+          lastUsedAt: "2026-08-17T09:00:00.000Z",
+        },
+      }),
     ]);
 
     expect(screen.getByText("Owner")).toBeVisible();
+    expect(screen.getByText("seb@trosset.net")).toBeVisible();
     expect(screen.getByText("No access")).toBeVisible();
-    expect(screen.getByText("Link live")).toBeVisible();
+    expect(screen.getAllByText("Guest")).toHaveLength(2);
     expect(screen.getByText(/No account · not invited yet/)).toBeVisible();
-    expect(
-      screen.getByText(/Invite link created .* · not opened yet/),
-    ).toBeVisible();
+    expect(screen.getByText("No account - Invited")).toBeVisible();
+    expect(screen.getByText("No account - Joined")).toBeVisible();
   });
 
   it("opens one row at a time", async () => {
@@ -159,7 +168,11 @@ describe("PeopleCard", () => {
     const rows = screen.getAllByRole("button", { expanded: false });
     await user.click(rows[0]);
     expect(screen.getByRole("button", { expanded: true })).toBeVisible();
-    expect(screen.getByText(/Seb signs in with seb@trosset.net/)).toBeVisible();
+    expect(
+      screen.getByText(
+        /Seb signs in with seb@trosset.net.*\(s\)he always has full access/,
+      ),
+    ).toBeVisible();
 
     await user.click(screen.getAllByRole("button", { expanded: false })[0]);
     // Still exactly one — opening the second closed the first.
@@ -196,6 +209,11 @@ describe("PeopleCard", () => {
     render([person()]);
 
     await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    expect(
+      screen.getByText(
+        "Cyril has no account. With a one-time link, (s)he can take part without signing up.",
+      ),
+    ).toBeVisible();
     await user.selectOptions(
       screen.getByLabelText("Expires"),
       screen.getByRole("option", { name: "In 24 hours" }),
@@ -295,8 +313,8 @@ describe("PeopleCard", () => {
       "Amélie",
     );
     expect(
-      screen.getByText(/email address changes in your account settings/),
-    ).toBeVisible();
+      screen.queryByText(/email address changes in your account settings/),
+    ).not.toBeInTheDocument();
     // The label carries an "optional" qualifier, hence the loose match.
     expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
   });

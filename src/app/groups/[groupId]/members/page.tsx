@@ -72,7 +72,6 @@ export default async function MembersPage({
     email: participant.email ?? "",
     isOwner: participant.role === "owner",
     access: accessOf(participant),
-    joinedAt: participant.createdAt.toISOString(),
     link:
       participant.hasActiveInvitation && participant.invitationCreatedAt
         ? {
@@ -110,7 +109,6 @@ export default async function MembersPage({
           {t("title")}
         </h1>
         <p className="text-pretty text-muted-foreground">{t(intro)}</p>
-        <Summary people={people} />
       </div>
 
       <PeopleCard
@@ -127,26 +125,4 @@ export default async function MembersPage({
       </p>
     </div>
   );
-}
-
-/**
- * "3 people · 1 with an account · 1 invite live · 1 waiting on an invite".
- *
- * Only the states that actually occur are named — a group where everyone has an
- * account should not be told that nobody is waiting on an invite.
- */
-async function Summary({ people }: { people: readonly PersonView[] }) {
-  const t = await getTranslations("membersPage");
-  const count = (state: PersonView["access"]) =>
-    people.filter((person) => person.access === state).length;
-
-  const parts = [t("countPeople", { count: people.length })];
-  const withAccount = count("account");
-  const live = count("link");
-  const waiting = count("none");
-  if (withAccount > 0) parts.push(t("countAccounts", { count: withAccount }));
-  if (live > 0) parts.push(t("countLinks", { count: live }));
-  if (waiting > 0) parts.push(t("countWaiting", { count: waiting }));
-
-  return <p className="text-xs text-muted-foreground">{parts.join(" · ")}</p>;
 }
