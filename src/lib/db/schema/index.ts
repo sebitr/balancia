@@ -7,6 +7,7 @@ export * from "./auth";
 export * from "./groups";
 export * from "./expenses";
 export * from "./guests";
+export * from "./join";
 export * from "./activity";
 export * from "./recurring";
 export * from "./imports";

@@ -24,6 +24,7 @@ export type RateLimitBucket =
   | "signIn"
   | "signUp"
   | "guestRedeem"
+  | "joinRedeem"
   | "passwordReset"
   | "emailChange"
   | "upload"
@@ -55,6 +56,10 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // is asking. Room for a typo and a correction, not for a mail campaign.
     emailChange: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     guestRedeem: { limit: 20, windowSeconds: 600 },
+    // One group link is opened by everyone it was sent to, so the ceiling has
+    // to clear a whole household on one address. Still far under what walking
+    // the token space would need.
+    joinRedeem: { limit: 40, windowSeconds: 600 },
     upload: { limit: 60, windowSeconds: 600 },
     // Tighter than `upload`, because each one is an outbound call the
     // operator is billed for. Enough to scan a dinner's worth of receipts and
