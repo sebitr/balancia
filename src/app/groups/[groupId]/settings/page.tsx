@@ -68,7 +68,12 @@ export default async function GroupSettingsPage({
         </Card>
       )}
 
-      {access.permissions.exportData && <ExportCard groupId={access.groupId} />}
+      {access.permissions.exportData && (
+        <ExportCard
+          groupId={access.groupId}
+          canImport={access.permissions.importData}
+        />
+      )}
 
       <Card>
         <CardHeader>

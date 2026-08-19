@@ -1109,8 +1109,8 @@
     "removeFailed": "That passkey could not be removed."
   },
   "importWizard": {
-    "fileLabel": "Splitwise export",
-    "fileHelp": "A group CSV export, or a JSON backup. The file is parsed on this server and never sent anywhere else.",
+    "fileLabel": "Backup or export",
+    "fileHelp": "A Balancia JSON export, a Splitwise group CSV, or a Splitwise JSON backup. The file is parsed on this server and never sent anywhere else.",
     "read": "Read the file",
     "readFailed": "That file could not be read.",
     "commitFailed": "The import could not be completed.",
@@ -1148,8 +1148,8 @@
     "managePeople": "Manage people"
   },
   "importPage": {
-    "title": "Import from Splitwise",
-    "intro": "Bring an existing group across. You will see a preview before anything is written, and importing the same file twice never creates duplicates.",
+    "title": "Import data",
+    "intro": "Restore a Balancia backup, or bring a Splitwise group across. You will see a preview before anything is written, and importing the same file twice never creates duplicates.",
     "previous": "Previous imports",
     "runSummary": "{imported} imported, {skipped} skipped",
     "runFailed": ", {failed} failed",
@@ -1249,7 +1249,7 @@
     "title": "Group settings",
     "shortcuts": "Shortcuts",
     "recurring": "Recurring expenses",
-    "import": "Import from Splitwise",
+    "import": "Import data",
     "convertedNote": "Everything is converted into {currency} at the rate recorded with each expense.",
     "separateNote": "Each currency keeps its own balance. Nothing is converted.",
     "modeFixed": "The mode is fixed once a group exists — changing it would reinterpret every amount already recorded.",
@@ -1264,6 +1264,8 @@
     "jsonPill": "For archives",
     "jsonSub": "The complete record — every amount exactly as stored.",
     "exportNote": "Receipts are not in these files — download them from each expense.",
+    "restoreNote": "A JSON export can be read back in.",
+    "restoreAction": "Import a backup",
     "exportStarted": "{format} file is on its way.",
     "currencyMode": "Currency mode: {mode}",
     "currencyModeSeparate": "Multi currency",

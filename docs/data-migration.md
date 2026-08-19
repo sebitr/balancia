@@ -1,6 +1,50 @@
 # Data migration
 
-How to bring existing shared-expense history into Balancia.
+How to bring existing shared-expense history into Balancia — from your own
+backup, or from another app.
+
+## Restoring a Balancia backup
+
+Group settings → **Export** → **JSON** produces the canonical file: integer
+minor units, every payer and every share, exactly as stored. That file goes
+back in through the same import screen — group settings → **Import data**, or
+the _Import a backup_ link under the export list.
+
+Restore it into a group you create for it. The import writes into whichever
+group you run it from; it does not create one, and it never edits the group's
+name, currency mode or timezone.
+
+### What comes back, and what does not
+
+| In the file           | On restore                                              |
+| --------------------- | ------------------------------------------------------- |
+| Expenses and payments | Restored, amount for amount                             |
+| Multiple payers       | Restored                                                |
+| Categories            | Restored as the code they were filed under              |
+| People                | Offered in the preview, matched by name or added as new |
+| Recurring expenses    | **Not restored** — set them up again                    |
+| Receipts              | **Not in the export at all**                            |
+| Converted amounts     | **Not restored** — see _Currency handling_ below        |
+
+People are matched by their ID inside the file, not by the name printed beside
+each share, so a rename between two exports never splits one person in two.
+Where a group held two people with the same display name, the repeat is
+numbered (`Ada (2)`) rather than merged, and the preview lets you point each
+one at the right person.
+
+Restoring the same file twice is safe: rows are fingerprinted by content, so
+the second run skips everything it already wrote.
+
+A backup from a newer version of Balancia is refused rather than half-read —
+its `exportVersion` is higher than the one this instance knows.
+
+### Restoring somewhere else
+
+Nothing in the file ties it to the instance that wrote it. The same JSON
+restores into a different Balancia — your own server, or somebody else's — as
+long as its version is not older than the one that made the file.
+
+---
 
 ## Importing from Splitwise
 
@@ -20,7 +64,7 @@ the interesting decisions — who is who, what will be skipped — need a human.
    keeps each currency balanced independently, `converted` folds everything into
    one base currency. This cannot be changed later without reinterpreting every
    amount.
-2. Open **Settings → Import from Splitwise**, or `/groups/<id>/import`.
+2. Open **Settings → Import data**, or `/groups/<id>/import`.
 3. **Upload the file.** It is parsed on your own server. Nothing is sent
    anywhere.
 4. **Read the preview.** It reports how many expenses and payments were found,
@@ -102,13 +146,19 @@ currencies:
 The simplest path for a mixed-currency Splitwise group is to import into a
 `separate` group.
 
+The same holds for a restored backup. A `converted` group's export carries the
+rate each expense was converted at, but the staging model has nowhere to put a
+historical rate, so a restored row comes back in the currency it was entered in
+and the preview warns how many rows that affects.
+
 ---
 
 ## Importing from something else
 
-There is no adapter for other services yet. The import layer is built as
-adapters (`src/modules/imports/`), each of which turns a file into the same
-staging model, so adding one is contained work:
+There is no adapter for other services yet — the two that exist read Splitwise
+and Balancia's own export. The import layer is built as adapters
+(`src/modules/imports/`), each of which turns a file into the same staging
+model, so adding one is contained work:
 
 1. Implement `ImportAdapter` — a `detect()` and a `parse()` that produce
    `StagedExpense` and `StagedSettlement` rows.

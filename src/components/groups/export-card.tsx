@@ -1,8 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Braces, Download, Sheet, Table, type LucideIcon } from "lucide-react";
+import {
+  Braces,
+  Download,
+  Sheet,
+  Table,
+  Upload,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
+import { PUSH } from "@/components/motion/transitions";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -22,6 +31,10 @@ import {
  * Still plain anchors with `download`. The file is built by a route handler,
  * so the browser fetches it the way it fetches any other link and the toast is
  * only there to say the request left.
+ *
+ * The way back sits in the same card. Somebody who kept a JSON export looks for
+ * the restore where they made the backup, not under a "Shortcuts" heading two
+ * cards down — so the link is here, shown only to someone allowed to import.
  */
 interface Format {
   readonly format: "csv" | "xlsx" | "json";
@@ -31,7 +44,13 @@ interface Format {
   readonly pill?: string;
 }
 
-export function ExportCard({ groupId }: { groupId: string }) {
+export function ExportCard({
+  groupId,
+  canImport,
+}: {
+  groupId: string;
+  canImport: boolean;
+}) {
   const t = useTranslations("settingsPage");
 
   const formats: Format[] = [
@@ -105,6 +124,23 @@ export function ExportCard({ groupId }: { groupId: string }) {
         <p className="text-xs text-pretty text-muted-foreground">
           {t("exportNote")}
         </p>
+        {canImport && (
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-pretty text-muted-foreground">
+            <Upload
+              aria-hidden="true"
+              className="size-3.5 shrink-0"
+              strokeWidth={1.5}
+            />
+            {t("restoreNote")}
+            <Link
+              href={`/groups/${groupId}/import`}
+              transitionTypes={PUSH}
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              {t("restoreAction")}
+            </Link>
+          </p>
+        )}
       </CardContent>
     </Card>
   );

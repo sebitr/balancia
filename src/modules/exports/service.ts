@@ -21,7 +21,10 @@ import { buildXlsx, xlsxNumber, type XlsxSheet } from "./xlsx";
  *
  *  - **JSON** is canonical and lossless. Amounts are integer minor units as
  *    strings, exactly as they are stored and exactly as every other JSON
- *    boundary in this codebase carries them.
+ *    boundary in this codebase carries them. It is also the one format that
+ *    reads back in: `src/modules/imports/balancia-json.ts` restores it, so a
+ *    change to the shape below is a change to what a backup can be restored
+ *    from — bump `exportVersion` rather than quietly moving a field.
  *  - **CSV** is for a spreadsheet or a script. One row per share, so "what did
  *    this person owe on this expense" is a filter rather than a calculation.
  *  - **XLSX** is the same data as a workbook, for people who do not want to

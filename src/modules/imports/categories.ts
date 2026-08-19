@@ -215,6 +215,12 @@ export function sourceCategory(
   label: string | null | undefined,
 ): ExpenseCategory | null {
   if (!label) return null;
+  // Already one of our codes, spelled exactly as we spell it: it came from a
+  // Balancia export, so it is a decision this app already made rather than a
+  // label to interpret. Checked before anything else — a restore that let the
+  // classifier re-read the description could hand back a different category
+  // than the one it was given.
+  if (isExpenseCategory(label)) return label;
   const normalized = normalizeLabel(label);
   if (normalized === "" || UNINFORMATIVE_LABELS.has(normalized)) return null;
   // "Entertainment" and "Utilities" are group names in Splitwise's tree *and*
