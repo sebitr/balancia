@@ -897,6 +897,14 @@
       "unavailable": {
         "title": "Something went wrong",
         "body": "The invitation could not be checked right now. Please try again in a moment."
+      },
+      "expired": {
+        "title": "This link has expired",
+        "body": "The group set an expiry date on it and that date has passed. Ask somebody in the group for a fresh link."
+      },
+      "revoked": {
+        "title": "This link was turned off",
+        "body": "It was revoked or replaced with a newer one. Ask somebody in the group for the current link."
       }
     }
   },
@@ -968,6 +976,108 @@
     "continueAsGuest": "Continue as guest",
     "createAccount": "Create an account",
     "haveAccount": "I already have an account"
+  },
+  "joinGroup": {
+    "metaTitle": "Join a group",
+    "header": {
+      "back": "Back",
+      "stepInvitation": "Invitation",
+      "stepOf": "Step {step} of {total}",
+      "stepDone": "Done"
+    },
+    "invite": {
+      "badge": "Invitation",
+      "title": "You've been invited to join {group}",
+      "ledeFrom": "{inviter} shared this link with the group. Anyone with it can ask to join.",
+      "lede": "This link was shared with the group. Anyone with it can ask to join.",
+      "since": "since {date}",
+      "trackedSoFar": "tracked so far",
+      "alertTitle": "Someone may have already added you",
+      "alertBody": "If your name is already in this group, you'll claim it in the next step and keep every expense attached to it.",
+      "start": "Ask to join this group",
+      "footnote": "You'll be in as soon as you finish setting up."
+    },
+    "name": {
+      "title": "What's your name?",
+      "lede": "We use it to find you among the people already in {group}.",
+      "label": "Your name",
+      "placeholder": "e.g. Jonas Thévenot",
+      "help": "Use the name your group would recognise.",
+      "continue": "Continue"
+    },
+    "match": {
+      "title": "Are you already in this group?",
+      "ledeSuggestion": "We found a name that looks like yours. Pick it to take over its expenses, or choose another.",
+      "ledePlain": "These people were added by hand and have no account yet. Pick your own name if you see it.",
+      "ledeEmpty": "Everyone in this group already has an account, so there is no name to take over.",
+      "likelyYou": "Likely you",
+      "othersWithSuggestion": "Someone else in the group",
+      "othersPlain": "Not linked to an account yet",
+      "expenseCount": "{count, plural, =0 {No expenses yet} one {# expense} other {# expenses}}",
+      "addMe": "I'm not on this list — add me",
+      "addMeEmpty": "Add me to the group",
+      "footnote": "Only people without an account yet are listed."
+    },
+    "confirm": {
+      "title": "Is this you?",
+      "lede": "Claiming a name links its whole history to your account. Check the details below before you confirm.",
+      "position": "Current position in {currency}",
+      "settled": "Nothing owed either way",
+      "recent": "Most recent expenses under this name",
+      "noRecent": "No expenses under this name yet",
+      "yes": "Yes, that's me",
+      "no": "No, pick someone else"
+    },
+    "account": {
+      "titleClaim": "Create your account",
+      "ledeClaim": "Your account is how you come back to this group, and how nobody else can claim this name.",
+      "titleNew": "Add yourself to the group",
+      "ledeNew": "You'll join as a new member with an empty balance. Past expenses stay as they are.",
+      "badgeClaim": "Claiming",
+      "badgeNew": "New member",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "At least 8 characters",
+      "passwordHelp": "This account works across every Balancia group you join.",
+      "submitNew": "Join {group}",
+      "submitClaim": "Claim this name and join",
+      "footnoteClaimFrom": "{inviter} is told that {member} is now linked.",
+      "footnoteClaim": "The group is told that {member} is now linked.",
+      "footnoteNew": "The group sees that you joined, not your email."
+    },
+    "done": {
+      "titleClaim": "Welcome back, {name}",
+      "titleNew": "You're in",
+      "ledeClaim": "Everything recorded under this name is now yours, and the group can see you're linked.",
+      "ledeNew": "You're a member of {group}. Add an expense whenever you pay for something.",
+      "balanceLabel": "You, in {currency}",
+      "open": "Open {group}",
+      "verifyTitle": "Confirm your email address",
+      "verifyBody": "We sent a link to {email}. Open it to finish signing in — your place in {group} is saved either way."
+    },
+    "taken": {
+      "title": "That name was just taken",
+      "body": "Somebody else claimed it while you were signing up. Your account exists, so sign in and ask the group to add you.",
+      "signIn": "Sign in"
+    },
+    "link": {
+      "heading": "Group link",
+      "description": "One link for the whole group. Anyone who opens it picks their own name, or adds themselves as someone new.",
+      "none": "No group link yet.",
+      "create": "Create a group link",
+      "replace": "Replace the link",
+      "revoke": "Revoke",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "active": "Link ending in {prefix}",
+      "expires": "Expires {date}",
+      "neverExpires": "Never expires",
+      "lastUsed": "Last opened {date}",
+      "neverUsed": "Not opened yet",
+      "warning": "Anyone with this link can see who is in the group and what they owe, and can join it.",
+      "revoked": "The group link was revoked."
+    }
   },
   "guestWidget": {
     "title": "You are in {group} as a guest",

@@ -897,6 +897,14 @@
       "unavailable": {
         "title": "Une erreur est survenue",
         "body": "L'invitation n'a pas pu être vérifiée pour le moment. Réessaie dans un instant."
+      },
+      "expired": {
+        "title": "Ce lien a expiré",
+        "body": "Le groupe lui avait fixé une date d'expiration, et elle est passée. Demande un nouveau lien à quelqu'un du groupe."
+      },
+      "revoked": {
+        "title": "Ce lien a été désactivé",
+        "body": "Il a été révoqué ou remplacé par un plus récent. Demande le lien actuel à quelqu'un du groupe."
       }
     }
   },
@@ -968,6 +976,108 @@
     "continueAsGuest": "Continuer en invité",
     "createAccount": "Créer un compte",
     "haveAccount": "J'ai déjà un compte"
+  },
+  "joinGroup": {
+    "metaTitle": "Rejoindre un groupe",
+    "header": {
+      "back": "Retour",
+      "stepInvitation": "Invitation",
+      "stepOf": "Étape {step} sur {total}",
+      "stepDone": "Terminé"
+    },
+    "invite": {
+      "badge": "Invitation",
+      "title": "Tu es invité à rejoindre {group}",
+      "ledeFrom": "{inviter} a partagé ce lien avec le groupe. Toute personne qui l'a peut demander à entrer.",
+      "lede": "Ce lien a été partagé avec le groupe. Toute personne qui l'a peut demander à entrer.",
+      "since": "depuis {date}",
+      "trackedSoFar": "suivis jusqu'ici",
+      "alertTitle": "Quelqu'un t'a peut-être déjà ajouté",
+      "alertBody": "Si ton nom est déjà dans ce groupe, tu le récupéreras à l'étape suivante en gardant toutes les dépenses qui y sont rattachées.",
+      "start": "Demander à rejoindre ce groupe",
+      "footnote": "Tu y seras dès que ton inscription sera terminée."
+    },
+    "name": {
+      "title": "Comment tu t'appelles ?",
+      "lede": "On s'en sert pour te retrouver parmi les personnes déjà dans {group}.",
+      "label": "Ton nom",
+      "placeholder": "ex. Jonas Thévenot",
+      "help": "Utilise le nom sous lequel le groupe te connaît.",
+      "continue": "Continuer"
+    },
+    "match": {
+      "title": "Tu es déjà dans ce groupe ?",
+      "ledeSuggestion": "On a trouvé un nom qui ressemble au tien. Choisis-le pour reprendre ses dépenses, ou prends-en un autre.",
+      "ledePlain": "Ces personnes ont été ajoutées à la main et n'ont pas encore de compte. Choisis ton nom si tu le vois.",
+      "ledeEmpty": "Tout le monde dans ce groupe a déjà un compte : il n'y a aucun nom à reprendre.",
+      "likelyYou": "Probablement toi",
+      "othersWithSuggestion": "Quelqu'un d'autre dans le groupe",
+      "othersPlain": "Pas encore lié à un compte",
+      "expenseCount": "{count, plural, =0 {Aucune dépense pour l'instant} one {# dépense} other {# dépenses}}",
+      "addMe": "Je ne suis pas dans cette liste — ajoute-moi",
+      "addMeEmpty": "Ajoute-moi au groupe",
+      "footnote": "Seules les personnes sans compte apparaissent ici."
+    },
+    "confirm": {
+      "title": "C'est bien toi ?",
+      "lede": "Reprendre un nom rattache tout son historique à ton compte. Vérifie les détails ci-dessous avant de confirmer.",
+      "position": "Position actuelle en {currency}",
+      "settled": "Rien à devoir ni à recevoir",
+      "recent": "Dépenses les plus récentes sous ce nom",
+      "noRecent": "Aucune dépense sous ce nom pour l'instant",
+      "yes": "Oui, c'est moi",
+      "no": "Non, choisir quelqu'un d'autre"
+    },
+    "account": {
+      "titleClaim": "Crée ton compte",
+      "ledeClaim": "Ton compte te permet de revenir dans ce groupe, et empêche quiconque d'autre de reprendre ce nom.",
+      "titleNew": "Ajoute-toi au groupe",
+      "ledeNew": "Tu rejoins le groupe comme nouveau membre, avec un solde vide. Les dépenses passées restent telles quelles.",
+      "badgeClaim": "Reprise",
+      "badgeNew": "Nouveau membre",
+      "email": "E-mail",
+      "emailPlaceholder": "toi@exemple.com",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "Au moins 8 caractères",
+      "passwordHelp": "Ce compte fonctionne dans tous les groupes Balancia que tu rejoins.",
+      "submitNew": "Rejoindre {group}",
+      "submitClaim": "Reprendre ce nom et rejoindre",
+      "footnoteClaimFrom": "{inviter} est prévenu que {member} est maintenant lié.",
+      "footnoteClaim": "Le groupe est prévenu que {member} est maintenant lié.",
+      "footnoteNew": "Le groupe voit que tu as rejoint, pas ton adresse e-mail."
+    },
+    "done": {
+      "titleClaim": "Te revoilà, {name}",
+      "titleNew": "Tu y es",
+      "ledeClaim": "Tout ce qui a été enregistré sous ce nom t'appartient désormais, et le groupe voit que tu y es lié.",
+      "ledeNew": "Tu es membre de {group}. Ajoute une dépense dès que tu paies quelque chose.",
+      "balanceLabel": "Toi, en {currency}",
+      "open": "Ouvrir {group}",
+      "verifyTitle": "Confirme ton adresse e-mail",
+      "verifyBody": "On a envoyé un lien à {email}. Ouvre-le pour finir de te connecter — ta place dans {group} est gardée dans tous les cas."
+    },
+    "taken": {
+      "title": "Ce nom vient d'être pris",
+      "body": "Quelqu'un d'autre l'a repris pendant ton inscription. Ton compte existe : connecte-toi et demande au groupe de t'ajouter.",
+      "signIn": "Se connecter"
+    },
+    "link": {
+      "heading": "Lien du groupe",
+      "description": "Un seul lien pour tout le groupe. Chaque personne qui l'ouvre choisit son propre nom, ou s'ajoute comme nouveau membre.",
+      "none": "Pas encore de lien de groupe.",
+      "create": "Créer un lien de groupe",
+      "replace": "Remplacer le lien",
+      "revoke": "Révoquer",
+      "copy": "Copier le lien",
+      "copied": "Copié",
+      "active": "Lien se terminant par {prefix}",
+      "expires": "Expire le {date}",
+      "neverExpires": "N'expire jamais",
+      "lastUsed": "Dernière ouverture {date}",
+      "neverUsed": "Jamais ouvert",
+      "warning": "Toute personne ayant ce lien peut voir qui est dans le groupe et ce que chacun doit, et peut le rejoindre.",
+      "revoked": "Le lien du groupe a été révoqué."
+    }
   },
   "guestWidget": {
     "title": "Tu es dans {group} en tant qu'invité",

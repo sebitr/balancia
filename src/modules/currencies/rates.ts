@@ -110,13 +110,13 @@ async function storeQuotes(
   rateDate: string,
   now: Date,
 ): Promise<void> {
-  const rows = [...quotes.rates].map(([quoteCurrency, rate]) => ({
+  const rows = [...quotes.rates].map(([quoteCurrency, quote]) => ({
     provider: quotes.provider,
     baseCurrency: quotes.base,
     quoteCurrency,
     rateDate,
-    quotedOn: quotes.quotedOn,
-    rate,
+    quotedOn: quote.quotedOn,
+    rate: quote.rate,
     fetchedAt: now,
   }));
   if (rows.length === 0) return;
@@ -209,9 +209,13 @@ export async function lookupRate(params: {
   if (!quotes) return null;
   await storeQuotes(quotes, on, now);
 
-  const rate = quotes.rates.get(to);
-  return rate
-    ? { rate, quotedOn: quotes.quotedOn, provider: quotes.provider }
+  const quote = quotes.rates.get(to);
+  return quote
+    ? {
+        rate: quote.rate,
+        quotedOn: quote.quotedOn,
+        provider: quotes.provider,
+      }
     : null;
 }
 

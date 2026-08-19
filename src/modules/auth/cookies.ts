@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { getEnv } from "@/lib/env";
 import { GUEST_COOKIE_NAME } from "@/lib/security/guest-session";
+import { JOIN_COOKIE_NAME, JOIN_COOKIE_TTL_MS } from "@/lib/security/join-link";
 import { SESSION_COOKIE_NAME } from "./sessions";
 import {
   APPLE_STATE_COOKIE_NAME,
@@ -84,6 +85,36 @@ export async function clearGuestCookie(): Promise<void> {
 export async function readGuestCookie(): Promise<string | undefined> {
   const cookieStore = await cookies();
   return cookieStore.get(GUEST_COOKIE_NAME)?.value;
+}
+
+/**
+ * The in-flight group join.
+ *
+ * Same three attributes again, and a short life rather than an expiry date:
+ * this one stands for a decision being made, not for an identity. It carries
+ * the join link's own token — see join-link.ts for why that is the right
+ * amount of power for it to have — and the flow clears it on the way out.
+ */
+export async function setJoinCookie(token: string): Promise<void> {
+  const env = getEnv();
+  const cookieStore = await cookies();
+  cookieStore.set(JOIN_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.appOrigin.startsWith("https://"),
+    path: "/",
+    maxAge: Math.floor(JOIN_COOKIE_TTL_MS / 1000),
+  });
+}
+
+export async function clearJoinCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(JOIN_COOKIE_NAME);
+}
+
+export async function readJoinCookie(): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get(JOIN_COOKIE_NAME)?.value;
 }
 
 /**

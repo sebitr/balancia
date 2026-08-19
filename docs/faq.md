@@ -84,8 +84,8 @@ When a group is created, it chooses one of two modes:
    currency using a rate stored with that expense.
 
 Stored exchange rates never silently change later. An administrator can enable
-daily rate suggestions from European Central Bank data, or users can enter a
-rate manually.
+daily rate suggestions drawn from central-bank data for 165 currencies, or
+users can enter a rate manually.
 
 ## Can I import an existing Splitwise group?
 

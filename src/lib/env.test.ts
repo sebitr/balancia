@@ -253,6 +253,54 @@ describe("environment validation", () => {
     });
   });
 
+  describe("exchange rates", () => {
+    it("defaults to the v2 root", () => {
+      const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
+      expect(env.EXCHANGE_RATE_API_URL).toBe("https://api.frankfurter.dev/v2");
+    });
+
+    it("refuses a v1 root, which prices thirty currencies and no more", () => {
+      // v1 parses, resolves and answers 200. Nothing fails loudly — the
+      // payload simply is not the one the provider reads, so every lookup
+      // degrades to "no suggestion" with the reason buried in a log line.
+      for (const EXCHANGE_RATE_API_URL of [
+        "https://api.frankfurter.dev/v1",
+        "https://api.frankfurter.dev/v1/",
+        "https://rates.internal.example.com/v1",
+      ]) {
+        expect(() =>
+          parseEnv({
+            ...base,
+            EXCHANGE_RATE_PROVIDER: "frankfurter",
+            EXCHANGE_RATE_API_URL,
+          } as unknown as NodeJS.ProcessEnv),
+        ).toThrow(/EXCHANGE_RATE_API_URL/);
+      }
+    });
+
+    it("leaves the URL alone when no provider is configured", () => {
+      // The default is `none`, and a stale URL on an instance that makes no
+      // outbound request at all is not worth refusing to boot over.
+      expect(() =>
+        parseEnv({
+          ...base,
+          EXCHANGE_RATE_API_URL: "https://api.frankfurter.dev/v1",
+        } as unknown as NodeJS.ProcessEnv),
+      ).not.toThrow();
+    });
+
+    it("accepts a v2 root on a path of its own", () => {
+      const env = parseEnv({
+        ...base,
+        EXCHANGE_RATE_PROVIDER: "frankfurter",
+        EXCHANGE_RATE_API_URL: "https://rates.internal.example.com/v2",
+      } as unknown as NodeJS.ProcessEnv);
+      expect(env.EXCHANGE_RATE_API_URL).toBe(
+        "https://rates.internal.example.com/v2",
+      );
+    });
+  });
+
   it("collects extra trusted origins", () => {
     const env = parseEnv({
       ...base,

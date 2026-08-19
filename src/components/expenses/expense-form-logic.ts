@@ -97,6 +97,36 @@ export function formatMinorUnits(minorUnits: string, currency: string): string {
   }
 }
 
+/**
+ * The inverse of what the form submits: stored split values, back into the
+ * text their fields hold.
+ *
+ * Only exact splits need turning: they are stored in minor units, while shares
+ * and percentages are stored as the decimal strings that were typed and an
+ * equal split stores no values at all. Reopening 83333 as an exact amount
+ * would read as 83 333, a hundred times the 833.33 that was entered.
+ */
+export function splitValuesToText(
+  method: SplitMethod,
+  entries: readonly { participantId: string; value?: string }[],
+  currency: string,
+): Record<string, string> {
+  return Object.fromEntries(
+    entries.flatMap((entry) =>
+      entry.value === undefined
+        ? []
+        : [
+            [
+              entry.participantId,
+              method === "exact"
+                ? formatMinorUnits(entry.value, currency)
+                : entry.value,
+            ],
+          ],
+    ),
+  );
+}
+
 export interface SplitPreviewAllocation {
   readonly participantId: string;
   readonly amount: bigint;
