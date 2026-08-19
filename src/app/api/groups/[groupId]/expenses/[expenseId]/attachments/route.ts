@@ -39,7 +39,7 @@ async function handleGet(
         id: attachment.id,
         fileName: attachment.fileName,
         contentType: attachment.contentType,
-        byteSize: attachment.byteSize,
+        byteSize: String(attachment.byteSize),
         createdAt: attachment.createdAt.toISOString(),
       })),
     });
