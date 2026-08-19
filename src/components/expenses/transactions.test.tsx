@@ -115,6 +115,7 @@ function row(overrides: Partial<RowView> = {}): RowView {
     title: "Something",
     amount: "2500",
     currency: "EUR",
+    note: null,
     category: "other",
     position: "1250",
     revenue: false,
@@ -334,6 +335,54 @@ describe("Transactions", () => {
     );
     // It is a repayment, so it closes a position rather than moving one.
     expect(within(settlement!).getByText("settled")).toBeInTheDocument();
+  });
+
+  it("says what a repayment was for, beside the date", () => {
+    renderList([
+      row({
+        kind: "settlement",
+        id: "s1",
+        title: "Seb paid Padi",
+        category: null,
+        note: "Bus tickets",
+      }),
+    ]);
+
+    // The names lead, because they are the fact; the words go after the date
+    // rather than in place of them.
+    expect(screen.getByText(/\u00b7 Bus tickets$/)).toBeVisible();
+  });
+
+  it("leaves the line to the date when nobody said what it was for", () => {
+    renderList([
+      row({
+        kind: "settlement",
+        id: "s1",
+        title: "Seb paid Padi",
+        category: null,
+      }),
+    ]);
+
+    expect(screen.queryByText(/\u00b7/)).not.toBeInTheDocument();
+  });
+
+  it("searches what a repayment was for, not only the two names", async () => {
+    const user = userEvent.setup();
+    renderList([
+      row({
+        kind: "settlement",
+        id: "s1",
+        title: "Seb paid Padi",
+        category: null,
+        note: "Bus tickets",
+      }),
+      row({ id: "migros", title: "Migros", category: "groceries" }),
+    ]);
+
+    await user.type(screen.getByRole("searchbox"), "bus");
+
+    expect(screen.getByText("Seb paid Padi")).toBeVisible();
+    expect(screen.queryByText("Migros")).not.toBeInTheDocument();
   });
 
   it("links every expense to its detail", () => {

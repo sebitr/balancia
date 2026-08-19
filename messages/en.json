@@ -1779,7 +1779,8 @@
       "amountReceived": "Amount received",
       "amountFromReceipt": "Amount from receipt",
       "payingBack": "Paying back",
-      "description": "Description"
+      "description": "Description",
+      "descriptionOptional": "Description (optional)"
     },
     "attach": {
       "add": "Attach a file",
