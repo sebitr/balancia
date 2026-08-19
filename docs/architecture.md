@@ -168,9 +168,22 @@ largest creditor) that is presentation-only: it never alters recorded history.
 - CSRF: Server Actions are origin-checked by Next.js, `proxy.ts` adds an origin
   check for route handlers, and cookies are `HttpOnly`, `SameSite=Lax`,
   `Secure` when the public URL is HTTPS.
+- Two kinds of invite link, with deliberately different power. A _guest
+  invitation_ names one participant: holding it means acting as that person, so
+  it is exchanged at `/join/[token]` for a separate guest-session token and the
+  link can be revoked independently of the sessions derived from it. A _group
+  join link_ (`group_join_links`) names only a group, so whoever opens it has
+  not been identified yet; `/join/g/[token]` puts that token straight into a
+  short-lived cookie and every read re-resolves it by hash, which means
+  revoking the link ends every in-flight join at once because no derived
+  credential outlives it. Both leave the token out of the address bar, history
+  and referrers by redirecting to a token-free URL.
+- Claiming a name is decided by the database, not by a prior read: the link
+  from participant to user account is an `UPDATE … WHERE user_id IS NULL`, so
+  two people racing for the same name cannot both be told they won.
 - Rate limiting: PostgreSQL-backed fixed-window limiter on sign-in,
-  registration, password reset, email change and guest-token redemption. The
-  email-change bucket is keyed by account rather than by client address,
+  registration, password reset, email change and both kinds of link redemption.
+  The email-change bucket is keyed by account rather than by client address,
   because what it spends is mail to an inbox the caller chose.
 - Account recovery and email change: single-use hashed tokens, opened from a
   link, spent by a route handler so the token is consumed exactly once and does
