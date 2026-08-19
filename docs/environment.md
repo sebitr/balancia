@@ -347,10 +347,16 @@ behaviour of every version before this setting existed.
 
 Set to `frankfurter`, converted-currency groups get the rate for the day filled
 in automatically, and the person entering the expense can still overwrite it.
-[Frankfurter](https://frankfurter.dev) republishes the European Central Bank's
-daily reference rates: no API key, no account, no per-request identity, roughly
-30 currencies. Rates are cached in your own database, so a currency pair costs
-at most one outbound request per day.
+[Frankfurter](https://frankfurter.dev) blends the daily rates published by some
+eighty central banks: no API key, no account, no per-request identity, and 165
+currencies — enough to cover all but a handful of what the picker offers. Rates
+are cached in your own database, so a currency pair costs at most one outbound
+request per day.
+
+Rates are blended across sources rather than taken from one, so the last
+decimal places of a suggestion can shift as a day's figures come in. Nothing
+downstream depends on that: a suggestion is only ever a starting point, and the
+rate written onto an expense is frozen the moment it is saved.
 
 ```bash
 EXCHANGE_RATE_PROVIDER=frankfurter
@@ -362,16 +368,22 @@ groups leaves the instance.
 
 ### `EXCHANGE_RATE_API_URL`
 
-Default `https://api.frankfurter.dev/v1`. Point it at your own Frankfurter
+Default `https://api.frankfurter.dev/v2`. Point it at your own Frankfurter
 instance to keep rate traffic inside your network:
 
 ```bash
-EXCHANGE_RATE_API_URL=https://rates.internal.example.com/v1
+EXCHANGE_RATE_API_URL=https://rates.internal.example.com/v2
 ```
+
+It must be a **v2** root. Frankfurter still serves v1, but v1 is the European
+Central Bank alone — 30 currencies, so AED, UAH and 130-odd others get no rate
+at all. A v1 URL fails no request and reaches a live server, so the only
+symptom would be suggestions that never appear; the app refuses to start on one
+instead, and names the fix.
 
 Rates the instance has already fetched keep working during an outage — a stale
 quote is served rather than none — and the worker refreshes the pairs in active
-use each weekday at 15:45 UTC, shortly after the ECB publishes.
+use each weekday at 15:45 UTC, after the European fixings.
 
 ---
 

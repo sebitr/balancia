@@ -857,10 +857,10 @@ TEXT
     question 'Exchange rates'
     prose <<'TEXT'
 Groups that convert to one base currency can have the day's rate filled
-in from the European Central Bank's published figures, through
-api.frankfurter.dev. No API key. Rates are cached in your database and
-can always be typed by hand; recorded rates are never recalculated.
-This is the only routine outbound request Balancia makes.
+in from the figures some eighty central banks publish, through
+api.frankfurter.dev. No API key, 165 currencies. Rates are cached in
+your database and can always be typed by hand; recorded rates are never
+recalculated. This is the only routine outbound request Balancia makes.
 
 TEXT
     if ask_yes_no 'Suggest daily exchange rates?' n; then
@@ -1144,6 +1144,28 @@ TEXT
       install_models scripts/fetch-semantic-model.ts 'categorization' "$semantic_sentinel"
     fi
   fi
+
+  # An instance set up before rates moved to Frankfurter v2 may still pin the
+  # v1 root by hand. v1 is the ECB alone — thirty currencies — and the app now
+  # refuses to start on it rather than answering every other currency with
+  # silence. Offered as a repair because the alternative is a container that
+  # restart-loops with the reason only in its logs.
+  case $(value_of EXCHANGE_RATE_API_URL) in
+    */v1 | */v1/)
+      heading 'The exchange-rate URL still points at Frankfurter v1'
+      prose <<'TEXT'
+EXCHANGE_RATE_API_URL ends in /v1, which republishes the European
+Central Bank alone: 30 currencies, and no rate for AED, UAH or the
+130-odd others Balancia lets people pick. v2 blends some eighty central
+banks and covers 165. Balancia will not start until this is changed.
+
+TEXT
+      if ask_yes_no 'Switch it to v2?' y; then
+        write_setting EXCHANGE_RATE_API_URL 'https://api.frankfurter.dev/v2' \
+          'Frankfurter v2 root, superseding the v1 line above: last one wins. v1 is refused at boot.'
+      fi
+      ;;
+  esac
 
   # Metrics say nothing about anyone's money, but they do say how many people
   # use this instance and how much of it is failing, and the app's port is

@@ -185,11 +185,14 @@ const envSchema = z
      */
     EXCHANGE_RATE_PROVIDER: z.enum(["none", "frankfurter"]).default("none"),
 
-    /** Provider base URL. Point it at your own Frankfurter instance if you run one. */
+    /**
+     * Provider base URL, a Frankfurter **v2** root. Point it at your own
+     * instance if you run one.
+     */
     EXCHANGE_RATE_API_URL: z
       .string()
       .url("EXCHANGE_RATE_API_URL must be an absolute URL")
-      .default("https://api.frankfurter.dev/v1"),
+      .default("https://api.frankfurter.dev/v2"),
 
     /**
      * Semantic fallback for expense categorization.
@@ -399,6 +402,27 @@ const envSchema = z
         message:
           `APP_URL "${value.APP_URL}" uses HTTP on a non-localhost host. ` +
           "WebAuthn (passkeys) requires HTTPS; put Balancia behind a TLS-terminating reverse proxy.",
+      });
+    }
+
+    /*
+     * A v1 root parses cleanly and reaches a live server, so nothing would
+     * fail loudly — the responses simply do not match what the provider reads,
+     * and every lookup degrades to "no suggestion" with a line in the log.
+     * That is the shape of bug an operator never goes looking for, so it is
+     * refused at boot with the fix in the message.
+     */
+    if (
+      value.EXCHANGE_RATE_PROVIDER === "frankfurter" &&
+      /\/v1\/*$/.test(new URL(value.EXCHANGE_RATE_API_URL).pathname)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["EXCHANGE_RATE_API_URL"],
+        message:
+          `EXCHANGE_RATE_API_URL "${value.EXCHANGE_RATE_API_URL}" points at Frankfurter's v1 API, which is not supported: ` +
+          "it republishes the ECB alone, so all but thirty currencies get no rate. Use the v2 root instead " +
+          "(https://api.frankfurter.dev/v2), or unset it to take that default.",
       });
     }
 
