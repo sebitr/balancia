@@ -318,3 +318,27 @@ carries `text-base`, and its real size comes back at `md:` and up:
 `text-base md:text-sm`. `Input` and `Textarea` already do this, so a call site
 only has to keep it when it overrides the size. Buttons and Radix triggers are
 exempt; the browser only zooms for controls it can put a caret or a picker in.
+
+Two things now hold that line without anyone remembering it.
+`src/app/globals.css` puts a `font-size: max(1rem, 1em)` floor under every
+`input`, `textarea` and `select` below `md`, which catches the control that
+states no size at all and inherits one — the case that actually shipped, an
+invisible `<input type="date">` over the entry form's date row picking up the
+`text-sm` that `SheetContent` sets on everything inside it. The floor lives in
+`@layer base`, so any explicit `text-*` still outranks it and the amount
+field's `text-[44px]` is untouched. What the floor cannot catch is a size
+stated explicitly and stated too small, so
+`src/components/ui/text-entry-size.test.ts` scans the source for exactly that
+and fails the build. Note that the phone scale is a point larger than the
+desk one, which makes `text-sm` 15px on a phone — still under the line, and
+still a failure.
+
+**Sheets and dialogs sit above the keyboard, not under it.** A phone keyboard
+does not shorten the layout viewport; it slides over it. So anything positioned
+against that viewport — a bottom sheet anchored to the bottom edge, a dialog
+centred with `top-1/2` — keeps its place while the keyboard covers the lower
+half of it, fields and submit button included. `useKeyboardInset` measures what
+`visualViewport` has lost and `SheetContent`, `DialogContent` and
+`AlertDialogContent` all spend it: the sheet lifts its `bottom`, the two
+dialogs re-centre on what is left and cap their height. A new surface that
+holds a field and positions itself by hand needs the same hook.

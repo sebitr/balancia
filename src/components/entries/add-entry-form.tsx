@@ -974,7 +974,7 @@ export function AddEntryForm({
               muted={effectiveCategory === ""}
               tag={
                 !categoryChosen && detectedCategory !== "" ? (
-                  <span className="shrink-0 rounded-full bg-payer/15 px-2 py-0.5 text-[11px] font-semibold text-payer">
+                  <span className="shrink-0 rounded-full bg-payer/15 px-2 py-0.5 text-2xs font-semibold text-payer">
                     {t("category.detectedTag")}
                   </span>
                 ) : null
@@ -1058,7 +1058,11 @@ export function AddEntryForm({
               aria-label={t("date.label")}
               value={date}
               onChange={(event) => setDate(event.target.value)}
-              className="absolute inset-0 size-full opacity-0"
+              // `text-base` on an invisible field costs nothing to look at and
+              // is the difference between the date picker opening and the date
+              // picker opening on a sheet Safari has zoomed into: the sheet
+              // sets `text-sm`, and a control that states no size inherits it.
+              className="absolute inset-0 size-full text-base opacity-0"
             />
           </Row>
 
@@ -1142,7 +1146,7 @@ export function AddEntryForm({
         )}
 
         {isSettle && selectedPair && (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {resolvedMethodLabel() !== ""
               ? t("settle.outcome", {
                   from: selectedPair.fromName,

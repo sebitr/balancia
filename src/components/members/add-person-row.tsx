@@ -118,9 +118,7 @@ export function AddPersonRow({
   return (
     <div className="flex flex-col gap-3 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] p-3.5 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
       <span className="flex items-center justify-between gap-2">
-        <span className="text-[0.9375rem] font-semibold">
-          {t("addSomeone")}
-        </span>
+        <span className="text-sm font-semibold">{t("addSomeone")}</span>
         <Button
           variant="ghost"
           size="icon"
@@ -137,7 +135,7 @@ export function AddPersonRow({
       </span>
 
       <label htmlFor="add-person-name" className="flex flex-col gap-1.5">
-        <span className="text-[0.8125rem] font-medium">{t("name")}</span>
+        <span className="text-xs font-medium">{t("name")}</span>
         <Input
           id="add-person-name"
           value={name}
@@ -150,7 +148,7 @@ export function AddPersonRow({
       </label>
 
       <label htmlFor="add-person-email" className="flex flex-col gap-1.5">
-        <span className="flex items-baseline gap-1.5 text-[0.8125rem] font-medium">
+        <span className="flex items-baseline gap-1.5 text-xs font-medium">
           {t("email")}
           <span className="text-xs font-normal text-muted-foreground">
             {tCommon("optional")}
@@ -169,9 +167,7 @@ export function AddPersonRow({
 
       {canInvite && (
         <fieldset className="flex flex-col gap-1.5">
-          <legend className="pb-1.5 text-[0.8125rem] font-medium">
-            {t("then")}
-          </legend>
+          <legend className="pb-1.5 text-xs font-medium">{t("then")}</legend>
           <span className="grid grid-cols-2 gap-2">
             <Choice
               selected={invite === "link"}
@@ -228,7 +224,7 @@ function Choice({
           : "border-border hover:bg-[color-mix(in_oklch,var(--muted)_45%,transparent)]",
       )}
     >
-      <span className="text-[0.8125rem] font-semibold">{title}</span>
+      <span className="text-xs font-semibold">{title}</span>
       <span className="text-xs leading-[1.35] text-muted-foreground">
         {description}
       </span>

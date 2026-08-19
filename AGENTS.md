@@ -57,9 +57,34 @@ pinch out of by hand, once per field they tap.
 So a text-entry control carries `text-base`, and the size it was actually
 designed at comes back from `md:` up: `text-base md:text-sm`. `Input` and
 `Textarea` already do this, so a call site only has to say it when it overrides
-the size — and an override is exactly how this bug gets back in. Arbitrary
-sizes count too: `text-[15px]` and `text-[0.8125rem]` are both under the line.
+the size — and an override is exactly how this bug gets back in. Note that the
+phone scale is a point larger than the desk one, so `text-sm` is 15px on a
+phone: still under the line.
 
 Buttons and Radix triggers are exempt, as is `<input type="file">` — the
-browser only zooms for controls it can type into. The long form, with the list
-of what it applies to, is in `docs/development.md` under _Notes on the stack_.
+browser only zooms for controls it can type into.
+
+`src/components/ui/text-entry-size.test.ts` fails the build on a control that
+states a size below the line, so do not go looking for these by eye. A control
+that states no size at all is fine: `globals.css` floors every one of these
+three elements at `max(1rem, 1em)` below `md`, from `@layer base`, where any
+explicit `text-*` still outranks it. The long form is in
+`docs/development.md` under _Notes on the stack_.
+
+# Seven type sizes, and the phone gets a point more
+
+`text-2xs` `text-xs` `text-sm` `text-base` `text-lg` `text-xl` `text-2xl`, as
+drawn in `design-system/src/pages/foundations/typography.html`. An arbitrary
+`text-[…]` inside the product is a bug — the scale had drifted to fourteen
+sizes, 13px spelled both `text-[13px]` and `text-[0.8125rem]`, with a
+half-point tier below that, which is how two labels showing the same kind of
+thing ended up a point apart on one card. The balance heroes are the exception:
+those display numerals are deliberate one-offs.
+
+Every step is a point larger below `md`, set once by redefining `--text-*` in
+`globals.css`. Never move those tokens into an `@theme inline` block — inline
+substitutes the value and the whole lever stops working.
+
+The marketing homepage (`src/app/page.tsx`, `src/components/marketing/`) is not
+covered by any of this. It is an editorial surface with its own scale; leave it
+alone.

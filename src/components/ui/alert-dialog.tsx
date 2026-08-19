@@ -5,6 +5,10 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useKeyboardInset } from "@/components/ui/use-keyboard-inset";
+
+/** Page left showing around a dialog the keyboard has pushed up. */
+const HEADROOM = 16;
 
 function AlertDialog({
   ...props
@@ -47,10 +51,20 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   size = "default",
+  style,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm";
 }) {
+  /**
+   * Centred in the room the keyboard has left, for the same reason
+   * `DialogContent` is: two of these ask you to type before they will act —
+   * the group name that confirms a deletion, the label on a new passkey — and
+   * `top-1/2` centres in a layout viewport the keyboard slides over rather
+   * than shortens.
+   */
+  const keyboard = useKeyboardInset();
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -58,9 +72,14 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
+        style={{
+          top: `calc(50dvh - ${keyboard / 2}px)`,
+          maxHeight: `calc(100dvh - ${keyboard + HEADROOM * 2}px)`,
+          ...style,
+        }}
         {...props}
       />
     </AlertDialogPortal>

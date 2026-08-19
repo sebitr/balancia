@@ -61,10 +61,10 @@ export function InstallInstructions() {
           {/* A div, not a span: the title renders an <h2> and the description
               a <p>, neither of which may sit inside inline content. */}
           <div className="flex min-w-0 flex-col gap-0.5">
-            <SheetTitle className="text-[1.0625rem] tracking-[-0.02em]">
+            <SheetTitle className="text-base tracking-[-0.02em]">
               {panel === "installed" ? t("alreadyInstalled") : t("install")}
             </SheetTitle>
-            <SheetDescription className="text-[0.8125rem]">
+            <SheetDescription className="text-xs">
               {panel === "ios-browser"
                 ? t("openInSafariDescription")
                 : panel === "installed"

@@ -85,7 +85,7 @@ export function BalanceList({
                 <Avatar className="size-7">
                   <AvatarFallback
                     className={cn(
-                      "text-[0.6875rem] font-semibold",
+                      "text-2xs font-semibold",
                       person.isSelf
                         ? "bg-primary/15 text-primary"
                         : "bg-accent text-accent-foreground",
@@ -109,7 +109,7 @@ export function BalanceList({
                 ))}
               </span>
 
-              <span className="flex shrink-0 flex-col gap-1 text-right text-[0.90625rem] font-semibold tabular-nums">
+              <span className="flex shrink-0 flex-col gap-1 text-right text-sm font-semibold tabular-nums">
                 {person.balances.map((balance) => (
                   <BalanceValue key={balance.currency} row={balance} />
                 ))}
@@ -123,7 +123,7 @@ export function BalanceList({
             <Link
               href={`/groups/${groupId}/balances`}
               transitionTypes={PUSH}
-              className="flex min-h-11 items-center justify-center px-3 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex min-h-11 items-center justify-center px-3 text-xs font-medium text-primary transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               {t("viewAllPeople", { count: people })}
             </Link>

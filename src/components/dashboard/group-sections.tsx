@@ -45,7 +45,7 @@ export function Section({
 }) {
   return (
     <section>
-      <h3 className="pb-2.5 text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+      <h3 className="pb-2.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
         {label}
       </h3>
       {children}

@@ -287,7 +287,7 @@ export function RemindSheet({
             <SheetTitle className="text-xl font-semibold tracking-[-0.01em]">
               {t("sheetTitle")}
             </SheetTitle>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {chosen.length === 0
                 ? t("sheetSubtitleNone")
                 : t("sheetSubtitle", {
@@ -357,7 +357,7 @@ export function RemindSheet({
                 </Avatar>
 
                 <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="min-w-[4ch] truncate text-[15px] font-medium">
+                  <span className="min-w-[4ch] truncate text-sm font-medium">
                     {recipient.name}
                   </span>
                   <RouteBadge
@@ -373,7 +373,7 @@ export function RemindSheet({
                 {/* Stacked, one line per currency: the euros and the yen are
                     two debts to the same person, and there is no rate here to
                     turn them into one figure. */}
-                <span className="flex shrink-0 flex-col items-end gap-0.5 text-[15px] font-semibold text-positive">
+                <span className="flex shrink-0 flex-col items-end gap-0.5 text-sm font-semibold text-positive">
                   {recipient.debts.map((debt) => (
                     <Amount
                       key={debt.currency}
@@ -421,7 +421,7 @@ export function RemindSheet({
         <AvatarStack names={queue.map((recipient) => recipient.name)} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[13px] text-muted-foreground">
+          <span className="truncate text-xs text-muted-foreground">
             {t("messageWho", {
               count: queue.length,
               names: format.list(
@@ -431,7 +431,7 @@ export function RemindSheet({
               group: groupName,
             })}
           </span>
-          <span className="text-[26px] leading-tight font-semibold tracking-[-0.02em] text-positive tabular-nums">
+          <span className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-positive tabular-nums">
             {phrase(queueTotal)}
           </span>
         </div>
@@ -447,7 +447,7 @@ export function RemindSheet({
             onClick={() => changeTone(option)}
             aria-pressed={tone === option}
             className={cn(
-              "h-[38px] flex-1 rounded-xl border text-[13px] font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              "h-[38px] flex-1 rounded-xl border text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
               tone === option ? PICKED_CHIP : UNPICKED,
             )}
           >
@@ -468,7 +468,7 @@ export function RemindSheet({
           aria-label={t("messageLabel")}
           rows={1}
           onChange={(event) => setEdited(event.target.value)}
-          className="min-h-[45px] resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-[15px] leading-[1.5] shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-[15px] dark:bg-transparent"
+          className="min-h-[45px] resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-sm leading-[1.5] shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm dark:bg-transparent"
         />
 
         <p className="mt-2.5 flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
@@ -482,7 +482,7 @@ export function RemindSheet({
             variant="ghost"
             size="sm"
             onClick={shuffle}
-            className="h-7 rounded-[10px] px-2.5 text-[13px] font-medium text-primary hover:bg-primary/10 hover:text-primary [&_svg:not([class*='size-'])]:size-3.5"
+            className="h-7 rounded-[10px] px-2.5 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary [&_svg:not([class*='size-'])]:size-3.5"
           >
             <Shuffle aria-hidden="true" />
             {t("shuffle")}
@@ -496,7 +496,7 @@ export function RemindSheet({
           onClick={() => setLogToActivity((on) => !on)}
           aria-pressed={logToActivity}
           className={cn(
-            "inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-[13px] font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            "inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
             logToActivity ? PICKED_CHIP : UNPICKED,
           )}
         >
@@ -646,7 +646,7 @@ function AvatarStack({ names }: { names: readonly string[] }) {
           <AvatarFallback
             className={cn(
               "bg-accent font-semibold text-accent-foreground",
-              names.length === 1 ? "text-[15px]" : "text-xs",
+              names.length === 1 ? "text-sm" : "text-xs",
             )}
           >
             {name.trim().charAt(0).toUpperCase()}

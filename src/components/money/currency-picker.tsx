@@ -114,8 +114,8 @@ export function CurrencyPicker({
 
         {empty && (
           <div className="flex flex-col items-center gap-1.5 px-5 py-[34px]">
-            <span className="text-[15px] font-medium">{t("emptyTitle")}</span>
-            <span className="text-center text-[13px] text-pretty text-muted-foreground">
+            <span className="text-sm font-medium">{t("emptyTitle")}</span>
+            <span className="text-center text-xs text-pretty text-muted-foreground">
               {t("emptyBody")}
             </span>
           </div>
@@ -153,7 +153,7 @@ function SearchField({
         autoComplete="off"
         // 16px on a phone or Safari zooms the sheet in on focus and never
         // zooms back out. The 15px the design asks for comes back from `md:`.
-        className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-[15px]"
+        className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm"
       />
       <button
         type="button"
@@ -216,10 +216,10 @@ function CurrencyRow({
           {entry.flag}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-px">
-          <span className="flex items-center gap-1.5 text-[15px] font-semibold tracking-[0.01em] text-foreground">
+          <span className="flex items-center gap-1.5 text-sm font-semibold tracking-[0.01em] text-foreground">
             {entry.code}
             {entry.symbol && (
-              <span className="text-[13px] font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {entry.symbol}
               </span>
             )}

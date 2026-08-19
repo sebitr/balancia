@@ -143,12 +143,10 @@ export function PositionHero({
 
         {settled ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-[0.6875rem] font-semibold tracking-[0.1em] text-neutral-balance uppercase">
+            <span className="text-2xs font-semibold tracking-[0.1em] text-neutral-balance uppercase">
               {t("allSettled")}
             </span>
-            <p className="text-[1.125rem] font-medium">
-              {t("noOutstandingBalances")}
-            </p>
+            <p className="text-lg font-medium">{t("noOutstandingBalances")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
@@ -170,7 +168,7 @@ export function PositionHero({
               })}
             </div>
 
-            <p className="flex items-center gap-2 text-[0.90625rem]">
+            <p className="flex items-center gap-2 text-sm">
               <span
                 className={cn(
                   "flex size-[18px] shrink-0 items-center justify-center rounded-full",
@@ -255,7 +253,7 @@ export function PositionHero({
           <button
             type="button"
             onClick={() => setPositionOpen(true)}
-            className="-m-2 flex min-h-11 items-center self-start rounded-lg p-2 text-[0.78125rem] text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="-m-2 flex min-h-11 items-center self-start rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {t("howCalculated")}
             <ChevronRight aria-hidden="true" className="ml-0.5 size-3.5" />
@@ -277,7 +275,7 @@ export function PositionHero({
           <SheetTitle className="text-xl font-semibold tracking-[-0.02em]">
             {t("positionSheetTitle")}
           </SheetTitle>
-          <SheetDescription className="mt-1 text-[0.8125rem]">
+          <SheetDescription className="mt-1 text-xs">
             {t("positionSheetDescription")}
           </SheetDescription>
 
@@ -287,7 +285,7 @@ export function PositionHero({
             ))}
           </div>
 
-          <p className="mt-5 text-[0.78125rem] leading-relaxed text-muted-foreground">
+          <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
             {t("positionRoutingNote")}
           </p>
         </SheetContent>
@@ -315,7 +313,7 @@ function HeroAmount({
     parts.findIndex((part) => part.type === "currency") <
     parts.findIndex((part) => part.type === "integer");
   const code = (
-    <span className="text-[1.375rem] leading-none font-semibold tracking-[-0.01em]">
+    <span className="text-xl leading-none font-semibold tracking-[-0.01em]">
       {currency}
     </span>
   );

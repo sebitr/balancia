@@ -79,7 +79,7 @@ export function ExportCard({
     <Card>
       <CardHeader>
         <CardTitle>{t("export")}</CardTitle>
-        <CardDescription className="text-[13px] text-pretty">
+        <CardDescription className="text-xs text-pretty">
           {t("exportIntro")}
         </CardDescription>
       </CardHeader>

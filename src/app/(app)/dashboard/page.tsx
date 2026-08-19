@@ -245,10 +245,10 @@ function FirstRun({
   return (
     <div className="flex flex-col gap-4">
       <div className="space-y-0.5">
-        <h1 className="font-heading text-[1.375rem] font-semibold tracking-[-0.02em]">
+        <h1 className="font-heading text-xl font-semibold tracking-[-0.02em]">
           {title}
         </h1>
-        <p className="text-[0.8125rem] text-muted-foreground">{subtitle}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
 
       <div className="flex flex-col items-center gap-[11px] rounded-[17px] border border-dashed px-5 py-8 text-center">
@@ -281,7 +281,7 @@ function FirstRun({
           href="?new"
           replace
           scroll={false}
-          className="shrink-0 rounded-md py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="shrink-0 rounded-md py-2 text-xs font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {t("splitwiseAction")}
         </Link>

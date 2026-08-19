@@ -234,7 +234,7 @@ export function GroupSettingsForm({
           <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
             {/* Truncated rather than wrapped: a language with a longer word
                 for this must not make the bar three lines tall. */}
-            <span className="min-w-0 truncate text-[13px] text-muted-foreground">
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
               {t("unsaved")}
             </span>
             <div className="flex shrink-0 items-center gap-2">

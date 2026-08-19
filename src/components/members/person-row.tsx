@@ -78,7 +78,7 @@ const EXPIRIES: readonly {
 ];
 
 const EYEBROW =
-  "text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase";
+  "text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase";
 const FIELD =
   "h-[42px] rounded-lg border-input bg-[color-mix(in_oklch,var(--input)_30%,transparent)] px-3 text-base md:text-sm";
 
@@ -139,7 +139,7 @@ export function PersonRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[0.9375rem] font-semibold tracking-[-0.01em]">
+          <span className="text-sm font-semibold tracking-[-0.01em]">
             {person.name}
           </span>
           {person.isOwner && <Pill tone="solid">{t("owner")}</Pill>}
@@ -213,7 +213,7 @@ function Pill({
   return (
     <span
       className={cn(
-        "inline-flex h-[19px] items-center gap-1 rounded-full px-2 text-[0.6875rem] font-semibold",
+        "inline-flex h-[19px] items-center gap-1 rounded-full px-2 text-2xs font-semibold",
         tone === "solid" && "bg-secondary text-secondary-foreground",
         tone === "primary" &&
           "bg-[color-mix(in_oklch,var(--primary)_16%,transparent)] text-primary",
@@ -361,7 +361,7 @@ function PersonPanel({
         <div className="flex flex-col gap-2.5">
           <span className={EYEBROW}>{t("details")}</span>
           <label htmlFor={nameId} className="flex flex-col gap-1.5">
-            <span className="text-[0.8125rem] font-medium">
+            <span className="text-xs font-medium">
               {may.email ? t("name") : t("nameHere")}
             </span>
             <Input
@@ -374,7 +374,7 @@ function PersonPanel({
           </label>
           {may.email && (
             <label htmlFor={emailId} className="flex flex-col gap-1.5">
-              <span className="flex items-baseline gap-1.5 text-[0.8125rem] font-medium">
+              <span className="flex items-baseline gap-1.5 text-xs font-medium">
                 {t("email")}
                 <span className="text-xs font-normal text-muted-foreground">
                   {tCommon("optional")}
@@ -437,7 +437,7 @@ function PersonPanel({
                 />
                 <span className="flex flex-col gap-0.5">
                   <span className="font-semibold">{t("copyNow")}</span>
-                  <span className="text-[0.8125rem] text-pretty text-muted-foreground">
+                  <span className="text-xs text-pretty text-muted-foreground">
                     {t("copyWarning", { name: person.name })}
                   </span>
                 </span>
@@ -494,9 +494,7 @@ function PersonPanel({
                   className="size-4 shrink-0 text-primary"
                 />
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-[0.8125rem] font-medium">
-                    {t("linkIsLive")}
-                  </span>
+                  <span className="text-xs font-medium">{t("linkIsLive")}</span>
                   <span className="text-xs text-muted-foreground">
                     {[
                       t("linkCreated", {
@@ -542,9 +540,7 @@ function PersonPanel({
               </p>
               <span className="flex flex-wrap items-end gap-2">
                 <label htmlFor={expiryId} className="flex flex-col gap-1.5">
-                  <span className="text-[0.8125rem] font-medium">
-                    {t("expires")}
-                  </span>
+                  <span className="text-xs font-medium">{t("expires")}</span>
                   {/* Native, like every other select in the app: a phone's own
                     picker beats a listbox that has to be scrolled. */}
                   <select

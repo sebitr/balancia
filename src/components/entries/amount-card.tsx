@@ -125,7 +125,7 @@ export function AmountCard({
         {/* A settlement is denominated by the debt it clears, so there is
             nothing to choose and the pill states the currency instead. */}
         {currencyLocked ? (
-          <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted-foreground">
+          <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-muted-foreground">
             {flag && (
               <span aria-hidden="true" className="text-base leading-none">
                 {flag}
@@ -137,7 +137,7 @@ export function AmountCard({
           <button
             type="button"
             onClick={onOpenCurrency}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-3 text-[13px] font-semibold transition-colors active:bg-white/14"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-3 text-xs font-semibold transition-colors active:bg-white/14"
           >
             {flag && (
               <span aria-hidden="true" className="text-base leading-none">
@@ -163,10 +163,10 @@ export function AmountCard({
           />
           {converted && (
             <div className="flex items-center justify-between gap-3 border-t border-white/12 pt-2.5">
-              <span className="text-[13px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {t("inBaseCurrency")}
               </span>
-              <span className="text-[15px] font-semibold tabular-nums">
+              <span className="text-sm font-semibold tabular-nums">
                 {converted}
               </span>
             </div>

@@ -100,7 +100,7 @@ export function SplitSheet({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
-        <SheetTitle className="text-[19px] font-semibold tracking-[-0.02em]">
+        <SheetTitle className="text-lg font-semibold tracking-[-0.02em]">
           {title}
         </SheetTitle>
         <span className="text-sm text-muted-foreground tabular-nums">
@@ -109,7 +109,7 @@ export function SplitSheet({
       </div>
 
       <section className="space-y-2">
-        <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        <h3 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {t(received ? "receivedBy" : "paidBy")}
         </h3>
         {/* Wrapping pills rather than a row of equal columns: a group of ten
@@ -144,7 +144,7 @@ export function SplitSheet({
             this sheet opens in, and the pills below reach either end in a tap
             or two. Two more controls that mostly restate the selection cost
             more attention than they save. */}
-        <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        <h3 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {t(received ? "creditedTo" : "splitBetween")}
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -168,7 +168,7 @@ export function SplitSheet({
             onClick={() => onMethodChange(candidate)}
             aria-pressed={candidate === method}
             className={cn(
-              "h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-[13px] transition-colors",
+              "h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs transition-colors",
               candidate === method
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground",
@@ -200,7 +200,7 @@ export function SplitSheet({
                   selected
                   tone={member.id === payerId ? "payer" : "primary"}
                 />
-                <span className="flex-1 truncate text-[15px]">
+                <span className="flex-1 truncate text-sm">
                   {member.displayName}
                 </span>
 
@@ -219,7 +219,7 @@ export function SplitSheet({
                   />
                 )}
 
-                <span className="w-[70px] text-right text-[15px] tabular-nums">
+                <span className="w-[70px] text-right text-sm tabular-nums">
                   {allocation?.formatted ?? "—"}
                 </span>
               </li>
@@ -232,7 +232,7 @@ export function SplitSheet({
       {note ? (
         <p
           className={cn(
-            "text-[13px]",
+            "text-xs",
             note.tone === "error" ? "text-negative" : "text-muted-foreground",
           )}
         >
@@ -241,7 +241,7 @@ export function SplitSheet({
       ) : (
         preview.ok &&
         preview.roundingNote && (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {splitText(preview.roundingNote)}
           </p>
         )

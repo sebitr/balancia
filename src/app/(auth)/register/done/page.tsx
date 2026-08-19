@@ -116,7 +116,7 @@ export default async function RegisterDonePage({
           )}
         </ul>
 
-        <p className="flex items-start gap-2 rounded-lg border bg-popover px-3.5 py-3 text-[0.8125rem] text-muted-foreground shadow-raised">
+        <p className="flex items-start gap-2 rounded-lg border bg-popover px-3.5 py-3 text-xs text-muted-foreground shadow-raised">
           <Mail aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           {t("linkRetired")}
         </p>

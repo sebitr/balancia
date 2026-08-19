@@ -108,7 +108,7 @@ export function MarketingLanguageSwitcher() {
         aria-label={`${t("language")}: ${activeLabel}`}
         className="group inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-white/20 px-2.5 text-sm font-semibold text-marketing-cream transition-colors hover:bg-white/9 data-open:bg-white/9"
       >
-        <span aria-hidden="true" className="text-[15px] leading-none">
+        <span aria-hidden="true" className="text-sm leading-none">
           {LOCALE_FLAGS[activeLocale]}
         </span>
         <span>{activeLocale.toUpperCase()}</span>

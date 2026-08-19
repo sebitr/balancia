@@ -375,7 +375,7 @@ export function Transactions({
                 // Equal shares of the row, so the set reads as one control
                 // rather than as a sentence of different lengths.
                 className={cn(
-                  "h-[34px] flex-1 rounded-full px-3 text-[0.8125rem] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                  "h-[34px] flex-1 rounded-full px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   on
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:text-foreground",
@@ -439,10 +439,10 @@ export function Transactions({
                   )}
                 >
                   <BandGlyph category={band.categories[0]} />
-                  <span className="line-clamp-2 text-[0.65625rem] leading-[1.15] font-semibold tracking-[-0.01em]">
+                  <span className="line-clamp-2 text-2xs leading-[1.15] font-semibold tracking-[-0.01em]">
                     {labelOf(band)}
                   </span>
-                  <span className="mt-px text-[0.65625rem] leading-none font-semibold tabular-nums opacity-70">
+                  <span className="mt-px text-2xs leading-none font-semibold tabular-nums opacity-70">
                     {formatShare(band.share, locale)}
                   </span>
                 </button>
@@ -469,7 +469,7 @@ export function Transactions({
               placeholder={t("searchPlaceholder")}
               // The platform's own clear affordance is hidden: it sits where
               // ours does and only one of them tells the URL about it.
-              className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-[0.8125rem] [&::-webkit-search-cancel-button]:hidden"
+              className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-xs [&::-webkit-search-cancel-button]:hidden"
             />
             {query !== "" && (
               <button
@@ -485,9 +485,7 @@ export function Transactions({
 
           {shown.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-9 text-center">
-              <p className="text-[0.84375rem] font-medium">
-                {t("noMatchTitle")}
-              </p>
+              <p className="text-sm font-medium">{t("noMatchTitle")}</p>
               <p className="text-xs text-muted-foreground">
                 {t("noMatchHint")}
               </p>
@@ -561,7 +559,7 @@ function Row({
           {name && <span className="sr-only">{name}</span>}
           <span className="truncate text-sm font-medium">{row.title}</span>
         </span>
-        <span className="mt-[3px] block truncate text-[0.71875rem] text-muted-foreground">
+        <span className="mt-[3px] block truncate text-2xs text-muted-foreground">
           {row.note
             ? `${dates.plain(row.date)} · ${row.note}`
             : dates.plain(row.date)}
@@ -630,7 +628,7 @@ function TypeBadge({ kind }: { kind: "revenue" | "settlement" | "recurring" }) {
     <span className="mt-[5px] flex">
       <span
         className={cn(
-          "inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full px-2 text-[0.65625rem] font-semibold",
+          "inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full px-2 text-2xs font-semibold",
           kind === "revenue" && "bg-positive/15 text-positive",
           kind === "settlement" && "border text-foreground",
           kind === "recurring" && "bg-accent text-accent-foreground",
@@ -668,7 +666,7 @@ function Position({
   return (
     <span
       className={cn(
-        "flex items-center gap-[3px] text-[0.6875rem] font-medium",
+        "flex items-center gap-[3px] text-2xs font-medium",
         TONE_STYLES[resolved],
       )}
     >

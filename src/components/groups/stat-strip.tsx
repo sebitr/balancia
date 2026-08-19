@@ -42,7 +42,7 @@ export function StatStrip({ stats }: { stats: readonly StatView[] }) {
             index < cells.length - 1 && "border-r",
           )}
         >
-          <dt className="text-[0.6875rem] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
+          <dt className="text-2xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">
             {t(cell.key)}
           </dt>
           <dd className="mt-1 flex flex-col gap-0.5">
@@ -51,11 +51,11 @@ export function StatStrip({ stats }: { stats: readonly StatView[] }) {
                 key={stat.currency}
                 minorUnits={cell.pick(stat)}
                 currency={stat.currency}
-                className="text-[0.9375rem] font-semibold"
+                className="text-sm font-semibold"
               />
             ))}
             {stats.length === 0 && (
-              <span className="text-[0.9375rem] font-semibold text-muted-foreground">
+              <span className="text-sm font-semibold text-muted-foreground">
                 —
               </span>
             )}
