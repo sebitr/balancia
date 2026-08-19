@@ -22,6 +22,9 @@ import type { ParticipantSummary } from "@/modules/groups/service";
 import type { GroupOverview } from "@/modules/groups/overview";
 import type { GroupPosition, HomeOverview } from "@/modules/balances/overview";
 import type { GroupAccess } from "@/lib/security/authorization";
+import type { ActivityEntry } from "@/modules/activity/service";
+import type { RecurringSummary } from "@/modules/recurring/service";
+import type { NotificationEntry } from "@/modules/notifications/types";
 
 /**
  * The mobile API's wire format and error contract, in one place.
@@ -173,6 +176,61 @@ export function serializeParticipant(participant: ParticipantSummary) {
     userId: participant.userId,
     role: participant.role,
     createdAt: participant.createdAt.toISOString(),
+    hasActiveInvitation: participant.hasActiveInvitation,
+    invitationCreatedAt: iso(participant.invitationCreatedAt),
+    invitationExpiresAt: iso(participant.invitationExpiresAt),
+    invitationLastUsedAt: iso(participant.invitationLastUsedAt),
+  };
+}
+
+export function serializeActivity(entry: ActivityEntry) {
+  return {
+    id: entry.id,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    metadata: entry.metadata,
+    actorLabel: entry.actorLabel,
+    actorType: entry.actorType,
+    createdAt: entry.createdAt.toISOString(),
+  };
+}
+
+export function serializeRecurring(template: RecurringSummary) {
+  return {
+    id: template.id,
+    direction: template.direction,
+    description: template.description,
+    category: template.category,
+    amount: minor(template.amount),
+    currency: template.currency,
+    frequency: template.frequency,
+    interval: template.interval,
+    weekday: template.weekday,
+    dayOfMonth: template.dayOfMonth,
+    monthOfYear: template.monthOfYear,
+    startDate: template.startDate,
+    endDate: template.endDate,
+    nextRunAt: iso(template.nextRunAt),
+    lastRunAt: iso(template.lastRunAt),
+    pausedAt: iso(template.pausedAt),
+    timezone: template.timezone,
+    generatedCount: template.generatedCount,
+  };
+}
+
+export function serializeNotification(entry: NotificationEntry) {
+  return {
+    id: entry.id,
+    groupId: entry.groupId,
+    type: entry.type,
+    category: entry.category,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    actorLabel: entry.actorLabel,
+    payload: entry.payload,
+    createdAt: entry.createdAt.toISOString(),
+    readAt: iso(entry.readAt),
   };
 }
 

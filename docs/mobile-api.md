@@ -47,6 +47,13 @@ their own. No parallel token scheme to issue or revoke.
 Guests are not signed in here: the `/join/[token]` and `/join/g/[token]`
 routes are already plain HTTP and set the guest cookie themselves.
 
+`POST /api/auth/register` is `registerUser` over JSON — `{name, email,
+password}` → 201 `{user, verificationRequired}` under the `signUp` rate
+bucket. With SMTP configured the instance mails a confirmation and issues no
+session; without it the session cookie is set right away, like the web form.
+Registration refusals (email taken, registration closed, password policy) are
+422, not the 401 a failed sign-in maps to.
+
 ## Reads
 
 | Method | Path                                             | Body of the answer                                                                                                                                                                                           |
@@ -57,22 +64,54 @@ routes are already plain HTTP and set the guest cookie themselves.
 | GET    | `/api/groups/:groupId/expenses/:expenseId`       | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                |
 | GET    | `/api/groups/:groupId/settlements?limit`         | `listSettlements`, newest first.                                                                                                                                                                             |
 | GET    | `/api/groups/:groupId/settlements/:settlementId` | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`).                                                                                                                |
+| GET    | `/api/groups/:groupId/participants`              | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                          |
+| GET    | `/api/groups/:groupId/activity?limit`            | `listGroupActivity`, newest first (default 100, max 200).                                                                                                                                                    |
+| GET    | `/api/groups/:groupId/recurring`                 | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                           |
+| GET    | `/api/groups/:groupId/reminders`                 | `listRemindRecipients`: who owes the reader, per-currency debts, the channel a message would take, and the 24-hour lock state.                                                                               |
+| GET    | `/api/groups/:groupId/categories`                | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                   |
+| GET    | `/api/groups/:groupId/join-link`                 | The live group-wide link's prefix and age, or `{link: null}`. The token itself only ever exists in the POST answer.                                                                                          |
+| GET    | `/api/notifications?limit&before`                | The inbox plus `unread`. Users only.                                                                                                                                                                         |
+| GET    | `/api/notifications/preferences`                 | Category switches plus `mutedGroupIds`.                                                                                                                                                                      |
+
+The group read also carries `profile` (`description`, `icon`, `iconColor` via
+`getGroupProfile`), which `GroupAccess` deliberately omits.
 
 ## Writes
 
-| Method | Path                                             | Body                                                      |
-| ------ | ------------------------------------------------ | --------------------------------------------------------- |
-| POST   | `/api/groups/:groupId/expenses`                  | `expenseInputSchema` → 201 `{expenseId}`                  |
-| PATCH  | `/api/groups/:groupId/expenses/:expenseId`       | `expenseInputSchema` (full replace, like `updateExpense`) |
-| DELETE | `/api/groups/:groupId/expenses/:expenseId`       | soft delete                                               |
-| POST   | `/api/groups/:groupId/settlements`               | `settlementInputSchema` → 201 `{settlementId}`            |
-| PATCH  | `/api/groups/:groupId/settlements/:settlementId` | `settlementInputSchema`                                   |
-| DELETE | `/api/groups/:groupId/settlements/:settlementId` | soft delete                                               |
+| Method | Path                                               | Body                                                                                                                             |
+| ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`                                                                                         |
+| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`)                                                                        |
+| DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                      |
+| POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`                                                                                   |
+| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema`                                                                                                          |
+| DELETE | `/api/groups/:groupId/settlements/:settlementId`   | soft delete                                                                                                                      |
+| POST   | `/api/groups`                                      | `createGroupSchema` → 201 `{groupId, participantId}`. `ownerDisplayName` defaults to the account name.                           |
+| PATCH  | `/api/groups/:groupId`                             | `updateGroupSchema` fields when `name`/`timezone` are present, and/or `{archived: boolean}` — either half may come alone.        |
+| DELETE | `/api/groups/:groupId`                             | **hard** delete, like the web's danger zone                                                                                      |
+| POST   | `/api/groups/:groupId/participants`                | `{displayName, email?}` → 201 `{participantId}`                                                                                  |
+| PATCH  | `/api/groups/:groupId/participants/:id`            | `{displayName, email?}`                                                                                                          |
+| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions                                                                         |
+| POST   | `/api/groups/:groupId/participants/:id/restore`    | undo for the remove (the invitation stays gone — only its hash was kept)                                                         |
+| POST   | `/api/groups/:groupId/participants/:id/invitation` | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once                                                                          |
+| DELETE | `/api/groups/:groupId/participants/:id/invitation` | revoke                                                                                                                           |
+| POST   | `/api/groups/:groupId/join-link`                   | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once                                                                          |
+| DELETE | `/api/groups/:groupId/join-link`                   | revoke                                                                                                                           |
+| POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id}`                                                                                              |
+| PATCH  | `/api/groups/:groupId/recurring/:templateId`       | `{paused: boolean}`                                                                                                              |
+| DELETE | `/api/groups/:groupId/recurring/:templateId`       | delete the template; generated expenses stay                                                                                     |
+| POST   | `/api/groups/:groupId/reminders`                   | `{toParticipantId, message, logToActivity?}` → `RemindResult`; the debt and channel are re-derived server-side, refusals are 422 |
+| PUT    | `/api/groups/:groupId/mute`                        | `{muted: boolean}` — per-user, needs an account                                                                                  |
+| POST   | `/api/notifications/read`                          | `{ids?: [uuid]}`; omit to mark all read                                                                                          |
+| PUT    | `/api/notifications/preferences`                   | all five category booleans                                                                                                       |
+| PATCH  | `/api/profile`                                     | `{preferredCurrency?: code\|null, favoriteCurrencies?: [code]}`                                                                  |
 
-Writes require the group to be active (`requireActive`), matching the actions.
-The pre-existing routes complete the picture for a mobile client: receipts
-upload to `POST /api/groups/:groupId/attachments`, and
-`GET /api/rates?from&to&on` suggests an exchange rate.
+Writes require the group to be active (`requireActive`), matching the actions
+— except the group's own PATCH/DELETE, which must work on an archived group
+(restoring is a write too). The pre-existing routes complete the picture for a
+mobile client: receipts upload to `POST /api/groups/:groupId/attachments`,
+`GET /api/groups/:groupId/export?format=json|csv|xlsx` downloads the group,
+and `GET /api/rates?from&to&on` suggests an exchange rate.
 
 ## CSRF
 
