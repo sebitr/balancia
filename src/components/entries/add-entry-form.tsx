@@ -5,9 +5,27 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
-import { AlignLeft, CalendarDays, Loader2, Repeat, X } from "lucide-react";
+import {
+  AlignLeft,
+  CalendarDays,
+  Loader2,
+  Repeat,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Sheet,
   SheetContent,
@@ -39,11 +57,18 @@ import type {
 } from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
 import {
+  convertExpenseToSettlementAction,
+  convertSettlementToExpenseAction,
   createExpenseAction,
   createSettlementAction,
+  deleteExpenseAction,
+  deleteSettlementAction,
+  updateExpenseAction,
+  updateSettlementAction,
 } from "@/modules/expenses/actions";
 import { createRecurringAction } from "@/modules/recurring/actions";
 import {
+  PAYMENT_METHOD_IDS,
   countryForTimezone,
   methodsForCountry,
   type PaymentMethodId,
@@ -104,9 +129,53 @@ import type { EntryMember } from "./pills";
  * the primary button both change with the type and neither is worth lifting
  * into a shell that would then need told about it. What the shell owns is the
  * sheet itself: see `add-entry-drawer`.
+ *
+ * Editing reopens this same screen with `editing` filled in rather than a
+ * screen of its own. There used to be a second form for it, and the two drifted
+ * exactly as far apart as you would expect: one had a receipt scanner, item
+ * splitting, a category picker that guessed and a currency list, the other had
+ * four dropdowns and could not change an entry's type at all. One form means an
+ * edit can do everything adding can, and it means a fix to either is a fix to
+ * both.
  */
 
 type OpenSheet = null | "split" | "category" | "currency" | "method" | "recur";
+
+/**
+ * An entry that already exists, as the fields that put it back on screen.
+ *
+ * Flat and already-formatted rather than the stored row: the two tables an
+ * entry can live in have little in common past an amount and a date, and the
+ * screen's business is fields. Whichever table it came from is `kind`, and it
+ * is the only thing here the form cannot infer — saving has to know whether the
+ * type it ends on still matches the table it started in.
+ */
+export interface EditingEntry {
+  readonly kind: "expense" | "settlement";
+  readonly id: string;
+  readonly type: EntryType;
+  /** Major units, as the reader would type them. */
+  readonly amountText: string;
+  readonly currency: string;
+  readonly exchangeRate: string;
+  readonly date: string;
+  readonly description: string;
+  readonly category: string;
+  /**
+   * Carried through untouched.
+   *
+   * This screen has no notes field — the old edit form did, which is how an
+   * imported entry came to have them — and dropping what it cannot show would
+   * make saving an untouched form destructive.
+   */
+  readonly notes: string;
+  readonly payerId: string | null;
+  readonly includedIds: readonly string[];
+  readonly splitMethod: SplitMethod;
+  readonly splitValues: Readonly<Record<string, string>>;
+  /** The stored label, which may predate the picker's list. */
+  readonly paymentMethod: string;
+}
 
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
 /** A group with no history yet — the picker simply has nothing to lead with. */
@@ -133,6 +202,10 @@ export interface AddEntryFormProps {
   receiptOcrLocal?: boolean;
   /** The configured server-side reader, named. Never a key. */
   receiptOcrProvider?: string;
+  /**
+   * The entry being changed, when there is one. Absent means a new entry.
+   */
+  editing?: EditingEntry;
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
   /**
@@ -143,6 +216,12 @@ export interface AddEntryFormProps {
    * earliest a refresh can be aimed at the group rather than at this route.
    */
   onSaved?: () => void;
+  /**
+   * Dismisses it on an entry that no longer exists — deleted, or moved to the
+   * other table by a change of type. Separate from `onSaved` because the shell
+   * cannot go back to a screen that has just been removed underneath it.
+   */
+  onRemoved?: () => void;
 }
 
 export function AddEntryForm({
@@ -160,8 +239,10 @@ export function AddEntryForm({
   receiptScanning = false,
   receiptOcrLocal = true,
   receiptOcrProvider,
+  editing,
   onClose,
   onSaved,
+  onRemoved,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
@@ -169,30 +250,64 @@ export function AddEntryForm({
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tCategories = useTranslations("expenses.categories");
+  const tMethods = useTranslations("paymentMethods");
   const repeatsId = useId();
 
   const splitText = (message: SplitMessage) =>
     tSplit(message.key, message.params);
 
-  const [type, setType] = useState<EntryType>("expense");
-  const [amountText, setAmountText] = useState("");
-  const [currency, setCurrency] = useState(defaultCurrency);
-  const [rate, setRate] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [categoryChosen, setCategoryChosen] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  /**
+   * Income the reader kept, reopened.
+   *
+   * Stored as a share of one, which is also what an expense split with a
+   * single person looks like — the difference is the direction, and it is what
+   * tells the two apart when the entry comes back.
+   */
+  const creditsOnePerson =
+    editing?.type === "income" &&
+    editing.includedIds.length === 1 &&
+    editing.includedIds[0] === editing.payerId;
 
-  const [payerId, setPayerId] = useState(selfId);
-  const [includedIds, setIncludedIds] = useState<readonly string[]>(() =>
-    members.map((member) => member.id),
+  const [type, setType] = useState<EntryType>(editing?.type ?? "expense");
+  const [amountText, setAmountText] = useState(editing?.amountText ?? "");
+  const [currency, setCurrency] = useState(
+    editing?.currency ?? defaultCurrency,
   );
-  const [method, setMethod] = useState<SplitMethod>("equal");
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [rate, setRate] = useState(editing?.exchangeRate ?? "");
+  const [description, setDescription] = useState(editing?.description ?? "");
+  const [category, setCategory] = useState(editing?.category ?? "");
+  // A category already on the entry is a decision somebody made, whoever made
+  // it. Leaving it open to the classifier would let reopening an entry
+  // silently refile it the moment the description was touched.
+  const [categoryChosen, setCategoryChosen] = useState(
+    (editing?.category ?? "") !== "",
+  );
+  const [date, setDate] = useState(
+    () => editing?.date ?? new Date().toISOString().slice(0, 10),
+  );
+
+  const [payerId, setPayerId] = useState(editing?.payerId ?? selfId);
+  // A settlement has no split of its own, and income credited to one person
+  // has one only in the sense that nobody else is in it. Both seed the full
+  // membership, so a reader who switches to something that does split starts
+  // where a new entry would rather than with a single name selected.
+  const [includedIds, setIncludedIds] = useState<readonly string[]>(() =>
+    editing && !creditsOnePerson && editing.includedIds.length > 0
+      ? [...editing.includedIds]
+      : members.map((member) => member.id),
+  );
+  const [method, setMethod] = useState<SplitMethod>(
+    editing?.splitMethod ?? "equal",
+  );
+  const [values, setValues] = useState<Record<string, string>>(() => ({
+    ...editing?.splitValues,
+  }));
   /** Set once per-item assignment has written exact amounts. */
   const [byItem, setByItem] = useState(false);
 
-  const [credit, setCredit] = useState<"shared" | "mine">("shared");
+  const [credit, setCredit] = useState<"shared" | "mine">(
+    creditsOnePerson ? "mine" : "shared",
+  );
 
   const [recurrence, setRecurrence] = useState<RecurrenceState>({
     enabled: false,
@@ -210,11 +325,14 @@ export function AddEntryForm({
     [],
   );
 
+  // The screen puts an edited settlement's own pair first, ahead of what is
+  // still outstanding, so reopening one lands on the people it was already
+  // between rather than on somebody else's debt.
   const [pairIndex, setPairIndex] = useState<number | null>(
     outstanding.length > 0 ? 0 : null,
   );
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId | null>(
-    null,
+    () => matchPaymentMethod(editing?.paymentMethod ?? "", tMethods),
   );
 
   const [sheet, setSheet] = useState<OpenSheet>(null);
@@ -223,6 +341,13 @@ export function AddEntryForm({
 
   const country = countryForTimezone(timezone);
   const countryMethods = useMemo(() => methodsForCountry(country), [country]);
+  /** A stored method the picker cannot name. Empty once anything is picked. */
+  const unmatchedMethod =
+    paymentMethod === null &&
+    editing !== undefined &&
+    matchPaymentMethod(editing.paymentMethod, tMethods) === null
+      ? editing.paymentMethod
+      : "";
 
   const suggestion = useCategorySuggestion({
     description,
@@ -238,6 +363,20 @@ export function AddEntryForm({
 
   const isSettle = type === "settle";
   const isIncome = type === "income";
+  /**
+   * What the entry's row has to become, against the table it is in today.
+   *
+   * Expense and income are the same row with a sign, so moving between them is
+   * an update. A repayment is a different table on purpose, so the same tab tap
+   * on an existing entry has to write one and remove the other.
+   */
+  const converting =
+    editing !== undefined &&
+    editing.kind !== (isSettle ? "settlement" : "expense");
+  /** An entry that already exists cannot become a template for future ones. */
+  const canRepeat = !isSettle && editing === undefined;
+  /** Kept whole; there is nowhere on this screen to show or change it. */
+  const notes = editing?.notes ?? "";
   const selectedPair =
     pairIndex !== null ? (outstanding[pairIndex] ?? null) : null;
 
@@ -378,7 +517,17 @@ export function AddEntryForm({
       const pair = pairIndex !== null ? outstanding[pairIndex] : outstanding[0];
       if (pair) {
         setPairIndex(pairIndex ?? 0);
-        takePair(pair);
+        // An amount already on an existing entry is the reader's, not the
+        // debt's: someone correcting a mis-typed entry chose that figure and
+        // is only saying it was a repayment. Only the currency has to follow
+        // the pair, because that is what the amount will be read as. Tapping a
+        // debt row is still a request for its amount — see `selectPair`.
+        if (editing) {
+          setCurrency(pair.currency);
+          setAmountText((current) => sanitiseAmount(current, pair.currency));
+        } else {
+          takePair(pair);
+        }
       }
     }
   };
@@ -474,10 +623,17 @@ export function AddEntryForm({
       // holding the drawer open in front of it: what they wanted to see is the
       // entry landing in the list, and the toast says the same thing without
       // standing between them and it.
-      toast.success(t(`saved.${confirmationKey(type, recurrence.enabled)}`), {
-        description: describeSaved(),
-      });
-      if (onSaved) onSaved();
+      toast.success(
+        t(
+          `saved.${confirmationKey(type, recurrence.enabled, editing !== undefined)}`,
+        ),
+        { description: describeSaved() },
+      );
+      // A conversion removed the row this drawer was opened on, so it leaves
+      // the way a deletion does rather than back onto a detail screen that no
+      // longer has anything to show.
+      const leave = converting ? onRemoved : onSaved;
+      if (leave) leave();
       else router.refresh();
     } finally {
       setPending(false);
@@ -497,32 +653,39 @@ export function AddEntryForm({
       return { participantId: id, value: (values[id] ?? "0").trim() };
     });
 
-  const submitEntry = () =>
-    createExpenseAction(groupId, {
-      direction: directionOf(type) ?? "out",
-      description: description.trim(),
-      notes: "",
-      category: effectiveCategory,
-      amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-      currency,
-      exchangeRate: needsRate ? rate.trim() : "",
-      expenseDate: date,
-      payers: [
-        {
-          participantId: payerId,
-          amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-        },
-      ],
-      splitMethod: method,
-      splitEntries: splitEntries(),
-      // The scan's own photograph, if it was kept, plus anything attached by
-      // hand. Both arrived through the same endpoint and are linked the same
-      // way; only the scanner knows the difference.
-      attachmentIds: [
-        ...(scan?.attachmentId ? [scan.attachmentId] : []),
-        ...attachments.map((file) => file.id),
-      ],
-    });
+  const submitEntry = () => {
+    const input = expensePayload();
+    if (!editing) return createExpenseAction(groupId, input);
+    return converting
+      ? convertSettlementToExpenseAction(groupId, editing.id, input)
+      : updateExpenseAction(groupId, editing.id, input);
+  };
+
+  const expensePayload = () => ({
+    direction: directionOf(type) ?? "out",
+    description: description.trim(),
+    notes,
+    category: effectiveCategory,
+    amount: totalMinor.ok ? totalMinor.value.toString() : "0",
+    currency,
+    exchangeRate: needsRate ? rate.trim() : "",
+    expenseDate: date,
+    payers: [
+      {
+        participantId: payerId,
+        amount: totalMinor.ok ? totalMinor.value.toString() : "0",
+      },
+    ],
+    splitMethod: method,
+    splitEntries: splitEntries(),
+    // The scan's own photograph, if it was kept, plus anything attached by
+    // hand. Both arrived through the same endpoint and are linked the same
+    // way; only the scanner knows the difference.
+    attachmentIds: [
+      ...(scan?.attachmentId ? [scan.attachmentId] : []),
+      ...attachments.map((file) => file.id),
+    ],
+  });
 
   const submitRecurring = () =>
     createRecurringAction(groupId, {
@@ -551,8 +714,8 @@ export function AddEntryForm({
       endDate: recurrence.endDate ?? "",
     });
 
-  const submitSettlement = () =>
-    createSettlementAction(groupId, {
+  const submitSettlement = () => {
+    const input = {
       fromParticipantId: selectedPair!.fromParticipantId,
       toParticipantId: selectedPair!.toParticipantId,
       amount: totalMinor.ok ? totalMinor.value.toString() : "0",
@@ -560,10 +723,14 @@ export function AddEntryForm({
       exchangeRate: needsRate ? rate.trim() : "",
       settledOn: date,
       paymentMethod: resolvedMethodLabel(),
-      notes: "",
-    });
+      notes,
+    };
+    if (!editing) return createSettlementAction(groupId, input);
+    return converting
+      ? convertExpenseToSettlementAction(groupId, editing.id, input)
+      : updateSettlementAction(groupId, editing.id, input);
+  };
 
-  const tMethods = useTranslations("paymentMethods");
   /**
    * What gets stored: the method's *label*, not its code.
    *
@@ -571,8 +738,42 @@ export function AddEntryForm({
    * years later even if the picker's list has moved on.
    */
   const resolvedMethodLabel = () => {
-    const id = paymentMethod ?? countryMethods[0];
-    return id ? tMethods(id) : "";
+    if (paymentMethod) return tMethods(paymentMethod);
+    // A label the picker no longer lists — an import, or a provider that has
+    // since left the list — is still the truth about how the money moved, so
+    // an untouched form writes it back rather than replacing it with whatever
+    // this country's first method happens to be today.
+    if (unmatchedMethod !== "") return unmatchedMethod;
+    const fallback = countryMethods[0];
+    return fallback ? tMethods(fallback) : "";
+  };
+
+  /**
+   * Removing the entry outright.
+   *
+   * It lives here rather than on a detail screen because this is now the only
+   * screen an entry is opened on — a settlement never had a detail screen at
+   * all, and offering "change it" without "remove it" would leave one behind
+   * with no way out.
+   */
+  const onDelete = async () => {
+    if (!editing) return;
+    setPending(true);
+    try {
+      const result =
+        editing.kind === "settlement"
+          ? await deleteSettlementAction(groupId, editing.id)
+          : await deleteExpenseAction(groupId, editing.id);
+      if (!result.ok) {
+        setError(result.error ?? t("errors.saveFailed"));
+        return;
+      }
+      toast.success(t("saved.deleted"));
+      if (onRemoved) onRemoved();
+      else router.refresh();
+    } finally {
+      setPending(false);
+    }
   };
 
   /** One line for the confirmation screen: what was saved, and how much. */
@@ -601,7 +802,7 @@ export function AddEntryForm({
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 pt-1.5 pb-3">
         <SheetTitle className="flex-1 truncate text-xl font-semibold tracking-[-0.02em]">
-          {t(`titles.${type}`)}
+          {editing ? t(`editTitles.${type}`) : t(`titles.${type}`)}
         </SheetTitle>
         {/* The group's name is not repeated here: the group is on screen
             behind this, which is the whole reason it is a drawer. */}
@@ -637,7 +838,10 @@ export function AddEntryForm({
           />
         )}
 
-        {type === "expense" && !scan && receiptScanning && (
+        {/* Nothing to scan into an entry that already exists: the amount, the
+            date and the split are all facts now, and a scan's business is
+            proposing them. A file can still be attached further down. */}
+        {type === "expense" && !editing && !scan && receiptScanning && (
           <ScanReceiptEntry
             enabled={receiptScanning}
             localEnabled={receiptOcrLocal}
@@ -767,8 +971,10 @@ export function AddEntryForm({
           </Row>
 
           {/* A settlement happened once, on a day. Nothing about it can
-              recur, so the card is the date row and nothing else. */}
-          {!isSettle && (
+              recur, so the card is the date row and nothing else — and neither
+              can an entry that has already happened become the template for
+              future ones. */}
+          {canRepeat && (
             <label
               htmlFor={repeatsId}
               className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2"
@@ -803,7 +1009,7 @@ export function AddEntryForm({
             </label>
           )}
 
-          {!isSettle && recurrence.enabled && (
+          {canRepeat && recurrence.enabled && (
             <RowButton
               label={t("repeat.title")}
               value={repeatLabel}
@@ -845,7 +1051,7 @@ export function AddEntryForm({
 
         {isSettle && selectedPair && (
           <p className="text-[13px] text-muted-foreground">
-            {paymentMethod || countryMethods[0]
+            {resolvedMethodLabel() !== ""
               ? t("settle.outcome", {
                   from: selectedPair.fromName,
                   to: selectedPair.toName,
@@ -878,6 +1084,43 @@ export function AddEntryForm({
             note={recurrence.enabled ? t("attach.notRepeating") : null}
           />
         )}
+
+        {editing && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                disabled={pending}
+                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[17px] bg-card text-sm font-semibold text-destructive shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)] transition-colors active:bg-destructive/10 disabled:opacity-50"
+              >
+                <Trash2 aria-hidden="true" className="size-[18px] shrink-0" />
+                {t("delete.trigger")}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("delete.body", { entry: describeSaved() })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>
+                  {t("delete.keep")}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void onDelete();
+                  }}
+                  disabled={pending}
+                >
+                  {t("delete.confirm")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* One button, and it is the only thing this footer is for. Cancel
@@ -892,7 +1135,9 @@ export function AddEntryForm({
           onClick={onSubmit}
         >
           {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-          {t(`actions.${primaryActionKey(type, recurrence.enabled)}`)}
+          {t(
+            `actions.${primaryActionKey(type, recurrence.enabled, editing !== undefined)}`,
+          )}
         </Button>
       </footer>
 
@@ -1052,6 +1297,28 @@ function CreditOption({
         </span>
       </span>
     </button>
+  );
+}
+
+/**
+ * A stored payment method, read back as one of the picker's own.
+ *
+ * The column holds the label rather than the code — deliberately, so a
+ * settlement still says "TWINT" years after the picker's list has moved on —
+ * which means reopening one has to match it back by name. A label that matches
+ * nothing is not an error: it is an import, or a provider since dropped, and
+ * the form keeps it verbatim rather than picking something else.
+ */
+function matchPaymentMethod(
+  label: string,
+  translate: (id: PaymentMethodId) => string,
+): PaymentMethodId | null {
+  const wanted = label.trim().toLocaleLowerCase();
+  if (wanted === "") return null;
+  return (
+    PAYMENT_METHOD_IDS.find(
+      (id) => translate(id).toLocaleLowerCase() === wanted,
+    ) ?? null
   );
 }
 

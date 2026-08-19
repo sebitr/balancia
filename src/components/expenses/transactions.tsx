@@ -574,26 +574,24 @@ function Row({
           />
         )}
       </span>
-      {row.kind === "expense" && (
-        <ChevronRight
-          aria-hidden="true"
-          className="-ml-0.5 size-3.5 shrink-0 text-muted-foreground"
-        />
-      )}
+      <ChevronRight
+        aria-hidden="true"
+        className="-ml-0.5 size-3.5 shrink-0 text-muted-foreground"
+      />
     </>
   );
 
-  // A settlement has no screen of its own to open yet, so it is not offered as
-  // something to tap. Everything else opens its detail.
-  if (row.kind === "settlement") {
-    return (
-      <span className="flex items-center gap-2.5 px-1.5 py-[7px]">{body}</span>
-    );
-  }
-
   return (
     <Link
-      href={`/groups/${groupId}/expenses/${row.id}`}
+      // A repayment has no detail screen — there is nothing to say about one
+      // that this row does not already say — so it opens the entry drawer
+      // directly, which is where changing or removing it lives. An expense
+      // opens its detail, and edits from there.
+      href={
+        row.kind === "settlement"
+          ? `/groups/${groupId}/settlements/${row.id}/edit`
+          : `/groups/${groupId}/expenses/${row.id}`
+      }
       transitionTypes={PUSH}
       // A finger never hovers, so the row answers the press itself — every
       // other list in the app already does.

@@ -1,4 +1,4 @@
-import { NewEntryScreen } from "../../../expenses/new/new-entry-screen";
+import { EntryScreen } from "../../../entry-screen";
 
 /**
  * The same screen, opened over the group instead of replacing it.
@@ -15,5 +15,5 @@ export default async function InterceptedNewEntryPage({
   params: Promise<{ groupId: string }>;
 }) {
   const { groupId } = await params;
-  return <NewEntryScreen groupId={groupId} dismissTo="back" />;
+  return <EntryScreen groupId={groupId} dismissTo="back" />;
 }

@@ -348,3 +348,56 @@ export async function listSettlements(
     toName: nameById.get(row.toParticipantId) ?? "Unknown",
   }));
 }
+
+/**
+ * One settlement, with everything the edit screen has to put back on screen.
+ *
+ * `listSettlements` deliberately does not carry the payment method — a list of
+ * repayments is about who and how much — but reopening one has to, or saving an
+ * untouched form would quietly restate a TWINT payment as cash.
+ */
+export async function getSettlement(
+  groupId: string,
+  settlementId: string,
+  options: { db?: Database } = {},
+): Promise<(SettlementSummary & { paymentMethod: string | null }) | null> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({
+      id: settlements.id,
+      fromParticipantId: settlements.fromParticipantId,
+      toParticipantId: settlements.toParticipantId,
+      amount: settlements.amount,
+      currency: settlements.currency,
+      convertedAmount: settlements.convertedAmount,
+      convertedCurrency: settlements.convertedCurrency,
+      exchangeRate: settlements.exchangeRate,
+      settledOn: settlements.settledOn,
+      paymentMethod: settlements.paymentMethod,
+      notes: settlements.notes,
+      createdAt: settlements.createdAt,
+    })
+    .from(settlements)
+    .where(
+      and(
+        eq(settlements.id, settlementId),
+        eq(settlements.groupId, groupId),
+        isNull(settlements.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return null;
+
+  const names = await db
+    .select({ id: participants.id, displayName: participants.displayName })
+    .from(participants)
+    .where(eq(participants.groupId, groupId));
+  const nameById = new Map(names.map((name) => [name.id, name.displayName]));
+
+  return {
+    ...row,
+    fromName: nameById.get(row.fromParticipantId) ?? "Unknown",
+    toName: nameById.get(row.toParticipantId) ?? "Unknown",
+  };
+}

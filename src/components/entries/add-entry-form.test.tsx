@@ -20,18 +20,45 @@ import { AddEntryDrawer } from "./add-entry-drawer";
  * service layer's problem and is tested there; this is about the form.
  */
 
-const { createExpense, createSettlement, createRecurring, upload, success } =
-  vi.hoisted(() => ({
-    createExpense: vi.fn(),
-    createSettlement: vi.fn(),
-    createRecurring: vi.fn(),
-    upload: vi.fn(),
-    success: vi.fn(),
-  }));
+const {
+  createExpense,
+  createSettlement,
+  createRecurring,
+  updateExpense,
+  updateSettlement,
+  toSettlement,
+  toExpense,
+  deleteExpense,
+  deleteSettlement,
+  upload,
+  success,
+  push,
+  back,
+} = vi.hoisted(() => ({
+  createExpense: vi.fn(),
+  createSettlement: vi.fn(),
+  createRecurring: vi.fn(),
+  updateExpense: vi.fn(),
+  updateSettlement: vi.fn(),
+  toSettlement: vi.fn(),
+  toExpense: vi.fn(),
+  deleteExpense: vi.fn(),
+  deleteSettlement: vi.fn(),
+  upload: vi.fn(),
+  success: vi.fn(),
+  push: vi.fn(),
+  back: vi.fn(),
+}));
 
 vi.mock("@/modules/expenses/actions", () => ({
   createExpenseAction: createExpense,
   createSettlementAction: createSettlement,
+  updateExpenseAction: updateExpense,
+  updateSettlementAction: updateSettlement,
+  convertExpenseToSettlementAction: toSettlement,
+  convertSettlementToExpenseAction: toExpense,
+  deleteExpenseAction: deleteExpense,
+  deleteSettlementAction: deleteSettlement,
 }));
 vi.mock("@/modules/recurring/actions", () => ({
   createRecurringAction: createRecurring,
@@ -40,7 +67,7 @@ vi.mock("@/components/expenses/upload-receipt", () => ({
   uploadReceipt: upload,
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push, back, refresh: vi.fn() }),
 }));
 // The confirmation is a toast now, and a toast needs a `<Toaster />` mounted
 // somewhere above it to render. What matters here is that it was raised, and
@@ -77,11 +104,23 @@ function renderForm(
 ) {
   // Module mocks are shared across the file; without this a "was not called"
   // assertion would be reading the previous test's call.
-  createExpense.mockClear();
-  createSettlement.mockClear();
-  createRecurring.mockClear();
-  upload.mockClear();
-  success.mockClear();
+  for (const action of [
+    createExpense,
+    createSettlement,
+    createRecurring,
+    updateExpense,
+    updateSettlement,
+    toSettlement,
+    toExpense,
+    deleteExpense,
+    deleteSettlement,
+    upload,
+    success,
+    push,
+    back,
+  ]) {
+    action.mockClear();
+  }
 
   createExpense.mockResolvedValue({ ok: true, data: { expenseId: "e1" } });
   createSettlement.mockResolvedValue({
@@ -89,6 +128,12 @@ function renderForm(
     data: { settlementId: "s1" },
   });
   createRecurring.mockResolvedValue({ ok: true, data: { id: "r1" } });
+  updateExpense.mockResolvedValue({ ok: true, data: undefined });
+  updateSettlement.mockResolvedValue({ ok: true, data: undefined });
+  toSettlement.mockResolvedValue({ ok: true, data: { settlementId: "s2" } });
+  toExpense.mockResolvedValue({ ok: true, data: { expenseId: "e2" } });
+  deleteExpense.mockResolvedValue({ ok: true, data: undefined });
+  deleteSettlement.mockResolvedValue({ ok: true, data: undefined });
   upload.mockResolvedValue({
     ok: true,
     file: { id: "att-1", fileName: "bill.pdf" },
@@ -894,5 +939,280 @@ describe("the currency picker", () => {
     await user.type(search, "yen");
     expect(search).toHaveFocus();
     expect(screen.getByRole("button", { name: /^JPY/ })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Reopening an entry, which is the same screen with something already in it.
+ *
+ * The point of the rework is that nothing here is edit-only: the tabs, the
+ * category picker and the currency list are the ones adding gets, and the only
+ * differences are what saving does and the two things an entry that already
+ * happened cannot become.
+ */
+describe("editing an entry", () => {
+  const EXPENSE = {
+    kind: "expense" as const,
+    id: "e1",
+    type: "expense" as const,
+    amountText: "84.60",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "Migros",
+    category: "groceries",
+    notes: "Weekly shop",
+    payerId: "herve",
+    includedIds: ["seb", "herve"],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "",
+  };
+
+  const SETTLEMENT = {
+    kind: "settlement" as const,
+    id: "s1",
+    type: "settle" as const,
+    amountText: "128.40",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "",
+    category: "",
+    notes: "",
+    payerId: "herve",
+    includedIds: [] as readonly string[],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "TWINT",
+  };
+
+  const save = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+  };
+
+  it("opens on the entry it was given", () => {
+    renderForm({ editing: EXPENSE });
+
+    expect(screen.getByRole("dialog", { name: "Edit expense" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue(
+      "84.60",
+    );
+    expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue(
+      "Migros",
+    );
+    // The payer and the two people in the split, not the group's three.
+    expect(
+      screen.getByRole("button", { name: /Hervé paid/ }),
+    ).toHaveTextContent("2");
+  });
+
+  it("saves an untouched entry as the update it is", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await save(user);
+
+    expect(createExpense).not.toHaveBeenCalled();
+    expect(updateExpense).toHaveBeenCalledTimes(1);
+    const [groupId, expenseId, payload] = updateExpense.mock.calls[0];
+    expect(groupId).toBe("g1");
+    expect(expenseId).toBe("e1");
+    expect(payload).toMatchObject({
+      direction: "out",
+      description: "Migros",
+      amount: "8460",
+      // The screen has no notes field; what it cannot show it must not drop.
+      notes: "Weekly shop",
+    });
+  });
+
+  it("turns an expense into income without leaving the screen", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("tab", { name: "Income" }));
+    await save(user);
+
+    expect(updateExpense).toHaveBeenCalledTimes(1);
+    expect(updateExpense.mock.calls[0][2]).toMatchObject({
+      direction: "in",
+      description: "Migros",
+    });
+  });
+
+  it("moves an expense to the settlements table when it was a repayment", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await save(user);
+
+    expect(updateExpense).not.toHaveBeenCalled();
+    expect(toSettlement).toHaveBeenCalledTimes(1);
+    const [groupId, expenseId, payload] = toSettlement.mock.calls[0];
+    expect(groupId).toBe("g1");
+    expect(expenseId).toBe("e1");
+    expect(payload).toMatchObject({
+      fromParticipantId: "herve",
+      toParticipantId: "seb",
+      // The reader's own figure, not the outstanding debt's: they are saying
+      // this entry was a repayment, not that it was that repayment.
+      amount: "8460",
+    });
+  });
+
+  it("reopens a settlement on its own pair and its own method", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    expect(screen.getByRole("dialog", { name: "Edit payment" })).toBeVisible();
+    await save(user);
+
+    expect(createSettlement).not.toHaveBeenCalled();
+    expect(updateSettlement).toHaveBeenCalledTimes(1);
+    const [groupId, settlementId, payload] = updateSettlement.mock.calls[0];
+    expect(groupId).toBe("g1");
+    expect(settlementId).toBe("s1");
+    expect(payload).toMatchObject({
+      fromParticipantId: "herve",
+      toParticipantId: "seb",
+      amount: "12840",
+      // Read back from the stored label rather than replaced by whatever this
+      // country's first method happens to be.
+      paymentMethod: "TWINT",
+    });
+  });
+
+  it("moves a settlement back to the expenses table", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      "Concert tickets",
+    );
+    await save(user);
+
+    expect(updateSettlement).not.toHaveBeenCalled();
+    expect(toExpense).toHaveBeenCalledTimes(1);
+    const [groupId, settlementId, payload] = toExpense.mock.calls[0];
+    expect(groupId).toBe("g1");
+    expect(settlementId).toBe("s1");
+    expect(payload).toMatchObject({
+      direction: "out",
+      description: "Concert tickets",
+      amount: "12840",
+    });
+  });
+
+  it("does not offer to repeat something that already happened", () => {
+    renderForm({ editing: EXPENSE });
+
+    expect(screen.queryByRole("switch", { name: "Repeats" })).toBeNull();
+  });
+
+  it("offers to remove the entry, once it has been confirmed", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("button", { name: "Delete this entry" }));
+    expect(deleteExpense).not.toHaveBeenCalled();
+
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    expect(deleteExpense).toHaveBeenCalledWith("g1", "e1");
+  });
+
+  it("removes a settlement from its own table", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await user.click(screen.getByRole("button", { name: "Delete this entry" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+
+    expect(deleteExpense).not.toHaveBeenCalled();
+    expect(deleteSettlement).toHaveBeenCalledWith("g1", "s1");
+  });
+
+  it("has no delete and no update when the entry is new", () => {
+    renderForm();
+
+    expect(
+      screen.queryByRole("button", { name: "Delete this entry" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Add expense" })).toBeVisible();
+  });
+});
+
+/**
+ * Where the drawer goes when it closes.
+ *
+ * `dismissTo="back"` is the intercepted route's way out, and it is right for
+ * everything that leaves the entry where it was. It is wrong for the two things
+ * that do not: a deletion and a change of type across the two tables both take
+ * the screen behind the drawer with them, and popping onto it lands on a 404.
+ */
+describe("leaving the drawer", () => {
+  const EXPENSE = {
+    kind: "expense" as const,
+    id: "e1",
+    type: "expense" as const,
+    amountText: "84.60",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "Migros",
+    category: "",
+    notes: "",
+    payerId: "seb",
+    includedIds: ["seb", "herve"],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "",
+  };
+
+  it("goes back after an edit that left the entry where it was", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() => expect(back).toHaveBeenCalled());
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("goes to the group after a deletion", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("button", { name: "Delete this entry" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/groups/g1"));
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it("goes to the group after a change of type moved the entry", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/groups/g1"));
+    expect(back).not.toHaveBeenCalled();
   });
 });

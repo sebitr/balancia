@@ -321,12 +321,17 @@ describe("Transactions", () => {
     ).toBeVisible();
   });
 
-  it("does not offer a settlement as something to open", () => {
+  it("opens a settlement straight in the entry drawer", () => {
     renderList();
 
     const settlement = screen.getByText("Seb paid Padi").closest("li");
     expect(settlement).not.toBeNull();
-    expect(within(settlement!).queryByRole("link")).not.toBeInTheDocument();
+    // A repayment has no detail screen of its own, so the row is the way to
+    // the only thing that can be done to one.
+    expect(within(settlement!).getByRole("link")).toHaveAttribute(
+      "href",
+      "/groups/g1/settlements/s1/edit",
+    );
     // It is a repayment, so it closes a position rather than moving one.
     expect(within(settlement!).getByText("settled")).toBeInTheDocument();
   });
