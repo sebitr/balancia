@@ -1,0 +1,1 @@
+ALTER TABLE "group_join_links" ADD COLUMN "token_cipher" text;

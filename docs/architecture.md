@@ -178,6 +178,15 @@ largest creditor) that is presentation-only: it never alters recorded history.
   revoking the link ends every in-flight join at once because no derived
   credential outlives it. Both leave the token out of the address bar, history
   and referrers by redirecting to a token-free URL.
+- The group join link is the one token stored in a form the server can read
+  back, because group settings has to show the live link weeks after minting it
+  — a link that can only be seen once has to be replaced to be shared with a
+  sixth person, invalidating it for the five who already have it. Lookups are
+  still by SHA-256 hash; alongside the hash sits an AES-256-GCM ciphertext
+  under a key derived from `AUTH_SECRET` by HKDF (`lib/security/secret-box.ts`),
+  so a dump of the database alone still yields no working links. A ciphertext
+  that does not open — rotated secret, edited row, a link minted before the
+  column existed — reads as "cannot be shown", never as an error.
 - Claiming a name is decided by the database, not by a prior read: the link
   from participant to user account is an `UPDATE … WHERE user_id IS NULL`, so
   two people racing for the same name cannot both be told they won.

@@ -6,18 +6,26 @@ import { CurrencyModeNote } from "@/components/groups/currency-mode-note";
 import { DangerZone } from "@/components/groups/danger-zone";
 import { ExportCard } from "@/components/groups/export-card";
 import { GroupSettingsForm } from "@/components/groups/group-settings-form";
+import { InviteLinkCard } from "@/components/groups/invite-link-card";
 import { requireGroupAccess } from "@/lib/actions";
 import { PUSH } from "@/components/motion/transitions";
-import { getGroupProfile } from "@/modules/groups/service";
+import { describeJoinLink } from "@/lib/security/join-link";
+import {
+  countUnclaimedParticipants,
+  getGroupProfile,
+} from "@/modules/groups/service";
 import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
 
 /**
  * The group's own settings.
  *
  * Ordered by how often it is opened for each: what the group is called, then
- * getting the data out, then the two screens this one is the way to, then the
- * two ways to end it. The currency mode used to be a card here; it cannot be
- * changed, so it is a line at the foot of Details instead.
+ * the link that lets everybody else in, then getting the data out, then the
+ * two screens this one is the way to, then the two ways to end it. The invite
+ * link sits that high because it is the only live control here — the rest
+ * describes the group, that one decides who else is in it. The currency mode
+ * used to be a card here; it cannot be changed, so it is a line at the foot of
+ * Details instead.
  */
 export default async function GroupSettingsPage({
   params,
@@ -28,9 +36,17 @@ export default async function GroupSettingsPage({
   const tGroup = await getTranslations("groupSettings");
 
   const manage = access.permissions.manageGroupSettings;
-  // The icon and description are read for the form alone, so only the person
-  // who can edit them pays for the query.
-  const profile = manage ? await getGroupProfile(access.groupId) : null;
+  const invites = access.permissions.manageInvitations;
+  // Each of these is read for one card, so a reader who cannot see that card
+  // pays for none of it.
+  const [profile, joinLink, unclaimedCount] = await Promise.all([
+    manage ? getGroupProfile(access.groupId) : null,
+    invites ? describeJoinLink(access.groupId) : null,
+    invites ? countUnclaimedParticipants(access.groupId) : 0,
+  ]);
+  // One instant for the whole render, so the card's "in 6 days" is a
+  // subtraction the browser can repeat and get the same answer.
+  const now = new Date().toISOString();
 
   return (
     // The last card clears the save bar, which is only there when the form is
@@ -66,6 +82,24 @@ export default async function GroupSettingsPage({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {invites && (
+        <InviteLinkCard
+          groupId={access.groupId}
+          groupName={access.group.name}
+          link={
+            joinLink
+              ? {
+                  status: joinLink.status,
+                  url: joinLink.url,
+                  expiresAt: joinLink.expiresAt?.toISOString() ?? null,
+                }
+              : null
+          }
+          unclaimedCount={unclaimedCount}
+          now={now}
+        />
       )}
 
       {access.permissions.exportData && (

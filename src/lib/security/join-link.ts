@@ -1,7 +1,9 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { getEnv } from "@/lib/env";
 import { groupJoinLinks, groups, users } from "@/lib/db/schema";
+import { open, seal } from "./secret-box";
 import { generateToken, hashToken, isWellFormedToken } from "./tokens";
 
 /**
@@ -24,7 +26,21 @@ import { generateToken, hashToken, isWellFormedToken } from "./tokens";
  * address bar, not in history, and not in a referrer sent to a third party.
  *
  * The moment the flow finishes, the cookie is cleared. It is not a session.
+ *
+ * The one thing this link does that the guest one must never do is come back:
+ * a sealed copy of the token is stored so the organiser's settings screen can
+ * show it again, weeks later, and send it to one more person without
+ * invalidating everybody else's. `secret-box.ts` is where that trade is
+ * written down.
  */
+
+/** Namespace for the sealed token, so it cannot be opened as anything else. */
+const SEAL_PURPOSE = "join-link";
+
+/** The URL that carries a raw token to the redemption route. */
+export function joinLinkUrl(token: string): string {
+  return `${getEnv().appOrigin}/join/g/${token}`;
+}
 
 export const JOIN_COOKIE_NAME = "balancia_join";
 
@@ -43,6 +59,19 @@ export interface JoinLinkContext {
 }
 
 export type JoinLinkFailure = "invalid" | "expired" | "revoked";
+
+/** Which of the three a link is in, from the organiser's side. */
+export type JoinLinkStatus = "active" | "expired" | "revoked";
+
+export interface JoinLinkView {
+  readonly status: JoinLinkStatus;
+  /** The full URL, or null when the sealed copy could not be opened. */
+  readonly url: string | null;
+  readonly prefix: string;
+  readonly createdAt: Date;
+  readonly expiresAt: Date | null;
+  readonly lastUsedAt: Date | null;
+}
 
 export class InvalidJoinLinkError extends Error {
   readonly reason: JoinLinkFailure;
@@ -154,6 +183,7 @@ export async function createJoinLink(
         groupId,
         tokenHash: token.hash,
         tokenPrefix: token.prefix,
+        tokenCipher: seal(SEAL_PURPOSE, token.raw),
         createdByUserId: options.createdByUserId ?? null,
         expiresAt: options.expiresAt ?? null,
         createdAt: now,
@@ -183,31 +213,83 @@ export async function revokeJoinLink(
   return revoked.length > 0;
 }
 
-/** The live link's prefix and age, for the screen that manages it. */
+/**
+ * What the organiser's screens show: the group's newest link, whatever state
+ * it is in.
+ *
+ * Deliberately not filtered to the live one. A link that has just been revoked
+ * is exactly the link the reader is looking at when they revoke it, and a card
+ * that empties itself on the tap reads as though the group lost something
+ * rather than as though the link stopped working.
+ *
+ * The URL comes back only when the sealed copy opens. Links minted before
+ * that column existed, or under a since-rotated `AUTH_SECRET`, still work for
+ * everyone holding them — they just cannot be shown again, and the card offers
+ * a fresh one instead.
+ */
 export async function describeJoinLink(
   groupId: string,
-  options: { db?: Database } = {},
-): Promise<{
-  readonly prefix: string;
-  readonly createdAt: Date;
-  readonly expiresAt: Date | null;
-  readonly lastUsedAt: Date | null;
-} | null> {
+  options: { now?: Date; db?: Database } = {},
+): Promise<JoinLinkView | null> {
   const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+
   const [link] = await db
     .select({
       prefix: groupJoinLinks.tokenPrefix,
+      cipher: groupJoinLinks.tokenCipher,
       createdAt: groupJoinLinks.createdAt,
       expiresAt: groupJoinLinks.expiresAt,
       lastUsedAt: groupJoinLinks.lastUsedAt,
+      revokedAt: groupJoinLinks.revokedAt,
     })
     .from(groupJoinLinks)
+    .where(eq(groupJoinLinks.groupId, groupId))
+    // One live link per group at most, and `createJoinLink` revokes the old
+    // one as it inserts the new, so the newest row is the live one if any is.
+    .orderBy(desc(groupJoinLinks.createdAt))
+    .limit(1);
+
+  if (!link) return null;
+
+  const token = open(SEAL_PURPOSE, link.cipher);
+  return {
+    status:
+      link.revokedAt !== null
+        ? "revoked"
+        : link.expiresAt !== null && link.expiresAt <= now
+          ? "expired"
+          : "active",
+    url: token ? joinLinkUrl(token) : null,
+    prefix: link.prefix,
+    createdAt: link.createdAt,
+    expiresAt: link.expiresAt,
+    lastUsedAt: link.lastUsedAt,
+  };
+}
+
+/**
+ * Moves the live link's expiry without touching the token.
+ *
+ * The two are separate on purpose: extending a link that is about to lapse is
+ * a routine thing to do, and it must not quietly break the URL five people
+ * already have. Returns false when the group has no live link to move.
+ */
+export async function setJoinLinkExpiry(
+  groupId: string,
+  expiresAt: Date | null,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const updated = await db
+    .update(groupJoinLinks)
+    .set({ expiresAt })
     .where(
       and(
         eq(groupJoinLinks.groupId, groupId),
         isNull(groupJoinLinks.revokedAt),
       ),
     )
-    .limit(1);
-  return link ?? null;
+    .returning({ id: groupJoinLinks.id });
+  return updated.length > 0;
 }

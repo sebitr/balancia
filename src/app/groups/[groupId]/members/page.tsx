@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { GroupLinkCard } from "@/components/members/group-link-card";
 import { PeopleCard, type PersonView } from "@/components/members/people-card";
-import { describeJoinLink } from "@/lib/security/join-link";
 import { inReadingOrder } from "@/components/members/reading-order";
 import { requireGroupAccess } from "@/lib/actions";
 import { loadGroupBalances } from "@/modules/balances/service";
@@ -23,6 +21,10 @@ import {
  * row is open. Balances are loaded for one reason only — a person who still
  * owes money should not be quietly removed — so they arrive as minor-unit
  * strings per currency and are never collapsed into a single number.
+ *
+ * The group-wide link used to have a card at the foot of this page as well. It
+ * lives in settings now: one link, one place that owns it, and this page kept
+ * the thing it is actually about — who the group is.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,14 +44,9 @@ export default async function MembersPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [participants, balances, joinLink] = await Promise.all([
+  const [participants, balances] = await Promise.all([
     listParticipants(access.groupId),
     loadGroupBalances(access),
-    // Only whoever may hand out invitations is shown the group link, so the
-    // query is skipped entirely for everyone else.
-    access.permissions.manageInvitations
-      ? describeJoinLink(access.groupId)
-      : Promise.resolve(null),
   ]);
 
   /*
@@ -126,22 +123,6 @@ export default async function MembersPage({
         canInvite={access.permissions.manageInvitations}
         canRemove={access.permissions.removeParticipants}
       />
-
-      {access.permissions.manageInvitations && (
-        <GroupLinkCard
-          groupId={access.groupId}
-          link={
-            joinLink
-              ? {
-                  prefix: joinLink.prefix,
-                  createdAt: joinLink.createdAt.toISOString(),
-                  expiresAt: joinLink.expiresAt?.toISOString() ?? null,
-                  lastUsedAt: joinLink.lastUsedAt?.toISOString() ?? null,
-                }
-              : null
-          }
-        />
-      )}
 
       <p className="text-xs text-pretty text-muted-foreground">
         {t("footnote")}
