@@ -73,10 +73,10 @@ export function InviteScreen({
         <Badge variant="secondary" className="w-fit">
           {t("badge")}
         </Badge>
-        <h1 className="font-heading text-[1.625rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {t("title", { group: summary.groupName })}
         </h1>
-        <p className="text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="text-sm text-pretty text-muted-foreground">
           {inviterName ? t("ledeFrom", { inviter: inviterName }) : t("lede")}
         </p>
       </div>
@@ -164,10 +164,10 @@ export function NameScreen({
       }}
     >
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.375rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {t("title")}
         </h1>
-        <p className="text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="text-sm text-pretty text-muted-foreground">
           {t("lede", { group: groupName })}
         </p>
       </div>
@@ -184,7 +184,7 @@ export function NameScreen({
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
-        <p className="text-[0.8125rem] text-muted-foreground">{t("help")}</p>
+        <p className="text-xs text-muted-foreground">{t("help")}</p>
       </div>
 
       <div className="mt-auto">
@@ -225,7 +225,7 @@ function MemberRow({
         </AvatarFallback>
       </Avatar>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-[0.9375rem] font-medium">
+        <span className="truncate text-sm font-medium">
           {member.displayName}
         </span>
         <span className="truncate text-xs text-muted-foreground">
@@ -257,10 +257,10 @@ export function MatchScreen({
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.375rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {t("title")}
         </h1>
-        <p className="text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="text-sm text-pretty text-muted-foreground">
           {empty
             ? t("ledeEmpty")
             : suggestion
@@ -329,12 +329,10 @@ export function ConfirmScreen({
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.375rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {t("title")}
         </h1>
-        <p className="text-[0.9375rem] text-pretty text-muted-foreground">
-          {t("lede")}
-        </p>
+        <p className="text-sm text-pretty text-muted-foreground">{t("lede")}</p>
       </div>
 
       <Card className="gap-0 p-4">
@@ -345,7 +343,7 @@ export function ConfirmScreen({
             </AvatarFallback>
           </Avatar>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-[1.0625rem] font-medium">
+            <span className="truncate text-base font-medium">
               {member.displayName}
             </span>
             <span className="text-xs text-muted-foreground">
@@ -451,10 +449,10 @@ export function AccountScreen({
       }}
     >
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.375rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {claiming ? t("titleClaim") : t("titleNew")}
         </h1>
-        <p className="text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="text-sm text-pretty text-muted-foreground">
           {claiming ? t("ledeClaim") : t("ledeNew")}
         </p>
       </div>
@@ -499,9 +497,7 @@ export function AccountScreen({
             value={password}
             onChange={(event) => onPasswordChange(event.target.value)}
           />
-          <p className="text-[0.8125rem] text-muted-foreground">
-            {t("passwordHelp")}
-          </p>
+          <p className="text-xs text-muted-foreground">{t("passwordHelp")}</p>
         </div>
       </div>
 
@@ -561,12 +557,12 @@ export function DoneScreen({
       </span>
 
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.625rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {claimed
             ? t("titleClaim", { name: firstNameOf(identityName) })
             : t("titleNew")}
         </h1>
-        <p className="max-w-[26ch] text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="max-w-[26ch] text-sm text-pretty text-muted-foreground">
           {claimed ? t("ledeClaim") : t("ledeNew", { group: groupName })}
         </p>
       </div>
@@ -637,10 +633,10 @@ export function DeadLinkScreen() {
         <Info aria-hidden="true" className="size-6" />
       </span>
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.625rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {t("reasons.invalid.title")}
         </h1>
-        <p className="text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="text-sm text-pretty text-muted-foreground">
           {t("reasons.invalid.body")}
         </p>
       </div>
@@ -665,10 +661,10 @@ export function TakenScreen() {
         <Info aria-hidden="true" className="size-6" />
       </span>
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-[1.625rem] leading-tight font-semibold tracking-[-0.02em] text-pretty">
+        <h1 className="font-heading text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
           {t("title")}
         </h1>
-        <p className="max-w-[30ch] text-[0.9375rem] text-pretty text-muted-foreground">
+        <p className="max-w-[30ch] text-sm text-pretty text-muted-foreground">
           {t("body")}
         </p>
       </div>

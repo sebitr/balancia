@@ -183,7 +183,7 @@ export function JoinFlow({
             />
           </div>
         </div>
-        <span className="text-[0.6875rem] font-semibold tracking-[0.06em] whitespace-nowrap text-muted-foreground uppercase">
+        <span className="text-2xs font-semibold tracking-[0.06em] whitespace-nowrap text-muted-foreground uppercase">
           {screen === "invite"
             ? t("stepInvitation")
             : finished
