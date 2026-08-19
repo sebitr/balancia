@@ -3,6 +3,7 @@ import {
   formatMinorUnits,
   parseAmountToMinor,
   previewSplit,
+  splitValuesToText,
   suggestExactValues,
   suggestPercentages,
 } from "./expense-form-logic";
@@ -52,6 +53,53 @@ describe("formatMinorUnits", () => {
     expect(formatMinorUnits("1050", "EUR")).toBe("10.50");
     expect(formatMinorUnits("1500", "JPY")).toBe("1500");
     expect(formatMinorUnits("1005", "BHD")).toBe("1.005");
+  });
+});
+
+describe("splitValuesToText", () => {
+  const exact = [
+    { participantId: "a", value: "83333" },
+    { participantId: "b", value: "83333" },
+    { participantId: "c", value: "83334" },
+  ];
+
+  it("turns stored exact amounts back into major units", () => {
+    expect(splitValuesToText("exact", exact, "CHF")).toEqual({
+      a: "833.33",
+      b: "833.33",
+      c: "833.34",
+    });
+  });
+
+  it("round-trips through the parser the form submits with", () => {
+    const text = splitValuesToText("exact", exact, "CHF");
+    for (const entry of exact) {
+      expect(parseAmountToMinor(text[entry.participantId], "CHF")).toEqual({
+        ok: true,
+        value: BigInt(entry.value),
+      });
+    }
+  });
+
+  it("leaves shares and percentages as they were typed", () => {
+    const entries = [
+      { participantId: "a", value: "2" },
+      { participantId: "b", value: "33.33" },
+    ];
+    expect(splitValuesToText("shares", entries, "CHF")).toEqual({
+      a: "2",
+      b: "33.33",
+    });
+    expect(splitValuesToText("percentage", entries, "CHF")).toEqual({
+      a: "2",
+      b: "33.33",
+    });
+  });
+
+  it("gives an equal split the empty object a new one starts with", () => {
+    expect(splitValuesToText("equal", [{ participantId: "a" }], "CHF")).toEqual(
+      {},
+    );
   });
 });
 
