@@ -1,0 +1,1 @@
+ALTER TYPE "public"."import_source_format" ADD VALUE 'balancia_json';

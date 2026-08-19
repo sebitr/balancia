@@ -259,7 +259,7 @@
     "recentActivity": "Activité récente",
     "noExpensesDescriptionSolo": "Ajoute les personnes qui partagent ces frais, puis enregistre la première dépense.",
     "addPeople": "Ajouter des personnes",
-    "importFromSplitwise": "Importer depuis Splitwise",
+    "importFromSplitwise": "Importer des données",
     "metaPeople": "{count, plural, one {# personne} other {# personnes}}",
     "metaExpenses": "{count, plural, one {# dépense} other {# dépenses}}",
     "metaSpan": "{first} – {last}",
@@ -1109,8 +1109,8 @@
     "removeFailed": "Cette clé d'accès n'a pas pu être supprimée."
   },
   "importWizard": {
-    "fileLabel": "Export Splitwise",
-    "fileHelp": "Un export CSV de groupe, ou une sauvegarde JSON. Le fichier est analysé sur ce serveur et n'est jamais transmis ailleurs.",
+    "fileLabel": "Sauvegarde ou export",
+    "fileHelp": "Un export JSON Balancia, un CSV de groupe Splitwise, ou une sauvegarde JSON Splitwise. Le fichier est analysé sur ce serveur et n'est jamais transmis ailleurs.",
     "read": "Lire le fichier",
     "readFailed": "Ce fichier n'a pas pu être lu.",
     "commitFailed": "L'import n'a pas pu être finalisé.",
@@ -1148,8 +1148,8 @@
     "managePeople": "Gérer les personnes"
   },
   "importPage": {
-    "title": "Importer depuis Splitwise",
-    "intro": "Reprends un groupe existant. Tu verras un aperçu avant toute écriture, et importer deux fois le même fichier ne crée jamais de doublons.",
+    "title": "Importer des données",
+    "intro": "Restaure une sauvegarde Balancia, ou reprends un groupe Splitwise. Tu verras un aperçu avant toute écriture, et importer deux fois le même fichier ne crée jamais de doublons.",
     "previous": "Imports précédents",
     "runSummary": "{imported} importées, {skipped} ignorées",
     "runFailed": ", {failed} en échec",
@@ -1264,6 +1264,8 @@
     "jsonPill": "Pour archiver",
     "jsonSub": "L'enregistrement complet — chaque montant exactement tel qu'il est stocké.",
     "exportNote": "Les reçus ne sont pas dans ces fichiers — télécharge-les depuis chaque dépense.",
+    "restoreNote": "Un export JSON peut être relu ici.",
+    "restoreAction": "Importer une sauvegarde",
     "exportStarted": "Le fichier {format} arrive.",
     "currencyMode": "Mode devises : {mode}",
     "currencyModeSeparate": "Plusieurs devises",

@@ -3,11 +3,12 @@
  *
  * Every source format is normalized into these shapes before anything touches
  * the domain. Adapters produce staged rows; the commit step turns staged rows
- * into expenses and settlements. Nothing about Splitwise's file layout leaks
- * past this boundary.
+ * into expenses and settlements. Nothing about a source's file layout leaks
+ * past this boundary — not Splitwise's, and not Balancia's own export.
  */
 
-export type ImportSourceFormat = "splitwise_csv" | "splitwise_json";
+export type ImportSourceFormat =
+  "splitwise_csv" | "splitwise_json" | "balancia_json";
 
 export interface StagedParticipant {
   /** Name exactly as it appeared in the source. */

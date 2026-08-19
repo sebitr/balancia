@@ -1,0 +1,202 @@
+{
+  "balancia": {
+    "exportVersion": 1,
+    "exportedAt": "2026-03-04T09:15:00.000Z"
+  },
+  "group": {
+    "id": "3f1b0d5a-0000-4000-8000-000000000001",
+    "name": "Lisbon trip",
+    "currencyMode": "separate",
+    "baseCurrency": null,
+    "timezone": "Europe/Paris",
+    "archivedAt": null
+  },
+  "participants": [
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000001",
+      "displayName": "Ada",
+      "email": "ada@example.test",
+      "role": "owner",
+      "hasAccount": true
+    },
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000002",
+      "displayName": "Blaise",
+      "email": null,
+      "role": "member",
+      "hasAccount": false
+    },
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "displayName": "Grace",
+      "email": null,
+      "role": "member",
+      "hasAccount": false
+    }
+  ],
+  "expenses": [
+    {
+      "id": "bbbbbbbb-0000-4000-8000-000000000001",
+      "description": "Guesthouse",
+      "notes": "Three nights",
+      "category": "lodging",
+      "amount": "42000",
+      "currency": "EUR",
+      "convertedAmount": null,
+      "convertedCurrency": null,
+      "exchangeRate": null,
+      "splitMethod": "equal",
+      "expenseDate": "2026-02-11",
+      "createdAt": "2026-02-11T18:02:00.000Z",
+      "recurringExpenseId": null,
+      "attachmentCount": 2,
+      "payers": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000001",
+          "displayName": "Ada",
+          "amount": "42000"
+        }
+      ],
+      "shares": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000001",
+          "displayName": "Ada",
+          "amount": "14000"
+        },
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000002",
+          "displayName": "Blaise",
+          "amount": "14000"
+        },
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000003",
+          "displayName": "Grace",
+          "amount": "14000"
+        }
+      ]
+    },
+    {
+      "id": "bbbbbbbb-0000-4000-8000-000000000002",
+      "description": "Tram tickets",
+      "notes": null,
+      "category": "transport",
+      "amount": "1800",
+      "currency": "EUR",
+      "convertedAmount": null,
+      "convertedCurrency": null,
+      "exchangeRate": null,
+      "splitMethod": "exact",
+      "expenseDate": "2026-02-12",
+      "createdAt": "2026-02-12T08:40:00.000Z",
+      "recurringExpenseId": null,
+      "attachmentCount": 0,
+      "payers": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000002",
+          "displayName": "Blaise",
+          "amount": "1000"
+        },
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000003",
+          "displayName": "Grace",
+          "amount": "800"
+        }
+      ],
+      "shares": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000002",
+          "displayName": "Blaise",
+          "amount": "900"
+        },
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000003",
+          "displayName": "Grace",
+          "amount": "900"
+        }
+      ]
+    },
+    {
+      "id": "bbbbbbbb-0000-4000-8000-000000000003",
+      "description": "Ferry",
+      "notes": null,
+      "category": "travel",
+      "amount": "9500",
+      "currency": "GBP",
+      "convertedAmount": "11020",
+      "convertedCurrency": "EUR",
+      "exchangeRate": "1.16",
+      "splitMethod": "equal",
+      "expenseDate": "2026-02-13T00:00:00.000Z",
+      "createdAt": "2026-02-13T11:00:00.000Z",
+      "recurringExpenseId": null,
+      "attachmentCount": 0,
+      "payers": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000003",
+          "displayName": "Grace",
+          "amount": "9500"
+        }
+      ],
+      "shares": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000001",
+          "displayName": "Ada",
+          "amount": "4750"
+        },
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000003",
+          "displayName": "Grace",
+          "amount": "4750"
+        }
+      ]
+    }
+  ],
+  "settlements": [
+    {
+      "id": "cccccccc-0000-4000-8000-000000000001",
+      "fromParticipantId": "aaaaaaaa-0000-4000-8000-000000000002",
+      "fromName": "Blaise",
+      "toParticipantId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "toName": "Ada",
+      "amount": "14000",
+      "currency": "EUR",
+      "convertedAmount": null,
+      "convertedCurrency": null,
+      "exchangeRate": null,
+      "settledOn": "2026-02-20",
+      "notes": "Paid the guesthouse share back",
+      "createdAt": "2026-02-20T19:30:00.000Z"
+    }
+  ],
+  "recurringExpenses": [
+    {
+      "id": "dddddddd-0000-4000-8000-000000000001",
+      "description": "Storage locker",
+      "category": "housing",
+      "amount": "3500",
+      "currency": "EUR",
+      "frequency": "monthly",
+      "interval": 1,
+      "weekday": null,
+      "dayOfMonth": 1,
+      "monthOfYear": null,
+      "startDate": "2026-01-01",
+      "endDate": null,
+      "paused": false,
+      "timezone": "Europe/Paris",
+      "generatedCount": 2
+    }
+  ],
+  "balances": [
+    {
+      "currency": "EUR",
+      "entries": [
+        {
+          "participantId": "aaaaaaaa-0000-4000-8000-000000000001",
+          "displayName": "Ada",
+          "amount": "14000"
+        }
+      ]
+    }
+  ]
+}

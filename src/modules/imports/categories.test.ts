@@ -65,6 +65,18 @@ describe("the source's own vocabulary", () => {
     expect(sourceCategory("Lodging")).toBe("lodging");
   });
 
+  it("keeps a code that a Splitwise group name also spells", () => {
+    // "Entertainment" and "Utilities" are Splitwise groups too, and a group is
+    // worth less than a description. Written exactly as we write a code, it
+    // came out of a Balancia export instead, and a restore must hand back the
+    // category it was given.
+    expect(sourceCategory("entertainment")).toBe("entertainment");
+    expect(sourceCategory("utilities")).toBe("utilities");
+    // Splitwise's own capitalisation is still read as the group it is.
+    expect(sourceCategory("Entertainment")).toBeNull();
+    expect(sourceCategory("Utilities")).toBeNull();
+  });
+
   it("declines the labels that mean nothing on their own", () => {
     // Splitwise exports the leaf, so "Other" under Home is furniture and
     // "Other" under Life is a dentist. Neither is a translation.

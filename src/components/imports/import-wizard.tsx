@@ -25,7 +25,11 @@ import type { ImportPreview, ImportReport } from "@/modules/imports/service";
 const CREATE_PARTICIPANT = "__create__";
 
 /**
- * Splitwise import wizard: upload → preview → map people → import → report.
+ * Import wizard: upload → preview → map people → import → report.
+ *
+ * The same four steps whatever the file is — a Balancia backup goes through
+ * the participant mapping exactly as a Splitwise export does, because a
+ * restore into a group that already has people is a mapping question too.
  *
  * The preview step is where the user sees exactly what will happen, including
  * rows that will be skipped because they were already imported. Committing is
@@ -288,9 +292,12 @@ export function ImportWizard({ groupId }: { groupId: string }) {
 }
 
 /**
- * Getting the file out of Splitwise is the step people get stuck on, so the
+ * Where the file comes from is the step people get stuck on, so the
  * instructions live next to the upload rather than in the docs. Collapsed by
  * default: anyone who already has the export should not have to scroll past it.
+ *
+ * Balancia's own backup goes first — it is the shortest answer, and the one
+ * somebody restoring their own data is looking for.
  */
 function ExportInstructions() {
   return (
@@ -301,12 +308,30 @@ function ExportInstructions() {
           aria-hidden="true"
           className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
         />
-        How do I export from Splitwise?
+        Where do I get the file?
       </summary>
 
       <div className="space-y-4 border-t px-4 py-3 text-sm">
         <section className="space-y-2">
-          <h3 className="font-medium">One group, as a spreadsheet (CSV)</h3>
+          <h3 className="font-medium">A Balancia backup</h3>
+          <p className="text-muted-foreground">
+            Open the group you exported, go to{" "}
+            <strong className="font-medium text-foreground">Settings</strong>{" "}
+            and download the{" "}
+            <strong className="font-medium text-foreground">JSON</strong>{" "}
+            export. Upload that file above. Amounts, categories and who owed
+            what come back exactly as they were.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Recurring expenses and receipts are not in the file, so they are not
+            restored — the preview says so before you commit.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="font-medium">
+            Splitwise: one group, as a spreadsheet (CSV)
+          </h3>
           <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
             <li>
               Sign in at{" "}
@@ -337,7 +362,9 @@ function ExportInstructions() {
         </section>
 
         <section className="space-y-2">
-          <h3 className="font-medium">Your whole account, as JSON</h3>
+          <h3 className="font-medium">
+            Splitwise: your whole account, as JSON
+          </h3>
           <p className="text-muted-foreground">
             In Splitwise&rsquo;s account settings, request a copy of your data.
             Splitwise emails you an archive; upload the JSON file holding your
@@ -347,8 +374,8 @@ function ExportInstructions() {
         </section>
 
         <p className="text-xs text-muted-foreground">
-          Either way, nothing is imported until you have seen the preview, and
-          re-uploading the same file never creates duplicates.
+          Whichever it is, nothing is imported until you have seen the preview,
+          and re-uploading the same file never creates duplicates.
         </p>
       </div>
     </details>
