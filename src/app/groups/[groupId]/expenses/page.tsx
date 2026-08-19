@@ -97,6 +97,10 @@ export default async function ExpensesPage({
         title: expense.description,
         amount: display.amount.toString(),
         currency: display.currency,
+        // An expense's own notes stay on its detail screen; the description
+        // is already the row, and repeating one under the other would say
+        // the same thing twice as often as not.
+        note: null,
         category: categoryKeyOf(expense.category),
         position: positionOf(expense),
         // Income keeps its amount positive in the database; the badge is what
@@ -118,6 +122,7 @@ export default async function ExpensesPage({
         }),
         amount: display.amount.toString(),
         currency: display.currency,
+        note: settlement.notes,
         category: null,
         // A repayment clears a position rather than creating one, so it is
         // shown neutrally — and only to the two people it names. Which of
