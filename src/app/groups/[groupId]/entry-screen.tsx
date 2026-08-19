@@ -112,34 +112,12 @@ export async function EntryScreen({
     }))
     .sort((a, b) => Number(BigInt(b.amountMinor) - BigInt(a.amountMinor)));
 
-  const editing = edit
-    ? await loadEditing(access.groupId, edit, locale)
-    : undefined;
+  const editing = edit ? await loadEditing(access.groupId, edit) : undefined;
   // Null only ever comes back from a load that was asked for: an entry that is
   // not in this group, or has already been removed under the reader.
   if (editing === null) {
     notFound();
   }
-
-  /**
-   * A settlement's own pair, ahead of what is still outstanding.
-   *
-   * The list is what the settle tab picks from, and the debt this repayment
-   * closed is by definition no longer in it — the balances above already count
-   * the settlement being edited. Without this, reopening one would land on
-   * somebody else's debt and quietly re-point the payment at them.
-   */
-  const pairs =
-    editing && editing.type === "settle" && editing.pair
-      ? [
-          editing.pair,
-          ...outstanding.filter(
-            (pair) =>
-              pair.fromParticipantId !== editing.pair!.fromParticipantId ||
-              pair.toParticipantId !== editing.pair!.toParticipantId,
-          ),
-        ]
-      : outstanding;
 
   return (
     <AddEntryDrawer
@@ -154,7 +132,7 @@ export async function EntryScreen({
       baseCurrency={access.group.baseCurrency}
       defaultCurrency={editing?.currency ?? access.group.baseCurrency ?? "EUR"}
       timezone={access.group.timezone}
-      outstanding={pairs}
+      outstanding={outstanding}
       categoryMappings={categoryMappings}
       frequentCategories={frequentCategories}
       semanticCategorization={isSemanticCategorizationEnabled()}
@@ -168,23 +146,19 @@ export async function EntryScreen({
   );
 }
 
-/** The pair a settlement is between, carried alongside its fields. */
-type EditingWithPair = EditingEntry & { pair?: DebtPair };
-
 async function loadEditing(
   groupId: string,
   edit: { kind: "expense" | "settlement"; id: string },
-  locale: string,
-): Promise<EditingWithPair | null> {
+): Promise<EditingEntry | null> {
   return edit.kind === "settlement"
-    ? loadSettlement(groupId, edit.id, locale)
+    ? loadSettlement(groupId, edit.id)
     : loadExpense(groupId, edit.id);
 }
 
 async function loadExpense(
   groupId: string,
   expenseId: string,
-): Promise<EditingWithPair | null> {
+): Promise<EditingEntry | null> {
   const expense = await getExpense(groupId, expenseId);
   if (!expense) return null;
 
@@ -209,6 +183,10 @@ async function loadExpense(
     category: expense.category ?? "",
     notes: expense.notes ?? "",
     payerId: expense.payers[0]?.participantId ?? null,
+    // An expense has no second side. Saying it was really a repayment means
+    // naming who it was repaid to, and that is the one thing only a person
+    // can answer.
+    settleTo: null,
     includedIds: entries.map((entry) => entry.participantId),
     splitMethod: expense.splitMethod,
     // An equal split stores no values at all, which is the same empty object
@@ -225,8 +203,7 @@ async function loadExpense(
 async function loadSettlement(
   groupId: string,
   settlementId: string,
-  locale: string,
-): Promise<EditingWithPair | null> {
+): Promise<EditingEntry | null> {
   const settlement = await getSettlement(groupId, settlementId);
   if (!settlement) return null;
 
@@ -244,21 +221,10 @@ async function loadSettlement(
     category: "",
     notes: settlement.notes ?? "",
     payerId: settlement.fromParticipantId,
+    settleTo: settlement.toParticipantId,
     includedIds: [],
     splitMethod: "equal",
     splitValues: {},
     paymentMethod: settlement.paymentMethod ?? "",
-    pair: {
-      fromParticipantId: settlement.fromParticipantId,
-      fromName: settlement.fromName,
-      toParticipantId: settlement.toParticipantId,
-      toName: settlement.toName,
-      amountMinor: settlement.amount.toString(),
-      currency: settlement.currency,
-      amountFormatted: formatMoney(
-        money(settlement.amount, settlement.currency),
-        { locale },
-      ),
-    },
   };
 }

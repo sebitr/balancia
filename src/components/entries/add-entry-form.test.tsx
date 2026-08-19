@@ -963,6 +963,7 @@ describe("editing an entry", () => {
     category: "groceries",
     notes: "Weekly shop",
     payerId: "herve",
+    settleTo: null,
     includedIds: ["seb", "herve"],
     splitMethod: "equal" as const,
     splitValues: {},
@@ -981,6 +982,7 @@ describe("editing an entry", () => {
     category: "",
     notes: "",
     payerId: "herve",
+    settleTo: "seb",
     includedIds: [] as readonly string[],
     splitMethod: "equal" as const,
     splitValues: {},
@@ -1046,6 +1048,10 @@ describe("editing an entry", () => {
     renderForm({ editing: EXPENSE });
 
     await user.click(screen.getByRole("tab", { name: "Settle" }));
+    // The payer carries over as the one paying; who they repaid is the one
+    // thing an expense cannot say, so it has to be picked.
+    expect(screen.getByRole("radio", { name: "From: Hervé" })).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: "To: Seb" }));
     await save(user);
 
     expect(updateExpense).not.toHaveBeenCalled();
@@ -1174,6 +1180,7 @@ describe("leaving the drawer", () => {
     category: "",
     notes: "",
     payerId: "seb",
+    settleTo: null,
     includedIds: ["seb", "herve"],
     splitMethod: "equal" as const,
     splitValues: {},
@@ -1210,9 +1217,125 @@ describe("leaving the drawer", () => {
     renderForm({ editing: EXPENSE });
 
     await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/groups/g1"));
     expect(back).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Who is repaying whom, when the answer is not one of the group's debts.
+ *
+ * The outstanding list is the right way into a new repayment and the wrong way
+ * to change one: a recorded settlement has already cleared the debt it was for,
+ * so its own pair is never in that list, and correcting a wrong name means
+ * naming somebody who never owed anything.
+ */
+describe("picking the people on a repayment", () => {
+  const SETTLEMENT = {
+    kind: "settlement" as const,
+    id: "s1",
+    type: "settle" as const,
+    amountText: "128.40",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "",
+    category: "",
+    notes: "",
+    payerId: "herve",
+    settleTo: "seb",
+    includedIds: [] as readonly string[],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "TWINT",
+  };
+
+  it("offers the whole group on both sides, not just its debts", () => {
+    renderForm({ editing: SETTLEMENT });
+
+    expect(screen.queryByText("Outstanding")).toBeNull();
+    for (const name of ["Seb", "Hervé", "Cyril"]) {
+      expect(
+        screen.getByRole("radio", { name: `From: ${name}` }),
+      ).toBeVisible();
+      expect(screen.getByRole("radio", { name: `To: ${name}` })).toBeVisible();
+    }
+    expect(screen.getByRole("radio", { name: "From: Hervé" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "To: Seb" })).toBeChecked();
+  });
+
+  it("keeps each side to one person", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await user.click(screen.getByRole("radio", { name: "To: Cyril" }));
+
+    expect(screen.getByRole("radio", { name: "To: Cyril" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "To: Seb" })).not.toBeChecked();
+    // The other side is untouched by a choice on this one.
+    expect(screen.getByRole("radio", { name: "From: Hervé" })).toBeChecked();
+  });
+
+  /** Naming the person who holds the other side can only mean reversing it. */
+  it("swaps the two rather than putting one person on both sides", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await user.click(screen.getByRole("radio", { name: "From: Seb" }));
+
+    expect(screen.getByRole("radio", { name: "From: Seb" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "To: Hervé" })).toBeChecked();
+  });
+
+  it("saves the people it was given, debt or no debt", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    // Cyril owes nobody in OUTSTANDING, which is exactly the point.
+    await user.click(screen.getByRole("radio", { name: "To: Cyril" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(updateSettlement).toHaveBeenCalledTimes(1);
+    expect(updateSettlement.mock.calls[0][2]).toMatchObject({
+      fromParticipantId: "herve",
+      toParticipantId: "cyril",
+      amount: "12840",
+    });
+  });
+
+  it("cannot be saved until both sides are named", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      editing: {
+        ...SETTLEMENT,
+        kind: "expense" as const,
+        id: "e1",
+        type: "expense" as const,
+        description: "Migros",
+        settleTo: null,
+      },
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    await user.click(screen.getByRole("radio", { name: "To: Seb" }));
+    expect(
+      screen.getByRole("button", { name: "Save changes" }),
+    ).not.toBeDisabled();
+  });
+
+  /** Adding one still starts from a debt: that is what makes it one tap. */
+  it("still leads a new repayment with what is outstanding", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    expect(screen.getByText("Outstanding")).toBeVisible();
+    expect(screen.queryByRole("radio", { name: "From: Seb" })).toBeNull();
   });
 });

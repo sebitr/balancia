@@ -1812,6 +1812,8 @@
       "mineHint": "Recorded, but nobody else's balance moves"
     },
     "settle": {
+      "from": "From",
+      "to": "To",
       "outstanding": "Outstanding",
       "owes": "{from} owes {to}",
       "nothingOutstanding": "Everyone is settled up.",

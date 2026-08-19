@@ -100,6 +100,7 @@ import { SplitSheet } from "./split-sheet";
 import { SplitSummaryRow } from "./split-summary-row";
 import {
   OutstandingList,
+  PairPicker,
   PaymentMethodRow,
   PaymentMethodSheet,
   type DebtPair,
@@ -170,6 +171,13 @@ export interface EditingEntry {
    */
   readonly notes: string;
   readonly payerId: string | null;
+  /**
+   * The other side of a repayment. `payerId` is the one paying.
+   *
+   * Null on an expense, which has no second side until somebody says it was
+   * really a repayment — and then it is the one thing they have to answer.
+   */
+  readonly settleTo: string | null;
   readonly includedIds: readonly string[];
   readonly splitMethod: SplitMethod;
   readonly splitValues: Readonly<Record<string, string>>;
@@ -325,11 +333,25 @@ export function AddEntryForm({
     [],
   );
 
-  // The screen puts an edited settlement's own pair first, ahead of what is
-  // still outstanding, so reopening one lands on the people it was already
-  // between rather than on somebody else's debt.
-  const [pairIndex, setPairIndex] = useState<number | null>(
-    outstanding.length > 0 ? 0 : null,
+  /**
+   * Who is repaying whom, as two people rather than as a debt.
+   *
+   * Held apart from `outstanding` because the two are only the same thing while
+   * the repayment is new. Reopening one is asking about a debt that this very
+   * settlement has already cleared, so it cannot be a row in that list — and
+   * correcting the wrong name means picking somebody who never owed anything.
+   * The list still writes here; it is one way to answer, not the state itself.
+   *
+   * Empty until the settle tab is reached, and left empty for an expense being
+   * turned into one: there is no honest guess at who was repaid, and filling it
+   * from the group's largest debt would put two names on the screen that nobody
+   * chose and that a reader has every reason to take for the entry's own.
+   */
+  const [settleFrom, setSettleFrom] = useState<string | null>(
+    () => editing?.payerId ?? null,
+  );
+  const [settleTo, setSettleTo] = useState<string | null>(
+    () => editing?.settleTo ?? null,
   );
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId | null>(
     () => matchPaymentMethod(editing?.paymentMethod ?? "", tMethods),
@@ -377,8 +399,32 @@ export function AddEntryForm({
   const canRepeat = !isSettle && editing === undefined;
   /** Kept whole; there is nowhere on this screen to show or change it. */
   const notes = editing?.notes ?? "";
-  const selectedPair =
-    pairIndex !== null ? (outstanding[pairIndex] ?? null) : null;
+  /**
+   * The pair, once it is one: two different people, both named.
+   *
+   * Half an answer is a legitimate thing to be in the middle of — an expense
+   * being turned into a repayment starts with only the payer — so this is null
+   * until it is whole, and the primary button stays disabled meanwhile.
+   */
+  const selectedPair = useMemo(() => {
+    if (settleFrom === null || settleTo === null) return null;
+    if (settleFrom === settleTo) return null;
+    const nameOf = (id: string) =>
+      members.find((member) => member.id === id)?.displayName ?? "";
+    return {
+      fromParticipantId: settleFrom,
+      fromName: nameOf(settleFrom),
+      toParticipantId: settleTo,
+      toName: nameOf(settleTo),
+    };
+  }, [settleFrom, settleTo, members]);
+
+  /** Which outstanding row, if any, the current pair happens to be. */
+  const outstandingIndex = outstanding.findIndex(
+    (pair) =>
+      pair.fromParticipantId === settleFrom &&
+      pair.toParticipantId === settleTo,
+  );
 
   const needsRate =
     currencyMode === "converted" &&
@@ -513,22 +559,14 @@ export function AddEntryForm({
       setCurrency(baseCurrency ?? defaultCurrency);
       setRate("");
     }
-    if (next === "settle") {
-      const pair = pairIndex !== null ? outstanding[pairIndex] : outstanding[0];
-      if (pair) {
-        setPairIndex(pairIndex ?? 0);
-        // An amount already on an existing entry is the reader's, not the
-        // debt's: someone correcting a mis-typed entry chose that figure and
-        // is only saying it was a repayment. Only the currency has to follow
-        // the pair, because that is what the amount will be read as. Tapping a
-        // debt row is still a request for its amount — see `selectPair`.
-        if (editing) {
-          setCurrency(pair.currency);
-          setAmountText((current) => sanitiseAmount(current, pair.currency));
-        } else {
-          takePair(pair);
-        }
-      }
+    // A new repayment opens on the largest debt, which is the answer most of
+    // the time and costs one tap to change. An entry that already exists opens
+    // on its own people: what it says today is the thing being corrected, and
+    // an edit that silently re-pointed the payment at the group's biggest debt
+    // would be changing the one fact nobody asked it to.
+    if (next === "settle" && !editing && selectedPair === null) {
+      const pair = outstanding[0];
+      if (pair) takePair(pair);
     }
   };
 
@@ -542,12 +580,13 @@ export function AddEntryForm({
    * retyped as francs.
    */
   const takePair = (pair: DebtPair) => {
+    setSettleFrom(pair.fromParticipantId);
+    setSettleTo(pair.toParticipantId);
     setCurrency(pair.currency);
     setAmountText(formatMinorUnits(pair.amountMinor, pair.currency));
   };
 
   const selectPair = (index: number) => {
-    setPairIndex(index);
     const pair = outstanding[index];
     if (pair) takePair(pair);
   };
@@ -830,13 +869,24 @@ export function AddEntryForm({
           </Alert>
         )}
 
-        {isSettle && (
-          <OutstandingList
-            pairs={outstanding}
-            selectedIndex={pairIndex}
-            onSelect={selectPair}
-          />
-        )}
+        {isSettle &&
+          (editing ? (
+            <PairPicker
+              members={members}
+              fromId={settleFrom}
+              toId={settleTo}
+              onChange={(next) => {
+                setSettleFrom(next.fromId);
+                setSettleTo(next.toId);
+              }}
+            />
+          ) : (
+            <OutstandingList
+              pairs={outstanding}
+              selectedIndex={outstandingIndex >= 0 ? outstandingIndex : null}
+              onSelect={selectPair}
+            />
+          ))}
 
         {/* Nothing to scan into an entry that already exists: the amount, the
             date and the split are all facts now, and a scan's business is
