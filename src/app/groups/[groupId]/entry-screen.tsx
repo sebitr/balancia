@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AddEntryDrawer } from "@/components/entries/add-entry-drawer";
 import type { EditingEntry } from "@/components/entries/add-entry-form";
 import type { DebtPair } from "@/components/entries/settle-blocks";
+import { splitValuesToText } from "@/components/expenses/expense-form-logic";
 import { requireGroupAccess } from "@/lib/actions";
 import {
   configuredOcrProviderName,
@@ -190,11 +191,12 @@ async function loadExpense(
     includedIds: entries.map((entry) => entry.participantId),
     splitMethod: expense.splitMethod,
     // An equal split stores no values at all, which is the same empty object
-    // the form starts a new equal split with.
-    splitValues: Object.fromEntries(
-      entries.flatMap((entry) =>
-        entry.value === undefined ? [] : [[entry.participantId, entry.value]],
-      ),
+    // the form starts a new equal split with. The rest come back as the text
+    // their fields hold, which for an exact split is not how it was stored.
+    splitValues: splitValuesToText(
+      expense.splitMethod,
+      entries,
+      expense.currency,
     ),
     paymentMethod: "",
   };
