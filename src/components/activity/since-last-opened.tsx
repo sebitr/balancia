@@ -49,7 +49,7 @@ export async function SinceLastOpened({
         {unseen.map((entry) => (
           <li
             key={entry.id}
-            className="flex min-w-0 items-start gap-2.5 text-[0.84375rem] leading-snug"
+            className="flex min-w-0 items-start gap-2.5 text-sm leading-snug"
           >
             <span
               aria-hidden="true"

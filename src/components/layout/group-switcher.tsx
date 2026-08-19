@@ -183,7 +183,7 @@ export function GroupSwitcher({
           aria-label={t("yourGroups")}
           className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none"
         >
-          <span className="px-3.5 pt-[11px] pb-[7px] text-[0.65625rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          <span className="px-3.5 pt-[11px] pb-[7px] text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             {t("yourGroups")}
           </span>
 
@@ -222,7 +222,7 @@ export function GroupSwitcher({
               strokeWidth={1.9}
               className="size-[17px] shrink-0 text-muted-foreground"
             />
-            <span className="min-w-0 flex-1 text-[0.84375rem] font-medium">
+            <span className="min-w-0 flex-1 text-sm font-medium">
               {t("switcherDashboard")}
               <span className="font-normal text-muted-foreground">
                 {" · "}
@@ -367,7 +367,7 @@ function GroupRow({
         name={group.name}
         muted={isCurrent}
         className={cn(
-          "size-7 rounded-[9px] text-[0.6875rem] font-semibold",
+          "size-7 rounded-[9px] text-2xs font-semibold",
           isCurrent
             ? "bg-primary text-primary-foreground"
             : "bg-accent text-accent-foreground",
@@ -376,7 +376,7 @@ function GroupRow({
       />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium">{group.name}</span>
-        <span className="truncate text-[0.71875rem] text-muted-foreground tabular-nums">
+        <span className="truncate text-2xs text-muted-foreground tabular-nums">
           {position}
         </span>
       </span>

@@ -78,10 +78,10 @@ export function AddExpenseSheet({
         className="gap-4 rounded-t-[22px] bg-card px-5 pt-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-card-foreground"
       >
         <div className="flex flex-col gap-0.5">
-          <SheetTitle className="text-[1.0625rem] font-semibold tracking-[-0.02em]">
+          <SheetTitle className="text-base font-semibold tracking-[-0.02em]">
             {t("pickerTitle")}
           </SheetTitle>
-          <p className="text-[0.8125rem] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {needle === ""
               ? t("pickerSubtitle")
               : t("pickerCount", { shown: shown.length, total: groups.length })}
@@ -99,7 +99,7 @@ export function AddExpenseSheet({
             onChange={(event) => setQuery(event.target.value)}
             aria-label={t("pickerSearchLabel")}
             placeholder={t("pickerSearchPlaceholder")}
-            className="h-10 rounded-xl pl-9 text-base md:text-[0.9375rem]"
+            className="h-10 rounded-xl pl-9 text-base md:text-sm"
           />
         </div>
 
@@ -129,7 +129,7 @@ export function AddExpenseSheet({
                     className="size-8 rounded-[10px] bg-accent text-sm text-accent-foreground"
                     iconClassName="size-4"
                   />
-                  <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {group.name}
                   </span>
                   <RelativeTime

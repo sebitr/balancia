@@ -48,7 +48,7 @@ export function SpendingCard({
         </h2>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-[30px] items-center gap-1 rounded-full border px-2.5 text-[0.75rem] font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+          <DropdownMenuTrigger className="flex h-[30px] items-center gap-1 rounded-full border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
             {t(`spendingPeriods.${periodKey}`)}
             <ChevronDown aria-hidden="true" className="size-3.5" />
           </DropdownMenuTrigger>
@@ -89,7 +89,7 @@ export function SpendingCard({
             aria-hidden="true"
             className="size-[17px] shrink-0 text-primary"
           />
-          <span className="min-w-0 flex-1 text-[0.8125rem] font-medium">
+          <span className="min-w-0 flex-1 text-xs font-medium">
             {t("statistics")}
             <span className="font-normal text-muted-foreground">
               {" · "}
@@ -122,17 +122,15 @@ function CurrencySpending({
     <div className="px-4 pt-4 pb-3.5">
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[0.71875rem] text-muted-foreground">
-            {t("groupSpending")}
-          </p>
+          <p className="text-2xs text-muted-foreground">{t("groupSpending")}</p>
           <Amount
             minorUnits={stat.groupSpent}
             currency={stat.currency}
             display="code"
-            className="mt-0.5 block truncate text-[1.375rem] font-semibold tracking-[-0.02em]"
+            className="mt-0.5 block truncate text-xl font-semibold tracking-[-0.02em]"
           />
         </div>
-        <span className="shrink-0 pb-0.5 text-[0.71875rem] text-muted-foreground tabular-nums">
+        <span className="shrink-0 pb-0.5 text-2xs text-muted-foreground tabular-nums">
           {t("percentYours", { percent })}
         </span>
       </div>
@@ -150,14 +148,14 @@ function CurrencySpending({
 
       <dl className="mt-3 grid grid-cols-2 divide-x">
         <div className="pr-3">
-          <dt className="flex items-center gap-1.5 text-[0.71875rem] text-muted-foreground">
+          <dt className="flex items-center gap-1.5 text-2xs text-muted-foreground">
             <span
               aria-hidden="true"
               className="size-[7px] rounded-full bg-primary/70"
             />
             {t("statYourShare")}
           </dt>
-          <dd className="mt-0.5 truncate text-[0.90625rem] font-semibold">
+          <dd className="mt-0.5 truncate text-sm font-semibold">
             <Amount
               minorUnits={stat.yourShare}
               currency={stat.currency}
@@ -166,14 +164,14 @@ function CurrencySpending({
           </dd>
         </div>
         <div className="pl-3">
-          <dt className="flex items-center gap-1.5 text-[0.71875rem] text-muted-foreground">
+          <dt className="flex items-center gap-1.5 text-2xs text-muted-foreground">
             <span
               aria-hidden="true"
               className="size-[7px] rounded-full bg-positive/70"
             />
             {t("statYouPaid")}
           </dt>
-          <dd className="mt-0.5 truncate text-[0.90625rem] font-semibold">
+          <dd className="mt-0.5 truncate text-sm font-semibold">
             <Amount
               minorUnits={stat.youPaid}
               currency={stat.currency}

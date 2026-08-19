@@ -178,7 +178,7 @@ export function PeopleCard({
       >
         <SheetContent side="bottom" showCloseButton={false} className="gap-3.5">
           <SheetHeader className="gap-1.5 pb-0">
-            <SheetTitle className="text-[1.0625rem] font-semibold tracking-[-0.015em]">
+            <SheetTitle className="text-base font-semibold tracking-[-0.015em]">
               {t("removeTitle", { name: confirming?.name ?? "" })}
             </SheetTitle>
             <SheetDescription className="text-pretty">

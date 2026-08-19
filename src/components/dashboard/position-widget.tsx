@@ -143,7 +143,7 @@ export function PositionWidget({
               {tMoney("settledUpBadge")}
             </p>
           ) : ratesUnavailable ? (
-            <p className="text-[0.9375rem] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {t("ratesUnavailable")}
             </p>
           ) : disclosure ? (
@@ -321,7 +321,7 @@ function TintedTotal({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 text-[0.9375rem] font-medium",
+        "inline-flex items-center gap-1.5 text-sm font-medium",
         tone === "positive" ? "text-positive" : "text-negative",
       )}
     >

@@ -99,7 +99,7 @@ export function SettlementList({
           <Link
             href={`/groups/${groupId}/balances`}
             transitionTypes={PUSH}
-            className="-my-2 rounded-lg px-2 py-2 text-[0.8125rem] font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="-my-2 rounded-lg px-2 py-2 text-xs font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {t("viewAll")}
           </Link>
@@ -123,7 +123,7 @@ export function SettlementList({
                   minorUnits={suggestion.minorUnits}
                   currency={suggestion.currency}
                   display="code"
-                  className="shrink-0 text-[0.90625rem] font-semibold"
+                  className="shrink-0 text-sm font-semibold"
                 />
               </button>
             );
@@ -159,7 +159,7 @@ export function SettlementList({
                   to: active.toIsSelf ? t("you") : active.toName,
                 })}
               </SheetTitle>
-              <SheetDescription className="mt-1 text-[0.8125rem]">
+              <SheetDescription className="mt-1 text-xs">
                 {t("settlementDetailDescription")}
               </SheetDescription>
 
@@ -232,7 +232,7 @@ function Person({ name, self }: { name: string; self: boolean }) {
       <Avatar className="size-7 shrink-0">
         <AvatarFallback
           className={cn(
-            "text-[0.6875rem] font-semibold",
+            "text-2xs font-semibold",
             self
               ? "bg-primary/15 text-primary"
               : "bg-accent text-accent-foreground",
@@ -241,7 +241,7 @@ function Person({ name, self }: { name: string; self: boolean }) {
           {name.trim().charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      <span className="max-w-[5.5rem] truncate text-[0.8125rem] font-medium">
+      <span className="max-w-[5.5rem] truncate text-xs font-medium">
         {name}
       </span>
     </span>

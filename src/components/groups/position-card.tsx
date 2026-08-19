@@ -75,7 +75,7 @@ export function PositionCard({
       aria-labelledby="your-position"
       className="flex flex-col gap-3.5 rounded-[17px] bg-card p-4 ring-1 ring-border"
     >
-      <h2 id="your-position" className="text-[0.8125rem] text-muted-foreground">
+      <h2 id="your-position" className="text-xs text-muted-foreground">
         {label}
       </h2>
 
@@ -123,7 +123,7 @@ export function PositionCard({
       )}
 
       {single && single.counterparties.length > 0 && (
-        <p className="text-[0.8125rem] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {BigInt(single.minorUnits) > 0n
             ? t("fromPeople", {
                 names: format.list(

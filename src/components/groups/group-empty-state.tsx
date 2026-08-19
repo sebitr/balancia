@@ -68,7 +68,7 @@ export function GroupEmptyState({
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
               <Link2 aria-hidden="true" className="size-[18px]" />
             </span>
-            <p className="text-[0.84375rem] leading-relaxed text-muted-foreground">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {t("inviteByLinkDescription")}
             </p>
           </div>

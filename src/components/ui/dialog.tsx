@@ -5,7 +5,11 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useKeyboardInset } from "@/components/ui/use-keyboard-inset";
 import { XIcon } from "lucide-react";
+
+/** Page left showing around a dialog the keyboard has pushed up. */
+const HEADROOM = 16;
 
 function Dialog({
   ...props
@@ -51,19 +55,41 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
+  /**
+   * A dialog centres itself in the room the keyboard has left.
+   *
+   * `top-1/2` centres in the *layout* viewport, and a phone keyboard does not
+   * shorten that — it slides over it. So the dialog that asks for a
+   * settlement's amount, date and note put all three, and the button that
+   * submits them, behind the keyboard as soon as the first field took focus.
+   * Re-centring on what the visual viewport has left is what a native sheet
+   * does, and what `SheetContent` already does one file over.
+   *
+   * The height cap comes with it, keyboard or not: without one, a dialog
+   * taller than the screen grows off both edges at once and nothing scrolls,
+   * because nothing has overflowed.
+   */
+  const keyboard = useKeyboardInset();
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
+        style={{
+          top: `calc(50dvh - ${keyboard / 2}px)`,
+          maxHeight: `calc(100dvh - ${keyboard + HEADROOM * 2}px)`,
+          ...style,
+        }}
         {...props}
       >
         {children}

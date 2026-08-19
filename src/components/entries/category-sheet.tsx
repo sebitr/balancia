@@ -138,14 +138,14 @@ export function CategorySheet({
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <div className="flex shrink-0 items-baseline justify-between gap-3">
-        <SheetTitle className="text-[19px] font-semibold tracking-[-0.02em]">
+        <SheetTitle className="text-lg font-semibold tracking-[-0.02em]">
           {t("title")}
         </SheetTitle>
         {overridden && (
           <button
             type="button"
             onClick={onRevert}
-            className="shrink-0 text-[13px] text-primary underline underline-offset-2"
+            className="shrink-0 text-xs text-primary underline underline-offset-2"
           >
             {t("backToDetected")}
           </button>
@@ -215,7 +215,7 @@ function Group({
 }) {
   return (
     <section className="space-y-2">
-      <h3 className="line-clamp-1 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+      <h3 className="line-clamp-1 text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
         {heading}
       </h3>
       <div className="flex flex-wrap gap-2">{children}</div>

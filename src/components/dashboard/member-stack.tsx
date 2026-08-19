@@ -37,13 +37,16 @@ export function MemberStack({
     >
       {shown.map((name, index) => (
         <Avatar key={`${name}-${index}`} className="size-5">
-          <AvatarFallback className="bg-accent text-[9px] font-semibold text-accent-foreground">
+          <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
             {name.trim().charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
       ))}
       {counter > 0 && (
-        <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-accent-foreground ring-2 ring-background">
+        // A circle while the count is one digit, a stadium once it is two.
+        // The avatars beside it are always a single letter and stay round; a
+        // fixed `size-5` here put `+12` over its own edge.
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-0.5 text-2xs font-semibold text-accent-foreground ring-2 ring-background">
           +{counter}
         </span>
       )}

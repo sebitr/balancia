@@ -119,7 +119,7 @@ export function RecurrenceSheet({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <SheetTitle className="text-[19px] font-semibold tracking-[-0.02em]">
+        <SheetTitle className="text-lg font-semibold tracking-[-0.02em]">
           {t("title")}
         </SheetTitle>
         <Switch
@@ -139,7 +139,7 @@ export function RecurrenceSheet({
                 onClick={() => set("frequency", frequency)}
                 aria-pressed={frequency === state.frequency}
                 className={cn(
-                  "h-9 flex-1 rounded-[9px] text-[13px] transition-colors",
+                  "h-9 flex-1 rounded-[9px] text-xs transition-colors",
                   frequency === state.frequency
                     ? "bg-accent font-semibold text-foreground"
                     : "font-medium text-muted-foreground",
@@ -197,7 +197,7 @@ export function RecurrenceSheet({
                 onClick={() => set("endDate", null)}
                 aria-pressed={state.endDate === null}
                 className={cn(
-                  "h-8 rounded-lg border border-border px-3 text-[13px] transition-colors",
+                  "h-8 rounded-lg border border-border px-3 text-xs transition-colors",
                   state.endDate === null
                     ? "bg-accent font-semibold"
                     : "text-muted-foreground",
@@ -210,7 +210,7 @@ export function RecurrenceSheet({
                 onClick={() => set("endDate", endOfYear(startDate))}
                 aria-pressed={state.endDate !== null}
                 className={cn(
-                  "h-8 rounded-lg border border-border px-3 text-[13px] transition-colors",
+                  "h-8 rounded-lg border border-border px-3 text-xs transition-colors",
                   state.endDate !== null
                     ? "bg-accent font-semibold"
                     : "text-muted-foreground",

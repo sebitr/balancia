@@ -205,7 +205,7 @@ export function CreateGroupSheet({
                 type="submit"
                 disabled={!ready || pending}
                 className={cn(
-                  "flex h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground transition-opacity duration-200",
+                  "flex h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity duration-200",
                   "hover:brightness-105 active:translate-y-px",
                   ready ? "opacity-100" : "opacity-45",
                 )}
@@ -318,7 +318,7 @@ function IdentityRow({
           maxLength={120}
           autoComplete="off"
           placeholder={t("name")}
-          className="h-13 flex-1 rounded-[14px] border-0 bg-foreground/5 px-4 text-[17px] font-medium tracking-[-0.01em] inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary"
+          className="h-13 flex-1 rounded-[14px] border-0 bg-foreground/5 px-4 text-base font-medium tracking-[-0.01em] inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary"
         />
       </div>
 
@@ -330,13 +330,13 @@ function IdentityRow({
           maxLength={2000}
           autoFocus
           placeholder={t("descriptionOptional")}
-          className="min-h-17 resize-none rounded-[14px] border-0 bg-foreground/5 px-4 py-3 text-base inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary md:text-[15px]"
+          className="min-h-17 resize-none rounded-[14px] border-0 bg-foreground/5 px-4 py-3 text-base inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary md:text-sm"
         />
       ) : (
         <button
           type="button"
           onClick={onOpenDescription}
-          className="h-7 self-start rounded-full px-2.5 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-foreground/6"
+          className="h-7 self-start rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-foreground/6"
         >
           + {t("addDescription")}
         </button>
@@ -387,14 +387,14 @@ function Participants({
             key={`${member.name}-${index}`}
             className="flex h-12 items-center gap-2.5 rounded-[14px] bg-foreground/4 pr-2 pl-2.5 inset-ring inset-ring-foreground/7"
           >
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-accent-foreground">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-2xs font-semibold text-accent-foreground">
               {member.name.trim().slice(0, 1).toUpperCase()}
             </span>
-            <span className="flex-1 truncate text-[15px] font-medium">
+            <span className="flex-1 truncate text-sm font-medium">
               {member.name}
             </span>
             {member.you && (
-              <span className="flex h-5 shrink-0 items-center rounded-full bg-primary/16 px-2 text-[11px] font-semibold text-primary">
+              <span className="flex h-5 shrink-0 items-center rounded-full bg-primary/16 px-2 text-2xs font-semibold text-primary">
                 {t("you")}
               </span>
             )}
@@ -443,14 +443,14 @@ function Participants({
           autoComplete="off"
           aria-label={t("addPerson")}
           placeholder={t("addPerson")}
-          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-[15px]"
+          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm"
         />
         <button
           type="button"
           onClick={onAdd}
           disabled={draft.trim() === ""}
           className={cn(
-            "flex h-8 shrink-0 items-center rounded-full bg-foreground/8 px-3 text-[13px] font-semibold transition-opacity duration-150",
+            "flex h-8 shrink-0 items-center rounded-full bg-foreground/8 px-3 text-xs font-semibold transition-opacity duration-150",
             draft.trim() === "" ? "opacity-35" : "opacity-100",
           )}
         >
@@ -586,7 +586,7 @@ function CurrencyRow({
       onClick={onOpen}
       className="flex h-12 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-foreground/4"
     >
-      <span className="text-[13px] text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <span className="flex flex-1 items-center justify-end gap-1.5 text-sm font-medium">
         <span aria-hidden="true" className="text-base leading-none">
           {entry?.flag}
@@ -616,7 +616,7 @@ function TimezoneRow({
 
   return (
     <div className="relative flex h-12 items-center justify-between rounded-[14px] px-3.5 inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-foreground/4">
-      <span aria-hidden="true" className="text-[13px] text-muted-foreground">
+      <span aria-hidden="true" className="text-xs text-muted-foreground">
         {t("timezoneShort")}
       </span>
       <span

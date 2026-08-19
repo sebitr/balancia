@@ -192,7 +192,7 @@ export function GroupIconPicker({
         <button
           type="button"
           onClick={onBack}
-          className="h-[50px] w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground transition-[filter,translate] duration-150 hover:brightness-105 active:translate-y-px"
+          className="h-[50px] w-full rounded-2xl bg-primary text-sm font-semibold text-primary-foreground transition-[filter,translate] duration-150 hover:brightness-105 active:translate-y-px"
         >
           {t("done")}
         </button>

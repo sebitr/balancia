@@ -103,9 +103,7 @@ export default async function InvitePage() {
           <h1 className="mt-1 font-heading text-[1.75rem] leading-tight font-semibold tracking-[-0.025em]">
             {access.group.name}
           </h1>
-          <p className="text-[0.8125rem] text-muted-foreground">
-            {meta.join(" · ")}
-          </p>
+          <p className="text-xs text-muted-foreground">{meta.join(" · ")}</p>
         </div>
 
         {position && (
@@ -118,7 +116,7 @@ export default async function InvitePage() {
               showLabel={false}
             />
             {only && (
-              <p className="text-[0.8125rem] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {position.amount < 0n
                   ? t("balanceTo", { name: only.name })
                   : t("balanceFrom", { name: only.name })}

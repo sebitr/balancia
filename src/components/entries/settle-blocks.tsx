@@ -131,7 +131,7 @@ function PairSide({
 }) {
   return (
     <section className="space-y-2">
-      <h2 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+      <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
         {label}
       </h2>
       <div
@@ -176,7 +176,7 @@ export function OutstandingList({
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+      <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
         {t("outstanding")}
       </h2>
       <ul className="overflow-hidden rounded-[17px] bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
@@ -329,11 +329,11 @@ export function PaymentMethodRow({
   return (
     <section className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {t("paidBy")}
         </h2>
         {country && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {tCountries(country)}
           </span>
         )}
@@ -361,7 +361,7 @@ export function PaymentMethodRow({
               <MethodMark method={method} label={label} />
               <span
                 className={cn(
-                  "truncate text-[13px]",
+                  "truncate text-xs",
                   active
                     ? "font-semibold text-foreground"
                     : "text-muted-foreground",
@@ -388,7 +388,7 @@ export function PaymentMethodRow({
           )}
           <span
             className={cn(
-              "truncate text-[13px]",
+              "truncate text-xs",
               offRow ? "font-semibold text-foreground" : "",
             )}
           >
@@ -436,7 +436,7 @@ export function PaymentMethodSheet({
 
   return (
     <div className="flex flex-col gap-3">
-      <SheetTitle className="text-[19px] font-semibold tracking-[-0.02em]">
+      <SheetTitle className="text-lg font-semibold tracking-[-0.02em]">
         {t("methodTitle")}
       </SheetTitle>
 
@@ -499,7 +499,7 @@ function MethodGroup({
   return (
     <section className="mb-2">
       {heading && (
-        <h3 className="px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        <h3 className="px-2.5 pt-2 pb-1 text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {heading}
         </h3>
       )}

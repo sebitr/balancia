@@ -1277,8 +1277,40 @@ a[aria-current="page"] .nav-icon--primary {
             inside a card
           </div>
         </div>
+        <div>
+          <div style="font-size: 0.6875rem; color: var(--muted-foreground)">
+            AB · 3 · Groceries
+          </div>
+          <div class="swatch-val">
+            text-2xs — avatar initials, the count on the bell, a category pill.
+            The floor. Nothing that has to be read as a sentence goes here.
+          </div>
+        </div>
       </div>
     </div>
+    <p class="note" style="margin-top: 0.75rem">
+      <strong>Seven steps, and only these seven.</strong> The scale had drifted
+      to fourteen — 13px written both as <code>text-[13px]</code> and
+      <code>text-[0.8125rem]</code>, a half-point tier of
+      <code>0.65625rem</code> through <code>0.90625rem</code> underneath it —
+      which is how two labels showing the same kind of thing ended up a point
+      apart on the same card. An arbitrary <code>text-[…]</code> in product
+      code is a bug; the display numerals on the balance heroes are the one
+      exception, and they are one-offs by design.
+    </p>
+    <p class="note" style="margin-top: 0.75rem">
+      <strong>Every step is one point larger below <code>md</code>.</strong>
+      The scale reads well at a desk and cramped in the hand, and the hand is
+      where nearly all of this app is used — so
+      <code>globals.css</code> redefines <code>--text-*</code> under
+      <code>(width &lt; 48rem)</code>: 2xs 11→12, xs 12→13, sm 14→15, base
+      16→17, lg 18→19, xl 20→21, 2xl 24→25. Gaps and ratios are unchanged.
+      Because Tailwind compiles <code>text-sm</code> to
+      <code>font-size: var(--text-sm)</code>, redefining the token moves every
+      call site at once — which is also why these must never be declared in an
+      <code>@theme inline</code> block, where the value is substituted and the
+      lever disappears.
+    </p>
   </section>
 
   <section>

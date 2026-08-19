@@ -77,6 +77,17 @@
 }
 
 /*
+ * One step below `text-xs`, for the tier the app had been writing by hand as
+ * `text-[9px]` through `text-[0.71875rem]`: avatar initials, category pills,
+ * the uppercase label above a group list. Named so it scales with the rest
+ * rather than sitting outside the scale.
+ */
+@theme {
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+}
+
+/*
  * Balancia design tokens.
  *
  * Brand direction: deep plum ink on cream, with coral held back for the one
@@ -233,6 +244,67 @@
   @media (display-mode: standalone), (display-mode: fullscreen) {
     html {
       overscroll-behavior-y: none;
+    }
+  }
+
+  /*
+   * One point larger on a phone.
+   *
+   * The scale was drawn at a desk, where 14px of body copy sits a comfortable
+   * arm's length away. Held at reading distance on a 390pt screen — which is
+   * where nearly all of this app is actually read — the same 14px is cramped,
+   * and the 11px and 12px metadata under it is worse. Every step moves up by
+   * exactly one point below `md`, so the gaps between them, and every ratio
+   * the design was drawn with, survive intact.
+   *
+   * Redefining the tokens rather than the utilities is what makes this a
+   * single lever: Tailwind compiles `text-sm` to `font-size: var(--text-sm)`,
+   * so every one of the app's several hundred call sites moves together, and
+   * a `md:` override still lands on the desk-sized value. Do not inline these
+   * into `@theme inline` — that substitutes the value and the lever is gone.
+   */
+  @media (width < 48rem) {
+    :root {
+      --text-2xs: 0.75rem; /* 11 -> 12 */
+      --text-2xs--line-height: 1rem;
+      --text-xs: 0.8125rem; /* 12 -> 13 */
+      --text-xs--line-height: 1.125rem;
+      --text-sm: 0.9375rem; /* 14 -> 15 */
+      --text-sm--line-height: 1.375rem;
+      --text-base: 1.0625rem; /* 16 -> 17 */
+      --text-base--line-height: 1.5625rem;
+      --text-lg: 1.1875rem; /* 18 -> 19 */
+      --text-lg--line-height: 1.8125rem;
+      --text-xl: 1.3125rem; /* 20 -> 21 */
+      --text-xl--line-height: 1.8125rem;
+      --text-2xl: 1.5625rem; /* 24 -> 25 */
+      --text-2xl--line-height: 2.0625rem;
+    }
+  }
+
+  /*
+   * The floor that keeps Safari from zooming the page in.
+   *
+   * A control iOS can put a caret or a picker in — `input`, `textarea`,
+   * `select` — zooms the whole page when it takes focus below 16px, and never
+   * zooms back out. Call sites say `text-base md:text-sm` for this, but a
+   * control that states no size at all inherits one, and both `SheetContent`
+   * and `DialogContent` set `text-sm` on everything inside them. The invisible
+   * `<input type="date">` laid over the entry form's date row was inheriting
+   * exactly that, and opening the date picker zoomed the sheet.
+   *
+   * This sits in `base`, so any explicit `text-*` utility still outranks it
+   * and the designed sizes are untouched; `1em` keeps a control nested in
+   * something larger at its inherited size rather than shrinking it to the
+   * floor. `type="file"` is exempt — the browser only zooms for controls it
+   * can type into — as are buttons and Radix triggers, which are not these
+   * three elements.
+   */
+  @media (width < 48rem) {
+    input:not([type="file"]),
+    textarea,
+    select {
+      font-size: max(1rem, 1em);
     }
   }
 }

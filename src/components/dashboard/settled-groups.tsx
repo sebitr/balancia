@@ -67,7 +67,7 @@ export function SettledGroups({
       {settled.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-3 pb-2.5">
-            <h3 className="text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+            <h3 className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
               {t("sectionSettled", { count: settled.length })}
             </h3>
             {!searchOpen && (
@@ -99,7 +99,7 @@ export function SettledGroups({
                 onBlur={() => {
                   if (query.trim() === "") setSearchOpen(false);
                 }}
-                className="h-[34px] rounded-xl text-[0.8125rem]"
+                className="h-[34px] rounded-xl text-xs"
               />
             </div>
           )}
@@ -135,7 +135,7 @@ export function SettledGroups({
             type="button"
             onClick={() => setArchivedOpen((open) => !open)}
             aria-expanded={archivedOpen}
-            className="flex w-full items-center gap-2.5 border-t py-3.5 text-left text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="flex w-full items-center gap-2.5 border-t py-3.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <Archive aria-hidden="true" className="size-[15px] shrink-0" />
             <span className="flex-1">
@@ -219,9 +219,7 @@ function QuietRow({
             <span className="text-xs text-muted-foreground">{meta}</span>
           )}
         </span>
-        <span className="shrink-0 text-[0.8125rem] text-neutral-balance">
-          {word}
-        </span>
+        <span className="shrink-0 text-xs text-neutral-balance">{word}</span>
       </Link>
     </li>
   );

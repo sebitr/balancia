@@ -39,7 +39,7 @@ export async function NotificationBell() {
           aria-hidden="true"
           className={cn(
             "absolute top-1 right-1 flex min-w-4 items-center justify-center",
-            "rounded-full bg-primary px-1 text-[10px] leading-4 font-medium text-primary-foreground",
+            "rounded-full bg-primary px-1 text-2xs leading-4 font-medium text-primary-foreground",
           )}
         >
           {unread > 99 ? "99+" : unread}

@@ -63,7 +63,7 @@ export function SplitSummaryRow({
         className="col-start-2 row-span-2 row-start-1 size-[18px] text-muted-foreground"
       />
 
-      <span className="text-[13px] text-muted-foreground">
+      <span className="text-xs text-muted-foreground">
         {t(`summary.${summary.key}`, summary.params)}
       </span>
     </button>

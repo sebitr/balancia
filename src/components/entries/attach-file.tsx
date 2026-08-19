@@ -98,14 +98,14 @@ export function AttachFile({
         {pending ? t("uploading") : t("add")}
       </button>
 
-      {error && <p className="text-[13px] text-negative">{error}</p>}
+      {error && <p className="text-xs text-negative">{error}</p>}
 
       {files.length > 0 && (
         <ul className="space-y-1">
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex items-center gap-2 text-[13px] text-muted-foreground"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
             >
               <Check aria-hidden="true" className="size-4 text-positive" />
               <span className="truncate">{file.name}</span>
@@ -123,7 +123,7 @@ export function AttachFile({
       )}
 
       {note && files.length > 0 && (
-        <p className="text-[13px] text-muted-foreground">{note}</p>
+        <p className="text-xs text-muted-foreground">{note}</p>
       )}
     </div>
   );

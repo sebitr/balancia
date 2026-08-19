@@ -34,7 +34,7 @@ export function ScanCard({ camera, upload }: CaptureActions) {
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-semibold">{t("title")}</span>
-          <span className="block truncate text-[13px] text-muted-foreground">
+          <span className="block truncate text-xs text-muted-foreground">
             {t("subtitle")}
           </span>
         </span>
@@ -98,7 +98,7 @@ export function ScanBanner({
         <span className="block text-sm font-semibold">
           {t("read", { count: itemCount, merchant })}
         </span>
-        <span className="block text-[13px] text-muted-foreground">
+        <span className="block text-xs text-muted-foreground">
           {t("check")}
         </span>
       </span>
@@ -139,7 +139,7 @@ export function ReceiptItems({
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {t("itemsTitle")}
         </h2>
         <button
@@ -170,7 +170,7 @@ export function ReceiptItems({
               </span>
               <span
                 className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[11px]",
+                  "shrink-0 rounded-full px-2 py-0.5 text-2xs",
                   missing
                     ? "text-negative"
                     : custom
