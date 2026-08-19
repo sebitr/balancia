@@ -15,7 +15,7 @@ import {
   type PaymentMethodId,
   type SupportedCountry,
 } from "@/modules/settlements/payment-methods";
-import { MemberAvatar } from "./pills";
+import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
 
 /**
  * The settlement half of the screen.
@@ -42,6 +42,117 @@ export interface DebtPair {
    */
   readonly currency: string;
   readonly amountFormatted: string;
+}
+
+/**
+ * Who is paying whom, picked from the group rather than from its debts.
+ *
+ * The outstanding list below is the right way *in* to a repayment: it starts
+ * from a debt that already exists and turns the commonest case into one tap.
+ * It is the wrong way to change one. A settlement that has been recorded has
+ * already cleared the debt it was for, so the pair is by definition no longer
+ * outstanding — and correcting one that named the wrong person means naming
+ * somebody who never owed anything in the first place. Editing therefore gets
+ * the whole group, twice, and picks a side each time.
+ *
+ * Two radiogroups rather than two dropdowns: the count is the group's, which is
+ * small, and a face is quicker to find than a name in a list. Each row is
+ * one-of-many, so a screen reader says "2 of 4" instead of announcing four
+ * toggles that merely happen to be exclusive.
+ *
+ * Picking somebody who already holds the other side swaps the two, which is
+ * what reversing a repayment means and the only thing the tap could sensibly
+ * do. Nothing is ever disabled: a control that cannot be pressed says less
+ * about why than one that does something reasonable.
+ */
+export function PairPicker({
+  members,
+  fromId,
+  toId,
+  onChange,
+}: {
+  members: readonly EntryMember[];
+  fromId: string | null;
+  toId: string | null;
+  onChange: (next: { fromId: string | null; toId: string | null }) => void;
+}) {
+  const t = useTranslations("addEntry.settle");
+
+  const pick = (side: "from" | "to", id: string) => {
+    const other = side === "from" ? toId : fromId;
+    // The person is already on the other side, so this is a reversal.
+    const swapped = other === id ? (side === "from" ? fromId : toId) : other;
+    onChange(
+      side === "from"
+        ? { fromId: id, toId: swapped }
+        : { fromId: swapped, toId: id },
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <PairSide
+        label={t("from")}
+        members={members}
+        selectedId={fromId}
+        onSelect={(id) => pick("from", id)}
+      />
+      <PairSide
+        label={t("to")}
+        members={members}
+        selectedId={toId}
+        onSelect={(id) => pick("to", id)}
+        tone="payer"
+      />
+    </div>
+  );
+}
+
+/**
+ * One of the two rows.
+ *
+ * The tones are the ones the split sheet already uses for its two questions:
+ * coral for the side being asked about first, amber for the other. Two rows of
+ * identical coral pills would leave the only difference between "paying" and
+ * "being paid" in a four-letter heading above them.
+ */
+function PairSide({
+  label,
+  members,
+  selectedId,
+  onSelect,
+  tone = "primary",
+}: {
+  label: string;
+  members: readonly EntryMember[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  tone?: "primary" | "payer";
+}) {
+  return (
+    <section className="space-y-2">
+      <h2 className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        {label}
+      </h2>
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="flex flex-wrap gap-2"
+      >
+        {members.map((member) => (
+          <MemberPill
+            key={member.id}
+            name={member.displayName}
+            label={`${label}: ${member.displayName}`}
+            selected={member.id === selectedId}
+            onToggle={() => onSelect(member.id)}
+            tone={tone}
+            choice
+          />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function OutstandingList({

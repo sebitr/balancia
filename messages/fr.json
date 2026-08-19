@@ -1812,6 +1812,8 @@
       "mineHint": "Enregistré, mais le solde de personne d'autre ne bouge"
     },
     "settle": {
+      "from": "De",
+      "to": "À",
       "outstanding": "En cours",
       "owes": "{from} doit à {to}",
       "nothingOutstanding": "Tout le monde est à jour.",
