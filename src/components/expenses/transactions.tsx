@@ -61,6 +61,15 @@ export interface RowView {
   readonly currency: string;
   /** The band key this row filters under; null for a settlement. */
   readonly category: string | null;
+  /**
+   * What a repayment was for, when whoever recorded it said.
+   *
+   * An expense puts that in its title, so this is null on one: the description
+   * *is* the row. A repayment's title is the two names, which are the fact
+   * worth leading with — so its own words go on the line below, beside the
+   * date, rather than displacing them.
+   */
+  readonly note: string | null;
   /** Signed minor units, in the row's display currency; null when it is not ours. */
   readonly position: string | null;
   readonly revenue: boolean;
@@ -317,7 +326,9 @@ export function Transactions({
     }
     if (needle === "") return true;
     const date = dates.plain(row.date);
-    return `${row.title} ${date}`.toLowerCase().includes(needle);
+    return `${row.title} ${row.note ?? ""} ${date}`
+      .toLowerCase()
+      .includes(needle);
   });
 
   /** Which colour a row's rail takes, from the band its category sits in. */
@@ -549,7 +560,9 @@ function Row({
           <span className="truncate text-sm font-medium">{row.title}</span>
         </span>
         <span className="mt-[3px] block truncate text-2xs text-muted-foreground">
-          {dates.plain(row.date)}
+          {row.note
+            ? `${dates.plain(row.date)} · ${row.note}`
+            : dates.plain(row.date)}
         </span>
         {badge && <TypeBadge kind={badge} />}
       </span>

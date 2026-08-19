@@ -673,6 +673,55 @@ describe("settlement", () => {
     expect(success).toHaveBeenCalledWith("Payment recorded", expect.anything());
   });
 
+  it("takes what the repayment was for, and saves it with the payment", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Description (optional)" }),
+      "Bus tickets",
+    );
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ notes: "Bus tickets" }),
+    );
+  });
+
+  /**
+   * The point of the field: most repayments are for everything at once, and
+   * being stopped to invent a title for one is how it goes unrecorded.
+   */
+  it("records a repayment nobody described, rather than asking for one", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ notes: "" }),
+    );
+  });
+
+  it("keeps a description off the expense tabs, which have no room for one", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    expect(
+      screen.getByRole("textbox", { name: "Description (optional)" }),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+    expect(
+      screen.queryByRole("textbox", { name: "Description (optional)" }),
+    ).toBeNull();
+  });
+
   it("says so when there is nothing outstanding", async () => {
     const user = userEvent.setup();
     renderForm({ outstanding: [] });
@@ -1024,7 +1073,7 @@ describe("editing an entry", () => {
       direction: "out",
       description: "Migros",
       amount: "8460",
-      // The screen has no notes field; what it cannot show it must not drop.
+      // No expense tab can show notes; what it cannot show it must not drop.
       notes: "Weekly shop",
     });
   });
@@ -1087,6 +1136,24 @@ describe("editing an entry", () => {
       // Read back from the stored label rather than replaced by whatever this
       // country's first method happens to be.
       paymentMethod: "TWINT",
+    });
+  });
+
+  it("reopens a repayment on the words it was recorded with", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: { ...SETTLEMENT, notes: "Bus tickets" } });
+
+    const note = screen.getByRole("textbox", {
+      name: "Description (optional)",
+    });
+    expect(note).toHaveValue("Bus tickets");
+
+    await user.clear(note);
+    await user.type(note, "Train tickets");
+    await save(user);
+
+    expect(updateSettlement.mock.calls[0][2]).toMatchObject({
+      notes: "Train tickets",
     });
   });
 

@@ -1779,7 +1779,8 @@
       "amountReceived": "Montant reçu",
       "amountFromReceipt": "Montant du reçu",
       "payingBack": "Remboursement",
-      "description": "Description"
+      "description": "Description",
+      "descriptionOptional": "Description (facultatif)"
     },
     "attach": {
       "add": "Joindre un fichier",

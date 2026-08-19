@@ -163,11 +163,12 @@ export interface EditingEntry {
   readonly description: string;
   readonly category: string;
   /**
-   * Carried through untouched.
+   * A repayment's description, and an expense's notes.
    *
-   * This screen has no notes field — the old edit form did, which is how an
-   * imported entry came to have them — and dropping what it cannot show would
-   * make saving an untouched form destructive.
+   * One field because it is one column on each of the two tables. The settle
+   * tab shows it and lets it be typed; the expense tabs have nowhere to put it
+   * and hand back whatever they were given, which is how an imported entry
+   * keeps notes that only its detail screen ever shows.
    */
   readonly notes: string;
   readonly payerId: string | null;
@@ -283,6 +284,15 @@ export function AddEntryForm({
   );
   const [rate, setRate] = useState(editing?.exchangeRate ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
+  /**
+   * What a repayment was for — the column has always called it notes.
+   *
+   * Kept apart from `description` rather than folded into it, because an
+   * expense carries notes of its own that this screen never shows. Sharing one
+   * value would let a tab switch overwrite an imported note with a title, and
+   * the reader would never see it happen.
+   */
+  const [notes, setNotes] = useState(editing?.notes ?? "");
   const [category, setCategory] = useState(editing?.category ?? "");
   // A category already on the entry is a decision somebody made, whoever made
   // it. Leaving it open to the classifier would let reopening an entry
@@ -397,8 +407,6 @@ export function AddEntryForm({
     editing.kind !== (isSettle ? "settlement" : "expense");
   /** An entry that already exists cannot become a template for future ones. */
   const canRepeat = !isSettle && editing === undefined;
-  /** Kept whole; there is nowhere on this screen to show or change it. */
-  const notes = editing?.notes ?? "";
   /**
    * The pair, once it is one: two different people, both named.
    *
@@ -973,6 +981,40 @@ export function AddEntryForm({
               }
               onClick={() => setSheet("category")}
             />
+          </RowCard>
+        )}
+
+        {/* A repayment already says who paid whom and how much; what it was
+            for is the one thing those three facts leave out. Optional because
+            most repayments are for everything at once, and a field nobody has
+            to fill in is the difference between recording that and being
+            stopped to invent a title for it.
+
+            Its own card rather than a row on the one above: there is no
+            category on a repayment, so that card is a single row here and
+            would read as an orphan attached to the amount. */}
+        {isSettle && (
+          <RowCard>
+            <Row>
+              <AlignLeft
+                aria-hidden="true"
+                className="size-[18px] shrink-0 text-muted-foreground"
+              />
+              <input
+                id="entry-note"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder={t("labels.descriptionOptional")}
+                aria-label={t("labels.descriptionOptional")}
+                // The same line the description above is, so the same limit.
+                // The column holds far more for the sake of imported notes,
+                // and one longer than this still opens here intact — the
+                // attribute governs typing, not the value it is given.
+                maxLength={200}
+                autoComplete="off"
+                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+              />
+            </Row>
           </RowCard>
         )}
 
