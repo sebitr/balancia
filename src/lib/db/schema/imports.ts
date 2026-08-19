@@ -17,6 +17,7 @@ import { expenses } from "./expenses";
 export const importSourceFormatEnum = pgEnum("import_source_format", [
   "splitwise_csv",
   "splitwise_json",
+  "balancia_json",
 ]);
 
 export const importRunStatusEnum = pgEnum("import_run_status", [
