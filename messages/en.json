@@ -593,10 +593,18 @@
         "percentage": "Percentage"
       },
       "people": {
-        "sam": { "name": "Sam" },
-        "mina": { "name": "Mina" },
-        "theo": { "name": "Théo" },
-        "ada": { "name": "Ada" }
+        "sam": {
+          "name": "Sam"
+        },
+        "mina": {
+          "name": "Mina"
+        },
+        "theo": {
+          "name": "Théo"
+        },
+        "ada": {
+          "name": "Ada"
+        }
       },
       "splitNotes": {
         "empty": "Type an amount to see the split.",
@@ -1142,7 +1150,6 @@
   },
   "expensePages": {
     "newTitle": "Add an expense",
-    "editTitle": "Edit expense",
     "noPeopleTitle": "Add someone first",
     "noPeopleDescription": "An expense needs at least one person to split it between.",
     "managePeople": "Manage people"
@@ -1643,6 +1650,11 @@
       "income": "Add income",
       "settle": "Settle up"
     },
+    "editTitles": {
+      "expense": "Edit expense",
+      "income": "Edit income",
+      "settle": "Edit payment"
+    },
     "close": "Close",
     "types": {
       "label": "What kind of entry",
@@ -1816,13 +1828,16 @@
       "addIncome": "Add income",
       "saveRecurringExpense": "Save recurring expense",
       "saveRecurringIncome": "Save recurring income",
-      "recordPayment": "Record payment"
+      "recordPayment": "Record payment",
+      "saveChanges": "Save changes"
     },
     "saved": {
       "expenseAdded": "Expense added",
       "incomeAdded": "Income added",
       "recurringSaved": "Recurring entry saved",
-      "paymentRecorded": "Payment recorded"
+      "paymentRecorded": "Payment recorded",
+      "changesSaved": "Changes saved",
+      "deleted": "Entry deleted"
     },
     "errors": {
       "amountRequired": "Enter an amount first.",
@@ -1836,6 +1851,13 @@
       "currency": "Currency",
       "method": "How was it paid",
       "recur": "Repeat"
+    },
+    "delete": {
+      "trigger": "Delete this entry",
+      "title": "Delete this entry?",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
+      "keep": "Keep it",
+      "confirm": "Delete"
     }
   },
   "paymentMethods": {

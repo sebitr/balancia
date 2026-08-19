@@ -1,4 +1,4 @@
-import { NewEntryScreen } from "./new-entry-screen";
+import { EntryScreen } from "../../entry-screen";
 
 /**
  * Add an entry: expense, income, or a repayment.
@@ -13,5 +13,5 @@ export default async function NewEntryPage({
   params,
 }: PageProps<"/groups/[groupId]/expenses/new">) {
   const { groupId } = await params;
-  return <NewEntryScreen groupId={groupId} dismissTo="group" />;
+  return <EntryScreen groupId={groupId} dismissTo="group" />;
 }

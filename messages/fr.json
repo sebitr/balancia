@@ -593,10 +593,18 @@
         "percentage": "Pourcentage"
       },
       "people": {
-        "sam": { "name": "Sam" },
-        "mina": { "name": "Mina" },
-        "theo": { "name": "Théo" },
-        "ada": { "name": "Ada" }
+        "sam": {
+          "name": "Sam"
+        },
+        "mina": {
+          "name": "Mina"
+        },
+        "theo": {
+          "name": "Théo"
+        },
+        "ada": {
+          "name": "Ada"
+        }
       },
       "splitNotes": {
         "empty": "Saisissez un montant pour voir la répartition.",
@@ -1142,7 +1150,6 @@
   },
   "expensePages": {
     "newTitle": "Ajouter une dépense",
-    "editTitle": "Modifier la dépense",
     "noPeopleTitle": "Ajoute d'abord quelqu'un",
     "noPeopleDescription": "Une dépense a besoin d'au moins une personne entre qui la partager.",
     "managePeople": "Gérer les personnes"
@@ -1643,6 +1650,11 @@
       "income": "Ajouter un revenu",
       "settle": "Rembourser"
     },
+    "editTitles": {
+      "expense": "Modifier la dépense",
+      "income": "Modifier le revenu",
+      "settle": "Modifier le remboursement"
+    },
     "close": "Fermer",
     "types": {
       "label": "Type d'écriture",
@@ -1816,13 +1828,16 @@
       "addIncome": "Ajouter le revenu",
       "saveRecurringExpense": "Enregistrer la dépense récurrente",
       "saveRecurringIncome": "Enregistrer le revenu récurrent",
-      "recordPayment": "Enregistrer le paiement"
+      "recordPayment": "Enregistrer le paiement",
+      "saveChanges": "Enregistrer les modifications"
     },
     "saved": {
       "expenseAdded": "Dépense ajoutée",
       "incomeAdded": "Revenu ajouté",
       "recurringSaved": "Écriture récurrente enregistrée",
-      "paymentRecorded": "Paiement enregistré"
+      "paymentRecorded": "Paiement enregistré",
+      "changesSaved": "Modifications enregistrées",
+      "deleted": "Écriture supprimée"
     },
     "errors": {
       "amountRequired": "Saisis d'abord un montant.",
@@ -1836,6 +1851,13 @@
       "currency": "Devise",
       "method": "Comment a-t-il été payé",
       "recur": "Répéter"
+    },
+    "delete": {
+      "trigger": "Supprimer cette écriture",
+      "title": "Supprimer cette écriture ?",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Cette action est irréversible depuis l'application.",
+      "keep": "La conserver",
+      "confirm": "Supprimer"
     }
   },
   "paymentMethods": {

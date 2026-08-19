@@ -47,12 +47,16 @@ export function AddEntryDrawer({
   dismissTo: "back" | "group";
 }) {
   const router = useRouter();
-  const [exit, setExit] = useState<null | "dismiss" | "saved">(null);
+  const [exit, setExit] = useState<null | "dismiss" | "saved" | "gone">(null);
 
   useEffect(() => {
     if (exit === null) return;
     const timer = setTimeout(() => {
-      if (dismissTo === "back") {
+      // `gone` overrides `dismissTo` on purpose. Back is only ever a way out
+      // while what is behind still exists, and an entry that was deleted — or
+      // moved to the other table by a change of type — takes its detail screen
+      // with it. Popping onto it would land the reader on a 404.
+      if (dismissTo === "back" && exit !== "gone") {
         router.back();
       } else {
         router.push(`/groups/${form.groupId}`);
@@ -60,7 +64,7 @@ export function AddEntryDrawer({
       // After the navigation, not before it: what is now stale is the group
       // behind, and refreshing while still on `/expenses/new` would only
       // refetch the drawer's own route.
-      if (exit === "saved") router.refresh();
+      if (exit !== "dismiss") router.refresh();
     }, EXIT_MS);
     return () => clearTimeout(timer);
   }, [exit, dismissTo, form.groupId, router]);
@@ -102,6 +106,7 @@ export function AddEntryDrawer({
           // A saved entry leaves the same way a dismissed one does — the
           // confirmation is a toast, which outlives the drawer.
           onSaved={() => setExit("saved")}
+          onRemoved={() => setExit("gone")}
         />
       </SheetContent>
     </Sheet>

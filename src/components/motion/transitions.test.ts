@@ -64,10 +64,24 @@ describe("screenPath", () => {
   it("does not mistake a neighbouring expense route for the drawer", () => {
     for (const path of [
       "/groups/g1/expenses/e1",
-      "/groups/g1/expenses/e1/edit",
       "/groups/g1/expenses/new/extra",
+      "/groups/g1/settlements/s1",
     ]) {
       expect(screenPath(path, "/groups/g1/expenses")).toBe(path);
+    }
+  });
+
+  /** Reopening an entry is the same drawer, so it is the same layer. */
+  it("holds the screen still under the edit drawer", () => {
+    for (const path of [
+      "/groups/g1/expenses/e1/edit",
+      "/groups/g1/settlements/s1/edit",
+    ]) {
+      expect(screenPath(path, "/groups/g1/expenses")).toBe(
+        "/groups/g1/expenses",
+      );
+      // Reached from outside the group, it is a screen of its own again.
+      expect(screenPath(path, "/dashboard")).toBe(path);
     }
   });
 });

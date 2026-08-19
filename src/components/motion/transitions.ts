@@ -36,15 +36,20 @@ export const SWITCH_BACK: string[] = ["switch-back"];
  * Paths that can be a layer over a screen rather than a screen of their own,
  * each capturing the part of itself that says where it may be opened from.
  *
- * Only the add-entry drawer, which is intercepted into the group's `@entry`
- * slot: the URL becomes `/groups/<id>/expenses/new`, but `children` goes on
- * rendering whatever was underneath, which is the whole point of intercepting
- * it. `(.)` only intercepts from the same segment level, so the drawer is a
- * layer when it was opened from inside `/groups/<id>` and a screen in its own
- * right when it was reached from anywhere else — a link on the dashboard, or a
- * cold load of the URL.
+ * The entry drawer, in each of the three shapes it can be reached in: adding
+ * one, reopening an expense, reopening a repayment. All three are intercepted
+ * into the group's `@entry` slot, so the URL becomes the real one while
+ * `children` goes on rendering whatever was underneath — which is the whole
+ * point of intercepting them. `(.)` only intercepts from the same segment
+ * level, so each is a layer when it was opened from inside `/groups/<id>` and a
+ * screen in its own right when it was reached from anywhere else — a link on
+ * the dashboard, or a cold load of the URL.
  */
-const OVERLAYS = [/^(\/groups\/[^/]+)\/expenses\/new$/];
+const OVERLAYS = [
+  /^(\/groups\/[^/]+)\/expenses\/new$/,
+  /^(\/groups\/[^/]+)\/expenses\/[^/]+\/edit$/,
+  /^(\/groups\/[^/]+)\/settlements\/[^/]+\/edit$/,
+];
 
 /** Whether `path` is `root` itself or something inside it. */
 function isUnder(path: string, root: string): boolean {

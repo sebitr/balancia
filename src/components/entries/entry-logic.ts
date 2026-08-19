@@ -144,12 +144,25 @@ export type PrimaryActionKey =
   | "addIncome"
   | "saveRecurringExpense"
   | "saveRecurringIncome"
-  | "recordPayment";
+  | "recordPayment"
+  | "saveChanges";
 
+/**
+ * An edit says the same thing whatever it is editing.
+ *
+ * "Add expense" is worth spelling out because the button is the moment the
+ * entry comes into existence and the type it comes into existence as is the
+ * one fact worth confirming. Reopening one is not that moment: the entry is
+ * already there, the type is already whatever the tabs say, and three verbs
+ * for one act of saving would only invite a reader to look for a difference
+ * between them.
+ */
 export function primaryActionKey(
   type: EntryType,
   repeats: boolean,
+  editing = false,
 ): PrimaryActionKey {
+  if (editing) return "saveChanges";
   if (type === "settle") return "recordPayment";
   if (type === "income") {
     return repeats ? "saveRecurringIncome" : "addIncome";
@@ -159,12 +172,18 @@ export function primaryActionKey(
 
 /** The title on the confirmation screen. */
 export type ConfirmationKey =
-  "expenseAdded" | "incomeAdded" | "recurringSaved" | "paymentRecorded";
+  | "expenseAdded"
+  | "incomeAdded"
+  | "recurringSaved"
+  | "paymentRecorded"
+  | "changesSaved";
 
 export function confirmationKey(
   type: EntryType,
   repeats: boolean,
+  editing = false,
 ): ConfirmationKey {
+  if (editing) return "changesSaved";
   if (type === "settle") return "paymentRecorded";
   if (repeats) return "recurringSaved";
   return type === "income" ? "incomeAdded" : "expenseAdded";
