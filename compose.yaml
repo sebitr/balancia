@@ -45,7 +45,7 @@ x-app-environment: &app-environment
   # Nothing forwards a variable this file does not name: an operator who sets
   # EXCHANGE_RATE_PROVIDER in .env gets it interpolated here or not at all.
   EXCHANGE_RATE_PROVIDER: ${EXCHANGE_RATE_PROVIDER:-none}
-  EXCHANGE_RATE_API_URL: ${EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v1}
+  EXCHANGE_RATE_API_URL: ${EXCHANGE_RATE_API_URL:-https://api.frankfurter.dev/v2}
   # Web Push. Unset by default, which leaves notifications working inside the
   # app and only turns push delivery off. Generate a pair with `pnpm push:keys`.
   PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}

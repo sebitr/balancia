@@ -13,20 +13,38 @@ import { EXCHANGE_RATE_SCALE } from "./conversion";
  * here degrades to "no suggestion" rather than to an error the user must deal
  * with.
  *
- * The default implementation talks to Frankfurter, which republishes the
- * European Central Bank's daily reference rates: no API key, no account, no
- * per-request identity, and self-hostable if an instance would rather not talk
- * to a third party at all (`EXCHANGE_RATE_API_URL`).
+ * The default implementation talks to Frankfurter's v2 API, which blends the
+ * daily rates published by some eighty central banks: no API key, no account,
+ * no per-request identity, and self-hostable if an instance would rather not
+ * talk to a third party at all (`EXCHANGE_RATE_API_URL`).
+ *
+ * v1 is deliberately not spoken here. It republishes the European Central Bank
+ * alone, which prices thirty currencies — so a group settling in AED, UAH or
+ * any of the other hundred and thirty-five the picker offers got silence
+ * rather than a rate. `env.ts` refuses a URL still pointing at it.
  */
+
+/** One currency's price against the base, on the day it was last priced. */
+export interface ProviderQuote {
+  /** 1 base = rate quote, as a decimal string. */
+  readonly rate: string;
+  /**
+   * Business day this pair was actually priced, `YYYY-MM-DD`.
+   *
+   * Per quote rather than per response: rates are blended across providers
+   * that do not all publish on the same schedule, so one response routinely
+   * carries three different days. A thinly traded pair rolls further back than
+   * a liquid one, and each row has to say which day it belongs to.
+   */
+  readonly quotedOn: string;
+}
 
 /** Quotes for one base currency on one day. */
 export interface ProviderQuotes {
   readonly provider: string;
   readonly base: string;
-  /** Business day actually priced, `YYYY-MM-DD`. */
-  readonly quotedOn: string;
-  /** Quote currency → decimal string; 1 base = rate quote. */
-  readonly rates: ReadonlyMap<string, string>;
+  /** Quote currency → its quote. */
+  readonly rates: ReadonlyMap<string, ProviderQuote>;
 }
 
 export interface RatesProvider {
@@ -56,11 +74,14 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Request timeout. A rate suggestion is a convenience; it must not hang a form. */
 const REQUEST_TIMEOUT_MS = 5_000;
 
-const responseSchema = z.object({
-  base: z.string(),
-  date: z.string().regex(ISO_DATE),
-  rates: z.record(z.string(), z.number()),
-});
+const responseSchema = z.array(
+  z.object({
+    date: z.string().regex(ISO_DATE),
+    base: z.string(),
+    quote: z.string(),
+    rate: z.number(),
+  }),
+);
 
 /** Today in UTC as `YYYY-MM-DD`. */
 export function todayIso(now: Date = new Date()): string {
@@ -91,10 +112,12 @@ export function createFrankfurterProvider(baseUrl: string): RatesProvider {
       if (!ISO_DATE.test(on)) {
         throw new RateProviderError(`"${on}" is not an ISO date`);
       }
-      // The endpoint has no future: ask for the newest fixing instead, and let
-      // the response say which day it belongs to.
-      const path = on >= todayIso() ? "latest" : on;
-      const url = `${root}/${path}?base=${encodeURIComponent(base)}`;
+      // A date in the future answers with an empty list rather than an error.
+      // Omit it instead and take the newest fixing, letting each row say which
+      // day it belongs to.
+      const query = new URLSearchParams({ base });
+      if (on < todayIso()) query.set("date", on);
+      const url = `${root}/rates?${query}`;
 
       const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
       let response: Response;
@@ -111,9 +134,10 @@ export function createFrankfurterProvider(baseUrl: string): RatesProvider {
         );
       }
 
-      // 404 is how Frankfurter says "no data for this currency or date". That
-      // is an answer, not a failure.
-      if (response.status === 404) return null;
+      // 404 is "no such resource", 422 "no such currency". Both are the
+      // provider saying it has nothing, which is an answer rather than a
+      // failure; a date outside its history comes back as an empty list.
+      if (response.status === 404 || response.status === 422) return null;
       if (!response.ok) {
         throw new RateProviderError(
           `Exchange-rate provider answered ${response.status}`,
@@ -127,20 +151,15 @@ export function createFrankfurterProvider(baseUrl: string): RatesProvider {
         );
       }
 
-      const rates = new Map<string, string>();
-      for (const [currency, value] of Object.entries(parsed.data.rates)) {
-        if (!/^[A-Z]{3}$/.test(currency) || currency === base) continue;
-        const rate = normalizeRate(value);
-        if (rate) rates.set(currency, rate);
+      const rates = new Map<string, ProviderQuote>();
+      for (const row of parsed.data) {
+        if (!/^[A-Z]{3}$/.test(row.quote) || row.quote === base) continue;
+        const rate = normalizeRate(row.rate);
+        if (rate) rates.set(row.quote, { rate, quotedOn: row.date });
       }
       if (rates.size === 0) return null;
 
-      return {
-        provider: "frankfurter",
-        base,
-        quotedOn: parsed.data.date,
-        rates,
-      };
+      return { provider: "frankfurter", base, rates };
     },
   };
 }
