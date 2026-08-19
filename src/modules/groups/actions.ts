@@ -36,9 +36,15 @@ import { getEnv } from "@/lib/env";
  * domain service. No business logic lives here.
  */
 
+export interface CreatedGroupResult {
+  readonly groupId: string;
+  /** Shown by the screen that replaces the create sheet. */
+  readonly invite: { readonly url: string; readonly expiresAt: string | null };
+}
+
 export async function createGroupAction(
   formData: FormData,
-): Promise<ActionResult<{ groupId: string }>> {
+): Promise<ActionResult<CreatedGroupResult>> {
   const user = await getCurrentUser();
   if (!user) {
     return actionError("Sign in to create a group.");
@@ -66,7 +72,13 @@ export async function createGroupAction(
 
   const result = await runAction("groups.create", async () => {
     const created = await createGroup(user, parsed.data);
-    return { groupId: created.id };
+    return {
+      groupId: created.id,
+      invite: {
+        url: created.invite.url,
+        expiresAt: created.invite.expiresAt?.toISOString() ?? null,
+      },
+    };
   });
 
   if (result.ok) {

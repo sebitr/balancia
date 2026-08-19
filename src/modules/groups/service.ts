@@ -17,9 +17,11 @@ import {
   type UserActor,
 } from "@/lib/security/authorization";
 import { generateToken } from "@/lib/security/tokens";
+import { createJoinLink, joinLinkUrl } from "@/lib/security/join-link";
 import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
 import { telemetry } from "@/lib/telemetry";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import { DEFAULT_JOIN_LINK_EXPIRY, expiryDate } from "@/modules/join/expiry";
 import type {
   AddParticipantInput,
   CreateGroupInput,
@@ -172,11 +174,23 @@ export async function getGroupProfile(
 export interface CreatedGroup {
   readonly id: string;
   readonly participantId: string;
+  /**
+   * The group's join link, handed back the once. The screen that follows
+   * creation shows it immediately; after that it is read from storage like
+   * anything else, so this is a convenience rather than the only sighting.
+   */
+  readonly invite: {
+    readonly url: string;
+    readonly expiresAt: Date | null;
+  };
 }
 
 /**
- * Creates a group, its owner membership and the owner's participant row in one
- * transaction — a group with no owner would be unreachable.
+ * Creates a group, its owner membership, the owner's participant row and the
+ * link that lets everybody else in — all in one transaction, because a group
+ * with no owner would be unreachable and a group with no link would send its
+ * organiser hunting through settings for the one thing the next screen is
+ * about to offer them.
  */
 export async function createGroup(
   actor: UserActor,
@@ -255,6 +269,17 @@ export async function createGroup(
       }
     }
 
+    // The link every newcomer arrives through, minted with the group so the
+    // screen after this one has something to hand over. A week by default; the
+    // organiser moves it there or in settings, and moving it never replaces
+    // the token.
+    const inviteExpiresAt = expiryDate(DEFAULT_JOIN_LINK_EXPIRY);
+    const invite = await createJoinLink(group.id, {
+      createdByUserId: actor.userId,
+      expiresAt: inviteExpiresAt,
+      db: tx,
+    });
+
     await recordActivity(tx, {
       groupId: group.id,
       action: "group.created",
@@ -271,7 +296,14 @@ export async function createGroup(
       },
     });
 
-    return { id: group.id, participantId: participant.id };
+    return {
+      id: group.id,
+      participantId: participant.id,
+      invite: {
+        url: joinLinkUrl(invite.token),
+        expiresAt: inviteExpiresAt,
+      },
+    };
   });
 
   // Which of the two currency modes was chosen, after the group exists. The
@@ -341,6 +373,32 @@ export async function setGroupArchived(
       metadata: { archived },
     });
   });
+}
+
+/**
+ * How many people in the group are still only a name.
+ *
+ * The one number that says whether the invite link is still doing anything:
+ * at zero everybody has an account, and the link is a door nobody needs. The
+ * settings card shows it and hides itself around it, which is why this is a
+ * count rather than the whole list — the list is one tap away on People.
+ */
+export async function countUnclaimedParticipants(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<number> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(participants)
+    .where(
+      and(
+        eq(participants.groupId, groupId),
+        isNull(participants.userId),
+        isNull(participants.removedAt),
+      ),
+    );
+  return row?.count ?? 0;
 }
 
 /** Permanently deletes a group. Owner only; cascades to all group data. */

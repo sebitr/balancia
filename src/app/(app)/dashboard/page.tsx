@@ -114,6 +114,13 @@ export default async function DashboardPage() {
    * The sheet is mounted on both branches below, because both offer to create
    * a group and `?new` may arrive at either — the shortcut does not know yet
    * whether this account has any groups.
+   *
+   * It is the *second child of a fragment* in both, and that is load-bearing.
+   * Creating the first group flips this page from one branch to the other
+   * while the sheet is still open on its handover step, and React reconciles
+   * by position: anywhere else in the tree, the sheet would be unmounted and
+   * remounted mid-flow, throwing away the link it was in the middle of
+   * offering. Keep it last, and keep both returns the same shape.
    */
   const createGroup = (
     // useSearchParams suspends; nothing under it should hold up the page.
@@ -149,82 +156,84 @@ export default async function DashboardPage() {
   const nowIso = now.toISOString();
 
   return (
-    <div className="flex flex-col gap-[26px]">
-      <h1 className="sr-only">{t("title")}</h1>
+    <>
+      <div className="flex flex-col gap-[26px]">
+        <h1 className="sr-only">{t("title")}</h1>
 
-      <PositionWidget
-        net={
-          netPosition
-            ? {
-                minorUnits: netPosition.net.amount.toString(),
-                currency: netPosition.net.currency,
-              }
-            : null
-        }
-        owedToYou={
-          netPosition
-            ? {
-                minorUnits: netPosition.owedToYou.amount.toString(),
-                currency: netPosition.owedToYou.currency,
-              }
-            : null
-        }
-        youOwe={
-          netPosition
-            ? {
-                minorUnits: netPosition.youOwe.amount.toString(),
-                currency: netPosition.youOwe.currency,
-              }
-            : null
-        }
-        currencyTotals={overview.currencyTotals.map((total) => ({
-          currency: total.currency,
-          owedToYou: total.owedToYou.amount.toString(),
-          youOwe: total.youOwe.amount.toString(),
-        }))}
-        displayCurrency={overview.displayCurrency}
-        ratesAsOf={overview.ratesAsOf}
-        today={todayIso(now)}
-        now={nowIso}
-        converted={overview.converted}
-        groups={active.map(toPickable)}
-        groupCount={overview.groupCount}
-        lastCleared={
-          overview.lastCleared
-            ? {
-                at: overview.lastCleared.at.toISOString(),
-                groupName: overview.lastCleared.groupName,
-              }
-            : null
-        }
-      />
+        <PositionWidget
+          net={
+            netPosition
+              ? {
+                  minorUnits: netPosition.net.amount.toString(),
+                  currency: netPosition.net.currency,
+                }
+              : null
+          }
+          owedToYou={
+            netPosition
+              ? {
+                  minorUnits: netPosition.owedToYou.amount.toString(),
+                  currency: netPosition.owedToYou.currency,
+                }
+              : null
+          }
+          youOwe={
+            netPosition
+              ? {
+                  minorUnits: netPosition.youOwe.amount.toString(),
+                  currency: netPosition.youOwe.currency,
+                }
+              : null
+          }
+          currencyTotals={overview.currencyTotals.map((total) => ({
+            currency: total.currency,
+            owedToYou: total.owedToYou.amount.toString(),
+            youOwe: total.youOwe.amount.toString(),
+          }))}
+          displayCurrency={overview.displayCurrency}
+          ratesAsOf={overview.ratesAsOf}
+          today={todayIso(now)}
+          now={nowIso}
+          converted={overview.converted}
+          groups={active.map(toPickable)}
+          groupCount={overview.groupCount}
+          lastCleared={
+            overview.lastCleared
+              ? {
+                  at: overview.lastCleared.at.toISOString(),
+                  groupName: overview.lastCleared.groupName,
+                }
+              : null
+          }
+        />
 
-      <div className="flex flex-col gap-[26px] pb-[max(2.125rem,env(safe-area-inset-bottom))]">
-        {/* The visitor already has a group, so Balancia has earned the ask.
+        <div className="flex flex-col gap-[26px] pb-[max(2.125rem,env(safe-area-inset-bottom))]">
+          {/* The visitor already has a group, so Balancia has earned the ask.
             A brand-new account returns above, and never meets an install
             nudge on its first load. */}
-        <InstallPrompt />
+          <InstallPrompt />
 
-        {buckets.needsYou.length > 0 && (
-          <Section label={t("sectionNeedsYou")}>
-            <GroupList groups={buckets.needsYou.map(toRow)} now={nowIso} />
-          </Section>
-        )}
+          {buckets.needsYou.length > 0 && (
+            <Section label={t("sectionNeedsYou")}>
+              <GroupList groups={buckets.needsYou.map(toRow)} now={nowIso} />
+            </Section>
+          )}
 
-        {buckets.youAreOwed.length > 0 && (
-          <Section label={t("sectionYouAreOwed")}>
-            <GroupList groups={buckets.youAreOwed.map(toRow)} now={nowIso} />
-          </Section>
-        )}
+          {buckets.youAreOwed.length > 0 && (
+            <Section label={t("sectionYouAreOwed")}>
+              <GroupList groups={buckets.youAreOwed.map(toRow)} now={nowIso} />
+            </Section>
+          )}
 
-        <SettledGroups
-          settled={buckets.settled.map(toQuiet)}
-          archived={buckets.archived.map(toQuiet)}
-          now={nowIso}
-        />
+          <SettledGroups
+            settled={buckets.settled.map(toQuiet)}
+            archived={buckets.archived.map(toQuiet)}
+            now={nowIso}
+          />
+        </div>
       </div>
       {createGroup}
-    </div>
+    </>
   );
 }
 

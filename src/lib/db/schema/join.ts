@@ -24,8 +24,12 @@ import { users } from "./auth";
  * read it.
  *
  * Storage follows the same rules as every other token here: 256 bits of
- * entropy, only the SHA-256 hash persisted, a short prefix kept so the UI can
- * say which link it is showing without revealing it.
+ * entropy, lookups by SHA-256 hash, a short prefix kept so the UI can say
+ * which link it is showing without revealing it. It departs from them in one
+ * place, deliberately: a sealed copy of the token is kept as well, because a
+ * link nobody can read back is a link that has to be replaced to be shared
+ * with a sixth person — see `secret-box.ts` for what that costs and what it
+ * does not.
  */
 export const groupJoinLinks = pgTable(
   "group_join_links",
@@ -38,6 +42,13 @@ export const groupJoinLinks = pgTable(
     tokenHash: text("token_hash").notNull(),
     /** First bytes of the token, for "link ending in …" in the UI. */
     tokenPrefix: text("token_prefix").notNull(),
+    /**
+     * The token again, sealed by `secret-box` so the organiser's own settings
+     * screen can show and share the live link a week after minting it. Null
+     * for links minted before that screen existed, which stay usable and are
+     * simply no longer displayable.
+     */
+    tokenCipher: text("token_cipher"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),

@@ -18,9 +18,18 @@ const { createGroupAction } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/modules/groups/actions", () => ({ createGroupAction }));
+
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: (href: string) => push(href), refresh: vi.fn() }),
 }));
+vi.mock("@/modules/join/actions", () => ({
+  setJoinLinkExpiryAction: vi.fn(async () => ({
+    ok: true,
+    data: { expiresAt: null },
+  })),
+}));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 // jsdom has no layout, so the sheet's swipe-dismiss listeners have nothing to
 // measure; the picker below only needs the content rendered.
 vi.mock("@/components/groups/use-detected-timezone", () => ({
@@ -29,7 +38,17 @@ vi.mock("@/components/groups/use-detected-timezone", () => ({
 
 function renderSheet() {
   createGroupAction.mockReset();
-  createGroupAction.mockResolvedValue({ ok: true, data: { groupId: "g1" } });
+  push.mockReset();
+  createGroupAction.mockResolvedValue({
+    ok: true,
+    data: {
+      groupId: "g1",
+      invite: {
+        url: "https://balancia.test/join/g/SECRET-TOKEN",
+        expiresAt: "2026-08-26T12:00:00.000Z",
+      },
+    },
+  });
   const onOpenChange = vi.fn();
   const view = renderWithIntl(
     <CreateGroupSheet
@@ -176,6 +195,48 @@ describe("CreateGroupSheet", () => {
     expect(screen.getByPlaceholderText("Group name")).toHaveValue("Roadtrip");
     await user.click(screen.getByRole("button", { name: "Create group" }));
     expect(submitted().get("baseCurrency")).toBe("JPY");
+  });
+
+  it("hands the link over instead of dropping straight into the group", async () => {
+    const { user } = renderSheet();
+    await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
+    await user.click(screen.getByRole("button", { name: "Create group" }));
+
+    // The group exists, but the organiser has not been sent anywhere yet:
+    // the sheet is now the screen that gives them the link.
+    expect(
+      await screen.findByRole("heading", { name: "Lisbon is ready" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("balancia.test/join/g/SECRET-TOKEN"),
+    ).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("goes to the group once the handover is done with", async () => {
+    const { user, onOpenChange } = renderSheet();
+    await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
+    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Skip for now" }),
+    );
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(push).toHaveBeenCalledWith("/groups/g1");
+  });
+
+  it("names the people it was given, creator first", async () => {
+    const { user } = renderSheet();
+    await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
+    await user.type(screen.getByLabelText("Add a person"), "Ana");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.click(screen.getByRole("button", { name: "Create group" }));
+
+    expect(
+      await screen.findByText(
+        "Send everyone the same link. Seb and Ana can claim their own name when they open it.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("keeps the description out of the way until it is asked for", async () => {

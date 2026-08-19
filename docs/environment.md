@@ -63,11 +63,17 @@ Instance secret, at least 32 characters of randomness.
 AUTH_SECRET=$(openssl rand -base64 48)
 ```
 
-Written into `.env` by `scripts/bootstrap.sh` on first run. Changing it
-invalidates nothing stored (session tokens are random and stored hashed), but it
-is treated as instance-identifying material — keep it in your backups. In
-production, values that look like placeholders (`changeme`, `password`, …) are
-rejected at startup.
+Written into `.env` by `scripts/bootstrap.sh` on first run. It is
+instance-identifying material — keep it in your backups. In production, values
+that look like placeholders (`changeme`, `password`, …) are rejected at startup.
+
+Changing it signs nobody out and breaks no link: session and invitation tokens
+are random values stored as hashes, and none of them is derived from this. The
+one visible effect is on the group invite link, whose URL is also kept
+encrypted under a key derived from this secret so that group settings can show
+it again. After a rotation those links keep working for everyone holding them,
+but the settings card can no longer display one — it says so, and offers to
+mint a fresh link.
 
 ---
 

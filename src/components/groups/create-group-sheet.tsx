@@ -12,9 +12,13 @@ import { CurrencyPicker } from "@/components/money/currency-picker";
 import { currencyEntry } from "@/modules/currencies/catalog";
 import { TimezoneSelect } from "@/components/groups/timezone-select";
 import { GroupIconPicker } from "@/components/groups/group-icon-picker";
+import { GroupReady } from "@/components/groups/group-ready";
 import { GroupIconTile } from "@/components/groups/group-icon";
 import { useDetectedTimezone } from "@/components/groups/use-detected-timezone";
-import { createGroupAction } from "@/modules/groups/actions";
+import {
+  createGroupAction,
+  type CreatedGroupResult,
+} from "@/modules/groups/actions";
 import {
   DEFAULT_GROUP_ICON_COLOR,
   type GroupIcon,
@@ -59,7 +63,11 @@ export function CreateGroupSheet({
   const t = useTranslations("groupForm");
   const nameId = useId();
 
-  const [view, setView] = useState<"form" | "icon" | "currency">("form");
+  const [view, setView] = useState<"form" | "icon" | "currency" | "ready">(
+    "form",
+  );
+  /** Set on success, which is also what swaps the sheet to the last view. */
+  const [created, setCreated] = useState<CreatedGroupResult | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [descOpen, setDescOpen] = useState(false);
@@ -95,19 +103,45 @@ export function CreateGroupSheet({
         toast.error(result.error ?? t("failed"));
         return;
       }
-      toast.success(t("created"));
-      onOpenChange(false);
-      router.push(`/groups/${result.data.groupId}`);
+      /*
+       * The group exists now, so the sheet stops being a form and becomes the
+       * handover: the same surface, one view further along. It is not closed
+       * and re-opened as something else, because the names on the screen
+       * behind it are the names the next view is about to talk about.
+       *
+       * No toast. The whole view is the confirmation.
+       */
+      setCreated(result.data);
+      setView("ready");
       router.refresh();
     } finally {
       setPending(false);
     }
   };
 
+  /**
+   * Leaving the handover, by any of its three exits — Skip, the close button,
+   * a swipe. All of them mean the same thing: the group is made, take me to
+   * it. Closing on the form instead is an abandoned draft and goes nowhere.
+   */
+  const leave = (groupId: string) => {
+    onOpenChange(false);
+    router.push(`/groups/${groupId}`);
+  };
+
   const ready = name.trim() !== "";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && created) {
+          leave(created.groupId);
+          return;
+        }
+        onOpenChange(next);
+      }}
+    >
       <SheetContent
         side="bottom"
         showCloseButton={false}
@@ -217,6 +251,17 @@ export function CreateGroupSheet({
               </button>
             </footer>
           </form>
+        ) : view === "ready" && created ? (
+          <GroupReady
+            groupId={created.groupId}
+            groupName={name.trim()}
+            people={members.map((member) => member.name)}
+            invite={created.invite}
+            onSkip={() => leave(created.groupId)}
+            // The sheet has to keep naming itself, and this view's own title
+            // is the only sensible name for it.
+            heading={SheetTitle}
+          />
         ) : view === "icon" ? (
           <GroupIconPicker
             name={name}

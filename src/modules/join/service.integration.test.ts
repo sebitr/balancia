@@ -4,10 +4,13 @@ import { getDb } from "@/lib/db/client";
 import { groupMembers, participants } from "@/lib/db/schema";
 import {
   createJoinLink,
+  describeJoinLink,
   resolveJoinLink,
   revokeJoinLink,
+  setJoinLinkExpiry,
   InvalidJoinLinkError,
 } from "@/lib/security/join-link";
+import { createGroup } from "@/modules/groups/service";
 import {
   claimMember,
   createMember,
@@ -89,6 +92,108 @@ describe("join links", () => {
     await expect(resolveJoinLink("A".repeat(43))).rejects.toThrow(
       InvalidJoinLinkError,
     );
+  });
+});
+
+/**
+ * The settings card reads the live link back out of the database weeks after
+ * it was minted, which is the one thing the rest of the token rules forbid.
+ * What matters is that what comes back still opens the door.
+ */
+describe("describeJoinLink", () => {
+  it("gives back a URL carrying the working token", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    await createJoinLink(group.groupId);
+
+    const view = await describeJoinLink(group.groupId);
+
+    expect(view?.status).toBe("active");
+    const token = view?.url?.split("/").at(-1);
+    await expect(resolveJoinLink(token)).resolves.toMatchObject({
+      groupId: group.groupId,
+    });
+  });
+
+  it("still shows a revoked link, so the card can say so", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    await createJoinLink(group.groupId);
+    await revokeJoinLink(group.groupId);
+
+    await expect(describeJoinLink(group.groupId)).resolves.toMatchObject({
+      status: "revoked",
+    });
+  });
+
+  it("separates a lapsed link from a revoked one", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    await createJoinLink(group.groupId, {
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    await expect(describeJoinLink(group.groupId)).resolves.toMatchObject({
+      status: "expired",
+    });
+  });
+
+  it("has nothing to show a group that never had a link", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    await expect(describeJoinLink(group.groupId)).resolves.toBeNull();
+  });
+});
+
+describe("setJoinLinkExpiry", () => {
+  it("moves the date and leaves the token working", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const link = await createJoinLink(group.groupId, {
+      expiresAt: new Date(Date.now() + 1000),
+    });
+
+    const later = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await expect(setJoinLinkExpiry(group.groupId, later)).resolves.toBe(true);
+
+    const view = await describeJoinLink(group.groupId);
+    expect(view?.expiresAt?.getTime()).toBe(later.getTime());
+    // The URL five people already have has to be the same URL.
+    await expect(resolveJoinLink(link.token)).resolves.toMatchObject({
+      groupId: group.groupId,
+    });
+  });
+
+  it("has nothing to move once the link is revoked", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    await createJoinLink(group.groupId);
+    await revokeJoinLink(group.groupId);
+
+    await expect(setJoinLinkExpiry(group.groupId, null)).resolves.toBe(false);
+  });
+});
+
+describe("createGroup", () => {
+  it("gives a new group a working link with the group itself", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+
+    const created = await createGroup(actor, {
+      name: "Lisbon, March",
+      currencyMode: "separate",
+      timezone: "UTC",
+      ownerDisplayName: "Amélie",
+      participantNames: ["Jonas"],
+    });
+
+    // A week out, and the same link the settings card will show.
+    expect(created.invite.expiresAt).not.toBeNull();
+    const stored = await describeJoinLink(created.id);
+    expect(stored?.url).toBe(created.invite.url);
+    await expect(
+      resolveJoinLink(created.invite.url.split("/").at(-1)),
+    ).resolves.toMatchObject({ groupId: created.id, inviterName: "Amélie" });
   });
 });
 
