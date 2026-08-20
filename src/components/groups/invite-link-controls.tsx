@@ -22,6 +22,7 @@ import {
 import { setJoinLinkExpiryAction } from "@/modules/join/actions";
 import {
   JOIN_LINK_EXPIRY_CHOICES,
+  expiryDate,
   isExpiryChoice,
   remainingFor,
   type JoinLinkExpiryChoice,
@@ -263,27 +264,39 @@ export function ExpiryRow({
    * The server is the truth, and a refresh moves it underneath the optimistic
    * value shown here. Adjusted during the render that brings the new prop
    * rather than in an effect, so the row never paints the stale date first.
+   *
+   * The clock moves with it. A date from the server measured against a clock
+   * frozen when the reader tapped is a subtraction across two instants that
+   * are not the same one, and the rounding below turns any overshoot into a
+   * whole extra hour: pick "In 24 hours", wait for the round trip, read 25.
    */
   const [rendered, setRendered] = useState(expiresAt);
   if (rendered !== expiresAt) {
     setRendered(expiresAt);
     setValue(expiresAt);
+    setAt(Date.parse(now));
   }
 
   const choose = async (choice: JoinLinkExpiryChoice) => {
-    const previous = value;
-    const optimistic = choice === "never" ? null : expiryPreview(choice);
-    setValue(optimistic);
-    setAt(Date.now());
+    const previous = { value, at };
+    // One instant, read once: the optimistic date and the clock it will be
+    // measured against have to be the same "now", or "In 24 hours" rounds up
+    // to 25 the moment they are a millisecond apart.
+    const chosenAt = Date.now();
+    setValue(expiryDate(choice, new Date(chosenAt))?.toISOString() ?? null);
+    setAt(chosenAt);
     setPending(true);
     try {
       const result = await setJoinLinkExpiryAction(groupId, choice);
       if (!result.ok) {
-        setValue(previous);
+        setValue(previous.value);
+        setAt(previous.at);
         toast.error(result.error ?? t("expiryFailed"));
         return;
       }
-      setValue(result.data?.expiresAt ?? null);
+      // The server's own date arrives with the refresh, paired with the
+      // instant it was drawn at. Taking it from the action instead would pin a
+      // server date to this browser's clock — the same mismatch again.
       router.refresh();
     } finally {
       setPending(false);
@@ -334,15 +347,6 @@ export function ExpiryRow({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
-
-/**
- * The same arithmetic the server would do, for the optimistic value only. The
- * server's answer replaces it a moment later.
- */
-function expiryPreview(choice: Exclude<JoinLinkExpiryChoice, "never">): string {
-  const days = choice === "day" ? 1 : choice === "week" ? 7 : 30;
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 /** "In 6 days", "In 3 hours", "Never" — whichever the date actually is. */

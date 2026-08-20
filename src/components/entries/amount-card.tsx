@@ -45,7 +45,6 @@ export function AmountCard({
   date,
   positive = false,
   editable = true,
-  currencyLocked = false,
   onAmountChange,
   onOpenCurrency,
   locale,
@@ -63,8 +62,6 @@ export function AmountCard({
   /** Income is green. */
   positive?: boolean;
   editable?: boolean;
-  /** A settlement is pinned to the base currency; the chip becomes a label. */
-  currencyLocked?: boolean;
   /** Raw field text; the caller runs it through `sanitiseAmount`. */
   onAmountChange: (next: string) => void;
   onOpenCurrency: () => void;
@@ -122,32 +119,25 @@ export function AmountCard({
           )}
         />
 
-        {/* A settlement is denominated by the debt it clears, so there is
-            nothing to choose and the pill states the currency instead. */}
-        {currencyLocked ? (
-          <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-muted-foreground">
-            {flag && (
-              <span aria-hidden="true" className="text-base leading-none">
-                {flag}
-              </span>
-            )}
-            {currency}
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpenCurrency}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-3 text-xs font-semibold transition-colors active:bg-white/14"
-          >
-            {flag && (
-              <span aria-hidden="true" className="text-base leading-none">
-                {flag}
-              </span>
-            )}
-            {currency}
-            <ChevronDown aria-hidden="true" className="size-[13px]" />
-          </button>
-        )}
+        {/* Always a chip that opens the list, repayments included. A
+            settlement usually is denominated by the debt it clears — which is
+            what picking one off the outstanding list already fills in — but
+            "usually" was being enforced as "only": money handed back in cash
+            on the trip, in the currency that was to hand, had no way to be
+            recorded as what it was. */}
+        <button
+          type="button"
+          onClick={onOpenCurrency}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-3 text-xs font-semibold transition-colors active:bg-white/14"
+        >
+          {flag && (
+            <span aria-hidden="true" className="text-base leading-none">
+              {flag}
+            </span>
+          )}
+          {currency}
+          <ChevronDown aria-hidden="true" className="size-[13px]" />
+        </button>
       </div>
 
       {needsRate && baseCurrency && (

@@ -118,6 +118,47 @@ describe("a live link", () => {
     expect(await screen.findByText("Never")).toBeInTheDocument();
   });
 
+  /**
+   * The row rounds up, so a date measured against a clock a millisecond behind
+   * it reads as a whole extra hour. Picking 24 and being told 25 was exactly
+   * that: an expiry the server stamped after the tap, subtracted from the
+   * instant of the tap.
+   */
+  it("says 24 hours when 24 hours is what was picked", async () => {
+    const user = userEvent.setup();
+    // Whatever the server answers, it stamped its date after the tap.
+    setJoinLinkExpiryAction.mockResolvedValueOnce({
+      ok: true,
+      data: { expiresAt: "2026-08-20T12:00:00.400Z" },
+    });
+    const view = renderCard();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "In 24 hours" }),
+    );
+
+    expect(await screen.findByText("In 24 hours")).toBeInTheDocument();
+
+    // And still 24 once the refresh brings the server's own date back down,
+    // paired with the instant that render was drawn at.
+    view.rerender(
+      <InviteLinkCard
+        groupId="g1"
+        groupName="Lisbon, March"
+        link={{
+          status: "active",
+          url: URL,
+          expiresAt: "2026-08-20T12:00:00.400Z",
+        }}
+        unclaimedCount={3}
+        now="2026-08-19T12:00:00.500Z"
+      />,
+    );
+
+    expect(screen.getByText("In 24 hours")).toBeInTheDocument();
+  });
+
   it("puts the old date back when the change is refused", async () => {
     const user = userEvent.setup();
     setJoinLinkExpiryAction.mockResolvedValueOnce({ ok: false });

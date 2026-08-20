@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import { InviteLinkCard } from "@/components/groups/invite-link-card";
 import { PeopleCard, type PersonView } from "@/components/members/people-card";
 import { inReadingOrder } from "@/components/members/reading-order";
 import { requireGroupAccess } from "@/lib/actions";
+import { describeJoinLink } from "@/lib/security/join-link";
 import { loadGroupBalances } from "@/modules/balances/service";
 import {
   listParticipants,
@@ -22,9 +24,12 @@ import {
  * owes money should not be quietly removed — so they arrive as minor-unit
  * strings per currency and are never collapsed into a single number.
  *
- * The group-wide link used to have a card at the foot of this page as well. It
- * lives in settings now: one link, one place that owns it, and this page kept
- * the thing it is actually about — who the group is.
+ * The group-wide link is below the list, the same card settings shows and the
+ * same one object behind it. Settings is where it is *administered*; this is
+ * where the question that reaches for it gets asked — a row saying somebody
+ * has no account yet is the whole reason anyone wants the link — and sending
+ * a reader to another screen to answer it was two taps for the one thing the
+ * two screens have in common.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -44,9 +49,13 @@ export default async function MembersPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [participants, balances] = await Promise.all([
+  // The link is read only for the readers who could do anything with it; the
+  // rest of the group pays nothing for a card they are not shown.
+  const invites = access.permissions.manageInvitations;
+  const [participants, balances, joinLink] = await Promise.all([
     listParticipants(access.groupId),
     loadGroupBalances(access),
+    invites ? describeJoinLink(access.groupId) : null,
   ]);
 
   /*
@@ -100,7 +109,7 @@ export default async function MembersPage({
    * Promising all three to everyone would have two thirds of the group tapping
    * rows to find out the offer was not theirs.
    */
-  const intro = access.permissions.manageInvitations
+  const intro = invites
     ? "intro"
     : access.permissions.manageParticipants
       ? "introMember"
@@ -123,6 +132,29 @@ export default async function MembersPage({
         canInvite={access.permissions.manageInvitations}
         canRemove={access.permissions.removeParticipants}
       />
+
+      {invites && (
+        <InviteLinkCard
+          groupId={access.groupId}
+          groupName={access.group.name}
+          link={
+            joinLink
+              ? {
+                  status: joinLink.status,
+                  url: joinLink.url,
+                  expiresAt: joinLink.expiresAt?.toISOString() ?? null,
+                }
+              : null
+          }
+          // The card's line about people without an account is a way *here*,
+          // and the list it points at is directly above. Counting them again
+          // under it would be the same screen offering to show itself.
+          unclaimedCount={0}
+          // One instant for the whole render, so the card's "In 6 days" is a
+          // subtraction the browser can repeat and get the same answer.
+          now={new Date().toISOString()}
+        />
+      )}
 
       <p className="text-xs text-pretty text-muted-foreground">
         {t("footnote")}

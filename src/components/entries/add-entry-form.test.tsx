@@ -659,6 +659,7 @@ describe("settlement", () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("button", { name: /TWINT/ }));
     await user.click(screen.getByRole("button", { name: "Record payment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
@@ -671,6 +672,50 @@ describe("settlement", () => {
       }),
     );
     expect(success).toHaveBeenCalledWith("Payment recorded", expect.anything());
+  });
+
+  /**
+   * How the money moved is optional, and the row used to answer it on the
+   * reader's behalf: the country's first suggestion arrived lit up, so every
+   * repayment saved without a thought said "TWINT".
+   */
+  it("records no method when nobody chose one", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    expect(screen.getByRole("button", { name: /TWINT/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ paymentMethod: "" }),
+    );
+  });
+
+  /**
+   * The debt names the currency, which is right nearly always and was enforced
+   * as always: cash handed back in whatever was in the wallet had nowhere to
+   * go.
+   */
+  it("lets the currency be changed away from the debt's", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+    await user.click(sheet("Currency").getByRole("button", { name: /^EUR/ }));
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ currency: "EUR" }),
+    );
   });
 
   it("takes what the repayment was for, and saves it with the payment", async () => {

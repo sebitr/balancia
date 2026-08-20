@@ -788,11 +788,13 @@ export function AddEntryForm({
     if (paymentMethod) return tMethods(paymentMethod);
     // A label the picker no longer lists — an import, or a provider that has
     // since left the list — is still the truth about how the money moved, so
-    // an untouched form writes it back rather than replacing it with whatever
-    // this country's first method happens to be today.
+    // an untouched form writes it back rather than dropping it.
     if (unmatchedMethod !== "") return unmatchedMethod;
-    const fallback = countryMethods[0];
-    return fallback ? tMethods(fallback) : "";
+    // Nothing chosen means nothing to say. Falling back to this country's
+    // first method wrote a payment method nobody had picked onto every
+    // repayment, and the column is optional precisely because "I paid them
+    // back" is a complete answer.
+    return "";
   };
 
   /**
@@ -868,7 +870,7 @@ export function AddEntryForm({
       {/* Rows overflow rather than compress: a scroll container whose
           children may shrink turns a long member list into a row of
           squashed avatars instead of a scroll. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 [&>*]:shrink-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [&>*]:shrink-0">
         <EntryTypeTabs value={type} onChange={changeType} />
 
         {error && (
@@ -933,7 +935,6 @@ export function AddEntryForm({
           onRateChange={setRate}
           date={date}
           positive={isIncome}
-          currencyLocked={isSettle}
           onAmountChange={(next) =>
             setAmountText(sanitiseAmount(next, currency))
           }
@@ -1217,12 +1218,15 @@ export function AddEntryForm({
             </AlertDialogContent>
           </AlertDialog>
         )}
-      </div>
 
-      {/* One button, and it is the only thing this footer is for. Cancel
-          is the scrim, the X and a downward swipe — three ways out that
-          cost no room. */}
-      <footer className="shrink-0 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* The end of the form, not a bar pinned over it. A footer that
+            follows the reader down covers the row it is sitting on — on a
+            short phone, with the keyboard up, that row is the one being
+            typed into — and it promises a button that is often disabled
+            anyway. Reaching it by scrolling is also the only reading of
+            "done" that is true: the form has been seen to its end. Cancel
+            is the scrim, the X and a downward swipe, none of which cost
+            any room. */}
         <Button
           type="button"
           size="lg"
@@ -1235,7 +1239,7 @@ export function AddEntryForm({
             `actions.${primaryActionKey(type, recurrence.enabled, editing !== undefined)}`,
           )}
         </Button>
-      </footer>
+      </div>
 
       <Sheet
         open={sheet !== null}

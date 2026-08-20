@@ -307,7 +307,7 @@ export function PaymentMethodRow({
 }: {
   /** Everything the country suggests, most likely first. */
   methods: readonly PaymentMethodId[];
-  /** The chosen method, or null while the first suggestion still stands. */
+  /** The chosen method, or null while nobody has chosen one. */
   value: PaymentMethodId | null;
   country: SupportedCountry | null;
   onSelect: (id: PaymentMethodId) => void;
@@ -321,7 +321,10 @@ export function PaymentMethodRow({
   // every label to the point of truncating "Bancontact Pay". The rest of the
   // country's list is one tap away, at the top of the picker.
   const shown = methods.slice(0, ROW_METHOD_COUNT);
-  const resolved = value ?? shown[0];
+  // Nothing is pre-selected. The country's first suggestion used to be lit up
+  // before anybody had touched the row, and a highlighted chip is a claim —
+  // every repayment then recorded "TWINT" whether or not that is how the money
+  // moved. How it was paid is optional, so an untouched row says nothing.
   // A method chosen from the picker takes the "Other" slot's label, so the row
   // always shows what is actually selected.
   const offRow = value !== null && !shown.includes(value);
@@ -344,7 +347,7 @@ export function PaymentMethodRow({
           const method = findPaymentMethod(id);
           if (!method) return null;
           const label = tMethods(id);
-          const active = !offRow && id === resolved;
+          const active = id === value;
           return (
             <button
               key={id}
