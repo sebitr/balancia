@@ -3,9 +3,9 @@ import { EntryScreen } from "../../../entry-screen";
 /**
  * Change a repayment.
  *
- * A settlement has no detail screen — it has never had anything to show that
- * the transactions row does not already say — so this is the whole of what can
- * be done to one, and the row links straight here.
+ * Reached from the repayment's detail screen, which is where a row in the
+ * transactions list now leads. Editing is the same drawer an expense opens,
+ * on the settle tab.
  */
 export default async function EditSettlementPage({
   params,

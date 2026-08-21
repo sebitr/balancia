@@ -364,15 +364,6 @@
     "positionOwed": "you owe",
     "positionSettled": "settled"
   },
-  "deleteExpense": {
-    "trigger": "Delete",
-    "title": "Delete this expense?",
-    "body": "“{description}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
-    "keep": "Keep it",
-    "confirm": "Delete expense",
-    "deleted": "Expense deleted",
-    "failed": "The expense could not be deleted."
-  },
   "profile": {
     "metaTitle": "Profile",
     "title": "Profile",
@@ -1427,21 +1418,60 @@
     "currencyModeConverted": "Converted to {currency}",
     "currencyModeFixed": "Fixed"
   },
-  "expenseDetail": {
-    "splitEqual": "Split equally",
-    "splitExact": "Exact amounts",
-    "splitPercentage": "Split by percentage",
-    "splitShares": "Split by shares",
-    "fromRecurring": "From a recurring expense",
-    "convertedAt": "Converted at {rate}",
-    "recordedIn": "Recorded in group currency",
-    "rateFrozen": "Rate frozen when this expense was saved. It is not recalculated.",
+  "transactionDetail": {
+    "types": {
+      "expense": "Expense",
+      "revenue": "Revenue",
+      "settlement": "Settlement"
+    },
+    "attachments": "{count, plural, one {# file attached} other {# files attached}}",
+    "date": "Date",
+    "repeats": "Repeats",
+    "oneOff": "One-off",
+    "repeatWeekly": "{count, plural, one {Weekly} other {Every # weeks}}",
+    "repeatMonthly": "{count, plural, one {Monthly} other {Every # months}}",
+    "repeatYearly": "{count, plural, one {Yearly} other {Every # years}}",
+    "fromTo": "From → to",
+    "inGroupCurrency": "In {currency}",
+    "atRate": "at {rate}",
     "paidBy": "Paid by",
+    "receivedBy": "Received by",
     "splitBetween": "Split between",
+    "creditedTo": "Credited to",
+    "person": "Person",
+    "share": "Share",
+    "credited": "Credited",
+    "balance": "Balance",
+    "splitEqual": "Shared equally",
+    "splitExact": "Exact amounts",
+    "splitPercentage": "By percentage",
+    "splitShares": "By shares",
+    "whatChanged": "What this changed",
+    "owedBefore": "Owed {amount} before this",
+    "backBefore": "Got back {amount} before this",
+    "settledBefore": "Settled up before this",
+    "settledUp": "Settled up",
+    "stillOwes": "still owes",
+    "stillGetsBack": "still gets back",
     "notes": "Notes",
-    "receipts": "Receipts",
-    "kilobytes": "{size} KB",
-    "edit": "Edit"
+    "files": "Files",
+    "fileKind": {
+      "image": "Image",
+      "pdf": "PDF",
+      "file": "File"
+    },
+    "fileKilobytes": "{kind} · {size} kB",
+    "fileMegabytes": "{kind} · {size} MB",
+    "edit": "Edit",
+    "delete": {
+      "trigger": "Delete",
+      "title": "Delete this entry?",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
+      "keep": "Keep it",
+      "confirm": "Delete",
+      "deleted": "Entry deleted",
+      "failed": "It could not be deleted."
+    }
   },
   "emails": {
     "fallbackLabel": "Or paste this link into your browser",

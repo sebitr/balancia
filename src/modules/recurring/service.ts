@@ -343,6 +343,47 @@ export async function listRecurringExpenses(
     .orderBy(asc(recurringExpenses.createdAt));
 }
 
+/** How often a template runs, and nothing else. */
+export interface RecurrenceCadence {
+  readonly frequency: "weekly" | "monthly" | "yearly";
+  readonly interval: number;
+}
+
+/**
+ * The cadence behind one generated entry.
+ *
+ * A detail screen states what an entry repeats at — "Monthly", "Every 2
+ * weeks" — and that is the whole of what it needs from the template. Reading
+ * it through `listRecurringExpenses` would load every template in the group,
+ * each with a count of the occurrences it has generated, to print two words.
+ *
+ * Returns null when the template has since been deleted: the entries it
+ * already produced stay, and they are simply one-offs now.
+ */
+export async function getRecurrenceCadence(
+  groupId: string,
+  recurringExpenseId: string,
+  options: { db?: Database } = {},
+): Promise<RecurrenceCadence | null> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({
+      frequency: recurringExpenses.frequency,
+      interval: recurringExpenses.interval,
+    })
+    .from(recurringExpenses)
+    .where(
+      and(
+        eq(recurringExpenses.id, recurringExpenseId),
+        eq(recurringExpenses.groupId, groupId),
+        isNull(recurringExpenses.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
 export interface GenerationReport {
   readonly templatesProcessed: number;
   readonly expensesCreated: number;
