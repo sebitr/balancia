@@ -147,6 +147,12 @@ services:
       <<: *app-environment
     volumes:
       - uploads:/data/uploads
+      # Payment-method logos an operator supplied. Mounted rather than baked in
+      # so that dropping an SVG in is a page refresh, not a rebuild — and so
+      # that artwork the repository must never carry stays on this host. The
+      # directory always exists: its README is committed, everything else in it
+      # is ignored.
+      - ./public/payment-methods:/app/public/payment-methods:ro
       # On-device receipt scanning (RECEIPT_SCANNING=1). Run
       # `pnpm ocr:install --yes` on the host, then uncomment this so the ~32 MB
       # of models is mounted rather than baked into the image — otherwise they
