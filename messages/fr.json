@@ -1471,6 +1471,11 @@
       "confirm": "Supprimer",
       "deleted": "Écriture supprimée",
       "failed": "La suppression a échoué."
+    },
+    "gone": {
+      "title": "Cette écriture n'est plus là",
+      "body": "Elle a été supprimée, ou enregistrée autrement — en remboursement plutôt qu'en dépense, ou l'inverse. Tu trouveras ce qui l'a remplacée dans la liste des transactions.",
+      "action": "Transactions"
     }
   },
   "emails": {

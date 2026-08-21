@@ -29,6 +29,19 @@ import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
  */
 const EXIT_MS = 380;
 
+/**
+ * Why the drawer is leaving, and where that leaves the reader.
+ *
+ * One value rather than a flag and a destination beside it, so a departure
+ * cannot be half-described: an entry that has gone always knows where the
+ * reader should be instead, whether that is the screen it moved to or the
+ * group it was removed from.
+ */
+type Exit =
+  | { readonly kind: "dismiss" }
+  | { readonly kind: "saved" }
+  | { readonly kind: "gone"; readonly to: string };
+
 export function AddEntryDrawer({
   dismissTo,
   ...form
@@ -48,7 +61,7 @@ export function AddEntryDrawer({
   dismissTo: "back" | "group";
 }) {
   const router = useRouter();
-  const [exit, setExit] = useState<null | "dismiss" | "saved" | "gone">(null);
+  const [exit, setExit] = useState<Exit | null>(null);
 
   useEffect(() => {
     if (exit === null) return;
@@ -58,7 +71,14 @@ export function AddEntryDrawer({
       // while what is behind still exists, and an entry that was deleted — or
       // moved to the other table by a change of type — takes its detail screen
       // with it. Popping onto it would land the reader on a 404.
-      if (dismissTo === "back" && exit !== "gone") {
+      //
+      // It replaces rather than pushes, too. This URL edits an entry that is
+      // no longer there, so it is not a place to return to: leaving it in the
+      // stack only puts a removed entry between the reader and the screen they
+      // were actually browsing.
+      if (exit.kind === "gone") {
+        router.replace(exit.to);
+      } else if (dismissTo === "back") {
         router.back();
       } else {
         router.push(`/groups/${form.groupId}`);
@@ -66,7 +86,7 @@ export function AddEntryDrawer({
       // After the navigation, not before it: what is now stale is the group
       // behind, and refreshing while still on `/expenses/new` would only
       // refetch the drawer's own route.
-      if (exit !== "dismiss") router.refresh();
+      if (exit.kind !== "dismiss") router.refresh();
     };
 
     // An entry that is gone cannot wait for the animation.
@@ -83,7 +103,7 @@ export function AddEntryDrawer({
     // marks it discarded, so its state is never applied, and Next re-runs the
     // revalidation it asked for once the navigation has landed. What it costs
     // is the slide-out — which had nothing to slide back onto.
-    if (exit === "gone") {
+    if (exit.kind === "gone") {
       leave();
       return;
     }
@@ -95,7 +115,7 @@ export function AddEntryDrawer({
   return (
     <Sheet
       open={exit === null}
-      onOpenChange={(open) => !open && setExit("dismiss")}
+      onOpenChange={(open) => !open && setExit({ kind: "dismiss" })}
     >
       <SheetContent
         side="bottom"
@@ -125,11 +145,16 @@ export function AddEntryDrawer({
       >
         <AddEntryForm
           {...form}
-          onClose={() => setExit("dismiss")}
+          onClose={() => setExit({ kind: "dismiss" })}
           // A saved entry leaves the same way a dismissed one does — the
           // confirmation is a toast, which outlives the drawer.
-          onSaved={() => setExit("saved")}
-          onRemoved={() => setExit("gone")}
+          onSaved={() => setExit({ kind: "saved" })}
+          // A conversion knows the screen the entry moved to and that is where
+          // the reader goes; a deletion has no such screen, and the group is
+          // the nearest thing to where the entry used to be.
+          onRemoved={(to) =>
+            setExit({ kind: "gone", to: to ?? `/groups/${form.groupId}` })
+          }
         />
       </SheetContent>
     </Sheet>
