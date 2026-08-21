@@ -1471,6 +1471,11 @@
       "confirm": "Delete",
       "deleted": "Entry deleted",
       "failed": "It could not be deleted."
+    },
+    "gone": {
+      "title": "That entry is no longer here",
+      "body": "It was removed, or recorded as something else — a repayment rather than an expense, or the other way round. The transactions list has whatever took its place.",
+      "action": "Transactions"
     }
   },
   "emails": {

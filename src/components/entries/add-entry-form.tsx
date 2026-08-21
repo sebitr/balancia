@@ -186,6 +186,20 @@ export interface EditingEntry {
   readonly paymentMethod: string;
 }
 
+/**
+ * What a save produced: the action's answer, and — when the entry changed
+ * tables — the screen it now lives on.
+ *
+ * The id in the URL belongs to the row the conversion has just removed, so
+ * where the entry went is only ever knowable from what the action hands back.
+ * Typed by the shape the form reads rather than imported from the server's
+ * `ActionResult`, which would drag a server module into this bundle.
+ */
+interface Outcome {
+  readonly result: { readonly ok: boolean; readonly error?: string };
+  readonly movedTo?: string;
+}
+
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
 /** A group with no history yet — the picker simply has nothing to lead with. */
 const NO_FREQUENT: readonly ExpenseCategory[] = [];
@@ -229,8 +243,13 @@ export interface AddEntryFormProps {
    * Dismisses it on an entry that no longer exists — deleted, or moved to the
    * other table by a change of type. Separate from `onSaved` because the shell
    * cannot go back to a screen that has just been removed underneath it.
+   *
+   * `to` is where the entry went, when it went somewhere: a conversion writes
+   * a new row in the other table, and its detail screen is the one thing the
+   * reader actually wants to see afterwards. A deletion leaves nothing to look
+   * at and passes nothing.
    */
-  onRemoved?: () => void;
+  onRemoved?: (to?: string) => void;
 }
 
 export function AddEntryForm({
@@ -656,7 +675,7 @@ export function AddEntryForm({
 
     setPending(true);
     try {
-      const result = isSettle
+      const { result, movedTo } = isSettle
         ? await submitSettlement()
         : recurrence.enabled
           ? await submitRecurring()
@@ -678,8 +697,11 @@ export function AddEntryForm({
       );
       // A conversion removed the row this drawer was opened on, so it leaves
       // the way a deletion does rather than back onto a detail screen that no
-      // longer has anything to show.
-      const leave = converting ? onRemoved : onSaved;
+      // longer has anything to show — and it says where the entry went, which
+      // is a screen that does.
+      const leave = converting
+        ? onRemoved && (() => onRemoved(movedTo))
+        : onSaved;
       if (leave) leave();
       else router.refresh();
     } finally {
@@ -700,12 +722,23 @@ export function AddEntryForm({
       return { participantId: id, value: (values[id] ?? "0").trim() };
     });
 
-  const submitEntry = () => {
+  const submitEntry = async (): Promise<Outcome> => {
     const input = expensePayload();
-    if (!editing) return createExpenseAction(groupId, input);
-    return converting
-      ? convertSettlementToExpenseAction(groupId, editing.id, input)
-      : updateExpenseAction(groupId, editing.id, input);
+    if (!editing) return { result: await createExpenseAction(groupId, input) };
+    if (!converting) {
+      return { result: await updateExpenseAction(groupId, editing.id, input) };
+    }
+    const result = await convertSettlementToExpenseAction(
+      groupId,
+      editing.id,
+      input,
+    );
+    return {
+      result,
+      movedTo: result.data
+        ? `/groups/${groupId}/expenses/${result.data.expenseId}`
+        : undefined,
+    };
   };
 
   const expensePayload = () => ({
@@ -734,8 +767,8 @@ export function AddEntryForm({
     ],
   });
 
-  const submitRecurring = () =>
-    createRecurringAction(groupId, {
+  const submitRecurring = async (): Promise<Outcome> => ({
+    result: await createRecurringAction(groupId, {
       direction: directionOf(type) ?? "out",
       description: description.trim(),
       notes: "",
@@ -759,9 +792,10 @@ export function AddEntryForm({
         recurrence.frequency === "weekly" ? undefined : recurrence.dayOfMonth,
       startDate: date,
       endDate: recurrence.endDate ?? "",
-    });
+    }),
+  });
 
-  const submitSettlement = () => {
+  const submitSettlement = async (): Promise<Outcome> => {
     const input = {
       fromParticipantId: selectedPair!.fromParticipantId,
       toParticipantId: selectedPair!.toParticipantId,
@@ -772,10 +806,25 @@ export function AddEntryForm({
       paymentMethod: resolvedMethodLabel(),
       notes,
     };
-    if (!editing) return createSettlementAction(groupId, input);
-    return converting
-      ? convertExpenseToSettlementAction(groupId, editing.id, input)
-      : updateSettlementAction(groupId, editing.id, input);
+    if (!editing) {
+      return { result: await createSettlementAction(groupId, input) };
+    }
+    if (!converting) {
+      return {
+        result: await updateSettlementAction(groupId, editing.id, input),
+      };
+    }
+    const result = await convertExpenseToSettlementAction(
+      groupId,
+      editing.id,
+      input,
+    );
+    return {
+      result,
+      movedTo: result.data
+        ? `/groups/${groupId}/settlements/${result.data.settlementId}`
+        : undefined,
+    };
   };
 
   /**

@@ -33,6 +33,7 @@ const {
   upload,
   success,
   push,
+  replace,
   back,
 } = vi.hoisted(() => ({
   createExpense: vi.fn(),
@@ -47,6 +48,7 @@ const {
   upload: vi.fn(),
   success: vi.fn(),
   push: vi.fn(),
+  replace: vi.fn(),
   back: vi.fn(),
 }));
 
@@ -67,7 +69,7 @@ vi.mock("@/components/expenses/upload-receipt", () => ({
   uploadReceipt: upload,
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, back, refresh: vi.fn() }),
+  useRouter: () => ({ push, replace, back, refresh: vi.fn() }),
 }));
 // The confirmation is a toast now, and a toast needs a `<Toaster />` mounted
 // somewhere above it to render. What matters here is that it was raised, and
@@ -117,6 +119,7 @@ function renderForm(
     upload,
     success,
     push,
+    replace,
     back,
   ]) {
     action.mockClear();
@@ -1278,6 +1281,11 @@ describe("editing an entry", () => {
  * everything that leaves the entry where it was. It is wrong for the two things
  * that do not: a deletion and a change of type across the two tables both take
  * the screen behind the drawer with them, and popping onto it lands on a 404.
+ *
+ * Those two leave by replacing rather than pushing, because the URL they are
+ * on edits an entry that has gone and is not a place to come back to. A
+ * conversion knows where the entry went and goes there; a deletion has nowhere
+ * to point at and falls back on the group.
  */
 describe("leaving the drawer", () => {
   const EXPENSE = {
@@ -1299,6 +1307,25 @@ describe("leaving the drawer", () => {
     paymentMethod: "",
   };
 
+  const SETTLEMENT = {
+    kind: "settlement" as const,
+    id: "s1",
+    type: "settle" as const,
+    amountText: "128.40",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "",
+    category: "",
+    notes: "",
+    payerId: "herve",
+    settleTo: "seb",
+    includedIds: [],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "TWINT",
+  };
+
   it("goes back after an edit that left the entry where it was", async () => {
     const user = userEvent.setup();
     renderForm({ editing: EXPENSE });
@@ -1307,9 +1334,10 @@ describe("leaving the drawer", () => {
 
     await vi.waitFor(() => expect(back).toHaveBeenCalled());
     expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it("goes to the group after a deletion", async () => {
+  it("goes to the group after a deletion, which leaves nothing to see", async () => {
     const user = userEvent.setup();
     renderForm({ editing: EXPENSE });
 
@@ -1320,11 +1348,11 @@ describe("leaving the drawer", () => {
       }),
     );
 
-    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/groups/g1"));
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/groups/g1"));
     expect(back).not.toHaveBeenCalled();
   });
 
-  it("goes to the group after a change of type moved the entry", async () => {
+  it("opens the repayment an expense was turned into", async () => {
     const user = userEvent.setup();
     renderForm({ editing: EXPENSE });
 
@@ -1332,7 +1360,28 @@ describe("leaving the drawer", () => {
     await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/groups/g1"));
+    // The id the conversion handed back, not the one in the URL — that one
+    // belongs to the row it has just removed.
+    await vi.waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("/groups/g1/settlements/s2"),
+    );
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it("opens the expense a repayment was turned into", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      "Concert tickets",
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("/groups/g1/expenses/e2"),
+    );
     expect(back).not.toHaveBeenCalled();
   });
 
@@ -1354,11 +1403,11 @@ describe("leaving the drawer", () => {
     await user.click(screen.getByRole("tab", { name: "Settle" }));
     await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
 
     await act(async () => moved({ ok: true, data: { settlementId: "s2" } }));
 
-    expect(push).toHaveBeenCalledWith("/groups/g1");
+    expect(replace).toHaveBeenCalledWith("/groups/g1/settlements/s2");
     expect(back).not.toHaveBeenCalled();
   });
 
@@ -1374,6 +1423,7 @@ describe("leaving the drawer", () => {
     expect(back).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(back).toHaveBeenCalled());
     expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 });
 
