@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { initialOf } from "./initials";
 
 /**
  * The small controls the split sheet is built from.
@@ -41,11 +42,6 @@ const TICK_TONE: Record<PillTone, string> = {
   primary: "text-primary",
   payer: "text-payer",
 };
-
-/** First letter of a name, for the avatar. */
-export function initialOf(name: string): string {
-  return name.trim().charAt(0).toUpperCase();
-}
 
 export function MemberAvatar({
   name,

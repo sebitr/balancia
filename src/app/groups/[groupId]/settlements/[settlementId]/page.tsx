@@ -168,6 +168,7 @@ export default async function SettlementDetailPage({
             minorUnits={settlement.amount.toString()}
             currency={settlement.currency}
             tone="settlement"
+            locale={locale}
           />
           <h1 className="text-[17px] font-medium">{description}</h1>
         </div>
