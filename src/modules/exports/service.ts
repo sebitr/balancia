@@ -73,6 +73,7 @@ export interface GroupExport {
     readonly description: string;
     readonly notes: string | null;
     readonly category: string | null;
+    readonly subcategory: string | null;
     /** Integer minor units, as a string. */
     readonly amount: string;
     readonly currency: string;
@@ -114,6 +115,7 @@ export interface GroupExport {
     readonly id: string;
     readonly description: string;
     readonly category: string | null;
+    readonly subcategory: string | null;
     readonly amount: string;
     readonly currency: string;
     readonly frequency: "weekly" | "monthly" | "yearly";
@@ -186,6 +188,7 @@ export async function buildGroupExport(
       description: expense.description,
       notes: expense.notes,
       category: expense.category,
+      subcategory: expense.subcategory,
       amount: expense.amount.toString(),
       currency: expense.currency,
       convertedAmount: expense.convertedAmount?.toString() ?? null,
@@ -226,6 +229,7 @@ export async function buildGroupExport(
       id: template.id,
       description: template.description,
       category: template.category,
+      subcategory: template.subcategory,
       amount: template.amount.toString(),
       currency: template.currency,
       frequency: template.frequency,
@@ -260,6 +264,7 @@ const EXPENSE_HEADERS = [
   "Date",
   "Description",
   "Category",
+  "Subcategory",
   "Currency",
   "Total",
   "Person",
@@ -308,6 +313,7 @@ function expenseRows(data: GroupExport): (string | number | null)[][] {
         expense.expenseDate,
         expense.description,
         expense.category,
+        expense.subcategory,
         expense.currency,
         major(expense.amount, expense.currency),
         share?.displayName ?? payer?.displayName ?? "Unknown",

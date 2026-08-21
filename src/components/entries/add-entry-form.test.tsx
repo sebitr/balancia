@@ -983,6 +983,86 @@ describe("payment method marks", () => {
 });
 
 describe("the category picker", () => {
+  /** An entry to reopen, so the edit flow can be exercised on a real pair. */
+  const EDITABLE_EXPENSE = {
+    kind: "expense" as const,
+    id: "e1",
+    type: "expense" as const,
+    amountText: "84.60",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "Migros",
+    category: "groceries",
+    subcategory: "",
+    notes: "",
+    payerId: "herve",
+    settleTo: null,
+    includedIds: ["seb", "herve"],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "",
+  };
+
+  /**
+   * Changing the parent clears the child.
+   *
+   * `fuel` is not a subcategory of `restaurants`, and carrying it across would
+   * leave a pair the server refuses and the reader never chose. The form is
+   * not what guarantees this — `expenseInputSchema` is — but it is where a
+   * person would see it go wrong.
+   */
+  it("drops the subcategory when the category changes under it", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const row = () => screen.getByRole("button", { name: /Category/ });
+
+    await user.click(row());
+    await user.click(screen.getByRole("button", { name: /^Transport/ }));
+    await user.click(screen.getByRole("button", { name: "Fuel" }));
+    expect(row()).toHaveTextContent("Transport");
+    expect(row()).toHaveTextContent("Fuel");
+
+    await user.click(row());
+    await user.click(screen.getByRole("button", { name: /^Restaurants/ }));
+    await user.click(screen.getByRole("button", { name: /^Just Restaurants/ }));
+
+    expect(row()).toHaveTextContent("Restaurants");
+    expect(row()).not.toHaveTextContent("Fuel");
+  });
+
+  it("reopens an entry on the pair it was saved with", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      editing: { ...EDITABLE_EXPENSE, category: "home", subcategory: "rent" },
+    });
+
+    const row = screen.getByRole("button", { name: /Category/ });
+    expect(row).toHaveTextContent("Home");
+    expect(row).toHaveTextContent("Rent");
+
+    // And the child can be taken off again without touching the parent. The
+    // sheet always opens at the root, so the pane is one tap away.
+    await user.click(row);
+    await user.click(screen.getByRole("button", { name: /^Home/ }));
+    await user.click(screen.getByRole("button", { name: "Just Home" }));
+    expect(row).toHaveTextContent("Home");
+    expect(row).not.toHaveTextContent("Rent");
+  });
+
+  it("leaves an entry with no subcategory reading as complete", () => {
+    renderForm({
+      editing: { ...EDITABLE_EXPENSE, category: "home", subcategory: "" },
+    });
+
+    const row = screen.getByRole("button", { name: /Category/ });
+    expect(row).toHaveTextContent("Home");
+    // Never a placeholder for the missing half: "no subcategory" would make an
+    // ordinary entry look unfinished.
+    expect(row).not.toHaveTextContent("Not specified");
+  });
+
   /**
    * A dialog focuses its first control when it opens, which in this sheet is
    * the search field — and on a phone that is a keyboard over the shortlist,
@@ -1003,9 +1083,11 @@ describe("the category picker", () => {
     );
 
     // And it is still a search field the moment somebody wants one.
-    await user.type(search, "trav");
+    await user.type(search, "lodg");
     expect(search).toHaveFocus();
-    expect(screen.getByRole("button", { name: "Travel" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Lodging/ }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -1058,6 +1140,7 @@ describe("editing an entry", () => {
     date: "2026-08-12",
     description: "Migros",
     category: "groceries",
+    subcategory: "",
     notes: "Weekly shop",
     payerId: "herve",
     settleTo: null,
@@ -1077,6 +1160,7 @@ describe("editing an entry", () => {
     date: "2026-08-12",
     description: "",
     category: "",
+    subcategory: "",
     notes: "",
     payerId: "herve",
     settleTo: "seb",
@@ -1298,6 +1382,7 @@ describe("leaving the drawer", () => {
     date: "2026-08-12",
     description: "Migros",
     category: "",
+    subcategory: "",
     notes: "",
     payerId: "seb",
     settleTo: null,
@@ -1465,6 +1550,7 @@ describe("picking the people on a repayment", () => {
     date: "2026-08-12",
     description: "",
     category: "",
+    subcategory: "",
     notes: "",
     payerId: "herve",
     settleTo: "seb",

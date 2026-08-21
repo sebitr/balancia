@@ -217,7 +217,8 @@ async function main(): Promise<void> {
   await createExpense(flatAccess, {
     description: "Electricity",
     notes: "",
-    category: "utilities",
+    category: "home",
+    subcategory: "electricity",
     amount: "8400",
     currency: "EUR",
     exchangeRate: "",
@@ -245,7 +246,8 @@ async function main(): Promise<void> {
   await createRecurringExpense(flatAccess, {
     description: "Rent",
     notes: "",
-    category: "housing",
+    category: "home",
+    subcategory: "rent",
     amount: "120000",
     currency: "EUR",
     exchangeRate: "",

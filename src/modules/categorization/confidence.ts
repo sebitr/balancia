@@ -44,6 +44,17 @@ export const THRESHOLDS = {
   /** How far ahead of the runner-up the winner must be to be applied silently. */
   autoAssignMinMargin: 0.12,
   suggestMinScore: 0.55,
+  /**
+   * What a subcategory has to reach before it is asserted at all.
+   *
+   * Set at merchant-and-phrase strength on purpose: `exactMerchant` (0.95),
+   * `strongPhrase` (0.90) and `merchantFamily` (0.85) clear it, and nothing
+   * else in the table does. There is no "suggested subcategory" tier — the
+   * second level is either named by the evidence or left for the user, because
+   * a plausible guess about which of twenty kinds of `home` a bill was is the
+   * one thing worse than no answer.
+   */
+  subcategoryMinScore: 0.82,
 } as const;
 
 /** How many suggestions a caller is ever offered. */

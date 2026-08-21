@@ -63,21 +63,54 @@ anything.
 
 ## The vocabulary
 
-Eighteen codes, in `types.ts`. Three of them are splits rather than additions,
-and the line between each pair is what a rule has to be filed against:
+Fifteen categories and 126 subcategories, in `taxonomy.ts`. That file is the
+single source of truth: the types, the validation, the picker's order, the
+classifier's constraints and the translation keys are all derived from it.
 
-| This         | Not that        | The line                                           |
-| ------------ | --------------- | -------------------------------------------------- |
-| `lodging`    | `travel`        | where the trip slept, not getting there            |
-| `activities` | `entertainment` | tickets, tours and entries, not shows and games    |
-| `household`  | `shopping`      | the upkeep of the home, not a thing someone bought |
-| `household`  | `housing`       | living in the place, not paying for it             |
+An expense is a **(category, subcategory) pair**, and the pair is the identity.
+A subcategory ID is unique only within its parent — `other` appears fourteen
+times, `streaming` and `clothing` twice each, and `activities` is both a
+category and one of `kids_family`'s children. `isValidSubcategory(category,
+subcategory)` is what every server boundary asks, and `null` is always a valid
+answer: an expense filed as `home` with nothing under it is complete, not
+half-entered.
 
-Each split had a reason. A week's Airbnb is four fifths of a trip's total, so
-leaving it in `travel` made every holiday chart one bar about the place people
-slept. A guided walk and a games console were never the same line. And
-supplies, furniture and repairs used to scatter between `shopping` and
-`housing`, which is why neither total meant anything.
+Where the lines fall:
+
+| This         | Not that        | The line                                         |
+| ------------ | --------------- | ------------------------------------------------ |
+| `lodging`    | `transport`     | where the trip slept, not getting there          |
+| `activities` | `entertainment` | tickets, tours and entries, not shows and games  |
+| `home`       | `shopping`      | the upkeep of a home, not a thing someone bought |
+
+A week's Airbnb is four fifths of a trip's total, so leaving it with the
+flights made every holiday chart one bar about the place people slept. A guided
+walk and a games console were never the same line.
+
+### What was retired, and what it became
+
+| Old         | New           | Why                                                |
+| ----------- | ------------- | -------------------------------------------------- |
+| `housing`   | `home`        | Rent, bills and upkeep were one place all along.   |
+| `utilities` | `home`        | Which of the three a plumber's invoice belonged to |
+| `household` | `home`        | was a coin toss that split a flat-share's largest  |
+|             |               | expense across three slices of the spread.         |
+| `family`    | `kids_family` | Renamed only. No row changes meaning.              |
+| `travel`    | `other`       | It named an occasion, not a kind of spending.      |
+
+The distinction the three `home` codes were really drawing moved down a level,
+where it can also be left blank — `home / electricity`, `home / rent`,
+`home / repairs`.
+
+`travel` resolves to `other` rather than being guessed apart. Its rows are
+flights, hotel nights and museum tickets mixed together, and nothing in a row
+says which; picking one would invent a fact and file it under the user's name.
+Its _rules_ did move, to the codes that describe the purchase — the airlines
+are `transport` now.
+
+Nothing else needs to know about the old codes. `normalizeLegacyCategory()` is
+the one place that maps them, and the migration
+(`drizzle/0019_fast_nighthawk.sql`) rewrites the stored rows.
 
 ## Matching priority
 
@@ -191,9 +224,9 @@ supermarket, a DIY shed and an electronics shop. The format is written on the
 receipt, so it decides:
 
 ```
-COOP BAU+HOBBY LAUSANNE  → household
+COOP BAU+HOBBY LAUSANNE  → home
 COOP VITALITY            → health
-MIGROS DO IT GARDEN      → household
+MIGROS DO IT GARDEN      → home
 MIGROS 1234              → groceries
 COOP                     → ask (supermarket? pharmacy? petrol?)
 ```
@@ -381,21 +414,45 @@ A brand that spans categories in a way the text can settle belongs in
 
 ### Add a category
 
-1. Add the ID to `EXPENSE_CATEGORIES` in `types.ts`.
-2. Add labels to `expenses.categories` in **both** `messages/en.json` and
-   `messages/fr.json` — `src/i18n/messages.test.ts` fails on a missing
-   translation.
+1. Add the ID and its subcategories to `EXPENSE_CATEGORIES` in `taxonomy.ts`.
+2. Add labels to `expenses.categories` and `expenses.subcategories` in **both**
+   `messages/en.json` and `messages/fr.json` —
+   `modules/categorization/taxonomy.test.ts` fails on a code with no label or a
+   label with no code, and `src/i18n/messages.test.ts` fails on a key that was
+   never translated.
 3. Add a `CategorySeed` in `seeds.ts`.
 4. Add prototypes in `prototypes.ts` if the semantic layer should know it.
-5. Draw it: `CATEGORY_GLYPHS` in `components/expenses/category-icon.tsx` is
-   exhaustive over the type, so a code with no glyph is a compile error rather
-   than a blank space on a row.
+5. Draw it: `CATEGORY_GLYPHS` and `SUBCATEGORY_GLYPHS` in
+   `components/expenses/category-icon.tsx` are exhaustive over the taxonomy, so
+   a code with no glyph is a compile error rather than a blank chip.
 6. If an import source names it, add the label to `SOURCE_CATEGORIES` in
    `modules/imports/categories.ts`.
 
-Existing rows keep their old category string; `loadMappings()` discards
-mappings whose category is no longer in the vocabulary, so a removed category
-cannot come back through an old row.
+Existing rows keep their old category string; `loadMappings()` translates a
+retired code and discards anything else, so a category that was removed
+outright cannot come back through an old row.
+
+### Add a subcategory rule
+
+`SUBCATEGORY_SEEDS` at the foot of `seeds.ts`, keyed by the parent category.
+Merchants and phrases only — there is deliberately no weak-keyword tier, and
+`THRESHOLDS.subcategoryMinScore` is set so that only merchant- or
+phrase-strength evidence can fill the field.
+
+The rule to hold to: a subcategory is asserted **only when something named it
+outright**. Being confident a purchase is `home` says nothing about which of
+its twenty children it is, and a plausible-looking guess filed under the user's
+name is worse than the blank it replaced. Partial coverage is the expected
+state — most categories name a handful of their children and no more.
+
+### Regrouping a picker pane
+
+`SUBCATEGORY_GROUPS` in `taxonomy.ts`, with labels under
+`expenses.categoryGroups`. Only `home` has any: twenty subcategories in one
+flat run is a wall, and its four shelves are deliberately the shape of the
+three codes that merged into it, so someone who filed rent under Housing for
+two years still finds their footing. These are presentation only — never
+stored, never part of the pair.
 
 ### Add a language
 

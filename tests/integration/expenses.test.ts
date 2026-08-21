@@ -8,6 +8,7 @@ import {
   createExpense,
   deleteExpense,
   listExpenses,
+  updateExpense,
 } from "@/modules/expenses/service";
 import { createSettlement } from "@/modules/settlements/service";
 import { loadGroupBalances } from "@/modules/balances/service";
@@ -493,5 +494,105 @@ describe("paging a long list", () => {
     `);
 
     expect(await pageThrough(group.groupId, 1)).toHaveLength(2);
+  });
+});
+
+describe("the category and subcategory pair", () => {
+  /**
+   * The column is plain nullable text, so the guarantee that a pair is
+   * coherent is the service layer's, not the database's. These check it holds
+   * where it actually matters: on the way in, and on the way back out.
+   */
+  const base = (group: Awaited<ReturnType<typeof createTestGroup>>) => ({
+    description: "Electricity August",
+    notes: "",
+    amount: "8700",
+    currency: "EUR",
+    exchangeRate: "",
+    expenseDate: isoToday(),
+    payers: [{ participantId: group.ownerParticipantId, amount: "8700" }],
+    splitMethod: "equal" as const,
+    splitEntries: [{ participantId: group.ownerParticipantId }],
+  });
+
+  it("stores both halves, and hands them back", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    const expenseId = await createExpense(group.access, {
+      ...base(group),
+      category: "home",
+      subcategory: "electricity",
+    });
+
+    const [row] = await getDb()
+      .select({
+        category: expenses.category,
+        subcategory: expenses.subcategory,
+      })
+      .from(expenses)
+      .where(eq(expenses.id, expenseId));
+
+    // Stable IDs, never the translated labels a French reader would see.
+    expect(row).toEqual({ category: "home", subcategory: "electricity" });
+  });
+
+  it("accepts a category with no subcategory at all", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    const expenseId = await createExpense(group.access, {
+      ...base(group),
+      category: "home",
+    });
+
+    const [row] = await getDb()
+      .select({ subcategory: expenses.subcategory })
+      .from(expenses)
+      .where(eq(expenses.id, expenseId));
+
+    // Complete, not half-entered.
+    expect(row.subcategory).toBeNull();
+  });
+
+  it("refuses a subcategory that belongs to another category", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    await expect(
+      createExpense(group.access, {
+        ...base(group),
+        category: "restaurants",
+        subcategory: "fuel",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("clears the subcategory when an edit changes the category", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    const expenseId = await createExpense(group.access, {
+      ...base(group),
+      category: "transport",
+      subcategory: "fuel",
+    });
+
+    // The picker clears the child before it ever reaches here; this is the
+    // same entry saved again under a different parent.
+    await updateExpense(group.access, expenseId, {
+      ...base(group),
+      category: "restaurants",
+    });
+
+    const [row] = await getDb()
+      .select({
+        category: expenses.category,
+        subcategory: expenses.subcategory,
+      })
+      .from(expenses)
+      .where(eq(expenses.id, expenseId));
+
+    expect(row).toEqual({ category: "restaurants", subcategory: null });
   });
 });

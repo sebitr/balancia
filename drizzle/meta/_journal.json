@@ -134,6 +134,13 @@
       "when": 1787161072333,
       "tag": "0018_secret_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787346663041,
+      "tag": "0019_fast_nighthawk",
+      "breakpoints": true
     }
   ]
 }

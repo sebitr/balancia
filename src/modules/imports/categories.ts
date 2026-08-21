@@ -2,7 +2,10 @@ import {
   FALLBACK_CATEGORY,
   classifyTransactionSync,
   isExpenseCategory,
+  isValidSubcategory,
+  normalizeLegacyCategory,
   type ExpenseCategory,
+  type ExpenseSubcategory,
   type LearnedMerchantMapping,
 } from "@/modules/categorization";
 import type { StagedExpense } from "./types";
@@ -31,6 +34,12 @@ import type { StagedExpense } from "./types";
  *  4. **The label, kept as it was.** Unrecognised is not the same as absent,
  *     and throwing the source's own word away would lose the only thing the
  *     row said about itself.
+ *
+ * A source leaf that is precise enough carries a subcategory across as well.
+ * Splitwise's "Electricity" is not merely `home`, it is `home / electricity`,
+ * and dropping the second half would throw away something the file actually
+ * said. Its vaguer leaves map to the category alone — "Services" is upkeep of
+ * some kind, and which kind is exactly what the row does not say.
  *
  * Nothing here writes a learned mapping. An imported label is somebody else's
  * classification of a merchant this group may never have chosen a category
@@ -64,82 +73,96 @@ function normalizeLabel(value: string): string {
  *    bank charge, but it is nearer that than any other code, and the
  *    alternative is a "Taxes" string that no rule and no icon ever reaches.
  */
-const SOURCE_CATEGORIES: Readonly<Record<string, ExpenseCategory>> = {
+/** A category, and the subcategory the source was precise enough to imply. */
+export interface CategoryAssignment {
+  readonly category: ExpenseCategory;
+  readonly subcategory: ExpenseSubcategory | null;
+}
+
+/** Spelt as a tuple in the tables below, for one line per label. */
+type Assignment =
+  ExpenseCategory | readonly [ExpenseCategory, ExpenseSubcategory];
+
+const SOURCE_CATEGORIES: Readonly<Record<string, Assignment>> = {
   // Food and drink
-  groceries: "groceries",
-  courses: "groceries",
-  "dining out": "restaurants",
-  restaurant: "restaurants",
-  "sortie au restaurant": "restaurants",
-  liquor: "restaurants",
-  alcool: "restaurants",
+  groceries: ["groceries", "supermarket"],
+  courses: ["groceries", "supermarket"],
+  "dining out": ["restaurants", "restaurant"],
+  restaurant: ["restaurants", "restaurant"],
+  "sortie au restaurant": ["restaurants", "restaurant"],
+  liquor: ["restaurants", "bar"],
+  alcool: ["restaurants", "bar"],
 
   // Entertainment
-  games: "entertainment",
-  jeux: "entertainment",
-  movies: "entertainment",
-  films: "entertainment",
-  music: "entertainment",
-  musique: "entertainment",
-  sports: "activities",
+  games: ["entertainment", "games"],
+  jeux: ["entertainment", "games"],
+  movies: ["entertainment", "cinema"],
+  films: ["entertainment", "cinema"],
+  music: ["entertainment", "music"],
+  musique: ["entertainment", "music"],
+  sports: ["activities", "sports"],
 
   // Home
-  rent: "housing",
-  loyer: "housing",
-  mortgage: "housing",
-  "pret immobilier": "housing",
-  furniture: "household",
-  meubles: "household",
-  "household supplies": "household",
-  "fournitures menageres": "household",
-  maintenance: "household",
-  entretien: "household",
-  services: "household",
-  electronics: "shopping",
-  electronique: "shopping",
+  rent: ["home", "rent"],
+  loyer: ["home", "rent"],
+  mortgage: ["home", "mortgage"],
+  "pret immobilier": ["home", "mortgage"],
+  furniture: ["home", "furniture"],
+  meubles: ["home", "furniture"],
+  "household supplies": ["home", "household_supplies"],
+  "fournitures menageres": ["home", "household_supplies"],
+  maintenance: ["home", "maintenance"],
+  entretien: ["home", "maintenance"],
+  // "Services" is upkeep of an unstated kind — a gardener, a plumber, a
+  // cleaner. The category is safe; naming one of them would not be.
+  services: "home",
+  electronics: ["shopping", "electronics"],
+  electronique: ["shopping", "electronics"],
   pets: "pets",
   animaux: "pets",
 
   // Life
-  childcare: "family",
-  "garde d enfants": "family",
-  education: "family",
-  clothing: "shopping",
-  vetements: "shopping",
-  gifts: "gifts",
-  cadeaux: "gifts",
+  childcare: ["kids_family", "childcare"],
+  "garde d enfants": ["kids_family", "childcare"],
+  education: ["kids_family", "school"],
+  clothing: ["shopping", "clothing"],
+  vetements: ["shopping", "clothing"],
+  gifts: ["gifts", "gifts"],
+  cadeaux: ["gifts", "gifts"],
   "medical expenses": "health",
   "frais medicaux": "health",
-  taxes: "fees",
-  impots: "fees",
+  taxes: ["fees", "taxes"],
+  impots: ["fees", "taxes"],
 
   // Transportation
-  bicycle: "transport",
-  velo: "transport",
-  "bus train": "transport",
+  bicycle: ["transport", "bike_scooter"],
+  velo: ["transport", "bike_scooter"],
+  "bus train": ["transport", "public_transport"],
+  // "Car" is fuel, servicing, a hire or a toll — the row does not say which.
   car: "transport",
   voiture: "transport",
-  "gas fuel": "transport",
-  "essence carburant": "transport",
-  parking: "transport",
-  taxi: "transport",
-  plane: "travel",
-  avion: "travel",
-  hotel: "lodging",
+  "gas fuel": ["transport", "fuel"],
+  "essence carburant": ["transport", "fuel"],
+  parking: ["transport", "parking"],
+  taxi: ["transport", "taxi_ride_hailing"],
+  plane: ["transport", "flights"],
+  avion: ["transport", "flights"],
+  hotel: ["lodging", "hotel"],
 
-  // Utilities
-  electricity: "utilities",
-  electricite: "utilities",
-  "heat gas": "utilities",
-  "chauffage gaz": "utilities",
-  "tv phone internet": "utilities",
-  "tv telephone internet": "utilities",
-  trash: "utilities",
-  poubelles: "utilities",
-  water: "utilities",
-  eau: "utilities",
-  cleaning: "household",
-  nettoyage: "household",
+  // Utilities — all of them `home` now, and each precise about which bill.
+  electricity: ["home", "electricity"],
+  electricite: ["home", "electricity"],
+  "heat gas": ["home", "heating"],
+  "chauffage gaz": ["home", "heating"],
+  "tv phone internet": ["home", "internet"],
+  "tv telephone internet": ["home", "internet"],
+  // Refuse collection is a charge on the home with no bill of its own here.
+  trash: "home",
+  poubelles: "home",
+  water: ["home", "water"],
+  eau: ["home", "water"],
+  cleaning: ["home", "cleaning_service"],
+  nettoyage: ["home", "cleaning_service"],
 };
 
 /**
@@ -157,10 +180,10 @@ const COARSE_CATEGORIES: Readonly<Record<string, ExpenseCategory>> = {
   transports: "transport",
   entertainment: "entertainment",
   divertissement: "entertainment",
-  utilities: "utilities",
-  "services publics": "utilities",
-  home: "household",
-  maison: "household",
+  utilities: "home",
+  "services publics": "home",
+  home: "home",
+  maison: "home",
 };
 
 /**
@@ -197,11 +220,15 @@ const UNINFORMATIVE_LABELS: ReadonlySet<string> = new Set([
  * Labels come out of a file, and a plain `table[label]` answers for
  * `constructor` and `toString` as well — with a function, not a category.
  */
-function lookup(
-  table: Readonly<Record<string, ExpenseCategory>>,
-  key: string,
-): ExpenseCategory | null {
+function lookup<T>(table: Readonly<Record<string, T>>, key: string): T | null {
   return Object.hasOwn(table, key) ? table[key] : null;
+}
+
+/** Widens a table entry into the pair the rest of the file passes around. */
+function assign(entry: Assignment): CategoryAssignment {
+  return typeof entry === "string"
+    ? { category: entry, subcategory: null }
+    : { category: entry[0], subcategory: entry[1] };
 }
 
 /**
@@ -213,14 +240,19 @@ function lookup(
  */
 export function sourceCategory(
   label: string | null | undefined,
-): ExpenseCategory | null {
+): CategoryAssignment | null {
   if (!label) return null;
   // Already one of our codes, spelled exactly as we spell it: it came from a
   // Balancia export, so it is a decision this app already made rather than a
   // label to interpret. Checked before anything else — a restore that let the
   // classifier re-read the description could hand back a different category
   // than the one it was given.
-  if (isExpenseCategory(label)) return label;
+  if (isExpenseCategory(label)) return { category: label, subcategory: null };
+  // A Balancia export written before the taxonomy changed still says
+  // `housing` or `family`. It is our own code, just an old one, so it is
+  // translated rather than read as somebody else's label.
+  const legacy = normalizeLegacyCategory(label);
+  if (legacy) return { category: legacy, subcategory: null };
   const normalized = normalizeLabel(label);
   if (normalized === "" || UNINFORMATIVE_LABELS.has(normalized)) return null;
   // "Entertainment" and "Utilities" are group names in Splitwise's tree *and*
@@ -228,22 +260,47 @@ export function sourceCategory(
   // group reading wins: they wait behind the description, with the rest of the
   // groups, rather than passing through as decided.
   if (lookup(COARSE_CATEGORIES, normalized)) return null;
-  if (isExpenseCategory(normalized)) return normalized;
-  return lookup(SOURCE_CATEGORIES, normalized);
+  // The leaf table is consulted before the "it normalizes to one of our codes"
+  // reading, because it is strictly more precise about the same answer.
+  // Splitwise's "Groceries" and ours are the same category either way — but
+  // its leaf also says *supermarket*, and taking the shortcut would throw that
+  // away for the three labels whose spelling happens to collide with a code.
+  const entry = lookup(SOURCE_CATEGORIES, normalized);
+  if (entry !== null) return assign(entry);
+  if (isExpenseCategory(normalized)) {
+    return { category: normalized, subcategory: null };
+  }
+  return null;
 }
 
 /**
- * What to store in `expenses.category` for an imported row.
+ * What to store in `category` and `subcategory` for an imported row.
  *
  * Returns a canonical code where one can be established, the source's own
- * label where it cannot, and null where there was nothing to go on.
+ * label where it cannot, and null where there was nothing to go on. A free
+ * text label never carries a subcategory — nothing can legitimately sit under
+ * something that is not a category.
  */
 export function categorizeImportedExpense(
   staged: StagedExpense,
   options: { mappings?: readonly LearnedMerchantMapping[] } = {},
-): string | null {
+): { category: string | null; subcategory: string | null } {
   const fromSource = sourceCategory(staged.category);
-  if (fromSource) return fromSource;
+  if (fromSource) {
+    // A Balancia backup carries the pair the user actually chose. It wins over
+    // whatever the label table would have inferred — restoring your own export
+    // must give you back your own answer, not a fresh reading of it. Anything
+    // that does not belong under the resolved category is dropped: a backup
+    // written before `housing` became `home` may well name a child that has no
+    // meaning under the code it migrated to.
+    if (isValidSubcategory(fromSource.category, staged.subcategory)) {
+      return {
+        category: fromSource.category,
+        subcategory: staged.subcategory || fromSource.subcategory,
+      };
+    }
+    return fromSource;
+  }
 
   const classified = classifyTransactionSync(
     {
@@ -256,13 +313,26 @@ export function categorizeImportedExpense(
     { mappings: options.mappings },
   );
   if (classified.decision === "auto_assigned" && classified.category) {
-    return classified.category;
+    // The subcategory rides in on the same rule that named the category, and
+    // only when it is one this category allows.
+    const subcategory = isValidSubcategory(
+      classified.category,
+      classified.subcategory,
+    )
+      ? (classified.subcategory ?? null)
+      : null;
+    return { category: classified.category, subcategory };
   }
 
   const label = staged.category?.trim();
-  if (!label) return null;
+  if (!label) return { category: null, subcategory: null };
 
   const normalized = normalizeLabel(label);
-  if (UNINFORMATIVE_LABELS.has(normalized)) return null;
-  return lookup(COARSE_CATEGORIES, normalized) ?? label;
+  if (UNINFORMATIVE_LABELS.has(normalized)) {
+    return { category: null, subcategory: null };
+  }
+  return {
+    category: lookup(COARSE_CATEGORIES, normalized) ?? label,
+    subcategory: null,
+  };
 }

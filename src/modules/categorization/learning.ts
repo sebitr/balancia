@@ -2,6 +2,7 @@ import { SIGNAL_WEIGHTS, type Signal } from "./confidence";
 import { merchantKey } from "./normalize";
 import type {
   ExpenseCategory,
+  ExpenseSubcategory,
   LearnedMerchantMapping,
   MappingScope,
   TransactionType,
@@ -68,6 +69,8 @@ export function selectMapping(
 
 export interface LearnedEvidence {
   readonly category: ExpenseCategory;
+  /** The subcategory taught with it, when there was one. */
+  readonly subcategory: ExpenseSubcategory | null;
   readonly transactionType: TransactionType | null;
   readonly signal: Signal;
 }
@@ -82,6 +85,7 @@ export function learnedEvidence(
 
   return {
     category: mapping.category,
+    subcategory: mapping.subcategory ?? null,
     transactionType: mapping.transactionType ?? null,
     signal: {
       group: "learned",

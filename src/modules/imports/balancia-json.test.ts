@@ -90,6 +90,10 @@ describe("Balancia backup adapter", () => {
   });
 
   it("keeps the category code the export wrote", () => {
+    // The adapter is a reader, not a translator: it hands back exactly what
+    // the file said, retired codes included. Migrating them is
+    // `categorizeImportedExpense`'s job, one layer up — see
+    // `imports/categories.test.ts`.
     expect(expenses.map((expense) => expense.category)).toEqual([
       "lodging",
       "transport",

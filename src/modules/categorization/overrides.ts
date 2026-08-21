@@ -75,9 +75,9 @@ const STORE_FORMATS: readonly StoreFormat[] = [
   {
     brand: tokenize("coop"),
     formats: [
-      { marker: tokenize("bau hobby"), category: "household" },
-      { marker: tokenize("bau und hobby"), category: "household" },
-      { marker: tokenize("brico"), category: "household" },
+      { marker: tokenize("bau hobby"), category: "home" },
+      { marker: tokenize("bau und hobby"), category: "home" },
+      { marker: tokenize("brico"), category: "home" },
       { marker: tokenize("vitality"), category: "health" },
       { marker: tokenize("restaurant"), category: "restaurants" },
       { marker: tokenize("city"), category: "shopping" },
@@ -86,13 +86,13 @@ const STORE_FORMATS: readonly StoreFormat[] = [
   {
     brand: tokenize("migros"),
     formats: [
-      { marker: tokenize("do it"), category: "household" },
-      { marker: tokenize("micasa"), category: "household" },
+      { marker: tokenize("do it"), category: "home" },
+      { marker: tokenize("micasa"), category: "home" },
       { marker: tokenize("restaurant"), category: "restaurants" },
       { marker: tokenize("melectronics"), category: "shopping" },
       { marker: tokenize("sportxx"), category: "shopping" },
-      { marker: tokenize("klubschule"), category: "family" },
-      { marker: tokenize("ecole club"), category: "family" },
+      { marker: tokenize("klubschule"), category: "kids_family" },
+      { marker: tokenize("ecole club"), category: "kids_family" },
     ],
   },
 ];

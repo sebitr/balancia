@@ -27,42 +27,92 @@ const expense = (overrides: Partial<StagedExpense> = {}): StagedExpense => ({
 });
 
 describe("the source's own vocabulary", () => {
-  const cases: [string, string][] = [
-    ["Groceries", "groceries"],
-    ["Dining out", "restaurants"],
-    ["Liquor", "restaurants"],
-    ["Household supplies", "household"],
-    ["Furniture", "household"],
-    ["Rent", "housing"],
-    ["Mortgage", "housing"],
-    ["Hotel", "lodging"],
-    ["Plane", "travel"],
-    ["Bus/train", "transport"],
-    ["Gas/fuel", "transport"],
-    ["TV/Phone/Internet", "utilities"],
-    ["Medical expenses", "health"],
-    ["Childcare", "family"],
-    ["Sports", "activities"],
-    ["Taxes", "fees"],
+  /**
+   * A leaf that is precise enough carries both levels. Splitwise's
+   * "Electricity" is not merely `home`, it is `home / electricity`, and
+   * dropping the second half would throw away something the file said.
+   */
+  const cases: [string, string, string | null][] = [
+    ["Groceries", "groceries", "supermarket"],
+    ["Dining out", "restaurants", "restaurant"],
+    ["Liquor", "restaurants", "bar"],
+    ["Household supplies", "home", "household_supplies"],
+    ["Furniture", "home", "furniture"],
+    ["Rent", "home", "rent"],
+    ["Mortgage", "home", "mortgage"],
+    ["Hotel", "lodging", "hotel"],
+    ["Plane", "transport", "flights"],
+    ["Bus/train", "transport", "public_transport"],
+    ["Gas/fuel", "transport", "fuel"],
+    ["TV/Phone/Internet", "home", "internet"],
+    ["Sports", "activities", "sports"],
+    ["Childcare", "kids_family", "childcare"],
+    ["Taxes", "fees", "taxes"],
+    // Vague leaves map to the category alone. "Medical expenses" could be a
+    // dentist, a prescription or a premium, and the row does not say which.
+    ["Medical expenses", "health", null],
+    ["Services", "home", null],
+    ["Car", "transport", null],
   ];
 
-  for (const [label, expected] of cases) {
-    it(`reads "${label}" as ${expected}`, () => {
-      expect(sourceCategory(label)).toBe(expected);
+  for (const [label, category, subcategory] of cases) {
+    it(`reads "${label}" as ${category}${subcategory ? ` / ${subcategory}` : ""}`, () => {
+      expect(sourceCategory(label)).toEqual({ category, subcategory });
     });
   }
 
   it("reads a localised export the same way", () => {
-    expect(sourceCategory("Courses")).toBe("groceries");
-    expect(sourceCategory("Fournitures ménagères")).toBe("household");
-    expect(sourceCategory("Frais médicaux")).toBe("health");
-    expect(sourceCategory("Essence/carburant")).toBe("transport");
-    expect(sourceCategory("Électricité")).toBe("utilities");
+    expect(sourceCategory("Courses")).toEqual({
+      category: "groceries",
+      subcategory: "supermarket",
+    });
+    expect(sourceCategory("Fournitures ménagères")).toEqual({
+      category: "home",
+      subcategory: "household_supplies",
+    });
+    expect(sourceCategory("Frais médicaux")).toEqual({
+      category: "health",
+      subcategory: null,
+    });
+    expect(sourceCategory("Essence/carburant")).toEqual({
+      category: "transport",
+      subcategory: "fuel",
+    });
+    expect(sourceCategory("Électricité")).toEqual({
+      category: "home",
+      subcategory: "electricity",
+    });
   });
 
   it("lets one of our own codes through unchanged", () => {
-    expect(sourceCategory("groceries")).toBe("groceries");
-    expect(sourceCategory("Lodging")).toBe("lodging");
+    expect(sourceCategory("groceries")).toEqual({
+      category: "groceries",
+      subcategory: null,
+    });
+    expect(sourceCategory("Lodging")).toEqual({
+      category: "lodging",
+      subcategory: null,
+    });
+  });
+
+  it("translates a code an older Balancia wrote", () => {
+    // A backup taken before the merge still says `housing`. It is our own
+    // code, just a retired one, so it is migrated rather than read as
+    // somebody else's label — the same mapping the SQL migration applies.
+    for (const legacy of ["housing", "utilities", "household"]) {
+      expect(sourceCategory(legacy)).toEqual({
+        category: "home",
+        subcategory: null,
+      });
+    }
+    expect(sourceCategory("family")).toEqual({
+      category: "kids_family",
+      subcategory: null,
+    });
+    expect(sourceCategory("travel")).toEqual({
+      category: "other",
+      subcategory: null,
+    });
   });
 
   it("keeps a code that a Splitwise group name also spells", () => {
@@ -70,8 +120,10 @@ describe("the source's own vocabulary", () => {
     // worth less than a description. Written exactly as we write a code, it
     // came out of a Balancia export instead, and a restore must hand back the
     // category it was given.
-    expect(sourceCategory("entertainment")).toBe("entertainment");
-    expect(sourceCategory("utilities")).toBe("utilities");
+    expect(sourceCategory("entertainment")).toEqual({
+      category: "entertainment",
+      subcategory: null,
+    });
     // Splitwise's own capitalisation is still read as the group it is.
     expect(sourceCategory("Entertainment")).toBeNull();
     expect(sourceCategory("Utilities")).toBeNull();
@@ -100,24 +152,27 @@ describe("categorizing a row", () => {
   it("prefers the source's label to its own reading of the text", () => {
     // Splitwise says groceries; the word "dinner" says restaurants. The
     // person who filed it at the time is the better witness.
-    const category = categorizeImportedExpense(
-      expense({ description: "Dinner shopping", category: "Groceries" }),
-    );
-    expect(category).toBe("groceries");
+    expect(
+      categorizeImportedExpense(
+        expense({ description: "Dinner shopping", category: "Groceries" }),
+      ),
+    ).toEqual({ category: "groceries", subcategory: "supermarket" });
   });
 
   it("classifies from the description when the label says nothing", () => {
+    // The classifier names the subcategory here too, because the merchant
+    // does: Migros is a supermarket beyond argument.
     expect(
       categorizeImportedExpense(
         expense({ description: "MIGROS 1234", category: "General" }),
       ),
-    ).toBe("groceries");
+    ).toEqual({ category: "groceries", subcategory: "supermarket" });
 
     expect(
       categorizeImportedExpense(
         expense({ description: "Nuit d'hôtel à Berne", category: null }),
       ),
-    ).toBe("lodging");
+    ).toEqual({ category: "lodging", subcategory: "hotel" });
   });
 
   it("uses what the group already taught the classifier", () => {
@@ -138,12 +193,13 @@ describe("categorizing a row", () => {
     // No rule in the world knows this name.
     expect(
       categorizeImportedExpense(expense({ description: "Atelier Ramuz" })),
-    ).toBeNull();
+    ).toEqual({ category: null, subcategory: null });
+    // The mapping taught a category and no child, so no child comes back.
     expect(
       categorizeImportedExpense(expense({ description: "Atelier Ramuz" }), {
         mappings,
       }),
-    ).toBe("restaurants");
+    ).toEqual({ category: "restaurants", subcategory: null });
   });
 
   it("does not decide what the form would have asked about", () => {
@@ -151,7 +207,7 @@ describe("categorizing a row", () => {
     // exactly the wrong place to pick one.
     expect(
       categorizeImportedExpense(expense({ description: "Dinner at Migros" })),
-    ).toBeNull();
+    ).toEqual({ category: null, subcategory: null });
   });
 
   it("keeps an unrecognised label rather than losing it", () => {
@@ -159,13 +215,14 @@ describe("categorizing a row", () => {
       categorizeImportedExpense(
         expense({ description: "Weekend", category: "Chalet fund" }),
       ),
-    ).toBe("Chalet fund");
+      // Free text is not a category, so nothing can sit under it.
+    ).toEqual({ category: "Chalet fund", subcategory: null });
   });
 
   it("leaves a row with nothing to go on uncategorised", () => {
     expect(
       categorizeImportedExpense(expense({ description: "Stuff" })),
-    ).toBeNull();
+    ).toEqual({ category: null, subcategory: null });
   });
 
   it("never files income as spending", () => {
@@ -174,7 +231,7 @@ describe("categorizing a row", () => {
       categorizeImportedExpense(
         expense({ description: "Remboursement carte MIGROS" }),
       ),
-    ).toBeNull();
+    ).toEqual({ category: null, subcategory: null });
   });
 });
 
@@ -186,13 +243,15 @@ describe("a group label rather than a leaf", () => {
       categorizeImportedExpense(
         expense({ description: "Hotel Bellevue", category: "Transportation" }),
       ),
-    ).toBe("lodging");
+      // The category is beyond doubt; which kind of lodging is not, and no
+      // rule claims to know from a hotel's name alone.
+    ).toEqual({ category: "lodging", subcategory: null });
 
     expect(
       categorizeImportedExpense(
         expense({ description: "Museum tickets", category: "Entertainment" }),
       ),
-    ).toBe("activities");
+    ).toEqual({ category: "activities", subcategory: null });
   });
 
   it("falls back to it when the description says nothing", () => {
@@ -200,7 +259,7 @@ describe("a group label rather than a leaf", () => {
       categorizeImportedExpense(
         expense({ description: "Getting around", category: "Transportation" }),
       ),
-    ).toBe("transport");
+    ).toEqual({ category: "transport", subcategory: null });
   });
 
   it("leaves a group whose leaves scatter as it found it", () => {
@@ -210,13 +269,18 @@ describe("a group label rather than a leaf", () => {
       categorizeImportedExpense(
         expense({ description: "Bits and pieces", category: "Food and drink" }),
       ),
-    ).toBe("Food and drink");
+    ).toEqual({ category: "Food and drink", subcategory: null });
   });
 });
 
 describe("a real export, end to end", () => {
   /** Parsed the way the importer parses it: adapter first, then categorizer. */
-  const categorize = (fixture: string): Record<string, string | null> => {
+  const categorize = (
+    fixture: string,
+  ): Record<
+    string,
+    { category: string | null; subcategory: string | null }
+  > => {
     const content = readFileSync(
       path.join(process.cwd(), "tests/fixtures/splitwise", fixture),
       "utf8",
@@ -232,25 +296,87 @@ describe("a real export, end to end", () => {
     );
   };
 
+  const pair = (
+    category: string | null,
+    subcategory: string | null = null,
+  ) => ({
+    category,
+    subcategory,
+  });
+
   it("categorizes an English export", () => {
     expect(categorize("trip-group.csv")).toEqual({
       // "Food and drink" covers both, so the description is what decides.
-      Groceries: "groceries",
-      Dinner: "restaurants",
-      Taxi: "transport",
-      "Museum tickets": "activities",
+      // These two come from the description rather than a leaf, and a
+      // description that says only "Groceries" names no subcategory. "Taxi"
+      // does — the word is the rule.
+      Groceries: pair("groceries"),
+      Dinner: pair("restaurants"),
+      Taxi: pair("transport", "taxi_ride_hailing"),
+      "Museum tickets": pair("activities"),
     });
   });
 
   it("categorizes a French export", () => {
     expect(categorize("groupe-fr.csv")).toEqual({
       // "Entretien" is Splitwise's own word, and Hornbach agrees with it.
-      Hornbach: "household",
-      "Décompte Electricite 25": "utilities",
-      "parapente cadeau célia": "gifts",
+      Hornbach: pair("home", "maintenance"),
+      "Décompte Electricite 25": pair("home", "electricity"),
+      "parapente cadeau célia": pair("gifts"),
       // "Général" says nothing, and neither of these descriptions says more.
-      Revolu: null,
-      "Barre de son": null,
+      Revolu: pair(null),
+      "Barre de son": pair(null),
     });
+  });
+});
+
+describe("a backup written by an older Balancia", () => {
+  /**
+   * Self-hosted instances upgrade from whatever they were running, and a
+   * backup taken before the merge still names codes that no longer exist.
+   * Restoring one must not leave a group full of categories the picker cannot
+   * show and no rule will ever match again.
+   */
+  it("migrates the retired codes it names", () => {
+    expect(categorizeImportedExpense(expense({ category: "travel" }))).toEqual({
+      category: "other",
+      subcategory: null,
+    });
+
+    expect(
+      categorizeImportedExpense(
+        expense({ description: "Loyer août", category: "housing" }),
+      ),
+    ).toEqual({ category: "home", subcategory: null });
+
+    expect(
+      categorizeImportedExpense(
+        expense({ description: "Crèche", category: "family" }),
+      ),
+    ).toEqual({ category: "kids_family", subcategory: null });
+  });
+
+  it("restores a pair the user actually chose", () => {
+    // Their own answer comes back as their own answer, not as a fresh reading
+    // of the description.
+    expect(
+      categorizeImportedExpense(
+        expense({
+          description: "Dinner shopping",
+          category: "transport",
+          subcategory: "fuel",
+        }),
+      ),
+    ).toEqual({ category: "transport", subcategory: "fuel" });
+  });
+
+  it("drops a child that does not survive its parent's migration", () => {
+    // Nothing guarantees a subcategory learned under `housing` means anything
+    // under the code it migrated to.
+    expect(
+      categorizeImportedExpense(
+        expense({ category: "housing", subcategory: "not_a_real_leaf" }),
+      ),
+    ).toEqual({ category: "home", subcategory: null });
   });
 });

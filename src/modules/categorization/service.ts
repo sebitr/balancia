@@ -18,7 +18,10 @@ import { normalizeMerchant } from "./normalize";
 import {
   isExpenseCategory,
   isTransactionType,
+  isValidSubcategory,
+  normalizeLegacyCategory,
   type ExpenseCategory,
+  type ExpenseSubcategory,
   type LearnedMerchantMapping,
   type MappingScope,
   type TransactionType,
@@ -66,6 +69,7 @@ export async function loadMappings(
       rawMerchant: expenseCategoryMappings.rawMerchant,
       normalizedMerchant: expenseCategoryMappings.normalizedMerchant,
       category: expenseCategoryMappings.category,
+      subcategory: expenseCategoryMappings.subcategory,
       transactionType: expenseCategoryMappings.transactionType,
       correctionCount: expenseCategoryMappings.correctionCount,
       conflictCount: expenseCategoryMappings.conflictCount,
@@ -97,6 +101,7 @@ export async function loadGroupMappings(
       rawMerchant: expenseCategoryMappings.rawMerchant,
       normalizedMerchant: expenseCategoryMappings.normalizedMerchant,
       category: expenseCategoryMappings.category,
+      subcategory: expenseCategoryMappings.subcategory,
       transactionType: expenseCategoryMappings.transactionType,
       correctionCount: expenseCategoryMappings.correctionCount,
       conflictCount: expenseCategoryMappings.conflictCount,
@@ -161,9 +166,24 @@ export async function loadFrequentCategories(
     .orderBy(desc(uses), desc(lastUsed))
     .limit(options.limit ?? FREQUENT_SCAN);
 
-  return rows.flatMap((row) =>
-    isExpenseCategory(row.category) ? [row.category] : [],
-  );
+  /**
+   * Retired codes are folded into their replacement rather than skipped, so a
+   * group whose history is mostly `housing` and `utilities` still sees `home`
+   * offered first. That folding can produce the same code twice — both of
+   * those become `home` — and the order is already "most used first", so the
+   * first sighting is the one that keeps its place.
+   */
+  const seen = new Set<ExpenseCategory>();
+  const frequent: ExpenseCategory[] = [];
+  for (const row of rows) {
+    const category = normalizeLegacyCategory(row.category);
+    if (category === null || category === "other" || seen.has(category)) {
+      continue;
+    }
+    seen.add(category);
+    frequent.push(category);
+  }
+  return frequent;
 }
 
 interface MappingRow {
@@ -171,6 +191,7 @@ interface MappingRow {
   rawMerchant: string;
   normalizedMerchant: string;
   category: string;
+  subcategory: string | null;
   transactionType: string | null;
   correctionCount: number;
   conflictCount: number;
@@ -180,16 +201,27 @@ interface MappingRow {
  * A stored row as the classifier wants it, or nothing.
  *
  * A category dropped from the vocabulary must not resurrect through an old
- * row, so unknown values are discarded on read rather than trusted.
+ * row, so unknown values are discarded on read rather than trusted — but a
+ * *retired* one is translated instead of dropped. The migration rewrites these
+ * rows, and this is what covers the instance that has not restarted its worker
+ * yet, or a row written by a replica still running the previous release.
+ *
+ * The subcategory is dropped whenever it does not belong to the category that
+ * came out of that translation: it was learned under a code that no longer
+ * exists, so nothing guarantees it still fits.
  */
 function toMapping(row: MappingRow): LearnedMerchantMapping[] {
-  if (!isExpenseCategory(row.category)) return [];
+  const category = normalizeLegacyCategory(row.category);
+  if (category === null) return [];
   return [
     {
       scope: row.scope,
       rawMerchant: row.rawMerchant,
       normalizedMerchant: row.normalizedMerchant,
-      category: row.category,
+      category,
+      subcategory: isValidSubcategory(category, row.subcategory)
+        ? ((row.subcategory || null) as ExpenseSubcategory | null)
+        : null,
       transactionType: isTransactionType(row.transactionType)
         ? row.transactionType
         : null,
@@ -214,12 +246,24 @@ export async function recordCategoryChoice(
   input: {
     merchant: string;
     category: string | null;
+    subcategory?: string | null;
     transactionType?: TransactionType | null;
   },
   options: { db?: Database } = {},
 ): Promise<void> {
   if (!isExpenseCategory(input.category)) return;
   if (input.category === "other") return;
+
+  /**
+   * The subcategory rides along only when it belongs to the category being
+   * taught. A mismatched pair is dropped rather than refused: the mapping
+   * "Coop means groceries" is worth keeping even if the child that came with
+   * it was stale, and this is a side effect of saving an expense — it must
+   * never be the reason one fails.
+   */
+  const subcategory = isValidSubcategory(input.category, input.subcategory)
+    ? ((input.subcategory || null) as ExpenseSubcategory | null)
+    : null;
 
   const { normalizedMerchant } = normalizeMerchant(input.merchant);
   const key = learningKeyFor(normalizedMerchant);
@@ -235,6 +279,7 @@ export async function recordCategoryChoice(
     key,
     rawMerchant: input.merchant,
     category: input.category,
+    subcategory,
     transactionType: input.transactionType ?? null,
   });
 
@@ -246,6 +291,7 @@ export async function recordCategoryChoice(
       key,
       rawMerchant: input.merchant,
       category: input.category,
+      subcategory,
       transactionType: input.transactionType ?? null,
     });
   }
@@ -260,6 +306,7 @@ async function upsertMapping(
     key: string;
     rawMerchant: string;
     category: ExpenseCategory;
+    subcategory: ExpenseSubcategory | null;
     transactionType: TransactionType | null;
   },
 ): Promise<void> {
@@ -308,6 +355,10 @@ async function upsertMapping(
       .set({
         rawMerchant: plan.rawMerchant,
         category: plan.category,
+        // Tied to the category actually stored: when `planCorrection` keeps
+        // the existing one, the incoming child would be an orphan under it.
+        subcategory:
+          plan.category === input.category ? input.subcategory : null,
         transactionType: input.transactionType,
         correctionCount: plan.correctionCount,
         conflictCount: plan.conflictCount,
@@ -327,6 +378,7 @@ async function upsertMapping(
       rawMerchant: plan.rawMerchant,
       normalizedMerchant: plan.normalizedMerchant,
       category: plan.category,
+      subcategory: plan.category === input.category ? input.subcategory : null,
       transactionType: input.transactionType,
       correctionCount: plan.correctionCount,
       conflictCount: plan.conflictCount,
@@ -350,6 +402,8 @@ async function upsertMapping(
       set: {
         rawMerchant: plan.rawMerchant,
         category: plan.category,
+        subcategory:
+          plan.category === input.category ? input.subcategory : null,
         transactionType: input.transactionType,
         lastUsedAt: now,
         updatedAt: now,

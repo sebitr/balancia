@@ -671,7 +671,7 @@ async function insertImportedExpense(
       groupId,
       description: staged.description,
       notes: staged.notes ?? null,
-      category: categorizeImportedExpense(staged, { mappings }),
+      ...categorizeImportedExpense(staged, { mappings }),
       amount: total,
       currency: staged.currency,
       // Imported rows keep their own currency; a converted group can be

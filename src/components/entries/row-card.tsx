@@ -66,6 +66,7 @@ export function RowButton({
   label,
   value,
   muted = false,
+  iconFilled = false,
   tag,
   className,
   onClick,
@@ -76,6 +77,12 @@ export function RowButton({
   value: React.ReactNode;
   /** A placeholder rather than a value — "Add a category". */
   muted?: boolean;
+  /**
+   * Draw the glyph in the foreground, for a row whose icon changes with the
+   * value it holds. Off by default: most rows keep the same glyph whatever
+   * they say, and a muted one reads as a field marker rather than as content.
+   */
+  iconFilled?: boolean;
   /** Sits between the value and the chevron: "Detected", and nothing else. */
   tag?: React.ReactNode;
   className?: string;
@@ -94,7 +101,10 @@ export function RowButton({
       {Icon && (
         <Icon
           aria-hidden={true}
-          className="size-[18px] shrink-0 text-muted-foreground"
+          className={cn(
+            "size-[18px] shrink-0",
+            iconFilled ? "text-foreground" : "text-muted-foreground",
+          )}
         />
       )}
       <span className="sr-only">{label}</span>

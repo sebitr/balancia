@@ -48,30 +48,47 @@ export const CATEGORY_PROTOTYPES: Readonly<
     "taxi ride",
     "parking",
     "fuel for the car",
+    "flight ticket",
+    "airport transfer",
     "billet de train",
     "transports publics",
     "essence",
     "place de parking",
+    "billet d'avion",
+    "navette pour l'aéroport",
   ],
-  housing: [
+  /**
+   * One place, three former codes: the rent, the bills and the upkeep. The
+   * anchors of all three are kept, because a category is compared against
+   * several sentences that mean it and `home` genuinely means all of these.
+   */
+  home: [
     "monthly rent",
     "mortgage payment",
     "landlord",
     "service charges for the flat",
-    "loyer mensuel",
-    "charges de copropriété",
-    "régie immobilière",
-  ],
-  utilities: [
     "electricity bill",
     "water bill",
     "internet subscription at home",
     "mobile phone bill",
     "heating",
+    "cleaning products for the flat",
+    "a new sofa",
+    "light bulbs and batteries",
+    "the plumber came round",
+    "toilet paper and washing powder",
+    "loyer mensuel",
+    "charges de copropriété",
+    "régie immobilière",
     "facture d'électricité",
     "facture d'eau",
     "abonnement internet",
     "chauffage",
+    "produits d'entretien",
+    "un nouveau canapé",
+    "ampoules et piles",
+    "passage du plombier",
+    "papier toilette et lessive",
   ],
   shopping: [
     "clothes",
@@ -106,16 +123,6 @@ export const CATEGORY_PROTOTYPES: Readonly<
     "spectacle",
     "jeu vidéo",
   ],
-  travel: [
-    "flight ticket",
-    "plane tickets for the holiday",
-    "travel agency booking",
-    "airport transfer",
-    "billet d'avion",
-    "réservation de voyage",
-    "agence de voyage",
-    "navette pour l'aéroport",
-  ],
   lodging: [
     "hotel night",
     "holiday accommodation",
@@ -140,18 +147,6 @@ export const CATEGORY_PROTOTYPES: Readonly<
     "escape game entre amis",
     "entrée au parc d'attractions",
   ],
-  household: [
-    "cleaning products for the flat",
-    "a new sofa",
-    "light bulbs and batteries",
-    "the plumber came round",
-    "toilet paper and washing powder",
-    "produits d'entretien",
-    "un nouveau canapé",
-    "ampoules et piles",
-    "passage du plombier",
-    "papier toilette et lessive",
-  ],
   subscriptions: [
     "monthly subscription",
     "streaming service",
@@ -161,7 +156,7 @@ export const CATEGORY_PROTOTYPES: Readonly<
     "service de streaming",
     "adhésion annuelle",
   ],
-  family: [
+  kids_family: [
     "childcare",
     "nursery fees",
     "babysitter",

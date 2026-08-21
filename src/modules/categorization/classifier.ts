@@ -1,5 +1,6 @@
 import {
   MAX_ALTERNATIVES,
+  SIGNAL_WEIGHTS,
   THRESHOLDS,
   combineSignals,
   describeSignal,
@@ -7,6 +8,7 @@ import {
 } from "./confidence";
 import {
   collectDeterministicSignals,
+  detectSubcategory,
   prepareText,
   type PreparedText,
 } from "./deterministic";
@@ -16,12 +18,14 @@ import {
   detectTransactionType,
   type TransactionTypeDetection,
 } from "./transaction-type";
+import { isValidSubcategory } from "./taxonomy";
 import type {
   ClassificationAlternative,
   ClassificationResult,
   ClassificationSource,
   ClassifyTransactionInput,
   ExpenseCategory,
+  ExpenseSubcategory,
   LearnedMerchantMapping,
 } from "./types";
 
@@ -48,6 +52,10 @@ import type {
  *
  * `alternatives` always excludes the chosen category. When the decision is
  * `suggested`, the UI shows `[category, ...alternatives]` as the shortlist.
+ *
+ * The subcategory is decided afterwards and separately, against the category
+ * that won — see `subcategoryFor`. It is never the reason a category is
+ * chosen, and it is left blank far more often than it is filled.
  */
 
 export interface ClassifyOptions {
@@ -145,6 +153,10 @@ function finish(evaluation: Evaluation): ClassificationResult {
     return {
       transactionType: learned.transactionType ?? detection.type,
       category: learned.category,
+      // A mapping that was taught with a subcategory hands back both halves,
+      // so accepting a remembered `Transport / Fuel` costs no extra tap. A
+      // mapping that only ever knew the category falls back to the rules.
+      ...subcategoryFor(learned.category, prepared, learned.subcategory),
       confidence: round(learned.signal.score),
       decision: "auto_assigned",
       source: "learned_mapping",
@@ -182,6 +194,7 @@ function finish(evaluation: Evaluation): ClassificationResult {
   return {
     ...base,
     category: best.category,
+    ...subcategoryFor(best.category, prepared),
     confidence: round(best.confidence),
     // Money coming *in* is never silently filed as spending, however
     // recognisable the merchant is.
@@ -193,6 +206,41 @@ function finish(evaluation: Evaluation): ClassificationResult {
       ...detection.signals,
       ...best.signals.map((signal) => describeSignal(signal)),
     ],
+  };
+}
+
+/**
+ * The subcategory to report for a settled category, as a spreadable partial.
+ *
+ * A remembered one wins outright: it is a decision somebody made about this
+ * merchant, and re-deriving it from the text could only disagree with them.
+ * Otherwise the rules are consulted, and their answer is kept only if it
+ * clears `subcategoryMinScore` — which is set at merchant-and-phrase strength,
+ * so nothing weaker than "this brand sells exactly this" ever fills the field.
+ *
+ * Returns an empty object rather than `{ subcategory: undefined }` so the
+ * property is genuinely absent from the result, the way it is for every
+ * transaction nobody could be specific about.
+ */
+function subcategoryFor(
+  category: ExpenseCategory,
+  prepared: PreparedText,
+  remembered?: ExpenseSubcategory | null,
+): { subcategory?: ExpenseSubcategory; subcategoryConfidence?: number } {
+  if (remembered && isValidSubcategory(category, remembered)) {
+    return {
+      subcategory: remembered,
+      subcategoryConfidence: SIGNAL_WEIGHTS.learnedGroupMapping,
+    };
+  }
+
+  const detected = detectSubcategory(category, prepared);
+  if (!detected || detected.confidence < THRESHOLDS.subcategoryMinScore) {
+    return {};
+  }
+  return {
+    subcategory: detected.subcategory,
+    subcategoryConfidence: round(detected.confidence),
   };
 }
 

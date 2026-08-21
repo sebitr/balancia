@@ -164,21 +164,182 @@
       "groceries": "Groceries",
       "restaurants": "Restaurants & Drinks",
       "transport": "Transport",
-      "housing": "Housing",
-      "utilities": "Utilities",
+      "home": "Home",
       "shopping": "Shopping",
       "health": "Health",
       "entertainment": "Entertainment",
-      "travel": "Travel",
-      "lodging": "Lodging",
       "activities": "Activities",
-      "household": "Household",
+      "lodging": "Lodging",
       "subscriptions": "Subscriptions",
-      "family": "Family",
+      "kids_family": "Kids & Family",
       "pets": "Pets",
       "gifts": "Gifts & Donations",
       "fees": "Fees",
       "other": "Other"
+    },
+    "subcategories": {
+      "groceries": {
+        "supermarket": "Supermarket",
+        "bakery": "Bakery",
+        "butcher": "Butcher",
+        "market": "Market",
+        "convenience_store": "Convenience store",
+        "drinks": "Drinks",
+        "other": "Other"
+      },
+      "restaurants": {
+        "restaurant": "Restaurant",
+        "cafe": "Café",
+        "bar": "Bar",
+        "fast_food": "Fast food",
+        "takeaway": "Takeaway",
+        "food_delivery": "Food delivery",
+        "other": "Other"
+      },
+      "transport": {
+        "public_transport": "Public transport",
+        "taxi_ride_hailing": "Taxi & ride-hailing",
+        "fuel": "Fuel",
+        "parking": "Parking",
+        "tolls": "Tolls",
+        "train": "Train",
+        "flights": "Flights",
+        "ferry": "Ferry",
+        "car_rental": "Car rental",
+        "bike_scooter": "Bike & scooter",
+        "other": "Other"
+      },
+      "home": {
+        "rent": "Rent",
+        "mortgage": "Mortgage",
+        "home_insurance": "Home insurance",
+        "property_tax": "Property tax",
+        "electricity": "Electricity",
+        "gas": "Gas",
+        "water": "Water",
+        "internet": "Internet",
+        "mobile_phone": "Mobile phone",
+        "heating": "Heating",
+        "repairs": "Repairs",
+        "maintenance": "Maintenance",
+        "renovation": "Renovation",
+        "cleaning_service": "Cleaning service",
+        "gardening": "Gardening",
+        "furniture": "Furniture",
+        "appliances": "Appliances",
+        "cleaning_supplies": "Cleaning supplies",
+        "household_supplies": "Household supplies",
+        "other": "Other"
+      },
+      "shopping": {
+        "clothing": "Clothing",
+        "shoes": "Shoes",
+        "electronics": "Electronics",
+        "accessories": "Accessories",
+        "personal_care": "Personal care",
+        "beauty": "Beauty",
+        "books": "Books",
+        "hobbies": "Hobbies",
+        "other": "Other"
+      },
+      "health": {
+        "doctor": "Doctor",
+        "dentist": "Dentist",
+        "pharmacy": "Pharmacy",
+        "hospital": "Hospital",
+        "therapy": "Therapy",
+        "glasses_contacts": "Glasses & contacts",
+        "health_insurance": "Health insurance",
+        "fitness": "Fitness",
+        "other": "Other"
+      },
+      "entertainment": {
+        "cinema": "Cinema",
+        "concerts": "Concerts",
+        "shows": "Shows",
+        "nightlife": "Nightlife",
+        "games": "Games",
+        "streaming": "Streaming",
+        "music": "Music",
+        "events": "Events",
+        "other": "Other"
+      },
+      "activities": {
+        "attractions": "Attractions",
+        "museums": "Museums",
+        "tours": "Tours",
+        "excursions": "Excursions",
+        "sports": "Sports",
+        "outdoor_activities": "Outdoor activities",
+        "classes_workshops": "Classes & workshops",
+        "theme_parks": "Theme parks",
+        "other": "Other"
+      },
+      "lodging": {
+        "hotel": "Hotel",
+        "vacation_rental": "Vacation rental",
+        "hostel": "Hostel",
+        "camping": "Camping",
+        "guesthouse": "Guesthouse",
+        "other": "Other"
+      },
+      "subscriptions": {
+        "software": "Software",
+        "streaming": "Streaming",
+        "media": "Media",
+        "cloud_storage": "Cloud storage",
+        "memberships": "Memberships",
+        "apps": "Apps",
+        "delivery_memberships": "Delivery memberships",
+        "other": "Other"
+      },
+      "kids_family": {
+        "childcare": "Childcare",
+        "school": "School",
+        "school_supplies": "School supplies",
+        "baby": "Baby",
+        "clothing": "Clothing",
+        "activities": "Activities",
+        "allowance": "Allowance",
+        "family_support": "Family support",
+        "other": "Other"
+      },
+      "pets": {
+        "pet_food": "Pet food",
+        "veterinary": "Veterinary",
+        "medication": "Medication",
+        "grooming": "Grooming",
+        "pet_supplies": "Pet supplies",
+        "pet_insurance": "Pet insurance",
+        "boarding": "Boarding",
+        "other": "Other"
+      },
+      "gifts": {
+        "gifts": "Gifts",
+        "birthdays": "Birthdays",
+        "weddings": "Weddings",
+        "celebrations": "Celebrations",
+        "donations": "Donations",
+        "other": "Other"
+      },
+      "fees": {
+        "bank_fees": "Bank fees",
+        "card_fees": "Card fees",
+        "exchange_fees": "Exchange fees",
+        "service_fees": "Service fees",
+        "late_fees": "Late fees",
+        "taxes": "Taxes",
+        "fines": "Fines",
+        "other": "Other"
+      }
+    },
+    "categoryGroups": {
+      "home": {
+        "housing": "Housing",
+        "utilities": "Utilities",
+        "upkeep": "Upkeep & repairs",
+        "supplies": "Furniture & supplies"
+      }
     },
     "split": {
       "amountRequired": "Enter an amount",
@@ -1926,13 +2087,17 @@
       "add": "Add a category",
       "title": "Category",
       "backToDetected": "Back to detected",
-      "detectedTag": "Detected",
       "search": "Search categories",
       "because": "Because it says “{description}”",
       "mostUsed": "Most used in this group",
       "all": "All categories",
       "results": "Results",
-      "noMatch": "No category matches."
+      "noMatch": "No category matches.",
+      "subcategories": "Subcategories",
+      "just": "Just {category}",
+      "optionalHint": "Optional — tap the category again to save it without a subcategory.",
+      "backToCategories": "Back to categories",
+      "detected": "Detected"
     },
     "repeat": {
       "title": "Repeat",

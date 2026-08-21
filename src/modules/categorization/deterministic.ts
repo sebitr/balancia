@@ -9,8 +9,18 @@ import {
   tokenize,
 } from "./normalize";
 import { contextualOverrides } from "./overrides";
-import { CATEGORY_SEEDS, allPhrases, type CategorySeed } from "./seeds";
-import type { ClassifyTransactionInput, ExpenseCategory } from "./types";
+import {
+  CATEGORY_SEEDS,
+  SUBCATEGORY_SEEDS,
+  allPhrases,
+  type CategorySeed,
+  type SubcategorySeed,
+} from "./seeds";
+import type {
+  ClassifyTransactionInput,
+  ExpenseCategory,
+  ExpenseSubcategory,
+} from "./types";
 
 /**
  * The deterministic pass: rules only, no model, no I/O.
@@ -274,3 +284,69 @@ function merchantScore(
     ? SIGNAL_WEIGHTS.merchantFamily
     : null;
 }
+
+/**
+ * The second level: which subcategory of an already-decided category, if any.
+ *
+ * Deliberately not part of `collectDeterministicSignals`. Subcategories are
+ * not ranked against each other across categories and never compete with it —
+ * the category is settled first, by whatever means (a rule, a learned mapping,
+ * the semantic pass), and only then is this asked about *that* category. So it
+ * scores at most a dozen rules instead of a hundred and twenty-six, and a
+ * strong `fuel` match can never drag a transaction away from `groceries`.
+ *
+ * Returns the best match and its score, or null. Only merchants and phrases
+ * count, at their usual weights; there is no keyword tier, and no fallback to
+ * "the first subcategory in the list".
+ */
+export function detectSubcategory(
+  category: ExpenseCategory,
+  prepared: PreparedText,
+): { subcategory: ExpenseSubcategory; confidence: number } | null {
+  const compiled = COMPILED_SUBCATEGORIES.get(category);
+  if (!compiled) return null;
+
+  let best: { subcategory: ExpenseSubcategory; confidence: number } | null =
+    null;
+  for (const rule of compiled) {
+    let score = 0;
+
+    for (const merchant of rule.merchants) {
+      const matched = merchantScore(prepared.merchantTokens, merchant);
+      if (matched !== null) score = Math.max(score, matched);
+    }
+
+    for (const phrase of rule.phrases) {
+      if (containsTokenRun(prepared.textStems, phrase.stems)) {
+        score = Math.max(score, SIGNAL_WEIGHTS.strongPhrase);
+      }
+    }
+
+    if (score > (best?.confidence ?? 0)) {
+      best = { subcategory: rule.id, confidence: score };
+    }
+  }
+
+  return best;
+}
+
+interface CompiledSubcategory {
+  readonly id: ExpenseSubcategory;
+  readonly merchants: readonly CompiledPhrase[];
+  readonly phrases: readonly CompiledPhrase[];
+}
+
+/** Compiled once, like the category seeds. */
+const COMPILED_SUBCATEGORIES: ReadonlyMap<
+  ExpenseCategory,
+  readonly CompiledSubcategory[]
+> = new Map(
+  Object.entries(SUBCATEGORY_SEEDS).map(([category, rules]) => [
+    category as ExpenseCategory,
+    (rules as readonly SubcategorySeed[]).map((rule) => ({
+      id: rule.id,
+      merchants: (rule.merchants ?? []).map(compileMerchant).filter(nonEmpty),
+      phrases: allPhrases(rule.phrases).map(compilePhrase).filter(nonEmpty),
+    })),
+  ]),
+);

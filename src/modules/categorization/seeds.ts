@@ -1,4 +1,4 @@
-import type { ExpenseCategory } from "./types";
+import type { ExpenseCategory, SubcategoryOf } from "./types";
 
 /**
  * Global category seed rules.
@@ -40,6 +40,29 @@ import type { ExpenseCategory } from "./types";
 /** Keyed by BCP-47 primary language subtag. Add a language by adding a key. */
 export type PhrasesByLanguage = Readonly<Record<string, readonly string[]>>;
 
+/**
+ * A rule that names a *subcategory*, once the category is already settled.
+ *
+ * Held to a higher bar than a category rule, and it is the same bar the whole
+ * feature rests on: a subcategory is only ever asserted when something named
+ * it outright — a brand that sells one thing (`Shell` is fuel), or a phrase
+ * that says it (`facture d'électricité`). There are no weak keywords here on
+ * purpose. Being sure a purchase is `home` says nothing about which of its
+ * twenty subcategories it is, and a plausible-looking guess filed under the
+ * user's name is worse than the blank it replaced.
+ *
+ * Generic on the parent, so a rule cannot name a subcategory the category does
+ * not have: `SubcategorySeed<"transport">` accepts `fuel` and rejects
+ * `electricity` at compile time.
+ */
+export interface SubcategorySeed<C extends ExpenseCategory = ExpenseCategory> {
+  readonly id: SubcategoryOf<C>;
+  /** Brands, matched against the normalized merchant only. */
+  readonly merchants?: readonly string[];
+  /** The purchase said outright, in any language the file covers. */
+  readonly phrases?: PhrasesByLanguage;
+}
+
 export interface CategorySeed {
   readonly id: ExpenseCategory;
   readonly strongPhrases: PhrasesByLanguage;
@@ -52,6 +75,12 @@ export interface CategorySeed {
   readonly ambiguousMerchants?: readonly string[];
   /** Words whose presence disqualifies this category's text evidence. */
   readonly excludes?: readonly string[];
+  /**
+   * Rules that refine this category into one of its subcategories. Optional
+   * everywhere, and deliberately not exhaustive — a category with none simply
+   * never suggests a second level, which is a supported outcome.
+   */
+  readonly subcategories?: readonly SubcategorySeed[];
 }
 
 export const CATEGORY_SEEDS: readonly CategorySeed[] = [
@@ -942,7 +971,7 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
     ],
   },
   {
-    id: "housing",
+    id: "home",
     strongPhrases: {
       en: [
         "rent",
@@ -1018,7 +1047,7 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
     ],
   },
   {
-    id: "utilities",
+    id: "home",
     strongPhrases: {
       en: [
         "electricity bill",
@@ -1453,48 +1482,44 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
     excludes: ["monthly", "subscription", "abonnement"],
   },
   {
-    id: "travel",
     /**
-     * Getting there, and the trip as a purchase. Where people *slept* is
-     * `lodging` — on any real holiday the accommodation is most of the total,
-     * and leaving it here made a trip's chart a single bar.
+     * Flying, filed under `transport`.
+     *
+     * These rules used to be a category of their own called `travel`, which
+     * named an occasion rather than a kind of spending: a flight, a hotel
+     * night and a museum ticket are three different purchases that happen to
+     * share a week. The flight half is transport and lives here; where people
+     * slept is `lodging`, and what they did once there is `activities`.
+     *
+     * What did *not* come across is as deliberate as what did. "Travel
+     * insurance", "visa fee" and "passport" are trip admin, not a journey;
+     * `travel`, `holiday`, `vacances` and `séjour` say only that a trip
+     * happened, and pointing them at `transport` would file a holiday dinner
+     * as a bus fare. They are better unmatched than wrong.
      */
+    id: "transport",
     strongPhrases: {
       en: [
         "airline",
         "plane ticket",
         "flight",
         "airfare",
-        "travel booking",
-        "travel agency",
-        "package holiday",
         "airport transfer",
-        "travel insurance",
         "excess baggage",
         "seat selection",
-        "visa fee",
-        "passport",
-        "duty free",
       ],
       fr: [
         "compagnie aérienne",
         "billet d'avion",
         "vol",
-        "réservation voyage",
-        "agence de voyage",
-        "séjour organisé",
         "navette aéroport",
-        "assurance voyage",
         "bagage supplémentaire",
         "choix du siège",
-        "frais de visa",
-        "passeport",
-        "duty free",
       ],
     },
     weakKeywords: {
-      en: ["travel", "holiday", "vacation", "flight", "airport", "trip"],
-      fr: ["voyage", "vacances", "vol", "aéroport", "séjour"],
+      en: ["flight", "airport"],
+      fr: ["vol", "aéroport"],
     },
     merchants: [
       "easyjet",
@@ -1526,6 +1551,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "united airlines",
       "delta air lines",
       "american airlines",
+    ],
+    /**
+     * The booking sites sell flights and hotel nights from the same basket,
+     * and a package holiday is mostly the second. They suggest, they never
+     * decide — which is what this bucket is for.
+     */
+    ambiguousMerchants: [
       "expedia",
       "opodo",
       "edreams",
@@ -1821,7 +1853,7 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
     ],
   },
   {
-    id: "household",
+    id: "home",
     /**
      * The upkeep of where people live: supplies, furniture, repairs. It used
      * to scatter between `shopping` (a thing was bought) and `housing` (the
@@ -2083,7 +2115,7 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
     ambiguousMerchants: ["max"],
   },
   {
-    id: "family",
+    id: "kids_family",
     strongPhrases: {
       en: [
         "childcare",
@@ -2349,8 +2381,85 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
   { id: "other", strongPhrases: {} },
 ];
 
+/**
+ * Why a category may appear more than once above.
+ *
+ * `home` is three entries, not one: the rules that were `housing`, `utilities`
+ * and `household` kept their shape when the codes merged. Leaving them apart
+ * is deliberate, and it is about `excludes`, which are scoped to the entry
+ * that declares them — the bill rules can disqualify themselves on a word
+ * without also silencing the furniture rules. Folding the three lists into one
+ * would union those exclusions and quietly blind the category to two thirds of
+ * its own evidence.
+ *
+ * Scoring is unaffected by the repetition: signals are grouped, and a group
+ * contributes its strongest member once (see `confidence.ts`), so three
+ * entries agreeing on `home` score exactly what one would. What the merge does
+ * change is that they can no longer *disagree*: a word both `housing` and
+ * `household` claimed used to be a tie that cancelled itself out on the margin
+ * rule, and is now simply `home`.
+ *
+ * `transport` is two entries for the same reason — the flight rules arrived
+ * from the retired `travel` code.
+ */
 export const SEED_BY_CATEGORY: ReadonlyMap<ExpenseCategory, CategorySeed> =
-  new Map(CATEGORY_SEEDS.map((seed) => [seed.id, seed]));
+  new Map(
+    CATEGORY_SEEDS.reduce<[ExpenseCategory, CategorySeed][]>((merged, seed) => {
+      const existing = merged.find(([id]) => id === seed.id);
+      if (!existing) {
+        merged.push([seed.id, seed]);
+        return merged;
+      }
+      existing[1] = mergeSeeds(existing[1], seed);
+      return merged;
+    }, []),
+  );
+
+/** Union of two seeds for one category. Used only by `SEED_BY_CATEGORY`. */
+function mergeSeeds(a: CategorySeed, b: CategorySeed): CategorySeed {
+  const languages = new Set([
+    ...Object.keys(a.strongPhrases),
+    ...Object.keys(b.strongPhrases),
+    ...Object.keys(a.weakKeywords ?? {}),
+    ...Object.keys(b.weakKeywords ?? {}),
+  ]);
+
+  const mergePhrases = (
+    left: PhrasesByLanguage | undefined,
+    right: PhrasesByLanguage | undefined,
+  ): PhrasesByLanguage =>
+    Object.fromEntries(
+      [...languages]
+        .map((language) => [
+          language,
+          [
+            ...new Set([
+              ...(left?.[language] ?? []),
+              ...(right?.[language] ?? []),
+            ]),
+          ],
+        ])
+        .filter(([, phrases]) => phrases.length > 0),
+    );
+
+  const mergeList = (
+    left: readonly string[] | undefined,
+    right: readonly string[] | undefined,
+  ): readonly string[] | undefined => {
+    const all = [...new Set([...(left ?? []), ...(right ?? [])])];
+    return all.length > 0 ? all : undefined;
+  };
+
+  return {
+    id: a.id,
+    strongPhrases: mergePhrases(a.strongPhrases, b.strongPhrases),
+    weakKeywords: mergePhrases(a.weakKeywords, b.weakKeywords),
+    merchants: mergeList(a.merchants, b.merchants),
+    merchantFragments: mergeList(a.merchantFragments, b.merchantFragments),
+    ambiguousMerchants: mergeList(a.ambiguousMerchants, b.ambiguousMerchants),
+    excludes: mergeList(a.excludes, b.excludes),
+  };
+}
 
 /** Every phrase of a bucket, across languages. */
 export function allPhrases(
@@ -2359,3 +2468,271 @@ export function allPhrases(
   if (!phrases) return [];
   return Object.values(phrases).flat();
 }
+
+/**
+ * The second level, keyed by the category it refines.
+ *
+ * Separate from `CATEGORY_SEEDS` rather than nested inside each entry, for the
+ * reason given above `SEED_BY_CATEGORY`: `home` and `transport` are each
+ * several entries, and hanging subcategory rules off one of them would make
+ * which entry an arbitrary and load-bearing choice.
+ *
+ * The mapped type is what keeps the two levels honest — every key must be a
+ * real category, and every `id` under it must be one of *that* category's
+ * subcategories. `groceries: [{ id: "fuel" }]` does not compile.
+ *
+ * Coverage is intentionally partial. These are the merchants and phrases that
+ * name a subcategory beyond argument; everything else leaves the field blank
+ * for the user, which is a complete answer and not a failure.
+ */
+export const SUBCATEGORY_SEEDS: {
+  readonly [C in ExpenseCategory]?: readonly SubcategorySeed<C>[];
+} = {
+  groceries: [
+    {
+      id: "supermarket",
+      merchants: [
+        "carrefour",
+        "lidl",
+        "aldi",
+        "migros",
+        "coop",
+        "denner",
+        "leclerc",
+        "intermarche",
+        "auchan",
+        "casino",
+        "monoprix",
+        "franprix",
+        "super u",
+        "hyper u",
+        "cora",
+        "delhaize",
+        "colruyt",
+        "albert heijn",
+        "tesco",
+        "sainsburys",
+        "mercadona",
+        "edeka",
+        "rewe",
+        "kaufland",
+      ],
+      phrases: { en: ["supermarket"], fr: ["supermarché"] },
+    },
+    { id: "bakery", phrases: { en: ["bakery"], fr: ["boulangerie"] } },
+    { id: "butcher", phrases: { en: ["butcher"], fr: ["boucherie"] } },
+    {
+      id: "market",
+      phrases: { en: ["farmers market"], fr: ["marché du samedi"] },
+    },
+  ],
+  restaurants: [
+    {
+      id: "food_delivery",
+      merchants: [
+        "uber eats",
+        "deliveroo",
+        "just eat",
+        "smood",
+        "eat ch",
+        "doordash",
+        "glovo",
+      ],
+      phrases: { en: ["food delivery"], fr: ["livraison de repas"] },
+    },
+    {
+      id: "fast_food",
+      merchants: [
+        "mcdonalds",
+        "burger king",
+        "kfc",
+        "subway",
+        "quick",
+        "five guys",
+      ],
+      phrases: { en: ["fast food"], fr: ["restauration rapide"] },
+    },
+    {
+      id: "cafe",
+      merchants: ["starbucks", "costa coffee", "pret a manger"],
+      phrases: { en: ["coffee shop"], fr: ["salon de thé"] },
+    },
+    { id: "takeaway", phrases: { en: ["takeaway"], fr: ["à emporter"] } },
+  ],
+  transport: [
+    {
+      id: "fuel",
+      merchants: [
+        "shell",
+        "esso",
+        "total",
+        "totalenergies",
+        "bp",
+        "avia",
+        "socar",
+        "tamoil",
+        "agip",
+        "eni",
+        "aral",
+        "q8",
+      ],
+      phrases: { en: ["petrol", "fuel"], fr: ["carburant", "essence"] },
+    },
+    {
+      id: "taxi_ride_hailing",
+      merchants: ["uber", "bolt", "lyft", "freenow", "g7"],
+      phrases: { en: ["taxi"], fr: ["taxi", "vtc"] },
+    },
+    {
+      id: "train",
+      merchants: ["sncf", "cff", "sbb", "ouigo", "trenitalia", "renfe", "db"],
+      phrases: { en: ["train ticket"], fr: ["billet de train"] },
+    },
+    {
+      id: "flights",
+      merchants: [
+        "easyjet",
+        "ryanair",
+        "air france",
+        "swiss international",
+        "lufthansa",
+        "klm",
+        "british airways",
+        "wizz air",
+        "vueling",
+      ],
+      phrases: { en: ["flight", "plane ticket"], fr: ["billet d'avion"] },
+    },
+    { id: "parking", phrases: { en: ["parking"], fr: ["stationnement"] } },
+    { id: "tolls", phrases: { en: ["toll"], fr: ["péage"] } },
+    {
+      id: "car_rental",
+      merchants: ["hertz", "avis", "sixt", "europcar", "enterprise rent"],
+      phrases: { en: ["car rental"], fr: ["location de voiture"] },
+    },
+    {
+      id: "public_transport",
+      phrases: { en: ["public transport"], fr: ["transports en commun"] },
+    },
+  ],
+  home: [
+    {
+      id: "electricity",
+      merchants: ["edf", "engie", "romande energie", "sig", "ewz"],
+      phrases: { en: ["electricity bill"], fr: ["facture d'électricité"] },
+    },
+    { id: "water", phrases: { en: ["water bill"], fr: ["facture d'eau"] } },
+    { id: "gas", phrases: { en: ["gas bill"], fr: ["facture de gaz"] } },
+    {
+      id: "internet",
+      merchants: ["swisscom", "sunrise", "salt", "free", "orange", "bouygues"],
+      phrases: { en: ["internet bill"], fr: ["abonnement internet"] },
+    },
+    {
+      id: "mobile_phone",
+      phrases: { en: ["mobile plan"], fr: ["forfait mobile"] },
+    },
+    { id: "rent", phrases: { en: ["rent"], fr: ["loyer"] } },
+    { id: "mortgage", phrases: { en: ["mortgage"], fr: ["prêt immobilier"] } },
+    {
+      id: "furniture",
+      merchants: ["ikea", "micasa", "conforama", "but", "maisons du monde"],
+      phrases: { en: ["furniture"], fr: ["mobilier"] },
+    },
+    {
+      id: "appliances",
+      phrases: { en: ["appliance"], fr: ["électroménager"] },
+    },
+    {
+      id: "repairs",
+      phrases: {
+        en: ["plumber", "electrician"],
+        fr: ["plombier", "électricien"],
+      },
+    },
+    {
+      id: "cleaning_supplies",
+      phrases: { en: ["cleaning products"], fr: ["produits d'entretien"] },
+    },
+    { id: "gardening", phrases: { en: ["gardening"], fr: ["jardinage"] } },
+  ],
+  lodging: [
+    {
+      id: "vacation_rental",
+      merchants: ["airbnb", "vrbo", "abritel"],
+      phrases: { en: ["vacation rental"], fr: ["location de vacances"] },
+    },
+    {
+      id: "hotel",
+      merchants: ["ibis", "novotel", "mercure", "marriott", "hilton"],
+      phrases: { en: ["hotel night"], fr: ["nuit d'hôtel"] },
+    },
+    { id: "camping", phrases: { en: ["campsite"], fr: ["camping"] } },
+    {
+      id: "hostel",
+      phrases: { en: ["hostel"], fr: ["auberge de jeunesse"] },
+    },
+  ],
+  subscriptions: [
+    {
+      id: "streaming",
+      merchants: [
+        "netflix",
+        "spotify",
+        "disney plus",
+        "hbo max",
+        "prime video",
+        "deezer",
+        "canal plus",
+      ],
+      phrases: { en: ["streaming"], fr: ["streaming"] },
+    },
+    {
+      id: "cloud_storage",
+      merchants: ["dropbox", "icloud", "google one"],
+      phrases: { en: ["cloud storage"], fr: ["stockage cloud"] },
+    },
+    {
+      id: "software",
+      merchants: ["adobe", "microsoft 365", "jetbrains", "github"],
+      phrases: { en: ["software licence"], fr: ["licence logicielle"] },
+    },
+  ],
+  health: [
+    { id: "pharmacy", phrases: { en: ["pharmacy"], fr: ["pharmacie"] } },
+    { id: "dentist", phrases: { en: ["dentist"], fr: ["dentiste"] } },
+    { id: "doctor", phrases: { en: ["doctor"], fr: ["médecin"] } },
+    {
+      id: "glasses_contacts",
+      phrases: { en: ["glasses"], fr: ["lunettes"] },
+    },
+  ],
+  entertainment: [
+    { id: "cinema", phrases: { en: ["cinema"], fr: ["cinéma"] } },
+    { id: "concerts", phrases: { en: ["concert"], fr: ["concert"] } },
+  ],
+  pets: [
+    { id: "veterinary", phrases: { en: ["vet"], fr: ["vétérinaire"] } },
+    { id: "grooming", phrases: { en: ["grooming"], fr: ["toilettage"] } },
+  ],
+  kids_family: [
+    {
+      id: "childcare",
+      phrases: {
+        en: ["childcare", "nursery"],
+        fr: ["garde d'enfants", "crèche"],
+      },
+    },
+    {
+      id: "school_supplies",
+      phrases: { en: ["school supplies"], fr: ["fournitures scolaires"] },
+    },
+  ],
+  fees: [
+    { id: "bank_fees", phrases: { en: ["bank fee"], fr: ["frais bancaires"] } },
+    {
+      id: "exchange_fees",
+      phrases: { en: ["exchange fee"], fr: ["frais de change"] },
+    },
+  ],
+};

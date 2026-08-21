@@ -140,12 +140,19 @@ export function ChoicePill({
   selected,
   onClick,
   icon: Icon,
+  trailing,
 }: {
   children: React.ReactNode;
   selected: boolean;
   onClick: () => void;
   /** Drawn in a 32px tile at the leading edge, the way a face would be. */
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  /**
+   * A mark at the trailing edge — a chevron, where the pill leads somewhere
+   * rather than only choosing. Not a hit target of its own: the whole pill
+   * goes wherever the chevron promises.
+   */
+  trailing?: React.ReactNode;
 }) {
   return (
     <button
@@ -173,6 +180,7 @@ export function ChoicePill({
         </span>
       )}
       <span className="truncate">{children}</span>
+      {trailing}
       {selected && !Icon && (
         <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />
       )}

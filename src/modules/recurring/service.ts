@@ -23,6 +23,7 @@ import { recordRecurringNotification } from "@/modules/notifications/events";
 import { telemetry } from "@/lib/telemetry";
 import type { ExchangeRateSource } from "@/modules/currencies/conversion";
 import { classifyRateSource } from "@/modules/currencies/rates";
+import { isValidSubcategory } from "@/modules/categorization";
 import {
   ENTRY_DIRECTIONS,
   type EntryDirection,
@@ -63,6 +64,7 @@ export const recurringInputSchema = z
     description: z.string().trim().min(1, "Describe the expense").max(200),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
     category: z.string().trim().max(60).optional().or(z.literal("")),
+    subcategory: z.string().trim().max(60).optional().or(z.literal("")),
     amount: minorUnitsString,
     currency: currencyCodeSchema,
     exchangeRate: z
@@ -93,7 +95,13 @@ export const recurringInputSchema = z
   .refine(
     (value) => value.frequency === "weekly" || value.dayOfMonth !== undefined,
     { path: ["dayOfMonth"], message: "Choose a day of the month" },
-  );
+  )
+  // The same pair rule the one-off entry form enforces; a template writes the
+  // column every occurrence will be born with.
+  .refine((value) => isValidSubcategory(value.category, value.subcategory), {
+    path: ["subcategory"],
+    message: "That subcategory does not belong to the chosen category",
+  });
 
 export type RecurringInput = z.infer<typeof recurringInputSchema>;
 
@@ -102,6 +110,7 @@ export interface RecurringSummary {
   readonly direction: EntryDirection;
   readonly description: string;
   readonly category: string | null;
+  readonly subcategory: string | null;
   readonly amount: bigint;
   readonly currency: string;
   readonly frequency: "weekly" | "monthly" | "yearly";
@@ -180,6 +189,7 @@ export async function createRecurringExpense(
         description: input.description,
         notes: input.notes || null,
         category: input.category || null,
+        subcategory: input.subcategory || null,
         amount: BigInt(input.amount),
         currency: input.currency,
         exchangeRate: input.exchangeRate || null,
@@ -315,6 +325,7 @@ export async function listRecurringExpenses(
       direction: recurringExpenses.direction,
       description: recurringExpenses.description,
       category: recurringExpenses.category,
+      subcategory: recurringExpenses.subcategory,
       amount: recurringExpenses.amount,
       currency: recurringExpenses.currency,
       frequency: recurringExpenses.frequency,
@@ -411,6 +422,7 @@ export async function generateDueOccurrences(
       description: recurringExpenses.description,
       notes: recurringExpenses.notes,
       category: recurringExpenses.category,
+      subcategory: recurringExpenses.subcategory,
       amount: recurringExpenses.amount,
       currency: recurringExpenses.currency,
       exchangeRate: recurringExpenses.exchangeRate,
@@ -518,6 +530,7 @@ interface TemplateRow {
   description: string;
   notes: string | null;
   category: string | null;
+  subcategory: string | null;
   amount: bigint;
   currency: string;
   exchangeRate: string | null;
@@ -644,6 +657,9 @@ async function generateSingleOccurrence(
           description: template.description,
           notes: template.notes,
           category: template.category,
+          // The generated entry is the template made real: both halves of the
+          // pair travel, or a monthly "Loyer" would arrive as bare `home`.
+          subcategory: template.subcategory,
           amount: prepared.amount,
           currency: prepared.currency,
           convertedAmount: prepared.convertedAmount,

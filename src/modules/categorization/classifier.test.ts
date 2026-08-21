@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyTransactionSync } from "./classifier";
 import { THRESHOLDS } from "./confidence";
 import { CATEGORY_SEEDS } from "./seeds";
+import { isValidSubcategory } from "./taxonomy";
 import type { ExpenseCategory, LearnedMerchantMapping } from "./types";
 
 /**
@@ -32,13 +33,13 @@ describe("merchants", () => {
     ["AMAVITA", "health"],
     ["BOOKING.COM", "lodging"],
     ["AIRBNB", "lodging"],
-    ["EASYJET", "travel"],
-    ["SWISSCOM", "utilities"],
-    ["EDF", "utilities"],
+    ["EASYJET", "transport"],
+    ["SWISSCOM", "home"],
+    ["EDF", "home"],
     ["ZOOPLUS", "pets"],
     ["ZALANDO", "shopping"],
-    ["IKEA 0815", "household"],
-    ["LEROY MERLIN", "household"],
+    ["IKEA 0815", "home"],
+    ["LEROY MERLIN", "home"],
     ["EUROPAPARK", "activities"],
     ["GETYOURGUIDE", "activities"],
     ["TICKETCORNER", "entertainment"],
@@ -56,20 +57,20 @@ describe("merchants", () => {
 
 describe("phrases, in English and in French", () => {
   const cases: [string, ExpenseCategory][] = [
-    ["MONTHLY RENT", "housing"],
-    ["LOYER AOUT", "housing"],
+    ["MONTHLY RENT", "home"],
+    ["LOYER AOUT", "home"],
     ["Weekly groceries", "groceries"],
     ["Courses alimentaires", "groceries"],
     ["Dinner", "restaurants"],
     ["Livraison de repas", "restaurants"],
     ["Train ticket to Bern", "transport"],
     ["Billet de train", "transport"],
-    ["Electricity bill", "utilities"],
-    ["Facture électricité", "utilities"],
+    ["Electricity bill", "home"],
+    ["Facture électricité", "home"],
     ["PHARMACIE CENTRALE", "health"],
     ["Dentist appointment", "health"],
-    ["CRECHE LES PETITS", "family"],
-    ["Cantine scolaire", "family"],
+    ["CRECHE LES PETITS", "kids_family"],
+    ["Cantine scolaire", "kids_family"],
     ["FRAIS BANCAIRES", "fees"],
     ["BANK ACCOUNT FEE", "fees"],
     ["PATHE CINEMA", "entertainment"],
@@ -86,9 +87,9 @@ describe("phrases, in English and in French", () => {
     ["Musée d'art", "activities"],
     ["Forfait de ski", "activities"],
     ["Guided tour", "activities"],
-    ["Produits d'entretien", "household"],
-    ["Cleaning products", "household"],
-    ["Plombier", "household"],
+    ["Produits d'entretien", "home"],
+    ["Cleaning products", "home"],
+    ["Plombier", "home"],
   ];
 
   for (const [description, expected] of cases) {
@@ -129,7 +130,7 @@ describe("contextual overrides", () => {
   });
 
   it("reads a Coop store format, and leaves bare Coop alone", () => {
-    expect(categoryOf("COOP BAU+HOBBY LAUSANNE")).toBe("household");
+    expect(categoryOf("COOP BAU+HOBBY LAUSANNE")).toBe("home");
     expect(categoryOf("COOP VITALITY")).toBe("health");
     expect(categoryOf("COOP RESTAURANT")).toBe("restaurants");
 
@@ -138,7 +139,7 @@ describe("contextual overrides", () => {
   });
 
   it("reads a Migros store format the same way", () => {
-    expect(categoryOf("MIGROS DO IT GARDEN")).toBe("household");
+    expect(categoryOf("MIGROS DO IT GARDEN")).toBe("home");
     expect(categoryOf("MIGROS RESTAURANT")).toBe("restaurants");
     // The supermarket itself is untouched by any of that.
     expect(categoryOf("MIGROS 1234")).toBe("groceries");
@@ -402,12 +403,12 @@ describe("ordinary descriptions", () => {
     ["Gasoil", "transport"],
     ["Vignette", "transport"],
     // The flat.
-    ["Éponges", "household"],
-    ["Sacs poubelle", "household"],
-    ["Piles", "household"],
-    ["Rideaux", "household"],
-    ["Facture de gaz", "utilities"],
-    ["Forfait mobile", "utilities"],
+    ["Éponges", "home"],
+    ["Sacs poubelle", "home"],
+    ["Piles", "home"],
+    ["Rideaux", "home"],
+    ["Facture de gaz", "home"],
+    ["Forfait mobile", "home"],
     // Out and about.
     ["Plongée", "activities"],
     ["Fleurs", "gifts"],
@@ -465,7 +466,7 @@ describe("words that belong to two languages", () => {
   });
 
   it("tells a water bill from a bottle of water", () => {
-    expect(categoryOf("Facture d'eau")).toBe("utilities");
+    expect(categoryOf("Facture d'eau")).toBe("home");
     expect(categoryOf("Bouteilles d'eau")).toBe("groceries");
   });
 
@@ -560,7 +561,7 @@ describe("brands", () => {
     expect(classify("Paul's share").decision).toBe("needs_user_input");
     // `dinner` decides this one; the point is that `Paul` did not have to.
     expect(categoryOf("Dinner with Paul")).toBe("restaurants");
-    expect(categoryOf("Prêt immobilier")).toBe("housing");
+    expect(categoryOf("Prêt immobilier")).toBe("home");
   });
 
   /**
@@ -569,7 +570,7 @@ describe("brands", () => {
    */
   it("leaves out the chocolate bar that is also a month", () => {
     expect(classify("Mars").decision).toBe("needs_user_input");
-    expect(categoryOf("Loyer mars")).toBe("housing");
+    expect(categoryOf("Loyer mars")).toBe("home");
     expect(classify("Vacances en mars").category).not.toBe("groceries");
   });
 });
@@ -608,5 +609,115 @@ describe("brand names that contain another category's word", () => {
     const juice = classify("Jus d'orange");
     expect(juice.category).toBe("groceries");
     expect(juice.decision).not.toBe("auto_assigned");
+  });
+});
+
+/**
+ * The second level.
+ *
+ * A subcategory is only ever asserted when something named it outright — a
+ * brand that sells one thing, or a phrase that says it. Being sure of the
+ * parent is not being sure of the child, and a plausible guess filed under the
+ * user's name is worse than the blank it replaced.
+ */
+describe("subcategories", () => {
+  const pairOf = (text: string) => {
+    const result = classifyTransactionSync({
+      merchant: text,
+      description: text,
+    });
+    return [result.category ?? null, result.subcategory ?? null];
+  };
+
+  const named: [string, string, string][] = [
+    ["Carrefour", "groceries", "supermarket"],
+    ["Lidl", "groceries", "supermarket"],
+    ["Uber", "transport", "taxi_ride_hailing"],
+    ["SNCF", "transport", "train"],
+    ["Shell", "transport", "fuel"],
+    ["Airbnb", "lodging", "vacation_rental"],
+    ["Netflix", "subscriptions", "streaming"],
+    ["EDF", "home", "electricity"],
+    ["IKEA", "home", "furniture"],
+  ];
+
+  it.each(named)("reads %s as %s / %s", (text, category, subcategory) => {
+    expect(pairOf(text)).toEqual([category, subcategory]);
+  });
+
+  it("names one from the words as well as from the brand", () => {
+    expect(pairOf("Facture d'électricité août")).toEqual([
+      "home",
+      "electricity",
+    ]);
+    expect(pairOf("Loyer mars")).toEqual(["home", "rent"]);
+    expect(pairOf("Billet de train Lausanne")).toEqual(["transport", "train"]);
+  });
+
+  it("leaves the field blank rather than guessing", () => {
+    // "Restaurant Le Pont" is restaurants beyond argument — the word is what
+    // decided it. Which of the seven kinds it was is not in the descriptor,
+    // and being sure of the parent is not being sure of the child.
+    expect(pairOf("Restaurant Le Pont")).toEqual(["restaurants", null]);
+    // Same for a museum: the category is named outright, the child is not.
+    expect(pairOf("Museum tickets")).toEqual(["activities", null]);
+  });
+
+  it("never returns a subcategory that does not belong to its category", () => {
+    for (const [text] of named) {
+      const result = classifyTransactionSync({
+        merchant: text,
+        description: text,
+      });
+      expect(isValidSubcategory(result.category, result.subcategory)).toBe(
+        true,
+      );
+    }
+  });
+
+  it("hands back a subcategory the group taught, without re-deriving it", () => {
+    // Accepting a remembered `Transport / Fuel` has to cost no extra tap.
+    const mappings: LearnedMerchantMapping[] = [
+      {
+        scope: "group",
+        rawMerchant: "ATELIER RAMUZ",
+        normalizedMerchant: "atelier ramuz",
+        category: "restaurants",
+        subcategory: "cafe",
+        transactionType: null,
+        correctionCount: 2,
+        conflictCount: 0,
+      },
+    ];
+
+    const result = classifyTransactionSync(
+      { merchant: "Atelier Ramuz", description: "Atelier Ramuz" },
+      { mappings },
+    );
+    expect(result.category).toBe("restaurants");
+    expect(result.subcategory).toBe("cafe");
+  });
+
+  it("drops a taught subcategory that no longer fits its category", () => {
+    const mappings: LearnedMerchantMapping[] = [
+      {
+        scope: "group",
+        rawMerchant: "ATELIER RAMUZ",
+        normalizedMerchant: "atelier ramuz",
+        category: "restaurants",
+        // Learned under a code that has since been merged away.
+        subcategory: "rent" as never,
+        transactionType: null,
+        correctionCount: 2,
+        conflictCount: 0,
+      },
+    ];
+
+    const result = classifyTransactionSync(
+      { merchant: "Atelier Ramuz", description: "Atelier Ramuz" },
+      { mappings },
+    );
+    expect(result.category).toBe("restaurants");
+    expect(result.subcategory).toBeUndefined();
   });
 });

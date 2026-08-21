@@ -230,7 +230,7 @@ describe("categoryShortlist", () => {
   it("leads with the detected category, then what the group uses", () => {
     const shortlist = categoryShortlist({
       suggestion: classified({ category: "restaurants" }),
-      frequent: ["groceries", "transport", "housing"],
+      frequent: ["groceries", "transport", "home"],
     });
 
     expect(shortlist.categories).toEqual([
@@ -244,7 +244,7 @@ describe("categoryShortlist", () => {
   it("falls back to the group's own habit when nothing was detected", () => {
     const shortlist = categoryShortlist({
       suggestion: null,
-      frequent: ["groceries", "restaurants", "transport", "housing"],
+      frequent: ["groceries", "restaurants", "transport", "home"],
     });
 
     expect(shortlist.categories).toEqual([

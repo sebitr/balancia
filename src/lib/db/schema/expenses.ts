@@ -81,6 +81,17 @@ export const expenses = pgTable(
     description: text("description").notNull(),
     notes: text("notes"),
     category: text("category"),
+    /**
+     * An optional refinement of `category` — `fuel` under `transport`.
+     *
+     * Plain text like its parent, and nullable on purpose: an expense filed as
+     * `home` with nothing under it is complete, not half-entered. The pair is
+     * what has to be consistent, and `isValidSubcategory` enforces that at
+     * every write boundary rather than a constraint here — the column also
+     * holds values written before a category was retired, and a check that
+     * rejected them would turn an old row into an unreadable one.
+     */
+    subcategory: text("subcategory"),
     amount: bigint("amount", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull(),
     convertedAmount: bigint("converted_amount", { mode: "bigint" }),

@@ -44,6 +44,13 @@ export const expenseCategoryMappings = pgTable(
     normalizedMerchant: text("normalized_merchant").notNull(),
     /** A canonical category ID, never a translated label. */
     category: text("category").notNull(),
+    /**
+     * The subcategory taught with it, when the user picked one.
+     *
+     * Nullable, and a mapping is perfectly useful without it: teaching that
+     * Coop is groceries is worth doing even when nobody said which aisle.
+     */
+    subcategory: text("subcategory"),
     transactionType: text("transaction_type"),
     /** How many times this mapping has been confirmed. Starts at 1. */
     correctionCount: integer("correction_count").notNull().default(1),

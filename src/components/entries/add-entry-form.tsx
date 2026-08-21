@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Loader2,
   Repeat,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -51,9 +52,10 @@ import {
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
-import type {
-  ExpenseCategory,
-  LearnedMerchantMapping,
+import {
+  isValidSubcategory,
+  type ExpenseCategory,
+  type LearnedMerchantMapping,
 } from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
 import {
@@ -75,7 +77,7 @@ import {
 } from "@/modules/settlements/payment-methods";
 import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
-import { CategorySheet } from "./category-sheet";
+import { CategorySheet, useSubcategoryLabel } from "./category-sheet";
 import { CurrencyPicker } from "@/components/money/currency-picker";
 import {
   confirmationKey,
@@ -162,6 +164,8 @@ export interface EditingEntry {
   readonly date: string;
   readonly description: string;
   readonly category: string;
+  /** Only meaningful against `category`; "" when nobody was more specific. */
+  readonly subcategory: string;
   /**
    * A repayment's description, and an expense's notes.
    *
@@ -319,6 +323,8 @@ export function AddEntryForm({
   const [categoryChosen, setCategoryChosen] = useState(
     (editing?.category ?? "") !== "",
   );
+  const [subcategory, setSubcategory] = useState(editing?.subcategory ?? "");
+  const tSubcategories = useSubcategoryLabel();
   const [date, setDate] = useState(
     () => editing?.date ?? new Date().toISOString().slice(0, 10),
   );
@@ -411,6 +417,26 @@ export function AddEntryForm({
       ? (suggestion.category ?? "")
       : "";
   const effectiveCategory = categoryChosen ? category : detectedCategory;
+  /**
+   * The subcategory that goes with whichever category is in force.
+   *
+   * A chosen category carries the chosen child; a detected one carries the
+   * classifier's, which it only offers when a rule named it outright. Either
+   * way the child is discarded the moment it does not belong to the parent —
+   * the pair is checked here as well as on the server, so a stale value can
+   * never be *shown* under a category it does not belong to either.
+   */
+  const effectiveSubcategory = categoryChosen
+    ? subcategory
+    : detectedCategory !== ""
+      ? (suggestion?.subcategory ?? "")
+      : "";
+  const shownSubcategory = isValidSubcategory(
+    effectiveCategory,
+    effectiveSubcategory,
+  )
+    ? effectiveSubcategory
+    : "";
 
   const isSettle = type === "settle";
   const isIncome = type === "income";
@@ -746,6 +772,7 @@ export function AddEntryForm({
     description: description.trim(),
     notes,
     category: effectiveCategory,
+    subcategory: shownSubcategory,
     amount: totalMinor.ok ? totalMinor.value.toString() : "0",
     currency,
     exchangeRate: needsRate ? rate.trim() : "",
@@ -773,6 +800,7 @@ export function AddEntryForm({
       description: description.trim(),
       notes: "",
       category: effectiveCategory,
+      subcategory: shownSubcategory,
       amount: totalMinor.ok ? totalMinor.value.toString() : "0",
       currency,
       exchangeRate: needsRate ? rate.trim() : "",
@@ -1013,20 +1041,42 @@ export function AddEntryForm({
               />
             </Row>
 
+            {/* The row reads as a breadcrumb — `Home › Household supplies` —
+                and shows the category alone when there is no subcategory. It
+                never shows a placeholder for the missing half: "no
+                subcategory" would make an ordinary entry look unfinished.
+
+                What the classifier filled in is marked by a bare sparkle
+                rather than a pill with the word in it. A breadcrumb and a pill
+                is too much for one 52px row, and the sparkle already means
+                "detected" everywhere else in this screen. It is the only
+                carrier of that fact now, so it is labelled. */}
             <RowButton
               icon={categoryGlyph}
+              iconFilled={effectiveCategory !== ""}
               label={t("category.title")}
               value={
-                hasGlyph(effectiveCategory)
-                  ? tCategories(effectiveCategory)
-                  : t("category.add")
+                hasGlyph(effectiveCategory) ? (
+                  <>
+                    {tCategories(effectiveCategory)}
+                    {shownSubcategory !== "" && (
+                      <>
+                        <span aria-hidden="true">{"  \u203a  "}</span>
+                        {tSubcategories(effectiveCategory, shownSubcategory)}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  t("category.add")
+                )
               }
               muted={effectiveCategory === ""}
               tag={
                 !categoryChosen && detectedCategory !== "" ? (
-                  <span className="shrink-0 rounded-full bg-payer/15 px-2 py-0.5 text-2xs font-semibold text-payer">
-                    {t("category.detectedTag")}
-                  </span>
+                  <Sparkles
+                    aria-label={t("category.detected")}
+                    className="size-3.5 shrink-0 text-payer"
+                  />
                 ) : null
               }
               onClick={() => setSheet("category")}
@@ -1342,15 +1392,21 @@ export function AddEntryForm({
           {sheet === "category" && (
             <CategorySheet
               value={effectiveCategory}
+              subcategory={shownSubcategory}
               detectedValue={detectedCategory}
               description={description}
               suggestion={suggestion}
               frequent={frequentCategories}
-              onSelect={(next) => {
+              // Every tap in the sheet writes a valid entry, including the one
+              // that only opens a pane — which is what lets the second level
+              // be optional rather than a step to escape from. The sheet says
+              // when it is finished; this only records what it chose.
+              onSelect={(next, leaf) => {
                 setCategoryChosen(true);
                 setCategory(next);
-                setSheet(null);
+                setSubcategory(leaf ?? "");
               }}
+              onDone={() => setSheet(null)}
               // Reverting has to clear the override rather than re-pick the
               // detected value: a category that merely *equals* the guess is
               // still a manual choice, and would stop following the
@@ -1358,6 +1414,7 @@ export function AddEntryForm({
               onRevert={() => {
                 setCategoryChosen(false);
                 setCategory("");
+                setSubcategory("");
                 setSheet(null);
               }}
             />

@@ -22,56 +22,30 @@ export const TRANSACTION_TYPES = [
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 /**
- * The vocabulary, in the order the design lays the picker out.
- *
- * `lodging`, `activities` and `household` are splits, not additions. Each one
- * existed as spending long before it had a code, filed under a neighbour that
- * then stopped meaning anything:
- *
- *  - **lodging** — a week's Airbnb is four fifths of a trip's total, so
- *    leaving it in `travel` made every holiday chart a single bar about the
- *    place people slept. `travel` keeps the getting there.
- *  - **activities** — tickets, tours and entries are planned outings; leaving
- *    them with `entertainment` put a guided walk beside a games console.
- *  - **household** — supplies, furniture and repairs used to scatter between
- *    `shopping` (a thing was bought) and `housing` (the flat was involved).
- *    It is the shared upkeep of where people live, not the rent for it.
+ * The category vocabulary lives in `taxonomy.ts`, which is the single source
+ * of truth for the codes, their subcategories and the retired codes that map
+ * onto them. It is re-exported here so `@/modules/categorization` stays the
+ * one import path callers need.
  */
-export const EXPENSE_CATEGORIES = [
-  "groceries",
-  "restaurants",
-  "transport",
-  "housing",
-  "utilities",
-  "shopping",
-  "health",
-  "entertainment",
-  "travel",
-  "lodging",
-  "activities",
-  "household",
-  "subscriptions",
-  "family",
-  "pets",
-  "gifts",
-  "fees",
-  "other",
-] as const;
+import type { ExpenseCategory, ExpenseSubcategory } from "./taxonomy";
 
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
-
-/**
- * `other` is a fallback, never a match. Rules must not name it, and the
- * ranking never lets it win on evidence — only on the absence of any.
- */
-export const FALLBACK_CATEGORY: ExpenseCategory = "other";
-
-export function isExpenseCategory(value: unknown): value is ExpenseCategory {
-  return (
-    typeof value === "string" &&
-    (EXPENSE_CATEGORIES as readonly string[]).includes(value)
-  );
-}
+export {
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_IDS,
+  FALLBACK_CATEGORY,
+  LEGACY_CATEGORY_MAP,
+  SUBCATEGORY_GROUPS,
+  getSubcategories,
+  getSubcategoryGroups,
+  hasSubcategories,
+  isExpenseCategory,
+  isLegacyCategory,
+  isValidSubcategory,
+  normalizeLegacyCategory,
+  type ExpenseCategory,
+  type ExpenseSubcategory,
+  type SubcategoryOf,
+} from "./taxonomy";
 
 export function isTransactionType(value: unknown): value is TransactionType {
   return (
@@ -126,6 +100,22 @@ export interface ClassificationResult {
   /** Absent when nothing scored well enough to name a category. */
   readonly category?: ExpenseCategory;
   readonly confidence: number;
+  /**
+   * The subcategory, when a rule named one outright — never a guess.
+   *
+   * Judged separately from the category and on its own threshold, because the
+   * two questions have different answers: "Shell" is a filling station with no
+   * doubt at all, while "Coop" is groceries beyond argument and could be a
+   * supermarket, a bakery counter or a hardware aisle. Being sure of the
+   * parent is not being sure of the child, and a wrong subcategory is worse
+   * than an empty one — it is a fact the user did not state, filed under their
+   * name.
+   *
+   * Always valid for `category`; `isValidSubcategory` holds over the pair.
+   */
+  readonly subcategory?: ExpenseSubcategory;
+  /** Only meaningful when `subcategory` is set. */
+  readonly subcategoryConfidence?: number;
   readonly decision: ClassificationDecision;
   readonly source: ClassificationSource;
   /** At most three, best first, excluding the chosen category. */
@@ -147,6 +137,8 @@ export interface LearnedMerchantMapping {
   readonly rawMerchant: string;
   readonly normalizedMerchant: string;
   readonly category: ExpenseCategory;
+  /** The subcategory taught alongside it, when the user picked one. */
+  readonly subcategory?: ExpenseSubcategory | null;
   readonly transactionType?: TransactionType | null;
   /** How many times someone confirmed this mapping. Starts at 1. */
   readonly correctionCount: number;

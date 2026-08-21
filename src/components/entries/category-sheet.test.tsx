@@ -39,11 +39,13 @@ function inSheet(props: Partial<Parameters<typeof CategorySheet>[0]>) {
       <SheetContent side="bottom">
         <CategorySheet
           value=""
+          subcategory=""
           detectedValue=""
           description=""
           suggestion={null}
           frequent={[]}
           onSelect={vi.fn()}
+          onDone={vi.fn()}
           onRevert={vi.fn()}
           {...props}
         />
@@ -57,12 +59,13 @@ function renderSheet(
   options: { locale?: "en" | "fr" } = {},
 ) {
   const onSelect = vi.fn();
+  const onDone = vi.fn();
   const onRevert = vi.fn();
   const view = renderWithIntl(
-    inSheet({ onSelect, onRevert, ...props }),
+    inSheet({ onSelect, onDone, onRevert, ...props }),
     options,
   );
-  return { ...view, onSelect, onRevert };
+  return { ...view, onSelect, onDone, onRevert };
 }
 
 /** The chips under a given heading, by their accessible name. */
@@ -109,9 +112,9 @@ describe("CategorySheet", () => {
     });
 
     // Whatever is on the shortlist is taken out of the list below it.
-    expect(chipsUnder("All categories")).not.toContain("Restaurants");
+    expect(chipsUnder("All categories")).not.toContain("Restaurants & Drinks");
     expect(chipsUnder("All categories")).not.toContain("Groceries");
-    expect(chipsUnder("All categories")).toContain("Travel");
+    expect(chipsUnder("All categories")).toContain("Transport");
   });
 
   it("shows no shortlist at all for a new group with nothing typed", () => {
@@ -123,15 +126,82 @@ describe("CategorySheet", () => {
     expect(chipsUnder("All categories")).toContain("Groceries");
   });
 
-  it("picks and closes on one tap, with no Done to press", async () => {
-    const { onSelect } = renderSheet({ frequent: ["groceries"] });
+  it("commits the category on the tap that opens its subcategories", async () => {
+    const { onSelect, onDone } = renderSheet({ frequent: ["groceries"] });
 
     expect(
       screen.queryByRole("button", { name: "Done" }),
     ).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Travel" }));
-    expect(onSelect).toHaveBeenCalledExactlyOnceWith("travel");
+    // The category is written immediately, before the second level is even
+    // shown. Dismissing from the pane leaves a complete entry rather than an
+    // abandoned one, which is what makes the subcategory genuinely optional.
+    await userEvent.click(screen.getByRole("button", { name: /Transport/ }));
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith("transport", null);
+    // Written, but not finished: the pane is still to come.
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("ends the journey on a category that has no second level", async () => {
+    const { onSelect, onDone } = renderSheet();
+
+    await userEvent.click(screen.getByRole("button", { name: /Other/ }));
+
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith("other", null);
+    expect(onDone).toHaveBeenCalledOnce();
+    // `other` has no subcategories, so there is no pane to land on.
+    expect(
+      screen.queryByRole("button", { name: "Just Other" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the subcategories of the category just tapped", async () => {
+    const { onSelect, onDone } = renderSheet();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Transport/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Fuel" }));
+
+    expect(onSelect).toHaveBeenLastCalledWith("transport", "fuel");
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the skip above the subcategories, and it clears the child", async () => {
+    const { onSelect } = renderSheet({
+      value: "transport",
+      subcategory: "fuel",
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /^Transport/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Just Transport" }),
+    );
+
+    expect(onSelect).toHaveBeenLastCalledWith("transport", null);
+  });
+
+  it("groups the twenty subcategories of Home under the codes they replaced", async () => {
+    renderSheet();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Home/ }));
+
+    // The four headings are the shape of what `home` merged, so somebody who
+    // filed rent under Housing for two years still finds their footing.
+    for (const heading of [
+      "Housing",
+      "Utilities",
+      "Upkeep & repairs",
+      "Furniture & supplies",
+    ]) {
+      expect(
+        screen.getByRole("heading", { name: heading }),
+      ).toBeInTheDocument();
+    }
+    expect(chipsUnder("Housing")).toEqual([
+      "Home insurance",
+      "Mortgage",
+      "Property tax",
+      "Rent",
+    ]);
   });
 
   it("puts every category behind the search, grouped as results", async () => {
@@ -143,7 +213,7 @@ describe("CategorySheet", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Search categories" }),
-      "ies",
+      "ping",
     );
 
     // Searching is someone saying they want something else, so the
@@ -152,13 +222,44 @@ describe("CategorySheet", () => {
     expect(
       screen.queryByRole("heading", { name: "All categories" }),
     ).not.toBeInTheDocument();
-    // Groceries was on the shortlist and Activities was not; the results are
-    // drawn from the whole vocabulary either way, in the reader's own order.
-    expect(chipsUnder("Results")).toEqual([
-      "Activities",
-      "Groceries",
-      "Utilities",
-    ]);
+    expect(chipsUnder("Results")).toEqual(["Shopping"]);
+  });
+
+  it("reaches the leaves, and sets both levels in one tap", async () => {
+    const { onSelect } = renderSheet();
+
+    // Matching is on the label, not the ID — the ID is not what is on screen.
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Search categories" }),
+      "fuel",
+    );
+
+    // A leaf hit is drawn as the breadcrumb it is: the parent muted, the leaf
+    // in the foreground, because the leaf is what matched.
+    const [first] = within(
+      screen.getByRole("heading", { name: "Subcategories" }).parentElement!,
+    ).getAllByRole("button");
+    expect(first).toHaveTextContent("Transport");
+    expect(first).toHaveTextContent("Fuel");
+
+    await userEvent.click(first);
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith("transport", "fuel");
+  });
+
+  it("reaches the same leaf through its French label", async () => {
+    const { onSelect } = renderSheet({}, { locale: "fr" });
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Rechercher une catégorie" }),
+      "carburant",
+    );
+
+    await userEvent.click(
+      within(
+        screen.getByRole("heading", { name: "Sous-catégories" }).parentElement!,
+      ).getAllByRole("button")[0],
+    );
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith("transport", "fuel");
   });
 
   it("says so when nothing matches", async () => {
@@ -212,13 +313,13 @@ describe("CategorySheet", () => {
   });
 
   it("marks the current category, and only it", () => {
-    renderSheet({ value: "travel", frequent: ["groceries"] });
+    renderSheet({ value: "transport", frequent: ["groceries"] });
 
-    expect(screen.getByRole("button", { name: "Travel" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /^Transport/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Groceries" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /^Groceries/ })).toHaveAttribute(
       "aria-pressed",
       "false",
     );

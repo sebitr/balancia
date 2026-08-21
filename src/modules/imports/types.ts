@@ -26,6 +26,11 @@ export interface StagedExpense {
   readonly kind: "expense";
   readonly description: string;
   readonly category?: string | null;
+  /**
+   * Only a Balancia backup carries one — no other source has a second level.
+   * Kept only when it belongs to the category the row resolves to.
+   */
+  readonly subcategory?: string | null;
   readonly notes?: string | null;
   /** YYYY-MM-DD. */
   readonly date: string;
