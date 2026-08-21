@@ -356,6 +356,10 @@
     "clearSearch": "Clear search",
     "noMatchTitle": "No transaction matches that",
     "noMatchHint": "Try a shorter word, or clear the category bands.",
+    "loadingEarlier": "Loading earlier transactions…",
+    "searchingEarlier": "Searching earlier transactions…",
+    "loadFailed": "Earlier transactions could not be loaded.",
+    "loadRetry": "Try again",
     "positionBack": "you get back",
     "positionOwed": "you owe",
     "positionSettled": "settled"

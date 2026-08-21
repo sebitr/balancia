@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import { participants, settlements } from "@/lib/db/schema";
 import {
   AuthorizationError,
@@ -38,6 +39,12 @@ export interface SettlementSummary {
   readonly settledOn: string;
   readonly notes: string | null;
   readonly createdAt: Date;
+}
+
+/** A settlement as the transactions list reads it. See `ListedExpense`. */
+export interface ListedSettlement extends SettlementSummary {
+  /** Creation instant, UTC, to the microsecond. See `@/lib/db/keyset`. */
+  readonly cursorKey: string;
 }
 
 async function assertParticipants(
@@ -312,11 +319,12 @@ export async function deleteSettlement(
 
 export async function listSettlements(
   groupId: string,
-  options: { db?: Database; limit?: number } = {},
-): Promise<SettlementSummary[]> {
+  options: { db?: Database; limit?: number; before?: ListCursor | null } = {},
+): Promise<ListedSettlement[]> {
   const db = options.db ?? getDb();
   const rows = await db
     .select({
+      cursorKey: keysetTime(settlements.createdAt),
       id: settlements.id,
       fromParticipantId: settlements.fromParticipantId,
       toParticipantId: settlements.toParticipantId,
@@ -330,8 +338,27 @@ export async function listSettlements(
       createdAt: settlements.createdAt,
     })
     .from(settlements)
-    .where(and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)))
-    .orderBy(desc(settlements.settledOn), desc(settlements.createdAt))
+    .where(
+      and(
+        eq(settlements.groupId, groupId),
+        isNull(settlements.deletedAt),
+        options.before
+          ? keysetBefore(
+              {
+                date: settlements.settledOn,
+                time: settlements.createdAt,
+                id: settlements.id,
+              },
+              options.before,
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(
+      desc(settlements.settledOn),
+      desc(settlements.createdAt),
+      desc(settlements.id),
+    )
     .limit(options.limit ?? 100);
 
   if (rows.length === 0) return [];
@@ -347,6 +374,27 @@ export async function listSettlements(
     fromName: nameById.get(row.fromParticipantId) ?? "Unknown",
     toName: nameById.get(row.toParticipantId) ?? "Unknown",
   }));
+}
+
+/**
+ * Whether the group has ever recorded a repayment.
+ *
+ * Asked separately from the list because the kind chips must describe the
+ * group, not the page: a Settlements chip that appeared only once the reader
+ * had scrolled far enough to reach one would be a control that arrives after
+ * the moment it was useful.
+ */
+export async function hasSettlements(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ id: settlements.id })
+    .from(settlements)
+    .where(and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)))
+    .limit(1);
+  return row !== undefined;
 }
 
 /**

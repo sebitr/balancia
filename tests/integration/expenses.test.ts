@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
+import { decodeCursor, encodeCursor, type ListCursor } from "@/lib/db/keyset";
 import { activityEvents, expenseShares, expenses } from "@/lib/db/schema";
 import { AuthorizationError } from "@/lib/security/authorization";
 import {
@@ -381,5 +382,116 @@ describe("soft deletion", () => {
       .from(expenses)
       .where(eq(expenses.id, expenseId));
     expect(row.deletedAt).not.toBeNull();
+  });
+});
+
+describe("paging a long list", () => {
+  /**
+   * Rows written in one statement, which is what an import does.
+   *
+   * They therefore share a `created_at` to the microsecond — Postgres' `now()`
+   * is the transaction's clock, not the statement's — and several share a
+   * date. That is the arrangement keyset paging has to survive, and the one
+   * `LIMIT`/`OFFSET` cannot: with nothing left to break the tie, the database
+   * is free to return them in a different order per query, and a page boundary
+   * then lands somewhere different each time.
+   */
+  async function fillGroup(groupId: string, count: number): Promise<void> {
+    const db = getDb();
+    await db.insert(expenses).values(
+      Array.from({ length: count }, (_, index) => ({
+        groupId,
+        description: `Row ${index}`,
+        amount: 1000n,
+        currency: "EUR",
+        splitMethod: "equal" as const,
+        // Two dates only, so most of the list ties on both date and clock and
+        // is separated by nothing but the id.
+        expenseDate: index < count / 2 ? "2019-07-02" : "2022-03-04",
+        createdByActorType: "user" as const,
+      })),
+    );
+  }
+
+  /** Walks the whole list a page at a time, as the screen does. */
+  async function pageThrough(groupId: string, size: number): Promise<string[]> {
+    const seen: string[] = [];
+    let cursor: ListCursor | null = null;
+
+    for (;;) {
+      const page = await listExpenses(groupId, { limit: size, before: cursor });
+      seen.push(...page.map((expense) => expense.id));
+      if (page.length < size) return seen;
+
+      const last = page[page.length - 1];
+      // Through the wire format, not around it: an encoding that cannot carry
+      // the key exactly is the failure this is looking for.
+      cursor = decodeCursor(
+        encodeCursor({
+          date: last.expenseDate,
+          time: last.cursorKey,
+          id: last.id,
+        }),
+      );
+      expect(cursor).not.toBeNull();
+    }
+  }
+
+  it("hands out every row exactly once, in the order one query would", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    await fillGroup(group.groupId, 25);
+
+    const whole = await listExpenses(group.groupId, { limit: 1000 });
+    const paged = await pageThrough(group.groupId, 7);
+
+    expect(paged).toHaveLength(25);
+    expect(new Set(paged).size).toBe(25);
+    expect(paged).toEqual(whole.map((expense) => expense.id));
+  });
+
+  it("ends on the boundary rather than one page past it", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    await fillGroup(group.groupId, 20);
+
+    // A page size that divides the list exactly is where an off-by-one shows
+    // up: the last full page must still be followed by an empty one.
+    expect(await pageThrough(group.groupId, 10)).toHaveLength(20);
+  });
+
+  it("carries a microsecond clock through the cursor without rounding it", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const db = getDb();
+
+    // Same date, same millisecond, different microseconds — a cursor that went
+    // through a JavaScript Date would round down and skip the second row.
+    await db.insert(expenses).values(
+      [".123456", ".123999"].map((fraction, index) => ({
+        groupId: group.groupId,
+        description: `Row ${index}`,
+        amount: 1000n,
+        currency: "EUR",
+        splitMethod: "equal" as const,
+        expenseDate: "2019-07-02",
+        createdByActorType: "user" as const,
+        createdAt: new Date(`2019-07-02T10:00:00${fraction}Z`),
+      })),
+    );
+
+    // Written as text so the microseconds survive the driver as well.
+    await db.execute(sql`
+      UPDATE ${expenses}
+      SET created_at = '2019-07-02 10:00:00.123456+00'
+      WHERE ${expenses.description} = 'Row 0'
+    `);
+    await db.execute(sql`
+      UPDATE ${expenses}
+      SET created_at = '2019-07-02 10:00:00.123999+00'
+      WHERE ${expenses.description} = 'Row 1'
+    `);
+
+    expect(await pageThrough(group.groupId, 1)).toHaveLength(2);
   });
 });

@@ -356,6 +356,10 @@
     "clearSearch": "Effacer la recherche",
     "noMatchTitle": "Aucune transaction ne correspond",
     "noMatchHint": "Essaie un mot plus court, ou désélectionne les catégories.",
+    "loadingEarlier": "Chargement des transactions plus anciennes…",
+    "searchingEarlier": "Recherche dans les transactions plus anciennes…",
+    "loadFailed": "Les transactions plus anciennes n'ont pas pu être chargées.",
+    "loadRetry": "Réessayer",
     "positionBack": "tu récupères",
     "positionOwed": "tu dois",
     "positionSettled": "soldé"

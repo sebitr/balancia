@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import {
   attachments,
   expensePayers,
@@ -29,6 +30,7 @@ import { classifyRateSource } from "@/modules/currencies/rates";
 import { money } from "@/modules/currencies/money";
 import { AllocationError } from "./allocation";
 import type { EntryDirection } from "./direction";
+import type { SpreadEntry } from "./spread";
 import {
   convertAllocations,
   resolveSplit,
@@ -79,6 +81,19 @@ export interface ExpenseSummary {
   }[];
   readonly attachmentCount: number;
   readonly recurringExpenseId: string | null;
+}
+
+/**
+ * An expense as the transactions list reads it: the summary, plus the position
+ * it occupies in that list.
+ *
+ * `cursorKey` is not part of `ExpenseSummary` because it is not a fact about
+ * the expense — it is a fact about one ordering of one list, and a caller
+ * fetching a single expense has no list to place it in.
+ */
+export interface ListedExpense extends ExpenseSummary {
+  /** Creation instant, UTC, to the microsecond. See `@/lib/db/keyset`. */
+  readonly cursorKey: string;
 }
 
 async function assertParticipantsInGroup(
@@ -588,14 +603,28 @@ async function linkAttachments(
     );
 }
 
-/** Expenses for a group, newest first, with payers and shares resolved. */
+/**
+ * Expenses for a group, newest first, with payers and shares resolved.
+ *
+ * Two ways to walk the list. `before` is the one the transactions screen uses:
+ * hand back the cursor of the last row you were given and the next call
+ * continues from exactly there, at constant cost and with no risk of a row
+ * being shown twice or missed. `offset` remains for the export, which reads
+ * the whole list in one pass and has no reader scrolling underneath it.
+ */
 export async function listExpenses(
   groupId: string,
-  options: { db?: Database; limit?: number; offset?: number } = {},
-): Promise<ExpenseSummary[]> {
+  options: {
+    db?: Database;
+    limit?: number;
+    offset?: number;
+    before?: ListCursor | null;
+  } = {},
+): Promise<ListedExpense[]> {
   const db = options.db ?? getDb();
   const rows = await db
     .select({
+      cursorKey: keysetTime(expenses.createdAt),
       id: expenses.id,
       direction: expenses.direction,
       description: expenses.description,
@@ -617,8 +646,30 @@ export async function listExpenses(
       )`,
     })
     .from(expenses)
-    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)))
-    .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt))
+    .where(
+      and(
+        eq(expenses.groupId, groupId),
+        isNull(expenses.deletedAt),
+        options.before
+          ? keysetBefore(
+              {
+                date: expenses.expenseDate,
+                time: expenses.createdAt,
+                id: expenses.id,
+              },
+              options.before,
+            )
+          : undefined,
+      ),
+    )
+    // `id` last, and never left out: an import files hundreds of rows under
+    // one transaction clock, and without it their order is the database's
+    // choice — a different one per query.
+    .orderBy(
+      desc(expenses.expenseDate),
+      desc(expenses.createdAt),
+      desc(expenses.id),
+    )
     .limit(options.limit ?? 100)
     .offset(options.offset ?? 0);
 
@@ -658,6 +709,38 @@ export async function listExpenses(
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
+}
+
+/**
+ * Every expense in the group, reduced to what the category spread reads.
+ *
+ * Unbounded, and deliberately so. The spine is a picture of *proportions*, and
+ * a proportion measured over the newest page only is not a smaller truth, it
+ * is a different and wrong one — it would also redraw itself under the
+ * reader's thumb as paging brought more rows in. Six scalar columns and no
+ * joins is a cheap read even for a group with years of history, and it is the
+ * same shape `loadGroupBalances` already takes over the same table.
+ *
+ * The totalling stays in `categoryTotals` rather than moving into SQL: the
+ * rule for which amount counts, and in which currency, is the one the balances
+ * use, and there must go on being exactly one copy of it.
+ */
+export async function listSpreadEntries(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<SpreadEntry[]> {
+  const db = options.db ?? getDb();
+  return db
+    .select({
+      direction: expenses.direction,
+      category: expenses.category,
+      amount: expenses.amount,
+      currency: expenses.currency,
+      convertedAmount: expenses.convertedAmount,
+      convertedCurrency: expenses.convertedCurrency,
+    })
+    .from(expenses)
+    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 }
 
 /** A single expense, scoped to its group. Returns null if it is not there. */

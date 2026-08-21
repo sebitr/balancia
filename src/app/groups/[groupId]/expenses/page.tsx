@@ -4,15 +4,11 @@ import { Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireGroupAccess } from "@/lib/actions";
-import { listExpenses } from "@/modules/expenses/service";
-import { listSettlements } from "@/modules/settlements/service";
-import { isSpending, signOf } from "@/modules/expenses/direction";
+import { listSpreadEntries } from "@/modules/expenses/service";
+import { loadTransactionPage } from "@/modules/expenses/transactions";
+import { hasSettlements } from "@/modules/settlements/service";
+import { isSpending } from "@/modules/expenses/direction";
 import {
-  allocationForGroup,
-  moneyForGroup,
-} from "@/modules/currencies/display";
-import {
-  categoryKeyOf,
   categoryTotals,
   isCategorised,
   spreadBands,
@@ -20,7 +16,7 @@ import {
 import {
   Transactions,
   type BandView,
-  type RowView,
+  type EntryKind,
 } from "@/components/expenses/transactions";
 
 /**
@@ -35,6 +31,19 @@ import {
  * count and a tally of what had been repaid all used to sit here, and each was
  * a restatement of the rows directly underneath — bought at the price of the
  * rows themselves, which on a phone started a third of the way down the screen.
+ *
+ * ## The rows arrive a page at a time
+ *
+ * Only the first page is built here; the island asks for the rest as the
+ * reader reaches the bottom. This screen used to fetch a flat 200 and stop,
+ * which stayed invisible until a group outgrew it and then cut its own history
+ * off without saying so — a group holding entries back to 2019 showed nothing
+ * before 2022.
+ *
+ * The two things that describe the *whole* group rather than the page — the
+ * category spread, and which kind chips exist — are measured over all of it,
+ * from their own queries. A proportion or a chip counted over the pages read
+ * so far would redraw itself under the reader as they scrolled.
  */
 export default async function ExpensesPage({
   params,
@@ -42,107 +51,15 @@ export default async function ExpensesPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [expenses, settlements] = await Promise.all([
-    listExpenses(access.groupId, { limit: 200 }),
-    listSettlements(access.groupId, { limit: 200 }),
+  const [page, spending, settlementsExist] = await Promise.all([
+    loadTransactionPage(access),
+    listSpreadEntries(access.groupId),
+    hasSettlements(access.groupId),
   ]);
 
   const t = await getTranslations("expensesList");
-  const self = access.participantId;
-  const displayGroup = {
-    mode: access.group.currencyMode,
-    baseCurrency: access.group.baseCurrency,
-  };
 
-  /**
-   * What this expense left the reader holding, in the currency the group uses
-   * for balances and list amounts.
-   *
-   * Paid minus owed, signed by direction — income is spending run backwards,
-   * so the person who received the money is the one who now owes. Taken from
-   * the stored allocations, never from an assumed even split: a 70/30 dinner
-   * is not 50/50 just because it is easier to render.
-   */
-  function positionOf(expense: (typeof expenses)[number]): string | null {
-    if (!self) return null;
-    const paid = expense.payers
-      .filter((payer) => payer.participantId === self)
-      .reduce(
-        (sum, payer) =>
-          sum + allocationForGroup(payer, access.group.currencyMode),
-        0n,
-      );
-    const owed = expense.shares
-      .filter((share) => share.participantId === self)
-      .reduce(
-        (sum, share) =>
-          sum + allocationForGroup(share, access.group.currencyMode),
-        0n,
-      );
-    if (paid === 0n && owed === 0n) return null;
-    return (signOf(expense.direction) * (paid - owed)).toString();
-  }
-
-  // Expenses and settlements share one chronological list — that is how people
-  // remember a trip — but a settlement is a repayment, not spending, and says
-  // so with its own badge, its own neutral rail and no category.
-  const rows: RowView[] = [
-    ...expenses.map((expense): RowView => {
-      const display = moneyForGroup(expense, displayGroup);
-      return {
-        kind: "expense",
-        id: expense.id,
-        date: expense.expenseDate,
-        createdAt: expense.createdAt.toISOString(),
-        title: expense.description,
-        amount: display.amount.toString(),
-        currency: display.currency,
-        // An expense's own notes stay on its detail screen; the description
-        // is already the row, and repeating one under the other would say
-        // the same thing twice as often as not.
-        note: null,
-        category: categoryKeyOf(expense.category),
-        position: positionOf(expense),
-        // Income keeps its amount positive in the database; the badge is what
-        // says which way it went.
-        revenue: !isSpending(expense.direction),
-        recurring: expense.recurringExpenseId !== null,
-      };
-    }),
-    ...settlements.map((settlement): RowView => {
-      const display = moneyForGroup(settlement, displayGroup);
-      return {
-        kind: "settlement",
-        id: settlement.id,
-        date: settlement.settledOn,
-        createdAt: settlement.createdAt.toISOString(),
-        title: t("settlementTitle", {
-          from: settlement.fromName,
-          to: settlement.toName,
-        }),
-        amount: display.amount.toString(),
-        currency: display.currency,
-        note: settlement.notes,
-        category: null,
-        // A repayment clears a position rather than creating one, so it is
-        // shown neutrally — and only to the two people it names. Which of
-        // them paid is already the row's title.
-        position:
-          self &&
-          (settlement.fromParticipantId === self ||
-            settlement.toParticipantId === self)
-            ? display.amount.toString()
-            : null,
-        revenue: false,
-        recurring: false,
-      };
-    }),
-  ].sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    return a.createdAt < b.createdAt ? 1 : -1;
-  });
-
-  if (rows.length === 0) {
+  if (page.rows.length === 0) {
     return (
       <div className="space-y-4">
         <PageTitle label={t("eyebrow")} />
@@ -181,8 +98,9 @@ export default async function ExpensesPage({
    * a filter whose only setting is the list already on screen. So it stays out
    * until there is a division to draw, and the list takes the width back.
    */
-  const spreads = categoryTotals(expenses, {
-    ...displayGroup,
+  const spreads = categoryTotals(spending, {
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
   });
   const single = spreads.length === 1 ? spreads[0] : null;
   const bands: BandView[] | null =
@@ -196,12 +114,28 @@ export default async function ExpensesPage({
         }))
       : null;
 
+  /*
+   * Which chips the group can offer, counted over everything it has recorded.
+   * Income is an expense running backwards, so both come out of the same scan;
+   * a repayment lives in another table and is asked for separately.
+   */
+  const kinds: EntryKind[] = [];
+  if (spending.some((entry) => isSpending(entry.direction))) {
+    kinds.push("expense");
+  }
+  if (spending.some((entry) => !isSpending(entry.direction))) {
+    kinds.push("revenue");
+  }
+  if (settlementsExist) kinds.push("settlement");
+
   return (
     <Transactions
       groupId={groupId}
       eyebrow={<PageTitle label={t("eyebrow")} />}
       bands={bands}
-      rows={rows}
+      kinds={kinds}
+      rows={page.rows}
+      cursor={page.cursor}
     />
   );
 }
