@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -55,7 +62,6 @@ export interface RowView {
   readonly kind: "expense" | "settlement";
   readonly id: string;
   readonly date: string;
-  readonly createdAt: string;
   readonly title: string;
   readonly amount: string;
   readonly currency: string;
@@ -90,7 +96,7 @@ const KIND_PARAM = "kind";
  */
 const KINDS = ["expense", "revenue", "settlement"] as const;
 
-type EntryKind = (typeof KINDS)[number];
+export type EntryKind = (typeof KINDS)[number];
 
 /** Income is stored as an expense running backwards, and filters as its own. */
 function kindOf(row: RowView): EntryKind {
@@ -191,13 +197,20 @@ export function Transactions({
   groupId,
   eyebrow,
   bands,
+  kinds,
   rows,
+  cursor,
 }: {
   groupId: string;
   eyebrow: ReactNode;
   /** Null when the group's spending spans more than one currency. */
   bands: readonly BandView[] | null;
+  /** Which kinds the group holds, measured over all of it — not over `rows`. */
+  kinds: readonly EntryKind[];
+  /** The first page. The rest arrive as the reader reaches the bottom. */
   rows: readonly RowView[];
+  /** Where the first page ended; null when it was also the last. */
+  cursor: string | null;
 }) {
   const t = useTranslations("expensesList");
   const dates = useDateFormatter();
@@ -239,11 +252,10 @@ export function Transactions({
    * over what the search field or the spine has left standing. Counted over
    * the visible rows instead, the row would lose a chip the moment that chip
    * did its job — and searching would make chips appear and vanish under the
-   * reader's thumb while they typed.
+   * reader's thumb while they typed. It is counted on the server for the same
+   * reason: the loaded rows are only the pages scrolled so far.
    */
-  const present = KINDS.filter((kind) =>
-    rows.some((row) => kindOf(row) === kind),
-  );
+  const present = KINDS.filter((kind) => kinds.includes(kind));
   const wantedKinds = new Set(
     searchParams
       .getAll(KIND_PARAM)
@@ -319,7 +331,25 @@ export function Transactions({
   const wanted = selected.size === 0 ? null : selected;
   const needle = query.trim().toLowerCase();
 
-  const shown = rows.filter((row) => {
+  /*
+   * A filter narrows the whole list, not the part of it that happens to be
+   * loaded. Rows arrive a screenful at a time while the reader scrolls, but
+   * the moment any filter is on, the rest of the history is fetched in bulk
+   * behind it — otherwise a search for a 2019 hotel would come back empty on a
+   * screen that simply had not read that far yet, which is a worse answer than
+   * no search at all.
+   */
+  const filtering = wanted !== null || wantedKinds.size > 0 || needle !== "";
+  const {
+    rows: loaded,
+    cursor: unread,
+    busy,
+    failed,
+    retry,
+    sentinelRef,
+  } = usePages(groupId, rows, cursor, filtering);
+
+  const shown = loaded.filter((row) => {
     if (wantedKinds.size > 0 && !wantedKinds.has(kindOf(row))) return false;
     if (wanted && (row.category === null || !wanted.has(row.category))) {
       return false;
@@ -483,7 +513,11 @@ export function Transactions({
             )}
           </div>
 
-          {shown.length === 0 ? (
+          {/* "Nothing matches" is only true once there is nothing left to
+              read. Said while pages are still arriving it would be a verdict
+              on a search that has not finished — and it would flash up on
+              every filter that has to reach back a few pages. */}
+          {shown.length === 0 && unread === null ? (
             <div className="flex flex-col items-center gap-2 px-4 py-9 text-center">
               <p className="text-sm font-medium">{t("noMatchTitle")}</p>
               <p className="text-xs text-muted-foreground">
@@ -510,10 +544,168 @@ export function Transactions({
               ))}
             </ul>
           )}
+
+          {/* Always mounted, so the observer watching it never has to be
+              rebuilt, and empty whenever there is nothing to say. */}
+          <div ref={sentinelRef} className="pt-6 empty:pt-0">
+            {failed ? (
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t("loadFailed")}
+                </p>
+                <button
+                  type="button"
+                  onClick={retry}
+                  className="rounded-md px-2 py-1 text-sm font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  {t("loadRetry")}
+                </button>
+              </div>
+            ) : busy ? (
+              <p
+                role="status"
+                className="text-center text-xs text-muted-foreground"
+              >
+                {filtering ? t("searchingEarlier") : t("loadingEarlier")}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Rows fetched at once when a filter is on.
+ *
+ * Large enough that reaching 2019 from 2026 is a handful of requests rather
+ * than a hundred, and capped again on the server, which is where the real
+ * limit belongs.
+ */
+const BULK_PAGE_SIZE = 500;
+
+interface PageResponse {
+  readonly rows: readonly RowView[];
+  readonly cursor: string | null;
+}
+
+interface Paging {
+  readonly rows: readonly RowView[];
+  /** Null once the whole list has been read. */
+  readonly cursor: string | null;
+  /** A page is on its way, or is about to be. */
+  readonly busy: boolean;
+  readonly failed: boolean;
+  readonly retry: () => void;
+  readonly sentinelRef: RefObject<HTMLDivElement | null>;
+}
+
+/**
+ * The rest of the list, fetched as the reader needs it.
+ *
+ * Two things ask for a page: the sentinel below the list coming into view, and
+ * a filter being on — the first a screenful at a time, the second in bulk
+ * until the list runs out. Both go through one request at a time, because the
+ * cursor for the next page is only known once the current one has landed.
+ *
+ * There is no `loading` flag, because there is nothing for one to remember.
+ * Wanting more rows and there being more to give is the whole condition, and
+ * both halves are already state: a request is in the air whenever `busy` says
+ * it should be. A separate flag would only be a second copy of that, kept in
+ * step by hand.
+ *
+ * A failure stops the loop rather than retrying by itself. A list that
+ * silently re-requested a failing endpoint every time the reader nudged the
+ * scrollbar would be a worse thing to be sitting under than a sentence saying
+ * so and a button.
+ */
+function usePages(
+  groupId: string,
+  first: readonly RowView[],
+  firstCursor: string | null,
+  eager: boolean,
+): Paging {
+  const [state, setState] = useState({
+    first,
+    rows: first,
+    cursor: firstCursor,
+  });
+  const [failed, setFailed] = useState(false);
+  const [atEnd, setAtEnd] = useState(false);
+  const inFlight = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * The server sent a different first page — something was added, edited or
+   * deleted and the route revalidated — so every page read after it describes
+   * a list that no longer exists. Start again from what it just sent.
+   *
+   * Adjusted during render rather than in an effect: React re-runs the
+   * component immediately with the new state and before anything paints, so
+   * the stale rows never reach the screen.
+   */
+  if (state.first !== first) {
+    setState({ first, rows: first, cursor: firstCursor });
+    setFailed(false);
+  }
+
+  const { cursor } = state;
+  const busy = cursor !== null && !failed && (eager || atEnd);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    // Watched well before it is actually reached, so the next rows are already
+    // in place by the time the reader gets to the bottom rather than starting
+    // to be fetched then.
+    const observer = new IntersectionObserver(
+      ([entry]) => setAtEnd(entry?.isIntersecting ?? false),
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!busy || cursor === null || inFlight.current) return;
+    inFlight.current = true;
+    const from = cursor;
+
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ cursor: from });
+        if (eager) params.set("limit", String(BULK_PAGE_SIZE));
+        const response = await fetch(
+          `/api/groups/${groupId}/transactions?${params}`,
+          { headers: { Accept: "application/json" } },
+        );
+        if (!response.ok) throw new Error(`Transactions: ${response.status}`);
+        const page = (await response.json()) as PageResponse;
+        setState((prev) =>
+          // Not the page we were reading any more: the list reset underneath
+          // this request while it was in the air, and these rows belong to the
+          // list it replaced.
+          prev.cursor === from
+            ? {
+                first: prev.first,
+                rows: [...prev.rows, ...page.rows],
+                cursor: page.cursor,
+              }
+            : prev,
+        );
+      } catch {
+        setFailed(true);
+      } finally {
+        inFlight.current = false;
+      }
+    })();
+  }, [busy, cursor, eager, groupId]);
+
+  const retry = useCallback(() => setFailed(false), []);
+
+  return { rows: state.rows, cursor, busy, failed, retry, sentinelRef };
 }
 
 function BandGlyph({ category }: { category: string }) {
