@@ -22,9 +22,10 @@ import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 /**
  * How long the sheet takes to leave, matching `SheetContent`'s own exit.
  *
- * The route change waits for it. Popping the route the moment the drawer is
- * dismissed would unmount it mid-animation, and the drawer would vanish rather
- * than slide away.
+ * A route change that still has somewhere to go back to waits for it. Popping
+ * the route the moment the drawer is dismissed would unmount it mid-animation,
+ * and the drawer would vanish rather than slide away. An entry that is gone is
+ * the exception, and the reason is below.
  */
 const EXIT_MS = 380;
 
@@ -51,7 +52,8 @@ export function AddEntryDrawer({
 
   useEffect(() => {
     if (exit === null) return;
-    const timer = setTimeout(() => {
+
+    const leave = () => {
       // `gone` overrides `dismissTo` on purpose. Back is only ever a way out
       // while what is behind still exists, and an entry that was deleted — or
       // moved to the other table by a change of type — takes its detail screen
@@ -65,7 +67,28 @@ export function AddEntryDrawer({
       // behind, and refreshing while still on `/expenses/new` would only
       // refetch the drawer's own route.
       if (exit !== "dismiss") router.refresh();
-    }, EXIT_MS);
+    };
+
+    // An entry that is gone cannot wait for the animation.
+    //
+    // Every Server Action re-renders the page it was called from, and the page
+    // this one was called from is `/expenses/<id>/edit`, whose whole job is to
+    // load the entry that has just been removed. That re-render is already on
+    // its way back when the action resolves, so a departure held for the
+    // slide-out arrives after it: the route answers 404, the reader lands on
+    // the not-found screen, and the only way on from there is the homepage.
+    //
+    // Leaving in the same turn wins that race by construction rather than by
+    // luck. A navigation dispatched while a Server Action is still in flight
+    // marks it discarded, so its state is never applied, and Next re-runs the
+    // revalidation it asked for once the navigation has landed. What it costs
+    // is the slide-out — which had nothing to slide back onto.
+    if (exit === "gone") {
+      leave();
+      return;
+    }
+
+    const timer = setTimeout(leave, EXIT_MS);
     return () => clearTimeout(timer);
   }, [exit, dismissTo, form.groupId, router]);
 

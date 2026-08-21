@@ -185,7 +185,10 @@ export async function convertSettlementToExpenseAction(
     return { expenseId };
   });
 
-  if (result.ok) revalidateGroup(groupId);
+  if (result.ok) {
+    revalidateGroup(groupId);
+    revalidatePath(`/groups/${groupId}/settlements/${settlementId}`);
+  }
   return result;
 }
 
