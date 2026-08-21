@@ -8,6 +8,11 @@ rebuild and no restart.
 Anything you do not supply keeps its lettermark, so a directory with one file
 in it is a perfectly good state.
 
+Under Compose this directory is bind-mounted into the container read-only, so
+the same is true there: drop the file in on the host and refresh the page. It
+is a mount rather than part of the image precisely so that artwork this
+repository must not carry never enters one either.
+
 ## Why this is empty
 
 Balancia ships no payment-provider artwork, on purpose.
