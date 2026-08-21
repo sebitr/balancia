@@ -189,6 +189,7 @@ export default async function TransactionDetailPage({
             minorUnits={expense.amount.toString()}
             currency={currency}
             tone={tone}
+            locale={locale}
           />
           <h1 className="text-[17px] font-medium">{expense.description}</h1>
         </div>

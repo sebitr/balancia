@@ -1,7 +1,7 @@
 import { Download, Minus } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { initialOf } from "./pills";
+import { initialOf } from "./initials";
 import { cn } from "@/lib/utils";
 
 /**
@@ -189,23 +189,55 @@ export function CountChip({
 }
 
 /**
+ * Which side of the figure this reader's notation puts the currency on.
+ *
+ * The handoff draws `− CHF 364.00`, which is where an English reader expects
+ * it — and every other figure on the screen goes through `Intl`, which in
+ * French puts it after. Left as drawn, one screen said `− CHF 364,00` at the
+ * top and `121,33 CHF` in every row underneath.
+ */
+function currencyLeads(locale: string, currency: string): boolean {
+  const parts = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  }).formatToParts(1);
+  const at = parts.findIndex((part) => part.type === "currency");
+  return at !== -1 && at < parts.findIndex((part) => part.type === "integer");
+}
+
+/**
  * The figure the whole screen is about.
  *
  * The currency and the sign sit on the figure's baseline at a third of its
  * size: they qualify the number rather than compete with it. The sign is a
  * character rather than a colour, so "money went out" survives greyscale and
- * is read aloud.
+ * is read aloud — and it always leads, whichever end the currency is at.
  */
 export function BigAmount({
   minorUnits,
   currency,
   tone,
+  locale,
 }: {
   minorUnits: string;
   currency: string;
   tone: EntryTone;
+  /** The reader's number notation, which decides where the currency sits. */
+  locale: string;
 }) {
   const sign = AMOUNT_SIGN[tone];
+  const leads = currencyLeads(locale, currency);
+  const qualifier = (text: string) => (
+    <span
+      className={cn(
+        "text-[17px] font-medium",
+        sign === "" ? "text-muted-foreground" : "opacity-75",
+      )}
+    >
+      {text}
+    </span>
+  );
+
   return (
     <span
       className={cn(
@@ -213,17 +245,13 @@ export function BigAmount({
         AMOUNT_TONE[tone],
       )}
     >
-      <span
-        className={cn(
-          "text-[17px] font-medium",
-          sign === "" ? "text-muted-foreground" : "opacity-75",
-        )}
-      >
-        {sign === "" ? currency : `${sign} ${currency}`}
-      </span>
+      {leads
+        ? qualifier(sign === "" ? currency : `${sign} ${currency}`)
+        : sign !== "" && qualifier(sign)}
       <span className="text-[40px] font-semibold tracking-[-0.03em]">
         <Amount minorUnits={minorUnits} currency={currency} display="none" />
       </span>
+      {!leads && qualifier(currency)}
     </span>
   );
 }

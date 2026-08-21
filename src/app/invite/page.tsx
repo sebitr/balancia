@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BalanceAmount } from "@/components/money/amount";
+import { initialOf } from "@/components/entries/initials";
 import { getDateFormatter } from "@/i18n/preferences";
 import { requireGroupAccess } from "@/lib/actions";
 import { getCurrentActor } from "@/lib/security/actor";
@@ -69,9 +70,8 @@ export default async function InvitePage() {
   const only =
     position?.counterparties.length === 1 ? position.counterparties[0] : null;
 
-  // `initialOf` lives in a client module and cannot be called from here.
   const inviter = invitation.inviterName ?? actor.displayName;
-  const initial = inviter.trim().charAt(0).toUpperCase();
+  const initial = initialOf(inviter);
 
   const promises = [
     { key: "promiseExpenses", kept: true },
