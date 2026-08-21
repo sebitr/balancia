@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { AddEntryDrawer } from "./add-entry-drawer";
@@ -1335,7 +1335,66 @@ describe("leaving the drawer", () => {
     await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/groups/g1"));
     expect(back).not.toHaveBeenCalled();
   });
+
+  /**
+   * *When* it leaves, which for a moved entry is not a matter of taste.
+   *
+   * The Server Action that moved it re-renders `/expenses/<id>/edit` on its
+   * way back, and that route loads the expense which is no longer there. A
+   * departure held for the slide-out arrives after the 404 the route answered,
+   * and the reader is stranded on the not-found screen. So the action is held
+   * open here and released by hand: nothing but microtasks runs between the
+   * result arriving and the assertion, and it has already gone.
+   */
+  it("leaves the moment the entry moved, without waiting for the slide-out", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+    const moved = held(toSettlement);
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(push).not.toHaveBeenCalled();
+
+    await act(async () => moved({ ok: true, data: { settlementId: "s2" } }));
+
+    expect(push).toHaveBeenCalledWith("/groups/g1");
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  /** An entry still in place has a screen behind it, so that one does wait. */
+  it("holds an ordinary edit until the drawer has slid away", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+    const saved = held(updateExpense);
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await act(async () => saved({ ok: true, data: undefined }));
+
+    expect(back).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(back).toHaveBeenCalled());
+    expect(push).not.toHaveBeenCalled();
+  });
 });
+
+/**
+ * Stops an action mid-flight and hands back the handle that finishes it.
+ *
+ * Timing is the assertion in the two tests above, and neither the clock nor
+ * fake timers can carry it: real time makes them a race against however loaded
+ * the machine is, and faking it deadlocks a tree this deep. Releasing the
+ * result by hand inside `act` leaves microtasks as the only thing that has
+ * run, which is exactly the window the drawer has to leave in.
+ */
+function held(action: ReturnType<typeof vi.fn>) {
+  let release!: (result: unknown) => void;
+  action.mockReturnValue(
+    new Promise((resolve) => {
+      release = resolve;
+    }),
+  );
+  return release;
+}
 
 /**
  * Who is repaying whom, when the answer is not one of the group's debts.
