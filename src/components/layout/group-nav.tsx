@@ -33,13 +33,29 @@ interface NavItem {
   readonly labelKey: "overview" | "expenses" | "add" | "people" | "settings";
   readonly icon: LucideIcon;
   readonly exact: boolean;
+  /**
+   * Other prefixes this tab answers to.
+   *
+   * A repayment is filed under `/settlements` because it is a different table,
+   * which is a fact about the database and not about where the reader thinks
+   * they are: they tapped a row in the transactions list and the screen they
+   * landed on is one of that list's rows. A bar that goes dark at that moment
+   * says they have left a section they are plainly still in.
+   */
+  readonly owns?: readonly string[];
   /** Rendered as a filled action button — the primary thing to do here. */
   readonly primary?: boolean;
 }
 
 const ITEMS: readonly NavItem[] = [
   { href: "", labelKey: "overview", icon: Scale, exact: true },
-  { href: "/expenses", labelKey: "expenses", icon: Receipt, exact: false },
+  {
+    href: "/expenses",
+    labelKey: "expenses",
+    icon: Receipt,
+    exact: false,
+    owns: ["/settlements"],
+  },
   {
     href: "/expenses/new",
     labelKey: "add",
@@ -52,22 +68,39 @@ const ITEMS: readonly NavItem[] = [
 ];
 
 /**
+ * How specifically a tab claims this path, or null when it does not.
+ *
+ * The length of the prefix that matched, so the caller can rank overlapping
+ * claims — /expenses/new is under both "Expenses" and "Add", and the longer
+ * one is the more specific tab.
+ */
+function claimOf(item: NavItem, pathname: string, base: string): number | null {
+  if (item.exact) {
+    return pathname === `${base}${item.href}` ? item.href.length : null;
+  }
+  let best: number | null = null;
+  for (const prefix of [item.href, ...(item.owns ?? [])]) {
+    if (pathname.startsWith(`${base}${prefix}`)) {
+      best = Math.max(best ?? 0, prefix.length);
+    }
+  }
+  return best;
+}
+
+/**
  * Which tab the current path belongs to, or -1 when it belongs to none.
  *
  * A sideways move needs to know where it starts as well as where it is going,
- * and prefix matches overlap — /expenses/new is under both "Expenses" and
- * "Add" — so the longest matching href wins, being the most specific tab.
+ * and prefix matches overlap, so the longest claim wins.
  */
 function activeIndexOf(pathname: string, base: string): number {
   let best = -1;
+  let bestClaim = -1;
   ITEMS.forEach((item, index) => {
-    const href = `${base}${item.href}`;
-    const matches = item.exact ? pathname === href : pathname.startsWith(href);
-    if (
-      matches &&
-      (best === -1 || item.href.length > ITEMS[best].href.length)
-    ) {
+    const claim = claimOf(item, pathname, base);
+    if (claim !== null && claim > bestClaim) {
       best = index;
+      bestClaim = claim;
     }
   });
   return best;
@@ -111,9 +144,9 @@ export function GroupNav({ groupId }: { groupId: string }) {
       <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-2 pb-2">
         {ITEMS.map((item, index) => {
           const href = `${base}${item.href}`;
-          const isActive = item.exact
-            ? pathname === href
-            : pathname.startsWith(href);
+          // The same claim the direction is ranked from, so a tab cannot be
+          // lit without being the one a sideways move counts from.
+          const isActive = claimOf(item, pathname, base) !== null;
 
           return (
             <li key={item.labelKey} className="flex-1">

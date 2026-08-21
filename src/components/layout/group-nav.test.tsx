@@ -93,6 +93,33 @@ describe("GroupNav", () => {
     );
   });
 
+  /**
+   * A repayment is stored in its own table and so lives at its own path, but
+   * the reader reached it from the transactions list and has not gone
+   * anywhere else. Expenses stays lit, and stays the tab a sideways move is
+   * measured from.
+   */
+  it("keeps Expenses lit on a repayment, which is one of its rows", () => {
+    cleanup();
+    nav.pathname = "/groups/g1/settlements/s1";
+    renderWithIntl(<GroupNav groupId="g1" />);
+    expect(screen.getByRole("link", { name: "Expenses" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    expect(directionFrom("/groups/g1/settlements/s1", "Settings")).toBe(
+      "switch-forward",
+    );
+    expect(directionFrom("/groups/g1/settlements/s1", "Overview")).toBe(
+      "switch-back",
+    );
+    // Editing one opens a drawer over it, and does not leave the section.
+    expect(directionFrom("/groups/g1/settlements/s1/edit", "Overview")).toBe(
+      "switch-back",
+    );
+  });
+
   it("treats a tab as the way out of a screen that is on no tab at all", () => {
     for (const tab of ["Overview", "Expenses", "People", "Settings"]) {
       expect(directionFrom("/groups/g1/balances", tab)).toBe("pop");
