@@ -1,12 +1,13 @@
 import { useSyncExternalStore } from "react";
-import { describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
   fitBandsToHeight,
   Transactions,
   type BandView,
+  type EntryKind,
   type RowView,
 } from "./transactions";
 
@@ -111,7 +112,6 @@ function row(overrides: Partial<RowView> = {}): RowView {
     kind: "expense",
     id: "e1",
     date: "2026-08-13",
-    createdAt: "2026-08-13T10:00:00.000Z",
     title: "Something",
     amount: "2500",
     currency: "EUR",
@@ -180,14 +180,39 @@ const ROWS: RowView[] = [
   }),
 ];
 
-function renderList(rows: readonly RowView[] = ROWS, search = "") {
+/**
+ * The chips the server would have offered for a group holding exactly `rows`.
+ *
+ * The real page counts these over the whole group rather than over the page it
+ * is rendering, so the component is told rather than left to work it out. Here
+ * the rows *are* the whole group.
+ */
+function kindsOf(rows: readonly RowView[]): EntryKind[] {
+  return KINDS.filter((kind) =>
+    rows.some((row) =>
+      row.kind === "settlement"
+        ? kind === "settlement"
+        : kind === (row.revenue ? "revenue" : "expense"),
+    ),
+  );
+}
+
+const KINDS = ["expense", "revenue", "settlement"] as const;
+
+function renderList(
+  rows: readonly RowView[] = ROWS,
+  search = "",
+  cursor: string | null = null,
+) {
   window.history.replaceState(null, "", `/groups/g1/expenses${search}`);
   return renderWithIntl(
     <Transactions
       groupId="g1"
       eyebrow={<h1>Transactions</h1>}
       bands={BANDS}
+      kinds={kindsOf(rows)}
       rows={rows}
+      cursor={cursor}
     />,
   );
 }
@@ -485,7 +510,9 @@ describe("Transactions without a single currency", () => {
         groupId="g1"
         eyebrow={<h1>Transactions</h1>}
         bands={null}
+        kinds={kindsOf(ROWS)}
         rows={ROWS}
+        cursor={null}
       />,
     );
 
@@ -500,5 +527,163 @@ describe("Transactions without a single currency", () => {
       screen.getByRole("group", { name: "Filter by kind" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toBeVisible();
+  });
+});
+
+/**
+ * The list reads itself a page at a time, and jsdom has no scrolling and no
+ * IntersectionObserver — so the observer is replaced with one these tests can
+ * fire by hand, which is the same event a thumb reaching the bottom produces.
+ */
+interface Watcher {
+  readonly callback: IntersectionObserverCallback;
+  target: Element | null;
+}
+
+const watchers = new Set<Watcher>();
+
+class StubObserver implements IntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly scrollMargin = "";
+  readonly thresholds: readonly number[] = [];
+  private readonly watcher: Watcher;
+
+  constructor(callback: IntersectionObserverCallback) {
+    this.watcher = { callback, target: null };
+  }
+
+  observe(target: Element) {
+    this.watcher.target = target;
+    watchers.add(this.watcher);
+  }
+
+  unobserve() {
+    watchers.delete(this.watcher);
+  }
+
+  disconnect() {
+    watchers.delete(this.watcher);
+  }
+
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+
+/** The reader arrives at the bottom of what has been loaded so far. */
+async function reachBottom() {
+  await act(async () => {
+    for (const watcher of watchers) {
+      watcher.callback(
+        [
+          {
+            isIntersecting: true,
+            target: watcher.target,
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+    }
+  });
+}
+
+function page(rows: RowView[], cursor: string | null = null) {
+  return { ok: true, json: async () => ({ rows, cursor }) } as Response;
+}
+
+const OLDER = row({
+  id: "hotel",
+  title: "Hôtel du Lac",
+  date: "2019-07-02",
+  category: "travel",
+});
+
+describe("Transactions beyond the first page", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    watchers.clear();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("IntersectionObserver", StubObserver);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reads the next page when the reader reaches the bottom", async () => {
+    fetchMock.mockResolvedValue(page([OLDER]));
+    const cursor = "2026-08-12|2026-08-12T09:00:00.000000Z|s1";
+    renderList(ROWS, "", cursor);
+
+    // Nothing is fetched for a reader who has not got there yet.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("Hôtel du Lac")).toBeNull();
+
+    await reachBottom();
+
+    expect(await screen.findByText("Hôtel du Lac")).toBeVisible();
+    // The rows already on screen stay where they were: this is one list
+    // continuing, not a page being replaced.
+    expect(screen.getByText("airbnb")).toBeVisible();
+
+    const asked = new URL(fetchMock.mock.calls[0][0] as string, "http://test");
+    expect(asked.pathname).toBe("/api/groups/g1/transactions");
+    expect(asked.searchParams.get("cursor")).toBe(cursor);
+  });
+
+  it("asks for nothing once the list has ended", async () => {
+    fetchMock.mockResolvedValue(page([OLDER]));
+    renderList(ROWS, "", null);
+
+    await reachBottom();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reads the rest of the list as soon as a filter is on", async () => {
+    fetchMock.mockResolvedValue(page([OLDER]));
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    // Typed, never scrolled: a search that only knew the rows already on
+    // screen would answer "nothing matches" about a hotel it has not read yet.
+    await userEvent.type(screen.getByRole("searchbox"), "hôtel");
+
+    expect(await screen.findByText("Hôtel du Lac")).toBeVisible();
+    const asked = new URL(fetchMock.mock.calls[0][0] as string, "http://test");
+    expect(asked.searchParams.get("limit")).toBe("500");
+  });
+
+  it("says nothing matches only once there is nothing left to read", async () => {
+    fetchMock.mockResolvedValue(page([OLDER]));
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    await userEvent.type(screen.getByRole("searchbox"), "hôtel");
+    await screen.findByText("Hôtel du Lac");
+
+    expect(screen.queryByText("No transaction matches that")).toBeNull();
+  });
+
+  it("stops after a failure, and waits to be told to try again", async () => {
+    fetchMock.mockRejectedValue(new Error("offline"));
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    await reachBottom();
+    expect(
+      await screen.findByText("Earlier transactions could not be loaded."),
+    ).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Scrolling again must not re-fire it: a failing endpoint asked once per
+    // nudge of the scrollbar is worse than a sentence and a button.
+    await reachBottom();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockResolvedValue(page([OLDER]));
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Hôtel du Lac")).toBeVisible();
   });
 });
