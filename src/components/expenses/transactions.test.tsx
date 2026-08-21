@@ -322,16 +322,16 @@ describe("Transactions", () => {
     ).toBeVisible();
   });
 
-  it("opens a settlement straight in the entry drawer", () => {
+  it("opens a settlement on its own detail screen", () => {
     renderList();
 
     const settlement = screen.getByText("Seb paid Padi").closest("li");
     expect(settlement).not.toBeNull();
-    // A repayment has no detail screen of its own, so the row is the way to
-    // the only thing that can be done to one.
+    // Not the edit drawer: the row cannot say whether the repayment finished
+    // the job, and the screen behind it is where that is answered.
     expect(within(settlement!).getByRole("link")).toHaveAttribute(
       "href",
-      "/groups/g1/settlements/s1/edit",
+      "/groups/g1/settlements/s1",
     );
     // It is a repayment, so it closes a position rather than moving one.
     expect(within(settlement!).getByText("settled")).toBeInTheDocument();

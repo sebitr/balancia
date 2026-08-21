@@ -360,15 +360,6 @@
     "positionOwed": "tu dois",
     "positionSettled": "soldé"
   },
-  "deleteExpense": {
-    "trigger": "Supprimer",
-    "title": "Supprimer cette dépense ?",
-    "body": "« {description} » sera retirée du groupe et les soldes seront recalculés sans elle. Cette action est irréversible depuis l'application.",
-    "keep": "La conserver",
-    "confirm": "Supprimer la dépense",
-    "deleted": "Dépense supprimée",
-    "failed": "La dépense n'a pas pu être supprimée."
-  },
   "profile": {
     "metaTitle": "Profil",
     "title": "Profil",
@@ -1423,21 +1414,60 @@
     "currencyModeConverted": "Converti en {currency}",
     "currencyModeFixed": "Figé"
   },
-  "expenseDetail": {
-    "splitEqual": "Partage à parts égales",
-    "splitExact": "Montants exacts",
-    "splitPercentage": "Partage par pourcentage",
-    "splitShares": "Partage par parts",
-    "fromRecurring": "Issue d'une dépense récurrente",
-    "convertedAt": "Converti au taux de {rate}",
-    "recordedIn": "Enregistré dans la devise du groupe",
-    "rateFrozen": "Taux figé au moment de l'enregistrement. Il n'est pas recalculé.",
+  "transactionDetail": {
+    "types": {
+      "expense": "Dépense",
+      "revenue": "Revenu",
+      "settlement": "Remboursement"
+    },
+    "attachments": "{count, plural, one {# fichier joint} other {# fichiers joints}}",
+    "date": "Date",
+    "repeats": "Récurrence",
+    "oneOff": "Ponctuel",
+    "repeatWeekly": "{count, plural, one {Chaque semaine} other {Toutes les # semaines}}",
+    "repeatMonthly": "{count, plural, one {Chaque mois} other {Tous les # mois}}",
+    "repeatYearly": "{count, plural, one {Chaque année} other {Tous les # ans}}",
+    "fromTo": "De → à",
+    "inGroupCurrency": "En {currency}",
+    "atRate": "au taux de {rate}",
     "paidBy": "Payé par",
+    "receivedBy": "Reçu par",
     "splitBetween": "Partagé entre",
+    "creditedTo": "Crédité à",
+    "person": "Personne",
+    "share": "Part",
+    "credited": "Crédité",
+    "balance": "Solde",
+    "splitEqual": "À parts égales",
+    "splitExact": "Montants exacts",
+    "splitPercentage": "Par pourcentage",
+    "splitShares": "Par parts",
+    "whatChanged": "Ce que ça a changé",
+    "owedBefore": "Devait {amount} avant",
+    "backBefore": "Récupérait {amount} avant",
+    "settledBefore": "Était soldé avant",
+    "settledUp": "Soldé",
+    "stillOwes": "doit encore",
+    "stillGetsBack": "récupère encore",
     "notes": "Notes",
-    "receipts": "Reçus",
-    "kilobytes": "{size} Ko",
-    "edit": "Modifier"
+    "files": "Fichiers",
+    "fileKind": {
+      "image": "Image",
+      "pdf": "PDF",
+      "file": "Fichier"
+    },
+    "fileKilobytes": "{kind} · {size} Ko",
+    "fileMegabytes": "{kind} · {size} Mo",
+    "edit": "Modifier",
+    "delete": {
+      "trigger": "Supprimer",
+      "title": "Supprimer cette écriture ?",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. C'est irréversible depuis l'application.",
+      "keep": "La garder",
+      "confirm": "Supprimer",
+      "deleted": "Écriture supprimée",
+      "failed": "La suppression a échoué."
+    }
   },
   "emails": {
     "fallbackLabel": "Ou colle ce lien dans ton navigateur",

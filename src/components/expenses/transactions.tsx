@@ -594,13 +594,12 @@ function Row({
 
   return (
     <Link
-      // A repayment has no detail screen — there is nothing to say about one
-      // that this row does not already say — so it opens the entry drawer
-      // directly, which is where changing or removing it lives. An expense
-      // opens its detail, and edits from there.
+      // Every row opens its own detail screen, repayments included: the one
+      // thing this row cannot say about a repayment is whether it finished the
+      // job, and that is the whole of what the screen behind it is for.
       href={
         row.kind === "settlement"
-          ? `/groups/${groupId}/settlements/${row.id}/edit`
+          ? `/groups/${groupId}/settlements/${row.id}`
           : `/groups/${groupId}/expenses/${row.id}`
       }
       transitionTypes={PUSH}

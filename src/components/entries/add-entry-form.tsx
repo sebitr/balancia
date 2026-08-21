@@ -800,10 +800,10 @@ export function AddEntryForm({
   /**
    * Removing the entry outright.
    *
-   * It lives here rather than on a detail screen because this is now the only
-   * screen an entry is opened on — a settlement never had a detail screen at
-   * all, and offering "change it" without "remove it" would leave one behind
-   * with no way out.
+   * The detail screens carry a delete of their own, but this drawer can also
+   * be reached without passing through one — from a notification, or from a
+   * link — and offering "change it" without "remove it" would leave an entry
+   * behind with no way out.
    */
   const onDelete = async () => {
     if (!editing) return;
