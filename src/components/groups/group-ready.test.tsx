@@ -30,6 +30,16 @@ vi.mock("sonner", () => ({
 
 const URL = "https://balancia.test/join/g/SECRET-TOKEN";
 
+/**
+ * A week out from whatever the clock says now.
+ *
+ * This screen is only ever reached by tapping "Create group", so it freezes
+ * its own "now" from the browser rather than taking one from a server render.
+ * A fixed date in the fixture is therefore a countdown that loses a day every
+ * day, and this one had already rotted past "In 7 days" into "In 6".
+ */
+const IN_A_WEEK = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
 function renderReady(
   overrides: Partial<React.ComponentProps<typeof GroupReady>> = {},
 ) {
@@ -39,7 +49,7 @@ function renderReady(
       groupId="g1"
       groupName="Lisbon, March"
       people={["Seb", "Ana", "Tom", "Bea"]}
-      invite={{ url: URL, expiresAt: "2026-08-26T12:00:00.000Z" }}
+      invite={{ url: URL, expiresAt: IN_A_WEEK }}
       onSkip={onSkip}
       {...overrides}
     />,
