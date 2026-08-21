@@ -41,11 +41,31 @@ export async function EntryScreen({
   groupId,
   dismissTo,
   edit,
+  whenGone = "notFound",
 }: {
   groupId: string;
   dismissTo: "back" | "group";
   /** The entry to reopen, by the table it lives in. Absent means a new one. */
   edit?: { kind: "expense" | "settlement"; id: string };
+  /**
+   * What to answer when the entry to reopen is no longer there.
+   *
+   * `notFound` is right for the routes a cold link lands on. A removed entry
+   * has no screen, and saying so is the honest answer.
+   *
+   * `nothing` is right for the intercepted ones, which are not a screen at all
+   * but a slot held over the group. A slot keeps its active subpage across a
+   * client-side navigation *even when the new URL does not match it*, so the
+   * drawer's route goes on rendering after the reader has walked away from it
+   * — and the one moment it is asked to render again is the refresh that
+   * follows a conversion or a deletion, when the entry it names has just
+   * stopped existing. Answering 404 there does not blank the drawer, which
+   * nobody can see anyway: it takes the *group* down with it, which is how
+   * turning an expense into a repayment ended on the not-found screen with
+   * `/groups/<id>` in the address bar. Rendering nothing is what the slot
+   * holds on every other group route — see its `default.tsx`.
+   */
+  whenGone?: "notFound" | "nothing";
 }) {
   const access = await requireGroupAccess(groupId);
 
@@ -117,6 +137,7 @@ export async function EntryScreen({
   // Null only ever comes back from a load that was asked for: an entry that is
   // not in this group, or has already been removed under the reader.
   if (editing === null) {
+    if (whenGone === "nothing") return null;
     notFound();
   }
 
