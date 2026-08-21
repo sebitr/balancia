@@ -6,7 +6,7 @@ import { Sparkles } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
-  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_IDS,
   MAX_ALTERNATIVES,
   THRESHOLDS,
   isExpenseCategory,
@@ -57,7 +57,7 @@ export function CategoryField({
   const options = useMemo(() => {
     const collator = new Intl.Collator(locale);
     const named: { category: ExpenseCategory; label: string }[] =
-      EXPENSE_CATEGORIES.filter((category) => category !== "other")
+      EXPENSE_CATEGORY_IDS.filter((category) => category !== "other")
         .map((category) => ({ category, label: tCategories(category) }))
         .sort((a, b) => collator.compare(a.label, b.label));
     named.push({ category: "other", label: tCategories("other") });

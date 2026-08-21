@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidSubcategory } from "@/modules/categorization";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
 import { ENTRY_DIRECTIONS } from "./direction";
 import { SPLIT_METHODS } from "./split";
@@ -52,7 +53,22 @@ export const expenseInputSchema = z
     direction: z.enum(ENTRY_DIRECTIONS).optional(),
     description: z.string().trim().min(1, "Describe the expense").max(200),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
+    /**
+     * A canonical category code — or free text, still.
+     *
+     * Not narrowed to `ExpenseCategory` on purpose. An import writes the
+     * source's own label when nothing recognised it ("Fournitures ménagères",
+     * "Bus/train"), the spread gives that label its own bucket, and the edit
+     * form offers it back as a selectable value. Rejecting it here would make
+     * every imported expense unsavable the first time somebody touched its
+     * amount. See `categorizeImportedExpense`.
+     */
     category: z.string().trim().max(60).optional().or(z.literal("")),
+    /**
+     * Optional, and only meaningful against a canonical category — the pair
+     * is checked below.
+     */
+    subcategory: z.string().trim().max(60).optional().or(z.literal("")),
     amount: minorUnitsString,
     currency: currencyCodeSchema,
     /** Required in converted groups when currency differs from the base. */
@@ -73,6 +89,19 @@ export const expenseInputSchema = z
   .refine((value) => BigInt(value.amount) > 0n, {
     path: ["amount"],
     message: "The amount must be greater than zero",
+  })
+  /**
+   * The pair has to agree.
+   *
+   * `restaurants` + `fuel` is refused, and so is a subcategory hung on free
+   * text: an imported label is not a category, so nothing can legitimately sit
+   * under it. The form clears the child whenever the parent changes, but a
+   * form is a convenience — this is the boundary the API, the importers and
+   * the recurring generator all cross.
+   */
+  .refine((value) => isValidSubcategory(value.category, value.subcategory), {
+    path: ["subcategory"],
+    message: "That subcategory does not belong to the chosen category",
   });
 
 export type ExpenseInput = z.infer<typeof expenseInputSchema>;

@@ -27,6 +27,15 @@ export interface SpreadEntry {
   readonly direction: EntryDirection;
   /** As stored: a canonical code, imported free text, or nothing. */
   readonly category: string | null;
+  /**
+   * The stored subcategory, carried but not yet totalled by.
+   *
+   * The primary spread stays at the top level — introducing subcategories must
+   * not silently split `Transport €540` into eleven slices nobody asked for.
+   * It is here so a drill-down can be built on `subcategoryTotals` without
+   * another pass over the table.
+   */
+  readonly subcategory: string | null;
   readonly amount: bigint;
   readonly currency: string;
   readonly convertedAmount: bigint | null;
@@ -197,4 +206,37 @@ export function spreadBands(
       rank: null,
     },
   ];
+}
+
+/**
+ * One category broken down by subcategory, in one currency.
+ *
+ * The drill-down half of the spread, and deliberately a separate function
+ * rather than a field on `CategorySpread`: the charts that exist today ask
+ * "where did the money go" and are answered at the top level, and computing a
+ * breakdown they never render would be work done for nobody. A view that wants
+ * `Transport → Flights €310, Fuel €120` calls this with the category it opened.
+ *
+ * `null` is a real bucket, not a gap. Spending filed as `transport` with
+ * nothing under it is most transport spending, and hiding it would make the
+ * parts add up to less than the whole.
+ *
+ * Returns the same shape as `categoryTotals`, with the subcategory in the
+ * `category` field — it is the category *of this breakdown*, and reusing the
+ * shape is what keeps the currency and direction rules identical to the
+ * spread it drills into.
+ */
+export function subcategoryTotals(
+  entries: readonly SpreadEntry[],
+  category: string | null,
+  group: { mode: CurrencyMode; baseCurrency: string | null },
+): CategorySpread[] {
+  return categoryTotals(
+    entries
+      .filter((entry) => entry.category === category)
+      // The breakdown is over the child, so the child stands in as the key and
+      // `categoryTotals` does the currency and direction work exactly once.
+      .map((entry) => ({ ...entry, category: entry.subcategory })),
+    group,
+  );
 }

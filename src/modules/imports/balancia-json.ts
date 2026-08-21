@@ -55,6 +55,7 @@ interface BackupExpense {
   description?: unknown;
   notes?: unknown;
   category?: unknown;
+  subcategory?: unknown;
   amount?: unknown;
   currency?: unknown;
   convertedAmount?: unknown;
@@ -324,6 +325,7 @@ export const balanciaJsonAdapter: ImportAdapter = {
           kind: "expense",
           description: asText(expense.description) ?? "Imported expense",
           category: asText(expense.category),
+          subcategory: asText(expense.subcategory),
           notes: asText(expense.notes),
           date,
           amount,

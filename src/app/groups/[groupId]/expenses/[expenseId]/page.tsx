@@ -40,7 +40,10 @@ import { requireGroupAccess } from "@/lib/actions";
 import { getExpense } from "@/modules/expenses/service";
 import { getRecurrenceCadence } from "@/modules/recurring/service";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
-import { isExpenseCategory } from "@/modules/categorization";
+import {
+  isExpenseCategory,
+  isValidSubcategory,
+} from "@/modules/categorization";
 import {
   CATEGORY_GLYPHS,
   FALLBACK_GLYPH,
@@ -83,19 +86,29 @@ export default async function TransactionDetailPage({
     notFound();
   }
 
-  const [attachments, cadence, t, tCommon, tCategories, tMoney, dates, locale] =
-    await Promise.all([
-      listAttachmentsForExpense(access.groupId, expenseId),
-      expense.recurringExpenseId === null
-        ? null
-        : getRecurrenceCadence(access.groupId, expense.recurringExpenseId),
-      getTranslations("transactionDetail"),
-      getTranslations("common"),
-      getTranslations("expenses.categories"),
-      getTranslations("money"),
-      getDateFormatter(),
-      getNumberLocale(),
-    ]);
+  const [
+    attachments,
+    cadence,
+    t,
+    tCommon,
+    tCategories,
+    tSubcategories,
+    tMoney,
+    dates,
+    locale,
+  ] = await Promise.all([
+    listAttachmentsForExpense(access.groupId, expenseId),
+    expense.recurringExpenseId === null
+      ? null
+      : getRecurrenceCadence(access.groupId, expense.recurringExpenseId),
+    getTranslations("transactionDetail"),
+    getTranslations("common"),
+    getTranslations("expenses.categories"),
+    getTranslations("expenses.subcategories"),
+    getTranslations("money"),
+    getDateFormatter(),
+    getNumberLocale(),
+  ]);
 
   const revenue = expense.direction === "in";
   const tone = revenue ? "revenue" : "expense";
@@ -105,10 +118,21 @@ export default async function TransactionDetailPage({
 
   // Canonical categories are translated; anything else came from an import
   // and is shown exactly as it was imported.
+  //
+  // The detail screen is where the subcategory earns its place: one entry, all
+  // the room, and the reader came here for exactly this level of detail. The
+  // list deliberately shows the category alone — see `transactions.tsx`.
   const categoryLabel = !expense.category
     ? null
     : isExpenseCategory(expense.category)
-      ? tCategories(expense.category)
+      ? isValidSubcategory(expense.category, expense.subcategory) &&
+        expense.subcategory
+        ? `${tCategories(expense.category)} · ${tSubcategories(
+            `${expense.category}.${expense.subcategory}` as Parameters<
+              typeof tSubcategories
+            >[0],
+          )}`
+        : tCategories(expense.category)
       : expense.category;
   const CategoryGlyph = hasGlyph(expense.category)
     ? CATEGORY_GLYPHS[expense.category]

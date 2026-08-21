@@ -59,6 +59,7 @@ export interface ExpenseSummary {
   readonly description: string;
   readonly notes: string | null;
   readonly category: string | null;
+  readonly subcategory: string | null;
   readonly amount: bigint;
   readonly currency: string;
   readonly convertedAmount: bigint | null;
@@ -268,6 +269,7 @@ export async function createExpense(
         description: input.description,
         notes: input.notes || null,
         category: input.category || null,
+        subcategory: input.subcategory || null,
         amount: prepared.amount,
         currency: prepared.currency,
         convertedAmount: prepared.convertedAmount,
@@ -330,7 +332,11 @@ export async function createExpense(
     // transaction as the expense that taught it.
     await recordCategoryChoice(
       access,
-      { merchant: input.description, category: input.category ?? null },
+      {
+        merchant: input.description,
+        category: input.category ?? null,
+        subcategory: input.subcategory ?? null,
+      },
       { db: tx },
     );
 
@@ -437,6 +443,7 @@ export async function updateExpense(
         description: input.description,
         notes: input.notes || null,
         category: input.category || null,
+        subcategory: input.subcategory || null,
         amount: prepared.amount,
         currency: prepared.currency,
         convertedAmount: prepared.convertedAmount,
@@ -497,7 +504,11 @@ export async function updateExpense(
 
     await recordCategoryChoice(
       access,
-      { merchant: input.description, category: input.category ?? null },
+      {
+        merchant: input.description,
+        category: input.category ?? null,
+        subcategory: input.subcategory ?? null,
+      },
       { db: tx },
     );
 
@@ -630,6 +641,7 @@ export async function listExpenses(
       description: expenses.description,
       notes: expenses.notes,
       category: expenses.category,
+      subcategory: expenses.subcategory,
       amount: expenses.amount,
       currency: expenses.currency,
       convertedAmount: expenses.convertedAmount,
@@ -734,6 +746,7 @@ export async function listSpreadEntries(
     .select({
       direction: expenses.direction,
       category: expenses.category,
+      subcategory: expenses.subcategory,
       amount: expenses.amount,
       currency: expenses.currency,
       convertedAmount: expenses.convertedAmount,
@@ -757,6 +770,7 @@ export async function getExpense(
       description: expenses.description,
       notes: expenses.notes,
       category: expenses.category,
+      subcategory: expenses.subcategory,
       amount: expenses.amount,
       currency: expenses.currency,
       convertedAmount: expenses.convertedAmount,

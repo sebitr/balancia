@@ -31,7 +31,8 @@ async function setupTemplate(options: { timezone?: string } = {}) {
   const templateId = await createRecurringExpense(group.access, {
     description: "Rent",
     notes: "",
-    category: "Housing",
+    category: "home",
+    subcategory: "rent",
     amount: "120000",
     currency: "EUR",
     exchangeRate: "",
@@ -68,6 +69,9 @@ describe("recurring generation", () => {
     for (const expense of generated) {
       expect(expense.amount).toBe(120000n);
       expect(expense.createdByActorType).toBe("system");
+      // Both halves travel, or a monthly "Loyer" arrives as bare `home`.
+      expect(expense.category).toBe("home");
+      expect(expense.subcategory).toBe("rent");
     }
   });
 

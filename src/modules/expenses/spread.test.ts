@@ -3,6 +3,7 @@ import {
   categoryTotals,
   isCategorised,
   spreadBands,
+  subcategoryTotals,
   UNCATEGORISED,
   type SpreadEntry,
 } from "./spread";
@@ -21,6 +22,7 @@ function entry(overrides: Partial<SpreadEntry> = {}): SpreadEntry {
   return {
     direction: "out",
     category: "groceries",
+    subcategory: null,
     amount: 1000n,
     currency: "EUR",
     convertedAmount: null,
@@ -106,7 +108,10 @@ describe("categoryTotals", () => {
   it("keeps an imported free-text category apart from the code it resembles", () => {
     const [spread] = categoryTotals(
       [
-        entry({ category: "travel", amount: 2000n }),
+        // The code, and a label an import kept verbatim that happens to spell
+        // it. Folding them together would hide the fact that the string
+        // reaches no rule, no glyph and no filter.
+        entry({ category: "lodging", amount: 2000n }),
         entry({ category: "Lodging", amount: 150000n }),
         entry({ category: null, amount: 1000n }),
       ],
@@ -115,7 +120,7 @@ describe("categoryTotals", () => {
 
     expect(spread.categories).toEqual([
       { category: "Lodging", total: 150000n },
-      { category: "travel", total: 2000n },
+      { category: "lodging", total: 2000n },
       { category: null, total: 1000n },
     ]);
   });
@@ -228,7 +233,7 @@ describe("spreadBands", () => {
         entry({ category: "other", amount: 9500n }),
         entry({ category: "groceries", amount: 8675n }),
         entry({ category: "shopping", amount: 5485n }),
-        entry({ category: "utilities", amount: 3990n }),
+        entry({ category: "home", amount: 3990n }),
         entry({ category: "transport", amount: 2250n }),
       ],
       SEPARATE,
@@ -256,5 +261,56 @@ describe("spreadBands", () => {
     const spread = categoryTotals([entry({ amount: 0n })], SEPARATE)[0];
 
     expect(spreadBands(spread)[0].share).toBe(0);
+  });
+});
+
+describe("subcategoryTotals", () => {
+  const entries = [
+    entry({ category: "transport", subcategory: "flights", amount: 31000n }),
+    entry({ category: "transport", subcategory: "fuel", amount: 12000n }),
+    entry({ category: "transport", subcategory: "fuel", amount: 4000n }),
+    entry({ category: "transport", subcategory: null, amount: 7000n }),
+    entry({ category: "home", subcategory: "rent", amount: 185000n }),
+  ];
+
+  it("breaks one category down by subcategory, biggest first", () => {
+    const [spread] = subcategoryTotals(entries, "transport", SEPARATE);
+
+    expect(spread.categories).toEqual([
+      { category: "flights", total: 31000n },
+      { category: "fuel", total: 16000n },
+      { category: null, total: 7000n },
+    ]);
+  });
+
+  it("counts spending filed at the top level as its own bucket", () => {
+    // Hiding it would make the parts add up to less than the whole, and most
+    // spending in most categories has no subcategory at all.
+    const [spread] = subcategoryTotals(entries, "transport", SEPARATE);
+
+    expect(spread.total).toBe(54000n);
+    expect(spread.categories.reduce((sum, e) => sum + e.total, 0n)).toBe(
+      spread.total,
+    );
+  });
+
+  it("agrees with the top-level spread it drills into", () => {
+    const [top] = categoryTotals(entries, SEPARATE);
+    const transport = top.categories.find((e) => e.category === "transport");
+
+    expect(subcategoryTotals(entries, "transport", SEPARATE)[0].total).toBe(
+      transport?.total,
+    );
+  });
+
+  it("does not split the primary spread", () => {
+    // Introducing subcategories must not silently turn one Transport bar into
+    // three. The top level stays exactly as it was.
+    const [top] = categoryTotals(entries, SEPARATE);
+
+    expect(top.categories).toEqual([
+      { category: "home", total: 185000n },
+      { category: "transport", total: 54000n },
+    ]);
   });
 });

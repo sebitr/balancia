@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { prepareText } from "./deterministic";
+import { THRESHOLDS } from "./confidence";
+import { detectSubcategory, prepareText } from "./deterministic";
+import { SUBCATEGORY_SEEDS } from "./seeds";
+import { isValidSubcategory } from "./taxonomy";
 
 /**
  * What the classifier is allowed to read, and in what shape.
@@ -69,5 +72,61 @@ describe("prepareText", () => {
     const prepared = prepareText({});
     expect(prepared.semanticText).toBe("");
     expect(prepared.textTokens).toEqual([]);
+  });
+});
+
+/**
+ * The subcategory rules, as data.
+ *
+ * Coverage is intentionally partial — most categories name only a handful of
+ * their children, and that is a supported outcome. What must hold is that
+ * every rule that exists points somewhere real.
+ */
+describe("subcategory seeds", () => {
+  it("only ever names a subcategory of the category it sits under", () => {
+    for (const [category, rules] of Object.entries(SUBCATEGORY_SEEDS)) {
+      for (const rule of rules) {
+        expect(isValidSubcategory(category, rule.id)).toBe(true);
+      }
+    }
+  });
+
+  it("names each subcategory at most once per category", () => {
+    for (const [category, rules] of Object.entries(SUBCATEGORY_SEEDS)) {
+      const ids = rules.map((rule) => rule.id);
+      expect(new Set(ids).size, `${category} repeats a subcategory`).toBe(
+        ids.length,
+      );
+    }
+  });
+
+  it("carries evidence on every rule", () => {
+    // A rule with neither a merchant nor a phrase can never fire, and would
+    // read as coverage that is not there.
+    for (const rules of Object.values(SUBCATEGORY_SEEDS)) {
+      for (const rule of rules) {
+        const merchants = rule.merchants?.length ?? 0;
+        const phrases = Object.values(rule.phrases ?? {}).flat().length;
+        expect(merchants + phrases).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("scores nothing for a category that has no rules", () => {
+    expect(
+      detectSubcategory("other", prepareText({ merchant: "Shell" })),
+    ).toBeNull();
+  });
+
+  it("only ever scores at merchant or phrase strength", () => {
+    // There is no weak-keyword tier here: `subcategoryMinScore` is set so that
+    // nothing below "this brand sells exactly this" can fill the field.
+    const detected = detectSubcategory(
+      "transport",
+      prepareText({ merchant: "Shell", description: "Shell" }),
+    );
+    expect(detected?.confidence).toBeGreaterThanOrEqual(
+      THRESHOLDS.subcategoryMinScore,
+    );
   });
 });

@@ -47,8 +47,8 @@ window.history.replaceState = (
 /** Every band's key is its lead category, as the server builds them. */
 const BANDS: BandView[] = [
   {
-    key: "travel",
-    categories: ["travel"],
+    key: "lodging",
+    categories: ["lodging"],
     total: "150000",
     share: 786,
     rank: 1,
@@ -76,8 +76,8 @@ const BANDS: BandView[] = [
     rank: 5,
   },
   {
-    key: "utilities",
-    categories: ["utilities"],
+    key: "home",
+    categories: ["home"],
     total: "3990",
     share: 21,
     rank: 1,
@@ -100,7 +100,7 @@ describe("fitBandsToHeight", () => {
     expect(short[3].categories).toEqual([
       "groceries",
       "shopping",
-      "utilities",
+      "home",
       "transport",
     ]);
     expect(short[3].total).toBe("20400");
@@ -128,7 +128,7 @@ const ROWS: RowView[] = [
   row({
     id: "airbnb",
     title: "airbnb",
-    category: "travel",
+    category: "lodging",
     amount: "150000",
     position: "-75000",
   }),
@@ -156,7 +156,7 @@ const ROWS: RowView[] = [
   row({
     id: "internet",
     title: "Internet",
-    category: "utilities",
+    category: "home",
     amount: "3990",
     position: "-1995",
     recurring: true,
@@ -164,7 +164,7 @@ const ROWS: RowView[] = [
   row({
     id: "refund",
     title: "Airbnb refund",
-    category: "travel",
+    category: "lodging",
     amount: "12000",
     position: "6000",
     revenue: true,
@@ -242,19 +242,19 @@ describe("Transactions", () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(band("Travel"));
+    await user.click(band("Lodging"));
 
     expect(screen.getByText("airbnb")).toBeVisible();
     expect(screen.queryByText("Migros")).not.toBeInTheDocument();
     // Pressed, and now offering the way back out — the band is both.
-    expect(pressedBand("Travel")).toHaveAttribute("aria-pressed", "true");
+    expect(pressedBand("Lodging")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("holds several bands at once, showing the union of them", async () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(band("Travel"));
+    await user.click(band("Lodging"));
     await user.click(band("Groceries"));
 
     expect(screen.getByText("airbnb")).toBeVisible();
@@ -266,34 +266,34 @@ describe("Transactions", () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(band("Travel"));
+    await user.click(band("Lodging"));
     await user.click(band("Groceries"));
 
-    expect(window.location.search).toBe("?cat=travel&cat=groceries");
+    expect(window.location.search).toBe("?cat=lodging&cat=groceries");
   });
 
   it("groups the categories that do not fit behind one band", async () => {
     const user = userEvent.setup();
     renderList();
 
-    // Utilities and Transport share the sixth band, so it filters to both.
-    await user.click(band("Utilities +1"));
+    // Home and Transport share the sixth band, so it filters to both.
+    await user.click(band("Home +1"));
 
     expect(screen.getByText("Internet")).toBeVisible();
     expect(screen.getByText("Uber")).toBeVisible();
     expect(screen.queryByText("airbnb")).not.toBeInTheDocument();
-    expect(window.location.search).toBe("?cat=utilities&cat=transport");
+    expect(window.location.search).toBe("?cat=home&cat=transport");
   });
 
   it("takes a band back off by pressing it again", async () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(band("Travel"));
+    await user.click(band("Lodging"));
     // The band is the whole control: pressed it filters, pressed again it
     // says so, and lets go.
     await user.click(
-      screen.getByRole("button", { name: "Stop filtering by Travel" }),
+      screen.getByRole("button", { name: "Stop filtering by Lodging" }),
     );
 
     expect(screen.getAllByRole("listitem")).toHaveLength(ROWS.length);
@@ -304,7 +304,7 @@ describe("Transactions", () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(band("Travel"));
+    await user.click(band("Lodging"));
     await user.type(screen.getByRole("searchbox"), "refund");
 
     expect(screen.getByText("Airbnb refund")).toBeVisible();
@@ -422,7 +422,7 @@ describe("Transactions", () => {
   it("prints a share on every band, to a tenth where that is the difference", () => {
     renderList();
 
-    expect(within(band("Travel")).getByText("79%")).toBeInTheDocument();
+    expect(within(band("Lodging")).getByText("79%")).toBeInTheDocument();
     expect(
       within(band("Restaurants & Drinks")).getByText("5.8%"),
     ).toBeInTheDocument();
@@ -463,9 +463,9 @@ describe("Transactions", () => {
     renderList();
 
     await user.click(kind("Expenses"));
-    await user.click(band("Travel"));
+    await user.click(band("Lodging"));
 
-    // Travel holds two rows, and one of them is the refund — so the pair of
+    // Lodging holds two rows, and one of them is the refund — so the pair of
     // filters has to intersect to leave one.
     expect(screen.getByText("airbnb")).toBeVisible();
     expect(screen.queryByText("Airbnb refund")).not.toBeInTheDocument();
@@ -596,7 +596,7 @@ const OLDER = row({
   id: "hotel",
   title: "Hôtel du Lac",
   date: "2019-07-02",
-  category: "travel",
+  category: "lodging",
 });
 
 describe("Transactions beyond the first page", () => {

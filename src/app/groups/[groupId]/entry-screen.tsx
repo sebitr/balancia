@@ -182,6 +182,7 @@ async function loadExpense(
     date: expense.expenseDate,
     description: expense.description,
     category: expense.category ?? "",
+    subcategory: expense.subcategory ?? "",
     notes: expense.notes ?? "",
     payerId: expense.payers[0]?.participantId ?? null,
     // An expense has no second side. Saying it was really a repayment means
@@ -221,6 +222,8 @@ async function loadSettlement(
     // somebody says it should have. The form asks for a description then.
     description: "",
     category: "",
+    // A repayment has no category, so it has nothing under one either.
+    subcategory: "",
     notes: settlement.notes ?? "",
     payerId: settlement.fromParticipantId,
     settleTo: settlement.toParticipantId,

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { CategoryField } from "./category-field";
 import {
-  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_IDS,
   type ClassificationResult,
 } from "@/modules/categorization";
 
@@ -54,7 +54,7 @@ describe("CategoryField", () => {
     // Every category, plus the empty placeholder. Counted from the vocabulary
     // rather than written out, so adding a code does not fail here for the
     // wrong reason.
-    expect(options).toHaveLength(EXPENSE_CATEGORIES.length + 1);
+    expect(options).toHaveLength(EXPENSE_CATEGORY_IDS.length + 1);
   });
 
   it("says when it filled the field in itself", () => {
@@ -98,7 +98,7 @@ describe("CategoryField", () => {
         alternatives: [
           { category: "restaurants", confidence: 0.6 },
           { category: "groceries", confidence: 0.56 },
-          { category: "travel", confidence: 0.55 },
+          { category: "transport", confidence: 0.55 },
         ],
       }),
     });

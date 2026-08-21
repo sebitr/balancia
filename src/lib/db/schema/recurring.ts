@@ -48,6 +48,8 @@ export const recurringExpenses = pgTable(
     description: text("description").notNull(),
     notes: text("notes"),
     category: text("category"),
+    /** Carried onto every entry this template generates, like `category`. */
+    subcategory: text("subcategory"),
     amount: bigint("amount", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull(),
     /** Frozen rate reused for each generated occurrence in converted groups. */
