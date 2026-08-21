@@ -1,6 +1,9 @@
 import { EntryScreen } from "../../../../entry-screen";
 
-/** The same, opened over the group the repayment belongs to. */
+/**
+ * The same, opened over the group the repayment belongs to, and vanishing on
+ * the same terms — see the expense flavour next door.
+ */
 export default async function InterceptedEditSettlementPage({
   params,
 }: {
@@ -12,6 +15,7 @@ export default async function InterceptedEditSettlementPage({
       groupId={groupId}
       dismissTo="back"
       edit={{ kind: "settlement", id: settlementId }}
+      whenGone="nothing"
     />
   );
 }
