@@ -77,7 +77,10 @@ export function BalanceList({
         {shown.map((person) => (
           <li key={person.participantId} className="border-t first:border-t-0">
             <Link
-              href={`/groups/${groupId}/members`}
+              // The row's own person, not the list they came from: somebody
+              // tapping a balance is asking about that balance, and the People
+              // screen answers a different question entirely.
+              href={`/groups/${groupId}/members/${person.participantId}`}
               transitionTypes={PUSH}
               className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_minmax(68px,0.85fr)_auto] items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
             >
