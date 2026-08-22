@@ -155,8 +155,8 @@ export function SettlementList({
             <>
               <SheetTitle className="text-xl font-semibold tracking-[-0.02em]">
                 {t("settlementDetailTitle", {
-                  from: active.fromIsSelf ? t("you") : active.fromName,
-                  to: active.toIsSelf ? t("you") : active.toName,
+                  from: active.fromName,
+                  to: active.toName,
                 })}
               </SheetTitle>
               <SheetDescription className="mt-1 text-xs">
@@ -207,21 +207,14 @@ function SettlementPeople({
 }: {
   suggestion: SettlementSuggestionView;
 }) {
-  const t = useTranslations("group");
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <Person
-        name={suggestion.fromIsSelf ? t("you") : suggestion.fromName}
-        self={suggestion.fromIsSelf}
-      />
+      <Person name={suggestion.fromName} self={suggestion.fromIsSelf} />
       <ArrowRight
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <Person
-        name={suggestion.toIsSelf ? t("you") : suggestion.toName}
-        self={suggestion.toIsSelf}
-      />
+      <Person name={suggestion.toName} self={suggestion.toIsSelf} />
     </span>
   );
 }

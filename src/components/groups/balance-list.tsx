@@ -95,7 +95,7 @@ export function BalanceList({
                   </AvatarFallback>
                 </Avatar>
                 <span className="truncate text-sm font-medium">
-                  {person.isSelf ? t("you") : person.name}
+                  {person.name}
                 </span>
               </span>
 
