@@ -657,6 +657,27 @@
       "saveFailed": "The payment could not be recorded."
     }
   },
+  "settleUp": {
+    "title": "Settle up",
+    "subtitlePeople": "{group} · {count, plural, one {# person} other {# people}}",
+    "subtitleConverted": "{group} · settles in {currency}",
+    "clearsGroup": "{count, plural, one {# payment clears the group} other {# payments clear the group}}",
+    "clearsCurrency": "{count, plural, one {# payment clears this currency} other {# payments clear this currency}}",
+    "yourPayments": "Your payments",
+    "betweenOthers": "Between others",
+    "settledUp": "Settled up",
+    "paysSentence": "{from} pays {to}",
+    "paidSentence": "{from} paid {to}",
+    "record": "Record",
+    "recordFor": "Record {from}'s payment to {to}",
+    "remindPerson": "Remind {name}",
+    "remindedWhen": "Reminded {when}",
+    "allSettledTitle": "Everyone is settled up",
+    "allSettledDescription": "No transfers are needed. New expenses show up here as soon as they change someone's balance.",
+    "lastSettled": "Last settled",
+    "settledOnVia": "{when} · {method}",
+    "backToGroup": "Back to the group"
+  },
   "balancesPage": {
     "title": "Balances",
     "allSettledTitle": "Everyone is settled up",

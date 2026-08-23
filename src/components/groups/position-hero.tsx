@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
-import { SettleUpDialog } from "@/components/settlements/settle-up-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -44,11 +43,6 @@ export interface PositionHeroView {
   };
 }
 
-interface ParticipantOption {
-  readonly id: string;
-  readonly displayName: string;
-}
-
 /**
  * The first answer on the screen: a large position, its human meaning and the
  * next useful action. The existing reminder and settlement flows stay intact;
@@ -60,9 +54,6 @@ export function PositionHero({
   groupName,
   senderName,
   recipients,
-  participants,
-  currencyMode,
-  baseCurrency,
   canArchive,
 }: {
   positions: readonly PositionHeroView[];
@@ -70,9 +61,6 @@ export function PositionHero({
   groupName: string;
   senderName: string;
   recipients: readonly RemindRecipient[];
-  participants: readonly ParticipantOption[];
-  currencyMode: "separate" | "converted";
-  baseCurrency: string | null;
   canArchive: boolean;
 }) {
   const t = useTranslations("group");
@@ -105,30 +93,32 @@ export function PositionHero({
       ? t("overallMixed")
       : t("positionAcrossCurrencies");
 
-  const defaultCurrency = baseCurrency ?? positions[0]?.currency ?? "EUR";
   const remindLabel =
     recipients.length === 1
       ? t("remindPerson", { name: recipients[0].name })
       : t("remindAll");
 
+  /**
+   * Settling is a screen, not a form.
+   *
+   * This used to open the record-a-payment dialog directly, which asked the
+   * reader to fill in who, whom and how much — the three things the group's
+   * own balances already answer. It now goes to the settle-up screen, which
+   * states the transfers that clear the group and puts the same dialog behind
+   * each one, prefilled.
+   */
   const settlement = (primary: boolean) => (
-    <SettleUpDialog
-      groupId={groupId}
-      participants={participants}
-      currencyMode={currencyMode}
-      baseCurrency={baseCurrency}
-      defaultCurrency={defaultCurrency}
-      trigger={
-        <Button
-          variant={primary ? "default" : "outline"}
-          size="lg"
-          className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-        >
-          <Check aria-hidden="true" className="size-4" />
-          {t("settleUp")}
-        </Button>
-      }
-    />
+    <Button
+      asChild
+      variant={primary ? "default" : "outline"}
+      size="lg"
+      className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
+    >
+      <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
+        <Check aria-hidden="true" className="size-4" />
+        {t("settleUp")}
+      </Link>
+    </Button>
   );
 
   return (
