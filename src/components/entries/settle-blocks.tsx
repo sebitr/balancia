@@ -8,6 +8,7 @@ import { SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   PAYMENT_METHODS,
+  PAYMENT_METHOD_MAX_LENGTH,
   ROW_METHOD_COUNT,
   findPaymentMethod,
   searchPaymentMethods,
@@ -246,17 +247,40 @@ export function OutstandingList({
  * no probe, no manifest to keep in step, and no broken-image frame.
  *
  * Cash and bank transfer are drawn glyphs — neither is a brand.
+ *
+ * A method somebody named themselves has no brand at all, so it takes the
+ * app's own surface rather than a hue invented for it: still a tile, still the
+ * initial, and honestly not one of ours.
  */
 function MethodMark({
   method,
   label,
   size = 22,
 }: {
-  method: PaymentMethod;
+  /** The listed method, or null for a name typed on the settle screen. */
+  method: PaymentMethod | null;
   label: string;
   size?: number;
 }) {
   const [logoLoaded, setLogoLoaded] = useState(false);
+  const radius = size / 3.4;
+
+  if (method === null) {
+    return (
+      <span
+        aria-hidden="true"
+        className="flex shrink-0 items-center justify-center bg-white/10 font-semibold text-foreground shadow-[inset_0_0_0_1px_oklch(1_0_0_/_0.16)]"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          fontSize: size * 0.5,
+        }}
+      >
+        {label.trim().charAt(0).toUpperCase()}
+      </span>
+    );
+  }
 
   if (method.kind === "cash") {
     return <Banknote aria-hidden="true" className="size-5" />;
@@ -264,8 +288,6 @@ function MethodMark({
   if (method.kind === "bank") {
     return <Landmark aria-hidden="true" className="size-5" />;
   }
-
-  const radius = size / 3.4;
 
   return (
     <span
@@ -301,6 +323,7 @@ function MethodMark({
 export function PaymentMethodRow({
   methods,
   value,
+  customLabel,
   country,
   onSelect,
   onOpenAll,
@@ -309,6 +332,8 @@ export function PaymentMethodRow({
   methods: readonly PaymentMethodId[];
   /** The chosen method, or null while nobody has chosen one. */
   value: PaymentMethodId | null;
+  /** A name typed by hand, when the choice is not one of the listed methods. */
+  customLabel: string;
   country: SupportedCountry | null;
   onSelect: (id: PaymentMethodId) => void;
   onOpenAll: () => void;
@@ -326,8 +351,9 @@ export function PaymentMethodRow({
   // every repayment then recorded "TWINT" whether or not that is how the money
   // moved. How it was paid is optional, so an untouched row says nothing.
   // A method chosen from the picker takes the "Other" slot's label, so the row
-  // always shows what is actually selected.
-  const offRow = value !== null && !shown.includes(value);
+  // always shows what is actually selected — a name typed by hand included,
+  // which the row can only ever show here.
+  const offRow = value !== null ? !shown.includes(value) : customLabel !== "";
 
   return (
     <section className="space-y-2">
@@ -395,7 +421,7 @@ export function PaymentMethodRow({
               offRow ? "font-semibold text-foreground" : "",
             )}
           >
-            {offRow && value ? tMethods(value) : t("other")}
+            {offRow ? (value ? tMethods(value) : customLabel) : t("other")}
           </span>
         </button>
       </div>
@@ -403,17 +429,32 @@ export function PaymentMethodRow({
   );
 }
 
+/**
+ * The whole list, plus a way out of it.
+ *
+ * The list is what is *offered*, never what is allowed: the column has always
+ * been free text, and a settlement imported from elsewhere can already carry a
+ * name nothing here matches. This is that door from the inside — the search
+ * field doubles as the name, so failing to find a method and naming it are one
+ * gesture instead of two screens, and the row that offers it appears at the
+ * exact moment the list has let somebody down.
+ */
 export function PaymentMethodSheet({
   value,
+  customLabel,
   country,
   suggested,
   onSelect,
+  onSelectCustom,
 }: {
   value: PaymentMethodId | null;
+  /** The name already typed for this repayment, if it was named by hand. */
+  customLabel: string;
   country: SupportedCountry | null;
   /** The country trio, pinned above the alphabet. */
   suggested: readonly PaymentMethodId[];
   onSelect: (id: PaymentMethodId) => void;
+  onSelectCustom: (name: string) => void;
 }) {
   const t = useTranslations("addEntry.settle");
   const tMethods = useTranslations("paymentMethods");
@@ -430,7 +471,21 @@ export function PaymentMethodSheet({
     [query],
   );
 
-  const searching = query.trim() !== "";
+  const typed = query.trim();
+  const searching = typed !== "";
+  /**
+   * Whether what was typed can be taken at its word.
+   *
+   * Not when the list already answers to it: storing a second spelling of a
+   * method sitting one row above is how "Twint" and "TWINT" end up as two
+   * different things in a group's history.
+   */
+  const namable =
+    searching &&
+    !matches.some(
+      (method) => label(method.id).toLowerCase() === typed.toLowerCase(),
+    );
+
   const alphabetical = useMemo(
     () => [...matches].sort((a, b) => label(a.id).localeCompare(label(b.id))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -453,15 +508,20 @@ export function PaymentMethodSheet({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t("methodSearch")}
           aria-label={t("methodSearch")}
+          maxLength={PAYMENT_METHOD_MAX_LENGTH}
           className="h-11 pl-9"
         />
       </div>
 
       <div className="-mx-1 max-h-[46vh] overflow-y-auto px-1">
-        {matches.length === 0 && (
-          <p className="px-2.5 py-6 text-center text-sm text-muted-foreground">
-            {t("noMethod")}
-          </p>
+        {!searching && customLabel !== "" && (
+          <CustomMethodRow
+            heading={t("namedByYou")}
+            name={customLabel}
+            text={customLabel}
+            selected
+            onSelect={() => onSelectCustom(customLabel)}
+          />
         )}
 
         {!searching && country && (
@@ -481,8 +541,63 @@ export function PaymentMethodSheet({
             onSelect={onSelect}
           />
         )}
+
+        {namable && (
+          <CustomMethodRow
+            heading={t("notListed")}
+            name={typed}
+            text={t("useMethodName", { name: typed })}
+            selected={typed.toLowerCase() === customLabel.toLowerCase()}
+            onSelect={() => onSelectCustom(typed)}
+          />
+        )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A method by the name somebody gave it.
+ *
+ * Drawn as a row of the list rather than as a form below it: it is one of the
+ * answers to the same question, and a text field with its own button underneath
+ * thirty tappable rows would read as a different question entirely.
+ */
+function CustomMethodRow({
+  heading,
+  name,
+  text,
+  selected,
+  onSelect,
+}: {
+  heading: string;
+  /** What the tile draws its initial from. */
+  name: string;
+  /** What the row says — the name itself, or an invitation to use it. */
+  text: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <section className="mb-2">
+      <h3 className="px-2.5 pt-2 pb-1 text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        {heading}
+      </h3>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors active:bg-accent",
+          selected && "bg-accent",
+        )}
+      >
+        <MethodMark method={null} label={name} size={30} />
+        <span className="flex-1 truncate text-sm">{text}</span>
+        {selected && (
+          <Check aria-hidden="true" className="size-4 text-primary" />
+        )}
+      </button>
+    </section>
   );
 }
 

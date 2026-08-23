@@ -252,6 +252,16 @@ export const DEFAULT_METHODS: readonly PaymentMethodId[] = [
 export const ROW_METHOD_COUNT = 3;
 
 /**
+ * How long a hand-typed method name may be.
+ *
+ * The list is what is *offered*, never what is allowed — so the picker also
+ * takes a name nobody here thought of, and this is where "anything" stops.
+ * `settlementInputSchema` reads its limit from here, so a name the field
+ * accepts is never one the server then refuses.
+ */
+export const PAYMENT_METHOD_MAX_LENGTH = 60;
+
+/**
  * The methods to offer for a country, most likely first.
  *
  * Unknown codes and unknown method ids both fall back rather than throw: a

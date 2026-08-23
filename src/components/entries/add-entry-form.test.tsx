@@ -809,6 +809,59 @@ describe("settlement", () => {
   });
 
   /**
+   * The list is what is *offered*, never what is allowed — the column has
+   * always been free text. Somebody settling in poker chips, or by a wallet
+   * three people in one country use, should not have to wait for a release
+   * that adds it, and should not have to leave the fact in the notes.
+   */
+  it("takes a method it has never heard of, by the name it was given", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("button", { name: "Other" }));
+
+    const picker = sheet("How was it paid");
+    await user.type(
+      picker.getByRole("textbox", { name: "Search or name a method" }),
+      "Poker chips",
+    );
+    await user.click(picker.getByRole("button", { name: /Use .Poker chips./ }));
+
+    // The row shows it where the picker was opened from, so the screen still
+    // says what was chosen once the sheet is gone.
+    expect(
+      screen.getByRole("button", { name: "Poker chips" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ paymentMethod: "Poker chips" }),
+    );
+  });
+
+  /**
+   * Offering to invent a method that is sitting one row above is how a group
+   * ends up with "Twint" and "TWINT" as two different things.
+   */
+  it("will not name a method the list already answers to", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("button", { name: "Other" }));
+
+    const picker = sheet("How was it paid");
+    await user.type(
+      picker.getByRole("textbox", { name: "Search or name a method" }),
+      "twint",
+    );
+
+    expect(picker.getByRole("button", { name: /TWINT/ })).toBeInTheDocument();
+    expect(picker.queryByRole("button", { name: /Use ./ })).toBeNull();
+  });
+
+  /**
    * The debt names the currency, which is right nearly always and was enforced
    * as always: cash handed back in whatever was in the wallet had nowhere to
    * go.
@@ -1399,6 +1452,33 @@ describe("editing an entry", () => {
       // Read back from the stored label rather than replaced by whatever this
       // country's first method happens to be.
       paymentMethod: "TWINT",
+    });
+  });
+
+  /**
+   * A stored method the picker cannot match is not a mistake to correct: it is
+   * an import, a provider since dropped from the list, or a name somebody
+   * typed here themselves. All three are the truth about how the money moved.
+   */
+  it("reopens a repayment on a method the list cannot name", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: { ...SETTLEMENT, paymentMethod: "Poker chips" } });
+
+    expect(
+      screen.getByRole("button", { name: "Poker chips" }),
+    ).toBeInTheDocument();
+
+    // And the picker shows it as the answer, rather than showing none.
+    await user.click(screen.getByRole("button", { name: "Poker chips" }));
+    const picker = sheet("How was it paid");
+    expect(picker.getByText("Named by you")).toBeInTheDocument();
+    expect(picker.getByRole("button", { name: "Poker chips" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    await save(user);
+
+    expect(updateSettlement.mock.calls[0][2]).toMatchObject({
+      paymentMethod: "Poker chips",
     });
   });
 
