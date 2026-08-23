@@ -122,7 +122,7 @@ describe("GroupNav", () => {
 
   it("treats a tab as the way out of a screen that is on no tab at all", () => {
     for (const tab of ["Overview", "Expenses", "People", "Settings"]) {
-      expect(directionFrom("/groups/g1/balances", tab)).toBe("pop");
+      expect(directionFrom("/groups/g1/settle", tab)).toBe("pop");
     }
     expect(directionFrom("/groups/g1/activity", "Overview")).toBe("pop");
   });

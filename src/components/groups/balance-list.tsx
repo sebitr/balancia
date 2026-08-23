@@ -132,8 +132,11 @@ export function BalanceList({
 
         {people > limit && (
           <li className="col-span-3 border-t">
+            {/* People, not a balances screen of its own: the rows above
+                already lead to one person each, and the only thing this row
+                adds is the rest of them. */}
             <Link
-              href={`/groups/${groupId}/balances`}
+              href={`/groups/${groupId}/members`}
               transitionTypes={PUSH}
               className="flex min-h-11 items-center justify-center px-3 text-xs font-medium text-primary transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >

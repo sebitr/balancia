@@ -26,7 +26,7 @@ import {
 function revalidateGroup(groupId: string): void {
   revalidatePath(`/groups/${groupId}`);
   revalidatePath(`/groups/${groupId}/expenses`);
-  revalidatePath(`/groups/${groupId}/balances`);
+  revalidatePath(`/groups/${groupId}/settle`);
 }
 
 export async function createExpenseAction(

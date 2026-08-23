@@ -26,6 +26,7 @@ import { formatMoney, money, toMajorString } from "@/modules/currencies/money";
 import { getExpense } from "@/modules/expenses/service";
 import { getSettlement } from "@/modules/settlements/service";
 import { PUSH } from "@/components/motion/transitions";
+import type { SettleIntent } from "@/components/entries/settle-intent";
 
 /**
  * Everything the entry drawer needs, loaded once.
@@ -41,10 +42,19 @@ export async function EntryScreen({
   groupId,
   dismissTo,
   edit,
+  settle,
   whenGone = "notFound",
 }: {
   groupId: string;
   dismissTo: "back" | "group";
+  /**
+   * A debt the screen that linked here had already stated, off the query.
+   *
+   * The drawer then opens on the settle tab with that pair picked. What it
+   * does *not* take from the query is the amount: see `settle-intent`, and the
+   * lookup against `outstanding` below.
+   */
+  settle?: SettleIntent | null;
   /** The entry to reopen, by the table it lives in. Absent means a new one. */
   edit?: { kind: "expense" | "settlement"; id: string };
   /**
@@ -133,6 +143,22 @@ export async function EntryScreen({
     }))
     .sort((a, b) => Number(BigInt(b.amountMinor) - BigInt(a.amountMinor)));
 
+  /*
+   * The stated debt, priced from the balances just loaded rather than from the
+   * link that was followed. A debt somebody else has settled in the meantime is
+   * no longer in this list, and then the two names stand on their own with the
+   * amount left for the reader — which is the honest answer, and the one that
+   * keeps the form from opening on a figure nobody owes any more.
+   */
+  const stated = settle
+    ? (outstanding.find(
+        (pair) =>
+          pair.fromParticipantId === settle.fromParticipantId &&
+          pair.toParticipantId === settle.toParticipantId &&
+          pair.currency === settle.currency,
+      ) ?? null)
+    : null;
+
   const editing = edit ? await loadEditing(access.groupId, edit) : undefined;
   // Null only ever comes back from a load that was asked for: an entry that is
   // not in this group, or has already been removed under the reader.
@@ -155,6 +181,16 @@ export async function EntryScreen({
       defaultCurrency={editing?.currency ?? access.group.baseCurrency ?? "EUR"}
       timezone={access.group.timezone}
       outstanding={outstanding}
+      prefill={
+        settle
+          ? {
+              fromParticipantId: settle.fromParticipantId,
+              toParticipantId: settle.toParticipantId,
+              amountMinor: stated?.amountMinor ?? null,
+              currency: settle.currency,
+            }
+          : undefined
+      }
       categoryMappings={categoryMappings}
       frequentCategories={frequentCategories}
       semanticCategorization={isSemanticCategorizationEnabled()}

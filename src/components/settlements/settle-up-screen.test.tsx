@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
@@ -8,15 +8,6 @@ import {
   type SettleUpTransferView,
 } from "./settle-up-screen";
 import type { RemindRecipient } from "@/modules/reminders/types";
-
-/*
- * The record dialog behind every row refreshes the page once it has saved, so
- * it reaches for the app router. There is none in jsdom, and nothing here
- * asserts on navigation — the dialog has its own tests.
- */
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: () => {} }),
-}));
 
 /**
  * What this screen must never do is mislead somebody about what they owe: no
@@ -53,12 +44,6 @@ function recipient(overrides: Partial<RemindRecipient> = {}): RemindRecipient {
   };
 }
 
-const PARTICIPANTS = [
-  { id: "seb", displayName: "Seb" },
-  { id: "amelie", displayName: "Amélie" },
-  { id: "ravi", displayName: "Ravi" },
-];
-
 function render(
   props: Partial<Parameters<typeof SettleUpScreen>[0]> = {},
   currencies: readonly SettleUpCurrencyView[] = [
@@ -79,7 +64,6 @@ function render(
       groupName="Lisbon trip"
       senderName="Seb"
       recipients={[]}
-      participants={PARTICIPANTS}
       currencyMode="separate"
       baseCurrency={null}
       {...props}
@@ -164,12 +148,26 @@ describe("the transfers", () => {
 });
 
 describe("the actions on a row", () => {
-  it("offers recording on the debt the reader owes", () => {
+  it("opens the add-entry drawer on the debt the reader owes", () => {
     render();
 
     expect(
-      screen.getByRole("button", { name: "Record Seb's payment to Amélie" }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Record Seb's payment to Amélie" }),
+    ).toHaveAttribute(
+      "href",
+      "/groups/g1/expenses/new?settleFrom=seb&settleTo=amelie&settleIn=EUR",
+    );
+  });
+
+  it("leaves the amount off the link, so the drawer prices it itself", () => {
+    render();
+
+    const href = screen
+      .getByRole("link", { name: /^Record/ })
+      .getAttribute("href");
+
+    expect(href).not.toContain("14860");
+    expect(href).not.toContain("148.60");
   });
 
   it("offers chasing a debt owed to the reader", () => {
@@ -196,8 +194,11 @@ describe("the actions on a row", () => {
       screen.getByRole("button", { name: /remind ravi/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Record Ravi's payment to Seb" }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Record Ravi's payment to Seb" }),
+    ).toHaveAttribute(
+      "href",
+      "/groups/g1/expenses/new?settleFrom=ravi&settleTo=seb&settleIn=CHF",
+    );
   });
 
   it("never offers to chase a debt between two other people", () => {
@@ -226,7 +227,7 @@ describe("the actions on a row", () => {
 
     expect(screen.queryByRole("button", { name: /remind/i })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Record Ravi's payment to Lena" }),
+      screen.getByRole("link", { name: "Record Ravi's payment to Lena" }),
     ).toBeInTheDocument();
   });
 
@@ -390,7 +391,7 @@ describe("nothing to settle", () => {
     expect(
       screen.getByRole("link", { name: "Back to the group" }),
     ).toHaveAttribute("href", "/groups/g1");
-    expect(screen.queryByRole("button", { name: /record/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /record/i })).toBeNull();
   });
 });
 

@@ -1931,3 +1931,81 @@ describe("picking the people on a repayment", () => {
     expect(screen.queryByRole("radio", { name: "From: Seb" })).toBeNull();
   });
 });
+
+/**
+ * Opened from a screen that has already stated the debt.
+ *
+ * The settle-up screen and the overview's settlement list both name a pair and
+ * a figure before anybody taps anything. What must not happen next is the form
+ * asking the same three questions again — and what must not happen either is
+ * the figure being taken on trust from a link that may be minutes old.
+ */
+describe("a drawer opened on a stated debt", () => {
+  const PREFILL = {
+    fromParticipantId: "herve",
+    toParticipantId: "seb",
+    amountMinor: "12840",
+    currency: "CHF",
+  };
+
+  it("opens on the settle tab with the pair and the amount filled in", () => {
+    renderForm({ prefill: PREFILL }, "/groups/g1/expenses/new");
+
+    expect(screen.getByRole("tab", { name: "Settle" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
+      "128.40",
+    );
+    expect(screen.getByText("Hervé owes Seb")).toBeVisible();
+  });
+
+  it("records that pair without anybody touching the form", async () => {
+    const user = userEvent.setup();
+    renderForm({ prefill: PREFILL }, "/groups/g1/expenses/new");
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({
+        fromParticipantId: "herve",
+        toParticipantId: "seb",
+        amount: "12840",
+        currency: "CHF",
+      }),
+    );
+  });
+
+  /**
+   * A debt somebody else cleared while this reader was looking at it. The
+   * route hands back no amount, and the two names stand on their own rather
+   * than a figure nobody owes any more being typed in for them.
+   */
+  it("names the people but no amount once the debt is gone", () => {
+    renderForm(
+      { prefill: { ...PREFILL, amountMinor: null }, outstanding: [] },
+      "/groups/g1/expenses/new",
+    );
+
+    expect(screen.getByRole("tab", { name: "Settle" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
+      "",
+    );
+    expect(screen.getByRole("radio", { name: "From: Hervé" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "To: Seb" })).toBeChecked();
+  });
+
+  it("opens on an expense when no debt was stated", () => {
+    renderForm({}, "/groups/g1/expenses/new");
+
+    expect(screen.getByRole("tab", { name: "Expense" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+});

@@ -48,10 +48,9 @@ test("register, create a group and add an equal expense", async ({ page }) => {
   await page.goto(`/groups/${groupId}/expenses`);
   await expect(page.getByText("Dinner")).toBeVisible();
 
-  // Balances: the payer is owed 15.00, the other owes 15.00.
-  await page.goto(`/groups/${groupId}/balances`);
-  await expect(page.getByText("gets back").first()).toBeVisible();
-  await expect(page.getByText("owes").first()).toBeVisible();
+  // The transfer that clears it, written as a sentence on the settle screen.
+  await page.goto(`/groups/${groupId}/settle`);
+  await expect(page.getByText(/pays/).first()).toBeVisible();
 });
 
 test("shows the rounding difference when a split does not divide evenly", async ({
@@ -130,12 +129,15 @@ test("records a settlement and clears the balance", async ({ page }) => {
   await page.getByRole("button", { name: "Add expense" }).click();
   await expectEntrySaved(page, "Expense added");
 
-  await page.goto(`/groups/${groupId}/balances`);
-  await page.getByRole("button", { name: "Settle up" }).click();
+  // Recording opens the add-entry drawer over the screen, on the settle tab
+  // with the pair and the outstanding amount already in place.
+  await page.goto(`/groups/${groupId}/settle`);
+  await page
+    .getByRole("link", { name: /^Record/ })
+    .first()
+    .click();
 
-  await page.getByLabel("Who paid").selectOption({ label: "Blaise" });
-  await page.getByLabel("Who received it").selectOption({ index: 0 });
-  await page.getByLabel("Amount").fill("10.00");
+  await page.getByLabel("Paying back").fill("10.00");
   await page.getByRole("button", { name: "Record payment" }).click();
 
   await expect(page.getByText("Everyone is settled up")).toBeVisible();
@@ -175,8 +177,8 @@ test("records a multi-currency expense in a converted group", async ({
   await expect(page.getByText("$110.00")).toBeVisible();
 
   // …but balanced in the group's base currency.
-  await page.goto(`/groups/${groupId}/balances`);
-  await expect(page.getByRole("heading", { name: "EUR" })).toBeVisible();
+  await page.goto(`/groups/${groupId}/settle`);
+  await expect(page.getByText(/EUR/).first()).toBeVisible();
 });
 
 test("configures a recurring expense", async ({ page }) => {

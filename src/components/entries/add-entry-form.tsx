@@ -234,6 +234,25 @@ export interface AddEntryFormProps {
    * The entry being changed, when there is one. Absent means a new entry.
    */
   editing?: EditingEntry;
+  /**
+   * A repayment the screen that opened this drawer already stated.
+   *
+   * The settle-up screen and the overview's settlement list both name a debt
+   * before anybody taps it, so the form opens on the settle tab with that pair
+   * already picked instead of asking the same question twice.
+   *
+   * `amountMinor` is what is outstanding *now*, read by the route rather than
+   * copied off the URL — null when the debt has since been cleared, which
+   * leaves the two people named and the amount for the reader to type. Never
+   * set together with `editing`: one is an entry that exists, the other a
+   * suggestion for one that does not.
+   */
+  prefill?: {
+    readonly fromParticipantId: string;
+    readonly toParticipantId: string;
+    readonly amountMinor: string | null;
+    readonly currency: string;
+  };
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
   /**
@@ -273,6 +292,7 @@ export function AddEntryForm({
   receiptOcrLocal = true,
   receiptOcrProvider,
   editing,
+  prefill,
   onClose,
   onSaved,
   onRemoved,
@@ -301,10 +321,24 @@ export function AddEntryForm({
     editing.includedIds.length === 1 &&
     editing.includedIds[0] === editing.payerId;
 
-  const [type, setType] = useState<EntryType>(editing?.type ?? "expense");
-  const [amountText, setAmountText] = useState(editing?.amountText ?? "");
+  /*
+   * A drawer opened from a stated debt starts where that debt left off: the
+   * settle tab, both names, the outstanding figure and the currency it is owed
+   * in. Seeded as initial state rather than applied in an effect, so the first
+   * paint is already the filled form — an empty expense tab that rearranges
+   * itself a frame later reads as the screen changing its mind.
+   */
+  const [type, setType] = useState<EntryType>(
+    editing?.type ?? (prefill ? "settle" : "expense"),
+  );
+  const [amountText, setAmountText] = useState(
+    editing?.amountText ??
+      (prefill?.amountMinor
+        ? formatMinorUnits(prefill.amountMinor, prefill.currency)
+        : ""),
+  );
   const [currency, setCurrency] = useState(
-    editing?.currency ?? defaultCurrency,
+    editing?.currency ?? prefill?.currency ?? defaultCurrency,
   );
   const [rate, setRate] = useState(editing?.exchangeRate ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
@@ -386,10 +420,10 @@ export function AddEntryForm({
    * chose and that a reader has every reason to take for the entry's own.
    */
   const [settleFrom, setSettleFrom] = useState<string | null>(
-    () => editing?.payerId ?? null,
+    () => editing?.payerId ?? prefill?.fromParticipantId ?? null,
   );
   const [settleTo, setSettleTo] = useState<string | null>(
-    () => editing?.settleTo ?? null,
+    () => editing?.settleTo ?? prefill?.toParticipantId ?? null,
   );
   /**
    * How the money moved, held as the words that will be stored.
@@ -491,6 +525,19 @@ export function AddEntryForm({
       pair.fromParticipantId === settleFrom &&
       pair.toParticipantId === settleTo,
   );
+
+  /**
+   * Whether the pair is named from the whole group rather than from its debts.
+   *
+   * The outstanding list is the right way *in* to a new repayment, and it can
+   * only ever show a debt that still exists. Two cases hold a pair it has no
+   * row for: an entry being edited, whose own settlement already cleared the
+   * debt it was for, and a drawer opened on a debt that somebody else settled
+   * between the link being rendered and being followed. Showing the list to
+   * either would leave two names selected with nothing on screen saying so.
+   */
+  const namesFromGroup =
+    editing !== undefined || (settleFrom !== null && outstandingIndex < 0);
 
   const needsRate =
     currencyMode === "converted" &&
@@ -952,7 +999,7 @@ export function AddEntryForm({
         )}
 
         {isSettle &&
-          (editing ? (
+          (namesFromGroup ? (
             <PairPicker
               members={members}
               fromId={settleFrom}
