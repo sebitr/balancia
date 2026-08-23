@@ -210,7 +210,14 @@ export function SplitSheet({
                     aria-label={t(`inputLabels.${method}`, {
                       name: member.displayName,
                     })}
-                    className="h-9 w-[72px] text-right tabular-nums"
+                    className={cn(
+                      "h-9 text-right tabular-nums",
+                      // An exact split has no allocation column beside it, so
+                      // the field takes that width back rather than leaving a
+                      // gap: it is the one method whose typing is an amount,
+                      // and amounts are the long thing to type.
+                      method === "exact" ? "w-[154px]" : "w-[72px]",
+                    )}
                     placeholder={method === "shares" ? "1" : "0"}
                     value={values[member.id] ?? ""}
                     onChange={(event) =>
@@ -219,9 +226,15 @@ export function SplitSheet({
                   />
                 )}
 
-                <span className="w-[70px] text-right text-sm tabular-nums">
-                  {allocation?.formatted ?? "—"}
-                </span>
+                {/* Shares and percentages need telling what they came to; an
+                    exact amount is already the number in the field, and
+                    printing it twice per row reads as two different figures
+                    that happen to agree. */}
+                {method !== "exact" && (
+                  <span className="w-[70px] text-right text-sm tabular-nums">
+                    {allocation?.formatted ?? "—"}
+                  </span>
+                )}
               </li>
             );
           })}
