@@ -27,6 +27,14 @@ import {
 } from "@/components/expenses/category-icon";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
+import {
+  FILTER_PARAM,
+  KIND_PARAM,
+  QUERY_PARAM,
+  listQuery,
+  withQuery,
+} from "./list-query";
+import { forgetPlace, readPlace, rememberPlace } from "./list-place";
 
 /**
  * The transactions list, and the spread that filters it.
@@ -47,6 +55,16 @@ import { cn } from "@/lib/utils";
  * which costs no server round-trip. `replaceState`, not `pushState`: Back here
  * is a swipe that leaves the screen, and a gesture that undid a chip instead
  * of going back would be a worse trade than a filter that does not survive it.
+ *
+ * ## Leaving, and coming back
+ *
+ * Opening a row is a round trip, and the reader expects to be put back down
+ * where they were picked up — same filters, same place in the list. The
+ * filters go with them, on the link out and on the detail screen's link home,
+ * because they are already a query string and `list-query.ts` is where the
+ * three of them are named. What cannot travel that way — how much of the list
+ * had been read in, and how far down it the reader was — is remembered for the
+ * length of the trip in `list-place.ts` and spent on arrival.
  */
 
 export interface BandView {
@@ -81,10 +99,6 @@ export interface RowView {
   readonly revenue: boolean;
   readonly recurring: boolean;
 }
-
-const FILTER_PARAM = "cat";
-const QUERY_PARAM = "q";
-const KIND_PARAM = "kind";
 
 /**
  * The three things a row can be, in the order the chips stand in.
@@ -242,6 +256,9 @@ export function Transactions({
   );
   const query = searchParams.get(QUERY_PARAM) ?? "";
 
+  /** The three of them as one string, which is what a link out carries. */
+  const filterQuery = listQuery(searchParams);
+
   const isActive = (band: BandView) =>
     band.categories.every((category) => selected.has(category));
   const hasSelection = (band: BandView) =>
@@ -340,6 +357,33 @@ export function Transactions({
    * no search at all.
    */
   const filtering = wanted !== null || wantedKinds.size > 0 || needle !== "";
+
+  /*
+   * The place the reader left from, read on the first render because the
+   * number of rows to fetch depends on it — and only there, so that the record
+   * outlives being erased a moment later.
+   */
+  const [stored] = useState(() =>
+    typeof window === "undefined" ? null : readPlace(groupId),
+  );
+
+  useEffect(forgetPlace, []);
+
+  /*
+   * It is only a place in *this* list if the filters are the ones that drew
+   * it. Compared every render rather than once, because the first render of a
+   * client component is not always the one that knows what is in the URL — and
+   * because a chip pressed afterwards makes it a different list, at which
+   * point there is nothing left to go back to.
+   */
+  const place =
+    stored !== null && stored.search === filterQuery ? stored : null;
+
+  /*
+   * While the place stands the list holds itself at least that long. That also
+   * covers the server sending a fresh first page from under the reader — a
+   * list that snapped back to forty rows would take their position with it.
+   */
   const {
     rows: loaded,
     cursor: unread,
@@ -347,7 +391,36 @@ export function Transactions({
     failed,
     retry,
     sentinelRef,
-  } = usePages(groupId, rows, cursor, filtering);
+  } = usePages(groupId, rows, cursor, filtering, place?.rows ?? 0);
+
+  /*
+   * Back down to where they were, once there is enough list to stand on.
+   *
+   * Held until the rows the offset was measured against are actually in the
+   * DOM: scrolling to 4000px on a page 900px tall does nothing at all, and the
+   * browser does not remember that you asked. Given up on — rather than waited
+   * out — when the list has ended or the fetch has failed, because as far down
+   * as we can get is a better answer than the top of the screen.
+   */
+  const restored = useRef(false);
+
+  useEffect(() => {
+    if (place === null || restored.current) return;
+    if (loaded.length < place.rows && unread !== null && !failed) return;
+    restored.current = true;
+    // Instant, not smooth: this is not a journey the reader took, it is the
+    // undoing of one they never asked to make.
+    window.scrollTo({ top: place.scrollY, behavior: "instant" });
+  }, [place, loaded.length, unread, failed]);
+
+  /** Remember the place, on the way into an entry's own screen. */
+  const remember = () => {
+    rememberPlace(groupId, {
+      rows: loaded.length,
+      scrollY: window.scrollY,
+      search: filterQuery,
+    });
+  };
 
   const shown = loaded.filter((row) => {
     if (wantedKinds.size > 0 && !wantedKinds.has(kindOf(row))) return false;
@@ -539,6 +612,8 @@ export function Transactions({
                     groupId={groupId}
                     rail={railOf(row.category)}
                     name={row.category === null ? null : nameOf(row.category)}
+                    query={filterQuery}
+                    onOpen={remember}
                   />
                 </li>
               ))}
@@ -604,10 +679,12 @@ interface Paging {
 /**
  * The rest of the list, fetched as the reader needs it.
  *
- * Two things ask for a page: the sentinel below the list coming into view, and
- * a filter being on — the first a screenful at a time, the second in bulk
- * until the list runs out. Both go through one request at a time, because the
- * cursor for the next page is only known once the current one has landed.
+ * Three things ask for a page: the sentinel below the list coming into view, a
+ * filter being on, and a reader returning to a place further down than the
+ * first page reaches. The first takes a screenful at a time; the other two ask
+ * for what they need in one request and stop. All of them go through one
+ * request at a time, because the cursor for the next page is only known once
+ * the current one has landed.
  *
  * There is no `loading` flag, because there is nothing for one to remember.
  * Wanting more rows and there being more to give is the whole condition, and
@@ -625,6 +702,11 @@ function usePages(
   first: readonly RowView[],
   firstCursor: string | null,
   eager: boolean,
+  /**
+   * Rows to read in without being asked twice, for a reader coming back to a
+   * position the first page does not reach. Zero on an ordinary arrival.
+   */
+  atLeast: number,
 ): Paging {
   const [state, setState] = useState({
     first,
@@ -651,7 +733,8 @@ function usePages(
   }
 
   const { cursor } = state;
-  const busy = cursor !== null && !failed && (eager || atEnd);
+  const shortfall = Math.max(0, atLeast - state.rows.length);
+  const busy = cursor !== null && !failed && (eager || shortfall > 0 || atEnd);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -676,7 +759,13 @@ function usePages(
     void (async () => {
       try {
         const params = new URLSearchParams({ cursor: from });
-        if (eager) params.set("limit", String(BULK_PAGE_SIZE));
+        // A filter has to reach the end of the list and takes the largest page
+        // it is allowed. Catching up to a remembered position knows exactly how
+        // far it has to go, so it asks for that and no more.
+        const bulk = eager
+          ? BULK_PAGE_SIZE
+          : Math.min(shortfall, BULK_PAGE_SIZE);
+        if (bulk > 0) params.set("limit", String(bulk));
         const response = await fetch(
           `/api/groups/${groupId}/transactions?${params}`,
           { headers: { Accept: "application/json" } },
@@ -701,7 +790,7 @@ function usePages(
         inFlight.current = false;
       }
     })();
-  }, [busy, cursor, eager, groupId]);
+  }, [busy, cursor, eager, shortfall, groupId]);
 
   const retry = useCallback(() => setFailed(false), []);
 
@@ -718,11 +807,16 @@ function Row({
   groupId,
   rail,
   name,
+  query,
+  onOpen,
 }: {
   row: RowView;
   groupId: string;
   rail: string;
   name: string | null;
+  /** The list's filters, so the screen this opens can hand them back. */
+  query: string;
+  onOpen: () => void;
 }) {
   const dates = useDateFormatter();
   const Glyph = hasGlyph(row.category)
@@ -789,12 +883,17 @@ function Row({
       // Every row opens its own detail screen, repayments included: the one
       // thing this row cannot say about a repayment is whether it finished the
       // job, and that is the whole of what the screen behind it is for.
-      href={
+      href={withQuery(
         row.kind === "settlement"
           ? `/groups/${groupId}/settlements/${row.id}`
-          : `/groups/${groupId}/expenses/${row.id}`
-      }
+          : `/groups/${groupId}/expenses/${row.id}`,
+        query,
+      )}
       transitionTypes={PUSH}
+      // Where the reader is standing, noted on the way out rather than on the
+      // way back: by the time the list unmounts the router has already been
+      // asked to scroll, and `scrollY` is no longer the answer to anything.
+      onClick={onOpen}
       // A finger never hovers, so the row answers the press itself — every
       // other list in the app already does.
       className="-mx-1.5 -my-[7px] flex items-center gap-2.5 rounded-[10px] px-1.5 py-[7px] transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-muted motion-reduce:transition-none"

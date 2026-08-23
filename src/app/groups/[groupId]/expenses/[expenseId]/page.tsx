@@ -50,6 +50,7 @@ import {
   hasGlyph,
 } from "@/components/expenses/category-icon";
 import { signOf } from "@/modules/expenses/direction";
+import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { POP, PUSH } from "@/components/motion/transitions";
 
 /**
@@ -77,9 +78,21 @@ const SPLIT_METHODS = {
 
 export default async function TransactionDetailPage({
   params,
+  searchParams,
 }: PageProps<"/groups/[groupId]/expenses/[expenseId]">) {
   const { groupId, expenseId } = await params;
   const access = await requireGroupAccess(groupId);
+
+  /*
+   * The state of the list this was opened from, riding along.
+   *
+   * Back is a link rather than `router.back()` because this screen is also
+   * something you can be sent — a link in a chat, a bookmark, a refresh — and
+   * a reader who arrived that way has nothing behind them to pop to. A link
+   * always leads to the list; carrying the filters is what makes it lead back
+   * to the *same* list for the reader who came from one.
+   */
+  const listFilters = listQuery(await searchParams);
 
   const expense = await getExpense(access.groupId, expenseId);
   if (!expense) {
@@ -181,7 +194,10 @@ export default async function TransactionDetailPage({
     <div className="flex flex-col gap-3 pb-[4.5rem]">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}/expenses`} transitionTypes={POP}>
+          <Link
+            href={withQuery(`/groups/${groupId}/expenses`, listFilters)}
+            transitionTypes={POP}
+          >
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>
@@ -359,7 +375,14 @@ export default async function TransactionDetailPage({
 
       <ActionBar>
         <Link
-          href={`/groups/${groupId}/expenses/${expenseId}/edit`}
+          // The filters go into the drawer with it, so that a save which turns
+          // this entry into a repayment — and so lands the reader on another
+          // detail screen — still leaves them a way back to the list they were
+          // reading.
+          href={withQuery(
+            `/groups/${groupId}/expenses/${expenseId}/edit`,
+            listFilters,
+          )}
           transitionTypes={PUSH}
           className={`${ACTION} ${ACTION_NEUTRAL}`}
         >
@@ -371,6 +394,7 @@ export default async function TransactionDetailPage({
           kind="expense"
           id={expenseId}
           description={expense.description}
+          backTo={withQuery(`/groups/${groupId}/expenses`, listFilters)}
         />
       </ActionBar>
     </div>

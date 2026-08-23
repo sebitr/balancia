@@ -35,6 +35,7 @@ import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { moneyForGroup } from "@/modules/currencies/display";
 import { formatMoney, money } from "@/modules/currencies/money";
+import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { POP, PUSH } from "@/components/motion/transitions";
 
 /**
@@ -62,9 +63,14 @@ const METHOD_GLYPHS = {
 
 export default async function SettlementDetailPage({
   params,
+  searchParams,
 }: PageProps<"/groups/[groupId]/settlements/[settlementId]">) {
   const { groupId, settlementId } = await params;
   const access = await requireGroupAccess(groupId);
+
+  /* The state of the list this was opened from — see the expense detail, which
+     carries it for the same reason and in the same three names. */
+  const listFilters = listQuery(await searchParams);
 
   const settlement = await getSettlement(access.groupId, settlementId);
   if (!settlement) {
@@ -140,7 +146,10 @@ export default async function SettlementDetailPage({
     <div className="flex flex-col gap-3 pb-[4.5rem]">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}/expenses`} transitionTypes={POP}>
+          <Link
+            href={withQuery(`/groups/${groupId}/expenses`, listFilters)}
+            transitionTypes={POP}
+          >
             <ArrowLeft aria-hidden="true" />
             {tCommon("back")}
           </Link>
@@ -260,7 +269,10 @@ export default async function SettlementDetailPage({
 
       <ActionBar>
         <Link
-          href={`/groups/${groupId}/settlements/${settlementId}/edit`}
+          href={withQuery(
+            `/groups/${groupId}/settlements/${settlementId}/edit`,
+            listFilters,
+          )}
           transitionTypes={PUSH}
           className={`${ACTION} ${ACTION_NEUTRAL}`}
         >
@@ -272,6 +284,7 @@ export default async function SettlementDetailPage({
           kind="settlement"
           id={settlementId}
           description={description}
+          backTo={withQuery(`/groups/${groupId}/expenses`, listFilters)}
         />
       </ActionBar>
     </div>
