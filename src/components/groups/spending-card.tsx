@@ -81,7 +81,7 @@ export function SpendingCard({
         </div>
 
         <Link
-          href={`/groups/${groupId}/expenses`}
+          href={`/groups/${groupId}/stats`}
           transitionTypes={PUSH}
           className="flex min-h-12 items-center gap-2.5 border-t px-4 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
