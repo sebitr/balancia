@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { toastUndoable } from "@/components/ui/sonner";
 import {
   Sheet,
   SheetContent,
@@ -53,9 +54,6 @@ export interface PersonView {
   readonly balances: readonly { minorUnits: string; currency: string }[];
 }
 
-/** How long the removal toast keeps its Undo, in milliseconds. */
-const UNDO_WINDOW = 6000;
-
 export function PeopleCard({
   groupId,
   people,
@@ -74,6 +72,7 @@ export function PeopleCard({
 }) {
   const router = useRouter();
   const t = useTranslations("membersPage");
+  const tCommon = useTranslations("common");
   const [openId, setOpenId] = useState<string | null>(null);
   const [reveal, setReveal] = useState<{ id: string; url: string } | null>(
     null,
@@ -112,12 +111,9 @@ export function PeopleCard({
       setConfirmId(null);
       if (openId === person.id) open(null);
       router.refresh();
-      toast.success(t("removed", { name: person.name }), {
-        duration: UNDO_WINDOW,
-        action: {
-          label: t("undo"),
-          onClick: () => void onRestore(person),
-        },
+      toastUndoable(t("removed", { name: person.name }), {
+        label: tCommon("undo"),
+        onUndo: () => onRestore(person),
       });
     } finally {
       setPending(false);

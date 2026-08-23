@@ -72,6 +72,14 @@
   --shadow-raised:
     0 4px 12px -2px oklch(0.226 0.072 319 / 0.1),
     0 2px 6px -2px oklch(0.226 0.072 319 / 0.06);
+  --shadow-toast:
+    0 16px 40px -12px oklch(0.226 0.072 319 / 0.3),
+    0 6px 14px -8px oklch(0.226 0.072 319 / 0.18);
+
+  /* notice tones — a caution and a remark, which the balance palette has no
+     word for; see globals.css */
+  --notice-warning: oklch(0.58 0.12 70);
+  --notice-info: oklch(0.51 0.14 250);
 }
 
 /* ── tokens: dark ── */
@@ -112,6 +120,9 @@
   --sidebar-accent-foreground: oklch(0.977 0.007 85);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.712 0.168 30);
+
+  --notice-warning: oklch(0.78 0.13 70);
+  --notice-info: oklch(0.68 0.12 250);
 }
 
 /* ── base ── */
@@ -992,21 +1003,84 @@ a.list-row:focus-visible {
   gap: 0.5rem;
 }
 .toast {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 0.625rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--popover);
-  box-shadow: var(--shadow-raised);
-  padding: 0.75rem 0.875rem;
-  max-width: 22rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-xl);
+  background: color-mix(in oklch, var(--popover) 90%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    var(--shadow-toast),
+    0 0 0 1px color-mix(in oklch, var(--foreground) 12%, transparent);
+  padding: 0.75rem 2.75rem 0.75rem 0.75rem;
+  width: 22.25rem;
+  max-width: 100%;
 }
-.toast svg {
+/* The glyph disc. Its tone is set per toast — see the `--tone` custom
+   property below, which is the only thing that changes between types. */
+.toast-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  color: var(--tone);
+  background: color-mix(in oklch, var(--tone) 15%, transparent);
+}
+.toast-glyph svg {
   width: 1rem;
   height: 1rem;
-  margin-top: 0.125rem;
+}
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+.toast-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.375;
+}
+/* The way back, offered only where there genuinely is one. */
+.toast-undo {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-close {
+  position: absolute;
+  top: 50%;
+  right: 0.625rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.toast-close svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* ── app shell / navigation ── */

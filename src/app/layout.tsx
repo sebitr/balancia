@@ -109,7 +109,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 group and the home screen swaps one shell for the other.
                 Mounted in there, it would forget its way back on the way in. */}
             <SwipeBack />
-            <Toaster position="top-center" richColors closeButton />
+            <Toaster />
           </FormatPreferencesProvider>
         </NextIntlClientProvider>
       </body>

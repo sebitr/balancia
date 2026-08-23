@@ -10,7 +10,9 @@
     "or": "ou",
     "guest": "invité",
     "optional": "facultatif",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "undo": "Annuler",
+    "dismiss": "Fermer"
   },
   "nav": {
     "accountMenu": "Menu du compte",
@@ -1546,7 +1548,6 @@
     "remove": "Retirer",
     "removed": "{name} a été retiré du groupe",
     "removeFailed": "Cette personne n’a pas pu être retirée.",
-    "undo": "Annuler",
     "restored": "{name} est de retour dans le groupe",
     "restoreFailed": "Cette personne n’a pas pu être rétablie.",
     "addSomeone": "Ajouter quelqu’un",

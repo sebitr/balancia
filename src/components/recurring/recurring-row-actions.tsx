@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { MoreVertical, Pause, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastUndoable } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -40,16 +41,27 @@ export function RecurringRowActions({
 }) {
   const router = useRouter();
   const t = useTranslations("recurringActions");
+  const tCommon = useTranslations("common");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const onTogglePause = async () => {
-    const result = await setRecurringPausedAction(groupId, templateId, !paused);
+  /** Reports whether it landed, so the undo can be offered only if it did. */
+  const setPaused = async (next: boolean) => {
+    const result = await setRecurringPausedAction(groupId, templateId, next);
     if (!result.ok) {
       toast.error(result.error ?? t("failed"));
-      return;
+      return false;
     }
-    toast.success(paused ? t("resumed") : t("paused"));
     router.refresh();
+    return true;
+  };
+
+  const onTogglePause = async () => {
+    if (!(await setPaused(!paused))) return;
+    // `paused` is where this started, which is where the undo puts it back.
+    toastUndoable(paused ? t("resumed") : t("paused"), {
+      label: tCommon("undo"),
+      onUndo: () => setPaused(paused),
+    });
   };
 
   const onDelete = async () => {

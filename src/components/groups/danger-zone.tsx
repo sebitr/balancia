@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Archive, ArchiveRestore, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastUndoable } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,16 +47,27 @@ export function DangerZone({
   const [confirmName, setConfirmName] = useState("");
   const [pending, setPending] = useState(false);
 
+  /** Reports whether it landed, so the undo can be offered only if it did. */
+  const setArchived = async (next: boolean) => {
+    const result = await setGroupArchivedAction(groupId, next);
+    if (!result.ok) {
+      toast.error(result.error ?? t("failed"));
+      return false;
+    }
+    router.refresh();
+    return true;
+  };
+
   const onToggleArchive = async () => {
     setPending(true);
     try {
-      const result = await setGroupArchivedAction(groupId, !archived);
-      if (!result.ok) {
-        toast.error(result.error ?? t("failed"));
-        return;
-      }
-      toast.success(archived ? t("restored") : t("archived"));
-      router.refresh();
+      if (!(await setArchived(!archived))) return;
+      // `archived` is the state this started from, which is exactly where the
+      // undo has to put it back — the prop underneath will have moved on.
+      toastUndoable(archived ? t("restored") : t("archived"), {
+        label: tCommon("undo"),
+        onUndo: () => setArchived(archived),
+      });
     } finally {
       setPending(false);
     }

@@ -10,7 +10,9 @@
     "or": "or",
     "guest": "guest",
     "optional": "optional",
-    "retry": "Try again"
+    "retry": "Try again",
+    "undo": "Undo",
+    "dismiss": "Dismiss"
   },
   "nav": {
     "accountMenu": "Account menu",
@@ -1546,7 +1548,6 @@
     "remove": "Remove",
     "removed": "{name} removed from the group",
     "removeFailed": "That person could not be removed.",
-    "undo": "Undo",
     "restored": "{name} is back in the group",
     "restoreFailed": "That person could not be put back.",
     "addSomeone": "Add someone",
