@@ -73,16 +73,25 @@ export function BalanceList({
         {t("everyoneBalances")}
       </h2>
 
-      <ul className="overflow-hidden rounded-2xl bg-card ring-1 ring-border">
+      {/* The three columns belong to the list, and every row subgrids onto
+          them. A row that sized its own columns would fit the amount column
+          to its own amount, and since the amounts differ in length the bars
+          would start and end a few pixels apart down the card. The column
+          gap is set here alone: a subgrid inherits it, and restating it on a
+          row is what pulls the tracks back out of line. */}
+      <ul className="grid grid-cols-[minmax(0,1fr)_minmax(68px,0.85fr)_auto] gap-x-2.5 overflow-hidden rounded-2xl bg-card ring-1 ring-border">
         {shown.map((person) => (
-          <li key={person.participantId} className="border-t first:border-t-0">
+          <li
+            key={person.participantId}
+            className="col-span-3 grid grid-cols-subgrid border-t first:border-t-0"
+          >
             <Link
               // The row's own person, not the list they came from: somebody
               // tapping a balance is asking about that balance, and the People
               // screen answers a different question entirely.
               href={`/groups/${groupId}/members/${person.participantId}`}
               transitionTypes={PUSH}
-              className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_minmax(68px,0.85fr)_auto] items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+              className="col-span-3 grid min-h-[52px] grid-cols-subgrid items-center px-3 py-2.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
             >
               <span className="flex min-w-0 items-center gap-2.5">
                 <Avatar className="size-7">
@@ -122,7 +131,7 @@ export function BalanceList({
         ))}
 
         {people > limit && (
-          <li className="border-t">
+          <li className="col-span-3 border-t">
             <Link
               href={`/groups/${groupId}/balances`}
               transitionTypes={PUSH}
