@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 
 /**
@@ -61,6 +62,15 @@ export function AddEntryDrawer({
   dismissTo: "back" | "group";
 }) {
   const router = useRouter();
+  /*
+   * The filters of the list the reader came from, which this route was opened
+   * carrying and which the screen it hands them on to must carry too.
+   *
+   * The drawer is the one that knows them. The form below builds a path to a
+   * row in another table — an id it has just been given — and has no business
+   * knowing which list somebody was reading when they opened it.
+   */
+  const searchParams = useSearchParams();
   const [exit, setExit] = useState<Exit | null>(null);
 
   useEffect(() => {
@@ -152,8 +162,20 @@ export function AddEntryDrawer({
           // A conversion knows the screen the entry moved to and that is where
           // the reader goes; a deletion has no such screen, and the group is
           // the nearest thing to where the entry used to be.
+          //
+          // The filters go with it. Changing an expense into a repayment moves
+          // the entry to another table and so to another detail screen, and
+          // that screen is where the reader presses Back — onto a list which,
+          // without this, had forgotten what it was showing and where in it
+          // they were. A deletion goes to the group instead, which is not a
+          // list and has no filters to keep.
           onRemoved={(to) =>
-            setExit({ kind: "gone", to: to ?? `/groups/${form.groupId}` })
+            setExit({
+              kind: "gone",
+              to: to
+                ? withQuery(to, listQuery(searchParams))
+                : `/groups/${form.groupId}`,
+            })
           }
         />
       </SheetContent>
