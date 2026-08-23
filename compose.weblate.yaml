@@ -1,0 +1,128 @@
+# Balancia — a Weblate on this machine, for wording and for new languages.
+#
+#   ./scripts/weblate.sh up
+#
+#   Weblate UI   http://localhost:8090   (admin / weblate)
+#
+# Translation lives in messages/en.json and messages/fr.json, and editing those
+# by hand is fine for one word. It stops being fine for a sweep across a
+# hundred strings, and it never worked at all for someone who wants to add a
+# language but does not want to open an editor. Weblate is the screen for both:
+# every string with its English source beside it, a progress bar per language,
+# and a button that writes a new messages/<code>.json.
+#
+# This is a development tool, like compose.dev.yaml. It is not hardened, the
+# secrets below are fixed and public, and nothing here is reachable off-host —
+# every published port is bound to 127.0.0.1. The production stack is
+# compose.yaml and knows nothing about any of this.
+#
+# Weblate works on a git repository, never on the working tree. It clones the
+# bare mirror the script keeps at .weblate/balancia.git, and pushes what
+# translators write back to the same place; scripts/weblate.sh is what moves
+# commits between that mirror and this checkout, in both directions, so that
+# nothing here can ever commit to the branch you happen to have checked out.
+# Read docs/translations.md before the first run.
+
+name: balancia-weblate
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: balancia-weblate-db
+    environment:
+      POSTGRES_USER: weblate
+      POSTGRES_PASSWORD: weblate
+      POSTGRES_DB: weblate
+    volumes:
+      # /var/lib/postgresql, not /var/lib/postgresql/data: the 18+ images store
+      # data under a major-version directory and refuse to start if anything is
+      # mounted at the old path. Same as compose.dev.yaml, same reason.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weblate -d weblate"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Celery's broker and Weblate's cache. Valkey rather than Redis because that
+  # is what upstream's own compose file moved to.
+  cache:
+    image: valkey/valkey:9.1.1
+    container_name: balancia-weblate-cache
+    command: [valkey-server, --save, "60", "1", --loglevel, warning]
+    volumes:
+      - cache-data:/data
+
+  weblate:
+    # Deliberately unpinned. This container holds no data worth protecting from
+    # an upgrade — the translations are in git and the rest is rebuildable with
+    # `./scripts/weblate.sh reset` — and tracking upstream is how the JSON
+    # writer stays in step with the format parameters the script sets.
+    image: weblate/weblate:latest
+    container_name: balancia-weblate
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    environment:
+      # Both spellings of each: the image renamed REDIS_* to VALKEY_* and
+      # POSTGRES_DATABASE to POSTGRES_DB along the way, and `latest` may be
+      # either side of those renames.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: weblate
+      POSTGRES_PASSWORD: weblate
+      POSTGRES_DB: weblate
+      POSTGRES_DATABASE: weblate
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      VALKEY_HOST: cache
+      VALKEY_PORT: 6379
+      # Must match the published port below, or Weblate builds wrong links.
+      WEBLATE_SITE_DOMAIN: localhost:${WEBLATE_PORT:-8090}
+      WEBLATE_SITE_TITLE: Balancia
+      WEBLATE_ADMIN_NAME: Balancia
+      WEBLATE_ADMIN_EMAIL: weblate@localhost
+      # Dev-only, deliberately not a secret: this instance is bound to
+      # 127.0.0.1 and the value is committed.
+      WEBLATE_ADMIN_PASSWORD: weblate
+      WEBLATE_SECRET_KEY: dev-only-insecure-weblate-key-0123456789abcdef
+      WEBLATE_ALLOWED_HOSTS: "*"
+      # Closed, and no mail server: the admin account created above is the only
+      # one, so nothing here ever needs to send a message to anybody.
+      WEBLATE_REGISTRATION_OPEN: 0
+      WEBLATE_DEBUG: 0
+      WEBLATE_LOGLEVEL: INFO
+      # Two, not one-per-core. Weblate sizes its uwsgi and Celery pools from
+      # the CPU count, which on a laptop running the app stack as well is a
+      # gigabyte of processes serving a single translator.
+      WEBLATE_WORKERS: 2
+      # The mirror is bind-mounted from the host and so is owned by whichever
+      # uid created it, which is not the uid git runs as in here.
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+    volumes:
+      - weblate-data:/app/data
+      - weblate-cache:/app/cache
+      # The exchange: .weblate/balancia.git is the bare repository Weblate
+      # clones from and pushes to. Writable, because pushing is half the point.
+      - ./.weblate:/repo
+      # The component definition, read once per `./scripts/weblate.sh up`.
+      # Tracked in the repository so the file mask, the base file and the JSON
+      # indentation are reviewable rather than clicked in somewhere.
+      - ./scripts/weblate-component.json:/config/component.json:ro
+    ports:
+      - "127.0.0.1:${WEBLATE_PORT:-8090}:8080"
+
+volumes:
+  db-data:
+    name: balancia-weblate-db-data
+  cache-data:
+    name: balancia-weblate-cache-data
+  weblate-data:
+    name: balancia-weblate-data
+  weblate-cache:
+    name: balancia-weblate-cache

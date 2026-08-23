@@ -38,13 +38,14 @@ useful guide.
 
 ## Developing Balancia
 
-| Guide                                    | Best for                                                 |
-| ---------------------------------------- | -------------------------------------------------------- |
-| [Development](development.md)            | Local setup, tests, project structure and stack notes    |
-| [Architecture](architecture.md)          | Boundaries, data flow and design decisions               |
-| [Contributing](../CONTRIBUTING.md)       | Proposing, implementing and verifying a change           |
-| [Code of conduct](../CODE_OF_CONDUCT.md) | Community expectations                                   |
-| [Support](../SUPPORT.md)                 | Where questions, bugs, ideas and security reports belong |
+| Guide                                    | Best for                                                     |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| [Development](development.md)            | Local setup, tests, project structure and stack notes        |
+| [Architecture](architecture.md)          | Boundaries, data flow and design decisions                   |
+| [Translations](translations.md)          | Changing wording and adding a language, with a local Weblate |
+| [Contributing](../CONTRIBUTING.md)       | Proposing, implementing and verifying a change               |
+| [Code of conduct](../CODE_OF_CONDUCT.md) | Community expectations                                       |
+| [Support](../SUPPORT.md)                 | Where questions, bugs, ideas and security reports belong     |
 
 ## Three useful starting points
 

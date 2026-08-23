@@ -129,6 +129,7 @@ pnpm dev:worker
 | `pnpm db:migrate`       | Apply migrations                               |
 | `pnpm db:seed`          | Development fixtures                           |
 | `pnpm icons`            | Regenerate PWA icons from the wordmark         |
+| `pnpm weblate`          | Local Weblate for wording and languages        |
 | `pnpm audit:prod`       | Vulnerability check on production dependencies |
 
 ## Project layout
@@ -159,6 +160,8 @@ src/
     security/             authorization, tokens, guest sessions, rate limits
   components/             React components
   worker/                 worker entrypoint
+  i18n/                   locale negotiation, formats, catalogue loading
+messages/                 en.json and fr.json — every translated string
 tests/
   integration/            real-database tests
   e2e/                    Playwright journeys

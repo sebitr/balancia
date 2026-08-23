@@ -14,6 +14,9 @@ pnpm-lock.yaml
 drizzle/meta
 dist
 LICENSE
+# The bare git repository ./scripts/weblate.sh keeps for the local Weblate
+# to clone and push to. Git's own files, not this project's.
+.weblate
 # Rendered email bodies, written by `pnpm email:render` and asserted against
 # byte for byte. Prettier would reindent the tables and rewrap the inline
 # styles, which is exactly the drift these files exist to catch — and three of

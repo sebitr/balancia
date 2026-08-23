@@ -37,6 +37,7 @@
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
     "audit:prod": "pnpm audit --prod",
     "design-system": "node design-system/build.mjs",
+    "weblate": "./scripts/weblate.sh",
     "build:next": "next build",
     "pdf:assets": "tsx scripts/copy-pdf-assets.ts",
     "email:render": "tsx scripts/render-emails.ts",
