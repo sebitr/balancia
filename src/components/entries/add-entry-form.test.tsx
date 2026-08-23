@@ -1613,6 +1613,7 @@ describe("leaving the drawer", () => {
     date: "2026-08-12",
     description: "",
     category: "",
+    subcategory: "",
     notes: "",
     payerId: "herve",
     settleTo: "seb",
