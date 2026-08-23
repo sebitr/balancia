@@ -132,6 +132,9 @@ describe("message catalogues", () => {
       // A category name and a count of the ones folded in behind it: a
       // placeholder, a plus sign and a placeholder.
       "expensesList.bandRemainder",
+      // A date and a payment method, joined by the separator the rest of the
+      // app uses. Both halves are already translated where they come from.
+      "settleUp.settledOnVia",
       // Product names. Interac and Bancontact Pay are called that in French
       // too — only the two generic methods, `bank` and `cash`, translate.
       "paymentMethods.interac",

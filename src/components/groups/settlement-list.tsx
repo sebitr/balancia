@@ -96,8 +96,13 @@ export function SettlementList({
           <h2 id="suggested-settlements" className="text-sm font-medium">
             {t("suggestedSettlements")}
           </h2>
+          {/* The settle-up screen, not the balances one. This heading is about
+              transfers, and "all" of a shortened transfer list is the screen
+              that writes every one of them out with its action attached —
+              balances answer a different question and have their own link,
+              under the list above. */}
           <Link
-            href={`/groups/${groupId}/balances`}
+            href={`/groups/${groupId}/settle`}
             transitionTypes={PUSH}
             className="-my-2 rounded-lg px-2 py-2 text-xs font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >

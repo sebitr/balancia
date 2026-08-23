@@ -657,6 +657,27 @@
       "saveFailed": "Le paiement n'a pas pu être enregistré."
     }
   },
+  "settleUp": {
+    "title": "Régler les comptes",
+    "subtitlePeople": "{group} · {count, plural, one {# personne} other {# personnes}}",
+    "subtitleConverted": "{group} · réglé en {currency}",
+    "clearsGroup": "{count, plural, one {# paiement solde le groupe} other {# paiements soldent le groupe}}",
+    "clearsCurrency": "{count, plural, one {# paiement solde cette devise} other {# paiements soldent cette devise}}",
+    "yourPayments": "Tes paiements",
+    "betweenOthers": "Entre les autres",
+    "settledUp": "Réglé",
+    "paysSentence": "{from} paie {to}",
+    "paidSentence": "{from} a payé {to}",
+    "record": "Enregistrer",
+    "recordFor": "Enregistrer le paiement de {from} à {to}",
+    "remindPerson": "Relancer {name}",
+    "remindedWhen": "Relancée {when}",
+    "allSettledTitle": "Tout le monde est à jour",
+    "allSettledDescription": "Aucun virement n'est nécessaire. Les nouvelles dépenses apparaissent ici dès qu'elles changent le solde de quelqu'un.",
+    "lastSettled": "Derniers règlements",
+    "settledOnVia": "{when} · {method}",
+    "backToGroup": "Retour au groupe"
+  },
   "balancesPage": {
     "title": "Soldes",
     "allSettledTitle": "Tout le monde est à jour",

@@ -152,9 +152,6 @@ export default async function GroupOverviewPage({
               groupName={access.group.name}
               senderName={senderName}
               recipients={recipients}
-              participants={participantOptions}
-              currencyMode={access.group.currencyMode}
-              baseCurrency={access.group.baseCurrency}
               canArchive={
                 access.permissions.manageGroupSettings &&
                 access.group.archivedAt === null
