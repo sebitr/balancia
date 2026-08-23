@@ -74,6 +74,14 @@
   --shadow-raised:
     0 4px 12px -2px oklch(0.226 0.072 319 / 0.1),
     0 2px 6px -2px oklch(0.226 0.072 319 / 0.06);
+  /* A toast is the one surface with nothing of ours behind it, so it carries
+     the only two-stage shadow in the app: a wide, soft cast that lifts it off
+     whatever it landed on, and a tight one that keeps its edge crisp. */
+  --shadow-toast:
+    0 16px 40px -12px oklch(0.226 0.072 319 / 0.3),
+    0 6px 14px -8px oklch(0.226 0.072 319 / 0.18);
+  --color-notice-warning: var(--notice-warning);
+  --color-notice-info: var(--notice-info);
 }
 
 /*
@@ -157,6 +165,17 @@
   --group-accent-plum: oklch(0.47 0.085 319);
   --group-accent-blue: oklch(0.51 0.14 250);
 
+  /*
+   * Notice tones — the two a toast needs and the balance palette cannot lend
+   * it. `--positive` and `--destructive` already say "went well" and "went
+   * wrong"; a caution and a plain remark are neither, and borrowing `--payer`
+   * for the amber would mean amber saying two different things on one screen.
+   * Both clear 3:1 on `--popover`, which is what a glyph owes its ground
+   * (WCAG 2.2 1.4.11).
+   */
+  --notice-warning: oklch(0.58 0.12 70);
+  --notice-info: oklch(0.51 0.14 250);
+
   /* Marketing-only surface steps that have no product-shell counterpart. */
   --marketing-plum: oklch(0.226 0.072 319);
   --marketing-plum-raised: oklch(0.27 0.068 319);
@@ -219,6 +238,9 @@
   --group-accent-amber: oklch(0.78 0.13 70);
   --group-accent-plum: oklch(0.71 0.048 319);
   --group-accent-blue: oklch(0.68 0.12 250);
+
+  --notice-warning: oklch(0.78 0.13 70);
+  --notice-info: oklch(0.68 0.12 250);
 }
 
 @layer base {
@@ -665,6 +687,30 @@
 }
 [data-sonner-toaster] {
   view-transition-name: app-toaster;
+}
+
+/*
+ * Sonner hides the contents of the toasts stacked behind the front one, so
+ * the stack reads as one card with edges peeking out rather than three
+ * overlapping sentences. It only does that for the styling it ships, and ours
+ * is its own (`unstyled` in src/components/ui/sonner.tsx), so the rule comes
+ * back by hand. Unlayered, like sonner's own sheet, which is injected after
+ * this one and would otherwise win the tie.
+ */
+[data-sonner-toast][data-expanded="false"][data-front="false"] > * {
+  opacity: 0;
+}
+
+/*
+ * Sonner's focus ring is a `box-shadow`, and a toast is tabbable — so reaching
+ * one with the keyboard replaced its elevation *and* the hairline the ring
+ * utility draws with a grey halo. The focus ring is an outline here, which
+ * sits beside both instead of on top of them.
+ */
+[data-sonner-toaster] [data-sonner-toast]:focus-visible {
+  box-shadow: var(--tw-ring-shadow), var(--shadow-toast);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* -------------------------------------------------------------------------- *
