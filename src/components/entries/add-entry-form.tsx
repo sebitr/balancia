@@ -83,6 +83,7 @@ import {
   confirmationKey,
   directionOf,
   hasAmount,
+  noteAfterTypeSwitch,
   primaryActionKey,
   resetsForType,
   sanitiseAmount,
@@ -313,7 +314,9 @@ export function AddEntryForm({
    * Kept apart from `description` rather than folded into it, because an
    * expense carries notes of its own that this screen never shows. Sharing one
    * value would let a tab switch overwrite an imported note with a title, and
-   * the reader would never see it happen.
+   * the reader would never see it happen. What a switch to settle does instead
+   * is move the title in when there is no note to displace, and take it back
+   * out again on the way to an expense: `noteAfterTypeSwitch`.
    */
   const [notes, setNotes] = useState(editing?.notes ?? "");
   const [category, setCategory] = useState(editing?.category ?? "");
@@ -596,6 +599,7 @@ export function AddEntryForm({
   const changeType = (next: EntryType) => {
     const resets = resetsForType(next);
     setType(next);
+    setNotes(noteAfterTypeSwitch({ from: type, to: next, description, notes }));
     setError(null);
     if (resets.clearScan) {
       setScan(null);

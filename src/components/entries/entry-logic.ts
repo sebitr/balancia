@@ -214,6 +214,39 @@ export function resetsForType(next: EntryType): TypeSwitchReset {
   };
 }
 
+/**
+ * What the note field holds after a type switch.
+ *
+ * The expense tabs keep the title in `description` and the settle tab has no
+ * field for one, so switching to settle used to drop whatever had been typed:
+ * the reader watched the single line they had written disappear, and a
+ * repayment converted from an expense arrived with nothing saying what it had
+ * been for. The title moves into the note instead, which is the only place on
+ * a repayment that can hold it.
+ *
+ * Only into an empty note. An entry that came with a note of its own — an
+ * import, mostly — is carrying something the expense tabs never had room to
+ * show, and a title is not worth overwriting it with.
+ *
+ * The move is undone on the way back, so a reader who tries the settle tab and
+ * returns does not leave a copy of their title behind in the expense's notes
+ * column, where nothing on this screen would show it again. A note *edited*
+ * while it was over there is no longer the title, and stays.
+ */
+export function noteAfterTypeSwitch(input: {
+  from: EntryType;
+  to: EntryType;
+  description: string;
+  notes: string;
+}): string {
+  const { from, to, description, notes } = input;
+  if (from === to) return notes;
+  const title = description.trim();
+  if (to === "settle") return notes.trim() === "" ? title : notes;
+  if (from === "settle") return notes === title ? "" : notes;
+  return notes;
+}
+
 /** How many chips the category picker leads with before the full list. */
 export const SUGGESTED_CATEGORIES = 3;
 

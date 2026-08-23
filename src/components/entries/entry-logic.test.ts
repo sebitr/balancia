@@ -5,6 +5,7 @@ import {
   confirmationKey,
   directionOf,
   hasAmount,
+  noteAfterTypeSwitch,
   primaryActionKey,
   resetsForType,
   sanitiseAmount,
@@ -202,6 +203,81 @@ describe("resetsForType", () => {
     expect(resetsForType("income").clearRecurrence).toBe(false);
     expect(resetsForType("income").clearAttachments).toBe(false);
     expect(resetsForType("income").resetCurrency).toBe(false);
+  });
+});
+
+/**
+ * The one field the settle tab has no room for, and where it goes instead.
+ *
+ * The title is the thing a reader has actually typed by the time they discover
+ * the entry was a repayment, so losing it is the expensive half of changing
+ * their mind.
+ */
+describe("noteAfterTypeSwitch", () => {
+  it("carries the title into the repayment's note", () => {
+    expect(
+      noteAfterTypeSwitch({
+        from: "expense",
+        to: "settle",
+        description: "  Dinner  ",
+        notes: "",
+      }),
+    ).toBe("Dinner");
+    expect(
+      noteAfterTypeSwitch({
+        from: "income",
+        to: "settle",
+        description: "Rent",
+        notes: "",
+      }),
+    ).toBe("Rent");
+  });
+
+  /** An imported note says something the title does not, and outranks it. */
+  it("leaves a note that is already there alone", () => {
+    expect(
+      noteAfterTypeSwitch({
+        from: "expense",
+        to: "settle",
+        description: "Dinner",
+        notes: "Paid in cash at the till",
+      }),
+    ).toBe("Paid in cash at the till");
+  });
+
+  /** Otherwise a look at the settle tab writes the title into a hidden column. */
+  it("takes the title back out on the way to an expense", () => {
+    expect(
+      noteAfterTypeSwitch({
+        from: "settle",
+        to: "expense",
+        description: "Dinner",
+        notes: "Dinner",
+      }),
+    ).toBe("");
+  });
+
+  it("keeps a note the reader edited while it was a repayment", () => {
+    expect(
+      noteAfterTypeSwitch({
+        from: "settle",
+        to: "expense",
+        description: "Dinner",
+        notes: "Dinner, minus the wine",
+      }),
+    ).toBe("Dinner, minus the wine");
+  });
+
+  /** Expense and income share every field, so neither one moves anything. */
+  it("moves nothing between the two tabs that have a description", () => {
+    expect(
+      noteAfterTypeSwitch({
+        from: "expense",
+        to: "income",
+        description: "Rent",
+        notes: "Rent",
+      }),
+    ).toBe("Rent");
   });
 });
 

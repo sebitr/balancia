@@ -635,6 +635,89 @@ describe("switching type", () => {
     await user.click(screen.getByRole("tab", { name: "Expense" }));
     expect(screen.getByRole("switch", { name: "Repeats" })).not.toBeChecked();
   });
+
+  /**
+   * The description is what has been typed by the time somebody realises the
+   * entry was a repayment. The settle tab has no field called that, but it has
+   * one for what the repayment was for, and that is the same sentence.
+   */
+  it("carries the description into what the repayment was for", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Description"), "Bus tickets");
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    expect(
+      screen.getByRole("textbox", { name: "Description (optional)" }),
+    ).toHaveValue("Bus tickets");
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ notes: "Bus tickets" }),
+    );
+  });
+
+  /** Both directions of the entry that has a description carry it. */
+  it("carries an income's description too", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("tab", { name: "Income" }));
+    await user.type(screen.getByLabelText("Description"), "Deposit back");
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    expect(
+      screen.getByRole("textbox", { name: "Description (optional)" }),
+    ).toHaveValue("Deposit back");
+  });
+
+  /**
+   * Going back is not a decision to file the title in the expense's notes,
+   * which is a column this screen never shows again.
+   */
+  it("takes the carried description back out on the way to an expense", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+
+    expect(screen.getByLabelText("Description")).toHaveValue("Dinner");
+
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    expect(createExpense).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ description: "Dinner", notes: "" }),
+    );
+  });
+
+  /** What the reader made of it over there is theirs, and comes back with them. */
+  it("keeps a note edited while it was a repayment", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Description (optional)" }),
+      ", minus the wine",
+    );
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    expect(createExpense).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({
+        description: "Dinner",
+        notes: "Dinner, minus the wine",
+      }),
+    );
+  });
 });
 
 describe("settlement", () => {
@@ -1271,7 +1354,30 @@ describe("editing an entry", () => {
       // The reader's own figure, not the outstanding debt's: they are saying
       // this entry was a repayment, not that it was that repayment.
       amount: "8460",
+      // A note the expense already had is the one thing the title cannot
+      // displace, so this one arrives unchanged.
+      notes: "Weekly shop",
     });
+  });
+
+  /**
+   * The usual expense has no notes, and what it does have is a description
+   * that the settlements table can only hold as one. Losing "Migros" on the
+   * way across left a repayment that said nothing about itself.
+   */
+  it("converts an expense's description into the repayment's note", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: { ...EXPENSE, notes: "" } });
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    expect(
+      screen.getByRole("textbox", { name: "Description (optional)" }),
+    ).toHaveValue("Migros");
+
+    await user.click(screen.getByRole("radio", { name: "To: Seb" }));
+    await save(user);
+
+    expect(toSettlement.mock.calls[0][2]).toMatchObject({ notes: "Migros" });
   });
 
   it("reopens a settlement on its own pair and its own method", async () => {
