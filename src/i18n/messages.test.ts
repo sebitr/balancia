@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { IntlMessageFormat } from "intl-messageformat";
 import en from "../../messages/en.json";
@@ -12,6 +13,9 @@ import { LOCALES, negotiateLocale, isAppLocale } from "./locales";
  * cannot see is a *translation* that has drifted — a key nobody translated, a
  * `{count}` dropped in the French copy, or a plural whose categories were
  * mangled. Those fail here instead of in front of a French-speaking user.
+ *
+ * Nor can it see a catalogue that arrived without anyone wiring it up, which
+ * is what a language added in Weblate looks like on the way in.
  */
 
 type Tree = { [key: string]: string | Tree };
@@ -76,6 +80,23 @@ const english = flatten(en as unknown as Tree);
 const french = flatten(fr as unknown as Tree);
 
 describe("message catalogues", () => {
+  it("loads every catalogue that messages/ contains", () => {
+    // Weblate writes messages/<code>.json the moment a translator adds a
+    // language, and a catalogue the app has not been told about is invisible:
+    // no switcher entry, no negotiation, no email in it. Registering one means
+    // naming the code in six places — LOCALES and LOCALE_LABELS in
+    // src/i18n/locales.ts, then the catalogue maps in src/i18n/request.ts,
+    // src/i18n/emails.ts, src/components/pwa/offline-notice.tsx,
+    // src/components/i18n/language-switcher.tsx and tests/helpers/intl.tsx.
+    // The last five are `Record<AppLocale, …>`, so `pnpm typecheck` names them
+    // one at a time once this test has said the file is there at all.
+    const shipped = readdirSync(new URL("../../messages", import.meta.url))
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => name.slice(0, -".json".length));
+
+    expect(shipped.sort()).toEqual([...LOCALES].sort());
+  });
+
   it("translates every English key into French", () => {
     const missing = [...english.keys()].filter((key) => !french.has(key));
     expect(missing).toEqual([]);
@@ -158,8 +179,10 @@ describe("locale negotiation", () => {
   });
 
   it("skips languages it does not have and falls back to English", () => {
-    expect(negotiateLocale("de-DE,de;q=0.9,fr;q=0.5")).toBe("fr");
-    expect(negotiateLocale("de,es;q=0.9")).toBe("en");
+    // `qa` and `qb` are in the ISO 639-2 private-use range, so these stay true
+    // whatever language Weblate adds next.
+    expect(negotiateLocale("qa-QA,qa;q=0.9,fr;q=0.5")).toBe("fr");
+    expect(negotiateLocale("qa,qb;q=0.9")).toBe("en");
     expect(negotiateLocale(null)).toBe("en");
     expect(negotiateLocale("")).toBe("en");
   });
@@ -174,7 +197,7 @@ describe("locale negotiation", () => {
 
   it("recognises exactly the locales the app ships", () => {
     expect(LOCALES.every(isAppLocale)).toBe(true);
-    expect(isAppLocale("de")).toBe(false);
+    expect(isAppLocale("qa")).toBe(false);
     expect(isAppLocale(undefined)).toBe(false);
   });
 });

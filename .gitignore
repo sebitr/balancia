@@ -70,3 +70,7 @@ next-env.d.ts
 .claude/worktrees/
 .worktree-install.log
 .ocr-eval/
+
+# the bare mirror the local Weblate clones from and pushes to, kept by
+# scripts/weblate.sh — a scratch copy of origin/main, rebuilt on demand
+/.weblate/

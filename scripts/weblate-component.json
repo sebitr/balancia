@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Messages",
+    "slug": "messages",
+    "vcs": "git",
+    "repo": "/repo/balancia.git",
+    "push": "/repo/balancia.git",
+    "branch": "main",
+    "file_format": "json-nested",
+    "filemask": "messages/*.json",
+    "template": "messages/en.json",
+    "edit_template": true,
+    "new_base": "messages/en.json",
+    "new_lang": "add",
+    "language_code_style": "bcp_lower",
+    "manage_units": false,
+    "check_flags": "icu-message-format"
+  }
+]
