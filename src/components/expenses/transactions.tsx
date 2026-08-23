@@ -13,7 +13,13 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDateFormatter } from "@/i18n/format-context";
 import { useNumberLocale } from "@/i18n/format-context";
-import { ChevronRight, Search, X } from "lucide-react";
+// Aliased: `ListFilter` is also the name of the object it opens.
+import {
+  ChevronRight,
+  ListFilter as FilterGlyph,
+  Search,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
@@ -25,26 +31,45 @@ import {
   hasGlyph,
   TYPE_GLYPHS,
 } from "@/components/expenses/category-icon";
+import type { EntryMember } from "@/components/entries/pills";
+import type { ExpenseCategory } from "@/modules/categorization";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
+import { listQuery, withQuery } from "./list-query";
 import {
-  FILTER_PARAM,
-  KIND_PARAM,
-  QUERY_PARAM,
-  listQuery,
-  withQuery,
-} from "./list-query";
+  filterDimensions,
+  filterParams,
+  KINDS,
+  NO_FILTER,
+  readFilter,
+  selectRows,
+  sortableByAmount,
+  type EntryKind,
+  type ListFilter,
+  type RowView,
+} from "./list-filter";
+import { FilterSheet } from "./filter-sheet";
 import { forgetPlace, readPlace, rememberPlace } from "./list-place";
 
 /**
  * The transactions list, and the spread that filters it.
  *
- * One island rather than three, because the chips, the bands and the rows are
- * three views of a single question — which transactions are we looking at —
- * and splitting them would mean lifting that answer into a store only to push
- * it back down again. Three things narrow it: the kind chips, the category
- * spine, and the search field. They intersect; each one only ever takes rows
- * away.
+ * One island rather than four, because the chips, the bands, the sheet and the
+ * rows are four views of a single question — which transactions are we looking
+ * at — and splitting them would mean lifting that answer into a store only to
+ * push it back down again. Four things narrow it: the kind chips, the category
+ * spine, the search field, and the filter sheet behind the button beside it.
+ * They intersect; each one only ever takes rows away.
+ *
+ * Type and Category have two controls each — the chip row and the sheet, the
+ * spine and the sheet — and one piece of state. Selecting Groceries in the
+ * sheet lights that band because there is nowhere else for it to be recorded;
+ * a chip row reading `Expenses` while the sheet held `Settlements` is the bug
+ * this shape makes unwritable.
+ *
+ * What rows a filter leaves standing is not decided here. `list-filter.ts` has
+ * the only predicate, so the sheet's apply button can promise a number the
+ * list is bound to honour.
  *
  * Nothing here summarises the result. The bands are already a picture of the
  * proportions, the rows are already the amounts, and a headline figure over
@@ -76,47 +101,7 @@ export interface BandView {
   readonly rank: number | null;
 }
 
-export interface RowView {
-  readonly kind: "expense" | "settlement";
-  readonly id: string;
-  readonly date: string;
-  readonly title: string;
-  readonly amount: string;
-  readonly currency: string;
-  /** The band key this row filters under; null for a settlement. */
-  readonly category: string | null;
-  /**
-   * What a repayment was for, when whoever recorded it said.
-   *
-   * An expense puts that in its title, so this is null on one: the description
-   * *is* the row. A repayment's title is the two names, which are the fact
-   * worth leading with — so its own words go on the line below, beside the
-   * date, rather than displacing them.
-   */
-  readonly note: string | null;
-  /** Signed minor units, in the row's display currency; null when it is not ours. */
-  readonly position: string | null;
-  readonly revenue: boolean;
-  readonly recurring: boolean;
-}
-
-/**
- * The three things a row can be, in the order the chips stand in.
- *
- * Fixed rather than derived, so a group that has never recorded revenue still
- * puts Settlements on the right: the chip that is missing is removed, and the
- * ones that remain do not shuffle to fill the gap. A reader who learned where
- * a chip lives keeps it there when the group's contents change.
- */
-const KINDS = ["expense", "revenue", "settlement"] as const;
-
-export type EntryKind = (typeof KINDS)[number];
-
-/** Income is stored as an expense running backwards, and filters as its own. */
-function kindOf(row: RowView): EntryKind {
-  if (row.kind === "settlement") return "settlement";
-  return row.revenue ? "revenue" : "expense";
-}
+export type { EntryKind, RowView };
 
 /**
  * Ink for each band, chosen per theme rather than taken from the mock.
@@ -214,6 +199,11 @@ export function Transactions({
   kinds,
   rows,
   cursor,
+  members,
+  used,
+  counts,
+  firstDate,
+  today,
 }: {
   groupId: string;
   eyebrow: ReactNode;
@@ -225,6 +215,16 @@ export function Transactions({
   rows: readonly RowView[];
   /** Where the first page ended; null when it was also the last. */
   cursor: string | null;
+  /** Everyone in the group, for the sheet's Paid by chips. */
+  members: readonly EntryMember[];
+  /** The categories the group has filed something under, in taxonomy order. */
+  used: readonly ExpenseCategory[];
+  /** Transactions per category, counted over the whole group. */
+  counts: Readonly<Record<string, number>>;
+  /** The group's earliest transaction date; null when it has none. */
+  firstDate: string | null;
+  /** Today, in the group's timezone. */
+  today: string;
 }) {
   const t = useTranslations("expensesList");
   const dates = useDateFormatter();
@@ -247,23 +247,6 @@ export function Transactions({
     return () => observer.disconnect();
   }, [bands]);
 
-  const categoryOrder = bands?.flatMap((band) => band.categories) ?? [];
-  const availableCategories = new Set(categoryOrder);
-  const selected = new Set(
-    searchParams
-      .getAll(FILTER_PARAM)
-      .filter((category) => availableCategories.has(category)),
-  );
-  const query = searchParams.get(QUERY_PARAM) ?? "";
-
-  /** The three of them as one string, which is what a link out carries. */
-  const filterQuery = listQuery(searchParams);
-
-  const isActive = (band: BandView) =>
-    band.categories.every((category) => selected.has(category));
-  const hasSelection = (band: BandView) =>
-    band.categories.some((category) => selected.has(category));
-
   /*
    * Which chips exist is counted over everything the group has recorded, not
    * over what the search field or the spine has left standing. Counted over
@@ -273,16 +256,43 @@ export function Transactions({
    * reason: the loaded rows are only the pages scrolled so far.
    */
   const present = KINDS.filter((kind) => kinds.includes(kind));
-  const wantedKinds = new Set(
-    searchParams
-      .getAll(KIND_PARAM)
-      .filter((kind): kind is EntryKind =>
-        (present as readonly string[]).includes(kind),
-      ),
-  );
 
-  const write = (next: URLSearchParams) => {
-    const search = next.toString();
+  /*
+   * What the list is showing, read from the URL on every render.
+   *
+   * One object rather than four reads, because four controls write it: the
+   * spine, the chip row, the search field and the sheet. Whichever one moves,
+   * every other one is looking at the result a render later — which is what
+   * makes "selecting Groceries in the sheet lights that band" true without
+   * anything being kept in step by hand.
+   *
+   * A kind this group cannot show is dropped rather than obeyed. A link built
+   * in a group that records revenue must not arrive in one that does not and
+   * empty the list against a chip that is not even on the screen to turn off.
+   * Categories are not narrowed the same way: filtering on one the group has
+   * never used is a question the sheet deliberately lets you ask.
+   */
+  const requested = readFilter(searchParams);
+  const applied: ListFilter = {
+    ...requested,
+    kinds: present.filter((kind) => requested.kinds.includes(kind)),
+  };
+  const selected = new Set(applied.categories);
+  const wantedKinds = new Set(applied.kinds);
+
+  /** The filters as one string, which is what a link out carries. */
+  const filterQuery = listQuery(searchParams);
+
+  const isActive = (band: BandView) =>
+    band.categories.every((category) => selected.has(category));
+  const hasSelection = (band: BandView) =>
+    band.categories.some((category) => selected.has(category));
+
+  const write = (next: ListFilter) => {
+    const search = filterParams(
+      next,
+      new URLSearchParams(searchParams),
+    ).toString();
     window.history.replaceState(
       null,
       "",
@@ -290,19 +300,19 @@ export function Transactions({
     );
   };
 
+  /*
+   * A band covers one or more categories, and pressing it takes all of them —
+   * but only those. Whatever else is selected is left alone, including the
+   * subcategory pairs the sheet writes, which no band has any opinion about.
+   */
   const toggleBand = (band: BandView) => {
-    const next = new URLSearchParams(searchParams);
-    next.delete(FILTER_PARAM);
-    const wanted = new Set(selected);
     const remove = isActive(band);
+    const wanted = new Set(selected);
     for (const category of band.categories) {
       if (remove) wanted.delete(category);
       else wanted.add(category);
     }
-    for (const category of categoryOrder) {
-      if (wanted.has(category)) next.append(FILTER_PARAM, category);
-    }
-    write(next);
+    write({ ...applied, categories: [...wanted] });
   };
 
   /*
@@ -313,24 +323,16 @@ export function Transactions({
    * the reader to.
    */
   const toggleKind = (kind: EntryKind) => {
-    const next = new URLSearchParams(searchParams);
-    next.delete(KIND_PARAM);
-    for (const value of KINDS) {
-      const on = wantedKinds.has(value);
-      if (value === kind ? !on : on) next.append(KIND_PARAM, value);
-    }
-    write(next);
+    const on = wantedKinds.has(kind);
+    write({
+      ...applied,
+      kinds: KINDS.filter((value) =>
+        value === kind ? !on : wantedKinds.has(value),
+      ),
+    });
   };
 
-  const setQuery = (value: string) => {
-    const next = new URLSearchParams(searchParams);
-    if (value) {
-      next.set(QUERY_PARAM, value);
-    } else {
-      next.delete(QUERY_PARAM);
-    }
-    write(next);
-  };
+  const setQuery = (value: string) => write({ ...applied, query: value });
 
   const nameOf = (category: string): string =>
     category === UNCATEGORISED
@@ -345,8 +347,22 @@ export function Transactions({
       : lead;
   };
 
-  const wanted = selected.size === 0 ? null : selected;
-  const needle = query.trim().toLowerCase();
+  /*
+   * The sheet, and the draft it is editing.
+   *
+   * The draft is held here rather than in the sheet because the apply button
+   * previews the outcome — `Show 4 transactions` — and that number has to be
+   * counted by the same predicate over the same rows the list is holding.
+   * Owned by the sheet, it would be a second answer to the question the list
+   * is already answering, and the two would eventually differ.
+   *
+   * Open is separate from it, and the draft is not cleared on closing, so the
+   * sheet has something to draw while it slides back down. Nothing survives
+   * the trip: opening writes the applied filters over whatever was there,
+   * which is what "closing without applying discards the draft" amounts to.
+   */
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<ListFilter>(NO_FILTER);
 
   /*
    * A filter narrows the whole list, not the part of it that happens to be
@@ -355,8 +371,13 @@ export function Transactions({
    * behind it — otherwise a search for a 2019 hotel would come back empty on a
    * screen that simply had not read that far yet, which is a worse answer than
    * no search at all.
+   *
+   * An open sheet counts as filtering even before anything is chosen. Its
+   * button promises a number over the whole history, and a number counted over
+   * the forty rows read so far would be a promise the list could not keep.
    */
-  const filtering = wanted !== null || wantedKinds.size > 0 || needle !== "";
+  const filtering =
+    open || applied.query !== "" || filterDimensions(applied) > 0;
 
   /*
    * The place the reader left from, read on the first render because the
@@ -422,17 +443,16 @@ export function Transactions({
     });
   };
 
-  const shown = loaded.filter((row) => {
-    if (wantedKinds.size > 0 && !wantedKinds.has(kindOf(row))) return false;
-    if (wanted && (row.category === null || !wanted.has(row.category))) {
-      return false;
-    }
-    if (needle === "") return true;
-    const date = dates.plain(row.date);
-    return `${row.title} ${row.note ?? ""} ${date}`
-      .toLowerCase()
-      .includes(needle);
-  });
+  /*
+   * The one predicate, run twice over the same rows: once for what is on
+   * screen, and once for what the sheet is promising. Nothing else in the app
+   * decides which transactions a filter leaves standing.
+   */
+  const context = { today, dateText: dates.plain };
+  const shown = selectRows(loaded, applied, context);
+  // Counted even while the sheet is shut, so the button it is pinned to does
+  // not change its mind about what it was promising on the way down.
+  const preview = selectRows(loaded, draft, context).length;
 
   /** Which colour a row's rail takes, from the band its category sits in. */
   const railOf = (category: string | null): string => {
@@ -444,9 +464,15 @@ export function Transactions({
     return band.rank === null ? "bg-muted" : RAIL_STYLES[band.rank - 1];
   };
 
-  // Replayed on every filter change, because the list the reader is looking at
-  // is a different list — the animation is what says so.
-  const signature = [...selected, ...wantedKinds].join("|") || "all";
+  /*
+   * Replayed on every filter change, because the list the reader is looking at
+   * is a different list — the animation is what says so.
+   *
+   * The search field is left out. It changes on every keystroke, and a list
+   * that re-entered under the reader's thumb as they typed would be motion
+   * for its own sake.
+   */
+  const signature = filterParams({ ...applied, query: "" }).toString() || "all";
 
   return (
     <div className="flex flex-col gap-4">
@@ -555,35 +581,46 @@ export function Transactions({
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* One chip per kind the group actually holds, and none at all when
-              it holds only one: a row whose every chip says the same thing as
-              the list underneath it is a control that can only be switched
-              off. The search field takes the space back. */}
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-2.5 size-[15px] -translate-y-1/2 text-muted-foreground"
+          {/* The search field, and beside it the way in to everything it
+              cannot ask. The button does not join the chip row above: every
+              control in that row is one of the kinds a row can be, and a
+              button that opens a sheet is not one of them. */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-[15px] -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="search"
+                value={applied.query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label={t("searchLabel")}
+                placeholder={t("searchPlaceholder")}
+                // The platform's own clear affordance is hidden: it sits where
+                // ours does and only one of them tells the URL about it.
+                className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-xs [&::-webkit-search-cancel-button]:hidden"
+              />
+              {applied.query !== "" && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={t("clearSearch")}
+                  className="absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                >
+                  <X aria-hidden="true" className="size-[11px]" />
+                </button>
+              )}
+            </div>
+            <FilterButton
+              count={filterDimensions(applied)}
+              // The draft starts as what is already applied, so the sheet
+              // opens showing the list the reader is looking at.
+              onClick={() => {
+                setDraft(applied);
+                setOpen(true);
+              }}
             />
-            <Input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-label={t("searchLabel")}
-              placeholder={t("searchPlaceholder")}
-              // The platform's own clear affordance is hidden: it sits where
-              // ours does and only one of them tells the URL about it.
-              className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-xs [&::-webkit-search-cancel-button]:hidden"
-            />
-            {query !== "" && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label={t("clearSearch")}
-                className="absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              >
-                <X aria-hidden="true" className="size-[11px]" />
-              </button>
-            )}
           </div>
 
           {/* "Nothing matches" is only true once there is nothing left to
@@ -647,6 +684,80 @@ export function Transactions({
           </div>
         </div>
       </div>
+
+      <FilterSheet
+        open={open}
+        onOpenChange={setOpen}
+        draft={draft}
+        onDraftChange={setDraft}
+        onApply={() => {
+          write(draft);
+          setOpen(false);
+        }}
+        count={preview}
+        kinds={present}
+        members={members}
+        used={used}
+        counts={counts}
+        firstDate={firstDate}
+        today={today}
+        // Measured over the rows in hand rather than asked of the server:
+        // opening the sheet reads the whole history in, so by the time the
+        // Sort section is on screen this has seen every currency there is.
+        byAmount={sortableByAmount(loaded)}
+      />
+    </div>
+  );
+}
+
+/**
+ * The way in to the sheet, and the only thing on the screen that can say the
+ * list is narrower than it looks.
+ *
+ * The badge counts dimensions in use, not matching rows and not chips: three
+ * categories inside one section is one filter. A list that is filtered but
+ * looks unfiltered is the failure this button exists to prevent, so the count
+ * is never the thing that makes it look busier than the filtering warrants.
+ */
+function FilterButton({
+  count,
+  onClick,
+}: {
+  count: number;
+  onClick: () => void;
+}) {
+  const t = useTranslations("expensesList.filters");
+  const on = count > 0;
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={on ? t("openWith", { count }) : t("open")}
+        // 34px square, sharing the search field's height and its border, so
+        // the two read as one row rather than as a field and a decoration.
+        className={cn(
+          "grid size-[34px] place-items-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+          // The coral the mock draws the icon in measures 2.6:1 against the
+          // light background and 5.6:1 against the dark one, so the light
+          // theme takes the ink it can read. The border and the tint are what
+          // carry the colour there, and the badge is what carries the count.
+          on
+            ? "border-primary bg-primary/15 text-foreground dark:text-primary"
+            : "border-input text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <FilterGlyph aria-hidden="true" className="size-4" />
+      </button>
+      {on && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-1.5 -right-1.5 grid min-w-[18px] place-items-center rounded-full bg-primary px-1 text-2xs leading-[18px] font-bold text-primary-foreground tabular-nums"
+        >
+          {count}
+        </span>
+      )}
     </div>
   );
 }
