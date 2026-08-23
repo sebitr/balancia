@@ -375,6 +375,31 @@ describe("the split sheet", () => {
     expect(split.getByLabelText("Shares for Seb")).toBeInTheDocument();
   });
 
+  it("prints an exact amount once, in the field it was typed into", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "84.60");
+    await openSplit(user);
+
+    const split = sheet("Payment and split");
+    const rowFor = (name: string) => {
+      const row = split
+        .getAllByRole("listitem")
+        .find((candidate) => candidate.textContent?.includes(name));
+      if (!row) throw new Error(`no split row for ${name}`);
+      return within(row);
+    };
+
+    // A weight is not an amount, so that row has to say what it came to.
+    await user.click(split.getByRole("button", { name: "Shares" }));
+    expect(rowFor("Seb").getByText("CHF 28.20")).toBeInTheDocument();
+
+    // An exact amount is the number in the field already.
+    await user.click(split.getByRole("button", { name: "Exact" }));
+    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("28.20");
+    expect(rowFor("Seb").queryByText(/CHF/)).not.toBeInTheDocument();
+  });
+
   it("keeps split rows the same height in every method", async () => {
     const user = userEvent.setup();
     renderForm();
