@@ -70,6 +70,11 @@ vi.mock("@/components/expenses/upload-receipt", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace, back, refresh: vi.fn() }),
+  // Backed by the real URL rather than a stand-in, because what the drawer
+  // reads off it — the filters of the list the reader came from — is a fact
+  // about the route it was opened at, and a mock returning a fixed set would
+  // test nothing about that.
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 // The confirmation is a toast now, and a toast needs a `<Toaster />` mounted
 // somewhere above it to render. What matters here is that it was raised, and
@@ -103,7 +108,10 @@ const OUTSTANDING = [
 
 function renderForm(
   overrides: Partial<Parameters<typeof AddEntryDrawer>[0]> = {},
+  /** The route the drawer was opened at, when a test cares which list it was. */
+  url = "/groups/g1/expenses/e1/edit",
 ) {
+  window.history.replaceState(null, "", url);
   // Module mocks are shared across the file; without this a "was not called"
   // assertion would be reading the previous test's call.
   for (const action of [
@@ -1663,6 +1671,71 @@ describe("leaving the drawer", () => {
       expect(replace).toHaveBeenCalledWith("/groups/g1/settlements/s2"),
     );
     expect(back).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The list the reader came from, kept across a change of type.
+   *
+   * A conversion is the one save that does not go back the way it came: the
+   * entry has moved to another table, so the drawer replaces its way onto the
+   * new entry's screen instead of popping onto the old one's. That screen is
+   * where Back gets pressed, and without the filters riding along it led to
+   * the whole of the group's history, at the top — the reader having done
+   * nothing but correct what an entry was.
+   */
+  it("keeps the list's filters across a change of type", async () => {
+    const user = userEvent.setup();
+    renderForm(
+      { editing: EXPENSE },
+      "/groups/g1/expenses/e1/edit?cat=lodging&q=h%C3%B4tel",
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(
+        "/groups/g1/settlements/s2?cat=lodging&q=h%C3%B4tel",
+      ),
+    );
+  });
+
+  it("keeps them going the other way too", async () => {
+    const user = userEvent.setup();
+    renderForm(
+      { editing: SETTLEMENT },
+      "/groups/g1/settlements/s1/edit?kind=settlement",
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Expense" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      "Concert tickets",
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(
+        "/groups/g1/expenses/e2?kind=settlement",
+      ),
+    );
+  });
+
+  it("carries nothing to the group after a deletion", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit?cat=lodging");
+
+    await user.click(screen.getByRole("button", { name: "Delete this entry" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+
+    // The group overview is not a list and has no filters to keep. Hanging the
+    // transactions list's own query on it would be a query nothing reads.
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/groups/g1"));
   });
 
   it("opens the expense a repayment was turned into", async () => {
