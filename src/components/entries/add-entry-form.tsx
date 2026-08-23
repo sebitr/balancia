@@ -388,8 +388,17 @@ export function AddEntryForm({
   const [settleTo, setSettleTo] = useState<string | null>(
     () => editing?.settleTo ?? null,
   );
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId | null>(
-    () => matchPaymentMethod(editing?.paymentMethod ?? "", tMethods),
+  /**
+   * How the money moved, held as the words that will be stored.
+   *
+   * The column takes a label rather than a code — deliberately, so a
+   * settlement still says "TWINT" years after the picker's list has moved on —
+   * and holding the same thing here means the two cases that used to need
+   * separate handling are one: a method tapped from the list and a name typed
+   * by hand are both simply text, and reopening either reads it straight back.
+   */
+  const [methodLabel, setMethodLabel] = useState(
+    () => editing?.paymentMethod.trim() ?? "",
   );
 
   const [sheet, setSheet] = useState<OpenSheet>(null);
@@ -398,13 +407,14 @@ export function AddEntryForm({
 
   const country = countryForTimezone(timezone);
   const countryMethods = useMemo(() => methodsForCountry(country), [country]);
-  /** A stored method the picker cannot name. Empty once anything is picked. */
-  const unmatchedMethod =
-    paymentMethod === null &&
-    editing !== undefined &&
-    matchPaymentMethod(editing.paymentMethod, tMethods) === null
-      ? editing.paymentMethod
-      : "";
+  /** The chosen method, when the picker has a chip for it. */
+  const methodId = matchPaymentMethod(methodLabel, tMethods);
+  /**
+   * A label the picker cannot name — typed here, or imported, or a provider
+   * since dropped from the list. Either way it is the truth about how the
+   * money moved, so it is shown as the choice and written back unchanged.
+   */
+  const customMethod = methodId === null ? methodLabel : "";
 
   const suggestion = useCategorySuggestion({
     description,
@@ -831,7 +841,7 @@ export function AddEntryForm({
       currency,
       exchangeRate: needsRate ? rate.trim() : "",
       settledOn: date,
-      paymentMethod: resolvedMethodLabel(),
+      paymentMethod: methodLabel,
       notes,
     };
     if (!editing) {
@@ -853,25 +863,6 @@ export function AddEntryForm({
         ? `/groups/${groupId}/settlements/${result.data.settlementId}`
         : undefined,
     };
-  };
-
-  /**
-   * What gets stored: the method's *label*, not its code.
-   *
-   * The column is free text on purpose — a settlement should still say "TWINT"
-   * years later even if the picker's list has moved on.
-   */
-  const resolvedMethodLabel = () => {
-    if (paymentMethod) return tMethods(paymentMethod);
-    // A label the picker no longer lists — an import, or a provider that has
-    // since left the list — is still the truth about how the money moved, so
-    // an untouched form writes it back rather than dropping it.
-    if (unmatchedMethod !== "") return unmatchedMethod;
-    // Nothing chosen means nothing to say. Falling back to this country's
-    // first method wrote a payment method nobody had picked onto every
-    // repayment, and the column is optional precisely because "I paid them
-    // back" is a complete answer.
-    return "";
   };
 
   /**
@@ -1238,21 +1229,22 @@ export function AddEntryForm({
         {isSettle && (
           <PaymentMethodRow
             methods={countryMethods}
-            value={paymentMethod}
+            value={methodId}
+            customLabel={customMethod}
             country={country}
-            onSelect={setPaymentMethod}
+            onSelect={(id) => setMethodLabel(tMethods(id))}
             onOpenAll={() => setSheet("method")}
           />
         )}
 
         {isSettle && selectedPair && (
           <p className="text-xs text-muted-foreground">
-            {resolvedMethodLabel() !== ""
+            {methodLabel !== ""
               ? t("settle.outcome", {
                   from: selectedPair.fromName,
                   to: selectedPair.toName,
                   amount: amountFormatted,
-                  method: resolvedMethodLabel(),
+                  method: methodLabel,
                 })
               : t("settle.outcomeNoMethod", {
                   from: selectedPair.fromName,
@@ -1438,11 +1430,16 @@ export function AddEntryForm({
 
           {sheet === "method" && (
             <PaymentMethodSheet
-              value={paymentMethod}
+              value={methodId}
+              customLabel={customMethod}
               country={country}
               suggested={countryMethods}
               onSelect={(id) => {
-                setPaymentMethod(id);
+                setMethodLabel(tMethods(id));
+                setSheet(null);
+              }}
+              onSelectCustom={(name) => {
+                setMethodLabel(name.trim());
                 setSheet(null);
               }}
             />

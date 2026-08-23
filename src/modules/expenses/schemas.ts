@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isValidSubcategory } from "@/modules/categorization";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
+import { PAYMENT_METHOD_MAX_LENGTH } from "@/modules/settlements/payment-methods";
 import { ENTRY_DIRECTIONS } from "./direction";
 import { SPLIT_METHODS } from "./split";
 
@@ -123,7 +124,12 @@ export const settlementInputSchema = z
      * How the money moved. Free text, because the picker's list is a
      * convenience and not a closed world — see the column comment.
      */
-    paymentMethod: z.string().trim().max(60).optional().or(z.literal("")),
+    paymentMethod: z
+      .string()
+      .trim()
+      .max(PAYMENT_METHOD_MAX_LENGTH)
+      .optional()
+      .or(z.literal("")),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
   })
   .refine((value) => value.fromParticipantId !== value.toParticipantId, {
