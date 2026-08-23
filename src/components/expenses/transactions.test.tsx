@@ -687,3 +687,156 @@ describe("Transactions beyond the first page", () => {
     expect(await screen.findByText("Hôtel du Lac")).toBeVisible();
   });
 });
+
+/**
+ * Opening a row and coming back.
+ *
+ * The filters go out on the link and come home on the detail screen's own; how
+ * much of the list had been read, and how far down it the reader was, ride in
+ * `sessionStorage` for the length of the trip. Both halves are driven here,
+ * because either one alone still puts the reader somewhere they were not.
+ */
+describe("Transactions, left and returned to", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    watchers.clear();
+    fetchMock.mockReset();
+    sessionStorage.clear();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("IntersectionObserver", StubObserver);
+    vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** The reader, some way down the page. */
+  function scrolledTo(y: number) {
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(y);
+  }
+
+  it("carries the filters into the entry it opens", async () => {
+    renderList();
+
+    await userEvent.click(band("Lodging"));
+    await userEvent.type(screen.getByRole("searchbox"), "airbnb");
+
+    const row = screen.getByText("airbnb").closest("li");
+    expect(within(row!).getByRole("link")).toHaveAttribute(
+      "href",
+      "/groups/g1/expenses/airbnb?cat=lodging&q=airbnb",
+    );
+  });
+
+  it("carries them into a repayment's screen too", async () => {
+    renderList();
+
+    await userEvent.click(kind("Settlements"));
+
+    const row = screen.getByText("Seb paid Padi").closest("li");
+    expect(within(row!).getByRole("link")).toHaveAttribute(
+      "href",
+      "/groups/g1/settlements/s1?kind=settlement",
+    );
+  });
+
+  it("puts the reader back down where they were picked up", async () => {
+    fetchMock.mockResolvedValue(page([OLDER]));
+    const cursor = "2026-08-12|2026-08-12T09:00:00.000000Z|s1";
+    const { unmount } = renderList(ROWS, "", cursor);
+
+    // A screenful further on than the server sent, and a long way down it.
+    await reachBottom();
+    await screen.findByText("Hôtel du Lac");
+    scrolledTo(2400);
+
+    await userEvent.click(screen.getByRole("link", { name: /Hôtel du Lac/ }));
+    unmount();
+
+    // The trip home: the same URL, and a list that starts again from the
+    // server's first page.
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(page([OLDER]));
+    renderList(ROWS, "", cursor);
+
+    expect(await screen.findByText("Hôtel du Lac")).toBeVisible();
+    // Exactly the row it is short of, rather than the bulk page a filter takes.
+    const asked = new URL(fetchMock.mock.calls[0][0] as string, "http://test");
+    expect(asked.searchParams.get("limit")).toBe("1");
+    expect(window.scrollTo).toHaveBeenCalledWith({
+      top: 2400,
+      behavior: "instant",
+    });
+  });
+
+  it("does not chase a position it does not need to", async () => {
+    renderList(ROWS, "", null);
+    scrolledTo(700);
+
+    await userEvent.click(screen.getByRole("link", { name: /Migros/ }));
+    renderList(ROWS, "", null);
+
+    // Every row was already there, so nothing is fetched and the reader is
+    // simply put back.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.scrollTo).toHaveBeenCalledWith({
+      top: 700,
+      behavior: "instant",
+    });
+  });
+
+  it("stays at the top when the reader comes back to another list", async () => {
+    renderList(ROWS, "?cat=lodging", null);
+    scrolledTo(700);
+    await userEvent.click(
+      within(screen.getByText("airbnb").closest("li")!).getByRole("link"),
+    );
+
+    // Home to the same screen, but not to the same list: 700px down
+    // "everything" is not the place 700px down "Lodging" was.
+    renderList(ROWS, "", null);
+
+    expect(window.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("spends the place, so the next arrival opens at the top", async () => {
+    renderList(ROWS, "", null);
+    scrolledTo(700);
+    await userEvent.click(screen.getByRole("link", { name: /Migros/ }));
+
+    renderList(ROWS, "", null);
+    expect(window.scrollTo).toHaveBeenCalledTimes(1);
+
+    // Arrived at again later — from the tab bar, from anywhere — this is a
+    // reader asking for the list, not one returning to it.
+    renderList(ROWS, "", null);
+    expect(window.scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it("gets as far as it can when the list has ended short", async () => {
+    fetchMock.mockResolvedValue(page([OLDER]));
+    const cursor = "2026-08-12|2026-08-12T09:00:00.000000Z|s1";
+    const { unmount } = renderList(ROWS, "", cursor);
+
+    await reachBottom();
+    await screen.findByText("Hôtel du Lac");
+    scrolledTo(2400);
+    await userEvent.click(screen.getByRole("link", { name: /Hôtel du Lac/ }));
+    unmount();
+
+    // Somebody deleted the hotel bill in the meantime: the list now ends where
+    // the first page does, and the rows the offset was measured against are
+    // never coming. Waiting for them would leave the reader at the top.
+    fetchMock.mockReset();
+    renderList(ROWS, "", null);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.scrollTo).toHaveBeenCalledWith({
+      top: 2400,
+      behavior: "instant",
+    });
+  });
+});

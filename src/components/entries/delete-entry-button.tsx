@@ -40,12 +40,22 @@ export function DeleteEntryButton({
   kind,
   id,
   description,
+  backTo,
 }: {
   groupId: string;
   kind: "expense" | "settlement";
   id: string;
   /** What the confirmation names, so nobody deletes the wrong one. */
   description: string;
+  /**
+   * The list to land on, filters and all.
+   *
+   * The detail screen builds it, because the detail screen is the one that
+   * knows which list the reader came from. Deleting is still leaving a row
+   * behind, and there is no reason for it to also throw away the search that
+   * found it.
+   */
+  backTo: string;
 }) {
   const router = useRouter();
   const t = useTranslations("transactionDetail.delete");
@@ -65,7 +75,7 @@ export function DeleteEntryButton({
       toast.success(t("deleted"));
       // The screen it was on no longer has anything to show, so leave before
       // refreshing rather than after: a refresh in place would render a 404.
-      router.push(`/groups/${groupId}/expenses`);
+      router.push(backTo);
       router.refresh();
     } finally {
       setPending(false);
