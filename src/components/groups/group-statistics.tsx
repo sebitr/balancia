@@ -723,7 +723,16 @@ function WhoCarries({
         ))}
       </div>
 
-      <ul className="flex flex-col divide-y divide-border">
+      {/* Three columns declared once on the list, subgridded onto by every
+          row, as the balance list does it. The amount track is `auto`, so it
+          is as wide as the longest amount in the card actually needs and no
+          wider; a fixed width is what pushed a five-figure balance out past
+          the card and broke the smaller ones over two lines. Sizing it per
+          row instead would fit each amount to itself, and the bars would
+          start and end a few pixels apart down the card. The column gap
+          belongs to the list alone — a subgrid inherits it, and restating it
+          on a row is what pulls the tracks back out of line. */}
+      <ul className="grid grid-cols-[minmax(0,1fr)_minmax(40px,0.8fr)_auto] gap-x-2.5 divide-y divide-border">
         {rows.map(({ member, value }) => {
           const magnitude = value < 0n ? -value : value;
           const width =
@@ -733,26 +742,28 @@ function WhoCarries({
           return (
             <li
               key={member.participantId}
-              className="flex items-center gap-2.5 py-2"
+              className="col-span-3 grid grid-cols-subgrid items-center py-2"
             >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "grid size-6.5 shrink-0 place-items-center rounded-full text-2xs font-semibold",
-                  member.isSelf
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-accent text-accent-foreground",
-                )}
-              >
-                {member.name.trim().charAt(0).toUpperCase()}
-              </span>
-              <span className="w-14 shrink-0 truncate text-sm font-medium">
-                {member.name}
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "grid size-6.5 shrink-0 place-items-center rounded-full text-2xs font-semibold",
+                    member.isSelf
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-accent text-accent-foreground",
+                  )}
+                >
+                  {member.name.trim().charAt(0).toUpperCase()}
+                </span>
+                <span className="truncate text-sm font-medium">
+                  {member.name}
+                </span>
               </span>
 
               <span
                 aria-hidden="true"
-                className="relative h-2 min-w-0 flex-1 rounded-full bg-foreground/[0.07]"
+                className="relative h-2 rounded-full bg-foreground/[0.07]"
               >
                 {signed && (
                   <span className="absolute -top-[3px] -bottom-[3px] left-1/2 w-px bg-foreground/30" />
@@ -770,7 +781,7 @@ function WhoCarries({
 
               <span
                 className={cn(
-                  "w-[4.3rem] shrink-0 text-right text-sm font-semibold tabular-nums",
+                  "text-right text-sm font-semibold tabular-nums",
                   signed && value > 0n && "text-positive",
                   signed && value < 0n && "text-negative",
                 )}

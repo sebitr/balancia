@@ -257,6 +257,41 @@ describe("the group statistics island", () => {
     ).toBeInTheDocument();
   });
 
+  /**
+   * A five-figure balance is wider than a fixed amount column, and what a
+   * fixed one does with it is put it outside the card and break the smaller
+   * amounts over two lines. So the amounts sit on one `auto` track declared
+   * on the list, which every row subgrids onto: wide enough for the longest
+   * amount in the card, and the same width on all three rows, so the bars
+   * still start and end in line.
+   */
+  it("sizes the amounts on one shared column, not a fixed width", () => {
+    renderWithIntl(<GroupStatistics stats={stats()} />);
+
+    const classesOf = (element: Element) => element.getAttribute("class") ?? "";
+    const list = screen
+      .getAllByRole("list")
+      .find((candidate) => within(candidate).queryByText("Nora"));
+
+    expect(list).toBeDefined();
+    expect(classesOf(list!)).toMatch(/(^|\s)grid(\s|$)/);
+    // Last track `auto`: as wide as the longest amount needs, and no wider.
+    expect(classesOf(list!)).toMatch(/grid-cols-\[[^\]]*_auto\]/);
+    expect(classesOf(list!)).toMatch(/gap-x-/);
+
+    for (const item of within(list!).getAllByRole("listitem")) {
+      expect(classesOf(item)).toContain("grid-cols-subgrid");
+      expect(classesOf(item)).toContain("col-span-3");
+
+      // Three cells, none of which fixes a width of its own.
+      const cells = [...item.children];
+      expect(cells).toHaveLength(3);
+      for (const cell of cells) {
+        expect(classesOf(cell)).not.toMatch(/(^|\s)w-/);
+      }
+    }
+  });
+
   it("opens one category at a time, onto its own subcategories", async () => {
     const user = userEvent.setup();
     renderWithIntl(<GroupStatistics stats={stats()} />);
