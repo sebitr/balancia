@@ -468,7 +468,7 @@ export function RemindSheet({
           aria-label={t("messageLabel")}
           rows={1}
           onChange={(event) => setEdited(event.target.value)}
-          className="min-h-[45px] resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-sm leading-[1.5] shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm dark:bg-transparent"
+          className="min-h-[45px] resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-base leading-[1.5] shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm dark:bg-transparent"
         />
 
         <p className="mt-2.5 flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">

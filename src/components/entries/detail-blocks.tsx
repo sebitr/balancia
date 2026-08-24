@@ -17,10 +17,18 @@ import { cn } from "@/lib/utils";
  * components in the tree are the leaves that have to be — `Amount`, which reads
  * the reader's number notation from context, and Radix's `Avatar`.
  *
- * Sizes are the handoff's, written as literals rather than as scale steps. The
- * screens were drawn at 390pt, which is the width nearly all of this is read
- * at, so `text-[13px]` here means thirteen pixels on a phone — where `text-xs`
- * would mean thirteen on a phone and twelve on a desk.
+ * Sizes are scale steps. They arrived from the handoff as literals — the
+ * screens were drawn at 390pt, so `text-[13px]` was written meaning thirteen
+ * pixels on a phone — and a literal does render the size it names. What it
+ * cannot do is move: `globals.css` lifts every step by a point below `md`, and
+ * a literal sits out that lift. Two of them had drifted under the floor that
+ * way (a 10px uppercase label above each field of the meta strip, an 11px
+ * chip), and the row titles read a point under the `text-sm` the rest of the
+ * app sets the same rows in. The mapping back was 10/11/12 -> `text-2xs`,
+ * 13 -> `text-xs`, 14 -> `text-sm`, 17 -> `text-base`.
+ *
+ * The 40px figure below stays a literal: display numerals on a balance hero
+ * are the scale's one documented exception, and this is one of them.
  */
 
 /** Which of the three a screen is. Decides the chip, and the amount's colour. */
@@ -92,7 +100,7 @@ export function Section({
   return (
     <section className="flex flex-col gap-2">
       <div className="flex min-w-0 items-center gap-2">
-        <h2 className="text-[12px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
           {label}
         </h2>
         {chip}
@@ -115,7 +123,7 @@ export function TypeChip({
   return (
     <span
       className={cn(
-        "inline-flex h-[26px] shrink-0 items-center gap-1.5 rounded-full pr-2.5 pl-[5px] text-[12px] font-semibold",
+        "inline-flex h-[26px] shrink-0 items-center gap-1.5 rounded-full pr-2.5 pl-[5px] text-xs font-semibold",
         CHIP_TONE[tone],
       )}
     >
@@ -136,8 +144,8 @@ export function TypeChip({
  * A neutral fact about the entry — its category, how it was paid.
  *
  * The `small` form is the one that rides beside a section label rather than in
- * the header strip: it sits on a 12px line instead of a 17px one, so it comes
- * down a step to match.
+ * the header strip: it sits on a `text-2xs` line rather than a `text-base` one,
+ * so it comes down a step to match.
  */
 export function MetaChip({
   icon: Icon,
@@ -153,8 +161,8 @@ export function MetaChip({
       className={cn(
         "inline-flex shrink-0 items-center rounded-full bg-secondary font-medium text-secondary-foreground",
         small
-          ? "h-[22px] gap-[5px] px-[9px] text-[11px]"
-          : "h-[26px] gap-1.5 px-2.5 text-[12px]",
+          ? "h-[22px] gap-[5px] px-[9px] text-2xs"
+          : "h-[26px] gap-1.5 px-2.5 text-xs",
       )}
     >
       {Icon && (
@@ -180,7 +188,7 @@ export function CountChip({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex h-[26px] shrink-0 items-center gap-1.5 rounded-full border border-input px-2.5 text-[12px] font-medium text-muted-foreground">
+    <span className="inline-flex h-[26px] shrink-0 items-center gap-1.5 rounded-full border border-input px-2.5 text-xs font-medium text-muted-foreground">
       <Icon aria-hidden={true} className="size-[11px] shrink-0" />
       <span aria-hidden="true">{children}</span>
       <span className="sr-only">{label}</span>
@@ -230,7 +238,7 @@ export function BigAmount({
   const qualifier = (text: string) => (
     <span
       className={cn(
-        "text-[17px] font-medium",
+        "text-base font-medium",
         sign === "" ? "text-muted-foreground" : "opacity-75",
       )}
     >
@@ -268,10 +276,10 @@ export function MetaField({
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-[3px]", className)}>
-      <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+      <span className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
         {label}
       </span>
-      <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium">
+      <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium">
         {children}
       </span>
     </div>
@@ -325,7 +333,7 @@ export function PersonAvatar({
   return (
     <Avatar className={cn("shrink-0", small ? "size-[22px]" : "size-[30px]")}>
       <AvatarFallback
-        className={cn(small ? "text-[10px]" : "text-[12px]", AVATAR_TONE[tone])}
+        className={cn(small ? "text-2xs" : "text-xs", AVATAR_TONE[tone])}
       >
         {initialOf(name)}
       </AvatarFallback>
@@ -357,13 +365,13 @@ export function PartyRow({
   return (
     <div className={ROW}>
       <PersonAvatar name={name} tone={tone} />
-      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
         {name}
       </span>
       <Amount
         minorUnits={minorUnits}
         currency={currency}
-        className="shrink-0 text-[14px] font-semibold"
+        className="shrink-0 text-sm font-semibold"
       />
     </div>
   );
@@ -391,7 +399,7 @@ export function PartyTable({
   children: React.ReactNode;
 }) {
   const head =
-    "h-8 border-b border-border pl-2.5 text-right text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase";
+    "h-8 border-b border-border pl-2.5 text-right text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase";
   return (
     <table className="w-full border-collapse text-left">
       <thead>
@@ -444,8 +452,7 @@ export function PartyTableRow({
   /** Null when the table has no balance column at all. */
   balance: { minorUnits: string; label: string } | null;
 }) {
-  const figure =
-    "pl-2.5 text-right text-[14px] font-semibold whitespace-nowrap";
+  const figure = "pl-2.5 text-right text-sm font-semibold whitespace-nowrap";
   const impact = balance === null ? 0n : BigInt(balance.minorUnits);
   const magnitude = impact < 0n ? -impact : impact;
 
@@ -454,7 +461,7 @@ export function PartyTableRow({
       <th scope="row" className="pl-3.5 text-left font-normal">
         <span className="flex min-w-0 items-center gap-2.5">
           <PersonAvatar name={name} tone={tone} />
-          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
             {name}
           </span>
         </span>
@@ -521,13 +528,13 @@ export function ChangeRow({
     <div className={ROW}>
       <PersonAvatar name={name} tone={tone} />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-[14px] font-semibold">{name}</span>
-        <span className="truncate text-[12px] text-muted-foreground">
+        <span className="truncate text-sm font-semibold">{name}</span>
+        <span className="truncate text-2xs text-muted-foreground">
           {before}
         </span>
       </span>
       {balance === 0n ? (
-        <span className="flex shrink-0 items-center gap-1.5 text-[14px] font-semibold text-neutral-balance">
+        <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-neutral-balance">
           <Minus aria-hidden="true" className="size-[15px]" />
           {settledLabel}
         </span>
@@ -535,14 +542,14 @@ export function ChangeRow({
         <span className="flex shrink-0 flex-col items-end">
           <span
             className={cn(
-              "flex items-center gap-1 text-[14px] font-semibold",
+              "flex items-center gap-1 text-sm font-semibold",
               balance > 0n ? "text-positive" : "text-negative",
             )}
           >
             <span aria-hidden="true">{balance > 0n ? "+" : "−"}</span>
             <Amount minorUnits={magnitude.toString()} currency={currency} />
           </span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {standingLabel}
           </span>
         </span>
@@ -581,8 +588,8 @@ export function FileRow({
         <FileGlyph />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-[14px] font-semibold">{name}</span>
-        <span className="text-[12px] text-muted-foreground">{meta}</span>
+        <span className="truncate text-sm font-semibold">{name}</span>
+        <span className="text-2xs text-muted-foreground">{meta}</span>
       </span>
       <Download
         aria-hidden="true"
@@ -623,7 +630,7 @@ function FileGlyph() {
  * scrolls under, and a blur would show the rows sliding behind the buttons.
  */
 export const ACTION =
-  "inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-[13px] text-[14px] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
+  "inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-[13px] text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
 
 /** Edit: outlined, and the only one of the two that takes the width. */
 export const ACTION_NEUTRAL =

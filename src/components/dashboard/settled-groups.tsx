@@ -99,7 +99,7 @@ export function SettledGroups({
                 onBlur={() => {
                   if (query.trim() === "") setSearchOpen(false);
                 }}
-                className="h-[34px] rounded-xl text-xs"
+                className="h-[34px] rounded-xl text-base md:text-xs"
               />
             </div>
           )}

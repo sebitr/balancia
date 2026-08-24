@@ -35,6 +35,13 @@ import type { Granularity, StatsRange } from "@/modules/groups/member-stats";
  * Chart labels sit at `text-2xs`, the bottom of the app's scale, rather than
  * at the 10px the design drew them at. Seven sizes is the scale; an eighth
  * spelled `text-[0.625rem]` is how it drifted to fourteen last time.
+ *
+ * The floor is for labels only. `text-2xs` is 12px on a phone, and the
+ * footnotes here — the method note, the flows note, the trend line — are
+ * sentences, which the scale says never go there: an axis tick is glanced at
+ * beside the mark it names, a sentence is read. Every caption and footnote on
+ * these cards is a step up at `text-xs`; what stays on the floor is what the
+ * scale names for it, the axis ticks, the pills and the avatar discs.
  */
 
 export interface SpendBucketView {
@@ -251,7 +258,7 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
         />
       ))}
 
-      <p className="text-2xs leading-relaxed text-pretty text-muted-foreground">
+      <p className="text-xs leading-relaxed text-pretty text-muted-foreground">
         {t("method")}
       </p>
     </section>
@@ -495,7 +502,7 @@ function Flows({
             </span>
             <div className="min-w-0 flex-1">
               <dt className="text-sm font-medium">{t(row.key)}</dt>
-              <dd className="truncate text-2xs text-muted-foreground">
+              <dd className="truncate text-xs text-muted-foreground">
                 {row.sub}
               </dd>
             </div>
@@ -512,7 +519,7 @@ function Flows({
         ))}
       </dl>
 
-      <p className="text-2xs text-pretty text-muted-foreground">
+      <p className="text-xs text-pretty text-muted-foreground">
         {t(net ? "flowsFootnoteNet" : "flowsFootnoteGross")}
       </p>
     </div>
@@ -560,13 +567,13 @@ function SpendChart({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{t("chartTitle")}</h3>
-          <p className="mt-0.5 text-2xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {t(`granularity.${range.granularity}`, {
               count: entry.buckets.length,
             })}
           </p>
         </div>
-        <p className="shrink-0 text-2xs text-muted-foreground">
+        <p className="shrink-0 text-xs text-muted-foreground">
           {t.rich("chartAverage", {
             amount: () => (
               <Amount minorUnits={entry.bucketMean} currency={entry.currency} />
@@ -650,7 +657,7 @@ function SpendChart({
       </div>
 
       {trend !== null && (
-        <p className="border-t border-border pt-3 text-2xs text-pretty text-muted-foreground">
+        <p className="border-t border-border pt-3 text-xs text-pretty text-muted-foreground">
           {t(
             trend > 0 ? "trendAbove" : trend < 0 ? "trendBelow" : "trendLevel",
             { percent: Math.abs(trend) },
@@ -700,7 +707,7 @@ function WhoCarries({
     <div className={CARD}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{t("membersTitle")}</h3>
-        <span className="shrink-0 text-2xs text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {t("membersCaption")}
         </span>
       </div>
@@ -797,7 +804,7 @@ function WhoCarries({
         })}
       </ul>
 
-      <p className="text-2xs text-pretty text-muted-foreground">
+      <p className="text-xs text-pretty text-muted-foreground">
         {t(`metricNotes.${metric}`)}
       </p>
     </div>
@@ -827,7 +834,7 @@ function Categories({ entry }: { entry: GroupCurrencyStatsView }) {
     <div className={CARD}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{t("categoriesTitle")}</h3>
-        <span className="shrink-0 text-2xs text-muted-foreground tabular-nums">
+        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
           {t("categoriesCaption", { percent: entry.topThreePercent })}
         </span>
       </div>
@@ -954,7 +961,7 @@ function Subcategories({
       })}
 
       {BigInt(slice.remainder) > 0n && (
-        <li className="text-2xs text-pretty text-muted-foreground">
+        <li className="text-xs text-pretty text-muted-foreground">
           {t.rich("noSubcategory", {
             category: label,
             amount: () => (
@@ -992,7 +999,7 @@ function Rhythm({ entry }: { entry: GroupCurrencyStatsView }) {
     <div className={CARD}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{t("rhythmTitle")}</h3>
-        <span className="shrink-0 text-2xs text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {t("rhythmCaption")}
         </span>
       </div>
@@ -1159,7 +1166,7 @@ function RecordsCard({
     <div className={CARD}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{t("recordsTitle")}</h3>
-        <span className="shrink-0 text-2xs text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {showCurrency
             ? `${records.currency} · ${t("allTime")}`
             : t("allTime")}
@@ -1171,7 +1178,7 @@ function RecordsCard({
           <div key={row.key} className="flex items-center gap-3 py-2">
             <div className="min-w-0 flex-1">
               <dt className="text-sm font-medium">{row.label}</dt>
-              <dd className="truncate text-2xs text-muted-foreground">
+              <dd className="truncate text-xs text-muted-foreground">
                 {row.sub}
               </dd>
             </div>

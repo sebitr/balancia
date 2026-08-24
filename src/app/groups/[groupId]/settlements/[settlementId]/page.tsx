@@ -179,7 +179,7 @@ export default async function SettlementDetailPage({
             tone="settlement"
             locale={locale}
           />
-          <h1 className="text-[17px] font-medium">{description}</h1>
+          <h1 className="text-base font-medium">{description}</h1>
         </div>
 
         <MetaStrip className="flex flex-wrap items-center gap-x-2.5 gap-y-3">

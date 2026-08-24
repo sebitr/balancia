@@ -13,6 +13,12 @@ import { describe, expect, it } from "vitest";
  * `text-sm` from the sheet around it, having never stated a size at all. So
  * the rule is checked instead of described.
  *
+ * `Input` and `Textarea` count as the elements they render. Reading only the
+ * lowercase tags left the reminder sheet's message box stating `text-sm` on a
+ * phone for as long as it did: the check walked straight past `<Textarea>`,
+ * and the component's own `text-base md:text-sm` — the thing that would have
+ * saved it — is what a call-site `className` overrides.
+ *
  * Two things keep a control clear of the floor, and the check accepts either:
  *
  *  - it states a size of its own that is at least 16px below `md`, which is
@@ -76,14 +82,15 @@ function sizeOf(token: string): number | null {
 }
 
 /**
- * The opening tag of every `<input>`, `<textarea>` and `<select>` in a file.
+ * The opening tag of every `<input>`, `<textarea>` and `<select>` in a file,
+ * and of the `Input` and `Textarea` components that render two of them.
  *
  * Braces are tracked so that a `>` inside an expression — a `=>` in an
  * `onChange`, most often — does not end the tag early.
  */
 function openingTags(source: string): { tag: string; line: number }[] {
   const found: { tag: string; line: number }[] = [];
-  const opens = /<(input|textarea|select)\b/g;
+  const opens = /<(input|textarea|select|Input|Textarea)\b/g;
   let match: RegExpExecArray | null;
   while ((match = opens.exec(source))) {
     let depth = 0;
