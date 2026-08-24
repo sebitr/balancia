@@ -2,9 +2,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
 import { expenses, recurringOccurrences } from "@/lib/db/schema";
+import { AuthorizationError } from "@/lib/security/authorization";
 import {
   createRecurringExpense,
+  deleteRecurringExpense,
   generateDueOccurrences,
+  listRecurringExpenses,
+  restoreRecurringExpense,
   setRecurringPaused,
 } from "@/modules/recurring/service";
 import {
@@ -217,5 +221,87 @@ describe("recurring generation", () => {
 
     const report = await generateDueOccurrences({ groupId: group.groupId });
     expect(report.expensesCreated).toBe(0);
+  });
+});
+
+/**
+ * Undo behind the removal toast.
+ *
+ * A template is only really back if the worker starts looking at it again, so
+ * that — and not the row's flag — is what these check.
+ */
+describe("restoring a removed template", () => {
+  it("puts the template back in the group's list", async () => {
+    const { group, templateId } = await setupTemplate();
+
+    await deleteRecurringExpense(group.access, templateId);
+    expect(await listRecurringExpenses(group.groupId)).toHaveLength(0);
+
+    await restoreRecurringExpense(group.access, templateId);
+    const listed = await listRecurringExpenses(group.groupId);
+    expect(listed.map((template) => template.id)).toEqual([templateId]);
+  });
+
+  /**
+   * Removal clears `next_run_at`, and the restore deliberately leaves it
+   * clear: a null marker is how the worker is told to work the date out for
+   * itself. What must not happen is a template that comes back and then never
+   * fires again.
+   */
+  it("generates again once it is back, without repeating what it already made", async () => {
+    const { group, templateId } = await setupTemplate();
+    const first = await generateDueOccurrences({ groupId: group.groupId });
+    expect(first.expensesCreated).toBeGreaterThan(0);
+
+    await deleteRecurringExpense(group.access, templateId);
+    const whileGone = await generateDueOccurrences({ groupId: group.groupId });
+    expect(whileGone.templatesProcessed).toBe(0);
+
+    await restoreRecurringExpense(group.access, templateId);
+    const after = await generateDueOccurrences({ groupId: group.groupId });
+
+    // Looked at again, and with nothing new to make: the occurrences it
+    // already recorded still say which dates are spoken for.
+    expect(after.templatesProcessed).toBe(1);
+    expect(after.expensesCreated).toBe(0);
+
+    const db = getDb();
+    const generated = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.recurringExpenseId, templateId));
+    expect(generated).toHaveLength(first.expensesCreated);
+  });
+
+  it("records the removal and the restore against the template", async () => {
+    const { group, templateId } = await setupTemplate();
+
+    await deleteRecurringExpense(group.access, templateId);
+    await restoreRecurringExpense(group.access, templateId);
+
+    const db = getDb();
+    const events = await db.query.activityEvents.findMany({
+      where: (table, { and, eq: equals }) =>
+        and(
+          equals(table.groupId, group.groupId),
+          equals(table.entityId, templateId),
+        ),
+      orderBy: (table, { asc }) => asc(table.createdAt),
+    });
+
+    expect(events.map((event) => event.action)).toEqual([
+      "recurring.created",
+      "recurring.deleted",
+      "recurring.restored",
+    ]);
+  });
+
+  /** The guard that makes the Undo safe to press twice. */
+  it("refuses to restore a template that is not deleted", async () => {
+    const { group, templateId } = await setupTemplate();
+
+    await expect(
+      restoreRecurringExpense(group.access, templateId),
+    ).rejects.toThrow(AuthorizationError);
   });
 });

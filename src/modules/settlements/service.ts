@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import { participants, settlements } from "@/lib/db/schema";
@@ -315,6 +315,60 @@ export async function deleteSettlement(
   });
 
   await dispatchNotifications(notificationIds);
+}
+
+/**
+ * Puts a deleted repayment back — the Undo behind the deletion toast.
+ *
+ * A settlement carries its whole self in one row, so unlike an expense there
+ * is nothing alongside it to put back: clearing `deleted_at` restores both
+ * ends of the payment at once. It is the counterpart of `restoreExpense`, and
+ * carries the same guard and the same silence about notifications; the note
+ * there explains why.
+ */
+export async function restoreSettlement(
+  access: GroupAccess,
+  settlementId: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  requirePermission(access, "addSettlement");
+  const db = options.db ?? getDb();
+
+  await db.transaction(async (tx) => {
+    const restored = await tx
+      .update(settlements)
+      .set({ deletedAt: null })
+      .where(
+        and(
+          eq(settlements.id, settlementId),
+          eq(settlements.groupId, access.groupId),
+          isNotNull(settlements.deletedAt),
+        ),
+      )
+      .returning({
+        amount: settlements.amount,
+        currency: settlements.currency,
+      });
+
+    if (restored.length === 0) {
+      throw new AuthorizationError(
+        "That settlement is not part of this group.",
+        "notInGroup",
+      );
+    }
+
+    await recordActivity(tx, {
+      groupId: access.groupId,
+      action: "settlement.restored",
+      entityType: "settlement",
+      entityId: settlementId,
+      ...activityActorFrom(access),
+      metadata: {
+        amount: restored[0].amount.toString(),
+        currency: restored[0].currency,
+      },
+    });
+  });
 }
 
 export async function listSettlements(

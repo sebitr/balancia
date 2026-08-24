@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import {
@@ -593,6 +593,71 @@ export async function deleteExpense(
   });
 
   await dispatchNotifications(notificationIds);
+}
+
+/**
+ * Puts a deleted expense back — the Undo behind the deletion toast.
+ *
+ * Deletion only stamps `deleted_at`; the payers, the shares and the
+ * attachments are all left exactly where they were, so clearing that stamp is
+ * the entire restoration and the balances come back to the cent.
+ *
+ * The guard is `deleted_at IS NOT NULL` rather than the delete's mirror image.
+ * It means an expense that is already live cannot be "restored", so a second
+ * press of Undo — or a request replayed by a flaky connection — changes
+ * nothing and writes no second event.
+ *
+ * What it cannot take back is the notification the deletion already sent: a
+ * push is gone the moment it leaves. Restoring deliberately does not send one
+ * of its own either, because two contradictory alerts seconds apart tell the
+ * reader less than one did. The activity log is where both are recorded, in
+ * the order they happened.
+ */
+export async function restoreExpense(
+  access: GroupAccess,
+  expenseId: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  requirePermission(access, "editAnyExpense");
+  const db = options.db ?? getDb();
+
+  await db.transaction(async (tx) => {
+    const restored = await tx
+      .update(expenses)
+      .set({ deletedAt: null })
+      .where(
+        and(
+          eq(expenses.id, expenseId),
+          eq(expenses.groupId, access.groupId),
+          isNotNull(expenses.deletedAt),
+        ),
+      )
+      .returning({
+        description: expenses.description,
+        amount: expenses.amount,
+        currency: expenses.currency,
+      });
+
+    if (restored.length === 0) {
+      throw new AuthorizationError(
+        "That expense is not part of this group.",
+        "notInGroup",
+      );
+    }
+
+    await recordActivity(tx, {
+      groupId: access.groupId,
+      action: "expense.restored",
+      entityType: "expense",
+      entityId: expenseId,
+      ...activityActorFrom(access),
+      metadata: {
+        description: restored[0].description,
+        amount: restored[0].amount.toString(),
+        currency: restored[0].currency,
+      },
+    });
+  });
 }
 
 async function linkAttachments(
