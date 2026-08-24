@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { PeopleCard, type PersonView } from "./people-card";
@@ -32,7 +32,15 @@ const {
   createInvitationAction,
   removeParticipantAction,
   restoreParticipantAction,
+  updateParticipantAction,
 } = vi.hoisted(() => ({
+  updateParticipantAction: vi.fn<
+    (
+      groupId: string,
+      participantId: string,
+      formData: FormData,
+    ) => Promise<{ ok: boolean; error?: string }>
+  >(async () => ({ ok: true })),
   createInvitationAction: vi.fn<
     (
       groupId: string,
@@ -71,7 +79,7 @@ vi.mock("@/modules/groups/actions", () => ({
   removeParticipantAction,
   restoreParticipantAction,
   revokeInvitationAction: vi.fn(async () => ({ ok: true })),
-  updateParticipantAction: vi.fn(async () => ({ ok: true })),
+  updateParticipantAction,
 }));
 
 function person(overrides: Partial<PersonView> = {}): PersonView {
@@ -119,6 +127,12 @@ function renderAsMember(
   viewerId: string | null = "member",
 ) {
   return render(people, { viewerId, canInvite: false, canRemove: false });
+}
+
+/** What one write posted, as plain entries. */
+function written(call = 0) {
+  const formData = updateParticipantAction.mock.calls[call]?.[2];
+  return (key: string) => formData?.get(key);
 }
 
 beforeEach(() => {
@@ -264,6 +278,91 @@ describe("PeopleCard", () => {
 
     options.action.onClick();
     expect(restoreParticipantAction).toHaveBeenCalledWith("g1", "p1");
+  });
+
+  it("writes a rename once the typing stops, and offers the name back", async () => {
+    const user = userEvent.setup();
+    render([person()]);
+
+    await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    await user.type(screen.getByLabelText("Name"), "le");
+
+    // Two keystrokes and nothing sent yet: the pause is what sends it.
+    expect(updateParticipantAction).not.toHaveBeenCalled();
+
+    await waitFor(
+      () => expect(updateParticipantAction).toHaveBeenCalledOnce(),
+      {
+        timeout: 3000,
+      },
+    );
+    expect(written()("displayName")).toBe("Cyrille");
+
+    const [message, options] = success.mock.calls.at(-1) as [
+      string,
+      { id?: string; action: { label: string; onClick: () => void } },
+    ];
+    expect(message).toBe("Changes saved");
+    // Named for the person: renaming a second one leaves the first way back.
+    expect(options.id).toBe("person-p1");
+
+    await act(async () => options.action.onClick());
+
+    await waitFor(() =>
+      expect(updateParticipantAction).toHaveBeenCalledTimes(2),
+    );
+    expect(written(1)("displayName")).toBe("Cyril");
+    expect(screen.getByLabelText("Name")).toHaveValue("Cyril");
+  });
+
+  it("sends a rename typed a moment before the row is closed", async () => {
+    const user = userEvent.setup();
+    render([person()]);
+
+    const row = screen.getByRole("button", { name: /Cyril/ });
+    await user.click(row);
+    await user.type(screen.getByLabelText("Name"), "le");
+    // Closing the row unmounts the panel, and the pause never arrives.
+    await user.click(row);
+
+    await waitFor(() => expect(updateParticipantAction).toHaveBeenCalledOnce());
+    expect(written()("displayName")).toBe("Cyrille");
+  });
+
+  it("holds the write while an address is half typed, and says so", async () => {
+    const user = userEvent.setup();
+    render([person()]);
+
+    await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    await user.type(screen.getByLabelText(/Email/), "cyril@");
+    // Leaving the field would normally be enough to send it.
+    await user.tab();
+
+    expect(
+      screen.getByText("That is not an email address yet."),
+    ).toBeInTheDocument();
+    expect(updateParticipantAction).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText(/Email/), "example.com");
+    await user.tab();
+
+    await waitFor(() => expect(updateParticipantAction).toHaveBeenCalledOnce());
+    expect(written()("email")).toBe("cyril@example.com");
+    expect(
+      screen.queryByText("That is not an email address yet."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says a name is missing rather than writing an empty one", async () => {
+    const user = userEvent.setup();
+    render([person()]);
+
+    await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    await user.clear(screen.getByLabelText("Name"));
+    await user.tab();
+
+    expect(screen.getByText("This person needs a name.")).toBeInTheDocument();
+    expect(updateParticipantAction).not.toHaveBeenCalled();
   });
 
   it("never offers to remove the owner", async () => {

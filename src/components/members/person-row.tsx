@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toastUndoable } from "@/components/ui/sonner";
+import { useAutosave } from "@/components/ui/use-autosave";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
 import {
@@ -23,6 +25,7 @@ import {
   revokeInvitationAction,
   updateParticipantAction,
 } from "@/modules/groups/actions";
+import { addParticipantSchema } from "@/modules/groups/schemas";
 import { cn } from "@/lib/utils";
 import type { PersonView } from "./people-card";
 
@@ -76,6 +79,23 @@ const EXPIRIES: readonly {
   { key: "week", days: 7 },
   { key: "day", days: 1 },
 ];
+
+/** What a row writes back: the two fields the panel offers. */
+interface Named {
+  readonly name: string;
+  readonly email: string;
+}
+
+/**
+ * Whether an address is one yet.
+ *
+ * Asked of the schema the Server Action parses with rather than of a second
+ * regex written here, so a field that holds the write back and a server that
+ * refuses it can never disagree. An empty address is fine — it is optional.
+ */
+function emailReady(value: string): boolean {
+  return addParticipantSchema.shape.email.safeParse(value.trim()).success;
+}
 
 const EYEBROW =
   "text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase";
@@ -257,25 +277,27 @@ function PersonPanel({
   const dates = useDateFormatter();
   const locale = useNumberLocale();
 
-  const [name, setName] = useState(person.name);
-  const [email, setEmail] = useState(person.email);
   const [expiry, setExpiry] =
     useState<(typeof EXPIRIES)[number]["key"]>("never");
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const dirty =
-    name.trim() !== person.name || (may.email && email.trim() !== person.email);
   const nameId = `person-name-${person.id}`;
   const emailId = `person-email-${person.id}`;
   const expiryId = `person-expiry-${person.id}`;
 
-  const onSave = async () => {
-    setPending(true);
-    try {
+  const { draft, saving, edit, flush } = useAutosave<Named>({
+    initial: { name: person.name, email: person.email },
+    same: (a, b) => a.name === b.name && a.email === b.email,
+    // Both halves have to be sendable before either is sent, since one write
+    // carries the pair. An address is judged by the schema the server parses
+    // with, so the field and the answer cannot disagree about what counts.
+    ready: (next) =>
+      next.name.trim() !== "" && (!may.email || emailReady(next.email)),
+    write: async (next) => {
       const formData = new FormData();
-      formData.set("displayName", name.trim());
-      formData.set("email", email.trim());
+      formData.set("displayName", next.name.trim());
+      formData.set("email", next.email.trim());
       const result = await updateParticipantAction(
         groupId,
         person.id,
@@ -283,14 +305,23 @@ function PersonPanel({
       );
       if (!result.ok) {
         toast.error(result.error ?? t("saveFailed"));
-        return;
+        return false;
       }
-      router.refresh();
-      toast.success(t("saved"));
-    } finally {
-      setPending(false);
-    }
-  };
+      return true;
+    },
+    announce: (undo) =>
+      toastUndoable(
+        t("saved"),
+        { label: tCommon("undo"), onUndo: undo },
+        // Named for the person, so renaming a second one does not take away
+        // the way back from the first.
+        { id: `person-${person.id}` },
+      ),
+    settled: () => router.refresh(),
+  });
+
+  const nameMissing = draft.name.trim() === "";
+  const emailWrong = may.email && !emailReady(draft.email);
 
   const onCreateLink = async () => {
     setPending(true);
@@ -359,18 +390,38 @@ function PersonPanel({
     <div className="flex flex-col gap-4 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] px-3.5 pt-0.5 pb-[18px] motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
       {may.name && (
         <div className="flex flex-col gap-2.5">
-          <span className={EYEBROW}>{t("details")}</span>
+          <span className="flex items-center justify-between gap-2">
+            <span className={EYEBROW}>{t("details")}</span>
+            {/* For the eye only: the toast is what announces the outcome. */}
+            {saving && (
+              <span
+                aria-hidden="true"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
+                <Loader2 className="size-3.5 animate-spin" />
+                {t("saving")}
+              </span>
+            )}
+          </span>
           <label htmlFor={nameId} className="flex flex-col gap-1.5">
             <span className="text-xs font-medium">
               {may.email ? t("name") : t("nameHere")}
             </span>
             <Input
               id={nameId}
-              value={name}
+              value={draft.name}
               maxLength={120}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => edit({ name: event.target.value })}
+              onBlur={flush}
+              aria-invalid={nameMissing}
+              aria-describedby={nameMissing ? `${nameId}-error` : undefined}
               className={FIELD}
             />
+            {nameMissing && (
+              <span id={`${nameId}-error`} className="text-xs text-destructive">
+                {t("nameRequired")}
+              </span>
+            )}
           </label>
           {may.email && (
             <label htmlFor={emailId} className="flex flex-col gap-1.5">
@@ -384,37 +435,23 @@ function PersonPanel({
                 id={emailId}
                 type="email"
                 inputMode="email"
-                value={email}
+                value={draft.email}
                 placeholder="name@example.com"
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => edit({ email: event.target.value })}
+                onBlur={flush}
+                aria-invalid={emailWrong}
+                aria-describedby={emailWrong ? `${emailId}-error` : undefined}
                 className={FIELD}
               />
+              {emailWrong && (
+                <span
+                  id={`${emailId}-error`}
+                  className="text-xs text-destructive"
+                >
+                  {t("emailInvalid")}
+                </span>
+              )}
             </label>
-          )}
-          {dirty && (
-            <span className="flex gap-2 pt-0.5">
-              <Button
-                className="h-[38px] px-3.5 font-semibold"
-                onClick={() => void onSave()}
-                disabled={pending || name.trim() === ""}
-              >
-                {pending && (
-                  <Loader2 aria-hidden="true" className="animate-spin" />
-                )}
-                {t("saveChanges")}
-              </Button>
-              <Button
-                variant="ghost"
-                className="h-[38px] px-3 text-muted-foreground"
-                onClick={() => {
-                  setName(person.name);
-                  setEmail(person.email);
-                }}
-                disabled={pending}
-              >
-                {t("discard")}
-              </Button>
-            </span>
           )}
         </div>
       )}
