@@ -308,6 +308,7 @@ export function AddEntryForm({
   const tCategories = useTranslations("expenses.categories");
   const tMethods = useTranslations("paymentMethods");
   const tCommon = useTranslations("common");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const repeatsId = useId();
 
   const splitText = (message: SplitMessage) =>
@@ -962,6 +963,10 @@ export function AddEntryForm({
         return;
       }
       const removed = editing;
+      // Close before the toast is raised. An open modal puts
+      // `pointer-events: none` on the body, and the toaster hangs off the body
+      // too — an Undo offered underneath one cannot be pressed.
+      setConfirmDelete(false);
       toastUndoable(t("saved.deleted"), {
         label: tCommon("undo"),
         onUndo: () => onRestore(removed),
@@ -1354,7 +1359,7 @@ export function AddEntryForm({
         )}
 
         {editing && (
-          <AlertDialog>
+          <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
             <AlertDialogTrigger asChild>
               <button
                 type="button"

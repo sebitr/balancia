@@ -68,6 +68,7 @@ export function DeleteEntryButton({
   const router = useRouter();
   const t = useTranslations("transactionDetail.delete");
   const tCommon = useTranslations("common");
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   /**
@@ -97,25 +98,36 @@ export function DeleteEntryButton({
           ? await deleteSettlementAction(groupId, id)
           : await deleteExpenseAction(groupId, id);
       if (!result.ok) {
+        // The dialog stays open on a refusal, so it can be tried again.
         toast.error(result.error ?? t("failed"));
         return;
       }
+      /*
+       * Close before anything else. A modal dialog holds the page down with
+       * `pointer-events: none` on the body, and the toaster is a child of the
+       * body like everything else — so a toast raised while this is still open
+       * is one nobody can press. Leaving the navigation to unmount the dialog
+       * was not enough: the Undo was on screen and inert for as long as that
+       * took, which is exactly the moment it is reached for.
+       */
+      setConfirmOpen(false);
       toastUndoable(t("deleted"), {
         label: tCommon("undo"),
         onUndo: onRestore,
       });
-      // The screen it was on no longer has anything to show, so leave before
-      // refreshing rather than after: a refresh in place would render a 404.
-      // The toast outlives the navigation, so the Undo goes with the reader.
+      // The screen it was on no longer has anything to show, so leave rather
+      // than refresh in place, which would render a 404. Nothing is refreshed
+      // afterwards either: the delete revalidated the list server-side, so the
+      // push already lands on a list without this entry, and a second
+      // navigation in the same tick only races the first.
       router.push(backTo);
-      router.refresh();
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <AlertDialog>
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
       <AlertDialogTrigger asChild>
         <button
           type="button"
