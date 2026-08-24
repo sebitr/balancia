@@ -138,6 +138,10 @@ export default async function GroupOverviewPage({
                 breakdown: {
                   paid: position.breakdown.paid.toString(),
                   share: position.breakdown.share.toString(),
+                  revenueReceived:
+                    position.breakdown.revenueReceived.toString(),
+                  revenueCredited:
+                    position.breakdown.revenueCredited.toString(),
                   settlementsPaid:
                     position.breakdown.settlementsPaid.toString(),
                   settlementsReceived:
