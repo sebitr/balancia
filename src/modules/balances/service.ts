@@ -14,12 +14,14 @@ import {
   balancesSumToZero,
   computeBalances,
   contributionsOf,
+  revenuesOf,
   simplifyDebts,
   totalSpendByCurrency,
   type BalanceInputExpense,
   type BalanceInputSettlement,
   type Contribution,
   type CurrencyBalances,
+  type Revenue,
   type RepaymentSuggestion,
 } from "./engine";
 
@@ -44,6 +46,12 @@ export interface GroupBalances {
    * rows the balances are, so asking for it costs no extra query.
    */
   readonly contributions: ReadonlyMap<string, Contribution>;
+  /**
+   * The same for income: what came in through that participant and what of it
+   * is theirs. Kept apart from `contributions` because the two words that fit
+   * spending — paid, share — invert their meaning on money coming in.
+   */
+  readonly revenues: ReadonlyMap<string, Revenue>;
   /**
    * Repayments involving the requested participant, kept as positive
    * magnitudes. Paying moves their position up; receiving moves it down.
@@ -251,6 +259,9 @@ export async function loadGroupBalances(
     participantNames,
     contributions: options.contributionsFor
       ? contributionsOf(engineExpenses, options.contributionsFor)
+      : new Map(),
+    revenues: options.contributionsFor
+      ? revenuesOf(engineExpenses, options.contributionsFor)
       : new Map(),
     settlementsFor,
     spendingFacts,

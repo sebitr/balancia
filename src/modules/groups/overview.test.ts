@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   counterpartiesOf,
   orderBalanceRows,
+  positionBreakdownOf,
   spendingPeriodsOf,
 } from "./overview";
 import type { CurrencyBalances } from "@/modules/balances/engine";
@@ -207,5 +208,93 @@ describe("the counterparties behind a position", () => {
     );
 
     expect(parties).toEqual([]);
+  });
+});
+
+describe("the ledger behind a position", () => {
+  /**
+   * The figures the position sheet was designed against: a chalet group that
+   * collects rental income, where the reader paid most of the bills, took the
+   * bookings, and has already been repaid nearly all of it.
+   */
+  const CHALET = {
+    contribution: { paid: 31634847n, share: 12454808n },
+    revenue: { received: 3100000n, credited: 390235n },
+    settlement: { paid: 2671n, received: 15162412n },
+  };
+
+  it("sums to the balance it is explaining, with nothing left over", () => {
+    const breakdown = positionBreakdownOf(1310533n, CHALET);
+
+    expect(breakdown.paid - breakdown.share).toBe(19180039n);
+    expect(breakdown.revenueCredited - breakdown.revenueReceived).toBe(
+      -2709765n,
+    );
+    expect(breakdown.settlementsPaid - breakdown.settlementsReceived).toBe(
+      -15159741n,
+    );
+    expect(breakdown.otherAdjustments).toBe(0n);
+  });
+
+  /**
+   * The sign rule the copy depends on. Collecting money for the group is an
+   * expense run backwards: it lowers the collector's balance, and the part
+   * credited to them raises it.
+   */
+  it("has income lower a balance and a credit raise it", () => {
+    const collected = positionBreakdownOf(-2709765n, {
+      revenue: CHALET.revenue,
+    });
+
+    expect(collected.revenueReceived).toBe(3100000n);
+    expect(collected.revenueCredited).toBe(390235n);
+    expect(collected.otherAdjustments).toBe(0n);
+  });
+
+  it("explains a position made only of repayments", () => {
+    const breakdown = positionBreakdownOf(-5000n, {
+      settlement: { paid: 1000n, received: 6000n },
+    });
+
+    expect(breakdown.paid).toBe(0n);
+    expect(breakdown.revenueReceived).toBe(0n);
+    expect(breakdown.otherAdjustments).toBe(0n);
+  });
+
+  /**
+   * A participant with no activity at all is settled, and the sheet says so
+   * with seven zeros rather than with a remainder it cannot name.
+   */
+  it("reports zeros, not a remainder, for someone with nothing recorded", () => {
+    expect(positionBreakdownOf(0n, {})).toEqual({
+      paid: 0n,
+      share: 0n,
+      revenueReceived: 0n,
+      revenueCredited: 0n,
+      settlementsPaid: 0n,
+      settlementsReceived: 0n,
+      otherAdjustments: 0n,
+    });
+  });
+
+  /**
+   * The remainder is the reason a fourth kind of entry could not go missing
+   * from this sheet the way income once did: whatever the three pairs fail to
+   * explain still shows up, as its own row, rather than being absorbed.
+   */
+  it("keeps whatever the three pairs cannot explain", () => {
+    const breakdown = positionBreakdownOf(20000n, {
+      contribution: { paid: 15000n, share: 5000n },
+    });
+
+    expect(breakdown.otherAdjustments).toBe(10000n);
+  });
+
+  it("carries a remainder in either direction", () => {
+    expect(
+      positionBreakdownOf(-100n, {
+        contribution: { paid: 900n, share: 400n },
+      }).otherAdjustments,
+    ).toBe(-600n);
   });
 });

@@ -5,6 +5,7 @@ import {
   balancesSumToZero,
   computeBalances,
   contributionsOf,
+  revenuesOf,
   simplifyDebts,
   totalSpendByCurrency,
   type BalanceComputationInput,
@@ -785,5 +786,239 @@ describe("spending statistics exclude income", () => {
       paid: 6000n,
       share: 3000n,
     });
+  });
+});
+
+describe("revenuesOf", () => {
+  const entries: BalanceInputExpense[] = [
+    {
+      id: "chalet-week",
+      currency: "CHF",
+      direction: "in",
+      payers: [{ participantId: "a", amount: 310000n }],
+      shares: [
+        { participantId: "a", amount: 100000n },
+        { participantId: "b", amount: 100000n },
+        { participantId: "c", amount: 110000n },
+      ],
+    },
+    {
+      id: "deposit-returned",
+      currency: "CHF",
+      direction: "in",
+      payers: [{ participantId: "b", amount: 40000n }],
+      shares: [
+        { participantId: "a", amount: 20000n },
+        { participantId: "b", amount: 20000n },
+      ],
+    },
+    {
+      id: "firewood",
+      currency: "CHF",
+      payers: [{ participantId: "a", amount: 9000n }],
+      shares: [
+        { participantId: "a", amount: 4500n },
+        { participantId: "b", amount: 4500n },
+      ],
+    },
+    {
+      id: "ferry-refund",
+      currency: "EUR",
+      direction: "in",
+      payers: [{ participantId: "a", amount: 5000n }],
+      shares: [
+        { participantId: "a", amount: 2500n },
+        { participantId: "b", amount: 2500n },
+      ],
+    },
+  ];
+
+  it("separates what came in through someone from what is theirs", () => {
+    expect(revenuesOf(entries, "a").get("CHF")).toEqual({
+      received: 310000n,
+      credited: 120000n,
+    });
+  });
+
+  /**
+   * The mirror of `contributionsOf`'s own agreement test. Money held on the
+   * group's behalf lowers a balance, so the pair explains a position as
+   * `credited - received` rather than `paid - share`.
+   */
+  it("agrees with the balance the engine computes", () => {
+    const income = entries.filter((entry) => entry.direction === "in");
+    const revenue = revenuesOf(income, "a").get("CHF");
+    const balance = balancesFor(
+      { participantIds: ["a", "b", "c"], expenses: income, settlements: [] },
+      "CHF",
+    ).find((row) => row.participantId === "a");
+
+    expect(revenue).toBeDefined();
+    expect(balance?.amount).toBe(revenue!.credited - revenue!.received);
+  });
+
+  it("leaves spending out, exactly as contributionsOf leaves income out", () => {
+    // `firewood` is the only entry in the list that is not income.
+    expect(revenuesOf(entries, "a").get("CHF")).toEqual({
+      received: 310000n,
+      credited: 120000n,
+    });
+    expect(contributionsOf(entries, "a").get("CHF")).toEqual({
+      paid: 9000n,
+      share: 4500n,
+    });
+  });
+
+  it("keeps each currency apart", () => {
+    const totals = revenuesOf(entries, "a");
+    expect(totals.get("EUR")).toEqual({ received: 5000n, credited: 2500n });
+    expect([...totals.keys()].sort()).toEqual(["CHF", "EUR"]);
+  });
+
+  it("reports nothing for someone with no part in any income", () => {
+    expect(revenuesOf(entries, "nobody").size).toBe(0);
+  });
+
+  it("counts a credit without a collection", () => {
+    expect(revenuesOf(entries, "c").get("CHF")).toEqual({
+      received: 0n,
+      credited: 110000n,
+    });
+  });
+
+  /** An entry with no direction is spending, so income never claims it. */
+  it("treats an absent direction as spending", () => {
+    const legacy: BalanceInputExpense[] = [
+      {
+        id: "before-income-existed",
+        currency: "EUR",
+        payers: [{ participantId: "a", amount: 1000n }],
+        shares: [{ participantId: "a", amount: 1000n }],
+      },
+    ];
+    expect(revenuesOf(legacy, "a").size).toBe(0);
+    expect(contributionsOf(legacy, "a").get("EUR")).toEqual({
+      paid: 1000n,
+      share: 1000n,
+    });
+  });
+});
+
+describe("the two tallies account for every entry (property-based)", () => {
+  /**
+   * The claim the position sheet makes.
+   *
+   * It tells the reader their balance is expenses plus revenue plus
+   * repayments, with nothing left over. That is only true if spending and
+   * income between them cover every entry in the group — so this generates
+   * groups of both directions, in two currencies, and checks that
+   * `paid - share + credited - received + settlementsPaid - settlementsReceived`
+   * reproduces the engine's balance exactly, for every participant.
+   */
+  const entryArbitrary = (participantIds: readonly string[]) =>
+    fc
+      .record({
+        id: fc.string({ minLength: 1, maxLength: 8 }),
+        currency: fc.constantFrom("EUR", "CHF"),
+        direction: fc.constantFrom<"out" | "in" | undefined>(
+          "out",
+          "in",
+          undefined,
+        ),
+        total: fc.bigInt({ min: 1n, max: 10n ** 8n }),
+        payerCount: fc.integer({ min: 1, max: participantIds.length }),
+        shareCount: fc.integer({ min: 1, max: participantIds.length }),
+      })
+      .map(({ id, currency, direction, total, payerCount, shareCount }) => {
+        const splitInto = (count: number) => {
+          const base = total / BigInt(count);
+          const remainder = total - base * BigInt(count);
+          return Array.from({ length: count }, (_, index) =>
+            index === 0 ? base + remainder : base,
+          );
+        };
+        return {
+          id,
+          currency,
+          direction,
+          payers: splitInto(payerCount).map((amount, index) => ({
+            participantId: participantIds[index],
+            amount,
+          })),
+          shares: splitInto(shareCount).map((amount, index) => ({
+            participantId: participantIds[index],
+            amount,
+          })),
+        } satisfies BalanceInputExpense;
+      });
+
+  it("leaves no part of any balance unexplained", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 2, max: 6 }).chain((count) => {
+          const participantIds = Array.from(
+            { length: count },
+            (_, index) => `p${index}`,
+          );
+          return fc.record({
+            participantIds: fc.constant(participantIds),
+            expenses: fc.array(entryArbitrary(participantIds), {
+              maxLength: 10,
+            }),
+            settlements: fc.array(
+              fc
+                .record({
+                  id: fc.string({ minLength: 1, maxLength: 8 }),
+                  currency: fc.constantFrom("EUR", "CHF"),
+                  amount: fc.bigInt({ min: 0n, max: 10n ** 7n }),
+                  from: fc.integer({ min: 0, max: count - 1 }),
+                  offset: fc.integer({ min: 1, max: count - 1 }),
+                })
+                .map(({ id, currency, amount, from, offset }) => ({
+                  id,
+                  currency,
+                  fromParticipantId: participantIds[from],
+                  toParticipantId: participantIds[(from + offset) % count],
+                  amount,
+                })),
+              { maxLength: 6 },
+            ),
+          });
+        }),
+        (input) => {
+          for (const entry of computeBalances(input)) {
+            for (const balance of entry.balances) {
+              const who = balance.participantId;
+              const contribution = contributionsOf(input.expenses, who).get(
+                entry.currency,
+              );
+              const revenue = revenuesOf(input.expenses, who).get(
+                entry.currency,
+              );
+              const settled = input.settlements.filter(
+                (settlement) => settlement.currency === entry.currency,
+              );
+              const settlementsPaid = settled
+                .filter((settlement) => settlement.fromParticipantId === who)
+                .reduce((sum, settlement) => sum + settlement.amount, 0n);
+              const settlementsReceived = settled
+                .filter((settlement) => settlement.toParticipantId === who)
+                .reduce((sum, settlement) => sum + settlement.amount, 0n);
+
+              const explained =
+                (contribution?.paid ?? 0n) -
+                (contribution?.share ?? 0n) +
+                (revenue?.credited ?? 0n) -
+                (revenue?.received ?? 0n) +
+                settlementsPaid -
+                settlementsReceived;
+
+              expect(explained).toBe(balance.amount);
+            }
+          }
+        },
+      ),
+      { numRuns: 200 },
+    );
   });
 });
