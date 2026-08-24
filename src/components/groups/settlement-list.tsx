@@ -146,13 +146,11 @@ export function SettlementList({
           onOpenAutoFocus={openOnContent}
           className="mx-auto max-w-[430px] gap-0 rounded-t-[26px] bg-background px-5 pt-2.5 pb-7 data-[side=bottom]:border-t-0"
         >
-          <span
-            aria-hidden="true"
-            className="mx-auto mb-5 block h-1 w-[38px] rounded-full bg-foreground/20"
-          />
+          {/* The grabber comes from `SheetContent`; `gap-0` above means the
+              room under it has to be stated rather than inherited. */}
           {active && (
             <>
-              <SheetTitle className="text-xl font-semibold tracking-[-0.02em]">
+              <SheetTitle className="mt-4 text-xl font-semibold tracking-[-0.02em]">
                 {t("settlementDetailTitle", {
                   from: active.fromName,
                   to: active.toName,
