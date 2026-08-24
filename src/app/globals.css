@@ -778,11 +778,20 @@
  *  Sliding a whole screen across the viewport is the most likely thing here to
  *  make someone unwell, so it is the first thing to go. The swipe gesture
  *  disarms itself in JavaScript; what remains is an instant swap.
+ *
+ *  A bottom sheet is the same move at the same scale — a full-height surface
+ *  travelling the height of the viewport — so it goes with them. The sheet
+ *  still opens, still traps focus and still dismisses; Radix is untouched. It
+ *  simply does not travel to get there.
  * -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
-  ::view-transition-new(*) {
+  ::view-transition-new(*),
+  /* Cut rather than removed. Radix unmounts a closing surface on its
+     animation ending, and an animation that never runs never ends. */
+  [data-slot="sheet-content"],
+  [data-slot="sheet-overlay"] {
     animation-duration: 1ms !important;
     animation-delay: 0s !important;
   }

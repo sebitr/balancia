@@ -1,7 +1,7 @@
 /**
  * The filters the transactions list keeps in its URL, and how to carry them.
  *
- * Four places have to agree on these three names: the island that writes them,
+ * Four places have to agree on these names: the island that writes them,
  * the rows that link out of it, and the two detail screens that link back. So
  * they live here rather than in the island, which is a `"use client"` module —
  * a Server Component that only wanted three strings would otherwise pull a
@@ -17,11 +17,44 @@
 /** A chosen category. Repeats: several bands can be on at once. */
 export const FILTER_PARAM = "cat";
 
+/**
+ * A chosen `category.subcategory` pair. Repeats.
+ *
+ * Separate from `cat` because the two mean different things: `cat=home` is
+ * every row filed under Home, and `sub=home.rent` is only the rent. A parent
+ * with some of its children chosen is not the same filter as the parent
+ * itself, and one list of codes could not tell them apart.
+ */
+export const SUB_PARAM = "sub";
+
 /** A chosen kind — expense, revenue, settlement. Repeats, for the same reason. */
 export const KIND_PARAM = "kind";
 
 /** What was typed in the search field. */
 export const QUERY_PARAM = "q";
+
+/** Which period — `month`, `year` or `custom`. Absent means any time. */
+export const WHEN_PARAM = "when";
+
+/** The ends of a custom period, as `YYYY-MM-DD`. Only read with `when=custom`. */
+export const FROM_PARAM = "from";
+export const TO_PARAM = "to";
+
+/** Amount bounds, in major units, exactly as they were typed. */
+export const MIN_PARAM = "min";
+export const MAX_PARAM = "max";
+
+/** A participant who paid. Repeats, and means *any of*. */
+export const PAYER_PARAM = "by";
+
+/** What the row left the reader holding — `owe`, `back`, `flat`. Repeats. */
+export const POSITION_PARAM = "pos";
+
+/** A property a row must have — `series`, `foreign`, `receipt`. Repeats. */
+export const PROPERTY_PARAM = "only";
+
+/** The order — `oldest` or `largest`. Absent means newest first. */
+export const SORT_PARAM = "sort";
 
 /**
  * The order they are written in, which is also the order `listQuery` prints.
@@ -30,7 +63,21 @@ export const QUERY_PARAM = "q";
  * filters always produce the same string — see `ListPlace`, which compares two
  * of them to decide whether a remembered position is a position in *this* list.
  */
-const LIST_PARAMS = [FILTER_PARAM, KIND_PARAM, QUERY_PARAM] as const;
+const LIST_PARAMS = [
+  FILTER_PARAM,
+  SUB_PARAM,
+  KIND_PARAM,
+  QUERY_PARAM,
+  WHEN_PARAM,
+  FROM_PARAM,
+  TO_PARAM,
+  MIN_PARAM,
+  MAX_PARAM,
+  PAYER_PARAM,
+  POSITION_PARAM,
+  PROPERTY_PARAM,
+  SORT_PARAM,
+] as const;
 
 /**
  * Either shape the filters arrive in: `useSearchParams` in the island, and the
@@ -42,7 +89,7 @@ export type ParamSource =
 /**
  * Just the list's own filters, canonically ordered, as a query string.
  *
- * Only these three: anything else on the URL belongs to whoever put it there,
+ * Only these: anything else on the URL belongs to whoever put it there,
  * and forwarding it into a detail screen and back out again would make this
  * function a general-purpose query launderer rather than a statement about
  * what the list is showing.

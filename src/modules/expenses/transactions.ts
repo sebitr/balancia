@@ -1,5 +1,8 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
+import { and, eq, isNull, min } from "drizzle-orm";
+import { getDb, type Database } from "@/lib/db/client";
+import { expenses, settlements } from "@/lib/db/schema";
 import {
   compareKeysDesc,
   encodeCursor,
@@ -11,7 +14,7 @@ import {
   moneyForGroup,
 } from "@/modules/currencies/display";
 import { listSettlements } from "@/modules/settlements/service";
-import type { RowView } from "@/components/expenses/transactions";
+import type { RowView } from "@/components/expenses/list-filter";
 import { isSpending, signOf } from "./direction";
 import { listExpenses, type ListedExpense } from "./service";
 import { categoryKeyOf } from "./spread";
@@ -79,6 +82,19 @@ export async function loadTransactionPage(
     baseCurrency: access.group.baseCurrency,
   };
 
+  /*
+   * Whether this was recorded in a currency the group does not keep its books
+   * in — the stored currency, not the displayed one, since a converted group
+   * displays everything in its base and the question would answer itself.
+   *
+   * A group with no base currency has nothing for an entry to differ from, so
+   * nothing in it is foreign.
+   */
+  function isForeign(currency: string): boolean {
+    const base = access.group.baseCurrency;
+    return base !== null && currency !== base;
+  }
+
   /**
    * What this expense left the reader holding, in the currency the group uses
    * for balances and list amounts.
@@ -130,11 +146,15 @@ export async function loadTransactionPage(
           // the same thing twice as often as not.
           note: null,
           category: categoryKeyOf(expense.category),
+          subcategory: expense.subcategory,
           position: positionOf(expense),
           // Income keeps its amount positive in the database; the badge is
           // what says which way it went.
           revenue: !isSpending(expense.direction),
           recurring: expense.recurringExpenseId !== null,
+          payers: expense.payers.map((payer) => payer.participantId),
+          foreign: isForeign(expense.currency),
+          receipt: expense.attachmentCount > 0,
         },
       };
     }),
@@ -158,6 +178,7 @@ export async function loadTransactionPage(
           currency: money.currency,
           note: settlement.notes,
           category: null,
+          subcategory: null,
           // A repayment clears a position rather than creating one, so it is
           // shown neutrally — and only to the two people it names. Which of
           // them paid is already the row's title.
@@ -169,6 +190,12 @@ export async function loadTransactionPage(
               : null,
           revenue: false,
           recurring: false,
+          // Exactly one payer, and it is the half of the title that did the
+          // paying.
+          payers: [settlement.fromParticipantId],
+          foreign: isForeign(settlement.currency),
+          // A repayment carries no attachments; there is no table for them.
+          receipt: false,
         },
       };
     }),
@@ -192,4 +219,40 @@ export async function loadTransactionPage(
     rows: taken.map((entry) => entry.row),
     cursor: more && last ? encodeCursor(last.key) : null,
   };
+}
+
+/**
+ * The day the group's history starts, or null when it has none.
+ *
+ * The custom date range prefills from here to today, so its default is the
+ * whole of what the group has recorded, and neither field will go earlier —
+ * there is nothing before it to find. Asked of the data rather than fixed at
+ * some safe constant, because a constant would either cut off a group that has
+ * been running since 2015 or offer 1970 to one that started last week.
+ *
+ * Both tables are asked, because either can hold the oldest row: a group that
+ * imported its repayments before its expenses starts at a settlement.
+ */
+export async function firstTransactionDate(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<string | null> {
+  const db = options.db ?? getDb();
+  const [[expense], [settlement]] = await Promise.all([
+    db
+      .select({ date: min(expenses.expenseDate) })
+      .from(expenses)
+      .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
+    db
+      .select({ date: min(settlements.settledOn) })
+      .from(settlements)
+      .where(
+        and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
+      ),
+  ]);
+
+  const dates = [expense?.date, settlement?.date].filter(
+    (date): date is string => typeof date === "string",
+  );
+  return dates.length === 0 ? null : dates.sort()[0];
 }

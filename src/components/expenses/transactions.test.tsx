@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
@@ -10,6 +10,7 @@ import {
   type EntryKind,
   type RowView,
 } from "./transactions";
+import { EXPENSE_CATEGORY_IDS } from "@/modules/categorization";
 
 /**
  * The spine, the kind chips and the search are the filters, so these tests
@@ -117,10 +118,41 @@ function row(overrides: Partial<RowView> = {}): RowView {
     currency: "EUR",
     note: null,
     category: "other",
+    subcategory: null,
     position: "1250",
     revenue: false,
     recurring: false,
+    payers: ["seb"],
+    foreign: false,
+    receipt: false,
     ...overrides,
+  };
+}
+
+/**
+ * Everything the sheet needs that the list itself does not.
+ *
+ * The screen gathers these on the server; a test that only drives the spine or
+ * the search field still has to hand them over, so they are one object with
+ * sane defaults rather than five arguments at every call site.
+ */
+function sheetProps(rows: readonly RowView[] = ROWS) {
+  const counts: Record<string, number> = {};
+  for (const entry of rows) {
+    if (entry.category)
+      counts[entry.category] = (counts[entry.category] ?? 0) + 1;
+  }
+  return {
+    members: [
+      { id: "seb", displayName: "Seb" },
+      { id: "padi", displayName: "Padi" },
+    ],
+    used: EXPENSE_CATEGORY_IDS.filter(
+      (category) => counts[category] !== undefined,
+    ),
+    counts,
+    firstDate: "2019-07-02",
+    today: "2026-08-14",
   };
 }
 
@@ -213,6 +245,7 @@ function renderList(
       kinds={kindsOf(rows)}
       rows={rows}
       cursor={cursor}
+      {...sheetProps(rows)}
     />,
   );
 }
@@ -319,7 +352,7 @@ describe("Transactions", () => {
 
     expect(screen.getByText("No transaction matches that")).toBeVisible();
     expect(
-      screen.getByText("Try a shorter word, or clear the category bands."),
+      screen.getByText("Try a shorter word, or loosen the filters."),
     ).toBeVisible();
   });
 
@@ -513,6 +546,7 @@ describe("Transactions without a single currency", () => {
         kinds={kindsOf(ROWS)}
         rows={ROWS}
         cursor={null}
+        {...sheetProps()}
       />,
     );
 
@@ -838,5 +872,424 @@ describe("Transactions, left and returned to", () => {
       top: 2400,
       behavior: "instant",
     });
+  });
+});
+
+/**
+ * The filter sheet, driven the way a thumb drives it.
+ *
+ * What each axis actually keeps is settled in `list-filter.test.ts`; these are
+ * about the two behaviours that only exist once there is a sheet — that it
+ * edits a draft nothing else can see until Apply, and that Type and Category
+ * are the same piece of state here as they are on the chip row and the spine.
+ */
+
+/** The button in the search row, whatever its badge currently says. */
+const filterButton = () =>
+  screen.getByRole("button", { name: /^Filter and sort/ });
+
+async function openSheet(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(filterButton());
+  return within(await screen.findByRole("dialog"));
+}
+
+/**
+ * The pinned button at the foot of the sheet.
+ *
+ * Named by what it promises rather than by a test id, but tightly: the sheet
+ * also holds `Show all 15 categories` and a `Show what is under…` caret per
+ * category, and any of those would answer to a looser pattern.
+ */
+const apply = (sheet: ReturnType<typeof within>) =>
+  sheet.getByRole("button", { name: /^(Show \d|No transactions)/ });
+
+/**
+ * A category's own row, told apart from the chips inside it.
+ *
+ * `Home` and `Home insurance` both begin with the same word, so the row is
+ * matched on its second line as well — the count, or what has been taken of it.
+ */
+const category = (sheet: ReturnType<typeof within>, label: string) =>
+  sheet.getByRole("button", { name: new RegExp(`^${label}, `) });
+
+describe("Transactions filter sheet", () => {
+  it("says nothing on the button until something is filtered", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    expect(filterButton()).toHaveAccessibleName("Filter and sort");
+
+    const sheet = await openSheet(user);
+    // The order it is already in is not a filter.
+    await user.click(sheet.getByRole("radio", { name: "Newest first" }));
+    await user.click(apply(sheet));
+
+    expect(filterButton()).toHaveAccessibleName("Filter and sort");
+  });
+
+  it("counts dimensions on the badge, not the chips inside them", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    let sheet = await openSheet(user);
+    await user.click(sheet.getByRole("button", { name: "You owe" }));
+    await user.click(sheet.getByRole("button", { name: "You get back" }));
+    await user.click(apply(sheet));
+
+    // Two chips, one question: "what did this leave me holding?"
+    expect(filterButton()).toHaveAccessibleName(
+      "Filter and sort, 1 filter applied",
+    );
+
+    sheet = await openSheet(user);
+    await user.click(sheet.getByRole("radio", { name: "This year" }));
+    await user.click(apply(sheet));
+
+    expect(filterButton()).toHaveAccessibleName(
+      "Filter and sort, 2 filters applied",
+    );
+  });
+
+  it("holds the list still until the draft is applied", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const before = screen.getAllByRole("listitem").length;
+
+    const sheet = await openSheet(user);
+    await user.click(sheet.getByRole("button", { name: "From a series" }));
+
+    // The sheet says what would happen; nothing behind it has happened. The
+    // rows are read with `hidden`, since an open dialog takes the rest of the
+    // page out of the accessibility tree.
+    expect(apply(sheet)).toHaveAccessibleName("Show 1 transaction");
+    expect(screen.getAllByRole("listitem", { hidden: true })).toHaveLength(
+      before,
+    );
+
+    await user.click(apply(sheet));
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("counts the preview with the search field still in force", async () => {
+    const user = userEvent.setup();
+    renderList(ROWS, "?q=airbnb");
+
+    const sheet = await openSheet(user);
+    // Two rows say "airbnb"; one of them is the refund.
+    expect(apply(sheet)).toHaveAccessibleName("Show 2 transactions");
+    await user.click(sheet.getByRole("button", { name: "Revenue" }));
+    expect(apply(sheet)).toHaveAccessibleName("Show 1 transaction");
+  });
+
+  it("says so rather than promising nothing when the draft matches nothing", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    const sheet = await openSheet(user);
+    await user.click(sheet.getByRole("button", { name: "With a receipt" }));
+    expect(apply(sheet)).toHaveAccessibleName("No transactions match");
+  });
+
+  it("throws the draft away when the sheet is closed without applying", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const before = screen.getAllByRole("listitem").length;
+
+    let sheet = await openSheet(user);
+    await user.click(sheet.getByRole("button", { name: "From a series" }));
+    await user.click(sheet.getByRole("button", { name: "Close" }));
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(before);
+
+    sheet = await openSheet(user);
+    expect(
+      sheet.getByRole("button", { name: "From a series" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("resets the draft, and is inert until there is one to reset", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    const sheet = await openSheet(user);
+    const reset = sheet.getByRole("button", { name: "Reset" });
+    expect(reset).toBeDisabled();
+
+    await user.click(sheet.getByRole("radio", { name: "This year" }));
+    expect(reset).toBeEnabled();
+
+    await user.click(reset);
+    expect(sheet.getByRole("radio", { name: "Any time" })).toBeChecked();
+    expect(reset).toBeDisabled();
+  });
+
+  it("leaves the applied filters alone when the draft is reset", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    let sheet = await openSheet(user);
+    await user.click(sheet.getByRole("button", { name: "From a series" }));
+    await user.click(apply(sheet));
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+
+    sheet = await openSheet(user);
+    await user.click(sheet.getByRole("button", { name: "Reset" }));
+    // Reset emptied the draft; the list is still filtered, because nothing
+    // has been applied since.
+    expect(screen.getAllByRole("listitem", { hidden: true })).toHaveLength(1);
+    await user.click(apply(sheet));
+    expect(screen.getAllByRole("listitem")).toHaveLength(ROWS.length);
+  });
+
+  it("marks the single-select sections as radios and the rest as toggles", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    // When and Sort look exactly like the sections around them, so the
+    // difference has to be in the markup.
+    expect(sheet.getByRole("radio", { name: "Any time" })).toBeChecked();
+    expect(sheet.getByRole("radio", { name: "Newest first" })).toBeChecked();
+    expect(sheet.getByRole("button", { name: "You owe" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("leaves the search field to speak for itself", async () => {
+    renderList(ROWS, "?q=airbnb");
+    expect(filterButton()).toHaveAccessibleName("Filter and sort");
+  });
+
+  it("puts the axes people reach for first above the tall one", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    // Category is the tallest section by far, and sits below the four short
+    // questions so it never pushes the common cases off the first screenful.
+    expect(
+      sheet.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual([
+      "When",
+      "Type",
+      "Amount",
+      "Paid byany of",
+      "Categorytap to open a category",
+      "Your position",
+      "Only show",
+      "Sort",
+    ]);
+  });
+
+  it("hides Type when the group only records one kind", async () => {
+    const user = userEvent.setup();
+    const spendingOnly = ROWS.filter(
+      (entry) => entry.kind === "expense" && !entry.revenue,
+    );
+    renderList(spendingOnly);
+    const sheet = await openSheet(user);
+
+    // The same rule the chip row follows: a section whose every option says
+    // what the list already says can only be switched off.
+    expect(sheet.queryByRole("group", { name: "Type" })).toBeNull();
+    expect(sheet.getByRole("group", { name: "Amount" })).toBeVisible();
+  });
+});
+
+describe("Transactions filter sheet, over one piece of state", () => {
+  it("lights the spine when a category is chosen in the sheet", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    const sheet = await openSheet(user);
+    await user.click(category(sheet, "Lodging"));
+    await user.click(apply(sheet));
+
+    expect(pressedBand("Lodging")).toBeInTheDocument();
+  });
+
+  it("shows the band the spine already has as chosen when the sheet opens", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(band("Lodging"));
+    const sheet = await openSheet(user);
+
+    expect(category(sheet, "Lodging")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the chip row and the sheet's Type section saying the same thing", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(kind("Settlements"));
+    let sheet = await openSheet(user);
+    expect(sheet.getByRole("button", { name: "Settlements" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(sheet.getByRole("button", { name: "Settlements" }));
+    await user.click(apply(sheet));
+    expect(kind("Settlements")).toHaveAttribute("aria-pressed", "false");
+
+    sheet = await openSheet(user);
+    expect(sheet.getByRole("button", { name: "Settlements" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+});
+
+describe("Transactions filter sheet, picking a category", () => {
+  it("opens on what the group has used, and can show the rest", async () => {
+    const user = userEvent.setup();
+    renderList();
+
+    const sheet = await openSheet(user);
+    // Nothing has ever been filed under Pets here.
+    expect(sheet.queryByRole("button", { name: /^Pets, / })).toBeNull();
+
+    await user.click(
+      sheet.getByRole("button", { name: "Show all 15 categories" }),
+    );
+    expect(category(sheet, "Pets")).toBeInTheDocument();
+  });
+
+  it("says how much is in a category before anything is chosen", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    expect(category(sheet, "Lodging")).toHaveAccessibleName(
+      "Lodging, 2 transactions",
+    );
+  });
+
+  it("opens one category at a time, onto the shelves it has", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    await user.click(
+      sheet.getByRole("button", { name: "Show what is under Home" }),
+    );
+    expect(sheet.getByRole("heading", { name: "Utilities" })).toBeVisible();
+    expect(sheet.getByRole("button", { name: "Rent" })).toBeVisible();
+
+    await user.click(
+      sheet.getByRole("button", { name: "Show what is under Transport" }),
+    );
+    expect(sheet.queryByRole("button", { name: "Rent" })).toBeNull();
+  });
+
+  it("gives Other no second step, because there is not one", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    await user.click(
+      sheet.getByRole("button", { name: "Show all 15 categories" }),
+    );
+    expect(
+      sheet.queryByRole("button", { name: "Show what is under Other" }),
+    ).toBeNull();
+    expect(
+      sheet.getByRole("button", { name: "Show what is under Pets" }),
+    ).toBeVisible();
+  });
+
+  it("tells a part of a category from the whole of it", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    await user.click(
+      sheet.getByRole("button", { name: "Show what is under Home" }),
+    );
+    await user.click(sheet.getByRole("button", { name: "Internet" }));
+
+    // The parent is not selected — the pair is the filter — and the row says
+    // how much of it has been taken.
+    const parent = category(sheet, "Home");
+    expect(parent).toHaveAttribute("aria-pressed", "false");
+    expect(parent).toHaveAccessibleName("Home, 1 of 20 subcategories");
+
+    await user.click(apply(sheet));
+    // The one Home row in this list carries no subcategory at all, so asking
+    // for Home / Internet is not asking for it.
+    expect(screen.getByText("No transaction matches that")).toBeVisible();
+  });
+
+  it("lets the whole category go of the parts already chosen", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    await user.click(
+      sheet.getByRole("button", { name: "Show what is under Home" }),
+    );
+    await user.click(sheet.getByRole("button", { name: "Internet" }));
+    await user.click(category(sheet, "Home"));
+
+    expect(category(sheet, "Home")).toHaveAccessibleName(
+      "Home, All subcategories",
+    );
+    expect(sheet.getByRole("button", { name: "Internet" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+});
+
+describe("Transactions filter sheet, dates and order", () => {
+  it("prefills a custom range with the group's whole history", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    await user.click(sheet.getByRole("radio", { name: "Pick dates" }));
+
+    const from = sheet.getByLabelText("from");
+    const to = sheet.getByLabelText("to");
+    expect(from).toHaveValue("2019-07-02");
+    expect(to).toHaveValue("2026-08-14");
+    // There is nothing before the group's first transaction to find.
+    expect(from).toHaveAttribute("min", "2019-07-02");
+    expect(to).toHaveAttribute("min", "2019-07-02");
+  });
+
+  it("withholds Largest amount when the amounts are in different currencies", async () => {
+    const user = userEvent.setup();
+    renderList();
+    let sheet = await openSheet(user);
+    expect(
+      sheet.getByRole("radio", { name: "Largest amount" }),
+    ).toBeInTheDocument();
+
+    cleanup();
+    renderList([ROWS[0], { ...ROWS[1], currency: "CHF" }]);
+    sheet = await openSheet(user);
+
+    // Ranking 1 000 JPY above 900 EUR is a coincidence of denominations, not
+    // an answer, so the question is not offered.
+    expect(sheet.queryByRole("radio", { name: "Largest amount" })).toBeNull();
+    expect(sheet.getByRole("radio", { name: "Oldest first" })).toBeVisible();
+  });
+
+  it("reorders the list on apply, and says so on the button", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const sheet = await openSheet(user);
+
+    await user.click(sheet.getByRole("radio", { name: "Oldest first" }));
+    await user.click(apply(sheet));
+
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("Seb paid Padi")).toBeVisible();
+    expect(filterButton()).toHaveAccessibleName(
+      "Filter and sort, 1 filter applied",
+    );
   });
 });

@@ -5,9 +5,19 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireGroupAccess } from "@/lib/actions";
 import { listSpreadEntries } from "@/modules/expenses/service";
-import { loadTransactionPage } from "@/modules/expenses/transactions";
+import { listParticipants } from "@/modules/groups/service";
+import {
+  firstTransactionDate,
+  loadTransactionPage,
+} from "@/modules/expenses/transactions";
 import { hasSettlements } from "@/modules/settlements/service";
 import { isSpending } from "@/modules/expenses/direction";
+import { todayIn } from "@/modules/recurring/schedule";
+import {
+  EXPENSE_CATEGORY_IDS,
+  normalizeLegacyCategory,
+  type ExpenseCategory,
+} from "@/modules/categorization";
 import {
   categoryTotals,
   isCategorised,
@@ -51,11 +61,14 @@ export default async function ExpensesPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [page, spending, settlementsExist] = await Promise.all([
-    loadTransactionPage(access),
-    listSpreadEntries(access.groupId),
-    hasSettlements(access.groupId),
-  ]);
+  const [page, spending, settlementsExist, people, firstDate] =
+    await Promise.all([
+      loadTransactionPage(access),
+      listSpreadEntries(access.groupId),
+      hasSettlements(access.groupId),
+      listParticipants(access.groupId),
+      firstTransactionDate(access.groupId),
+    ]);
 
   const t = await getTranslations("expensesList");
 
@@ -128,6 +141,28 @@ export default async function ExpensesPage({
   }
   if (settlementsExist) kinds.push("settlement");
 
+  /*
+   * What the filter sheet's Category list opens on, and the counts beside it.
+   *
+   * Both are measured over everything the group has recorded, for the same
+   * reason the kind chips are: a count that shrank as its own filter took
+   * effect would be telling the reader about the list rather than about the
+   * group. Legacy codes are resolved first, so a group that has not been
+   * touched since `housing` became `home` finds its rent under Home.
+   *
+   * Only taxonomy codes are counted. Free text kept verbatim by an import is
+   * not a category the sheet can offer, and the spine is where those are
+   * reachable.
+   */
+  const counts: Record<string, number> = {};
+  for (const entry of spending) {
+    const category = normalizeLegacyCategory(entry.category);
+    if (category !== null) counts[category] = (counts[category] ?? 0) + 1;
+  }
+  const used = EXPENSE_CATEGORY_IDS.filter(
+    (category: ExpenseCategory) => counts[category] !== undefined,
+  );
+
   return (
     <Transactions
       groupId={groupId}
@@ -136,6 +171,16 @@ export default async function ExpensesPage({
       kinds={kinds}
       rows={page.rows}
       cursor={page.cursor}
+      members={people.map((person) => ({
+        id: person.id,
+        displayName: person.displayName,
+      }))}
+      used={used}
+      counts={counts}
+      firstDate={firstDate}
+      // The group's own calendar day, not the server's: `This month` has to
+      // mean the month the expense dates were written against.
+      today={todayIn(access.group.timezone)}
     />
   );
 }
