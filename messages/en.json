@@ -1427,14 +1427,13 @@
     "description": "Description",
     "timezone": "Timezone",
     "timezoneHelp": "Recurring expenses are generated according to this timezone.",
-    "save": "Save changes",
+    "saving": "Saving…",
     "saved": "Changes saved",
     "failed": "Those changes could not be saved.",
     "nameAndIcon": "Name & icon",
+    "nameRequired": "The group needs a name.",
     "changeIcon": "Change the group's icon",
-    "descriptionPlaceholder": "What this group is for",
-    "unsaved": "Unsaved changes",
-    "discard": "Discard"
+    "descriptionPlaceholder": "What this group is for"
   },
   "dangerZone": {
     "title": "Danger zone",
