@@ -208,8 +208,16 @@ export function toastUndoable(
   message: string,
   /** `onUndo` may be async; whatever it returns is nobody's business here. */
   undo: { label: string; onUndo: () => unknown },
+  /**
+   * `id` names the toast. A surface that confirms over and over — a settings
+   * card writing itself as it is edited — passes one, and each confirmation
+   * then replaces the one already on screen, with its eight seconds starting
+   * again, rather than stacking a column of them.
+   */
+  options?: { id?: string | number },
 ) {
   return toast.success(message, {
+    id: options?.id,
     duration: UNDO_WINDOW,
     action: {
       label: undo.label,

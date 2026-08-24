@@ -117,6 +117,23 @@ describe("a toast", () => {
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
 
+  it("replaces the confirmation it was told to name", async () => {
+    renderWithIntl(<Toaster />);
+    const saved = () =>
+      toastUndoable(
+        "Changes saved",
+        { label: "Undo", onUndo: vi.fn() },
+        { id: "group-settings" },
+      );
+
+    // A settings card writing itself as it is edited says this over and over;
+    // a named toast is one surface being updated, not a column being built.
+    await raise(saved);
+    await raise(saved);
+
+    expect(document.querySelectorAll("[data-sonner-toast]")).toHaveLength(1);
+  });
+
   it("names its close button in the reader's language", async () => {
     const user = userEvent.setup();
     renderWithIntl(<Toaster />, { locale: "fr" });

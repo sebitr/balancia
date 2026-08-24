@@ -1414,14 +1414,13 @@
     "description": "Description",
     "timezone": "Fuseau horaire",
     "timezoneHelp": "Les dépenses récurrentes sont générées selon ce fuseau horaire.",
-    "save": "Enregistrer",
+    "saving": "Enregistrement…",
     "saved": "Modifications enregistrées",
     "failed": "Ces modifications n'ont pas pu être enregistrées.",
     "nameAndIcon": "Nom et icône",
+    "nameRequired": "Le groupe a besoin d'un nom.",
     "changeIcon": "Changer l'icône du groupe",
-    "descriptionPlaceholder": "À quoi sert ce groupe",
-    "unsaved": "Non enregistré",
-    "discard": "Annuler"
+    "descriptionPlaceholder": "À quoi sert ce groupe"
   },
   "dangerZone": {
     "title": "Zone sensible",
