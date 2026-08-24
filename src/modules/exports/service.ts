@@ -10,8 +10,9 @@ import { listSettlements } from "@/modules/settlements/service";
 import { listRecurringExpenses } from "@/modules/recurring/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { money, toMajorString } from "@/modules/currencies/money";
+import { isSpending, type EntryDirection } from "@/modules/expenses/direction";
 import { toCsv } from "./csv";
-import { buildXlsx, xlsxNumber, type XlsxSheet } from "./xlsx";
+import { buildXlsx, xlsxNumber, type XlsxCell, type XlsxSheet } from "./xlsx";
 
 /**
  * Group export.
@@ -24,7 +25,9 @@ import { buildXlsx, xlsxNumber, type XlsxSheet } from "./xlsx";
  *    boundary in this codebase carries them. It is also the one format that
  *    reads back in: `src/modules/imports/balancia-json.ts` restores it, so a
  *    change to the shape below is a change to what a backup can be restored
- *    from — bump `exportVersion` rather than quietly moving a field.
+ *    from — bump `exportVersion` rather than quietly moving a field. Adding
+ *    one is not that: an older instance ignores a field it does not know,
+ *    where a version it does not know makes it refuse the whole file.
  *  - **CSV** is for a spreadsheet or a script. One row per share, so "what did
  *    this person owe on this expense" is a filter rather than a calculation.
  *  - **XLSX** is the same data as a workbook, for people who do not want to
@@ -70,6 +73,11 @@ export interface GroupExport {
   }[];
   readonly expenses: readonly {
     readonly id: string;
+    /**
+     * `out` — spending. `in` — income. Without it a restored backup files
+     * every income as spending, and the balance it contributes flips sign.
+     */
+    readonly direction: EntryDirection;
     readonly description: string;
     readonly notes: string | null;
     readonly category: string | null;
@@ -113,6 +121,7 @@ export interface GroupExport {
   }[];
   readonly recurringExpenses: readonly {
     readonly id: string;
+    readonly direction: EntryDirection;
     readonly description: string;
     readonly category: string | null;
     readonly subcategory: string | null;
@@ -185,6 +194,7 @@ export async function buildGroupExport(
     })),
     expenses: expenses.map((expense) => ({
       id: expense.id,
+      direction: expense.direction,
       description: expense.description,
       notes: expense.notes,
       category: expense.category,
@@ -227,6 +237,7 @@ export async function buildGroupExport(
     })),
     recurringExpenses: recurring.map((template) => ({
       id: template.id,
+      direction: template.direction,
       description: template.description,
       category: template.category,
       subcategory: template.subcategory,
@@ -265,6 +276,7 @@ const EXPENSE_HEADERS = [
   "Description",
   "Category",
   "Subcategory",
+  "Direction",
   "Currency",
   "Total",
   "Person",
@@ -314,6 +326,10 @@ function expenseRows(data: GroupExport): (string | number | null)[][] {
         expense.description,
         expense.category,
         expense.subcategory,
+        // Spelt out rather than left as the stored code: a spreadsheet's
+        // "Total" column sums income and spending together, and this is the
+        // column that says which of the two a row was.
+        isSpending(expense.direction) ? "spending" : "income",
         expense.currency,
         major(expense.amount, expense.currency),
         share?.displayName ?? payer?.displayName ?? "Unknown",
@@ -413,14 +429,23 @@ export function toWorkbook(data: GroupExport): Uint8Array {
       name: "Expenses",
       rows: [
         [...EXPENSE_HEADERS],
-        ...expenseRows(data).map((row) => numericise(row, [4, 6, 7, 9, 13])),
+        ...numericise(expenseRows(data), EXPENSE_HEADERS, [
+          "Total",
+          "Owed share",
+          "Paid",
+          "Converted total",
+          "Receipts",
+        ]),
       ],
     },
     {
       name: "Payments",
       rows: [
         [...PAYMENT_HEADERS],
-        ...paymentRows(data).map((row) => numericise(row, [4, 6])),
+        ...numericise(paymentRows(data), PAYMENT_HEADERS, [
+          "Amount",
+          "Converted amount",
+        ]),
       ],
     },
     { name: "People", rows: [[...PEOPLE_HEADERS], ...peopleRows(data)] },
@@ -428,7 +453,7 @@ export function toWorkbook(data: GroupExport): Uint8Array {
       name: "Balances",
       rows: [
         [...BALANCE_HEADERS],
-        ...balanceRows(data).map((row) => numericise(row, [2])),
+        ...numericise(balanceRows(data), BALANCE_HEADERS, ["Balance"]),
       ],
     },
   ];
@@ -438,15 +463,32 @@ export function toWorkbook(data: GroupExport): Uint8Array {
 /**
  * Marks the money columns as numeric so a spreadsheet can sum them, passing the
  * decimal literal straight through rather than via a JavaScript number.
+ *
+ * The columns are named, not numbered. They were numbered once, and the day a
+ * `Subcategory` column was inserted ahead of them every number pointed one
+ * column to its left: the workbook went out with the currency code written
+ * into a numeric cell. A name cannot drift when a column is added, and one
+ * that is not in the sheet throws here rather than shipping a broken cell.
  */
 function numericise(
-  row: readonly (string | number | null)[],
-  columns: readonly number[],
-) {
-  return row.map((cell, index) => {
-    if (!columns.includes(index) || cell === null || cell === "") return cell;
-    return typeof cell === "number" ? cell : xlsxNumber(cell);
+  rows: readonly (readonly (string | number | null)[])[],
+  headers: readonly string[],
+  numeric: readonly string[],
+): XlsxCell[][] {
+  const columns = numeric.map((name) => {
+    const index = headers.indexOf(name);
+    if (index === -1) {
+      throw new Error(`No "${name}" column to make numeric`);
+    }
+    return index;
   });
+
+  return rows.map((row) =>
+    row.map((cell, index) => {
+      if (!columns.includes(index) || cell === null || cell === "") return cell;
+      return typeof cell === "number" ? cell : xlsxNumber(cell);
+    }),
+  );
 }
 
 /** A filesystem-safe basename for the downloaded file. */

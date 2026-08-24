@@ -19,12 +19,17 @@ name, currency mode or timezone.
 | In the file           | On restore                                              |
 | --------------------- | ------------------------------------------------------- |
 | Expenses and payments | Restored, amount for amount                             |
+| Spending or income    | Restored the way each entry was recorded                |
 | Multiple payers       | Restored                                                |
 | Categories            | Restored as the code they were filed under              |
 | People                | Offered in the preview, matched by name or added as new |
 | Recurring expenses    | **Not restored** — set them up again                    |
 | Receipts              | **Not in the export at all**                            |
 | Converted amounts     | **Not restored** — see _Currency handling_ below        |
+
+Whether an entry was money out or money in comes back with it. A backup
+written before Balancia recorded income says nothing about direction, and every
+entry in one restores as spending — which is what all of them were.
 
 People are matched by their ID inside the file, not by the name printed beside
 each share, so a rename between two exports never splits one person in two.

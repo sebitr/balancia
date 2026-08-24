@@ -22,6 +22,7 @@ import {
 import { recordActivity } from "@/modules/activity/service";
 import type { LearnedMerchantMapping } from "@/modules/categorization";
 import { loadGroupMappings } from "@/modules/categorization/service";
+import { DEFAULT_DIRECTION } from "@/modules/expenses/direction";
 import { dispatchNotifications } from "@/modules/notifications/service";
 import { recordImportNotification } from "@/modules/notifications/events";
 import { telemetry } from "@/lib/telemetry";
@@ -669,6 +670,7 @@ async function insertImportedExpense(
     .insert(expenses)
     .values({
       groupId,
+      direction: staged.direction ?? DEFAULT_DIRECTION,
       description: staged.description,
       notes: staged.notes ?? null,
       ...categorizeImportedExpense(staged, { mappings }),

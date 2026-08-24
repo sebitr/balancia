@@ -1,5 +1,9 @@
 import { isSupportedCurrency } from "@/modules/currencies/iso-4217";
 import {
+  DEFAULT_DIRECTION,
+  isEntryDirection,
+} from "@/modules/expenses/direction";
+import {
   ImportParseError,
   type ImportAdapter,
   type ImportWarning,
@@ -52,6 +56,7 @@ interface BackupShare {
 }
 
 interface BackupExpense {
+  direction?: unknown;
   description?: unknown;
   notes?: unknown;
   category?: unknown;
@@ -323,6 +328,13 @@ export const balanciaJsonAdapter: ImportAdapter = {
         rowNumber,
         row: {
           kind: "expense",
+          // A backup written before entries had a direction says nothing here,
+          // and every entry in it was spending. Anything else unreadable is
+          // read the same way rather than skipping a row that is otherwise
+          // whole.
+          direction: isEntryDirection(expense.direction)
+            ? expense.direction
+            : DEFAULT_DIRECTION,
           description: asText(expense.description) ?? "Imported expense",
           category: asText(expense.category),
           subcategory: asText(expense.subcategory),

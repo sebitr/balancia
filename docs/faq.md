@@ -104,6 +104,9 @@ Yes. Any group can be downloaded as:
 - CSV for broad compatibility; or
 - an Excel workbook.
 
+Every row in the CSV and the workbook says whether the entry was spending or
+income, so a total taken from the file does not add the two together.
+
 Self-hosters also control the PostgreSQL database and receipt storage directly.
 Receipts are not yet bundled into the group export and must be downloaded
 separately.

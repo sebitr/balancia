@@ -7,6 +7,8 @@
  * past this boundary — not Splitwise's, and not Balancia's own export.
  */
 
+import type { EntryDirection } from "@/modules/expenses/direction";
+
 export type ImportSourceFormat =
   "splitwise_csv" | "splitwise_json" | "balancia_json";
 
@@ -24,6 +26,12 @@ export interface StagedShare {
 
 export interface StagedExpense {
   readonly kind: "expense";
+  /**
+   * Which way the money went. Only a Balancia backup carries one; absent means
+   * `out`, which is what every other source records and what an entry written
+   * before income existed was.
+   */
+  readonly direction?: EntryDirection;
   readonly description: string;
   readonly category?: string | null;
   /**
