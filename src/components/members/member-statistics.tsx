@@ -34,6 +34,10 @@ import type { Granularity, StatsRange } from "@/modules/groups/member-stats";
  * rather than at the 10px the design drew them at. The scale is seven sizes
  * and an eighth spelled `text-[0.625rem]` is how it drifted to fourteen last
  * time; a point of extra size on a chart label is the cheaper of the two.
+ *
+ * That floor is for labels only — see the same note on `group-statistics`.
+ * The captions and footnotes here are sentences, so they sit a step up at
+ * `text-xs`; the axis, the legend, the tooltip and the avatar discs stay.
  */
 
 export interface StatsBucketView {
@@ -246,7 +250,7 @@ export function MemberStatistics({
         />
       ))}
 
-      <p className="text-2xs leading-relaxed text-pretty text-muted-foreground">
+      <p className="text-xs leading-relaxed text-pretty text-muted-foreground">
         {t("method")}
       </p>
     </section>
@@ -394,7 +398,7 @@ function PaidAgainstShare({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{t("chartTitle")}</h3>
-          <p className="mt-0.5 text-2xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {t(`granularity.${range.granularity}`, {
               count: entry.buckets.length,
             })}
@@ -466,7 +470,7 @@ function PaidAgainstShare({
 
       <div className="flex flex-col gap-2 border-t border-border pt-3">
         <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 text-2xs text-pretty text-muted-foreground">
+          <p className="min-w-0 text-xs text-pretty text-muted-foreground">
             {index === null
               ? t("payerIndexNone")
               : t(viewingSelf ? "payerIndexYou" : "payerIndexThem", {
@@ -585,7 +589,7 @@ function ShareOfGroup({ entry }: { entry: CurrencyStatsView }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{t("shareTitle")}</h3>
-          <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {t.rich("shareCaption", {
               amount: () => (
                 <Amount
@@ -624,7 +628,7 @@ function ShareOfGroup({ entry }: { entry: CurrencyStatsView }) {
         ))}
       </div>
 
-      <p className="text-2xs text-pretty text-muted-foreground">
+      <p className="text-xs text-pretty text-muted-foreground">
         {t("shareFootnote", {
           rank: entry.rank,
           count: entry.members.length,
@@ -763,7 +767,7 @@ function SplitsMostWith({
               <span className="truncate text-sm font-medium">
                 {partner.name}
               </span>
-              <span className="truncate text-2xs text-muted-foreground">
+              <span className="truncate text-xs text-muted-foreground">
                 {t("sharedEntries", { count: partner.entryCount })}
               </span>
             </span>
@@ -775,7 +779,7 @@ function SplitsMostWith({
       </ul>
 
       {entry.topPartnerPercent !== null && (
-        <p className="text-2xs text-pretty text-muted-foreground">
+        <p className="text-xs text-pretty text-muted-foreground">
           {t(viewingSelf ? "partnersFootnoteYou" : "partnersFootnoteThem", {
             name: top.name,
             percent: entry.topPartnerPercent,
@@ -817,11 +821,11 @@ function ActivityCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{t("activityTitle")}</h3>
-          <p className="mt-0.5 text-2xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {t("activityCaption")}
           </p>
         </div>
-        <p className="shrink-0 text-2xs text-muted-foreground tabular-nums">
+        <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
           {t("runs", { longest: longestRun, current: currentRun })}
         </p>
       </div>
@@ -973,7 +977,7 @@ function RecordsCard({
     <div className={CARD}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{t("recordsTitle")}</h3>
-        <span className="shrink-0 text-2xs text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {showCurrency
             ? `${records.currency} · ${t("allTime")}`
             : t("allTime")}
@@ -985,7 +989,7 @@ function RecordsCard({
           <div key={row.key} className="flex items-center gap-3 py-2">
             <div className="min-w-0 flex-1">
               <dt className="text-sm font-medium">{row.label}</dt>
-              <dd className="truncate text-2xs text-muted-foreground">
+              <dd className="truncate text-xs text-muted-foreground">
                 {row.sub}
               </dd>
             </div>

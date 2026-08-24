@@ -231,7 +231,7 @@ export default async function TransactionDetailPage({
             tone={tone}
             locale={locale}
           />
-          <h1 className="text-[17px] font-medium">{expense.description}</h1>
+          <h1 className="text-base font-medium">{expense.description}</h1>
         </div>
 
         <MetaStrip>
@@ -340,7 +340,7 @@ export default async function TransactionDetailPage({
       {expense.notes && (
         <Section label={t("notes")}>
           <DetailCard>
-            <p className="px-3.5 py-3 text-[14px] whitespace-pre-wrap">
+            <p className="px-3.5 py-3 text-sm whitespace-pre-wrap">
               {expense.notes}
             </p>
           </DetailCard>
