@@ -617,12 +617,14 @@
       "expense": {
         "created": "a ajouté une dépense",
         "updated": "a modifié une dépense",
-        "deleted": "a supprimé une dépense"
+        "deleted": "a supprimé une dépense",
+        "restored": "a rétabli une dépense"
       },
       "settlement": {
         "created": "a enregistré un paiement",
         "updated": "a modifié un paiement",
-        "deleted": "a supprimé un paiement"
+        "deleted": "a supprimé un paiement",
+        "restored": "a rétabli un paiement"
       },
       "member": {
         "added": "a ajouté un membre",
@@ -644,6 +646,7 @@
         "created": "a configuré une dépense récurrente",
         "updated": "a modifié une dépense récurrente",
         "deleted": "a supprimé une dépense récurrente",
+        "restored": "a rétabli une dépense récurrente",
         "generated": "a généré une dépense récurrente"
       },
       "import": {
@@ -1363,10 +1366,12 @@
     "paused": "Suspendue",
     "delete": "Supprimer",
     "removeTitle": "Supprimer « {description} » ?",
-    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe.",
+    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe. Tu peux annuler juste après.",
     "keep": "La conserver",
     "remove": "Supprimer",
     "removed": "Dépense récurrente supprimée",
+    "restored": "Dépense récurrente rétablie",
+    "restoreFailed": "Impossible de la rétablir.",
     "failed": "Cela n'a pas fonctionné."
   },
   "groupForm": {
@@ -1848,11 +1853,13 @@
     "delete": {
       "trigger": "Supprimer",
       "title": "Supprimer cette écriture ?",
-      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. C'est irréversible depuis l'application.",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après.",
       "keep": "La garder",
       "confirm": "Supprimer",
       "deleted": "Écriture supprimée",
-      "failed": "La suppression a échoué."
+      "restored": "Écriture rétablie",
+      "failed": "La suppression a échoué.",
+      "restoreFailed": "Impossible de la rétablir."
     },
     "gone": {
       "title": "Cette écriture n'est plus là",
@@ -2413,13 +2420,15 @@
       "recurringSaved": "Écriture récurrente enregistrée",
       "paymentRecorded": "Paiement enregistré",
       "changesSaved": "Modifications enregistrées",
-      "deleted": "Écriture supprimée"
+      "deleted": "Écriture supprimée",
+      "restored": "Écriture rétablie"
     },
     "errors": {
       "amountRequired": "Saisis d'abord un montant.",
       "descriptionRequired": "Donne une description à cette écriture.",
       "choosePair": "Choisis qui rembourse qui.",
-      "saveFailed": "Impossible d'enregistrer. Réessaie."
+      "saveFailed": "Impossible d'enregistrer. Réessaie.",
+      "restoreFailed": "Impossible de rétablir cette écriture. Réessaie."
     },
     "sheetTitles": {
       "split": "Paiement et partage",

@@ -34,6 +34,7 @@ import {
   openOnContent,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { toastUndoable } from "@/components/ui/sonner";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
 import type { ScannedExpense } from "@/components/receipts/scan-receipt-dialog";
 import {
@@ -65,6 +66,8 @@ import {
   createSettlementAction,
   deleteExpenseAction,
   deleteSettlementAction,
+  restoreExpenseAction,
+  restoreSettlementAction,
   updateExpenseAction,
   updateSettlementAction,
 } from "@/modules/expenses/actions";
@@ -304,6 +307,7 @@ export function AddEntryForm({
   const tSplit = useTranslations("expenses.split");
   const tCategories = useTranslations("expenses.categories");
   const tMethods = useTranslations("paymentMethods");
+  const tCommon = useTranslations("common");
   const repeatsId = useId();
 
   const splitText = (message: SplitMessage) =>
@@ -917,12 +921,33 @@ export function AddEntryForm({
   };
 
   /**
+   * Puts a deleted entry back. It takes what was being edited as an argument
+   * rather than reading `editing`, because by the time the Undo is pressed
+   * this form has been closed and reopened on something else as often as not.
+   */
+  const onRestore = async (removed: EditingEntry) => {
+    const result =
+      removed.kind === "settlement"
+        ? await restoreSettlementAction(groupId, removed.id)
+        : await restoreExpenseAction(groupId, removed.id);
+    if (!result.ok) {
+      toast.error(result.error ?? t("errors.restoreFailed"));
+      return;
+    }
+    router.refresh();
+    toast.success(t("saved.restored"));
+  };
+
+  /**
    * Removing the entry outright.
    *
    * The detail screens carry a delete of their own, but this drawer can also
    * be reached without passing through one — from a notification, or from a
    * link — and offering "change it" without "remove it" would leave an entry
    * behind with no way out.
+   *
+   * The drawer closes on its way out, so the Undo cannot live in it. It goes
+   * in the toast, which outlives the screen that raised it.
    */
   const onDelete = async () => {
     if (!editing) return;
@@ -936,7 +961,11 @@ export function AddEntryForm({
         setError(result.error ?? t("errors.saveFailed"));
         return;
       }
-      toast.success(t("saved.deleted"));
+      const removed = editing;
+      toastUndoable(t("saved.deleted"), {
+        label: tCommon("undo"),
+        onUndo: () => onRestore(removed),
+      });
       if (onRemoved) onRemoved();
       else router.refresh();
     } finally {

@@ -30,6 +30,8 @@ const {
   toExpense,
   deleteExpense,
   deleteSettlement,
+  restoreExpense,
+  restoreSettlement,
   upload,
   success,
   push,
@@ -45,6 +47,8 @@ const {
   toExpense: vi.fn(),
   deleteExpense: vi.fn(),
   deleteSettlement: vi.fn(),
+  restoreExpense: vi.fn(),
+  restoreSettlement: vi.fn(),
   upload: vi.fn(),
   success: vi.fn(),
   push: vi.fn(),
@@ -61,6 +65,8 @@ vi.mock("@/modules/expenses/actions", () => ({
   convertSettlementToExpenseAction: toExpense,
   deleteExpenseAction: deleteExpense,
   deleteSettlementAction: deleteSettlement,
+  restoreExpenseAction: restoreExpense,
+  restoreSettlementAction: restoreSettlement,
 }));
 vi.mock("@/modules/recurring/actions", () => ({
   createRecurringAction: createRecurring,
@@ -124,6 +130,8 @@ function renderForm(
     toExpense,
     deleteExpense,
     deleteSettlement,
+    restoreExpense,
+    restoreSettlement,
     upload,
     success,
     push,
@@ -145,6 +153,8 @@ function renderForm(
   toExpense.mockResolvedValue({ ok: true, data: { expenseId: "e2" } });
   deleteExpense.mockResolvedValue({ ok: true, data: undefined });
   deleteSettlement.mockResolvedValue({ ok: true, data: undefined });
+  restoreExpense.mockResolvedValue({ ok: true, data: undefined });
+  restoreSettlement.mockResolvedValue({ ok: true, data: undefined });
   upload.mockResolvedValue({
     ok: true,
     file: { id: "att-1", fileName: "bill.pdf" },
@@ -1565,6 +1575,34 @@ describe("editing an entry", () => {
 
     expect(deleteExpense).not.toHaveBeenCalled();
     expect(deleteSettlement).toHaveBeenCalledWith("g1", "s1");
+  });
+
+  /**
+   * The drawer is gone by the time the reader changes their mind, so the offer
+   * has to outlive it — and it has to name the entry that was open when Delete
+   * was pressed, not whatever the form was reopened on afterwards.
+   */
+  it("offers an undo that puts the entry back", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("button", { name: "Delete this entry" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+
+    const [message, options] = success.mock.calls.at(-1) as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+    expect(message).toBe("Entry deleted");
+    expect(options.action.label).toBe("Undo");
+
+    options.action.onClick();
+    expect(restoreExpense).toHaveBeenCalledWith("g1", "e1");
+    expect(restoreSettlement).not.toHaveBeenCalled();
   });
 
   it("has no delete and no update when the entry is new", () => {

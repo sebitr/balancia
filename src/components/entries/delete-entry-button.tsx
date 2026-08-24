@@ -19,7 +19,10 @@ import {
 import {
   deleteExpenseAction,
   deleteSettlementAction,
+  restoreExpenseAction,
+  restoreSettlementAction,
 } from "@/modules/expenses/actions";
+import { toastUndoable } from "@/components/ui/sonner";
 import { ACTION, ACTION_DESTRUCTIVE } from "./detail-blocks";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +37,11 @@ import { cn } from "@/lib/utils";
  * Both tables land here rather than in two near-identical buttons — what
  * differs between removing an expense and removing a repayment is one action
  * import, and the sentence the reader is shown is the same either way.
+ *
+ * The confirmation is not the last word. Deletion is soft, so the toast that
+ * follows carries an Undo for as long as it is on screen. The dialog still
+ * asks first — recalculating a group's balances without an entry is a change
+ * worth agreeing to — but it no longer calls that change irreversible.
  */
 export function DeleteEntryButton({
   groupId,
@@ -59,7 +67,27 @@ export function DeleteEntryButton({
 }) {
   const router = useRouter();
   const t = useTranslations("transactionDetail.delete");
+  const tCommon = useTranslations("common");
   const [pending, setPending] = useState(false);
+
+  /**
+   * Puts the entry back, which by now means putting it back behind the reader:
+   * they are on the list, and may have gone further still. A refresh brings
+   * the entry back into whatever they are looking at instead of hauling them
+   * onto the screen it reappeared on.
+   */
+  const onRestore = async () => {
+    const result =
+      kind === "settlement"
+        ? await restoreSettlementAction(groupId, id)
+        : await restoreExpenseAction(groupId, id);
+    if (!result.ok) {
+      toast.error(result.error ?? t("restoreFailed"));
+      return;
+    }
+    router.refresh();
+    toast.success(t("restored"));
+  };
 
   const onConfirm = async () => {
     setPending(true);
@@ -72,9 +100,13 @@ export function DeleteEntryButton({
         toast.error(result.error ?? t("failed"));
         return;
       }
-      toast.success(t("deleted"));
+      toastUndoable(t("deleted"), {
+        label: tCommon("undo"),
+        onUndo: onRestore,
+      });
       // The screen it was on no longer has anything to show, so leave before
       // refreshing rather than after: a refresh in place would render a 404.
+      // The toast outlives the navigation, so the Undo goes with the reader.
       router.push(backTo);
       router.refresh();
     } finally {

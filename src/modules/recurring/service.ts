@@ -1,5 +1,15 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { getDb, type Database } from "@/lib/db/client";
 import {
@@ -310,6 +320,58 @@ export async function deleteRecurringExpense(
       entityId: templateId,
       ...activityActorFrom(access),
       metadata: { description: deleted[0].description },
+    });
+  });
+}
+
+/**
+ * Puts a deleted template back — the Undo behind the removal toast.
+ *
+ * `next_run_at` is deliberately left null. Deletion cleared it, and the
+ * scheduler already treats a null marker as "work out when this is next due"
+ * — it re-derives the date from the template's last recorded occurrence, under
+ * the same catch-up cap every other template runs under. Restoring therefore
+ * hands the schedule back to the worker rather than guessing at a date here,
+ * and a template deleted and restored inside a minute never notices the gap.
+ *
+ * Expenses the template already generated were never touched by the deletion;
+ * they belong to the group, not to the template that produced them.
+ */
+export async function restoreRecurringExpense(
+  access: GroupAccess,
+  templateId: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  requirePermission(access, "manageRecurring");
+  const db = options.db ?? getDb();
+
+  await db.transaction(async (tx) => {
+    const restored = await tx
+      .update(recurringExpenses)
+      .set({ deletedAt: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(recurringExpenses.id, templateId),
+          eq(recurringExpenses.groupId, access.groupId),
+          isNotNull(recurringExpenses.deletedAt),
+        ),
+      )
+      .returning({ description: recurringExpenses.description });
+
+    if (restored.length === 0) {
+      throw new AuthorizationError(
+        "That template is not part of this group.",
+        "notInGroup",
+      );
+    }
+
+    await recordActivity(tx, {
+      groupId: access.groupId,
+      action: "recurring.restored",
+      entityType: "recurring_expense",
+      entityId: templateId,
+      ...activityActorFrom(access),
+      metadata: { description: restored[0].description },
     });
   });
 }

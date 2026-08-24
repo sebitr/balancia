@@ -84,9 +84,11 @@ The group read also carries `profile` (`description`, `icon`, `iconColor` via
 | POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`                                                                                         |
 | PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`)                                                                        |
 | DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                      |
+| POST   | `/api/groups/:groupId/expenses/:expenseId/restore` | undo for the delete; the expense comes back under its own id, payers and shares intact                                           |
 | POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`                                                                                   |
 | PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema`                                                                                                          |
 | DELETE | `/api/groups/:groupId/settlements/:settlementId`   | soft delete                                                                                                                      |
+| POST   | `/api/groups/:groupId/settlements/:id/restore`     | undo for the delete                                                                                                              |
 | POST   | `/api/groups`                                      | `createGroupSchema` → 201 `{groupId, participantId}`. `ownerDisplayName` defaults to the account name.                           |
 | PATCH  | `/api/groups/:groupId`                             | `updateGroupSchema` fields when `name`/`timezone` are present, and/or `{archived: boolean}` — either half may come alone.        |
 | DELETE | `/api/groups/:groupId`                             | **hard** delete, like the web's danger zone                                                                                      |
@@ -101,11 +103,16 @@ The group read also carries `profile` (`description`, `icon`, `iconColor` via
 | POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id}`                                                                                              |
 | PATCH  | `/api/groups/:groupId/recurring/:templateId`       | `{paused: boolean}`                                                                                                              |
 | DELETE | `/api/groups/:groupId/recurring/:templateId`       | delete the template; generated expenses stay                                                                                     |
+| POST   | `/api/groups/:groupId/recurring/:id/restore`       | undo for the delete; the worker picks the schedule up again on its next tick                                                     |
 | POST   | `/api/groups/:groupId/reminders`                   | `{toParticipantId, message, logToActivity?}` → `RemindResult`; the debt and channel are re-derived server-side, refusals are 422 |
 | PUT    | `/api/groups/:groupId/mute`                        | `{muted: boolean}` — per-user, needs an account                                                                                  |
 | POST   | `/api/notifications/read`                          | `{ids?: [uuid]}`; omit to mark all read                                                                                          |
 | PUT    | `/api/notifications/preferences`                   | all five category booleans                                                                                                       |
 | PATCH  | `/api/profile`                                     | `{preferredCurrency?: code\|null, favoriteCurrencies?: [code]}`                                                                  |
+
+Every restore refuses a row that is not deleted, so a client may replay one
+safely: a second call answers 404 rather than writing a second event about
+something that never left.
 
 Writes require the group to be active (`requireActive`), matching the actions
 — except the group's own PATCH/DELETE, which must work on an archived group
