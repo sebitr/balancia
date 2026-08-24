@@ -1,24 +1,29 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { GroupSettingsForm } from "./group-settings-form";
 
 /**
- * Editing a group's identity, with no Save button on the card.
+ * Editing a group's identity, which is saved as it is edited.
  *
- * The save bar is the whole interaction model here: it is the only way to
- * commit, it only exists while something is unsaved, and Discard has to put
- * back everything — including the icon, which is chosen two views away from
- * the field it belongs to. So these check when the bar appears and what the
- * two buttons on it actually do.
+ * There is no Save button and nothing to press: what is typed goes when the
+ * typing stops or the field is left, what is chosen goes as it is chosen, and
+ * the icon sheet's choices go together when it closes. So these check *when* a
+ * write happens — one per pause rather than one per keystroke — and that the
+ * Undo on the confirmation puts back everything the run of edits changed,
+ * including the icon, which is chosen two views from the field it belongs to.
  */
 
-const { updateGroupAction } = vi.hoisted(() => ({
+const { updateGroupAction, toastUndoable } = vi.hoisted(() => ({
   updateGroupAction: vi.fn(),
+  toastUndoable: vi.fn(),
 }));
 
 vi.mock("@/modules/groups/actions", () => ({ updateGroupAction }));
+// The toast itself is pinned in `sonner.test.tsx`; what matters here is what
+// the card hands it, so this stands in for the real one.
+vi.mock("@/components/ui/sonner", () => ({ toastUndoable, UNDO_WINDOW: 8000 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
@@ -26,6 +31,7 @@ vi.mock("next/navigation", () => ({
 function renderForm() {
   updateGroupAction.mockReset();
   updateGroupAction.mockResolvedValue({ ok: true });
+  toastUndoable.mockReset();
   const view = renderWithIntl(
     <GroupSettingsForm
       groupId="g1"
@@ -41,48 +47,61 @@ function renderForm() {
   return { ...view, user: userEvent.setup() };
 }
 
-/** What the server action was called with, as plain entries. */
-function submitted() {
-  const formData = updateGroupAction.mock.calls[0]?.[1] as FormData;
+/** What one write posted, as plain entries. */
+function posted(call = 0) {
+  const formData = updateGroupAction.mock.calls[call]?.[1] as FormData;
   return (key: string) => formData.get(key);
 }
 
-const saveBar = () => screen.queryByText("Unsaved changes");
+/** The way back the newest confirmation offered. */
+function offeredUndo(): () => void {
+  const newest = toastUndoable.mock.calls.at(-1);
+  if (!newest) throw new Error("nothing was confirmed");
+  return newest[1].onUndo;
+}
+
+const nameField = () => screen.getByLabelText("Name & icon");
 
 describe("GroupSettingsForm", () => {
-  it("keeps the save bar away until something is unsaved", async () => {
+  it("waits for the typing to stop, then writes it once", async () => {
     const { user } = renderForm();
 
-    expect(saveBar()).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Save changes" }),
+      screen.queryByRole("button", { name: /save/i }),
     ).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Name & icon"), "!");
+    await user.type(nameField(), "!!!");
+    // Three keystrokes and nothing sent yet: the pause is what sends it.
+    expect(updateGroupAction).not.toHaveBeenCalled();
 
-    expect(saveBar()).toBeInTheDocument();
-  });
+    await waitFor(() => expect(updateGroupAction).toHaveBeenCalledOnce(), {
+      timeout: 3000,
+    });
 
-  it("posts every field, the icon included, and lowers the bar", async () => {
-    const { user } = renderForm();
-
-    await user.clear(screen.getByLabelText("Name & icon"));
-    await user.type(screen.getByLabelText("Name & icon"), "Porto");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    expect(updateGroupAction).toHaveBeenCalledOnce();
-    const field = submitted();
-    expect(field("name")).toBe("Porto");
+    const field = posted();
+    expect(field("name")).toBe("Lisbon trip!!!");
     expect(field("description")).toBe("Four days");
     expect(field("timezone")).toBe("Europe/Zurich");
-    // Silence would leave the stored icon alone, so the form always says.
+    // Silence would leave the stored icon alone, so the card always says.
     expect(field("icon")).toBe("plane");
     expect(field("iconColor")).toBe("coral");
-
-    expect(saveBar()).not.toBeInTheDocument();
   });
 
-  it("carries an icon chosen in the sheet, and discards it again", async () => {
+  it("writes without waiting when the field is left", async () => {
+    const { user } = renderForm();
+
+    await user.type(nameField(), "!");
+    await user.tab();
+
+    expect(updateGroupAction).toHaveBeenCalledOnce();
+    expect(posted()("name")).toBe("Lisbon trip!");
+
+    await waitFor(() =>
+      expect(screen.queryByText("Saving…")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("holds what the icon sheet changes until it closes", async () => {
     const { user } = renderForm();
 
     await user.click(
@@ -90,23 +109,79 @@ describe("GroupSettingsForm", () => {
     );
     await user.click(screen.getByRole("radio", { name: "tent" }));
     await user.click(screen.getByRole("radio", { name: "blue" }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
 
-    // Choosing is a change like any other: nothing is written yet.
-    expect(saveBar()).toBeInTheDocument();
+    // An icon and a colour are one decision, and the sheet is still open.
     expect(updateGroupAction).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Discard" }));
-    expect(saveBar()).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Done" }));
 
-    // Back to the stored pair, which only a save can prove.
-    await user.type(screen.getByLabelText("Name & icon"), "!");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(updateGroupAction).toHaveBeenCalledOnce();
+    const field = posted();
+    expect(field("icon")).toBe("tent");
+    expect(field("iconColor")).toBe("blue");
+    expect(field("name")).toBe("Lisbon trip");
+  });
 
-    const field = submitted();
+  it("writes a timezone as it is chosen", async () => {
+    const { user } = renderForm();
+
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByLabelText("Search timezones"), "Auckland");
+    await user.keyboard("{Enter}");
+
+    expect(updateGroupAction).toHaveBeenCalledOnce();
+    expect(posted()("timezone")).toBe("Pacific/Auckland");
+  });
+
+  it("offers a way back to what the run of edits began with", async () => {
+    const { user } = renderForm();
+
+    await user.click(
+      screen.getByRole("button", { name: "Change the group's icon" }),
+    );
+    await user.click(screen.getByRole("radio", { name: "tent" }));
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.type(nameField(), "!");
+    await user.tab();
+
+    expect(updateGroupAction).toHaveBeenCalledTimes(2);
+    // One toast, replaced, rather than a column of them.
+    expect(toastUndoable.mock.calls.map((call) => call[2]?.id)).toEqual([
+      "group-settings-g1",
+      "group-settings-g1",
+    ]);
+
+    await act(async () => offeredUndo()());
+    await waitFor(() => expect(updateGroupAction).toHaveBeenCalledTimes(3));
+
+    // Both edits, not just the last one.
+    const field = posted(2);
+    expect(field("name")).toBe("Lisbon trip");
     expect(field("icon")).toBe("plane");
-    expect(field("iconColor")).toBe("coral");
-    expect(field("name")).toBe("Lisbon trip!");
+    expect(nameField()).toHaveValue("Lisbon trip");
+
+    // Undoing is not itself something to undo, so it says nothing.
+    expect(toastUndoable).toHaveBeenCalledTimes(2);
+  });
+
+  it("says a name is missing rather than writing the group out of its own list", async () => {
+    const { user } = renderForm();
+
+    await user.clear(nameField());
+    expect(screen.getByText("The group needs a name.")).toBeInTheDocument();
+
+    // Leaving the field would normally be enough to write it.
+    await user.tab();
+    expect(updateGroupAction).not.toHaveBeenCalled();
+
+    await user.type(nameField(), "Porto");
+    await user.tab();
+
+    await waitFor(() => expect(updateGroupAction).toHaveBeenCalledOnce());
+    expect(posted()("name")).toBe("Porto");
+    expect(
+      screen.queryByText("The group needs a name."),
+    ).not.toBeInTheDocument();
   });
 
   it("says what the currency mode is, and offers nothing to change it", () => {

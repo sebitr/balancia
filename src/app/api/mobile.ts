@@ -313,6 +313,8 @@ export function serializeGroupOverview(overview: GroupOverview) {
       breakdown: {
         paid: minor(position.breakdown.paid),
         share: minor(position.breakdown.share),
+        revenueReceived: minor(position.breakdown.revenueReceived),
+        revenueCredited: minor(position.breakdown.revenueCredited),
         settlementsPaid: minor(position.breakdown.settlementsPaid),
         settlementsReceived: minor(position.breakdown.settlementsReceived),
         otherAdjustments: minor(position.breakdown.otherAdjustments),

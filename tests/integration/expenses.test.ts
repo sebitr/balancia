@@ -8,9 +8,15 @@ import {
   createExpense,
   deleteExpense,
   listExpenses,
+  restoreExpense,
   updateExpense,
 } from "@/modules/expenses/service";
-import { createSettlement } from "@/modules/settlements/service";
+import {
+  createSettlement,
+  deleteSettlement,
+  listSettlements,
+  restoreSettlement,
+} from "@/modules/settlements/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { balancesSumToZero } from "@/modules/balances/engine";
 import {
@@ -383,6 +389,193 @@ describe("soft deletion", () => {
       .from(expenses)
       .where(eq(expenses.id, expenseId));
     expect(row.deletedAt).not.toBeNull();
+  });
+});
+
+/**
+ * Undo, from the server's side.
+ *
+ * The toast's Undo is only honest if a restore really does put the group back
+ * where it was, so what is checked here is the group and not the row: the
+ * expense in its listing, the balances to the cent, and the trail saying both
+ * things happened.
+ */
+describe("restoring what was deleted", () => {
+  async function groupWithExpense() {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+    const expenseId = await createExpense(group.access, {
+      description: "Dinner",
+      notes: "",
+      category: "",
+      amount: "5000",
+      currency: "EUR",
+      exchangeRate: "",
+      expenseDate: isoToday(),
+      payers: [{ participantId: group.ownerParticipantId, amount: "5000" }],
+      splitMethod: "equal",
+      splitEntries: [
+        { participantId: group.ownerParticipantId },
+        { participantId: blaise },
+      ],
+    });
+
+    return { group, blaise, expenseId };
+  }
+
+  it("puts an expense back in the listing and the balances", async () => {
+    const { group, expenseId } = await groupWithExpense();
+    const before = await loadGroupBalances(group.access);
+
+    await deleteExpense(group.access, expenseId);
+    await restoreExpense(group.access, expenseId);
+
+    expect(await listExpenses(group.groupId)).toHaveLength(1);
+
+    // The shares were never touched, so the balances come back identical
+    // rather than merely close.
+    const after = await loadGroupBalances(group.access);
+    expect(after.totalSpend.get("EUR")).toBe(before.totalSpend.get("EUR"));
+    for (const entry of after.currencies) {
+      const was = before.currencies.find(
+        (candidate) => candidate.currency === entry.currency,
+      )!;
+      expect(entry.balances).toEqual(was.balances);
+    }
+  });
+
+  it("records the deletion and the restore, in that order", async () => {
+    const { group, expenseId } = await groupWithExpense();
+
+    await deleteExpense(group.access, expenseId);
+    await restoreExpense(group.access, expenseId);
+
+    const db = getDb();
+    const events = await db
+      .select({ action: activityEvents.action })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.groupId, group.groupId),
+          eq(activityEvents.entityId, expenseId),
+        ),
+      )
+      .orderBy(activityEvents.createdAt);
+
+    expect(events.map((event) => event.action)).toEqual([
+      "expense.created",
+      "expense.deleted",
+      "expense.restored",
+    ]);
+  });
+
+  /**
+   * The guard that makes Undo safe to press twice. A restore only ever clears
+   * a deletion, so a second one — a double tap, a request the network sent
+   * again — finds nothing to clear and refuses rather than writing a second
+   * event about an expense that never left.
+   */
+  it("refuses to restore an expense that is not deleted", async () => {
+    const { group, expenseId } = await groupWithExpense();
+
+    await expect(restoreExpense(group.access, expenseId)).rejects.toThrow(
+      AuthorizationError,
+    );
+
+    await deleteExpense(group.access, expenseId);
+    await restoreExpense(group.access, expenseId);
+    await expect(restoreExpense(group.access, expenseId)).rejects.toThrow(
+      AuthorizationError,
+    );
+  });
+
+  it("will not restore an expense belonging to another group", async () => {
+    const { group, expenseId } = await groupWithExpense();
+    await deleteExpense(group.access, expenseId);
+
+    const stranger = await createTestUser();
+    const theirGroup = await createTestGroup(stranger);
+
+    await expect(restoreExpense(theirGroup.access, expenseId)).rejects.toThrow(
+      AuthorizationError,
+    );
+
+    // And it is still deleted, not quietly resurrected into the wrong group.
+    expect(await listExpenses(group.groupId)).toHaveLength(0);
+  });
+
+  it("puts a repayment back on both sides of it", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+    await createExpense(group.access, {
+      description: "Dinner",
+      notes: "",
+      category: "",
+      amount: "2000",
+      currency: "EUR",
+      exchangeRate: "",
+      expenseDate: isoToday(),
+      payers: [{ participantId: group.ownerParticipantId, amount: "2000" }],
+      splitMethod: "equal",
+      splitEntries: [
+        { participantId: group.ownerParticipantId },
+        { participantId: blaise },
+      ],
+    });
+    const settlementId = await createSettlement(group.access, {
+      fromParticipantId: blaise,
+      toParticipantId: group.ownerParticipantId,
+      amount: "1000",
+      currency: "EUR",
+      exchangeRate: "",
+      settledOn: isoToday(),
+      notes: "Paid back",
+    });
+
+    await deleteSettlement(group.access, settlementId);
+    // Deleted, the repayment stops squaring them.
+    const owing = await loadGroupBalances(group.access);
+    expect(
+      owing.currencies
+        .find((entry) => entry.currency === "EUR")!
+        .balances.every((balance) => balance.amount === 0n),
+    ).toBe(false);
+
+    await restoreSettlement(group.access, settlementId);
+
+    expect(await listSettlements(group.groupId)).toHaveLength(1);
+    const square = await loadGroupBalances(group.access);
+    expect(
+      square.currencies
+        .find((entry) => entry.currency === "EUR")!
+        .balances.every((balance) => balance.amount === 0n),
+    ).toBe(true);
+    // A repayment is not spending, restored any more than created.
+    expect(square.totalSpend.get("EUR")).toBe(2000n);
+  });
+
+  it("refuses to restore a repayment that is not deleted", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+    const settlementId = await createSettlement(group.access, {
+      fromParticipantId: blaise,
+      toParticipantId: group.ownerParticipantId,
+      amount: "1000",
+      currency: "EUR",
+      exchangeRate: "",
+      settledOn: isoToday(),
+      notes: "",
+    });
+
+    await expect(restoreSettlement(group.access, settlementId)).rejects.toThrow(
+      AuthorizationError,
+    );
   });
 });
 

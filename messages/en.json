@@ -528,13 +528,21 @@
     "howCalculated": "How this is calculated",
     "positionSheetTitle": "Your position",
     "positionSheetDescription": "The recorded amounts that produce your current balance.",
-    "positionYouPaid": "You paid",
-    "positionYourShare": "Your share",
-    "positionSettlementsPaid": "Settlements paid",
-    "positionSettlementsReceived": "Settlements received",
+    "positionSectionExpenses": "Expenses",
+    "positionYouPaid": "You paid for the group",
+    "positionYourShare": "Your share of the spending",
+    "positionExpensesCaption": "Bills you covered, less the part that was yours to carry.",
+    "positionSectionRevenue": "Revenue",
+    "positionRevenueReceived": "Income you received",
+    "positionRevenueCredited": "Your share of the income",
+    "positionRevenueCaption": "Income that came in through you, less the part that is yours to keep.",
+    "positionSectionSettlements": "Settlements",
+    "positionSettlementsPaid": "Repayments you made",
+    "positionSettlementsReceived": "Repayments you received",
+    "positionSettlementsCaption": "Money already moved between you and the group.",
     "positionOtherAdjustments": "Other adjustments",
     "positionResult": "Resulting balance",
-    "positionRoutingNote": "Suggested settlements may route payments differently to clear the group with fewer transfers.",
+    "positionResultHint": "Sum of the three groups above",
     "suggestedSettlements": "Suggested settlements",
     "viewAll": "View all",
     "settlementDetailTitle": "{from} pays {to}",
@@ -682,12 +690,14 @@
       "expense": {
         "created": "added an expense",
         "updated": "edited an expense",
-        "deleted": "deleted an expense"
+        "deleted": "deleted an expense",
+        "restored": "restored an expense"
       },
       "settlement": {
         "created": "recorded a payment",
         "updated": "edited a payment",
-        "deleted": "deleted a payment"
+        "deleted": "deleted a payment",
+        "restored": "restored a payment"
       },
       "member": {
         "added": "added a member",
@@ -709,6 +719,7 @@
         "created": "set up a recurring expense",
         "updated": "changed a recurring expense",
         "deleted": "removed a recurring expense",
+        "restored": "restored a recurring expense",
         "generated": "generated a recurring expense"
       },
       "import": {
@@ -1428,10 +1439,12 @@
     "paused": "Paused",
     "delete": "Delete",
     "removeTitle": "Remove “{description}”?",
-    "removeBody": "No further expenses will be generated. Expenses it has already created stay in the group.",
+    "removeBody": "No further expenses will be generated. Expenses it has already created stay in the group. You can undo this right after.",
     "keep": "Keep it",
     "remove": "Remove",
     "removed": "Recurring expense removed",
+    "restored": "Recurring expense restored",
+    "restoreFailed": "It could not be put back.",
     "failed": "That did not work."
   },
   "groupForm": {
@@ -1479,14 +1492,13 @@
     "description": "Description",
     "timezone": "Timezone",
     "timezoneHelp": "Recurring expenses are generated according to this timezone.",
-    "save": "Save changes",
+    "saving": "Saving…",
     "saved": "Changes saved",
     "failed": "Those changes could not be saved.",
     "nameAndIcon": "Name & icon",
+    "nameRequired": "The group needs a name.",
     "changeIcon": "Change the group's icon",
-    "descriptionPlaceholder": "What this group is for",
-    "unsaved": "Unsaved changes",
-    "discard": "Discard"
+    "descriptionPlaceholder": "What this group is for"
   },
   "dangerZone": {
     "title": "Danger zone",
@@ -1913,11 +1925,13 @@
     "delete": {
       "trigger": "Delete",
       "title": "Delete this entry?",
-      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after.",
       "keep": "Keep it",
       "confirm": "Delete",
       "deleted": "Entry deleted",
-      "failed": "It could not be deleted."
+      "restored": "Entry restored",
+      "failed": "It could not be deleted.",
+      "restoreFailed": "It could not be put back."
     },
     "gone": {
       "title": "That entry is no longer here",
@@ -2478,13 +2492,15 @@
       "recurringSaved": "Recurring entry saved",
       "paymentRecorded": "Payment recorded",
       "changesSaved": "Changes saved",
-      "deleted": "Entry deleted"
+      "deleted": "Entry deleted",
+      "restored": "Entry restored"
     },
     "errors": {
       "amountRequired": "Enter an amount first.",
       "descriptionRequired": "Give this entry a description.",
       "choosePair": "Choose who is paying whom.",
-      "saveFailed": "That could not be saved. Try again."
+      "saveFailed": "That could not be saved. Try again.",
+      "restoreFailed": "That entry could not be put back. Try again."
     },
     "sheetTitles": {
       "split": "Payment and split",

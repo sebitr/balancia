@@ -8,10 +8,16 @@ import {
   type ActionResult,
 } from "@/lib/actions";
 import { expenseInputSchema, settlementInputSchema } from "./schemas";
-import { createExpense, deleteExpense, updateExpense } from "./service";
+import {
+  createExpense,
+  deleteExpense,
+  restoreExpense,
+  updateExpense,
+} from "./service";
 import {
   createSettlement,
   deleteSettlement,
+  restoreSettlement,
   updateSettlement,
 } from "@/modules/settlements/service";
 
@@ -80,6 +86,28 @@ export async function deleteExpenseAction(
   });
 
   if (result.ok) revalidateGroup(groupId);
+  return result;
+}
+
+/**
+ * Undo for a deletion, offered by the toast the deletion raises.
+ *
+ * It revalidates the entry's own screen as well as the group's, because the
+ * reader may already be looking at the detail page of what they just put back.
+ */
+export async function restoreExpenseAction(
+  groupId: string,
+  expenseId: string,
+): Promise<ActionResult> {
+  const result = await runAction("expenses.restore", async () => {
+    const access = await requireGroupAccess(groupId, { requireActive: true });
+    await restoreExpense(access, expenseId);
+  });
+
+  if (result.ok) {
+    revalidateGroup(groupId);
+    revalidatePath(`/groups/${groupId}/expenses/${expenseId}`);
+  }
   return result;
 }
 
@@ -202,5 +230,22 @@ export async function deleteSettlementAction(
   });
 
   if (result.ok) revalidateGroup(groupId);
+  return result;
+}
+
+/** Undo for a deletion — see `restoreExpenseAction`. */
+export async function restoreSettlementAction(
+  groupId: string,
+  settlementId: string,
+): Promise<ActionResult> {
+  const result = await runAction("settlements.restore", async () => {
+    const access = await requireGroupAccess(groupId, { requireActive: true });
+    await restoreSettlement(access, settlementId);
+  });
+
+  if (result.ok) {
+    revalidateGroup(groupId);
+    revalidatePath(`/groups/${groupId}/settlements/${settlementId}`);
+  }
   return result;
 }

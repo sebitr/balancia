@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { toastUndoable } from "@/components/ui/sonner";
 import { savePreferencesAction } from "@/modules/notifications/actions";
 import type { NotificationPreferences } from "@/modules/notifications/types";
 
@@ -29,10 +30,15 @@ export function NotificationPreferencesForm({
   defaultValue: NotificationPreferences;
 }) {
   const t = useTranslations("notificationSettings");
+  const tCommon = useTranslations("common");
   const [preferences, setPreferences] = useState(defaultValue);
   const [isPending, startTransition] = useTransition();
 
-  const toggle = (key: keyof NotificationPreferences, value: boolean) => {
+  const toggle = (
+    key: keyof NotificationPreferences,
+    value: boolean,
+    announce = true,
+  ) => {
     const next = { ...preferences, [key]: value };
     // Optimistic: the switch should move under the finger, and a failure puts
     // it back rather than leaving it lying about the saved state.
@@ -44,7 +50,17 @@ export function NotificationPreferencesForm({
         toast.error(result.error ?? t("saveFailed"));
         return;
       }
-      toast.success(t("saved"));
+      if (announce) {
+        // Named for the switch rather than the card: flicking two of them
+        // leaves two ways back, and flicking one twice replaces its own
+        // confirmation instead of adding to a pile. Undoing says nothing —
+        // the switch moving back is the answer.
+        toastUndoable(
+          t("saved"),
+          { label: tCommon("undo"), onUndo: () => toggle(key, !value, false) },
+          { id: `notify-${key}` },
+        );
+      }
     });
   };
 

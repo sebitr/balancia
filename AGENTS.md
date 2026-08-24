@@ -81,6 +81,16 @@ half-point tier below that, which is how two labels showing the same kind of
 thing ended up a point apart on one card. The balance heroes are the exception:
 those display numerals are deliberate one-offs.
 
+`src/components/ui/type-scale.test.ts` fails the build on an arbitrary size
+below the top of the scale, so the one-offs stay allowed and the drift does
+not. It was written after the entry detail screens were found rendering a 10px
+uppercase label on a phone: they had been transcribed from a 390pt handoff as
+literals, and a literal sits out the point every step gains below `md`.
+
+`text-2xs` is the floor, and it is for labels — avatar initials, a badge count,
+a category pill, a chart axis tick. Nothing read as a sentence goes there. A
+footnote or a caption starts at `text-xs`.
+
 Every step is a point larger below `md`, set once by redefining `--text-*` in
 `globals.css`. Never move those tokens into an `@theme inline` block — inline
 substitutes the value and the whole lever stops working.

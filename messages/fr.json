@@ -528,13 +528,21 @@
     "howCalculated": "Comment ce montant est calculé",
     "positionSheetTitle": "Ta situation",
     "positionSheetDescription": "Les montants enregistrés qui donnent ton solde actuel.",
-    "positionYouPaid": "Tu as payé",
-    "positionYourShare": "Ta part",
-    "positionSettlementsPaid": "Remboursements versés",
-    "positionSettlementsReceived": "Remboursements reçus",
+    "positionSectionExpenses": "Dépenses",
+    "positionYouPaid": "Tu as payé pour le groupe",
+    "positionYourShare": "Ta part des dépenses",
+    "positionExpensesCaption": "Les factures que tu as réglées, moins la part qui te revenait.",
+    "positionSectionRevenue": "Revenus",
+    "positionRevenueReceived": "Revenus que tu as encaissés",
+    "positionRevenueCredited": "Ta part des revenus",
+    "positionRevenueCaption": "Les revenus encaissés par toi, moins la part qui te revient.",
+    "positionSectionSettlements": "Remboursements",
+    "positionSettlementsPaid": "Remboursements que tu as versés",
+    "positionSettlementsReceived": "Remboursements que tu as reçus",
+    "positionSettlementsCaption": "L'argent déjà passé entre toi et le groupe.",
     "positionOtherAdjustments": "Autres ajustements",
     "positionResult": "Solde obtenu",
-    "positionRoutingNote": "Les règlements suggérés peuvent acheminer l'argent différemment afin de solder le groupe avec moins de virements.",
+    "positionResultHint": "Somme des trois groupes ci-dessus",
     "suggestedSettlements": "Règlements suggérés",
     "viewAll": "Tout voir",
     "settlementDetailTitle": "{from} paie {to}",
@@ -682,12 +690,14 @@
       "expense": {
         "created": "a ajouté une dépense",
         "updated": "a modifié une dépense",
-        "deleted": "a supprimé une dépense"
+        "deleted": "a supprimé une dépense",
+        "restored": "a rétabli une dépense"
       },
       "settlement": {
         "created": "a enregistré un paiement",
         "updated": "a modifié un paiement",
-        "deleted": "a supprimé un paiement"
+        "deleted": "a supprimé un paiement",
+        "restored": "a rétabli un paiement"
       },
       "member": {
         "added": "a ajouté un membre",
@@ -709,6 +719,7 @@
         "created": "a configuré une dépense récurrente",
         "updated": "a modifié une dépense récurrente",
         "deleted": "a supprimé une dépense récurrente",
+        "restored": "a rétabli une dépense récurrente",
         "generated": "a généré une dépense récurrente"
       },
       "import": {
@@ -1428,10 +1439,12 @@
     "paused": "Suspendue",
     "delete": "Supprimer",
     "removeTitle": "Supprimer « {description} » ?",
-    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe.",
+    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe. Tu peux annuler juste après.",
     "keep": "La conserver",
     "remove": "Supprimer",
     "removed": "Dépense récurrente supprimée",
+    "restored": "Dépense récurrente rétablie",
+    "restoreFailed": "Impossible de la rétablir.",
     "failed": "Cela n'a pas fonctionné."
   },
   "groupForm": {
@@ -1479,14 +1492,13 @@
     "description": "Description",
     "timezone": "Fuseau horaire",
     "timezoneHelp": "Les dépenses récurrentes sont générées selon ce fuseau horaire.",
-    "save": "Enregistrer",
+    "saving": "Enregistrement…",
     "saved": "Modifications enregistrées",
     "failed": "Ces modifications n'ont pas pu être enregistrées.",
     "nameAndIcon": "Nom et icône",
+    "nameRequired": "Le groupe a besoin d'un nom.",
     "changeIcon": "Changer l'icône du groupe",
-    "descriptionPlaceholder": "À quoi sert ce groupe",
-    "unsaved": "Non enregistré",
-    "discard": "Annuler"
+    "descriptionPlaceholder": "À quoi sert ce groupe"
   },
   "dangerZone": {
     "title": "Zone sensible",
@@ -1913,11 +1925,13 @@
     "delete": {
       "trigger": "Supprimer",
       "title": "Supprimer cette écriture ?",
-      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. C'est irréversible depuis l'application.",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après.",
       "keep": "La garder",
       "confirm": "Supprimer",
       "deleted": "Écriture supprimée",
-      "failed": "La suppression a échoué."
+      "restored": "Écriture rétablie",
+      "failed": "La suppression a échoué.",
+      "restoreFailed": "Impossible de la rétablir."
     },
     "gone": {
       "title": "Cette écriture n'est plus là",
@@ -2478,13 +2492,15 @@
       "recurringSaved": "Écriture récurrente enregistrée",
       "paymentRecorded": "Paiement enregistré",
       "changesSaved": "Modifications enregistrées",
-      "deleted": "Écriture supprimée"
+      "deleted": "Écriture supprimée",
+      "restored": "Écriture rétablie"
     },
     "errors": {
       "amountRequired": "Saisis d'abord un montant.",
       "descriptionRequired": "Donne une description à cette écriture.",
       "choosePair": "Choisis qui rembourse qui.",
-      "saveFailed": "Impossible d'enregistrer. Réessaie."
+      "saveFailed": "Impossible d'enregistrer. Réessaie.",
+      "restoreFailed": "Impossible de rétablir cette écriture. Réessaie."
     },
     "sheetTitles": {
       "split": "Paiement et partage",

@@ -482,7 +482,7 @@ describe("the migration that rewrites the stored rows", () => {
    * whole `drizzle/` directory rather than against one file.
    */
   const sql = readFileSync(
-    path.join(process.cwd(), "drizzle", "0020_bright_ultron.sql"),
+    path.join(process.cwd(), "drizzle", "0021_bright_ultron.sql"),
     "utf8",
   );
 

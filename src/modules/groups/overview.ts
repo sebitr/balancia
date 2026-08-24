@@ -9,8 +9,10 @@ import {
   contributionsOf,
   totalSpendByCurrency,
   type BalanceInputExpense,
+  type Contribution,
   CurrencyBalances,
   type RepaymentSuggestion,
+  type Revenue,
 } from "@/modules/balances/engine";
 
 /**
@@ -41,13 +43,27 @@ export interface CurrencyPosition {
   readonly amount: bigint;
   /** Ordered by amount, descending. Empty when the user is square. */
   readonly counterparties: readonly PositionCounterparty[];
-  /** The explainable components behind the resulting balance. */
+  /**
+   * The explainable components behind the resulting balance, in three pairs.
+   *
+   * Sign convention the copy depends on: money the reader holds on the
+   * group's behalf lowers their balance. So spending contributes
+   * `paid - share`, income contributes `revenueCredited - revenueReceived`,
+   * and repayments contribute `settlementsPaid - settlementsReceived`. Every
+   * figure here is the positive magnitude that was recorded.
+   */
   readonly breakdown: {
+    /** Spending entries only. */
     readonly paid: bigint;
+    /** Spending entries only. */
     readonly share: bigint;
+    /** Income the reader collected on the group's behalf. */
+    readonly revenueReceived: bigint;
+    /** The part of the group's income credited to the reader. */
+    readonly revenueCredited: bigint;
     readonly settlementsPaid: bigint;
     readonly settlementsReceived: bigint;
-    /** Income, reimbursements and any other signed remainder. */
+    /** Signed remainder. Zero unless a future entry kind escapes the three. */
     readonly otherAdjustments: bigint;
   };
 }
@@ -102,6 +118,54 @@ export interface GroupOverview {
   readonly suggestions: readonly SettlementSuggestion[];
   /** When the reader last opened this group. Null on a first visit. */
   readonly lastOpenedAt: Date | null;
+}
+
+/** The three pairs of magnitudes a position is explained by. */
+export interface PositionParts {
+  readonly contribution?: Contribution;
+  readonly revenue?: Revenue;
+  readonly settlement?: { readonly paid: bigint; readonly received: bigint };
+}
+
+/**
+ * Splits one position into the ledger that produced it.
+ *
+ * No balance is derived here — `amount` arrives already computed, and this
+ * only says which recorded magnitudes account for it. Each pair is signed the
+ * same way: what the reader put in raises their balance, what they hold on the
+ * group's behalf lowers it. So spending contributes `paid - share`, income
+ * contributes `credited - received`, repayments contribute
+ * `paid - received`, and `otherAdjustments` is whatever the three could not
+ * explain — zero for every entry kind that exists today, and the reason a
+ * fourth one could not silently go missing.
+ */
+export function positionBreakdownOf(
+  amount: bigint,
+  parts: PositionParts,
+): CurrencyPosition["breakdown"] {
+  const paid = parts.contribution?.paid ?? 0n;
+  const share = parts.contribution?.share ?? 0n;
+  const revenueReceived = parts.revenue?.received ?? 0n;
+  const revenueCredited = parts.revenue?.credited ?? 0n;
+  const settlementsPaid = parts.settlement?.paid ?? 0n;
+  const settlementsReceived = parts.settlement?.received ?? 0n;
+  const explained =
+    paid -
+    share +
+    revenueCredited -
+    revenueReceived +
+    settlementsPaid -
+    settlementsReceived;
+
+  return {
+    paid,
+    share,
+    revenueReceived,
+    revenueCredited,
+    settlementsPaid,
+    settlementsReceived,
+    otherAdjustments: amount - explained,
+  };
 }
 
 /**
@@ -288,6 +352,7 @@ export async function loadGroupOverview(
 
   for (const entry of balances.currencies) {
     const contribution = balances.contributions.get(entry.currency);
+    const revenue = balances.revenues.get(entry.currency);
     const settlement = balances.settlementsFor.get(entry.currency);
 
     rows.push(...orderBalanceRows(entry, balances.participantNames, self));
@@ -313,11 +378,6 @@ export async function loadGroupOverview(
       (balance) => balance.participantId === self,
     );
     const amount = mine?.amount ?? 0n;
-    const paid = contribution?.paid ?? 0n;
-    const share = contribution?.share ?? 0n;
-    const settlementsPaid = settlement?.paid ?? 0n;
-    const settlementsReceived = settlement?.received ?? 0n;
-    const explained = paid - share + settlementsPaid - settlementsReceived;
     positions.push({
       currency: entry.currency,
       amount,
@@ -326,13 +386,11 @@ export async function loadGroupOverview(
         self,
         balances.participantNames,
       ),
-      breakdown: {
-        paid,
-        share,
-        settlementsPaid,
-        settlementsReceived,
-        otherAdjustments: amount - explained,
-      },
+      breakdown: positionBreakdownOf(amount, {
+        contribution,
+        revenue,
+        settlement,
+      }),
     });
   }
 

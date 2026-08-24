@@ -145,8 +145,15 @@
     {
       "idx": 20,
       "version": "7",
-      "when": 1787347563041,
-      "tag": "0020_bright_ultron",
+      "when": 1787603939038,
+      "tag": "0020_restored_activity_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787604539038,
+      "tag": "0021_bright_ultron",
       "breakpoints": true
     }
   ]

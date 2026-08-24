@@ -314,6 +314,50 @@ export interface Contribution {
   readonly share: bigint;
 }
 
+/** What one participant collected for the group, and what they may keep. */
+export interface Revenue {
+  /** Money that came in through this participant and belongs to the group. */
+  readonly received: bigint;
+  /** The part of the group's income that is theirs. */
+  readonly credited: bigint;
+}
+
+/**
+ * One participant's payer and share totals per currency, over the entries a
+ * caller cares about.
+ *
+ * Spending and income are the same arithmetic with opposite signs, so they are
+ * also the same tally. What differs is only which entries are counted and what
+ * the two halves are called, and both of those are the caller's business.
+ */
+function tallyBy(
+  expenses: readonly BalanceInputExpense[],
+  participantId: string,
+  wanted: (direction: EntryDirection | undefined) => boolean,
+): Map<string, { payers: bigint; shares: bigint }> {
+  const totals = new Map<string, { payers: bigint; shares: bigint }>();
+
+  for (const expense of expenses) {
+    if (!wanted(expense.direction)) continue;
+    const payers = expense.payers
+      .filter((payer) => payer.participantId === participantId)
+      .reduce((accumulator, payer) => accumulator + payer.amount, 0n);
+    const shares = expense.shares
+      .filter((entry) => entry.participantId === participantId)
+      .reduce((accumulator, entry) => accumulator + entry.amount, 0n);
+
+    if (payers === 0n && shares === 0n) continue;
+
+    const running = totals.get(expense.currency) ?? { payers: 0n, shares: 0n };
+    totals.set(expense.currency, {
+      payers: running.payers + payers,
+      shares: running.shares + shares,
+    });
+  }
+
+  return totals;
+}
+
 /**
  * One participant's side of the ledger, per currency.
  *
@@ -323,33 +367,44 @@ export interface Contribution {
  *
  * Spending only. Income is left out because neither word survives it — nobody
  * "paid" the rent they received, and calling their credit a "share" inverts
- * its meaning. So `paid - share` is the part of the balance that spending
- * explains; in a group with income it is no longer the whole balance.
+ * its meaning. `revenuesOf` is its mirror image, and the two together account
+ * for every entry in the group.
  */
 export function contributionsOf(
   expenses: readonly BalanceInputExpense[],
   participantId: string,
 ): Map<string, Contribution> {
   const totals = new Map<string, Contribution>();
-
-  for (const expense of expenses) {
-    if (!isSpending(expense.direction)) continue;
-    const paid = expense.payers
-      .filter((payer) => payer.participantId === participantId)
-      .reduce((accumulator, payer) => accumulator + payer.amount, 0n);
-    const share = expense.shares
-      .filter((entry) => entry.participantId === participantId)
-      .reduce((accumulator, entry) => accumulator + entry.amount, 0n);
-
-    if (paid === 0n && share === 0n) continue;
-
-    const running = totals.get(expense.currency) ?? { paid: 0n, share: 0n };
-    totals.set(expense.currency, {
-      paid: running.paid + paid,
-      share: running.share + share,
-    });
+  for (const [currency, tally] of tallyBy(
+    expenses,
+    participantId,
+    isSpending,
+  )) {
+    totals.set(currency, { paid: tally.payers, share: tally.shares });
   }
+  return totals;
+}
 
+/**
+ * The income counterpart of `contributionsOf`, per currency.
+ *
+ * Both magnitudes are positive, as they are stored. The sign convention lives
+ * with the reader of this map: money held on the group's behalf lowers the
+ * holder's balance, so a position is explained by `credited - received` —
+ * the mirror image of `paid - share`.
+ */
+export function revenuesOf(
+  expenses: readonly BalanceInputExpense[],
+  participantId: string,
+): Map<string, Revenue> {
+  const totals = new Map<string, Revenue>();
+  for (const [currency, tally] of tallyBy(
+    expenses,
+    participantId,
+    (direction) => !isSpending(direction),
+  )) {
+    totals.set(currency, { received: tally.payers, credited: tally.shares });
+  }
   return totals;
 }
 

@@ -175,7 +175,7 @@ The migration, the importers, the API, the learned mappings, the statistics
 and the row renderer all go through it rather than keeping their own table.
 
 Stored rows are rewritten by `drizzle/0019_fast_nighthawk.sql` (the merge) and
-`drizzle/0020_bright_ultron.sql` (this one). Both are pure `UPDATE`s: the
+`drizzle/0021_bright_ultron.sql` (this one). Both are pure `UPDATE`s: the
 columns are plain nullable text, so nothing here is a type change, and a row
 either migration misses still reads, because the normaliser runs at render
 time as well.

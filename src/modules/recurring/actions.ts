@@ -11,6 +11,7 @@ import {
   createRecurringExpense,
   deleteRecurringExpense,
   recurringInputSchema,
+  restoreRecurringExpense,
   setRecurringPaused,
 } from "./service";
 
@@ -54,6 +55,20 @@ export async function deleteRecurringAction(
   const result = await runAction("recurring.delete", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
     await deleteRecurringExpense(access, templateId);
+  });
+
+  if (result.ok) revalidatePath(`/groups/${groupId}/recurring`);
+  return result;
+}
+
+/** Undo for a removal, offered by the toast the removal raises. */
+export async function restoreRecurringAction(
+  groupId: string,
+  templateId: string,
+): Promise<ActionResult> {
+  const result = await runAction("recurring.restore", async () => {
+    const access = await requireGroupAccess(groupId, { requireActive: true });
+    await restoreRecurringExpense(access, templateId);
   });
 
   if (result.ok) revalidatePath(`/groups/${groupId}/recurring`);

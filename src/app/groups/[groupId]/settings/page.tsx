@@ -22,8 +22,9 @@ import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
  * Ordered by how often it is opened for each: what the group is called, then
  * the link that lets everybody else in, then getting the data out, then the
  * two screens this one is the way to, then the two ways to end it. The invite
- * link sits that high because it is the only live control here — the rest
- * describes the group, that one decides who else is in it. The currency mode
+ * link sits that high because it is the one control here that reaches past the
+ * group — the rest says what the group is, that one says who else is in it.
+ * Every card writes as it is used; none of them has a Save. The currency mode
  * used to be a card here; it cannot be changed, so it is a line at the foot of
  * Details instead.
  */
@@ -49,9 +50,7 @@ export default async function GroupSettingsPage({
   const now = new Date().toISOString();
 
   return (
-    // The last card clears the save bar, which is only there when the form is
-    // dirty but must never be the thing that hides Delete.
-    <div className="space-y-5 pb-12">
+    <div className="space-y-5">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">
         {t("title")}
       </h1>

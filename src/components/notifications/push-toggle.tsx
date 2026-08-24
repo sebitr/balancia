@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { BellOff, BellRing, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { toastUndoable } from "@/components/ui/sonner";
 import { usePushSubscription } from "./use-push-subscription";
 
 /**
@@ -51,6 +52,15 @@ export function PushToggle() {
     );
   }
 
+  /** Subscribing this browser, whether asked for by the button or by an Undo. */
+  const turnOn = async () => {
+    if (await enable()) {
+      router.refresh();
+    } else {
+      toast.error(t("pushFailed"));
+    }
+  };
+
   const sendTest = async () => {
     setTesting(true);
     try {
@@ -80,7 +90,14 @@ export function PushToggle() {
             disabled={busy}
             onClick={async () => {
               if (await disable()) {
-                toast.success(t("deviceRemoved"));
+                // The permission is still granted, so turning it back on is a
+                // resubscribe rather than another prompt — which makes this a
+                // real way back rather than a button that reopens the dialog.
+                toastUndoable(
+                  t("deviceRemoved"),
+                  { label: tCommon("undo"), onUndo: turnOn },
+                  { id: "push-subscription" },
+                );
                 router.refresh();
               }
             }}
@@ -89,17 +106,7 @@ export function PushToggle() {
             {t("pushDisable")}
           </Button>
         ) : (
-          <Button
-            size="sm"
-            disabled={busy}
-            onClick={async () => {
-              if (await enable()) {
-                router.refresh();
-              } else {
-                toast.error(t("pushFailed"));
-              }
-            }}
-          >
+          <Button size="sm" disabled={busy} onClick={turnOn}>
             <BellRing aria-hidden="true" />
             {t("pushEnable")}
           </Button>

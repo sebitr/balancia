@@ -1,16 +1,22 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { toastUndoable, UNDO_WINDOW } from "@/components/ui/sonner";
 import { CurrencyModeNote } from "@/components/groups/currency-mode-note";
 import { GroupIconPicker } from "@/components/groups/group-icon-picker";
 import { GroupIconTile } from "@/components/groups/group-icon";
@@ -42,18 +48,45 @@ function same(a: Draft, b: Draft): boolean {
   );
 }
 
+/** What `updateGroupAction` reads, which is every field on every write. */
+function formDataFor(draft: Draft): FormData {
+  const data = new FormData();
+  data.set("name", draft.name);
+  data.set("description", draft.description);
+  // Silence would leave the stored icon alone, so this always says.
+  data.set("icon", draft.icon ?? "");
+  data.set("iconColor", draft.color);
+  data.set("timezone", draft.timezone);
+  return data;
+}
+
+/** How long typing has to stop before what was typed is sent. */
+const QUIET = 800;
+
 /**
  * What the group calls itself.
  *
- * There is no Save button in the card. Changing anything raises a bar over the
- * bottom navigation instead, and it stays there until the change is saved or
- * discarded — so the answer to "did that take?" is on screen rather than in
- * the memory of having pressed something.
+ * Nothing here is saved by pressing anything. A field that is typed in goes
+ * once the typing stops or the field is left, a control that is chosen goes as
+ * it is chosen, and the two choices in the icon sheet go together when the
+ * sheet closes — one write for a visit to it rather than one per tap.
  *
- * That means the persisted values are held here as well as the draft: the bar
- * appears when the two differ, Discard copies one onto the other, and a save
- * moves the baseline forward without waiting for the refresh to bring the new
- * record back.
+ * The confirmation carries the way back. Each write raises the same named
+ * toast, so a run of edits replaces the one already on screen instead of
+ * stacking a column of them, and its Undo restores the values as they stood
+ * before that run began rather than before its last keystroke — the baseline
+ * is taken at the first save of the run and forgotten when the toast goes.
+ * Undoing is written like any other change but announces nothing: the fields
+ * going back to what they were is the answer.
+ *
+ * So the draft is held twice — as state, which the fields read, and as refs,
+ * which a write that started a keystroke ago reads. `persisted` is what the
+ * server is known to hold; it moves forward on a save rather than waiting for
+ * the refresh to bring the new record back.
+ *
+ * An empty name is the one thing that stops all this: the server would refuse
+ * it and the group list would have nothing left to show, so the field says so
+ * and nothing is sent until it is filled in again.
  *
  * The currency mode is the one thing here that cannot be edited, and it sits
  * at the foot of the same card rather than in one of its own — it is a fact
@@ -93,39 +126,155 @@ export function GroupSettingsForm({
     timezone,
   };
 
-  const [persisted, setPersisted] = useState(stored);
   const [draft, setDraft] = useState(stored);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const dirty = !same(draft, persisted);
-  const edit = (changes: Partial<Draft>) =>
-    setDraft((current) => ({ ...current, ...changes }));
+  const draftNow = useRef(stored);
+  const persisted = useRef(stored);
+  const inFlight = useRef(false);
+  const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const onSubmit = async (formData: FormData) => {
-    // Read before the await: the draft this save is for, not whatever it has
-    // become by the time the server answers.
-    const saving = draft;
-    setPending(true);
+  // What Undo would put back, and the timer that forgets it once the toast
+  // offering it has gone.
+  const undoTo = useRef<Draft | null>(null);
+  const forget = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // One toast for this group's settings, replaced rather than repeated.
+  const toastId = `group-settings-${groupId}`;
+
+  const clear = (
+    timer: React.RefObject<ReturnType<typeof setTimeout> | null>,
+  ) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+
+  /** Puts a whole run of edits back, and writes that without announcing it. */
+  const undo = (back: Draft) => {
+    undoTo.current = null;
+    clear(forget);
+    clear(quiet);
+    draftNow.current = back;
+    setDraft(back);
+    void save(false);
+  };
+
+  const offerUndo = (before: Draft) => {
+    undoTo.current ??= before;
+    const back = undoTo.current;
+    clear(forget);
+    forget.current = setTimeout(() => {
+      undoTo.current = null;
+    }, UNDO_WINDOW);
+
+    toastUndoable(
+      t("saved"),
+      { label: tCommon("undo"), onUndo: () => undo(back) },
+      { id: toastId },
+    );
+  };
+
+  /**
+   * Writes the newest draft, and then whatever it became while that one was in
+   * the air. A refused write is not retried on its own — the next edit is the
+   * retry, and until then the card still shows what was typed.
+   */
+  const save = async (announce = true): Promise<void> => {
+    if (inFlight.current) return;
+    const next = draftNow.current;
+    const before = persisted.current;
+    if (same(next, before) || next.name.trim() === "") return;
+
+    inFlight.current = true;
+    setSaving(true);
     try {
-      const result = await updateGroupAction(groupId, formData);
+      const result = await updateGroupAction(groupId, formDataFor(next));
       if (!result.ok) {
         toast.error(result.error ?? t("failed"));
         return;
       }
-      setPersisted(saving);
-      toast.success(t("saved"));
-      router.refresh();
+      persisted.current = next;
+      if (announce) offerUndo(before);
     } finally {
-      setPending(false);
+      inFlight.current = false;
+      setSaving(false);
     }
+
+    if (!same(draftNow.current, persisted.current)) {
+      await save();
+      return;
+    }
+    // The header, the group list and the nav were all drawn by the server with
+    // the old name on them. Once, at the end of the run, rather than once per
+    // keystroke.
+    router.refresh();
   };
 
+  /**
+   * A change to the draft, and when it is written: typing waits for a pause, a
+   * control that is chosen goes at once, and what the icon sheet changes is
+   * held until it closes.
+   */
+  const edit = (
+    changes: Partial<Draft>,
+    when: "typed" | "chosen" | "held" = "typed",
+  ) => {
+    const next = { ...draftNow.current, ...changes };
+    draftNow.current = next;
+    setDraft(next);
+
+    clear(quiet);
+    if (when === "held") return;
+    if (when === "chosen") {
+      void save();
+      return;
+    }
+    quiet.current = setTimeout(() => void save(), QUIET);
+  };
+
+  const closePicker = () => {
+    setPickerOpen(false);
+    void save();
+  };
+
+  // The newest `save`, for a cleanup that must not close over a stale draft.
+  const latest = useRef(save);
+  useEffect(() => {
+    latest.current = save;
+  });
+
+  useEffect(
+    () => () => {
+      clear(quiet);
+      clear(forget);
+      // Typing and then leaving is still a change: it goes with them.
+      void latest.current();
+    },
+    [],
+  );
+
+  const nameMissing = draft.name.trim() === "";
+
   return (
-    <form action={onSubmit}>
+    <>
       <Card>
         <CardHeader>
           <CardTitle>{t("details")}</CardTitle>
+          {/* For the eye only: the toast is what announces the outcome, and a
+              reader who is told "Saving…" and then "Changes saved" for every
+              pause in their typing has been told twice. */}
+          <CardAction>
+            {saving && (
+              <span
+                aria-hidden="true"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
+                <Loader2 className="size-3.5 animate-spin" />
+                {t("saving")}
+              </span>
+            )}
+          </CardAction>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
@@ -153,12 +302,25 @@ export function GroupSettingsForm({
                 name="name"
                 value={draft.name}
                 onChange={(event) => edit({ name: event.target.value })}
+                onBlur={() => void save()}
                 required
+                aria-invalid={nameMissing}
+                aria-describedby={
+                  nameMissing ? `${fieldId}name-error` : undefined
+                }
                 maxLength={120}
                 autoComplete="off"
                 className="h-10 flex-1"
               />
             </div>
+            {nameMissing && (
+              <p
+                id={`${fieldId}name-error`}
+                className="text-sm text-destructive"
+              >
+                {t("nameRequired")}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -173,6 +335,7 @@ export function GroupSettingsForm({
               name="description"
               value={draft.description}
               onChange={(event) => edit({ description: event.target.value })}
+              onBlur={() => void save()}
               rows={2}
               maxLength={2000}
               placeholder={t("descriptionPlaceholder")}
@@ -188,7 +351,7 @@ export function GroupSettingsForm({
               id={`${fieldId}timezone`}
               name="timezone"
               value={draft.timezone}
-              onValueChange={(zone) => edit({ timezone: zone })}
+              onValueChange={(zone) => edit({ timezone: zone }, "chosen")}
             />
             <p className="text-xs text-muted-foreground">{t("timezoneHelp")}</p>
           </div>
@@ -202,11 +365,10 @@ export function GroupSettingsForm({
         </div>
       </Card>
 
-      {/* What the picker chose; no visible control submits these. */}
-      <input type="hidden" name="icon" value={draft.icon ?? ""} />
-      <input type="hidden" name="iconColor" value={draft.color} />
-
-      <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
+      <Sheet
+        open={pickerOpen}
+        onOpenChange={(open) => (open ? setPickerOpen(true) : closePicker())}
+      >
         <SheetContent
           side="bottom"
           showCloseButton={false}
@@ -216,47 +378,15 @@ export function GroupSettingsForm({
         >
           <GroupIconPicker
             name={draft.name}
-            onName={(value) => edit({ name: value })}
+            onName={(value) => edit({ name: value }, "held")}
             icon={draft.icon}
             color={draft.color}
-            onIcon={(chosen) => edit({ icon: chosen })}
-            onColor={(chosen) => edit({ color: chosen })}
-            onBack={() => setPickerOpen(false)}
+            onIcon={(chosen) => edit({ icon: chosen }, "held")}
+            onColor={(chosen) => edit({ color: chosen }, "held")}
+            onBack={closePicker}
           />
         </SheetContent>
       </Sheet>
-
-      {dirty && (
-        // Above the bottom bar rather than over it, and pinned to the same
-        // column the content is capped at. The offset is the bar's own height:
-        // see `GroupNav`, which owns the safe area below it.
-        <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 border-t bg-card motion-safe:animate-in motion-safe:duration-[180ms] motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-full">
-          <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
-            {/* Truncated rather than wrapped: a language with a longer word
-                for this must not make the bar three lines tall. */}
-            <span className="min-w-0 truncate text-xs text-muted-foreground">
-              {t("unsaved")}
-            </span>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={pending}
-                onClick={() => setDraft(persisted)}
-              >
-                {t("discard")}
-              </Button>
-              <Button type="submit" size="sm" disabled={pending}>
-                {pending && (
-                  <Loader2 aria-hidden="true" className="animate-spin" />
-                )}
-                {t("save")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </form>
+    </>
   );
 }

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   deleteRecurringAction,
+  restoreRecurringAction,
   setRecurringPausedAction,
 } from "@/modules/recurring/actions";
 
@@ -55,6 +56,21 @@ export function RecurringRowActions({
     return true;
   };
 
+  /**
+   * Puts the template back. Its schedule comes back with it: the worker works
+   * out the next date on its own tick, so a template removed and restored in
+   * the same minute never misses one.
+   */
+  const onRestore = async () => {
+    const result = await restoreRecurringAction(groupId, templateId);
+    if (!result.ok) {
+      toast.error(result.error ?? t("restoreFailed"));
+      return;
+    }
+    router.refresh();
+    toast.success(t("restored"));
+  };
+
   const onTogglePause = async () => {
     if (!(await setPaused(!paused))) return;
     // `paused` is where this started, which is where the undo puts it back.
@@ -70,7 +86,10 @@ export function RecurringRowActions({
       toast.error(result.error ?? t("failed"));
       return;
     }
-    toast.success(t("removed"));
+    toastUndoable(t("removed"), {
+      label: tCommon("undo"),
+      onUndo: onRestore,
+    });
     setConfirmOpen(false);
     router.refresh();
   };

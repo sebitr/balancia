@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toastUndoable } from "@/components/ui/sonner";
 import { setGroupMutedAction } from "@/modules/notifications/actions";
 
 export interface MutableGroup {
@@ -22,6 +23,7 @@ export interface MutableGroup {
  */
 export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
   const t = useTranslations("notificationSettings");
+  const tCommon = useTranslations("common");
   const [state, setState] = useState(groups);
   const [isPending, startTransition] = useTransition();
 
@@ -29,7 +31,7 @@ export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
     return <p className="text-sm text-muted-foreground">{t("noGroups")}</p>;
   }
 
-  const toggle = (groupId: string, muted: boolean) => {
+  const toggle = (groupId: string, muted: boolean, announce = true) => {
     const previous = state;
     setState((current) =>
       current.map((group) =>
@@ -43,7 +45,18 @@ export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
         toast.error(result.error ?? t("saveFailed"));
         return;
       }
-      toast.success(t("saved"));
+      if (announce) {
+        // One way back per group: silencing two of them is two decisions, and
+        // the second must not take away the chance to undo the first.
+        toastUndoable(
+          t("saved"),
+          {
+            label: tCommon("undo"),
+            onUndo: () => toggle(groupId, !muted, false),
+          },
+          { id: `muted-${groupId}` },
+        );
+      }
     });
   };
 
