@@ -1,9 +1,6 @@
 import { DateTime } from "luxon";
 import { isSpending } from "@/modules/expenses/direction";
-import {
-  isValidSubcategory,
-  normalizeLegacyCategory,
-} from "@/modules/categorization/taxonomy";
+import { normalizeLegacyPair } from "@/modules/categorization/taxonomy";
 import {
   STATS_RANGES,
   bucketsFor,
@@ -321,21 +318,32 @@ function selectFacts(
 }
 
 /**
- * The category a stored code means today.
+ * The pair a stored pair means today.
  *
  * A retired code is normalised to its replacement, so `housing` and
  * `utilities` land on `home` and are never drawn under a name the picker
- * stopped offering. Anything that is not a code at all — a label an import
- * kept verbatim — is passed through as itself: it is what somebody actually
- * wrote, and inventing a code for it would be a guess.
+ * stopped offering — and a subcategory that moved takes its parent with it,
+ * so a row still saying `health` / `health_insurance` is counted under
+ * Insurance and not under Health. Anything that is not a code at all — a
+ * label an import kept verbatim — is passed through as itself: it is what
+ * somebody actually wrote, and inventing a code for it would be a guess.
+ *
+ * The migration rewrites these rows; this is what covers the minutes during
+ * an upgrade when a replica on the previous release is still writing them.
  */
-function categoryKeyOf(value: string | null): {
-  key: string | null;
-  known: boolean;
-} {
-  const normalized = normalizeLegacyCategory(value);
-  if (normalized) return { key: normalized, known: true };
-  return { key: value && value.length > 0 ? value : null, known: false };
+function categoryKeyOf(
+  value: string | null,
+  subcategory: string | null = null,
+): { key: string | null; child: string | null; known: boolean } {
+  const pair = normalizeLegacyPair({ category: value, subcategory });
+  if (pair.category) {
+    return { key: pair.category, child: pair.subcategory, known: true };
+  }
+  return {
+    key: value && value.length > 0 ? value : null,
+    child: null,
+    known: false,
+  };
 }
 
 interface CategoryTally {
@@ -413,7 +421,10 @@ function statsForCurrency(
       );
     }
 
-    const { key, known } = categoryKeyOf(fact.category);
+    const { key, child, known } = categoryKeyOf(
+      fact.category,
+      fact.subcategory,
+    );
     const tally = byCategory.get(key) ?? {
       amount: 0n,
       known,
@@ -424,11 +435,8 @@ function statsForCurrency(
     // does not — `travel` / `flights`, filed before travel was retired — falls
     // into the parent's remainder, where it is reported as spending nobody has
     // filed rather than as a child of a category it never belonged to.
-    if (known && key && isValidSubcategory(key, fact.subcategory)) {
-      const child = fact.subcategory;
-      if (child) {
-        tally.children.set(child, (tally.children.get(child) ?? 0n) + total);
-      }
+    if (known && key && child) {
+      tally.children.set(child, (tally.children.get(child) ?? 0n) + total);
     }
     byCategory.set(key, tally);
 
@@ -797,10 +805,11 @@ function recordsFor(input: GroupStatsInput, currency: string): GroupRecords {
     const payer = [...fact.payers].sort((a, b) =>
       byAmountDesc(a.amount, b.amount),
     )[0];
+    const filed = categoryKeyOf(fact.category, fact.subcategory);
     biggestEntry = {
       description: fact.description,
-      category: categoryKeyOf(fact.category).key,
-      subcategory: fact.subcategory,
+      category: filed.key,
+      subcategory: filed.child,
       date: fact.expenseDate,
       amount: total,
       paidBy: payer ? (names.get(payer.participantId) ?? null) : null,

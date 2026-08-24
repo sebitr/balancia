@@ -47,7 +47,8 @@ describe("the source's own vocabulary", () => {
     ["TV/Phone/Internet", "home", "internet"],
     ["Sports", "activities", "sports"],
     ["Childcare", "kids_family", "childcare"],
-    ["Taxes", "fees", "taxes"],
+    ["Education", "education", "school"],
+    ["Taxes", "finance_admin", "taxes"],
     // Vague leaves map to the category alone. "Medical expenses" could be a
     // dentist, a prescription or a premium, and the row does not say which.
     ["Medical expenses", "health", null],
@@ -127,6 +128,11 @@ describe("the source's own vocabulary", () => {
     // Splitwise's own capitalisation is still read as the group it is.
     expect(sourceCategory("Entertainment")).toBeNull();
     expect(sourceCategory("Utilities")).toBeNull();
+    // `insurance` is a code of ours now, but Splitwise's "Insurance" is a
+    // group whose leaves scatter across every policy there is. It waits
+    // behind the description for the same reason the other two do.
+    expect(sourceCategory("Insurance")).toBeNull();
+    expect(sourceCategory("Assurances")).toBeNull();
   });
 
   it("declines the labels that mean nothing on their own", () => {
@@ -322,7 +328,7 @@ describe("a real export, end to end", () => {
       // "Entretien" is Splitwise's own word, and Hornbach agrees with it.
       Hornbach: pair("home", "maintenance"),
       "Décompte Electricite 25": pair("home", "electricity"),
-      "parapente cadeau célia": pair("gifts"),
+      "parapente cadeau célia": pair("gifts_donations"),
       // "Général" says nothing, and neither of these descriptions says more.
       Revolu: pair(null),
       "Barre de son": pair(null),
@@ -378,5 +384,55 @@ describe("a backup written by an older Balancia", () => {
         expense({ category: "housing", subcategory: "not_a_real_leaf" }),
       ),
     ).toEqual({ category: "home", subcategory: null });
+  });
+
+  it("migrates the two codes the taxonomy renamed", () => {
+    expect(
+      categorizeImportedExpense(
+        expense({ category: "fees", subcategory: "bank_fees" }),
+      ),
+    ).toEqual({ category: "finance_admin", subcategory: "bank_fees" });
+
+    expect(
+      categorizeImportedExpense(
+        expense({ category: "gifts", subcategory: "weddings" }),
+      ),
+    ).toEqual({ category: "gifts_donations", subcategory: "weddings" });
+  });
+
+  it("follows a subcategory that changed parent, and takes the parent with it", () => {
+    // A backup written before `insurance` existed says `health` /
+    // `health_insurance`. Restoring it must give back the answer the user
+    // gave, which lives somewhere else now — not a fresh reading of the
+    // description, and not the bare parent.
+    expect(
+      categorizeImportedExpense(
+        expense({
+          description: "Prime CSS",
+          category: "health",
+          subcategory: "health_insurance",
+        }),
+      ),
+    ).toEqual({ category: "insurance", subcategory: "health" });
+
+    expect(
+      categorizeImportedExpense(
+        expense({ category: "kids_family", subcategory: "school" }),
+      ),
+    ).toEqual({ category: "education", subcategory: "school" });
+
+    expect(
+      categorizeImportedExpense(
+        expense({ category: "entertainment", subcategory: "streaming" }),
+      ),
+    ).toEqual({ category: "subscriptions", subcategory: "streaming" });
+  });
+
+  it("keeps the parent when a subcategory has no successor", () => {
+    expect(
+      categorizeImportedExpense(
+        expense({ category: "fees", subcategory: "late_fees" }),
+      ),
+    ).toEqual({ category: "finance_admin", subcategory: null });
   });
 });

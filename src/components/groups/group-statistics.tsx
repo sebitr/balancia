@@ -175,7 +175,7 @@ const CARD =
  * The colours a category split runs through, richest first.
  *
  * Assigned by rank rather than by category, as on the member screen: the
- * vocabulary is fifteen codes long and an imported label can be anything at
+ * vocabulary is eighteen codes long and an imported label can be anything at
  * all. What the reader needs is to tell the rows apart, not to learn that
  * groceries are permanently plum.
  */
@@ -814,7 +814,7 @@ function WhoCarries({
 /**
  * Where the money went, one level down when the reader asks.
  *
- * An accordion rather than a permanently open tree: fifteen categories with
+ * An accordion rather than a permanently open tree: eighteen categories with
  * their subcategories under them is a wall of a hundred rows on a phone, and
  * the question "what is inside Home" is asked one category at a time.
  */

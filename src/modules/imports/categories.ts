@@ -4,6 +4,7 @@ import {
   isExpenseCategory,
   isValidSubcategory,
   normalizeLegacyCategory,
+  normalizeLegacyPair,
   type ExpenseCategory,
   type ExpenseSubcategory,
   type LearnedMerchantMapping,
@@ -63,15 +64,19 @@ function normalizeLabel(value: string): string {
  * Keys are normalized, so "Frais médicaux", "frais medicaux" and
  * "FRAIS MEDICAUX" are one entry.
  *
- * Two placements are choices rather than translations, and are made here so
+ * Three placements are choices rather than translations, and are made here so
  * they are visible:
  *
- *  - **Insurance** is left out on purpose. Balancia has no insurance code, and
- *    which one is right depends on the policy — the description says
- *    "assurance ménage" or "assurance maladie" and the classifier reads it.
- *  - **Taxes** goes to `fees`, the money-that-buys-nothing bucket. It is not a
- *    bank charge, but it is nearer that than any other code, and the
- *    alternative is a "Taxes" string that no rule and no icon ever reaches.
+ *  - **Insurance** is not in this table but in `COARSE_CATEGORIES` below, so
+ *    it is consulted *after* the description. `insurance` exists as a code
+ *    now, but which policy it was is what the description says — "assurance
+ *    ménage" reaches `insurance` / `home` through the classifier, and only a
+ *    row that says nothing falls back to the bare category.
+ *  - **Taxes** goes to `finance_admin` / `taxes`, which is what that code is
+ *    for: money that buys neither goods nor an experience. Under the old
+ *    `fees` this was a compromise; it is now simply the right shelf.
+ *  - **Education** is its own category rather than a `kids_family` leaf. The
+ *    Splitwise row does not say who was taught, and it no longer has to.
  */
 /** A category, and the subcategory the source was precise enough to imply. */
 export interface CategoryAssignment {
@@ -124,15 +129,15 @@ const SOURCE_CATEGORIES: Readonly<Record<string, Assignment>> = {
   // Life
   childcare: ["kids_family", "childcare"],
   "garde d enfants": ["kids_family", "childcare"],
-  education: ["kids_family", "school"],
+  education: ["education", "school"],
   clothing: ["shopping", "clothing"],
   vetements: ["shopping", "clothing"],
-  gifts: ["gifts", "gifts"],
-  cadeaux: ["gifts", "gifts"],
+  gifts: ["gifts_donations", "gifts"],
+  cadeaux: ["gifts_donations", "gifts"],
   "medical expenses": "health",
   "frais medicaux": "health",
-  taxes: ["fees", "taxes"],
-  impots: ["fees", "taxes"],
+  taxes: ["finance_admin", "taxes"],
+  impots: ["finance_admin", "taxes"],
 
   // Transportation
   bicycle: ["transport", "bike_scooter"],
@@ -156,9 +161,8 @@ const SOURCE_CATEGORIES: Readonly<Record<string, Assignment>> = {
   "chauffage gaz": ["home", "heating"],
   "tv phone internet": ["home", "internet"],
   "tv telephone internet": ["home", "internet"],
-  // Refuse collection is a charge on the home with no bill of its own here.
-  trash: "home",
-  poubelles: "home",
+  trash: ["home", "waste"],
+  poubelles: ["home", "waste"],
   water: ["home", "water"],
   eau: ["home", "water"],
   cleaning: ["home", "cleaning_service"],
@@ -177,6 +181,9 @@ const SOURCE_CATEGORIES: Readonly<Record<string, Assignment>> = {
  */
 const COARSE_CATEGORIES: Readonly<Record<string, ExpenseCategory>> = {
   transportation: "transport",
+  insurance: "insurance",
+  assurance: "insurance",
+  assurances: "insurance",
   transports: "transport",
   entertainment: "entertainment",
   divertissement: "entertainment",
@@ -242,17 +249,18 @@ export function sourceCategory(
   label: string | null | undefined,
 ): CategoryAssignment | null {
   if (!label) return null;
-  // Already one of our codes, spelled exactly as we spell it: it came from a
-  // Balancia export, so it is a decision this app already made rather than a
-  // label to interpret. Checked before anything else — a restore that let the
-  // classifier re-read the description could hand back a different category
-  // than the one it was given.
-  if (isExpenseCategory(label)) return { category: label, subcategory: null };
-  // A Balancia export written before the taxonomy changed still says
-  // `housing` or `family`. It is our own code, just an old one, so it is
-  // translated rather than read as somebody else's label.
-  const legacy = normalizeLegacyCategory(label);
-  if (legacy) return { category: legacy, subcategory: null };
+  // Already one of our codes — spelled as we spell it, or as we used to spell
+  // it. It came from a Balancia export, so it is a decision this app already
+  // made rather than a label to interpret, and it is settled before anything
+  // else: a restore that let the classifier re-read the description could
+  // hand back a different category than the one it was given.
+  //
+  // This answers for the category alone. A row that also carried a
+  // subcategory goes through `normalizeLegacyPair` in
+  // `categorizeImportedExpense`, which is what can move it from `health` to
+  // `insurance`.
+  const own = normalizeLegacyCategory(label);
+  if (own) return { category: own, subcategory: null };
   const normalized = normalizeLabel(label);
   if (normalized === "" || UNINFORMATIVE_LABELS.has(normalized)) return null;
   // "Entertainment" and "Utilities" are group names in Splitwise's tree *and*
@@ -285,18 +293,30 @@ export function categorizeImportedExpense(
   staged: StagedExpense,
   options: { mappings?: readonly LearnedMerchantMapping[] } = {},
 ): { category: string | null; subcategory: string | null } {
+  // A Balancia backup carries the pair the user actually chose, and the pair
+  // is what gets brought up to date: a 2025 export saying `health` /
+  // `health_insurance` restores as `insurance` / `health`, because that is
+  // where the answer they gave lives now. This wins over whatever the label
+  // table would have inferred — restoring your own export must give you back
+  // your own answer, not a fresh reading of it.
+  const own = normalizeLegacyPair({
+    category: staged.category,
+    subcategory: staged.subcategory,
+  });
+  if (own.category) {
+    return { category: own.category, subcategory: own.subcategory };
+  }
+
   const fromSource = sourceCategory(staged.category);
   if (fromSource) {
-    // A Balancia backup carries the pair the user actually chose. It wins over
-    // whatever the label table would have inferred — restoring your own export
-    // must give you back your own answer, not a fresh reading of it. Anything
-    // that does not belong under the resolved category is dropped: a backup
-    // written before `housing` became `home` may well name a child that has no
-    // meaning under the code it migrated to.
+    // Somebody else's leaf, which may have been precise enough to imply a
+    // subcategory. Anything the staged row hung on it is only kept when the
+    // resolved category admits it.
     if (isValidSubcategory(fromSource.category, staged.subcategory)) {
       return {
         category: fromSource.category,
-        subcategory: staged.subcategory || fromSource.subcategory,
+        subcategory: (staged.subcategory ||
+          fromSource.subcategory) as ExpenseSubcategory | null,
       };
     }
     return fromSource;

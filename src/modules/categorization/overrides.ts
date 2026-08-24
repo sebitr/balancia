@@ -91,8 +91,8 @@ const STORE_FORMATS: readonly StoreFormat[] = [
       { marker: tokenize("restaurant"), category: "restaurants" },
       { marker: tokenize("melectronics"), category: "shopping" },
       { marker: tokenize("sportxx"), category: "shopping" },
-      { marker: tokenize("klubschule"), category: "kids_family" },
-      { marker: tokenize("ecole club"), category: "kids_family" },
+      { marker: tokenize("klubschule"), category: "education" },
+      { marker: tokenize("ecole club"), category: "education" },
     ],
   },
 ];

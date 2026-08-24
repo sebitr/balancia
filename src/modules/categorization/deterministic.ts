@@ -292,7 +292,7 @@ function merchantScore(
  * not ranked against each other across categories and never compete with it —
  * the category is settled first, by whatever means (a rule, a learned mapping,
  * the semantic pass), and only then is this asked about *that* category. So it
- * scores at most a dozen rules instead of a hundred and twenty-six, and a
+ * scores at most a dozen rules instead of a hundred and seventy-six, and a
  * strong `fuel` match can never drag a transaction away from `groceries`.
  *
  * Returns the best match and its score, or null. Only merchants and phrases

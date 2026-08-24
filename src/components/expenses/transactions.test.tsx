@@ -456,9 +456,7 @@ describe("Transactions", () => {
     renderList();
 
     expect(within(band("Lodging")).getByText("79%")).toBeInTheDocument();
-    expect(
-      within(band("Restaurants & Drinks")).getByText("5.8%"),
-    ).toBeInTheDocument();
+    expect(within(band("Restaurants")).getByText("5.8%")).toBeInTheDocument();
   });
 
   it("holds several kinds at once rather than swapping between them", async () => {
@@ -897,7 +895,7 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>) {
  * The pinned button at the foot of the sheet.
  *
  * Named by what it promises rather than by a test id, but tightly: the sheet
- * also holds `Show all 15 categories` and a `Show what is under…` caret per
+ * also holds `Show all 18 categories` and a `Show what is under…` caret per
  * category, and any of those would answer to a looser pattern.
  */
 const apply = (sheet: ReturnType<typeof within>) =>
@@ -1152,7 +1150,7 @@ describe("Transactions filter sheet, picking a category", () => {
     expect(sheet.queryByRole("button", { name: /^Pets, / })).toBeNull();
 
     await user.click(
-      sheet.getByRole("button", { name: "Show all 15 categories" }),
+      sheet.getByRole("button", { name: "Show all 18 categories" }),
     );
     expect(category(sheet, "Pets")).toBeInTheDocument();
   });
@@ -1190,7 +1188,7 @@ describe("Transactions filter sheet, picking a category", () => {
     const sheet = await openSheet(user);
 
     await user.click(
-      sheet.getByRole("button", { name: "Show all 15 categories" }),
+      sheet.getByRole("button", { name: "Show all 18 categories" }),
     );
     expect(
       sheet.queryByRole("button", { name: "Show what is under Other" }),
@@ -1214,7 +1212,7 @@ describe("Transactions filter sheet, picking a category", () => {
     // how much of it has been taken.
     const parent = category(sheet, "Home");
     expect(parent).toHaveAttribute("aria-pressed", "false");
-    expect(parent).toHaveAccessibleName("Home, 1 of 20 subcategories");
+    expect(parent).toHaveAccessibleName("Home, 1 of 25 subcategories");
 
     await user.click(apply(sheet));
     // The one Home row in this list carries no subcategory at all, so asking

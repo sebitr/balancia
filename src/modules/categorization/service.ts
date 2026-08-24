@@ -20,6 +20,7 @@ import {
   isTransactionType,
   isValidSubcategory,
   normalizeLegacyCategory,
+  normalizeLegacyPair,
   type ExpenseCategory,
   type ExpenseSubcategory,
   type LearnedMerchantMapping,
@@ -206,12 +207,18 @@ interface MappingRow {
  * rows, and this is what covers the instance that has not restarted its worker
  * yet, or a row written by a replica still running the previous release.
  *
- * The subcategory is dropped whenever it does not belong to the category that
- * came out of that translation: it was learned under a code that no longer
- * exists, so nothing guarantees it still fits.
+ * The *pair* is translated, not just the category: someone who taught this
+ * group that `CSS ASSURANCE` means `health` / `health_insurance` taught it
+ * something that is now `insurance` / `health`, and the whole answer moves.
+ * A subcategory that does not belong to the category it ends on is dropped —
+ * it was learned under a code that no longer exists, so nothing guarantees it
+ * still fits.
  */
 function toMapping(row: MappingRow): LearnedMerchantMapping[] {
-  const category = normalizeLegacyCategory(row.category);
+  const { category, subcategory } = normalizeLegacyPair({
+    category: row.category,
+    subcategory: row.subcategory,
+  });
   if (category === null) return [];
   return [
     {
@@ -219,9 +226,7 @@ function toMapping(row: MappingRow): LearnedMerchantMapping[] {
       rawMerchant: row.rawMerchant,
       normalizedMerchant: row.normalizedMerchant,
       category,
-      subcategory: isValidSubcategory(category, row.subcategory)
-        ? ((row.subcategory || null) as ExpenseSubcategory | null)
-        : null,
+      subcategory,
       transactionType: isTransactionType(row.transactionType)
         ? row.transactionType
         : null,

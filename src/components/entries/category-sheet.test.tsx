@@ -90,7 +90,7 @@ describe("CategorySheet", () => {
       screen.getByRole("heading", { name: /Dinner at the harbour/ }),
     ).toBeInTheDocument();
     expect(chipsUnder(/Dinner at the harbour/)).toEqual([
-      "Restaurants & Drinks",
+      "Restaurants",
       "Groceries",
       "Transport",
     ]);
@@ -112,7 +112,7 @@ describe("CategorySheet", () => {
     });
 
     // Whatever is on the shortlist is taken out of the list below it.
-    expect(chipsUnder("All categories")).not.toContain("Restaurants & Drinks");
+    expect(chipsUnder("All categories")).not.toContain("Restaurants");
     expect(chipsUnder("All categories")).not.toContain("Groceries");
     expect(chipsUnder("All categories")).toContain("Transport");
   });
@@ -179,28 +179,53 @@ describe("CategorySheet", () => {
     expect(onSelect).toHaveBeenLastCalledWith("transport", null);
   });
 
-  it("groups the twenty subcategories of Home under the codes they replaced", async () => {
+  it("shelves Home's twenty-four, four of them under the codes they replaced", async () => {
     renderSheet();
 
     await userEvent.click(screen.getByRole("button", { name: /^Home/ }));
 
-    // The four headings are the shape of what `home` merged, so somebody who
-    // filed rent under Housing for two years still finds their footing.
+    // The first four headings are the shape of what `home` merged, so
+    // somebody who filed rent under Housing for two years still finds their
+    // footing. Moving costs are their own shelf: a removal van and a storage
+    // unit are a month of someone's life, not upkeep.
     for (const heading of [
       "Housing",
       "Utilities",
       "Upkeep & repairs",
       "Furniture & supplies",
+      "Moving & storage",
     ]) {
       expect(
         screen.getByRole("heading", { name: heading }),
       ).toBeInTheDocument();
     }
+    // The premium left for `insurance`; buying the place arrived.
     expect(chipsUnder("Housing")).toEqual([
-      "Home insurance",
+      "Down payment",
+      "Home purchase",
       "Mortgage",
       "Property tax",
       "Rent",
+      "Security deposit",
+    ]);
+    expect(chipsUnder("Moving & storage")).toEqual(["Moving", "Storage"]);
+  });
+
+  it("shelves Transport's sixteen, the car apart from the journey", async () => {
+    renderSheet();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Transport/ }));
+
+    for (const heading of ["Journeys", "Running costs", "Buying & hiring"]) {
+      expect(
+        screen.getByRole("heading", { name: heading }),
+      ).toBeInTheDocument();
+    }
+    expect(chipsUnder("Buying & hiring")).toEqual([
+      "Car rental",
+      "Vehicle financing",
+      "Vehicle lease",
+      "Vehicle purchase",
     ]);
   });
 
