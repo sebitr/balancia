@@ -23,6 +23,7 @@ interface EditableBackup {
   balancia: { exportVersion: number };
   participants: { displayName: string }[];
   expenses: {
+    direction?: string;
     amount: string;
     currency: string;
     payers: { displayName: string }[];
@@ -99,6 +100,38 @@ describe("Balancia backup adapter", () => {
       "transport",
       "travel",
     ]);
+  });
+
+  it("reads which way each entry moved money", () => {
+    // The fixture predates income, so every entry in it is spending — which is
+    // also what a backup that says nothing has to restore as.
+    expect(expenses.map((expense) => expense.direction)).toEqual([
+      "out",
+      "out",
+      "out",
+    ]);
+
+    const withIncome = balanciaJsonAdapter.parse(
+      edited((data) => {
+        data.expenses[1].direction = "in";
+      }),
+    );
+    const restored = withIncome.rows
+      .map((entry) => entry.row)
+      .filter((row): row is StagedExpense => row.kind === "expense");
+    expect(restored.map((row) => row.direction)).toEqual(["out", "in", "out"]);
+  });
+
+  it("reads a direction it does not recognise as spending", () => {
+    const tampered = balanciaJsonAdapter.parse(
+      edited((data) => {
+        data.expenses[0].direction = "sideways";
+      }),
+    );
+    // The row is otherwise whole; filing it as spending is what every backup
+    // written before income already gets, and losing the entry would be worse.
+    expect(tampered.rows).toHaveLength(4);
+    expect((tampered.rows[0].row as StagedExpense).direction).toBe("out");
   });
 
   it("collects every currency used", () => {
