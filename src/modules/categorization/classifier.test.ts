@@ -43,7 +43,7 @@ describe("merchants", () => {
     ["EUROPAPARK", "activities"],
     ["GETYOURGUIDE", "activities"],
     ["TICKETCORNER", "entertainment"],
-    ["INTERFLORA", "gifts"],
+    ["INTERFLORA", "gifts_donations"],
   ];
 
   for (const [description, expected] of cases) {
@@ -70,13 +70,13 @@ describe("phrases, in English and in French", () => {
     ["PHARMACIE CENTRALE", "health"],
     ["Dentist appointment", "health"],
     ["CRECHE LES PETITS", "kids_family"],
-    ["Cantine scolaire", "kids_family"],
-    ["FRAIS BANCAIRES", "fees"],
-    ["BANK ACCOUNT FEE", "fees"],
+    ["Cantine scolaire", "education"],
+    ["FRAIS BANCAIRES", "finance_admin"],
+    ["BANK ACCOUNT FEE", "finance_admin"],
     ["PATHE CINEMA", "entertainment"],
     ["TICKETMASTER CONCERT", "entertainment"],
     ["Vétérinaire", "pets"],
-    ["Charity donation", "gifts"],
+    ["Charity donation", "gifts_donations"],
     ["Ice cream at the lake", "restaurants"],
     ["Glaces au bord du lac", "restaurants"],
     ["Glace italienne", "restaurants"],
@@ -411,7 +411,7 @@ describe("ordinary descriptions", () => {
     ["Forfait mobile", "home"],
     // Out and about.
     ["Plongée", "activities"],
-    ["Fleurs", "gifts"],
+    ["Fleurs", "gifts_donations"],
     ["Nuit d'hôtel", "lodging"],
   ];
 
@@ -461,7 +461,7 @@ describe("words that belong to two languages", () => {
   });
 
   it("keeps perfume out of the food shopping", () => {
-    expect(categoryOf("Eau de parfum")).toBe("shopping");
+    expect(categoryOf("Eau de parfum")).toBe("personal_care");
     expect(categoryOf("Eau")).toBe("groceries");
   });
 
@@ -477,7 +477,7 @@ describe("words that belong to two languages", () => {
   });
 
   it("files an outing bought as a present as a present", () => {
-    expect(categoryOf("Parapente cadeau Célia")).toBe("gifts");
+    expect(categoryOf("Parapente cadeau Célia")).toBe("gifts_donations");
     expect(categoryOf("Parapente")).toBe("activities");
   });
 });
@@ -639,6 +639,10 @@ describe("subcategories", () => {
     ["Netflix", "subscriptions", "streaming"],
     ["EDF", "home", "electricity"],
     ["IKEA", "home", "furniture"],
+    ["Midas", "transport", "vehicle_maintenance"],
+    ["Sephora", "personal_care", "cosmetics"],
+    ["Coursera", "education", "courses"],
+    ["Helsana", "insurance", "health"],
   ];
 
   it.each(named)("reads %s as %s / %s", (text, category, subcategory) => {
@@ -652,6 +656,100 @@ describe("subcategories", () => {
     ]);
     expect(pairOf("Loyer mars")).toEqual(["home", "rent"]);
     expect(pairOf("Billet de train Lausanne")).toEqual(["transport", "train"]);
+  });
+
+  /**
+   * The categories added when the taxonomy grew to eighteen, each reached
+   * from the words rather than from a brand — which is the harder half, and
+   * the one that decides whether a code is actually usable.
+   */
+  it("reaches the car through what was done to it", () => {
+    expect(pairOf("Voiture d'occasion")).toEqual([
+      "transport",
+      "vehicle_purchase",
+    ]);
+    expect(pairOf("Leasing voiture janvier")).toEqual([
+      "transport",
+      "vehicle_lease",
+    ]);
+    expect(pairOf("Prêt auto")).toEqual(["transport", "vehicle_financing"]);
+    expect(pairOf("Garage automobile")).toEqual([
+      "transport",
+      "vehicle_maintenance",
+    ]);
+    expect(pairOf("Immatriculation véhicule")).toEqual([
+      "transport",
+      "vehicle_registration",
+    ]);
+  });
+
+  it("files a premium by what it covers, never by what it insures", () => {
+    // The whole reason `insurance` exists: three of these used to land on
+    // three different categories, so nothing could total them.
+    expect(pairOf("Assurance habitation")).toEqual(["insurance", "home"]);
+    expect(pairOf("Assurance auto")).toEqual(["insurance", "vehicle"]);
+    expect(pairOf("Assurance maladie")).toEqual(["insurance", "health"]);
+    expect(pairOf("Assurance vie")).toEqual(["insurance", "life"]);
+    // Except the animal's, which stays with the animal on purpose.
+    expect(categoryOf("Assurance animaux")).toBe("pets");
+  });
+
+  it("reads buying and leaving a home as the home it is", () => {
+    expect(pairOf("Acquisition immobilière")).toEqual([
+      "home",
+      "home_purchase",
+    ]);
+    expect(pairOf("Dépôt de garantie")).toEqual(["home", "security_deposit"]);
+    expect(pairOf("Société de déménagement")).toEqual(["home", "moving"]);
+    expect(pairOf("Garde-meuble")).toEqual(["home", "storage"]);
+  });
+
+  it("files learning as education whoever is learning", () => {
+    expect(pairOf("Frais de scolarité")).toEqual(["education", "tuition"]);
+    expect(pairOf("Cours de langue")).toEqual(["education", "courses"]);
+    expect(pairOf("Formation professionnelle")).toEqual([
+      "education",
+      "training",
+    ]);
+    expect(pairOf("Fournitures scolaires")).toEqual([
+      "education",
+      "school_supplies",
+    ]);
+  });
+
+  it("files what is done to a person as personal care", () => {
+    expect(pairOf("Coupe de cheveux")).toEqual([
+      "personal_care",
+      "hairdresser",
+    ]);
+    expect(pairOf("Pressing")).toEqual([
+      "personal_care",
+      "laundry_dry_cleaning",
+    ]);
+    expect(categoryOf("Manucure")).toBe("personal_care");
+    // A massage is a spa afternoon until the words say a body hurts.
+    expect(categoryOf("Massage")).toBe("personal_care");
+    expect(categoryOf("Massage thérapeutique")).toBe("health");
+  });
+
+  it("takes in what `fees` never admitted", () => {
+    expect(pairOf("Comptable")).toEqual(["finance_admin", "accounting"]);
+    expect(pairOf("Renouvellement passeport")).toEqual([
+      "finance_admin",
+      "passport_visa",
+    ]);
+    expect(pairOf("Impôt sur le revenu")).toEqual(["finance_admin", "taxes"]);
+    expect(categoryOf("Notaire")).toBe("finance_admin");
+  });
+
+  it("keeps recurrence and category apart", () => {
+    // Balancia has recurring expenses of its own, so a thing that repeats is
+    // not thereby a subscription. Only a purchase whose whole substance is
+    // the arrangement belongs there.
+    expect(categoryOf("Abonnement salle de sport")).toBe("health");
+    expect(categoryOf("Transports en commun")).toBe("transport");
+    expect(categoryOf("Forfait mobile")).toBe("home");
+    expect(pairOf("Netflix")).toEqual(["subscriptions", "streaming"]);
   });
 
   it("leaves the field blank rather than guessing", () => {

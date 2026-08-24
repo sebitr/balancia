@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { normalizeLegacyPair } from "@/modules/categorization/taxonomy";
 import { isSpending, type EntryDirection } from "@/modules/expenses/direction";
 
 /**
@@ -206,6 +207,20 @@ export interface MemberStatsInput {
   readonly now: Date;
 }
 
+/**
+ * The category a stored code means today, or the label somebody imported.
+ *
+ * The same rule `group-stats.ts` follows: a retired code is drawn under its
+ * replacement, and free text is drawn as itself. Without this a group whose
+ * upgrade is minutes old shows `fees` and `finance_admin` as two slices, and
+ * the first of them with no label and no icon.
+ */
+function categoryKeyOf(value: string | null): string | null {
+  const pair = normalizeLegacyPair({ category: value });
+  if (pair.category) return pair.category;
+  return value && value.length > 0 ? value : null;
+}
+
 /** Sums one participant's side of an entry. */
 function amountFor(
   rows: readonly { participantId: string; amount: bigint }[],
@@ -385,10 +400,8 @@ function statsForCurrency(
     entryCount += 1;
     paid += mePaid;
     share += myShare;
-    byCategory.set(
-      fact.category,
-      (byCategory.get(fact.category) ?? 0n) + myShare,
-    );
+    const filed = categoryKeyOf(fact.category);
+    byCategory.set(filed, (byCategory.get(filed) ?? 0n) + myShare);
 
     const index = bucketIndexOf(starts, fact.expenseDate);
     if (index !== null) {
@@ -775,7 +788,7 @@ function recordsFor(input: MemberStatsInput, currency: string): MemberRecords {
     if (!biggestBill || mine > biggestBill.amount) {
       biggestBill = {
         description: fact.description,
-        category: fact.category,
+        category: categoryKeyOf(fact.category),
         date: fact.expenseDate,
         amount: mine,
       };

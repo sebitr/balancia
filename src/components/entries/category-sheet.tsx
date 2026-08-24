@@ -23,7 +23,7 @@ import { ChoicePill } from "./pills";
 /**
  * Picking a category, and optionally what kind of one.
  *
- * Two levels in one sheet, and a tap always commits. The root is the fifteen
+ * Two levels in one sheet, and a tap always commits. The root is the eighteen
  * categories; tapping one writes it immediately and slides its subcategories
  * in behind. Dismissing from there is not an abandoned journey — the expense
  * keeps the category with `subcategory: null`, which is a complete answer.
@@ -32,14 +32,14 @@ import { ChoicePill } from "./pills";
  * saved by the time the second question is asked.
  *
  * The root still leads with a few chips rather than the whole vocabulary.
- * Fifteen categories in the reader's alphabet is a wall, and the one they want
+ * Eighteen categories in the reader's alphabet is a wall, and the one they want
  * is rarely near the top of it: it is either what the description already says
  * or what this group files most things under. The heading over those chips
  * says which of the two it is, and it has to stay honest — "Because it says…"
  * over a list the description had no part in would be the interface claiming
  * to have read something it did not.
  *
- * Search is what keeps a hundred and twenty-six subcategories usable, and it
+ * Search is what keeps a hundred and seventy-six subcategories usable, and it
  * is why two levels are not slower than one: typing `carburant` reaches the
  * leaf directly and one tap sets both halves, without ever opening a pane.
  */
@@ -134,7 +134,7 @@ export function CategorySheet({
    *
    * Somebody typing a specific word wants the specific thing: `ren` should
    * reach Rent and Renovation before it reaches the categories they live in.
-   * Capped, because 126 leaves can match loosely and a list nobody can see the
+   * Capped, because 176 leaves can match loosely and a list nobody can see the
    * end of is not a result.
    */
   const leafResults = useMemo(() => {
@@ -435,7 +435,7 @@ function SubcategoryPane({
  *
  * The parent is muted and the leaf is not, because the leaf is what matched
  * and what the tap will set — and a bare "Other" in a results list would name
- * fourteen different things.
+ * seventeen different things.
  */
 function LeafPill({
   category,
@@ -505,7 +505,7 @@ function fold(value: string, locale: string): string {
  *
  * The cast is the one place the nesting costs something: `t()` is typed over
  * the literal key paths in `en.json`, and `${category}.${subcategory}` is a
- * cross product of fifteen parents and a hundred and twenty-six leaves, most
+ * cross product of eighteen parents and a hundred and seventy-six leaves, most
  * of which are not real paths. The pairs this is called with always are —
  * every caller iterates `getSubcategories(category)` — so the check is done by
  * the taxonomy rather than by the key type.

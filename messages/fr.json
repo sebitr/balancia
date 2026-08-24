@@ -164,19 +164,22 @@
     },
     "categories": {
       "groceries": "Courses",
-      "restaurants": "Restaurants & boissons",
+      "restaurants": "Restaurants",
       "transport": "Transport",
       "home": "Maison",
       "shopping": "Achats",
+      "personal_care": "Soins personnels",
       "health": "Santé",
+      "education": "Éducation",
       "entertainment": "Divertissement",
       "activities": "Activités",
       "lodging": "Hébergement",
       "subscriptions": "Abonnements",
       "kids_family": "Enfants & famille",
       "pets": "Animaux",
-      "gifts": "Cadeaux & dons",
-      "fees": "Frais",
+      "gifts_donations": "Cadeaux & dons",
+      "insurance": "Assurances",
+      "finance_admin": "Finance & administratif",
       "other": "Autre"
     },
     "subcategories": {
@@ -209,12 +212,20 @@
         "ferry": "Ferry",
         "car_rental": "Location de voiture",
         "bike_scooter": "Vélo & trottinette",
+        "vehicle_purchase": "Achat de véhicule",
+        "vehicle_lease": "Leasing",
+        "vehicle_financing": "Financement de véhicule",
+        "vehicle_maintenance": "Entretien & réparations",
+        "vehicle_registration": "Immatriculation & taxes",
+        "vehicle_wash": "Lavage",
         "other": "Autre"
       },
       "home": {
         "rent": "Loyer",
         "mortgage": "Prêt immobilier",
-        "home_insurance": "Assurance habitation",
+        "home_purchase": "Achat immobilier",
+        "down_payment": "Apport",
+        "security_deposit": "Dépôt de garantie",
         "property_tax": "Taxe foncière",
         "electricity": "Électricité",
         "gas": "Gaz",
@@ -222,15 +233,18 @@
         "internet": "Internet",
         "mobile_phone": "Téléphone",
         "heating": "Chauffage",
+        "waste": "Déchets",
         "repairs": "Réparations",
         "maintenance": "Entretien",
         "renovation": "Travaux",
-        "cleaning_service": "Ménage",
-        "gardening": "Jardinage",
         "furniture": "Mobilier",
         "appliances": "Électroménager",
         "cleaning_supplies": "Produits d'entretien",
         "household_supplies": "Fournitures ménagères",
+        "cleaning_service": "Ménage",
+        "gardening": "Jardinage",
+        "moving": "Déménagement",
+        "storage": "Stockage",
         "other": "Autre"
       },
       "shopping": {
@@ -238,10 +252,24 @@
         "shoes": "Chaussures",
         "electronics": "Électronique",
         "accessories": "Accessoires",
-        "personal_care": "Soins personnels",
-        "beauty": "Beauté",
         "books": "Livres",
         "hobbies": "Loisirs",
+        "sporting_goods": "Articles de sport",
+        "toys": "Jouets",
+        "general": "Achats divers",
+        "repairs": "Réparations",
+        "other": "Autre"
+      },
+      "personal_care": {
+        "hairdresser": "Coiffeur",
+        "barber": "Barbier",
+        "beauty": "Beauté",
+        "cosmetics": "Cosmétiques",
+        "skincare": "Soins de la peau",
+        "toiletries": "Produits d'hygiène",
+        "spa": "Spa",
+        "massage": "Massage",
+        "laundry_dry_cleaning": "Blanchisserie & pressing",
         "other": "Autre"
       },
       "health": {
@@ -250,9 +278,22 @@
         "pharmacy": "Pharmacie",
         "hospital": "Hôpital",
         "therapy": "Thérapie",
+        "physiotherapy": "Kinésithérapie",
+        "labs_tests": "Analyses & examens",
         "glasses_contacts": "Lunettes & lentilles",
-        "health_insurance": "Assurance santé",
+        "medical_devices": "Matériel médical",
         "fitness": "Sport & fitness",
+        "other": "Autre"
+      },
+      "education": {
+        "tuition": "Frais de scolarité",
+        "school": "École",
+        "courses": "Cours",
+        "training": "Formation",
+        "tutoring": "Soutien scolaire",
+        "books_materials": "Livres & matériel",
+        "school_supplies": "Fournitures scolaires",
+        "exams": "Examens",
         "other": "Autre"
       },
       "entertainment": {
@@ -261,7 +302,6 @@
         "shows": "Spectacles",
         "nightlife": "Sorties",
         "games": "Jeux",
-        "streaming": "Streaming",
         "music": "Musique",
         "events": "Événements",
         "other": "Autre"
@@ -286,24 +326,24 @@
         "other": "Autre"
       },
       "subscriptions": {
-        "software": "Logiciels",
         "streaming": "Streaming",
-        "media": "Presse & médias",
-        "cloud_storage": "Stockage cloud",
-        "memberships": "Adhésions",
+        "software": "Logiciels",
         "apps": "Applications",
+        "cloud_storage": "Stockage cloud",
+        "media": "Presse & médias",
+        "memberships": "Adhésions",
         "delivery_memberships": "Services de livraison",
         "other": "Autre"
       },
       "kids_family": {
         "childcare": "Garde d'enfants",
-        "school": "École",
-        "school_supplies": "Fournitures scolaires",
+        "babysitting": "Baby-sitting",
         "baby": "Bébé",
-        "clothing": "Vêtements",
-        "activities": "Activités",
         "allowance": "Argent de poche",
         "family_support": "Aide familiale",
+        "elder_care": "Aide aux personnes âgées",
+        "caregiving": "Aide à un proche",
+        "child_support": "Pension alimentaire",
         "other": "Autre"
       },
       "pets": {
@@ -314,23 +354,42 @@
         "pet_supplies": "Accessoires",
         "pet_insurance": "Assurance",
         "boarding": "Garde",
+        "training": "Dressage",
         "other": "Autre"
       },
-      "gifts": {
+      "gifts_donations": {
         "gifts": "Cadeaux",
         "birthdays": "Anniversaires",
         "weddings": "Mariages",
         "celebrations": "Fêtes",
+        "charity": "Œuvres caritatives",
         "donations": "Dons",
+        "religious_giving": "Dons religieux",
         "other": "Autre"
       },
-      "fees": {
+      "insurance": {
+        "home": "Habitation",
+        "vehicle": "Auto",
+        "health": "Santé",
+        "life": "Vie",
+        "travel": "Voyage",
+        "liability": "Responsabilité civile",
+        "legal_protection": "Protection juridique",
+        "disability": "Invalidité",
+        "other": "Autre"
+      },
+      "finance_admin": {
         "bank_fees": "Frais bancaires",
         "card_fees": "Frais de carte",
         "exchange_fees": "Frais de change",
+        "interest": "Intérêts",
+        "loan_payment": "Remboursement de prêt",
         "service_fees": "Frais de service",
-        "late_fees": "Pénalités de retard",
-        "taxes": "Taxes",
+        "taxes": "Impôts & taxes",
+        "government_fees": "Frais administratifs",
+        "passport_visa": "Passeport & visa",
+        "legal": "Frais juridiques",
+        "accounting": "Comptabilité",
         "fines": "Amendes",
         "other": "Autre"
       }
@@ -340,7 +399,13 @@
         "housing": "Logement",
         "utilities": "Factures & charges",
         "upkeep": "Entretien & réparations",
-        "supplies": "Mobilier & fournitures"
+        "supplies": "Mobilier & fournitures",
+        "moving": "Déménagement & stockage"
+      },
+      "transport": {
+        "journeys": "Trajets",
+        "running": "Frais d'utilisation",
+        "vehicle": "Achat & location"
       }
     },
     "split": {

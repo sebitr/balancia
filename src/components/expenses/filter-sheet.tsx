@@ -517,7 +517,7 @@ function AmountField({
 /**
  * Category, as a list rather than a chip cloud.
  *
- * Fifteen categories over a hundred and twenty-six subcategories will not fit
+ * Eighteen categories over a hundred and seventy-six subcategories will not fit
  * in a run of pills, and flattening them would lose the thing that makes the
  * vocabulary usable: that you pick a category first and only then say what
  * kind. So it is the entry form's category sheet again, in the shape a filter

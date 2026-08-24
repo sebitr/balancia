@@ -10,20 +10,21 @@ adding entries to a data file.
 
 ## Where the code lives
 
-| File                  | What it does                                                   |
-| --------------------- | -------------------------------------------------------------- |
-| `types.ts`            | Category and transaction-type IDs, the input and result shapes |
-| `normalize.ts`        | Turns a bank descriptor into a comparable merchant             |
-| `transaction-type.ts` | Refund, salary, transfer… before any category is considered    |
-| `seeds.ts`            | The rule data: merchants, phrases, keywords, exclusions        |
-| `overrides.ts`        | Apple, Amazon, Uber, filling stations, store formats           |
-| `confidence.ts`       | Signal groups, score combination, thresholds                   |
-| `deterministic.ts`    | Scores every category against the seeds                        |
-| `prototypes.ts`       | Short sentences the semantic layer compares against            |
-| `semantic.ts`         | The `Embedder` interface and the similarity ranking            |
-| `learning.ts`         | What a correction means (pure)                                 |
-| `service.ts`          | What a correction is stored as (`server-only`)                 |
-| `classifier.ts`       | Puts the passes in order and decides                           |
+| File                  | What it does                                                |
+| --------------------- | ----------------------------------------------------------- |
+| `taxonomy.ts`         | The vocabulary: categories, subcategories, legacy mappings  |
+| `types.ts`            | Transaction-type IDs, the input and result shapes           |
+| `normalize.ts`        | Turns a bank descriptor into a comparable merchant          |
+| `transaction-type.ts` | Refund, salary, transfer… before any category is considered |
+| `seeds.ts`            | The rule data: merchants, phrases, keywords, exclusions     |
+| `overrides.ts`        | Apple, Amazon, Uber, filling stations, store formats        |
+| `confidence.ts`       | Signal groups, score combination, thresholds                |
+| `deterministic.ts`    | Scores every category against the seeds                     |
+| `prototypes.ts`       | Short sentences the semantic layer compares against         |
+| `semantic.ts`         | The `Embedder` interface and the similarity ranking         |
+| `learning.ts`         | What a correction means (pure)                              |
+| `service.ts`          | What a correction is stored as (`server-only`)              |
+| `classifier.ts`       | Puts the passes in order and decides                        |
 
 The browser side of the optional model is `src/lib/semantic/`, and the UI is
 `src/components/expenses/category-field.tsx` plus
@@ -63,40 +64,69 @@ anything.
 
 ## The vocabulary
 
-Fifteen categories and 126 subcategories, in `taxonomy.ts`. That file is the
+Eighteen categories and 176 subcategories, in `taxonomy.ts`. That file is the
 single source of truth: the types, the validation, the picker's order, the
 classifier's constraints and the translation keys are all derived from it.
 
 An expense is a **(category, subcategory) pair**, and the pair is the identity.
-A subcategory ID is unique only within its parent — `other` appears fourteen
-times, `streaming` and `clothing` twice each, and `activities` is both a
-category and one of `kids_family`'s children. `isValidSubcategory(category,
-subcategory)` is what every server boundary asks, and `null` is always a valid
-answer: an expense filed as `home` with nothing under it is complete, not
-half-entered.
+A subcategory ID is unique only within its parent — `other` appears seventeen
+times, `repairs` and `training` twice each, and `home`, `health` and `travel`
+are subcategories of `insurance` as well as being (or having been) categories.
+`isValidSubcategory(category, subcategory)` is what every server boundary asks,
+and `null` is always a valid answer: an expense filed as `home` with nothing
+under it is complete, not half-entered.
+
+The rule that decides everything else:
+
+> **Classify by what the money was for, not by where, when or how it was
+> paid.**
+
+A restaurant meal on holiday is `restaurants`. A child's dentist is `health`.
+A monthly train pass is `transport` and not `subscriptions`, because Balancia
+already has recurring expenses and recurrence is not a kind of spending. The
+group carries the occasion — "Rome 2026", "Our apartment" — which is why there
+is no `travel` code and no plans for one.
 
 Where the lines fall:
 
-| This         | Not that        | The line                                         |
-| ------------ | --------------- | ------------------------------------------------ |
-| `lodging`    | `transport`     | where the trip slept, not getting there          |
-| `activities` | `entertainment` | tickets, tours and entries, not shows and games  |
-| `home`       | `shopping`      | the upkeep of a home, not a thing someone bought |
+| This            | Not that        | The line                                         |
+| --------------- | --------------- | ------------------------------------------------ |
+| `lodging`       | `transport`     | where the trip slept, not getting there          |
+| `activities`    | `entertainment` | tickets, tours and entries, not shows and games  |
+| `activities`    | `education`     | for the pleasure of it, not to learn a thing     |
+| `home`          | `shopping`      | the upkeep of a home, not a thing someone bought |
+| `personal_care` | `shopping`      | done to a person, not bought as an object        |
+| `education`     | `kids_family`   | what the money bought, not who was taught        |
+| `insurance`     | everything      | a premium is a premium, whatever it covers       |
+| `finance_admin` | `other`         | money that buys neither goods nor an experience  |
 
 A week's Airbnb is four fifths of a trip's total, so leaving it with the
 flights made every holiday chart one bar about the place people slept. A guided
 walk and a games console were never the same line.
 
+Two deliberate exceptions, both there because they answer a question people
+actually ask:
+
+- **`pets` / `pet_insurance` stays with the animal.** "What does the dog come
+  to" is a real question, and pulling the premium into the insurance total
+  would answer one nobody asked at the price of the one they did.
+- **`transport` owns the whole car** — the purchase, the lease, the loan, the
+  garage, the road tax — but not its insurance, which is `insurance` /
+  `vehicle`. Splitting premiums by what they insure is exactly what made them
+  impossible to total.
+
 ### What was retired, and what it became
 
-| Old         | New           | Why                                                |
-| ----------- | ------------- | -------------------------------------------------- |
-| `housing`   | `home`        | Rent, bills and upkeep were one place all along.   |
-| `utilities` | `home`        | Which of the three a plumber's invoice belonged to |
-| `household` | `home`        | was a coin toss that split a flat-share's largest  |
-|             |               | expense across three slices of the spread.         |
-| `family`    | `kids_family` | Renamed only. No row changes meaning.              |
-| `travel`    | `other`       | It named an occasion, not a kind of spending.      |
+| Old         | New               | Why                                              |
+| ----------- | ----------------- | ------------------------------------------------ |
+| `housing`   | `home`            | Rent, bills and upkeep were one place all along. |
+| `utilities` | `home`            | Which of the three a plumber's invoice belonged  |
+| `household` | `home`            | to was a coin toss that split a flat-share's     |
+|             |                   | largest expense across three slices.             |
+| `family`    | `kids_family`     | Renamed only. No row changes meaning.            |
+| `travel`    | `other`           | It named an occasion, not a kind of spending.    |
+| `fees`      | `finance_admin`   | It only ever admitted a bank's.                  |
+| `gifts`     | `gifts_donations` | Renamed, to say what it always held.             |
 
 The distinction the three `home` codes were really drawing moved down a level,
 where it can also be left blank — `home / electricity`, `home / rent`,
@@ -108,9 +138,47 @@ says which; picking one would invent a fact and file it under the user's name.
 Its _rules_ did move, to the codes that describe the purchase — the airlines
 are `transport` now.
 
-Nothing else needs to know about the old codes. `normalizeLegacyCategory()` is
-the one place that maps them, and the migration
-(`drizzle/0019_fast_nighthawk.sql`) rewrites the stored rows.
+### Subcategories that changed parent
+
+Nine of them, each one a move somebody could not have made themselves because
+the destination did not exist when they filed the row:
+
+| Old pair                        | New pair                      |
+| ------------------------------- | ----------------------------- |
+| `home / home_insurance`         | `insurance / home`            |
+| `health / health_insurance`     | `insurance / health`          |
+| `shopping / beauty`             | `personal_care / beauty`      |
+| `shopping / personal_care`      | `personal_care / other`       |
+| `entertainment / streaming`     | `subscriptions / streaming`   |
+| `kids_family / school`          | `education / school`          |
+| `kids_family / school_supplies` | `education / school_supplies` |
+| `kids_family / clothing`        | `shopping / clothing`         |
+| `kids_family / activities`      | `activities / other`          |
+
+`fees / late_fees` is the one that did **not** move: nothing under
+`finance_admin` means "late", so it resolves to the parent with
+`subcategory: null`. The nearest survivor would be a guess, and a guess filed
+under the user's name is worse than the blank it replaces. The same rule
+governs `kids_family / activities`, which lands on `activities` and says
+nothing more — which of the eight it meant is exactly what the row does not
+say.
+
+### One place reads the old values
+
+`normalizeLegacyPair({ category, subcategory })` is it. Given anything a
+database, a backup or an API payload might hold, it returns a pair the current
+vocabulary accepts, or `{ category: null }` for free text an import kept
+verbatim. `normalizeLegacyCategory()` is the category-only form, for the
+callers that have no pair to ask about.
+
+The migration, the importers, the API, the learned mappings, the statistics
+and the row renderer all go through it rather than keeping their own table.
+
+Stored rows are rewritten by `drizzle/0019_fast_nighthawk.sql` (the merge) and
+`drizzle/0020_bright_ultron.sql` (this one). Both are pure `UPDATE`s: the
+columns are plain nullable text, so nothing here is a type change, and a row
+either migration misses still reads, because the normaliser runs at render
+time as well.
 
 ## Matching priority
 
@@ -308,8 +376,11 @@ Some labels are deliberately never translated:
   spread would be a category invented for the rows that have none.
 - **Groups whose leaves scatter** — `Food and drink` is half a supermarket and
   half a restaurant, `Life` runs from childcare to taxes.
-- **`Insurance`**, because which category it belongs to depends on the policy,
-  and the description is what says.
+- **`Insurance`** is read as a _group_ rather than a leaf, so it waits behind
+  the description. `insurance` exists as a code now, but which policy the row
+  was is what the description says: "assurance ménage" reaches
+  `insurance / home` through the classifier, and only a row that says nothing
+  falls back to the bare category.
 
 Nothing here writes a learned mapping. An imported label is somebody else's
 classification of a merchant this group may never have chosen a category for,
@@ -396,6 +467,26 @@ the rules are answering alone.
 
 ## Extending it
 
+### A rule may not open with a card prefix
+
+`normalizeMerchant()` strips leading card and payment words — `cb`, `carte`,
+`card`, `credit`, `debit`, `visa`, `paiement`, `achat`, `purchase` and the
+rest of `LEADING_PREFIXES` — from **every** part it matches against, the
+description included. So a rule that starts with one of them can never fire on
+a description that starts with one of them either:
+
+```
+"Achat de voiture"    → achat stripped → "de voiture"
+"Carte grise"         → carte stripped → "grise"
+"Crédit auto"         → credit stripped → "auto"
+```
+
+Say the same thing in words that survive: `voiture d'occasion`,
+`immatriculation`, `prêt auto`, `acquisition immobilière`. The stripping is
+deliberate and worth far more than the handful of phrasings it costs —
+`CB CARREFOUR 12/05` has to become `carrefour` — but it is the trap to know
+about before writing a French rule.
+
 ### Add a merchant
 
 `seeds.ts`, in the category's `merchants` list, lower-case and as it appears on
@@ -428,9 +519,35 @@ A brand that spans categories in a way the text can settle belongs in
 6. If an import source names it, add the label to `SOURCE_CATEGORIES` in
    `modules/imports/categories.ts`.
 
-Existing rows keep their old category string; `loadMappings()` translates a
-retired code and discards anything else, so a category that was removed
-outright cannot come back through an old row.
+### Retire or move one
+
+Whatever you remove has to keep resolving, because self-hosted instances hold
+rows that name it:
+
+1. A retired **category** goes in `LEGACY_CATEGORIES`; a **subcategory** that
+   changed parent goes in `LEGACY_SUBCATEGORIES`, keyed
+   `<current parent>.<old subcategory>`. One that simply has no successor goes
+   in neither — it falls to `subcategory: null`, which is what
+   `normalizeLegacyPair` does with anything it cannot place.
+2. Write a migration that makes the same rewrites against `expenses`,
+   `recurring_expenses` and `expense_category_mappings`. `taxonomy.test.ts`
+   compares the two: a move in the table with no matching `UPDATE` fails the
+   build, and so does the reverse.
+3. Never guess. Nothing in a migration may read a description to decide what a
+   row meant — see `kids_family / activities`, which lands on the parent and
+   says nothing more.
+
+Existing rows keep their old string until a migration rewrites them;
+`loadMappings()` translates a retired pair on read and discards anything else,
+so a category that was removed outright cannot come back through an old row.
+
+### The category has to be reachable first
+
+`SUBCATEGORY_SEEDS` is consulted only _after_ a category is settled, so a
+brand or phrase that appears there and nowhere else names a subcategory of
+nothing. `Midas` was exactly that for an afternoon: a `vehicle_maintenance`
+rule under a category no rule could reach. Whatever names the subcategory
+usually has to name the category too.
 
 ### Add a subcategory rule
 
@@ -441,18 +558,25 @@ phrase-strength evidence can fill the field.
 
 The rule to hold to: a subcategory is asserted **only when something named it
 outright**. Being confident a purchase is `home` says nothing about which of
-its twenty children it is, and a plausible-looking guess filed under the user's
+its twenty-four children it is, and a plausible-looking guess filed under the user's
 name is worse than the blank it replaced. Partial coverage is the expected
 state — most categories name a handful of their children and no more.
 
 ### Regrouping a picker pane
 
 `SUBCATEGORY_GROUPS` in `taxonomy.ts`, with labels under
-`expenses.categoryGroups`. Only `home` has any: twenty subcategories in one
-flat run is a wall, and its four shelves are deliberately the shape of the
-three codes that merged into it, so someone who filed rent under Housing for
-two years still finds their footing. These are presentation only — never
-stored, never part of the pair.
+`expenses.categoryGroups`. Only the two long categories have any, and length is
+what earns them: a flat run someone has to read to the end of stops being a
+list.
+
+`home`'s five shelves are deliberately the shape of the three codes that merged
+into it, so someone who filed rent under Housing for two years still finds
+their footing, with moving costs added as their own — a removal van and a
+storage unit are a month of someone's life, not upkeep. `transport`'s three
+separate the journey from the car: a bus fare, the petrol that car runs on, and
+the car itself.
+
+These are presentation only — never stored, never part of the pair.
 
 ### Add a language
 

@@ -161,7 +161,7 @@ export const NO_FILTER: ListFilter = {
  *
  * Values that name *data* — categories, subcategory pairs, payers — are taken
  * as they come. A category the group has never used is a legitimate filter
- * (the sheet offers all fifteen on purpose), and a participant who has since
+ * (the sheet offers all eighteen on purpose), and a participant who has since
  * been removed still paid for the rows they paid for.
  */
 export function readFilter(source: ParamSource): ListFilter {

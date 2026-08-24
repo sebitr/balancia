@@ -279,8 +279,10 @@ describe("what a member put in against what was theirs", () => {
     const categories =
       stats.ranges.find((r) => r.key === "all")?.currencies[0].categories ?? [];
 
+    // `housing` was retired; the slice is drawn under the code it became, so
+    // a member screen never shows a name the picker stopped offering.
     expect(categories.map((slice) => slice.category)).toEqual([
-      "housing",
+      "home",
       "groceries",
       null,
     ]);
@@ -348,7 +350,7 @@ describe("all-time records", () => {
 
     expect(stats.records[0].biggestBill).toMatchObject({
       description: "Sofa",
-      category: "household",
+      category: "home",
       amount: 9000n,
     });
   });

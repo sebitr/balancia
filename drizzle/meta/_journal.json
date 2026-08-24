@@ -141,6 +141,13 @@
       "when": 1787346663041,
       "tag": "0019_fast_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787347563041,
+      "tag": "0020_bright_ultron",
+      "breakpoints": true
     }
   ]
 }

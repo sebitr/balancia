@@ -232,7 +232,8 @@ async function main(): Promise<void> {
   await createExpense(flatAccess, {
     description: "Souvenir from Tokyo",
     notes: "Recorded in yen; this group keeps currencies apart",
-    category: "gifts",
+    category: "gifts_donations",
+    subcategory: "gifts",
     amount: "9000",
     currency: "JPY",
     exchangeRate: "",

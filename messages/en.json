@@ -164,19 +164,22 @@
     },
     "categories": {
       "groceries": "Groceries",
-      "restaurants": "Restaurants & Drinks",
+      "restaurants": "Restaurants",
       "transport": "Transport",
       "home": "Home",
       "shopping": "Shopping",
+      "personal_care": "Personal Care",
       "health": "Health",
+      "education": "Education",
       "entertainment": "Entertainment",
       "activities": "Activities",
       "lodging": "Lodging",
       "subscriptions": "Subscriptions",
       "kids_family": "Kids & Family",
       "pets": "Pets",
-      "gifts": "Gifts & Donations",
-      "fees": "Fees",
+      "gifts_donations": "Gifts & Donations",
+      "insurance": "Insurance",
+      "finance_admin": "Finance & Admin",
       "other": "Other"
     },
     "subcategories": {
@@ -209,12 +212,20 @@
         "ferry": "Ferry",
         "car_rental": "Car rental",
         "bike_scooter": "Bike & scooter",
+        "vehicle_purchase": "Vehicle purchase",
+        "vehicle_lease": "Vehicle lease",
+        "vehicle_financing": "Vehicle financing",
+        "vehicle_maintenance": "Repairs & maintenance",
+        "vehicle_registration": "Registration & road taxes",
+        "vehicle_wash": "Vehicle wash",
         "other": "Other"
       },
       "home": {
         "rent": "Rent",
         "mortgage": "Mortgage",
-        "home_insurance": "Home insurance",
+        "home_purchase": "Home purchase",
+        "down_payment": "Down payment",
+        "security_deposit": "Security deposit",
         "property_tax": "Property tax",
         "electricity": "Electricity",
         "gas": "Gas",
@@ -222,15 +233,18 @@
         "internet": "Internet",
         "mobile_phone": "Mobile phone",
         "heating": "Heating",
+        "waste": "Waste",
         "repairs": "Repairs",
         "maintenance": "Maintenance",
         "renovation": "Renovation",
-        "cleaning_service": "Cleaning service",
-        "gardening": "Gardening",
         "furniture": "Furniture",
         "appliances": "Appliances",
         "cleaning_supplies": "Cleaning supplies",
         "household_supplies": "Household supplies",
+        "cleaning_service": "Cleaning service",
+        "gardening": "Gardening",
+        "moving": "Moving",
+        "storage": "Storage",
         "other": "Other"
       },
       "shopping": {
@@ -238,10 +252,24 @@
         "shoes": "Shoes",
         "electronics": "Electronics",
         "accessories": "Accessories",
-        "personal_care": "Personal care",
-        "beauty": "Beauty",
         "books": "Books",
         "hobbies": "Hobbies",
+        "sporting_goods": "Sporting goods",
+        "toys": "Toys",
+        "general": "General shopping",
+        "repairs": "Repairs",
+        "other": "Other"
+      },
+      "personal_care": {
+        "hairdresser": "Hairdresser",
+        "barber": "Barber",
+        "beauty": "Beauty",
+        "cosmetics": "Cosmetics",
+        "skincare": "Skincare",
+        "toiletries": "Toiletries",
+        "spa": "Spa",
+        "massage": "Massage",
+        "laundry_dry_cleaning": "Laundry & dry cleaning",
         "other": "Other"
       },
       "health": {
@@ -250,9 +278,22 @@
         "pharmacy": "Pharmacy",
         "hospital": "Hospital",
         "therapy": "Therapy",
+        "physiotherapy": "Physiotherapy",
+        "labs_tests": "Tests & laboratory",
         "glasses_contacts": "Glasses & contacts",
-        "health_insurance": "Health insurance",
+        "medical_devices": "Medical devices",
         "fitness": "Fitness",
+        "other": "Other"
+      },
+      "education": {
+        "tuition": "Tuition",
+        "school": "School",
+        "courses": "Courses",
+        "training": "Training",
+        "tutoring": "Tutoring",
+        "books_materials": "Books & materials",
+        "school_supplies": "School supplies",
+        "exams": "Exams",
         "other": "Other"
       },
       "entertainment": {
@@ -261,7 +302,6 @@
         "shows": "Shows",
         "nightlife": "Nightlife",
         "games": "Games",
-        "streaming": "Streaming",
         "music": "Music",
         "events": "Events",
         "other": "Other"
@@ -286,24 +326,24 @@
         "other": "Other"
       },
       "subscriptions": {
-        "software": "Software",
         "streaming": "Streaming",
-        "media": "Media",
-        "cloud_storage": "Cloud storage",
-        "memberships": "Memberships",
+        "software": "Software",
         "apps": "Apps",
+        "cloud_storage": "Cloud storage",
+        "media": "Media",
+        "memberships": "Memberships",
         "delivery_memberships": "Delivery memberships",
         "other": "Other"
       },
       "kids_family": {
         "childcare": "Childcare",
-        "school": "School",
-        "school_supplies": "School supplies",
+        "babysitting": "Babysitting",
         "baby": "Baby",
-        "clothing": "Clothing",
-        "activities": "Activities",
         "allowance": "Allowance",
         "family_support": "Family support",
+        "elder_care": "Elder care",
+        "caregiving": "Caregiving",
+        "child_support": "Child support",
         "other": "Other"
       },
       "pets": {
@@ -314,23 +354,42 @@
         "pet_supplies": "Pet supplies",
         "pet_insurance": "Pet insurance",
         "boarding": "Boarding",
+        "training": "Training",
         "other": "Other"
       },
-      "gifts": {
+      "gifts_donations": {
         "gifts": "Gifts",
         "birthdays": "Birthdays",
         "weddings": "Weddings",
         "celebrations": "Celebrations",
+        "charity": "Charity",
         "donations": "Donations",
+        "religious_giving": "Religious giving",
         "other": "Other"
       },
-      "fees": {
+      "insurance": {
+        "home": "Home",
+        "vehicle": "Vehicle",
+        "health": "Health",
+        "life": "Life",
+        "travel": "Travel",
+        "liability": "Liability",
+        "legal_protection": "Legal protection",
+        "disability": "Disability",
+        "other": "Other"
+      },
+      "finance_admin": {
         "bank_fees": "Bank fees",
         "card_fees": "Card fees",
         "exchange_fees": "Exchange fees",
+        "interest": "Interest",
+        "loan_payment": "Loan payment",
         "service_fees": "Service fees",
-        "late_fees": "Late fees",
         "taxes": "Taxes",
+        "government_fees": "Government fees",
+        "passport_visa": "Passport & visa",
+        "legal": "Legal",
+        "accounting": "Accounting",
         "fines": "Fines",
         "other": "Other"
       }
@@ -340,7 +399,13 @@
         "housing": "Housing",
         "utilities": "Utilities",
         "upkeep": "Upkeep & repairs",
-        "supplies": "Furniture & supplies"
+        "supplies": "Furniture & supplies",
+        "moving": "Moving & storage"
+      },
+      "transport": {
+        "journeys": "Journeys",
+        "running": "Running costs",
+        "vehicle": "Buying & hiring"
       }
     },
     "split": {
