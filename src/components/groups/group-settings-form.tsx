@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -16,7 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { toastUndoable, UNDO_WINDOW } from "@/components/ui/sonner";
+import { toastUndoable } from "@/components/ui/sonner";
+import { useAutosave } from "@/components/ui/use-autosave";
 import { CurrencyModeNote } from "@/components/groups/currency-mode-note";
 import { GroupIconPicker } from "@/components/groups/group-icon-picker";
 import { GroupIconTile } from "@/components/groups/group-icon";
@@ -60,29 +61,19 @@ function formDataFor(draft: Draft): FormData {
   return data;
 }
 
-/** How long typing has to stop before what was typed is sent. */
-const QUIET = 800;
-
 /**
  * What the group calls itself.
  *
- * Nothing here is saved by pressing anything. A field that is typed in goes
- * once the typing stops or the field is left, a control that is chosen goes as
- * it is chosen, and the two choices in the icon sheet go together when the
- * sheet closes — one write for a visit to it rather than one per tap.
+ * Nothing here is saved by pressing anything: `useAutosave` owns the timing,
+ * the ordering and the way back, and this card says what to write and what to
+ * call it. A field that is typed in goes once the typing stops or the field is
+ * left, the timezone goes as it is chosen, and the two choices in the icon
+ * sheet are held until it closes — one write for a visit to it rather than one
+ * per tap.
  *
- * The confirmation carries the way back. Each write raises the same named
- * toast, so a run of edits replaces the one already on screen instead of
- * stacking a column of them, and its Undo restores the values as they stood
- * before that run began rather than before its last keystroke — the baseline
- * is taken at the first save of the run and forgotten when the toast goes.
- * Undoing is written like any other change but announces nothing: the fields
- * going back to what they were is the answer.
- *
- * So the draft is held twice — as state, which the fields read, and as refs,
- * which a write that started a keystroke ago reads. `persisted` is what the
- * server is known to hold; it moves forward on a save rather than waiting for
- * the refresh to bring the new record back.
+ * One toast, named for this group, so a run of edits replaces the one already
+ * on screen rather than stacking a column of them; its Undo restores the
+ * values as they stood before the run began.
  *
  * An empty name is the one thing that stops all this: the server would refuse
  * it and the group list would have nothing left to show, so the field says so
@@ -126,133 +117,39 @@ export function GroupSettingsForm({
     timezone,
   };
 
-  const [draft, setDraft] = useState(stored);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
 
-  const draftNow = useRef(stored);
-  const persisted = useRef(stored);
-  const inFlight = useRef(false);
-  const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // What Undo would put back, and the timer that forgets it once the toast
-  // offering it has gone.
-  const undoTo = useRef<Draft | null>(null);
-  const forget = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // One toast for this group's settings, replaced rather than repeated.
-  const toastId = `group-settings-${groupId}`;
-
-  const clear = (
-    timer: React.RefObject<ReturnType<typeof setTimeout> | null>,
-  ) => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
-
-  /** Puts a whole run of edits back, and writes that without announcing it. */
-  const undo = (back: Draft) => {
-    undoTo.current = null;
-    clear(forget);
-    clear(quiet);
-    draftNow.current = back;
-    setDraft(back);
-    void save(false);
-  };
-
-  const offerUndo = (before: Draft) => {
-    undoTo.current ??= before;
-    const back = undoTo.current;
-    clear(forget);
-    forget.current = setTimeout(() => {
-      undoTo.current = null;
-    }, UNDO_WINDOW);
-
-    toastUndoable(
-      t("saved"),
-      { label: tCommon("undo"), onUndo: () => undo(back) },
-      { id: toastId },
-    );
-  };
-
-  /**
-   * Writes the newest draft, and then whatever it became while that one was in
-   * the air. A refused write is not retried on its own — the next edit is the
-   * retry, and until then the card still shows what was typed.
-   */
-  const save = async (announce = true): Promise<void> => {
-    if (inFlight.current) return;
-    const next = draftNow.current;
-    const before = persisted.current;
-    if (same(next, before) || next.name.trim() === "") return;
-
-    inFlight.current = true;
-    setSaving(true);
-    try {
+  const { draft, saving, edit, flush } = useAutosave<Draft>({
+    initial: stored,
+    same,
+    // The server would refuse an empty name, and the group list would have
+    // nothing left to show for this group.
+    ready: (next) => next.name.trim() !== "",
+    write: async (next) => {
       const result = await updateGroupAction(groupId, formDataFor(next));
       if (!result.ok) {
         toast.error(result.error ?? t("failed"));
-        return;
+        return false;
       }
-      persisted.current = next;
-      if (announce) offerUndo(before);
-    } finally {
-      inFlight.current = false;
-      setSaving(false);
-    }
-
-    if (!same(draftNow.current, persisted.current)) {
-      await save();
-      return;
-    }
+      return true;
+    },
+    announce: (undo) =>
+      toastUndoable(
+        t("saved"),
+        { label: tCommon("undo"), onUndo: undo },
+        // One toast for this group's settings, replaced rather than repeated.
+        { id: `group-settings-${groupId}` },
+      ),
     // The header, the group list and the nav were all drawn by the server with
-    // the old name on them. Once, at the end of the run, rather than once per
+    // the old name on them. Once, at the end of a run, rather than per
     // keystroke.
-    router.refresh();
-  };
-
-  /**
-   * A change to the draft, and when it is written: typing waits for a pause, a
-   * control that is chosen goes at once, and what the icon sheet changes is
-   * held until it closes.
-   */
-  const edit = (
-    changes: Partial<Draft>,
-    when: "typed" | "chosen" | "held" = "typed",
-  ) => {
-    const next = { ...draftNow.current, ...changes };
-    draftNow.current = next;
-    setDraft(next);
-
-    clear(quiet);
-    if (when === "held") return;
-    if (when === "chosen") {
-      void save();
-      return;
-    }
-    quiet.current = setTimeout(() => void save(), QUIET);
-  };
+    settled: () => router.refresh(),
+  });
 
   const closePicker = () => {
     setPickerOpen(false);
-    void save();
+    flush();
   };
-
-  // The newest `save`, for a cleanup that must not close over a stale draft.
-  const latest = useRef(save);
-  useEffect(() => {
-    latest.current = save;
-  });
-
-  useEffect(
-    () => () => {
-      clear(quiet);
-      clear(forget);
-      // Typing and then leaving is still a change: it goes with them.
-      void latest.current();
-    },
-    [],
-  );
 
   const nameMissing = draft.name.trim() === "";
 
@@ -302,7 +199,7 @@ export function GroupSettingsForm({
                 name="name"
                 value={draft.name}
                 onChange={(event) => edit({ name: event.target.value })}
-                onBlur={() => void save()}
+                onBlur={flush}
                 required
                 aria-invalid={nameMissing}
                 aria-describedby={
@@ -335,7 +232,7 @@ export function GroupSettingsForm({
               name="description"
               value={draft.description}
               onChange={(event) => edit({ description: event.target.value })}
-              onBlur={() => void save()}
+              onBlur={flush}
               rows={2}
               maxLength={2000}
               placeholder={t("descriptionPlaceholder")}
