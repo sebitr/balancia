@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { toastUndoable } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useFormatPreferences } from "@/i18n/format-context";
 import {
@@ -28,6 +29,13 @@ import { setFormatPreferencesAction } from "@/modules/profile/actions";
  * Saved on change rather than behind a Save button, like the currency picker
  * and the language switcher. The router is refreshed afterwards because every
  * date and amount on screen was written by the server.
+ *
+ * Each row confirms itself and offers the way back. The two are written
+ * together — the action takes both — but they are two decisions, so each has
+ * its own named toast: changing one does not take away the chance to undo the
+ * other, and changing the same one twice replaces its own confirmation rather
+ * than adding to a pile. Undoing writes the old pair the same way and says
+ * nothing more.
  */
 
 const SELECT_CLASS =
@@ -36,24 +44,39 @@ const SELECT_CLASS =
 export function FormatPreferencesForm() {
   const router = useRouter();
   const t = useTranslations("profile");
+  const tCommon = useTranslations("common");
   const { dateFormat, numberFormat, formatLocale } = useFormatPreferences();
   const [dateChoice, setDateChoice] = useState<DateFormat>(dateFormat);
   const [numberChoice, setNumberChoice] = useState<NumberFormat>(numberFormat);
   const [isPending, startTransition] = useTransition();
 
-  const save = (next: {
-    dateFormat: DateFormat;
-    numberFormat: NumberFormat;
-  }) => {
+  type Formats = { dateFormat: DateFormat; numberFormat: NumberFormat };
+
+  /** `undo` names the row that changed, and is the toast it replaces. */
+  const save = (next: Formats, undo?: "dateFormat" | "numberFormat") => {
+    const previous: Formats = {
+      dateFormat: dateChoice,
+      numberFormat: numberChoice,
+    };
     setDateChoice(next.dateFormat);
     setNumberChoice(next.numberFormat);
     startTransition(async () => {
       const result = await setFormatPreferencesAction(next);
       if (!result.ok) {
+        // Back to what is actually stored: a row left showing a choice the
+        // account did not keep is worse than no confirmation at all.
+        setDateChoice(previous.dateFormat);
+        setNumberChoice(previous.numberFormat);
         toast.error(result.error ?? t("formatsFailed"));
         return;
       }
-      toast.success(t("formatsSaved"));
+      if (undo) {
+        toastUndoable(
+          t("formatsSaved"),
+          { label: tCommon("undo"), onUndo: () => save(previous) },
+          { id: `format-${undo}` },
+        );
+      }
       router.refresh();
     });
   };
@@ -71,10 +94,13 @@ export function FormatPreferencesForm() {
           value={dateChoice}
           disabled={isPending}
           onChange={(event) =>
-            save({
-              dateFormat: event.target.value as DateFormat,
-              numberFormat: numberChoice,
-            })
+            save(
+              {
+                dateFormat: event.target.value as DateFormat,
+                numberFormat: numberChoice,
+              },
+              "dateFormat",
+            )
           }
           className={cn(SELECT_CLASS, "max-w-sm")}
         >
@@ -93,10 +119,13 @@ export function FormatPreferencesForm() {
           value={numberChoice}
           disabled={isPending}
           onChange={(event) =>
-            save({
-              dateFormat: dateChoice,
-              numberFormat: event.target.value as NumberFormat,
-            })
+            save(
+              {
+                dateFormat: dateChoice,
+                numberFormat: event.target.value as NumberFormat,
+              },
+              "numberFormat",
+            )
           }
           className={cn(SELECT_CLASS, "max-w-sm")}
         >

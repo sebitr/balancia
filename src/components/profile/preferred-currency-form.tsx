@@ -48,10 +48,11 @@ export function PreferredCurrencyForm({
         return;
       }
       if (announce) {
-        toastUndoable(t("currencySaved"), {
-          label: tCommon("undo"),
-          onUndo: () => choose(previous, false),
-        });
+        toastUndoable(
+          t("currencySaved"),
+          { label: tCommon("undo"), onUndo: () => choose(previous, false) },
+          { id: "preferred-currency" },
+        );
       }
       router.refresh();
     });
