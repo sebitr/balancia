@@ -171,11 +171,17 @@ export const notificationPreferences = pgTable("notification_preferences", {
 });
 
 /**
- * Groups a person has silenced.
+ * Groups a person has silenced, for a while or for good.
  *
- * A row's presence is the mute — there is no `muted` boolean to disagree with
- * it. Muting stops the notification being created at all, rather than hiding
- * it afterwards, so a muted group leaves nothing behind to read.
+ * A row's presence is the silence — there is no `muted` boolean to disagree
+ * with it — and `snoozed_until` says how long it lasts: null is indefinite,
+ * which is a mute, and a timestamp is a snooze that wears off on its own. One
+ * table rather than two because the two are the same rule with two clocks, and
+ * because a group cannot be muted and snoozed at once.
+ *
+ * Either way it stops the notification being created at all, rather than
+ * hiding one afterwards, so a quietened group leaves nothing behind to read
+ * and nothing accumulates for the moment it wakes up.
  */
 export const notificationGroupMutes = pgTable(
   "notification_group_mutes",
@@ -189,6 +195,13 @@ export const notificationGroupMutes = pgTable(
     mutedAt: timestamp("muted_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /**
+     * When the silence lifts. Null means never, which is what a mute is.
+     *
+     * A row whose time has passed is spent: it suppresses nothing, and the
+     * next write over the same pair replaces it.
+     */
+    snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.groupId] }),

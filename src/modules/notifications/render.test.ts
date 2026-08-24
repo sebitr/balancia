@@ -195,3 +195,122 @@ describe("naming the app in the title", () => {
     expect(rendered.title).toBe("€24.00 from Portugal, March");
   });
 });
+
+/**
+ * One wording, two shapes.
+ *
+ * The inbox gives the amount a column of its own so a screenful of them can be
+ * read down as figures; a lock screen has no columns and needs the whole line.
+ * Both come out of the same call, which is what stops the two surfaces
+ * describing one event differently.
+ */
+describe("splitting the line for a surface that has a column for the amount", () => {
+  const expense: ExpensePayload = {
+    kind: "expense",
+    groupName: "Chalet",
+    description: "Raclette",
+    amount: "2500",
+    currency: "CHF",
+  };
+
+  function expenseEntry(type: NotificationEntry["type"]): NotificationEntry {
+    return {
+      id: "n3",
+      groupId: "g1",
+      type,
+      category: "expenses",
+      entityType: "expense",
+      entityId: "e1",
+      actorLabel: "Hervé",
+      payload: expense,
+      createdAt: new Date("2026-08-14T09:00:00Z"),
+      readAt: null,
+    };
+  }
+
+  it("keeps the amount out of the sentence and beside it instead", () => {
+    const rendered = renderNotification(
+      expenseEntry("expense.created"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Hervé added Raclette");
+    // Intl holds the code to its number with a space of its own choosing.
+    expect(rendered.amount?.replace(/\s/g, " ")).toBe("CHF 25.00");
+  });
+
+  /** The push message is the two halves joined, never a third phrasing. */
+  it("writes the whole line into the body a push message sends", () => {
+    const rendered = renderNotification(
+      expenseEntry("expense.created"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.body).toBe(`${rendered.sentence} · ${rendered.amount}`);
+  });
+
+  /**
+   * A deleted expense has no figure to report. Naming what it was worth only
+   * invites the reader to go looking for something that is not there.
+   */
+  it("gives a deletion no amount at all", () => {
+    const rendered = renderNotification(
+      expenseEntry("expense.deleted"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.amount).toBeNull();
+    expect(rendered.body).toBe("Hervé deleted Raclette");
+  });
+
+  /** A reminder's sentence is the sender's own, and carries no column. */
+  it("leaves a reminder's authored message as the whole of it", () => {
+    const rendered = renderNotification(
+      entry(reminder([{ amount: "2400", currency: "EUR" }])),
+      translate,
+      "en",
+    );
+
+    expect(rendered.amount).toBeNull();
+    expect(rendered.sentence).toBe(rendered.body);
+  });
+});
+
+/**
+ * Where a settlement lands.
+ *
+ * `/balances` is not a route and never has been, so every payment notification
+ * opened a 404 on a screen that says nothing went wrong.
+ */
+describe("the destination of a payment notification", () => {
+  it("opens the screen that lists the balances", () => {
+    const rendered = renderNotification(
+      {
+        id: "n4",
+        groupId: "g1",
+        type: "settlement.created",
+        category: "settlements",
+        entityType: "settlement",
+        entityId: "s1",
+        actorLabel: "Alice",
+        payload: {
+          kind: "settlement",
+          groupName: "Chalet",
+          amount: "12000",
+          currency: "CHF",
+          direction: "incoming",
+          counterpartName: "Alice",
+        },
+        createdAt: new Date("2026-08-14T09:00:00Z"),
+        readAt: null,
+      },
+      translate,
+      "en",
+    );
+
+    expect(rendered.url).toBe("/groups/g1/settle");
+  });
+});

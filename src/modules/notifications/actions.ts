@@ -5,7 +5,12 @@ import { getTranslations } from "next-intl/server";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getCurrentActor, getCurrentUser } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
-import { markRead, savePreferences, setGroupMuted } from "./service";
+import {
+  markRead,
+  savePreferences,
+  setGroupMuted,
+  setGroupSnoozed,
+} from "./service";
 import type { NotificationPreferences } from "./types";
 
 /**
@@ -54,6 +59,39 @@ export async function setGroupMutedAction(
     await setGroupMuted(user.userId, access.groupId, muted);
     revalidatePath("/profile/notifications");
   });
+}
+
+/**
+ * Quietens a group until tomorrow, or lifts the quiet early.
+ *
+ * `hours` is a duration rather than an instant on purpose: the wake time is
+ * computed on the server, so a device with a wrong clock — or a caller minded
+ * to send one — cannot buy itself a silence of any length it likes. Null lifts
+ * a snooze that is already running.
+ */
+export async function setGroupSnoozedAction(
+  groupId: string,
+  hours: number | null,
+): Promise<ActionResult> {
+  const t = await getTranslations("serverErrors");
+  const user = await getCurrentUser();
+  if (!user) return actionError(t("signedInRequired"));
+
+  return runAction("setGroupSnoozed", async () => {
+    const access = await authorizeGroup(await getCurrentActor(), groupId);
+    const until =
+      hours === null
+        ? null
+        : new Date(Date.now() + clampHours(hours) * 60 * 60 * 1000);
+    await setGroupSnoozed(user.userId, access.groupId, until);
+    revalidatePath("/notifications");
+  });
+}
+
+/** A snooze is a day, give or take. Anything longer is a mute by another name. */
+function clampHours(hours: number): number {
+  if (!Number.isFinite(hours)) return 24;
+  return Math.min(24 * 7, Math.max(1, Math.round(hours)));
 }
 
 export async function markReadAction(
