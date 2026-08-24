@@ -110,8 +110,11 @@ describe("deleting the entry on screen", () => {
 
     await confirmDelete(user);
     expect(deleteExpenseAction).toHaveBeenCalledWith("g1", "e1");
-    // The filters the reader arrived with survive the deletion.
+    // The filters the reader arrived with survive the deletion. Once, too:
+    // the delete revalidated the list server-side, and a refresh chasing the
+    // push only raced it.
     expect(push).toHaveBeenCalledWith("/groups/g1/expenses?q=din");
+    expect(refresh).not.toHaveBeenCalled();
 
     const [message, options] = lastToast();
     expect(message).toBe("Entry deleted");
@@ -119,6 +122,35 @@ describe("deleting the entry on screen", () => {
 
     options.action.onClick();
     expect(restoreExpenseAction).toHaveBeenCalledWith("g1", "e1");
+  });
+
+  /**
+   * The Undo was on screen and inert: nothing closed the confirmation, and a
+   * modal dialog holds the whole page down with `pointer-events: none` on the
+   * body. The toaster hangs off the body like everything else, so the button
+   * took no taps until the navigation got round to unmounting the dialog —
+   * which is well after the reader has reached for it and concluded it does
+   * not work.
+   */
+  it("lets go of the page before the Undo is offered", async () => {
+    const user = userEvent.setup();
+    render();
+
+    await confirmDelete(user);
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(document.body.style.pointerEvents).not.toBe("none");
+  });
+
+  it("keeps the confirmation up when the deletion is refused", async () => {
+    deleteExpenseAction.mockResolvedValueOnce({ ok: false });
+    const user = userEvent.setup();
+    render();
+
+    await confirmDelete(user);
+
+    // Still there to be tried again — the toast said why it did not work.
+    expect(screen.getByRole("alertdialog")).toBeVisible();
   });
 
   it("puts a repayment back on the table it was deleted from", async () => {

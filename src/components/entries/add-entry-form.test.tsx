@@ -1603,6 +1603,11 @@ describe("editing an entry", () => {
     options.action.onClick();
     expect(restoreExpense).toHaveBeenCalledWith("g1", "e1");
     expect(restoreSettlement).not.toHaveBeenCalled();
+
+    // And the confirmation is gone. A modal dialog holds the page down with
+    // `pointer-events: none` on the body, and the toaster hangs off the body
+    // too — an Undo offered underneath one takes no taps at all.
+    expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it("has no delete and no update when the entry is new", () => {
