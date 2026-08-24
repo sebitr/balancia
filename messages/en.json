@@ -726,14 +726,6 @@
     "settledOnVia": "{when} · {method}",
     "backToGroup": "Back to the group"
   },
-  "balancesPage": {
-    "title": "Balances",
-    "allSettledTitle": "Everyone is settled up",
-    "allSettledDescription": "No outstanding balances in this group.",
-    "whoOwesWhat": "Who owes what",
-    "suggestedRepayments": "Suggested repayments",
-    "suggestedNote": "The fewest transfers that clear these balances. Recording one adds a payment; nothing already recorded changes."
-  },
   "landing": {
     "signIn": "Sign in",
     "createAccount": "Create account",

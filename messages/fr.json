@@ -726,14 +726,6 @@
     "settledOnVia": "{when} · {method}",
     "backToGroup": "Retour au groupe"
   },
-  "balancesPage": {
-    "title": "Soldes",
-    "allSettledTitle": "Tout le monde est à jour",
-    "allSettledDescription": "Aucun solde en attente dans ce groupe.",
-    "whoOwesWhat": "Qui doit quoi",
-    "suggestedRepayments": "Remboursements suggérés",
-    "suggestedNote": "Le minimum de virements pour solder ces comptes. En enregistrer un ajoute un paiement ; rien de ce qui est déjà enregistré n'est modifié."
-  },
   "landing": {
     "signIn": "Se connecter",
     "createAccount": "Créer un compte",

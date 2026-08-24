@@ -16,7 +16,7 @@ describe("screenPath", () => {
     for (const from of [
       "/groups/g1",
       "/groups/g1/expenses",
-      "/groups/g1/balances",
+      "/groups/g1/settle",
       "/groups/g1/members",
       "/groups/g1/expenses/e1",
     ]) {
@@ -51,7 +51,7 @@ describe("screenPath", () => {
     for (const path of [
       "/groups/g1",
       "/groups/g1/expenses",
-      "/groups/g1/balances",
+      "/groups/g1/settle",
       "/dashboard",
       "/",
     ]) {

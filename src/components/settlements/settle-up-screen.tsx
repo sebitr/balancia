@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
-import { SettleUpDialog } from "@/components/settlements/settle-up-dialog";
+import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -67,17 +67,11 @@ export interface SettledRepaymentView {
   readonly paymentMethod: string | null;
 }
 
-interface ParticipantOption {
-  readonly id: string;
-  readonly displayName: string;
-}
-
 interface Shared {
   readonly groupId: string;
   readonly groupName: string;
   readonly senderName: string;
   readonly recipients: readonly RemindRecipient[];
-  readonly participants: readonly ParticipantOption[];
   readonly currencyMode: "separate" | "converted";
   readonly baseCurrency: string | null;
 }
@@ -268,20 +262,20 @@ function TransferRow({
   // reader is in the sentence, and the person who owes when they are not.
   const face = transfer.fromIsSelf ? transfer.toName : transfer.fromName;
 
-  const record = (trigger: React.ReactNode) => (
-    <SettleUpDialog
-      groupId={shared.groupId}
-      participants={shared.participants}
-      currencyMode={shared.currencyMode}
-      baseCurrency={shared.baseCurrency}
-      defaultCurrency={shared.baseCurrency ?? transfer.currency}
-      initialFromId={transfer.fromParticipantId}
-      initialToId={transfer.toParticipantId}
-      initialAmountMinor={transfer.minorUnits}
-      initialCurrency={transfer.currency}
-      trigger={trigger}
-    />
-  );
+  /*
+   * Recording opens the add-entry drawer over this screen, on the settle tab,
+   * with the pair already picked — the same drawer the bottom bar's Add opens,
+   * rather than a second form that only knows how to write repayments.
+   *
+   * The amount is not on the link. The drawer prices the debt from the
+   * balances it loads for itself, so what the form opens on is what is
+   * outstanding when it opens rather than what this screen last rendered.
+   */
+  const recordHref = settleIntentPath(shared.groupId, {
+    fromParticipantId: transfer.fromParticipantId,
+    toParticipantId: transfer.toParticipantId,
+    currency: transfer.currency,
+  });
 
   // Only debts owed *to* the reader can be chased, and only through the
   // reminder flow's own memory of who was asked when.
@@ -334,15 +328,15 @@ function TransferRow({
 
       <div className="flex items-center gap-2">
         {transfer.fromIsSelf ? (
-          record(
-            <Button
-              size="lg"
-              aria-label={recordLabel}
-              className="h-[46px] flex-1 rounded-[14px] text-sm font-semibold"
-            >
+          <Button
+            asChild
+            size="lg"
+            className="h-[46px] flex-1 rounded-[14px] text-sm font-semibold"
+          >
+            <Link href={recordHref} aria-label={recordLabel}>
               {t("record")}
-            </Button>,
-          )
+            </Link>
+          </Button>
         ) : (
           <>
             {transfer.toIsSelf && recipients.length > 0 && (
@@ -356,28 +350,28 @@ function TransferRow({
                 className="h-[46px] flex-1 rounded-[14px] text-sm font-semibold"
               />
             )}
-            {record(
-              <Button
-                variant="outline"
-                size="lg"
-                aria-label={recordLabel}
-                className={cn(
-                  "rounded-[14px] font-medium",
-                  // A row the reader is part of gets the full 44px target
-                  // beside its primary action; one between two other people is
-                  // the quiet case and takes the small recipe, right-aligned.
-                  involved
-                    ? "h-[46px] flex-1 text-sm"
-                    : "ml-auto h-9 px-3.5 text-xs",
-                )}
-              >
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className={cn(
+                "rounded-[14px] font-medium",
+                // A row the reader is part of gets the full 44px target beside
+                // its primary action; one between two other people is the
+                // quiet case and takes the small recipe, right-aligned.
+                involved
+                  ? "h-[46px] flex-1 text-sm"
+                  : "ml-auto h-9 px-3.5 text-xs",
+              )}
+            >
+              <Link href={recordHref} aria-label={recordLabel}>
                 {t("record")}
                 <ChevronRight
                   aria-hidden="true"
                   className="text-muted-foreground"
                 />
-              </Button>,
-            )}
+              </Link>
+            </Button>
           </>
         )}
       </div>

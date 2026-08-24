@@ -52,7 +52,7 @@ export async function commitImportAction(
   if (result.ok) {
     revalidatePath(`/groups/${groupId}`);
     revalidatePath(`/groups/${groupId}/expenses`);
-    revalidatePath(`/groups/${groupId}/balances`);
+    revalidatePath(`/groups/${groupId}/settle`);
     revalidatePath(`/groups/${groupId}/import`);
   }
   return result;

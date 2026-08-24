@@ -119,7 +119,7 @@ describe("the comparison bars' alignment", () => {
         within(candidate)
           .getByRole("link")
           .getAttribute("href")
-          ?.endsWith("/balances"),
+          ?.endsWith("/members"),
       );
 
     expect(item).toBeDefined();

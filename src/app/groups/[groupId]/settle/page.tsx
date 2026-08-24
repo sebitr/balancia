@@ -63,10 +63,6 @@ export default async function SettleUpPage({
       groupName={access.group.name}
       senderName={senderName}
       recipients={recipients}
-      participants={participants.map((participant) => ({
-        id: participant.id,
-        displayName: participant.displayName,
-      }))}
       currencyMode={access.group.currencyMode}
       baseCurrency={access.group.baseCurrency}
     />

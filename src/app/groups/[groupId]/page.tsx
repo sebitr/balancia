@@ -11,7 +11,6 @@ import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
 import { requireGroupAccess } from "@/lib/actions";
 import { listGroupActivity } from "@/modules/activity/service";
 import { countContributions } from "@/modules/guests/service";
-import { listParticipants } from "@/modules/groups/service";
 import {
   loadGroupOverview,
   markGroupOpened,
@@ -66,8 +65,12 @@ export default async function GroupOverviewPage({
   const isGuest = access.role === "guest";
   const now = new Date();
 
-  const [overview, activity, recipients, contributionCount, participants] =
-    await Promise.all([
+  // The roster used to be loaded here for the record-a-payment dialog the
+  // settlement rows carried. Recording now happens in the add-entry drawer,
+  // which loads the people it needs on its own route, so the overview no
+  // longer pays for a list nothing on it reads.
+  const [overview, activity, recipients, contributionCount] = await Promise.all(
+    [
       loadGroupOverview(access, { now }),
       listGroupActivity(access.groupId, { limit: ACTIVITY_ROWS }),
       listRemindRecipients(access),
@@ -75,8 +78,8 @@ export default async function GroupOverviewPage({
       isGuest && access.participantId
         ? countContributions(access.participantId)
         : Promise.resolve(0),
-      listParticipants(access.groupId),
-    ]);
+    ],
+  );
 
   const t = await getTranslations("group");
 
@@ -96,11 +99,6 @@ export default async function GroupOverviewPage({
     access.actor.kind === "guest"
       ? access.actor.displayName
       : access.actor.name;
-  const participantOptions = participants.map((participant) => ({
-    id: participant.id,
-    displayName: participant.displayName,
-  }));
-
   return (
     <div className="flex flex-col gap-[26px]">
       {/* No visible title and no meta line: the switcher in the top bar
@@ -190,9 +188,6 @@ export default async function GroupOverviewPage({
             groupName={access.group.name}
             senderName={senderName}
             recipients={recipients}
-            participants={participantOptions}
-            currencyMode={access.group.currencyMode}
-            baseCurrency={access.group.baseCurrency}
           />
 
           {activity.length > 0 && (

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { ArrowRight, Banknote } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
-import { SettleUpDialog } from "@/components/settlements/settle-up-dialog";
+import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,11 +31,6 @@ export interface SettlementSuggestionView {
   readonly toIsSelf: boolean;
 }
 
-interface ParticipantOption {
-  readonly id: string;
-  readonly displayName: string;
-}
-
 /** Explicit transfers; net balances remain in the section above. */
 export function SettlementList({
   suggestions,
@@ -43,42 +38,31 @@ export function SettlementList({
   groupName,
   senderName,
   recipients,
-  participants,
-  currencyMode,
-  baseCurrency,
 }: {
   suggestions: readonly SettlementSuggestionView[];
   groupId: string;
   groupName: string;
   senderName: string;
   recipients: readonly RemindRecipient[];
-  participants: readonly ParticipantOption[];
-  currencyMode: "separate" | "converted";
-  baseCurrency: string | null;
 }) {
   const t = useTranslations("group");
   const [active, setActive] = useState<SettlementSuggestionView | null>(null);
 
   if (suggestions.length === 0) return null;
 
-  const form = (
-    suggestion: SettlementSuggestionView,
-    trigger: React.ReactNode,
-  ) => (
-    <SettleUpDialog
-      key={`${suggestion.fromParticipantId}-${suggestion.toParticipantId}-${suggestion.currency}-${suggestion.minorUnits}`}
-      groupId={groupId}
-      participants={participants}
-      currencyMode={currencyMode}
-      baseCurrency={baseCurrency}
-      defaultCurrency={baseCurrency ?? suggestion.currency}
-      initialFromId={suggestion.fromParticipantId}
-      initialToId={suggestion.toParticipantId}
-      initialAmountMinor={suggestion.minorUnits}
-      initialCurrency={suggestion.currency}
-      trigger={trigger}
-    />
-  );
+  /**
+   * Where recording this transfer goes: the add-entry drawer, over the group,
+   * on the settle tab with the pair already picked. The amount is left off the
+   * link on purpose — the drawer prices the debt from the balances it loads,
+   * so the form opens on what is outstanding rather than on what this list
+   * last rendered.
+   */
+  const recordHref = (suggestion: SettlementSuggestionView) =>
+    settleIntentPath(groupId, {
+      fromParticipantId: suggestion.fromParticipantId,
+      toParticipantId: suggestion.toParticipantId,
+      currency: suggestion.currency,
+    });
 
   const activeRecipients = active
     ? recipients.filter(
@@ -113,16 +97,10 @@ export function SettlementList({
         <ul className="overflow-hidden rounded-2xl bg-card ring-1 ring-border">
           {suggestions.map((suggestion, index) => {
             const key = `${suggestion.fromParticipantId}-${suggestion.toParticipantId}-${suggestion.currency}-${index}`;
-            const row = (
-              <button
-                type="button"
-                onClick={
-                  suggestion.fromIsSelf
-                    ? undefined
-                    : () => setActive(suggestion)
-                }
-                className="grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
-              >
+            const surface =
+              "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0";
+            const inside = (
+              <>
                 <SettlementPeople suggestion={suggestion} />
                 <Amount
                   minorUnits={suggestion.minorUnits}
@@ -130,12 +108,28 @@ export function SettlementList({
                   display="code"
                   className="shrink-0 text-sm font-semibold"
                 />
-              </button>
+              </>
             );
 
             return (
               <li key={key} className="border-t first:border-t-0">
-                {suggestion.fromIsSelf ? form(suggestion, row) : row}
+                {/* The reader's own debt is the one they can act on, so its row
+                    is the action: straight into the drawer, prefilled. Anybody
+                    else's opens the sheet, which is where the little that can
+                    be done about someone else's debt lives. */}
+                {suggestion.fromIsSelf ? (
+                  <Link href={recordHref(suggestion)} className={surface}>
+                    {inside}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setActive(suggestion)}
+                    className={surface}
+                  >
+                    {inside}
+                  </button>
+                )}
               </li>
             );
           })}
@@ -181,12 +175,12 @@ export function SettlementList({
               </div>
 
               <div className="mt-4 flex flex-col gap-2">
-                {form(
-                  active,
-                  <Button className="h-[46px] w-full rounded-[13px] font-semibold">
-                    {t("recordPayment")}
-                  </Button>,
-                )}
+                <Button
+                  asChild
+                  className="h-[46px] w-full rounded-[13px] font-semibold"
+                >
+                  <Link href={recordHref(active)}>{t("recordPayment")}</Link>
+                </Button>
                 {active.toIsSelf && activeRecipients.length > 0 && (
                   <RemindButton
                     groupId={groupId}
