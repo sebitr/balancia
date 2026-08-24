@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
@@ -210,5 +212,79 @@ describe("a sheet that scrolls itself", () => {
     row.dispatchEvent(move);
 
     expect(sheet.style.transform).toBe("");
+  });
+});
+
+/**
+ * One grabber, drawn in one place.
+ *
+ * `SheetContent` puts the pill at the top of every bottom sheet itself. Two
+ * call sites drew a second one directly underneath it — the position sheet and
+ * the settlement detail — and the pair read as one thick smudged bar rather
+ * than as a handle.
+ *
+ * They had a reason, which is why this is a test and not a note. The
+ * primitive's grabber carries `mb-1` and gets the rest of its room from the
+ * container's `gap-4`; a sheet that spaces its children by hand turns that gap
+ * off, the pill ends up 4px from the title, and adding a grabber with the
+ * margin baked in looks exactly like the fix. So the rule is enforced from
+ * both ends: the primitive draws one, and no component may draw its own.
+ */
+describe("the grabber", () => {
+  it("is drawn once on a bottom sheet, and not at all on a side one", () => {
+    const { unmount } = render(
+      <Sheet open>
+        <SheetContent side="bottom">
+          <SheetTitle>Your position</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+    );
+
+    expect(
+      document.querySelectorAll('[data-slot="sheet-grabber"]'),
+    ).toHaveLength(1);
+    unmount();
+
+    render(
+      <Sheet open>
+        <SheetContent side="right">
+          <SheetTitle>Filters</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+    );
+
+    expect(
+      document.querySelectorAll('[data-slot="sheet-grabber"]'),
+    ).toHaveLength(0);
+  });
+
+  /**
+   * The render test above cannot see a hand-rolled pill in a call site, so the
+   * source is read for the shape of one: a 4px-tall element with a full
+   * radius. Nothing else in the product is both.
+   */
+  it("is not hand-rolled anywhere else in the product", () => {
+    const PILL = /className="[^"]*\bh-1\b[^"]*\brounded-full\b[^"]*"/;
+    const offenders: string[] = [];
+
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.name.endsWith(".tsx")) {
+          const source = readFileSync(full, "utf8");
+          if (source.includes("SheetContent") && PILL.test(source)) {
+            offenders.push(path.relative(process.cwd(), full));
+          }
+        }
+      }
+    };
+    walk(path.join(process.cwd(), "src", "components"));
+
+    // `ui/sheet.tsx` is where the one grabber lives. Anything else listed here
+    // is a second bar under the first: delete it, and if the sheet has turned
+    // off `gap-4`, state the room under the grabber on its first child.
+    expect(offenders).toEqual(["src/components/ui/sheet.tsx"]);
   });
 });

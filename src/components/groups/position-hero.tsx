@@ -261,11 +261,11 @@ export function PositionHero({
           onOpenAutoFocus={openOnContent}
           className="mx-auto max-h-[90svh] max-w-[430px] gap-0 overflow-y-auto rounded-t-[26px] bg-background px-5 pt-2.5 pb-7 data-[side=bottom]:border-t-0"
         >
-          <span
-            aria-hidden="true"
-            className="mx-auto mb-5 block h-1 w-[38px] rounded-full bg-foreground/20"
-          />
-          <SheetTitle className="text-xl font-semibold tracking-[-0.02em]">
+          {/* `SheetContent` draws the grabber itself on a bottom sheet. Its
+              own `mb-1` is the other half of the default `gap-4`, which this
+              sheet turns off to space its children by hand — so the room under
+              it is stated here instead. */}
+          <SheetTitle className="mt-4 text-xl font-semibold tracking-[-0.02em]">
             {t("positionSheetTitle")}
           </SheetTitle>
           {/* The three subtotals explain the sheet now; this stays for the
