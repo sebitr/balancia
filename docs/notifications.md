@@ -29,9 +29,55 @@ Three rules apply to all of them:
    them by, so a participant with no linked user is silently not a recipient.
 
 Each person has four switches (expenses, payments, recurring, imports) and can
-mute a group outright. Both suppress the notification at the point it would be
-written, rather than hiding one that already exists — a muted group leaves
-nothing behind to read later.
+quieten a group — either **muted**, which lasts until it is undone, or
+**snoozed for 24 hours**, which wears off on its own. Both are the same row in
+`notification_group_mutes`, and `snoozed_until` is the whole of the difference:
+null is a mute, a timestamp is a snooze, and a timestamp that has passed
+suppresses nothing (nothing sweeps them; the row is simply spent).
+
+Switches and quiet alike suppress the notification at the point it would be
+written, rather than hiding one that already exists — so a quietened group
+leaves nothing behind to read later, and nothing accumulates for the moment a
+snooze lifts. The settings screen lists only the mutes: a decision that undoes
+itself tomorrow morning does not belong beside a switch.
+
+## The inbox
+
+`/notifications` groups what it has rather than listing it flat.
+
+- **Day sections.** Today, Yesterday, Earlier, decided on the server in the
+  reader's own time zone (`day.ts`) and sent down with each row — computed in
+  the browser it would be read off a second clock, and a list drawn at ten past
+  midnight would hydrate into different headings than the ones already on
+  screen.
+- **Filters.** All / Unread / Reminders, with counts. A quietened group and a
+  row swiped away drop out of every count, or the badge could not be cleared.
+- **Group chips** print once per run of consecutive rows from one group. A
+  reminder card ends the run.
+- **Bursts.** Consecutive rows about one entity _by one person_ fold into
+  "{actor} made {n} changes to {description}". One person, because the sentence
+  names one — two people editing the same expense stay two rows.
+- **Imports** sink to the foot of their day; two or more in a day become one
+  expandable count. They are receipts for something the reader started, not
+  news.
+- **Reminders** are cards with the sender's own words and two actions, Settle
+  up and Copy link.
+- **The archive** is the read half older than 30 days, behind a footer on the
+  All filter. Unread rows never archive, however old: nobody has looked at
+  them. It is a separate query, so an old read row cannot spend one of the
+  fifty the inbox asks for.
+
+Swiping a row left dismisses it **for as long as the list is on screen**. There
+is no column behind it — a notification is a record of something that happened,
+and the reader is clearing their view rather than editing history — so it comes
+back on the next load. Every row is a real button, the swipe has a Dismiss
+button beside it for anyone who is not holding a phone, and unread state is in
+the accessible name as well as in the dot.
+
+The wording of a row comes from `renderNotification` like everything else, but
+in two halves: `sentence` (actor, verb, object) and `amount`, so the inbox can
+right-align the figures into a column that can be read down. `body` is the two
+joined, and that is what a push message sends — one wording, two shapes.
 
 ## How it is delivered
 
@@ -87,8 +133,12 @@ notification inside the app.
 - `src/lib/push/send.ts` — one HTTP request, and the four answers that change
   what the caller does next (sent / expired / retry / failed).
 - `src/modules/notifications/` — audience rules (`events.ts`), writes and
-  reads (`service.ts`), the shared renderer (`render.ts`) and delivery
-  (`delivery.ts`).
+  reads (`service.ts`), the shared renderer (`render.ts`), day bucketing
+  (`day.ts`) and delivery (`delivery.ts`).
+- `src/components/notifications/` — the inbox. `grouping.ts` holds the
+  sectioning, chip dedupe, burst folding and import digesting as pure
+  functions over the rows the server rendered, which is why all of it is
+  tested as arithmetic rather than by driving a list with a pointer.
 
 The renderer is shared deliberately: the card on a lock screen and the row in
 the inbox are produced by the same function, so they cannot word the same event

@@ -1,0 +1,1 @@
+ALTER TABLE "notification_group_mutes" ADD COLUMN "snoozed_until" timestamp with time zone;

@@ -12,10 +12,14 @@ import {
 import { createSettlement } from "@/modules/settlements/service";
 import {
   countUnread,
+  listInbox,
+  listMutedGroups,
   listNotifications,
+  listQuietGroups,
   markRead,
   savePreferences,
   setGroupMuted,
+  setGroupSnoozed,
 } from "@/modules/notifications/service";
 import type { SettlementPayload } from "@/modules/notifications/types";
 import {
@@ -323,5 +327,207 @@ describe("the inbox", () => {
 
     expect(marked).toBe(0);
     expect(await countUnread(fixture.member.actor.userId)).toBe(1);
+  });
+});
+
+/**
+ * A group quietened until tomorrow.
+ *
+ * A snooze is a mute with an hour on it, and it works the same way: the row is
+ * never written, so nothing piles up waiting for the silence to lift. What is
+ * worth checking is the seam between the two — they share one row, and a
+ * "Resume" beside a snooze must not undo a mute somebody made deliberately.
+ */
+describe("snoozing a group", () => {
+  const inADay = () => new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  it("writes nothing while the snooze is running", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      inADay(),
+    );
+
+    await createExpense(fixture.group.access, expenseInput(fixture));
+
+    expect(await listNotifications(fixture.member.actor.userId)).toHaveLength(
+      0,
+    );
+  });
+
+  /** The hour passes and the group is audible again, with nothing swept. */
+  it("lets everything through once the hour has passed", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      new Date(Date.now() - 1000),
+    );
+
+    await createExpense(fixture.group.access, expenseInput(fixture));
+
+    expect(await listNotifications(fixture.member.actor.userId)).toHaveLength(
+      1,
+    );
+  });
+
+  it("lifts early when the reader resumes it", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      inADay(),
+    );
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      null,
+    );
+
+    await createExpense(fixture.group.access, expenseInput(fixture));
+
+    expect(await listNotifications(fixture.member.actor.userId)).toHaveLength(
+      1,
+    );
+  });
+
+  /**
+   * Resume is offered beside a snooze, never beside a mute — but the two are
+   * one row, so a delete that did not say which shape it wanted would quietly
+   * unmute a group the reader muted on purpose.
+   */
+  it("leaves a mute alone when a snooze is lifted", async () => {
+    await setGroupMuted(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      true,
+    );
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      null,
+    );
+
+    await createExpense(fixture.group.access, expenseInput(fixture));
+
+    expect(await listNotifications(fixture.member.actor.userId)).toHaveLength(
+      0,
+    );
+  });
+
+  /** Muting outright is the stronger decision and replaces a running snooze. */
+  it("becomes indefinite when the group is muted instead", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      inADay(),
+    );
+    await setGroupMuted(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      true,
+    );
+
+    expect(await listMutedGroups(fixture.member.actor.userId)).toEqual([
+      fixture.group.groupId,
+    ]);
+  });
+
+  /**
+   * The settings screen lists standing decisions with a switch beside each.
+   * Something that undoes itself tomorrow morning does not belong there.
+   */
+  it("stays out of the muted-groups list on the settings screen", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      inADay(),
+    );
+
+    expect(await listMutedGroups(fixture.member.actor.userId)).toEqual([]);
+    expect(await listQuietGroups(fixture.member.actor.userId)).toHaveLength(1);
+  });
+
+  /** A group with nothing left in the inbox still has to be nameable. */
+  it("names the group it quietened, which has no rows left to read it off", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      inADay(),
+    );
+
+    const [quiet] = await listQuietGroups(fixture.member.actor.userId);
+
+    expect(quiet.groupId).toBe(fixture.group.groupId);
+    expect(quiet.groupName).toBeTruthy();
+    expect(quiet.snoozedUntil).not.toBeNull();
+  });
+
+  /** A spent row suppresses nothing and is not reported as quiet. */
+  it("stops reporting a group whose snooze has run out", async () => {
+    await setGroupSnoozed(
+      fixture.member.actor.userId,
+      fixture.group.groupId,
+      new Date(Date.now() - 1000),
+    );
+
+    expect(await listQuietGroups(fixture.member.actor.userId)).toEqual([]);
+  });
+});
+
+/**
+ * Where the inbox stops and the archive begins.
+ *
+ * Age alone does not archive anything: an unread row is one nobody has looked
+ * at, and however old it is, it is still the thing the reader came for. What
+ * ages out is the read half, kept only so it can be found again.
+ */
+describe("the archive line", () => {
+  const longAgo = new Date("2026-01-01T09:00:00Z");
+
+  /** Backdates a reader's rows and marks them read, as time would have. */
+  async function ageAndRead(userId: string): Promise<void> {
+    const db = getDb();
+    await db
+      .update(notifications)
+      .set({ createdAt: longAgo, readAt: longAgo })
+      .where(eq(notifications.userId, userId));
+  }
+
+  it("moves read rows past thirty days into the archive", async () => {
+    await createExpense(fixture.group.access, expenseInput(fixture));
+    await ageAndRead(fixture.member.actor.userId);
+
+    const inbox = await listInbox(fixture.member.actor.userId);
+
+    expect(inbox.entries).toHaveLength(0);
+    expect(inbox.archived).toHaveLength(1);
+  });
+
+  it("keeps an unread row in the list however old it is", async () => {
+    await createExpense(fixture.group.access, expenseInput(fixture));
+    const db = getDb();
+    await db
+      .update(notifications)
+      .set({ createdAt: longAgo })
+      .where(eq(notifications.userId, fixture.member.actor.userId));
+
+    const inbox = await listInbox(fixture.member.actor.userId);
+
+    expect(inbox.entries).toHaveLength(1);
+    expect(inbox.archived).toHaveLength(0);
+  });
+
+  /**
+   * The limit is what the inbox is for. A quiet month of read rows must not
+   * fill the page and push the recent ones off the end of it.
+   */
+  it("does not spend the page's limit on archived rows", async () => {
+    await createExpense(fixture.group.access, expenseInput(fixture));
+    await ageAndRead(fixture.member.actor.userId);
+    await createExpense(fixture.group.access, expenseInput(fixture));
+
+    const inbox = await listInbox(fixture.member.actor.userId, { limit: 1 });
+
+    expect(inbox.entries).toHaveLength(1);
+    expect(inbox.entries[0].readAt).toBeNull();
   });
 });

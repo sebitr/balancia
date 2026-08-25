@@ -27,7 +27,24 @@ export type Translate = (
 
 export interface RenderedNotification {
   readonly title: string;
+  /**
+   * The whole line, amount included — what a push message says.
+   *
+   * Composed from the two fields below rather than written separately, so the
+   * lock screen and the inbox cannot drift into wording one event two ways.
+   */
   readonly body: string;
+  /**
+   * The sentence without the amount: actor, verb, object.
+   *
+   * The inbox gives the amount a column of its own, right-aligned against the
+   * others, so a list of them can be read down as figures rather than hunted
+   * for inside fifteen words of prose. A lock screen has no such column, which
+   * is why `body` exists and why this is not simply what every caller gets.
+   */
+  readonly sentence: string;
+  /** The amount as the reader writes it, or null where the event has none. */
+  readonly amount: string | null;
   /** Where tapping it should land. Always a path on this instance. */
   readonly url: string;
   /**
@@ -91,10 +108,14 @@ function urlFor(entry: NotificationEntry): string {
         : `${group}/expenses`;
     case "expense.deleted":
       return `${group}/expenses`;
+    // Settle up: the screen that lists every balance in the group, which is
+    // where a payment's consequence is visible. It was `/balances` here for as
+    // long as this function has existed, and there has never been a route by
+    // that name — every settlement notification opened a 404.
     case "settlement.created":
     case "settlement.updated":
     case "settlement.deleted":
-      return `${group}/balances`;
+      return `${group}/settle`;
     case "import.completed":
       return `${group}/expenses`;
     // A reminder lands on the reader's own position, which is the thing it is
@@ -102,6 +123,25 @@ function urlFor(entry: NotificationEntry): string {
     case "reminder.received":
       return group;
   }
+}
+
+/**
+ * How a sentence and its amount are written as one line.
+ *
+ * The separator is the same middle dot the expense list and the activity log
+ * use between a thing and its price, so a push message reads like the app it
+ * came from.
+ */
+const AMOUNT_SEPARATOR = " · ";
+
+/** Joins the two halves into the `body` a push message sends. */
+function line(parts: Omit<RenderedNotification, "body">): RenderedNotification {
+  return {
+    ...parts,
+    body: parts.amount
+      ? `${parts.sentence}${AMOUNT_SEPARATOR}${parts.amount}`
+      : parts.sentence,
+  };
 }
 
 export function renderNotification(
@@ -138,7 +178,6 @@ export function renderNotification(
   const title = options.brand
     ? `${payload.groupName} - ${options.brand}`
     : payload.groupName;
-
   switch (payload.kind) {
     case "expense": {
       const key =
@@ -147,16 +186,18 @@ export function renderNotification(
           : entry.type === "expense.updated"
             ? "expenseUpdated"
             : "expenseCreated";
-      return {
+      return line({
         title,
-        body: t(key, {
-          actor,
-          description: payload.description,
-          amount: amountOf(payload, amountLocale),
-        }),
+        sentence: t(key, { actor, description: payload.description }),
+        // A deletion names no figure: the expense is gone, and reporting what
+        // it used to be worth invites the reader to look for it.
+        amount:
+          entry.type === "expense.deleted"
+            ? null
+            : amountOf(payload, amountLocale),
         url,
         tag,
-      };
+      });
     }
 
     case "settlement": {
@@ -168,40 +209,38 @@ export function renderNotification(
             : payload.direction === "incoming"
               ? "settlementIncoming"
               : "settlementOutgoing";
-      return {
+      return line({
         title,
-        body: t(key, {
-          actor,
-          amount: amountOf(payload, amountLocale),
-          counterpart: payload.counterpartName,
-        }),
+        sentence: t(key, { actor, counterpart: payload.counterpartName }),
+        amount: amountOf(payload, amountLocale),
         url,
         tag,
-      };
+      });
     }
 
     case "recurring":
-      return {
+      return line({
         title,
-        body: t("recurringGenerated", {
-          description: payload.description,
-          amount: amountOf(payload, amountLocale),
-        }),
+        sentence: t("recurringGenerated", { description: payload.description }),
+        amount: amountOf(payload, amountLocale),
         url,
         tag,
-      };
+      });
 
+    // Counts, not money. The three figures are the sentence itself, so the
+    // amount column beside an import row stays empty.
     case "import":
-      return {
+      return line({
         title,
-        body: t("importCompleted", {
+        sentence: t("importCompleted", {
           imported: payload.imported,
           skipped: payload.skipped,
           failed: payload.failed,
         }),
+        amount: null,
         url,
         tag,
-      };
+      });
 
     /*
      * The only kind whose title is not the group name, and the only one whose
@@ -216,18 +255,22 @@ export function renderNotification(
      * anything: how much, and which group. That is also what makes a reminder
      * legible among the notifications either side of it, whose titles are
      * group names too.
+     *
+     * Nothing is joined onto it. The amount is already in the title, and the
+     * inbox draws a reminder as a card rather than as a row with columns.
      */
     case "reminder":
-      return {
+      return line({
         title: t("reminderTitle", {
           amount: debtOf(payload, locale, amountLocale),
           group: payload.groupName,
         }),
-        body: payload.message,
+        sentence: payload.message,
+        amount: null,
         url,
         // One outstanding nudge per group: a second reminder replaces the
         // first on the lock screen rather than stacking beside it.
         tag: `reminder:${entry.groupId}`,
-      };
+      });
   }
 }
