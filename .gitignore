@@ -75,3 +75,11 @@ next-env.d.ts
 # scripts/weblate.sh — a scratch copy of origin/main, rebuilt on demand. The
 # file .weblate, which names the public translation project, is tracked.
 /.weblate-mirror/
+
+# pnpm's content-addressable store, when it lands in the project rather than
+# in the container volume. Both images set `store-dir /pnpm/store`, but pnpm
+# run anywhere else puts its store on the same filesystem as the project it
+# is installing into — which, under a bind mount, is right here. 42,755 of
+# these files were committed once already, swept up by a `git add .`, and
+# `format:check` went red on main until they were taken back out.
+/.pnpm-store/

@@ -1,1 +1,0 @@
-export{b as getIconModuleSpecifier,a as parseImportTemplate,c as parseUsageTemplate}from'../chunk-3W6BGJGE.js';export{a as iconLibraries}from'../chunk-CHWMSXYA.js';
