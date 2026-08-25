@@ -5,6 +5,7 @@ import { requireGroupAccess } from "@/lib/actions";
 import { listParticipants } from "@/modules/groups/service";
 import { listRemindRecipients } from "@/modules/reminders/service";
 import { loadSettleUp } from "@/modules/settlements/settle-up";
+import { listPayoutsOwed } from "@/modules/payouts/service";
 
 /**
  * Settle up.
@@ -36,6 +37,33 @@ export default async function SettleUpPage({
     listParticipants(access.groupId),
   ]);
 
+  /*
+   * The payout details of the people this reader owes, and of nobody else.
+   *
+   * The recipients are read off the transfers that were just computed, so the
+   * permission is structural rather than checked: a participant reaches this
+   * list only by appearing in a debt the balances say the reader has. There is
+   * no endpoint that answers "show me their IBAN".
+   */
+  const owed = view.currencies.flatMap((entry) =>
+    [...entry.yours, ...entry.others]
+      .filter((transfer) => transfer.fromIsSelf)
+      .map((transfer) => transfer.toParticipantId),
+  );
+  const payouts = await listPayoutsOwed(access.groupId, owed);
+  const payoutHints = [...payouts.entries()].flatMap(
+    ([participantId, methods]) =>
+      methods[0]
+        ? [
+            {
+              participantId,
+              method: methods[0].method,
+              detail: methods[0].detail,
+            },
+          ]
+        : [],
+  );
+
   const senderName =
     access.actor.kind === "guest"
       ? access.actor.displayName
@@ -49,6 +77,7 @@ export default async function SettleUpPage({
         others: entry.others.map(toView),
       }))}
       transferCount={view.transferCount}
+      payoutHints={payoutHints}
       lastSettled={view.lastSettled.map((repayment) => ({
         id: repayment.id,
         fromName: repayment.fromName,

@@ -13,6 +13,7 @@ export * from "./recurring";
 export * from "./imports";
 export * from "./rates";
 export * from "./categorization";
+export * from "./payouts";
 export * from "./notifications";
 export * from "./reminders";
 export * from "./telemetry";

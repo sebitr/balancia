@@ -12,8 +12,6 @@ import {
   openOnContent,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BalanceAmount } from "@/components/money/amount";
@@ -22,12 +20,9 @@ import { usePushSubscription } from "@/components/notifications/use-push-subscri
 import { initialsOf } from "@/components/join/types";
 import { currencyCatalogue } from "@/modules/currencies/catalog";
 import {
-  PAYMENT_METHOD_MAX_LENGTH,
-  countryForTimezone,
-  findPaymentMethod,
-  methodsForCountry,
-  type PaymentMethodId,
-} from "@/modules/settlements/payment-methods";
+  PayoutMethodsForm,
+  type PayoutEntry,
+} from "@/components/payouts/payout-methods-form";
 import {
   setFavoriteCurrenciesAction,
   setPreferredCurrencyAction,
@@ -56,25 +51,6 @@ import type { SettleRequestView } from "./types";
 
 /** 54px, matching the flow's primaries. */
 const DONE = "h-[3.375rem] w-full text-base";
-
-/**
- * The payout methods to offer, most likely first.
- *
- * Taken from the phone's own timezone, which is the best country signal
- * available before anybody has been asked anything — better than the currency,
- * which says nothing at all (EUR spans twenty countries), and better than one
- * more question on a form. An unrecognised zone falls back to the dull list
- * that works anywhere rather than to nothing.
- */
-function useRegionalMethods(): readonly PaymentMethodId[] {
-  return useMemo(() => {
-    const timezone =
-      typeof Intl === "undefined"
-        ? null
-        : Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return methodsForCountry(countryForTimezone(timezone));
-  }, []);
-}
 
 /** A row that can be ticked. At least 44px, tick on the right. */
 function ChoiceRow({
@@ -316,29 +292,23 @@ export function NotificationsSheet({
   );
 }
 
-interface PayoutEntry {
-  readonly method: PaymentMethodId;
-  readonly value: string;
-}
-
 /**
  * How should people pay you back.
  *
- * Multi-select, each ticked method opening the one field it needs. The order
- * is the order they were ticked, because whoever owes money sees the top one
- * first.
+ * The rows, the fields and the writing are all `PayoutMethodsForm`, which the
+ * money settings screen renders too — one list, one validator, one place where
+ * an IBAN's checksum is checked. What this adds is the sheet around it.
  *
- * **These do not persist.** Payout details are not in the schema — there is no
- * table, no validation and no API for them yet — so what this sheet holds
- * lives for the length of the flow and is shown back on the checklist. It is
- * built now because the settle-up sheet is the argument for collecting them at
- * all, and that argument is not visible without it.
+ * Confirmations are silenced here. A toast raised under an open sheet is
+ * painted behind it and its Undo takes no taps, so the sheet's own dismissal
+ * is the confirmation instead.
  */
 export function PayoutsSheet({
   open,
   onOpenChange,
   entries,
   onChange,
+  persist,
   title,
   description,
   doneLabel,
@@ -347,29 +317,14 @@ export function PayoutsSheet({
   onOpenChange: (open: boolean) => void;
   entries: readonly PayoutEntry[];
   onChange: (entries: readonly PayoutEntry[]) => void;
+  /** False for a guest: there is no account to store a bank account on. */
+  persist: boolean;
   title?: string;
   description?: string;
   doneLabel?: string;
 }) {
-  const t = useTranslations("onboarding.sheets.payouts");
-  const tMethods = useTranslations("paymentMethods");
-  const methods = useRegionalMethods();
-
-  const toggle = (method: PaymentMethodId) => {
-    onChange(
-      entries.some((entry) => entry.method === method)
-        ? entries.filter((entry) => entry.method !== method)
-        : [...entries, { method, value: "" }],
-    );
-  };
-
-  const setValue = (method: PaymentMethodId, value: string) => {
-    onChange(
-      entries.map((entry) =>
-        entry.method === method ? { ...entry, value } : entry,
-      ),
-    );
-  };
+  const t = useTranslations("payouts");
+  const tSheet = useTranslations("onboarding.sheets.payouts");
 
   return (
     <SheetShell
@@ -379,40 +334,17 @@ export function PayoutsSheet({
       description={description ?? t("sub")}
       footer={
         <Button size="lg" className={DONE} onClick={() => onOpenChange(false)}>
-          {doneLabel ?? t("done")}
+          {doneLabel ?? tSheet("done")}
         </Button>
       }
     >
-      <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
-        {methods.map((id) => {
-          const method = findPaymentMethod(id);
-          if (!method) return null;
-          const entry = entries.find((candidate) => candidate.method === id);
-          const label = tMethods(id as Parameters<typeof tMethods>[0]);
-
-          return (
-            <div key={id} className="flex flex-col">
-              <ChoiceRow checked={Boolean(entry)} onToggle={() => toggle(id)}>
-                <span className="text-sm">{label}</span>
-              </ChoiceRow>
-              {entry && method.kind !== "cash" && (
-                <div className="px-3 pb-2">
-                  <Label className="sr-only" htmlFor={`payout-${id}`}>
-                    {label}
-                  </Label>
-                  <Input
-                    id={`payout-${id}`}
-                    className="h-11"
-                    value={entry.value}
-                    maxLength={PAYMENT_METHOD_MAX_LENGTH}
-                    placeholder={t("detail")}
-                    onChange={(event) => setValue(id, event.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="flex max-h-80 flex-col overflow-y-auto">
+        <PayoutMethodsForm
+          initial={entries}
+          onChange={onChange}
+          persist={persist}
+          confirmations="silent"
+        />
       </div>
     </SheetShell>
   );
@@ -423,8 +355,9 @@ export function PayoutsSheet({
  *
  * This is the argument for asking about payout details here rather than in
  * onboarding: the detail gets entered because there is money on the table, by
- * somebody who wants it. Choosing here ticks the checklist's payout row too,
- * because it is the same answer to the same question.
+ * somebody who wants it. What is saved is the reader's own list, which is why
+ * it ticks the checklist's payout row too — it is the same answer to the same
+ * question, asked at the moment it pays off.
  */
 export function SettleUpSheet({
   open,
@@ -432,12 +365,14 @@ export function SettleUpSheet({
   request,
   entries,
   onChange,
+  persist,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   request: SettleRequestView;
   entries: readonly PayoutEntry[];
   onChange: (entries: readonly PayoutEntry[]) => void;
+  persist: boolean;
 }) {
   const t = useTranslations("onboarding.sheets.settleUp");
 
@@ -465,79 +400,20 @@ export function SettleUpSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <PayoutsInline entries={entries} onChange={onChange} />
+        <div className="flex max-h-70 flex-col overflow-y-auto">
+          <PayoutMethodsForm
+            initial={entries}
+            onChange={onChange}
+            persist={persist}
+            confirmations="silent"
+          />
+        </div>
 
         <Button size="lg" className={DONE} onClick={() => onOpenChange(false)}>
           {t("save", { name: request.name })}
         </Button>
       </SheetContent>
     </Sheet>
-  );
-}
-
-/** The method rows again, without a sheet of their own around them. */
-function PayoutsInline({
-  entries,
-  onChange,
-}: {
-  entries: readonly PayoutEntry[];
-  onChange: (entries: readonly PayoutEntry[]) => void;
-}) {
-  const t = useTranslations("onboarding.sheets.payouts");
-  const tMethods = useTranslations("paymentMethods");
-  // Three, not the whole list: this sheet is answering one person's question
-  // about one payment, not setting up a profile.
-  const methods = useRegionalMethods().slice(0, 3);
-
-  return (
-    <div className="flex flex-col gap-1">
-      {methods.map((id) => {
-        const method = findPaymentMethod(id);
-        if (!method) return null;
-        const entry = entries.find((candidate) => candidate.method === id);
-        const label = tMethods(id as Parameters<typeof tMethods>[0]);
-
-        return (
-          <div key={id} className="flex flex-col">
-            <ChoiceRow
-              checked={Boolean(entry)}
-              onToggle={() =>
-                onChange(
-                  entry
-                    ? entries.filter((candidate) => candidate.method !== id)
-                    : [...entries, { method: id, value: "" }],
-                )
-              }
-            >
-              <span className="text-sm">{label}</span>
-            </ChoiceRow>
-            {entry && method.kind !== "cash" && (
-              <div className="px-3 pb-2">
-                <Label className="sr-only" htmlFor={`settle-${id}`}>
-                  {label}
-                </Label>
-                <Input
-                  id={`settle-${id}`}
-                  className="h-11"
-                  value={entry.value}
-                  maxLength={PAYMENT_METHOD_MAX_LENGTH}
-                  placeholder={t("detail")}
-                  onChange={(event) =>
-                    onChange(
-                      entries.map((candidate) =>
-                        candidate.method === id
-                          ? { ...candidate, value: event.target.value }
-                          : candidate,
-                      ),
-                    )
-                  }
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
   );
 }
 

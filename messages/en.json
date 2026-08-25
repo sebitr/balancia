@@ -2860,6 +2860,56 @@
     "wise": "Wise",
     "zelle": "Zelle"
   },
+  "payouts": {
+    "title": "How people pay you back",
+    "sub": "Whoever owes you sees the top one first. Only people in your groups can see these, and only when they owe you.",
+    "empty": "Nothing yet — you will be asked the first time somebody settles up with you.",
+    "saved": "Saved",
+    "saveFailed": "That could not be saved.",
+    "fields": {
+      "phone": {
+        "label": "Phone number",
+        "placeholder": "+41 79 123 45 67"
+      },
+      "iban": {
+        "label": "IBAN",
+        "placeholder": "CH93 0076 2011 6238 5295 7"
+      },
+      "email": {
+        "label": "Email on the account",
+        "placeholder": "you@example.com"
+      },
+      "handle": {
+        "label": "Your handle there",
+        "placeholder": "@you"
+      },
+      "link": {
+        "label": "Payment link",
+        "placeholder": "paypal.me/you"
+      },
+      "text": {
+        "label": "The detail they need",
+        "placeholder": "Whatever they have to type"
+      }
+    },
+    "errors": {
+      "required": "This one needs a detail before anybody can use it.",
+      "tooLong": "That is longer than anything anybody has to type.",
+      "phone": "Write the number with its country code, like +41 79 123 45 67.",
+      "iban": "That IBAN does not check out — one character is usually the culprit.",
+      "email": "That does not look like an email address.",
+      "link": "Write the whole link, like paypal.me/you.",
+      "unknownMethod": "That is not a payment method Balancia knows.",
+      "invalid": "That detail cannot be saved as it is."
+    },
+    "settle": {
+      "title": "How {name} wants it",
+      "none": "{name} has not said how they want to be paid. Ask them, or pay them the way you always do.",
+      "guest": "{name} is a guest, so there is no account to hold a payment detail."
+    },
+    "copy": "Copy",
+    "copied": "Copied"
+  },
   "countries": {
     "CH": "Switzerland",
     "FR": "France",
