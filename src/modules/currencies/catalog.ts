@@ -135,6 +135,17 @@ function flagOf(region: string): string {
 }
 
 /**
+ * One currency's flag, and nothing else about it.
+ *
+ * A heading that groups figures by currency wants the flag on its own, and
+ * `currencyEntry` would build the whole hundred-and-fifty-six-row catalogue to
+ * hand it over. Nothing about a flag is localised, so this asks for no locale.
+ */
+export function currencyFlag(code: string): string {
+  return FLAGS[code] ?? flagOf((REGIONS[code] ?? [code.slice(0, 2)])[0]!);
+}
+
+/**
  * French currency names arrive lowercased ("franc suisse") and English ones
  * capitalised. The row is a standalone line either way, so it starts on a
  * capital either way.
@@ -192,7 +203,7 @@ function buildCatalogue(locale: string): readonly CurrencyEntry[] {
       code,
       name,
       symbol: symbolOf(code, locale),
-      flag: FLAGS[code] ?? flagOf(regions[0]!),
+      flag: currencyFlag(code),
       keywords: normaliseForSearch(
         [code, name, ...countries, ...(ALIASES[code] ?? [])].join(" "),
       ),

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   currencyCatalogue,
   currencyEntry,
+  currencyFlag,
   normaliseForSearch,
   searchCurrencies,
 } from "./catalog";
@@ -48,6 +49,17 @@ describe("the currency catalogue", () => {
       const entry = currencyEntry(code, "en");
       expect(entry?.flag, code).not.toContain("🇽");
       expect(entry?.flag, code).not.toBe("🇦🇳");
+    }
+  });
+
+  /**
+   * The currency headings ask for a flag on its own, and would rather not
+   * build a hundred and fifty-six rows of `Intl` to get one. Two ways of
+   * answering the same question is one way for them to disagree.
+   */
+  it("hands out the same flag on its own as it does in a row", () => {
+    for (const { code, flag } of currencyCatalogue("en")) {
+      expect(currencyFlag(code), code).toBe(flag);
     }
   });
 
