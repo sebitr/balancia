@@ -54,6 +54,21 @@ export function GroupReady({
   // Fixed when the screen opens: this view is only ever reached by tapping
   // "Create group", so there is no server render for it to disagree with.
   const [openedAt] = useState(() => new Date().toISOString());
+  /*
+   * The link's life, as the row below is currently showing it.
+   *
+   * The sheet minted this invite, handed it over and stopped listening: the
+   * prop never moves again, however often the reader changes the expiry. That
+   * was survivable while the sentence under the row only said "until then",
+   * and is not now that it says a number — a row reading "Dans 24 heures"
+   * above a line reading "reste valable 7 jours" is the screen contradicting
+   * itself. So the row reports what the reader picked, and the sentence
+   * follows it rather than the prop.
+   */
+  const [expiry, setExpiry] = useState(() => ({
+    expiresAt: invite?.expiresAt ?? null,
+    at: Date.parse(openedAt),
+  }));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-5 pt-7 pb-6 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1">
@@ -83,9 +98,10 @@ export function GroupReady({
             label={t("linkExpires")}
             expiresAt={invite.expiresAt}
             now={openedAt}
+            onChange={(expiresAt, at) => setExpiry({ expiresAt, at })}
           />
           <p className="text-xs text-pretty text-muted-foreground">
-            {expiryNote(t, invite.expiresAt, openedAt)}
+            {expiryNote(t, expiry.expiresAt, expiry.at)}
           </p>
         </Card>
       )}
@@ -168,13 +184,15 @@ function lede(
  * promise said twice, so it rounds hours up into a day and leaves the exact
  * deadline to the row.
  *
- * `expired` cannot happen here: the link is minted with the group, and the
- * clock this is measured against was read when the screen opened.
+ * `expired` cannot happen here: every date this can be handed is one the
+ * group was just created with or the reader just picked, and both are ahead
+ * of the clock they are measured against.
  */
 function expiryNote(
   t: ReturnType<typeof useTranslations<"inviteLink">>,
   expiresAt: string | null,
-  now: string,
+  /** Epoch milliseconds. See `ExpiryRow` for why this travels with the date. */
+  now: number,
 ): string {
   if (expiresAt === null) return t("expiryNoteNever");
   const remaining = remainingFor(new Date(expiresAt), new Date(now));
