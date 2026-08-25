@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { resolveJoinLink } from "@/lib/security/join-link";
 import { readJoinCookie } from "@/modules/auth/cookies";
 import { getCurrentUser } from "@/lib/security/actor";
+import { loadProfileSetup } from "@/modules/profile/setup";
 import { getDateFormatter } from "@/i18n/preferences";
 import { listClaimableMembers, loadJoinSummary } from "@/modules/join/service";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
@@ -67,10 +68,14 @@ export default async function JoinStartPage() {
    */
   if (!link) return <OnboardingFlow arrival="shared" group={null} linkGone />;
 
-  const [summary, claimable, viewer] = await Promise.all([
+  const viewer = await getCurrentUser();
+
+  const [summary, claimable, profile] = await Promise.all([
     loadJoinSummary(link.groupId),
     listClaimableMembers(link.groupId),
-    getCurrentUser(),
+    // What they have set up already, so the checklist at the end starts from
+    // it — and disappears when there is nothing on it left to do.
+    viewer ? loadProfileSetup(viewer.userId) : null,
   ]);
 
   const dates = await getDateFormatter();
@@ -82,6 +87,7 @@ export default async function JoinStartPage() {
       arrival="shared"
       inviterName={link.inviterName}
       account={viewer && { name: viewer.name, email: viewer.email }}
+      profile={profile}
       registrationAllowed={env.ALLOW_REGISTRATION}
       codeSignupAvailable={env.smtpEnabled}
       group={{

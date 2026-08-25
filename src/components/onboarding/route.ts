@@ -52,6 +52,16 @@ export interface OnboardingRouteState {
    * prove, only which of the listed names is theirs.
    */
   readonly signedIn: boolean;
+  /**
+   * There is nothing left on the setup checklist.
+   *
+   * Only an account that arrived with a photo, starred currencies, a payout
+   * method and a device registered for push can be in this state, so in
+   * practice it is the same reader as `signedIn` — one who has done all this
+   * before. The screen is dropped rather than shown with five green ticks,
+   * because a list that exists only to be dismissed is a tap for nothing.
+   */
+  readonly setupComplete: boolean;
 }
 
 /**
@@ -73,6 +83,11 @@ export interface OnboardingRouteState {
  *
  *  - **Cold.** No group exists, so there is no arrival screen to land on and
  *    nothing to be a guest of. It ends at the empty state instead.
+ *
+ * The checklist is the one screen any of them can lose. It is a receipt of
+ * what is set up and what is not, so an account that has all of it already —
+ * which only somebody arriving signed in can — ends on the arrival screen and
+ * goes straight to the group from there.
  */
 export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
   if (state.arrival === "cold") {
@@ -96,7 +111,7 @@ export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
             ...(state.intent === "guest" ? [] : (["identity"] as const)),
           ] as const)),
       "arrival",
-      "checklist",
+      ...(state.setupComplete ? [] : (["checklist"] as const)),
     ];
   }
 
@@ -110,7 +125,7 @@ export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
         ? (["identity"] as const)
         : (["identity", "profile"] as const)),
     "arrival",
-    "checklist",
+    ...(state.setupComplete ? [] : (["checklist"] as const)),
   ];
 }
 

@@ -7,6 +7,7 @@ import { requireGroupAccess } from "@/lib/actions";
 import { getCurrentActor } from "@/lib/security/actor";
 import { getEnv } from "@/lib/env";
 import { describeGuestSession } from "@/modules/guests/service";
+import { loadProfileSetup } from "@/modules/profile/setup";
 import { loadGroupOverview } from "@/modules/groups/overview";
 import { loadJoinSummary } from "@/modules/join/service";
 
@@ -48,11 +49,16 @@ export default async function InvitePage() {
    * people from their own arrival screen to the dashboard.
    */
   if (actor.kind === "user") {
+    // The second of those two situations is what the profile is for: somebody
+    // who signed in from inside the flow and is still standing on it. The
+    // checklist a screen away should not ask them for a photo they have.
+    const profile = await loadProfileSetup(actor.userId);
     return (
       <OnboardingFlow
         arrival="personal"
         group={null}
         account={{ name: actor.name, email: actor.email }}
+        profile={profile}
       />
     );
   }

@@ -25,7 +25,14 @@ const state = (
   intent: Intent,
   isNewMember = false,
   signedIn = false,
-): OnboardingRouteState => ({ arrival, intent, isNewMember, signedIn });
+  setupComplete = false,
+): OnboardingRouteState => ({
+  arrival,
+  intent,
+  isNewMember,
+  signedIn,
+  setupComplete,
+});
 
 describe("routeFor", () => {
   it("asks a personal invitation for an address, then a name", () => {
@@ -125,6 +132,31 @@ describe("routeFor", () => {
     expect(route).not.toContain("checklist");
   });
 
+  it("drops the checklist when there is nothing left on it", () => {
+    // Only somebody who arrived signed in can be in this state, and for them
+    // the arrival screen is the end: its primary goes straight to the group.
+    const route = routeFor(state("shared", "signin", false, true, true));
+    expect(route).toEqual(["welcome", "whichOne", "confirm", "arrival"]);
+    expect(nextScreen(route, "arrival")).toBeNull();
+  });
+
+  it("drops it from a personal invitation on the same terms", () => {
+    expect(routeFor(state("personal", "signin", false, false, true))).toEqual([
+      "welcome",
+      "identity",
+      "arrival",
+    ]);
+  });
+
+  it("leaves a cold arrival alone, having no checklist to drop", () => {
+    expect(routeFor(state("cold", "account", false, false, true))).toEqual([
+      "welcome",
+      "identity",
+      "profile",
+      "firstGroup",
+    ]);
+  });
+
   it("never lands the same screen twice in one route", () => {
     const arrivals: Arrival[] = ["personal", "shared", "cold"];
     const intents: Intent[] = ["account", "signin", "guest"];
@@ -132,10 +164,14 @@ describe("routeFor", () => {
       for (const intent of intents) {
         for (const isNewMember of [false, true]) {
           for (const signedIn of [false, true]) {
-            const route = routeFor(
-              state(arrival, intent, isNewMember, signedIn),
-            );
-            expect(new Set(route).size).toBe(route.length);
+            for (const setupComplete of [false, true]) {
+              const route = routeFor(
+                state(arrival, intent, isNewMember, signedIn, setupComplete),
+              );
+              expect(new Set(route).size).toBe(route.length);
+              // Whatever else it drops, a route always has somewhere to land.
+              expect(route.length).toBeGreaterThan(1);
+            }
           }
         }
       }
@@ -182,6 +218,11 @@ describe("progressOf", () => {
     }
   });
 
+  it("reaches full on the arrival screen when that is where a route ends", () => {
+    const route = routeFor(state("shared", "signin", false, true, true));
+    expect(progressOf(route, "arrival")).toBe(1);
+  });
+
   it("runs to full on the shorter route a signed-in reader takes", () => {
     const route = routeFor(state("shared", "signin", false, true));
     expect(progressOf(route, "welcome")).toBe(0);
@@ -202,10 +243,12 @@ describe("STEP_LABEL_KEYS", () => {
       for (const intent of ["account", "signin", "guest"] as Intent[]) {
         for (const isNewMember of [false, true]) {
           for (const signedIn of [false, true]) {
-            const route = routeFor(
-              state(arrival, intent, isNewMember, signedIn),
-            );
-            for (const screen of route) reachable.add(screen);
+            for (const setupComplete of [false, true]) {
+              const route = routeFor(
+                state(arrival, intent, isNewMember, signedIn, setupComplete),
+              );
+              for (const screen of route) reachable.add(screen);
+            }
           }
         }
       }

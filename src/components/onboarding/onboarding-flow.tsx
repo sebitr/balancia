@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { firstNameOf } from "@/components/join/types";
 import { joinWithAccountAction } from "@/modules/join/actions";
 import {
+  nextScreen,
   previousScreen,
   progressOf,
   routeFor,
@@ -16,6 +17,7 @@ import {
   type Intent,
   type ScreenId,
 } from "./route";
+import { checklistIsComplete } from "./checklist";
 import { DeadLinkScreen } from "./dead-link-screen";
 import { IdentityScreen } from "./identity-screen";
 import { ChecklistScreen } from "./checklist-screen";
@@ -28,7 +30,11 @@ import {
   WelcomeScreen,
   WhichOneScreen,
 } from "./screens";
-import type { JoinMemberView, OnboardingGroupView } from "./types";
+import type {
+  JoinMemberView,
+  OnboardingGroupView,
+  OnboardingProfileView,
+} from "./types";
 
 /**
  * Everything between arriving at Balancia and standing on a group screen with
@@ -58,6 +64,7 @@ export function OnboardingFlow({
   codeSignupAvailable = true,
   linkGone = false,
   account = null,
+  profile = null,
   alreadyGuest = false,
 }: {
   arrival: Arrival;
@@ -92,6 +99,15 @@ export function OnboardingFlow({
    * once, on mount, and never again — see below.
    */
   account?: { readonly name: string; readonly email: string } | null;
+  /**
+   * What that account has already set up: a photo, currencies, a payout
+   * method, a device registered for push.
+   *
+   * Null when there is nothing to read it from — a guest, or an account this
+   * flow is about to create. The checklist is seeded from it rather than from
+   * zero, and a reader with all four already done never sees that screen.
+   */
+  profile?: OnboardingProfileView | null;
   /**
    * This browser is already holding a guest session for the group below.
    *
@@ -146,13 +162,72 @@ export function OnboardingFlow({
    */
   const [initialGroup] = useState(linkGone ? null : group);
 
+  /*
+   * The account's existing setup, from whichever render could see it.
+   *
+   * It goes both ways, which is why neither the prop nor a captured copy is
+   * enough on its own. A shared link is read on the first render and gone by
+   * the second: finishing spends the cookie, and the page that re-renders has
+   * no session to load a profile from. A personal invitation is the mirror —
+   * there is no account at all until somebody signs in halfway through, and
+   * only then can it be read. Preferring the live one and falling back on the
+   * first answers both, and the pair cannot disagree: a profile is only ever
+   * null-then-present or present-then-null, never one account then another.
+   */
+  const [profileAtArrival] = useState(profile);
+  const initialProfile = profile ?? profileAtArrival;
+
+  /*
+   * Whether the checklist has anything left to say.
+   *
+   * Computed from the same rows the screen would draw, so the question and
+   * the answer cannot drift apart. A guest is never complete — their account
+   * row is urgent, not done — which is why `intent` is part of it.
+   */
+  const profileIsComplete = useMemo(
+    () =>
+      initialProfile !== null &&
+      checklistIsComplete({
+        isGuest: intent === "guest",
+        credential,
+        email: email || null,
+        hasPhoto: initialProfile.hasPhoto,
+        name,
+        currencies: initialProfile.currencies,
+        payouts: initialProfile.payouts.map((payout) => payout.method),
+        notificationsOn: 5,
+        notificationCount: 5,
+        pushEnabled: initialProfile.pushEnabled,
+      }),
+    [initialProfile, intent, credential, email, name],
+  );
+
+  /*
+   * A screen somebody is standing on is never dropped from under them.
+   *
+   * The route says what comes *next*, and finishing the rows from inside the
+   * checklist is exactly how somebody on it becomes complete. Without this,
+   * ticking the last one would take the screen out of its own route — leaving
+   * the progress bar measuring against a list that no longer contains it.
+   */
+  const setupComplete = screen !== "checklist" && profileIsComplete;
+
   const route = useMemo(
-    () => routeFor({ arrival, intent, isNewMember, signedIn }),
-    [arrival, intent, isNewMember, signedIn],
+    () => routeFor({ arrival, intent, isNewMember, signedIn, setupComplete }),
+    [arrival, intent, isNewMember, signedIn, setupComplete],
   );
 
   const previous = previousScreen(route, screen);
-  const finished = screen === "checklist" || screen === "firstGroup";
+  /*
+   * The last screen of whichever route this is, rather than a named one.
+   *
+   * It used to name `checklist` and `firstGroup`, which stopped being the
+   * whole answer when a finished checklist started dropping out: the arrival
+   * screen is the end of the road for somebody who has nothing left to set
+   * up, and offering them a back button to un-claim a name they have already
+   * claimed is not a place to return to.
+   */
+  const finished = nextScreen(route, screen) === null;
   const groupId = joinedGroupId ?? initialGroup?.groupId ?? null;
   /** A shared link finished by an account that already existed. */
   const joinsWithAccount = signedIn && arrival === "shared";
@@ -301,6 +376,7 @@ export function OnboardingFlow({
                   intent: chosen,
                   isNewMember,
                   signedIn,
+                  setupComplete,
                 })[1] ?? "arrival",
               );
             }}
@@ -395,7 +471,13 @@ export function OnboardingFlow({
               if (outcome.claimedGroupId) {
                 setJoinedGroupId(outcome.claimedGroupId);
               }
-              const next = routeFor({ arrival, intent, isNewMember, signedIn });
+              const next = routeFor({
+                arrival,
+                intent,
+                isNewMember,
+                signedIn,
+                setupComplete,
+              });
               const index = next.indexOf("identity");
               advance(next[index + 1] ?? "arrival");
             }}
@@ -443,13 +525,23 @@ export function OnboardingFlow({
             joinedWithAccount={joinsWithAccount}
             name={firstNameOf(name)}
             group={initialGroup}
-            onContinue={() => advance("checklist")}
+            /*
+              The checklist, or the group itself when there is no checklist
+              left to show. Read off the route rather than named, so the two
+              cannot disagree about which screen comes after this one.
+            */
+            onContinue={() => {
+              const next = nextScreen(route, "arrival");
+              if (next) advance(next);
+              else leave();
+            }}
           />
         )}
 
         {screen === "checklist" && (
           <ChecklistScreen
             group={initialGroup}
+            profile={initialProfile}
             isGuest={intent === "guest"}
             credential={credential}
             email={email}

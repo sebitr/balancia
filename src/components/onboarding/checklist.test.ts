@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checklistIsComplete,
   checklistProgress,
   checklistRows,
   type ChecklistState,
@@ -71,6 +72,38 @@ describe("checklistRows", () => {
   it("keeps five rows whether or not this is a guest", () => {
     expect(checklistRows(base)).toHaveLength(5);
     expect(checklistRows({ ...base, isGuest: true })).toHaveLength(5);
+  });
+});
+
+describe("checklistIsComplete", () => {
+  const everything: ChecklistState = {
+    ...base,
+    hasPhoto: true,
+    currencies: ["CHF"],
+    payouts: ["TWINT"],
+    pushEnabled: true,
+  };
+
+  it("is true only once every row is done", () => {
+    expect(checklistIsComplete(everything)).toBe(true);
+    expect(checklistIsComplete(base)).toBe(false);
+  });
+
+  it("is false while any single row is outstanding", () => {
+    // One at a time, because a screen that hides itself on four out of five
+    // is worse than one that shows five green ticks.
+    expect(checklistIsComplete({ ...everything, hasPhoto: false })).toBe(false);
+    expect(checklistIsComplete({ ...everything, currencies: [] })).toBe(false);
+    expect(checklistIsComplete({ ...everything, payouts: [] })).toBe(false);
+    expect(checklistIsComplete({ ...everything, pushEnabled: false })).toBe(
+      false,
+    );
+  });
+
+  it("is never true for a guest, whose account row is urgent", () => {
+    // Urgent is not done. A guest with all four of the others still has the
+    // one thing on this list that closing the browser loses.
+    expect(checklistIsComplete({ ...everything, isGuest: true })).toBe(false);
   });
 });
 

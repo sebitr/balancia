@@ -19,6 +19,24 @@ export interface SettleRequestView {
   readonly amount: OnboardingMoney;
 }
 
+/**
+ * What the reader's account has already set up.
+ *
+ * Null when there is no account to read it from — a guest, or a signup that
+ * has not happened yet. The checklist's rows are seeded from this rather than
+ * from zero, and a flow whose every row is already ticked skips the screen
+ * altogether; `modules/profile/setup.ts` is where it comes from.
+ */
+export interface OnboardingProfileView {
+  readonly hasPhoto: boolean;
+  readonly currencies: readonly string[];
+  readonly payouts: readonly {
+    readonly method: string;
+    readonly detail: string;
+  }[];
+  readonly pushEnabled: boolean;
+}
+
 export interface OnboardingGroupView {
   /**
    * Null on a shared link until the account is in the group, and on a cold
