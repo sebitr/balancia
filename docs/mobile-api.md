@@ -70,6 +70,7 @@ Registration refusals (email taken, registration closed, password policy) are
 | GET    | `/api/groups/:groupId/recurring`                         | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                           |
 | GET    | `/api/groups/:groupId/reminders`                         | `listRemindRecipients`: who owes the reader, per-currency debts, the channel a message would take, and the 24-hour lock state.                                                                               |
 | GET    | `/api/groups/:groupId/categories`                        | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                   |
+| POST   | `/api/groups/:groupId/categorize`                        | What a description is about: `classifyTransactionSync` against this group's learned mappings. Body `{description, note?, recurring?}`; answers `{classification}` or `{classification: null}` with nothing to go on. |
 | GET    | `/api/groups/:groupId/join-link`                         | The live group-wide link's prefix and age, or `{link: null}`. The token itself only ever exists in the POST answer.                                                                                          |
 | GET    | `/api/groups/:groupId/transactions?cursor&limit`         | One page of the group's history, expenses and repayments in one list, newest first (40 by default, 500 at most). Feed `cursor` back for the next page; a null cursor is the end.                             |
 | GET    | `/api/groups/:groupId/stats`                             | `loadGroupStats`: all three windows, every currency and the all-time records in one read.                                                                                                                    |
@@ -111,6 +112,17 @@ stop a group's balances growing by a screenful per currency. Count it rather
 than reading the group's `currencyMode` — a group kept in separate currencies
 that has so far only spent in one is a one-currency group today, whatever it is
 configured to become.
+
+`categorize` exists because the browser does not need it. The web runs the
+same classifier locally, between keystrokes and with the network gone, and a
+phone cannot have that without carrying the rules — three and a half thousand
+lines of merchants and phrases that grow every week. Transcribing them into a
+second language is how the two ends start disagreeing about what `Migros` is,
+which is why the category vocabulary is read from the message catalogues
+rather than copied. So the phone asks, debounced, and does without an answer
+when it cannot reach the server. Only the deterministic pass runs: the
+semantic one needs an embedder in a worker, and the browser does not wait for
+it either — what a reader sees first is this.
 
 `settle-up` fills `lastSettled` only when nothing is left to settle — it is the
 one screen with room for it. Read an empty list as "no room for it here", never
