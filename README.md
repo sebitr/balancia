@@ -127,6 +127,11 @@ features to enable, and is safe to run again. Docker Compose starts PostgreSQL,
 applies migrations, and launches the app — which runs its own background jobs,
 so that is the whole stack: two containers, one of them the database.
 
+Rather not build it? Every release is published to Docker Hub as
+[`sebitro/balancia`](https://hub.docker.com/r/sebitro/balancia) for amd64 and
+arm64. Keep the first three commands and make the last one
+`docker compose -f compose.yaml -f compose.image.yaml up -d`.
+
 For a public domain, upgrades, reverse proxies and production responsibilities,
 read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
 database and receipt storage together; the
