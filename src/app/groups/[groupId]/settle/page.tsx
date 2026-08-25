@@ -5,7 +5,11 @@ import { requireGroupAccess } from "@/lib/actions";
 import { listParticipants } from "@/modules/groups/service";
 import { listRemindRecipients } from "@/modules/reminders/service";
 import { loadSettleUp } from "@/modules/settlements/settle-up";
-import { listPayoutsOwed } from "@/modules/payouts/service";
+import {
+  listPayoutAddressesOwed,
+  listPayoutsOwed,
+} from "@/modules/payouts/service";
+import { buildPaymentQr } from "@/modules/payouts/qr/payment-qr";
 
 /**
  * Settle up.
@@ -50,18 +54,61 @@ export default async function SettleUpPage({
       .filter((transfer) => transfer.fromIsSelf)
       .map((transfer) => transfer.toParticipantId),
   );
-  const payouts = await listPayoutsOwed(access.groupId, owed);
+  const [payouts, addresses] = await Promise.all([
+    listPayoutsOwed(access.groupId, owed),
+    listPayoutAddressesOwed(access.groupId, owed),
+  ]);
+
+  /*
+   * The amount each debt is for, which the payment code needs and the map of
+   * methods does not carry. Taken from the same transfers the recipients were
+   * read off, so the code can never name a figure the screen is not showing.
+   */
+  const debts = new Map(
+    view.currencies.flatMap((entry) =>
+      [...entry.yours, ...entry.others]
+        .filter((transfer) => transfer.fromIsSelf)
+        .map(
+          (transfer) =>
+            [
+              transfer.toParticipantId,
+              {
+                minorUnits: transfer.amount.toString(),
+                currency: transfer.currency,
+                name: transfer.toName,
+              },
+            ] as const,
+        ),
+    ),
+  );
+
   const payoutHints = [...payouts.entries()].flatMap(
-    ([participantId, methods]) =>
-      methods[0]
-        ? [
-            {
-              participantId,
-              method: methods[0].method,
-              detail: methods[0].detail,
-            },
-          ]
-        : [],
+    ([participantId, methods]) => {
+      const top = methods[0];
+      if (!top) return [];
+      const debt = debts.get(participantId);
+
+      /*
+       * A code is only built for a bank transfer, and only when everything the
+       * standard needs is present. A TWINT number is not something a banking app
+       * scans, and a Swiss account with no address on file is a code that would
+       * be refused — so both come back as no code at all rather than as one that
+       * fails at the till.
+       */
+      const qr =
+        top.method === "bank" && debt
+          ? buildPaymentQr({
+              iban: top.detail,
+              creditorName: debt.name,
+              address: addresses.get(participantId) ?? null,
+              minorUnits: debt.minorUnits,
+              currency: debt.currency,
+              message: access.group.name,
+            })
+          : null;
+
+      return [{ participantId, method: top.method, detail: top.detail, qr }];
+    },
   );
 
   const senderName =

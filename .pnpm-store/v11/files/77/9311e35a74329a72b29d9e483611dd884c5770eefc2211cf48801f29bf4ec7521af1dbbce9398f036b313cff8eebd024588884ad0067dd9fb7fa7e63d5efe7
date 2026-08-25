@@ -1,0 +1,110 @@
+import { InjectManifestOptions as InjectManifestOptions$1, InjectManifestOptionsComplete as InjectManifestOptionsComplete$1 } from "@serwist/webpack-plugin";
+import { RequiredSwDestPartial, RequiredSwDestResolved } from "@serwist/build";
+import { Require } from "@serwist/utils";
+import { NextConfig } from "next";
+//#region src/lib/types.d.ts
+interface InjectPartial {
+  /**
+   * Enables additional route caching when users navigate through pages with
+   * `next/link`. This improves the user experience in some cases but it
+   * also adds a bit of overhead due to additional network calls.
+   * @default false
+   */
+  cacheOnNavigation?: boolean;
+  /**
+   * Whether Serwist should be disabled.
+   * @default false
+   */
+  disable?: boolean;
+  /**
+   * Whether `@serwist/next` should automatically register the service worker for you. If
+   * you want to register the service worker yourself, set this to `false` and run
+   * `window.serwist.register()` in `componentDidMount` or `useEffect`.
+   * @example
+   *   ```tsx
+   *   // app/register-pwa.tsx
+   *   "use client";
+   *   import { useEffect } from "react";
+   *   import type { Serwist } from "@serwist/window";
+   *
+   *   declare global {
+   *     interface Window {
+   *       serwist: Serwist;
+   *     }
+   *   }
+   *
+   *   export default function RegisterPWA() {
+   *     useEffect(() => {
+   *       if ("serviceWorker" in navigator && window.serwist !== undefined) {
+   *         window.serwist.register();
+   *       }
+   *     }, []);
+   *     return <></>;
+   *   }
+   *
+   *   // app/layout.tsx
+   *   import RegisterPWA from "./register-pwa";
+   *
+   *   export default function RootLayout({
+   *     children,
+   *   }: {
+   *     children: React.ReactNode;
+   *   }) {
+   *     return (
+   *       <html lang="en">
+   *         <head />
+   *         <body>
+   *           <RegisterPWA />
+   *           {children}
+   *         </body>
+   *       </html>
+   *     );
+   *   }
+   *   ```
+   * @default true
+   */
+  register?: boolean;
+  /**
+   * Whether Serwist should reload the app when it goes online.
+   * @default true
+   */
+  reloadOnOnline?: boolean;
+  /**
+   * The service worker's URL scope. Set to `/foo/` so that paths under `/foo/` are under the service
+   * worker's control while others are not.
+   * @default nextConfig.basePath
+   */
+  scope?: string;
+  /**
+   * The URL to the service worker.
+   * @default "/sw.js"
+   */
+  swUrl?: string;
+  /**
+   * Files in the public directory matching any of these patterns
+   * will be included in the precache manifest. For more information,
+   * see [`node-glob`'s Glob Primer](https://github.com/isaacs/node-glob#glob-primer).
+   * @default
+   * ```
+   * ["**\/*"]
+   * ```
+   */
+  globPublicPatterns?: string[];
+}
+type InjectResolved = Require<InjectPartial, "cacheOnNavigation" | "disable" | "register" | "reloadOnOnline" | "swUrl" | "globPublicPatterns">;
+type InjectManifestOptions = Omit<InjectManifestOptions$1 & RequiredSwDestPartial & InjectPartial, "disablePrecacheManifest">;
+type InjectManifestOptionsComplete = Omit<InjectManifestOptionsComplete$1 & RequiredSwDestResolved & InjectResolved, "disablePrecacheManifest">;
+//#endregion
+//#region src/lib/validator.d.ts
+declare const validateInjectManifestOptions: (input: unknown) => InjectManifestOptionsComplete;
+//#endregion
+//#region src/index.d.ts
+/**
+ * Integrates Serwist into your Next.js app.
+ * @param userOptions
+ * @returns
+ */
+declare const withSerwistInit: (userOptions: InjectManifestOptions) => ((nextConfig?: NextConfig) => NextConfig);
+//#endregion
+export { type InjectManifestOptions as PluginOptions, type InjectManifestOptionsComplete as PluginOptionsComplete, withSerwistInit as default, validateInjectManifestOptions };
+//# sourceMappingURL=index.d.mts.map

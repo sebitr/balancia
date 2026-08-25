@@ -1,0 +1,8 @@
+import { Serwist } from "@serwist/window";
+//#region src/sw-entry.d.ts
+declare global {
+  interface Window {
+    serwist: Serwist;
+  }
+}
+//# sourceMappingURL=sw-entry.d.mts.map

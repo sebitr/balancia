@@ -1,0 +1,289 @@
+import { i as logger, n as runBuildCommand, r as runInjectManifestCommand, t as errors } from "./chunks/errors-DXCDZqq6.js";
+import { n as constants } from "./chunks/constants-Dcy7HyXu.js";
+import chokidar from "chokidar";
+import { glob } from "glob";
+import path from "node:path";
+import meow from "meow";
+import updateNotifier from "update-notifier";
+import assert from "node:assert";
+import { pathToFileURL } from "node:url";
+import { statSync, writeFileSync } from "node:fs";
+import stringifyObject from "stringify-object";
+import { Separator, checkbox, input, select } from "@inquirer/prompts";
+import { toUnix } from "@serwist/utils";
+//#region src/lib/read-config.ts
+const readConfig = async (configFile) => {
+	return (await import(configFile)).default;
+};
+//#endregion
+//#region src/lib/ask-questions.ts
+/**
+* @returns The subdirectories of the current
+* working directory, with hidden and ignored ones filtered out.
+*/
+const getSubdirectories = async () => {
+	return await glob("*/", { ignore: constants.ignoredDirectories.map((directory) => `${directory}/`) });
+};
+const askRootOfWebApp = async () => {
+	const subdirectories = await getSubdirectories();
+	const { globDirectory, manualDirectoryInput } = await (async () => {
+		if (subdirectories.length > 0) {
+			const manualEntryChoice = "Manually enter path";
+			const globDirectory = await select({
+				message: "What is the root of your web app (i.e. which directory do you deploy)?",
+				choices: [
+					...subdirectories.map((dir) => ({ value: dir })),
+					new Separator(),
+					{ value: manualEntryChoice }
+				]
+			});
+			let manualDirectoryInput;
+			if (globDirectory === manualEntryChoice) manualDirectoryInput = await input({ message: "Please enter the path to the root of your web app:" });
+			return {
+				globDirectory,
+				manualDirectoryInput
+			};
+		}
+		return {
+			globDirectory: await input({
+				message: "Please enter the path to the root of your web app:",
+				default: "."
+			}),
+			manualDirectoryInput: void 0
+		};
+	})();
+	assert(statSync(manualDirectoryInput || globDirectory).isDirectory(), errors["glob-directory-invalid"]);
+	return manualDirectoryInput || globDirectory;
+};
+/**
+* @param globDirectory The directory used for the root of globbing.
+* @returns The unique file extensions corresponding
+* to all of the files under globDirectory.
+*/
+const getAllFileExtensions = async (globDirectory) => {
+	const files = await glob("**/*.*", {
+		cwd: globDirectory,
+		nodir: true,
+		ignore: [...constants.ignoredDirectories.map((directory) => `**/${directory}/**`), ...constants.ignoredFileExtensions.map((extension) => `**/*.${extension}`)]
+	});
+	const extensions = /* @__PURE__ */ new Set();
+	for (const file of files) {
+		const extension = path.extname(file);
+		if (extension) extensions.add(extension.replace(/^\./, ""));
+	}
+	return [...extensions];
+};
+const askQuestions = async () => {
+	const globDirectory = await askRootOfWebApp();
+	const fileExtensions = await getAllFileExtensions(globDirectory);
+	assert(fileExtensions.length > 0, errors["no-file-extensions-found"]);
+	const swSrc = await input({
+		message: "Where's your existing service worker file? To be used with 'injectManifest', it should include a call to 'self.__SW_MANIFEST'",
+		validate(input) {
+			if (typeof input !== "string") return "You must provide a valid 'swSrc'!";
+			if (!statSync(input, { throwIfNoEntry: false })?.isFile()) return "'swSrc' must point to a valid file!";
+			return true;
+		}
+	});
+	const swDest = await input({
+		message: "Where would you like your service worker file to be saved?",
+		default: toUnix(path.join(globDirectory, "sw.js")),
+		validate(input) {
+			if (typeof input !== "string") return "You must provide a valid 'swDest'!";
+			return true;
+		}
+	});
+	const selectedExtensions = await checkbox({
+		message: "Which file types would you like to precache?",
+		choices: fileExtensions.map((ext) => ({
+			value: ext,
+			checked: true
+		})),
+		validate(input) {
+			if (!Array.isArray(input)) return "'selectedExtensions' is not an array. This is most likely a bug.";
+			if (input.length === 0) return errors["no-file-extensions-selected"];
+			return true;
+		}
+	});
+	const configLocation = await input({
+		message: "Where would you like to save these configuration options?",
+		default: constants.defaultConfigFile,
+		validate(input) {
+			if (typeof input !== "string") return "You must provide a valid location!";
+			return true;
+		}
+	});
+	return {
+		config: {
+			globDirectory,
+			globPatterns: [`**/*.${selectedExtensions.length === 1 ? selectedExtensions[0] : `{${selectedExtensions.join(",")}}`}`],
+			swSrc,
+			swDest
+		},
+		configLocation
+	};
+};
+//#endregion
+//#region src/lib/run-wizard.ts
+async function runWizard() {
+	const { configLocation, config } = await askQuestions();
+	writeFileSync(configLocation, `/** @type {import("@serwist/build").InjectManifestOptions} */\nexport default ${stringifyObject(config)};`);
+	logger.log(`To build your service worker, run
+
+  serwist inject-manifest ${configLocation}
+
+as part of a build process.`);
+	logger.log(`You can further customize your service worker by making changes to ${configLocation}. See https://serwist.pages.dev/docs/build/configuring for details.`);
+}
+//#endregion
+//#region src/app.ts
+const app = async (params) => {
+	assert(params && Array.isArray(params.input), errors["missing-input"]);
+	const [command = "help", option] = params.input;
+	process.env.SERWIST_ENV = params.flags.watch ? "watch" : "build";
+	if (!process.env.NODE_ENV) process.env.NODE_ENV = params.flags.watch ? "development" : "production";
+	switch (command) {
+		case "wizard":
+			await runWizard();
+			break;
+		case "build": {
+			const configPath = path.resolve(process.cwd(), option || constants.defaultConfigFile);
+			const configUrl = pathToFileURL(configPath).href;
+			let config;
+			try {
+				config = await readConfig(configUrl);
+			} catch (error) {
+				config = null;
+				if (error instanceof Error) {
+					logger.error(errors["invalid-common-js-module"]);
+					throw error;
+				}
+			}
+			if (config === null) throw logger.error(errors["invalid-config-location"]);
+			logger.log(`Using configuration from ${configPath}.`);
+			await runBuildCommand({
+				config,
+				watch: !!params.flags.watch
+			});
+			break;
+		}
+		case "inject-manifest": {
+			const configPath = path.resolve(process.cwd(), option || constants.defaultConfigFile);
+			const configUrl = pathToFileURL(configPath).href;
+			let config;
+			try {
+				config = await readConfig(configUrl);
+			} catch (error) {
+				config = null;
+				if (error instanceof Error) {
+					logger.error(errors["invalid-common-js-module"]);
+					throw error;
+				}
+			}
+			if (config === null) throw logger.error(errors["invalid-config-location"]);
+			logger.log(`Using configuration from ${configPath}.`);
+			if (params.flags.watch) {
+				if (config.globPatterns) chokidar.watch(await glob(config.globPatterns, {
+					cwd: config.globDirectory,
+					follow: config.globFollow,
+					ignore: config.globIgnores
+				}), {
+					ignoreInitial: true,
+					cwd: config.globDirectory
+				}).on("all", async () => {
+					if (config === null) return;
+					await runInjectManifestCommand({
+						config,
+						watch: true
+					});
+				}).on("ready", async () => {
+					if (config === null) return;
+					await runInjectManifestCommand({
+						config,
+						watch: true
+					});
+				}).on("error", (err) => {
+					logger.error(err instanceof Error ? err.toString() : "Unknown error");
+				});
+			} else await runInjectManifestCommand({
+				config,
+				watch: false
+			});
+			break;
+		}
+		case "help": params.showHelp();
+		default: throw new Error(`${errors["unknown-command"]} ${command}`);
+	}
+};
+//#endregion
+//#region src/lib/cleanup-stack-trace.ts
+const cleanupStackTrace = (error, moduleName) => {
+	if (!error.stack) return "";
+	const frames = error.stack.split("\n");
+	let startFrame;
+	let lastFrame = 0;
+	frames.forEach((frame, index) => {
+		if (startFrame === void 0 && frame.includes("    at ")) startFrame = index;
+		if (frame.includes(`${moduleName}:`)) lastFrame = index;
+	});
+	return frames.slice(startFrame, lastFrame + 1).join("\n");
+};
+//#endregion
+//#region src/lib/help-text.ts
+const helpText = `Usage:
+$ serwist <command> [options]
+
+Commands:
+  wizard
+    Runs the configuration wizard, which will generate a
+    config file based on answers to questions.
+
+  inject-manifest [<path/to/config.js>] [--watch]
+    Takes an existing service worker file and creates a
+    copy of it with a precache manifest injected. The precache 
+    manifest is generated based on the options in the config file 
+    (defaults to 'serwist.config.js'). If '--watch' is provided, the 
+    CLI will stay running and rebuild the service worker each 
+    time a file in the precache manifest changes. See 
+    https://serwist.pages.dev/docs/cli for more information.
+
+  build [<path/to/config.js>] [--watch]
+    Takes a service worker file and bundles it with a precache manifest
+    injected using esbuild. The precache manifest is generated based
+    on the options in the config file (defaults to 'serwist.config.js').
+    If '--watch' is provided, the CLI will stay running and rebuild
+    the service worker each time a file in the precache manifest changes.
+    See https://serwist.pages.dev/docs/cli for more information.
+
+Configuration file:
+  The 'inject-manifest' and 'build' commands expect the configuration 
+  file to be a JavaScript file. By default, it is assumed 
+  to be named 'serwist.config.js' and located in the current
+  directory, but this can be overridden.
+
+Examples:
+  $ serwist wizard
+  $ serwist inject-manifest configs/serwist-config.js
+  $ serwist build configs/serwist-config.js
+`;
+//#endregion
+//#region src/bin.ts
+(async () => {
+	const params = meow(helpText, { importMeta: import.meta });
+	updateNotifier({ pkg: params.pkg }).notify();
+	try {
+		await app(params);
+	} catch (error) {
+		if (error instanceof Error) if (params.flags.debug) {
+			if (error.stack) logger.error(`\n${error.stack}`);
+		} else {
+			logger.error(`\n${error.message}`);
+			logger.debug(`${cleanupStackTrace(error, "app.js")}\n`);
+		}
+		process.exit(1);
+	}
+})();
+//#endregion
+export {};
+
+//# sourceMappingURL=bin.mjs.map

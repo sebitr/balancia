@@ -1,0 +1,129 @@
+{
+  "name": "@serwist/next",
+  "version": "9.5.12",
+  "type": "module",
+  "description": "A module that integrates Serwist into your Next.js application.",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "keywords": [
+    "serwist",
+    "serwistjs",
+    "sw",
+    "service worker",
+    "progressive web apps",
+    "web",
+    "service-worker",
+    "progressive-web-apps",
+    "next",
+    "next.js",
+    "pwa"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Serwist <ducanh2912.rusty@gmail.com> (https://serwist.pages.dev/)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serwist/serwist"
+  },
+  "bugs": "https://github.com/serwist/serwist/issues",
+  "homepage": "https://serwist.pages.dev",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "typesVersions": {
+    "*": {
+      "config": [
+        "./dist/index.config.d.mts"
+      ],
+      "react": [
+        "./dist/index.react.d.mts"
+      ],
+      "schema": [
+        "./dist/index.schema.d.mts"
+      ],
+      "typings": [
+        "./dist/sw-entry.d.mts"
+      ],
+      "worker": [
+        "./dist/index.worker.d.mts"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./config": {
+      "types": "./dist/index.config.d.mts",
+      "default": "./dist/index.config.mjs"
+    },
+    "./react": {
+      "types": "./dist/index.react.d.mts",
+      "default": "./dist/index.react.mjs"
+    },
+    "./schema": {
+      "types": "./dist/index.schema.d.mts",
+      "default": "./dist/index.schema.mjs"
+    },
+    "./typings": {
+      "types": "./dist/sw-entry.d.mts"
+    },
+    "./worker": {
+      "types": "./dist/index.worker.d.mts",
+      "default": "./dist/index.worker.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "browserslist": "4.28.6",
+    "glob": "13.0.6",
+    "kolorist": "1.8.0",
+    "semver": "7.8.5",
+    "zod": "4.4.3",
+    "@serwist/utils": "9.5.12",
+    "@serwist/build": "9.5.12",
+    "@serwist/webpack-plugin": "9.5.12",
+    "@serwist/window": "9.5.12",
+    "serwist": "9.5.12"
+  },
+  "devDependencies": {
+    "@rolldown/plugin-babel": "0.2.3",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/semver": "7.7.1",
+    "@vitejs/plugin-react": "6.0.3",
+    "babel-plugin-react-compiler": "1.0.0",
+    "next": "16.2.10",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "tsdown": "^0.22.12",
+    "type-fest": "5.8.0",
+    "typescript": "7.0.2",
+    "webpack": "5.108.4",
+    "@serwist/cli": "9.5.12"
+  },
+  "peerDependencies": {
+    "next": ">=14.0.0",
+    "react": ">=18.0.0",
+    "typescript": ">=5.0.0",
+    "@serwist/cli": "^9.5.12"
+  },
+  "peerDependenciesMeta": {
+    "@serwist/cli": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && NODE_ENV=production tsdown",
+    "dev": "tsdown --watch",
+    "lint": "biome lint ./src",
+    "typecheck": "tsc"
+  }
+}

@@ -76,3 +76,68 @@ export const payoutMethods = pgTable(
     check("payout_methods_detail_bounded", sql`length(${table.detail}) <= 120`),
   ],
 );
+
+/**
+ * The postal address that goes on a Swiss QR-bill.
+ *
+ * Only the Swiss standard needs one: the Girocode carries no address at all,
+ * and every other payout method here is a phone number or a handle. So this is
+ * asked for at the moment it becomes necessary — somebody saving a Swiss IBAN
+ * — and never otherwise, which is why it is a table of its own rather than
+ * three more nullable columns on `users` that almost nobody would fill.
+ *
+ * The Implementation Guidelines mark postcode and town as always required
+ * under the structured-address obligation, and unstructured addresses stop
+ * being accepted by the Swiss payment infrastructure on 30 September 2026.
+ * Street and building number stay genuinely optional, so they are nullable
+ * here and empty lines in the payload.
+ *
+ * It is worth being clear about who sees this: the address is *in* the QR
+ * code, so anybody who owes this person money and scans it reads their
+ * address. That is how a bank transfer has always worked, and it is why the
+ * form that collects it says so rather than leaving somebody to find out.
+ */
+export const payoutAddresses = pgTable(
+  "payout_addresses",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    street: text("street"),
+    buildingNumber: text("building_number"),
+    postalCode: text("postal_code").notNull(),
+    town: text("town").notNull(),
+    /** ISO 3166-1 alpha-2, upper case. */
+    country: text("country").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The lengths the guidelines give, so a row can never be one the standard
+    // would refuse to carry.
+    check(
+      "payout_addresses_street_bounded",
+      sql`length(${table.street}) <= 70`,
+    ),
+    check(
+      "payout_addresses_building_bounded",
+      sql`length(${table.buildingNumber}) <= 16`,
+    ),
+    check(
+      "payout_addresses_postal_code_bounded",
+      sql`length(${table.postalCode}) BETWEEN 1 AND 16`,
+    ),
+    check(
+      "payout_addresses_town_bounded",
+      sql`length(${table.town}) BETWEEN 1 AND 35`,
+    ),
+    check(
+      "payout_addresses_country_format",
+      sql`${table.country} ~ '^[A-Z]{2}$'`,
+    ),
+  ],
+);

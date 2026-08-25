@@ -161,6 +161,10 @@ These are deliberate omissions for this version, not oversights:
 - **No email delivery was exercised end to end.** SMTP paths are implemented and
   gated behind configuration; without a mail server the instance works fully and
   simply does not offer verification, recovery or the six-digit codes.
+- **No payment QR has been scanned by a real banking app.** The Swiss payload
+  is asserted line for line against Annex A example 3 of the Implementation
+  Guidelines, and the Girocode against EPC069-12's field order and its 331-byte
+  and version-13 limits — but a passing test is not a bank accepting a payment.
 - **The payout read path has not been run against a database.**
   `listPayoutsOwed` joins participants to their owner's methods and is scoped by
   group; its permission rule — that a recipient is reachable only by appearing

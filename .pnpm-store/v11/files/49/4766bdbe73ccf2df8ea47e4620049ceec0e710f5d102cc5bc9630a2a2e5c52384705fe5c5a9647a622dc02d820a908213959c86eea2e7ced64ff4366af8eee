@@ -1,0 +1,268 @@
+import { n as manifestTransformResult, r as manifestEntry, t as manifestTransform } from "./chunks/manifest-transform-B-PM_veR.js";
+import { z } from "zod";
+//#region src/schema/assert-type.d.ts
+type Equals<T, S> = [T] extends [S] ? ([S] extends [T] ? true : false) : false;
+type Assignable<T, U> = [U] extends [T] ? true : false;
+declare function assertType<_T extends true>(): void;
+//#endregion
+//#region src/schema/base.d.ts
+declare const basePartial: z.ZodObject<{
+  additionalPrecacheEntries: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+  }, z.core.$strict>]>>>;
+  disablePrecacheManifest: z.ZodDefault<z.ZodBoolean>;
+  dontCacheBustURLsMatching: z.ZodOptional<z.ZodCustom<RegExp, RegExp>>;
+  manifestTransforms: z.ZodOptional<z.ZodArray<z.ZodPipe<z.ZodCustom<z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>>, z.ZodTransform<z.core.$InferOuterFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>>>>>;
+  maximumFileSizeToCacheInBytes: z.ZodDefault<z.ZodNumber>;
+  modifyURLPrefix: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+}, z.core.$strict>;
+//#endregion
+//#region src/schema/error.d.ts
+declare class SerwistConfigError extends Error {
+  constructor({ moduleName, message }: {
+    moduleName?: string;
+    message?: string;
+  });
+}
+declare const validationErrorMap: z.core.$ZodErrorMap;
+//#endregion
+//#region src/schema/get-manifest.d.ts
+declare const getManifestOptions: z.ZodObject<{
+  additionalPrecacheEntries: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+  }, z.core.$strict>]>>>;
+  disablePrecacheManifest: z.ZodDefault<z.ZodBoolean>;
+  dontCacheBustURLsMatching: z.ZodOptional<z.ZodCustom<RegExp, RegExp>>;
+  manifestTransforms: z.ZodOptional<z.ZodArray<z.ZodPipe<z.ZodCustom<z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>>, z.ZodTransform<z.core.$InferOuterFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>>>>>;
+  maximumFileSizeToCacheInBytes: z.ZodDefault<z.ZodNumber>;
+  modifyURLPrefix: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  globFollow: z.ZodDefault<z.ZodBoolean>;
+  globIgnores: z.ZodDefault<z.ZodArray<z.ZodString>>;
+  globPatterns: z.ZodDefault<z.ZodArray<z.ZodString>>;
+  globStrict: z.ZodDefault<z.ZodBoolean>;
+  templatedURLs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodString>]>>>;
+  globDirectory: z.ZodString;
+}, z.core.$strict>;
+//#endregion
+//#region src/schema/glob.d.ts
+declare const globPartial: z.ZodObject<{
+  globFollow: z.ZodDefault<z.ZodBoolean>;
+  globIgnores: z.ZodDefault<z.ZodArray<z.ZodString>>;
+  globPatterns: z.ZodDefault<z.ZodArray<z.ZodString>>;
+  globStrict: z.ZodDefault<z.ZodBoolean>;
+  templatedURLs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodString>]>>>;
+}, z.core.$strict>;
+declare const optionalGlobDirectoryPartial: z.ZodObject<{
+  globDirectory: z.ZodOptional<z.ZodString>;
+}, z.core.$strict>;
+declare const requiredGlobDirectoryPartial: z.ZodObject<{
+  globDirectory: z.ZodString;
+}, z.core.$strict>;
+//#endregion
+//#region src/schema/inject-manifest.d.ts
+declare const baseInjectPartial: z.ZodObject<{
+  injectionPoint: z.ZodDefault<z.ZodString>;
+  swSrc: z.ZodString;
+}, z.core.$strict>;
+declare const injectManifestOptions: z.ZodObject<{
+  additionalPrecacheEntries: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+  }, z.core.$strict>]>>>;
+  disablePrecacheManifest: z.ZodDefault<z.ZodBoolean>;
+  dontCacheBustURLsMatching: z.ZodOptional<z.ZodCustom<RegExp, RegExp>>;
+  manifestTransforms: z.ZodOptional<z.ZodArray<z.ZodPipe<z.ZodCustom<z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>>, z.ZodTransform<z.core.$InferOuterFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<[z.ZodArray<z.ZodObject<{
+    integrity: z.ZodOptional<z.ZodString>;
+    revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    url: z.ZodString;
+    size: z.ZodNumber;
+  }, z.core.$strip>>, z.ZodOptional<z.ZodUnknown>], null>, z.ZodObject<{
+    manifest: z.ZodArray<z.ZodObject<{
+      integrity: z.ZodOptional<z.ZodString>;
+      revision: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+      url: z.ZodString;
+      size: z.ZodNumber;
+    }, z.core.$strip>>;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>>>>>>;
+  maximumFileSizeToCacheInBytes: z.ZodDefault<z.ZodNumber>;
+  modifyURLPrefix: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  globFollow: z.ZodDefault<z.ZodBoolean>;
+  globIgnores: z.ZodDefault<z.ZodArray<z.ZodString>>;
+  globPatterns: z.ZodDefault<z.ZodArray<z.ZodString>>;
+  globStrict: z.ZodDefault<z.ZodBoolean>;
+  templatedURLs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodString>]>>>;
+  globDirectory: z.ZodString;
+  swDest: z.ZodString;
+  injectionPoint: z.ZodDefault<z.ZodString>;
+  swSrc: z.ZodString;
+}, z.core.$strict>;
+//#endregion
+//#region src/schema/sw-dest.d.ts
+declare const optionalSwDestPartial: z.ZodObject<{
+  swDest: z.ZodOptional<z.ZodString>;
+}, z.core.$strict>;
+declare const requiredSwDestPartial: z.ZodObject<{
+  swDest: z.ZodString;
+}, z.core.$strict>;
+//#endregion
+//#region src/schema/utils.d.ts
+declare const fn: <TInput extends [z.ZodType, ...z.ZodType[]], TOutput extends z.ZodType>({ input, output }: {
+  input: TInput;
+  output: TOutput;
+}) => z.ZodPipe<z.ZodCustom<z.core.$InferInnerFunctionType<z.ZodTuple<TInput, null>, TOutput>, z.core.$InferInnerFunctionType<z.ZodTuple<TInput, null>, TOutput>>, z.ZodTransform<(...args: TInput extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [...Prefix extends readonly [...infer Prefix extends z.core.SomeType[], infer Tail extends z.core.SomeType] ? Tail["_zod"]["optin"] extends "optional" ? [... /*elided*/ any, (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof Prefix]: z.input<Prefix[k]>; } : [], (z.input<Tail> | undefined)?] : { [k in keyof TInput]: z.input<TInput[k]>; } : []) => z.input<TOutput> extends z.TypeOf<TOutput> ? z.TypeOf<TOutput> & z.input<TOutput> : z.TypeOf<TOutput>, z.core.$InferInnerFunctionType<z.ZodTuple<TInput, null>, TOutput>>>;
+declare const asyncFn: <TInput extends [z.ZodType, ...z.ZodType[]], TOutput extends z.ZodType>({ input, output }: {
+  input: TInput;
+  output: TOutput;
+}) => z.ZodPipe<z.ZodCustom<z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput>>, z.ZodTransform<Awaited<z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput> extends (infer T) ? T extends z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput> ? T extends z.core.$InferOuterFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput> ? T : z.core.$InferOuterFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput> : never : never>, z.core.$InferInnerFunctionTypeAsync<z.ZodTuple<TInput, null>, TOutput>>>;
+//#endregion
+export { type Assignable, type Equals, SerwistConfigError, assertType, asyncFn, basePartial, fn, getManifestOptions, globPartial, injectManifestOptions, baseInjectPartial as injectPartial, manifestEntry, manifestTransform, manifestTransformResult, optionalGlobDirectoryPartial, optionalSwDestPartial, requiredGlobDirectoryPartial, requiredSwDestPartial, validationErrorMap };
+//# sourceMappingURL=index.schema.d.mts.map

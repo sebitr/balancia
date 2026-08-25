@@ -1,0 +1,49 @@
+import { Optional } from "@serwist/utils";
+import { BuildOptions } from "@serwist/cli";
+import { NextConfigComplete } from "next/dist/server/config-shared.js";
+//#region src/lib/config/types.d.ts
+interface SerwistOptions extends Optional<BuildOptions, "globDirectory"> {
+  /**
+   * Whether Serwist should precache prerendered routes.
+   *
+   * @default true
+   */
+  precachePrerendered?: boolean;
+}
+//#endregion
+//#region src/lib/config/utils.d.ts
+declare const generateGlobPatterns: (distDir: string) => string[];
+//#endregion
+//#region src/index.config.d.ts
+/**
+ * Additional build context.
+ */
+interface SerwistContext {
+  /**
+   * The current working directory.
+   */
+  cwd?: string;
+  /**
+   * Whether Serwist is in development mode. This option determines how Next.js configuration
+   * is resolved. Note that it doesn't change how the service worker is built.
+   */
+  isDev?: boolean;
+}
+interface Serwist {
+  /**
+   * Integrates Serwist into your Next.js app.
+   * @param options
+   * @returns
+   */
+  (options: SerwistOptions, nextConfig?: NextConfigComplete, context?: SerwistContext): Promise<BuildOptions>;
+  /**
+   * Integrates Serwist into your Next.js app. Allows reading fully resolved Next.js configuration.
+   * @param optionsFunction
+   * @returns
+   */
+  withNextConfig: (optionsFunction: (nextConfig: NextConfigComplete) => Promise<SerwistOptions> | SerwistOptions, context?: SerwistContext) => Promise<BuildOptions>;
+}
+declare const serwist: Serwist;
+//#endregion
+export { Serwist, SerwistContext, type SerwistOptions, generateGlobPatterns, serwist };
+//# sourceMappingURL=index.config.d.mts.map

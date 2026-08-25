@@ -1,0 +1,17 @@
+import { RuntimeCaching } from "serwist";
+//#region src/index.worker.d.ts
+declare const PAGES_CACHE_NAME: {
+  readonly rscPrefetch: "pages-rsc-prefetch";
+  readonly rsc: "pages-rsc";
+  readonly html: "pages";
+};
+/**
+ * The default, recommended list of caching strategies for applications
+ * built with Next.js.
+ *
+ * @see https://serwist.pages.dev/docs/next/worker-exports#default-cache
+ */
+declare const defaultCache: RuntimeCaching[];
+//#endregion
+export { PAGES_CACHE_NAME, defaultCache };
+//# sourceMappingURL=index.worker.d.mts.map

@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toastUndoable } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import { setPayoutMethodsAction } from "@/modules/payouts/actions";
+import {
+  setPayoutAddressAction,
+  setPayoutMethodsAction,
+} from "@/modules/payouts/actions";
 import {
   needsDetail,
   payoutFieldFor,
@@ -19,6 +22,7 @@ import {
   methodsForCountry,
   type PaymentMethodId,
 } from "@/modules/settlements/payment-methods";
+import type { SwissCreditorAddress } from "@/modules/payouts/qr/swiss";
 
 /**
  * How people pay you back, as a list you tick.
@@ -48,11 +52,14 @@ export interface PayoutEntry {
 
 export function PayoutMethodsForm({
   initial,
+  initialAddress = null,
   confirmations = "toast",
   persist = true,
   onChange,
 }: {
   initial: readonly PayoutEntry[];
+  /** Only ever set, and only ever asked for, alongside a Swiss IBAN. */
+  initialAddress?: SwissCreditorAddress | null;
   /**
    * False for a guest, who has no account to store any of this on. The list
    * still works for the length of the visit — the same bargain everything else
@@ -73,6 +80,15 @@ export function PayoutMethodsForm({
   const tCommon = useTranslations("common");
 
   const [entries, setEntries] = useState<readonly PayoutEntry[]>(initial);
+  const [address, setAddress] = useState<SwissCreditorAddress>(
+    initialAddress ?? {
+      street: "",
+      buildingNumber: "",
+      postalCode: "",
+      town: "",
+      country: "",
+    },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
@@ -179,6 +195,19 @@ export function PayoutMethodsForm({
     }
   };
 
+  /*
+   * Whether an address is needed at all.
+   *
+   * Only the Swiss standard requires one, so only a Swiss IBAN is asked. A
+   * German account gets a Girocode, which carries no address, and nobody is
+   * asked where they live to be paid by TWINT.
+   */
+  const swissIban = entries.some(
+    (entry) =>
+      entry.method === "bank" &&
+      /^(CH|LI)/i.test(entry.detail.replace(/\s/g, "")),
+  );
+
   return (
     <div className="flex flex-col gap-1">
       {offered.map((id) => {
@@ -238,6 +267,14 @@ export function PayoutMethodsForm({
         );
       })}
 
+      {swissIban && (
+        <SwissAddress
+          address={address}
+          onChange={setAddress}
+          persist={persist}
+        />
+      )}
+
       {errors.form && (
         <p className="px-3 pt-1 text-sm text-destructive">{errors.form}</p>
       )}
@@ -252,6 +289,84 @@ export function PayoutMethodsForm({
           className="mx-3 size-4 animate-spin text-muted-foreground"
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * The postal address a Swiss QR-bill cannot be built without.
+ *
+ * Shown only under a Swiss IBAN, and it says who will see it. That sentence is
+ * the point: the address travels inside the QR code, so the person who owes
+ * money reads it when they scan. That is how a bank transfer has always
+ * worked, and somebody should learn it here rather than afterwards.
+ *
+ * Street and building number are genuinely optional in the standard and are
+ * left so here. Postcode, town and country are not, so nothing is written
+ * until all three are there — a half-filled address is one the QR would be
+ * refused for.
+ */
+function SwissAddress({
+  address,
+  onChange,
+  persist,
+}: {
+  address: SwissCreditorAddress;
+  onChange: (address: SwissCreditorAddress) => void;
+  persist: boolean;
+}) {
+  const t = useTranslations("payouts");
+
+  const complete =
+    (address.postalCode ?? "").trim().length > 0 &&
+    (address.town ?? "").trim().length > 0 &&
+    /^[A-Za-z]{2}$/.test((address.country ?? "").trim());
+
+  const commit = () => {
+    if (!persist || !complete) return;
+    void setPayoutAddressAction(address);
+  };
+
+  const field = (
+    key: keyof SwissCreditorAddress,
+    label: string,
+    className?: string,
+  ) => (
+    <div className={cn("flex flex-col gap-1", className)}>
+      <Label
+        className="text-2xs text-muted-foreground"
+        htmlFor={`address-${key}`}
+      >
+        {label}
+      </Label>
+      <Input
+        id={`address-${key}`}
+        className="h-11"
+        value={address[key] ?? ""}
+        onChange={(event) =>
+          onChange({ ...address, [key]: event.target.value })
+        }
+        onBlur={commit}
+      />
+    </div>
+  );
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded-xl bg-muted/50 p-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-medium">{t("addressTitle")}</span>
+        <span className="text-xs text-pretty text-muted-foreground">
+          {t("addressSub")}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {field("street", t("addressStreet"), "col-span-2")}
+        {field("buildingNumber", t("addressBuilding"))}
+        {field("postalCode", t("addressPostalCode"))}
+        {field("town", t("addressTown"), "col-span-2")}
+        {field("country", t("addressCountry"))}
+      </div>
     </div>
   );
 }

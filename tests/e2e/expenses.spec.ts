@@ -237,7 +237,21 @@ test("saving from the intercepted drawer leaves the group uncovered", async ({
   await expectEntrySaved(page, "Expense added");
   await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
   await expect(drawer).toBeHidden();
-  await expect(page.getByText("added an expense: Taxi")).toBeVisible();
+
+  // The group behind is current, not the empty one the drawer opened over:
+  // the position only exists once the group has an expense in it.
+  //
+  // Not the "since your last visit" line, which this used to read. That
+  // section is keyed on `lastOpenedAt`, which the overview stamps in an
+  // `after()` on every render of itself — and leaving the drawer renders it
+  // twice, once from the pop and once from the `router.refresh()` behind it.
+  // The first render shows the new entry as news and moves the boundary past
+  // it; the second, which is the one left on screen, has nothing unseen to
+  // report. Whether the assertion caught the first render was a coin flip,
+  // and CI lost it both times.
+  await expect(
+    page.getByRole("region", { name: "Your position" }),
+  ).toBeVisible();
 
   // And going back from the group leaves it, rather than reopening the form.
   await page.goBack();

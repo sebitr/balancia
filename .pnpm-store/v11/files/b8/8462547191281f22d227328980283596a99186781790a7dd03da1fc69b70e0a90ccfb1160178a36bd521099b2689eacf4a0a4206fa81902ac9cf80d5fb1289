@@ -1,0 +1,1 @@
+import{cache as t}from"react";import r from"./getServerTranslator.js";var a=t((function(t,a){throw r(t,a),new Error("[next-intl] `useExtracted` was called in production without compilation. Include modules that call `useExtracted` in `srcPath` and use `transpilePackages` for 3rd-party packages.")}));export{a as default};

@@ -1,0 +1,33 @@
+import { InjectManifestOptions, InjectManifestOptionsComplete } from "@serwist/build";
+import { Flag } from "meow";
+import { Prettify, Require } from "@serwist/utils";
+import { BuildOptions } from "esbuild";
+//#region src/lib/constants.d.ts
+declare const constants: {
+  defaultConfigFile: string;
+  ignoredDirectories: string[];
+  ignoredFileExtensions: string[];
+};
+declare const SUPPORTED_ESBUILD_OPTIONS: readonly ["sourcemap", "legalComments", "sourceRoot", "sourcesContent", "format", "globalName", "target", "supported", "define", "treeShaking", "minify", "mangleProps", "reserveProps", "mangleQuoted", "mangleCache", "drop", "dropLabels", "minifyWhitespace", "minifyIdentifiers", "minifySyntax", "lineLimit", "charset", "ignoreAnnotations", "jsx", "jsxFactory", "jsxFragment", "jsxImportSource", "jsxDev", "jsxSideEffects", "pure", "keepNames", "absPaths", "color", "logLevel", "logLimit", "logOverride", "tsconfigRaw", "bundle", "splitting", "preserveSymlinks", "external", "packages", "alias", "loader", "resolveExtensions", "mainFields", "conditions", "allowOverwrite", "tsconfig", "outExtension", "publicPath", "inject", "banner", "footer", "plugins"];
+//#endregion
+//#region src/types.d.ts
+type StringFlag = Flag<"string", string> | Flag<"string", string[], true>;
+type BooleanFlag = Flag<"boolean", boolean> | Flag<"boolean", boolean[], true>;
+type NumberFlag = Flag<"number", number> | Flag<"number", number[], true>;
+type AnyFlag = StringFlag | BooleanFlag | NumberFlag;
+type AnyFlags = Record<string, AnyFlag>;
+type EsbuildSupportedOptions = (typeof SUPPORTED_ESBUILD_OPTIONS)[number];
+type EsbuildOptions = Pick<BuildOptions, EsbuildSupportedOptions>;
+interface BuildPartial {
+  /**
+   * Options to configure the esbuild instance used to bundle
+   * the service worker.
+   */
+  esbuildOptions?: EsbuildOptions;
+}
+type BuildResolved = Require<BuildPartial, "esbuildOptions">;
+type BuildOptions$1 = Prettify<InjectManifestOptions & BuildPartial>;
+type BuildOptionsComplete = Prettify<InjectManifestOptionsComplete & BuildResolved>;
+//#endregion
+export { BuildOptionsComplete as a, EsbuildOptions as c, StringFlag as d, SUPPORTED_ESBUILD_OPTIONS as f, BuildOptions$1 as i, EsbuildSupportedOptions as l, AnyFlags as n, BuildPartial as o, constants as p, BooleanFlag as r, BuildResolved as s, AnyFlag as t, NumberFlag as u };
+//# sourceMappingURL=types-DIGJFlHE.d.ts.map

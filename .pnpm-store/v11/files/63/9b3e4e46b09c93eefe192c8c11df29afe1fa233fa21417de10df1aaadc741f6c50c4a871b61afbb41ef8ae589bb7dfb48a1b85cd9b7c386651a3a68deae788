@@ -1,0 +1,594 @@
+import { n as validationErrorMap, t as SerwistConfigError } from "./chunks/error-B_o2bTQE.js";
+import { t as DEFAULT_GLOB_PATTERNS } from "./chunks/constants-nOu8OVD-.js";
+import assert from "node:assert";
+import { oneLine } from "common-tags";
+import crypto from "node:crypto";
+import path from "node:path";
+import { globSync } from "glob";
+import fs, { readFileSync } from "node:fs";
+import prettyBytes from "pretty-bytes";
+import { z } from "zod";
+import fsp from "node:fs/promises";
+import { toUnix } from "@serwist/utils";
+import { SourceMapConsumer, SourceMapGenerator } from "source-map";
+//#region src/lib/errors.ts
+const errors = {
+	"unable-to-get-rootdir": "Unable to get the root directory of your web app.",
+	"no-extension": oneLine`Unable to detect a usable extension for a file in your web
+    app directory.`,
+	"invalid-file-manifest-name": oneLine`The File Manifest Name must have at least one
+    character.`,
+	"unable-to-get-file-manifest-name": "Unable to get a file manifest name.",
+	"invalid-sw-dest": `The 'swDest' value must be a valid path.`,
+	"unable-to-get-sw-name": "Unable to get a service worker file name.",
+	"unable-to-get-save-config": oneLine`An error occurred when asking to save details
+    in a config file.`,
+	"unable-to-get-file-hash": oneLine`An error occurred when attempting to create a
+    file hash.`,
+	"unable-to-get-file-size": oneLine`An error occurred when attempting to get a file
+    size.`,
+	"unable-to-glob-files": "An error occurred when globbing for files.",
+	"unable-to-make-manifest-directory": oneLine`Unable to make output directory for
+    file manifest.`,
+	"read-manifest-template-failure": "Unable to read template for file manifest",
+	"populating-manifest-tmpl-failed": oneLine`An error occurred when populating the
+    file manifest template.`,
+	"manifest-file-write-failure": "Unable to write the file manifest.",
+	"unable-to-make-sw-directory": oneLine`Unable to make the directories to output
+    the service worker path.`,
+	"sw-write-failure": "Unable to write the service worker file.",
+	"sw-write-failure-directory": oneLine`Unable to write the service worker file;
+    'swDest' should be a full path to the file, not a path to a directory.`,
+	"unable-to-copy-serwist-libraries": oneLine`One or more of the Serwist libraries
+    could not be copied over to the destination directory: `,
+	"invalid-glob-directory": oneLine`The supplied globDirectory must be a path as a
+    string.`,
+	"invalid-dont-cache-bust": oneLine`The supplied 'dontCacheBustURLsMatching'
+    parameter must be a RegExp.`,
+	"invalid-exclude-files": "The excluded files should be an array of strings.",
+	"invalid-get-manifest-entries-input": oneLine`The input to
+    'getFileManifestEntries()' must be an object.`,
+	"invalid-manifest-path": oneLine`The supplied manifest path is not a string with
+    at least one character.`,
+	"invalid-manifest-entries": oneLine`The manifest entries must be an array of
+    strings or JavaScript objects containing a url parameter.`,
+	"invalid-manifest-format": oneLine`The value of the 'format' option passed to
+    generateFileManifest() must be either 'iife' (the default) or 'es'.`,
+	"invalid-static-file-globs": oneLine`The 'globPatterns' value must be an array
+    of strings.`,
+	"invalid-templated-urls": oneLine`The 'templatedURLs' value should be an object
+    that maps URLs to either a string, or to an array of glob patterns.`,
+	"templated-url-matches-glob": oneLine`One of the 'templatedURLs' URLs is already
+    being tracked via 'globPatterns': `,
+	"invalid-glob-ignores": oneLine`The 'globIgnores' parameter must be an array of
+    glob pattern strings.`,
+	"manifest-entry-bad-url": oneLine`The generated manifest contains an entry without
+    a URL string. This is likely an error with @serwist/build.`,
+	"modify-url-prefix-bad-prefixes": oneLine`The 'modifyURLPrefix' parameter must be
+    an object with string key value pairs.`,
+	"invalid-inject-manifest-arg": oneLine`The input to 'injectManifest()' must be an
+    object.`,
+	"injection-point-not-found": oneLine`Unable to find a place to inject the manifest.
+    Please ensure that your service worker file contains the following: `,
+	"multiple-injection-points": oneLine`Please ensure that your 'swSrc' file contains
+    only one match for the following: `,
+	"bad-template-urls-asset": oneLine`There was an issue using one of the provided
+    'templatedURLs'.`,
+	"invalid-generate-file-manifest-arg": oneLine`The input to generateFileManifest()
+    must be an Object.`,
+	"invalid-sw-src": `The 'swSrc' file can't be read.`,
+	"same-src-and-dest": oneLine`Unable to find a place to inject the manifest. This is
+    likely because swSrc and swDest are configured to the same file.
+    Please ensure that your swSrc file contains the following:`,
+	"no-module-name": oneLine`You must provide a moduleName parameter when calling
+    getModuleURL().`,
+	"bad-manifest-transforms-return-value": oneLine`The return value from a
+    manifestTransform should be an object with 'manifest' and optionally
+    'warnings' properties.`,
+	"string-entry-warning": oneLine`Some items were passed to additionalPrecacheEntries
+    without revisioning info. This is generally NOT safe. Learn more at
+    https://bit.ly/wb-precache.`,
+	"cant-find-sourcemap": oneLine`The swSrc file refers to a sourcemap that can't be
+    opened:`,
+	"manifest-transforms": oneLine`When using manifestTransforms, you must provide
+    an array of functions.`
+};
+//#endregion
+//#region src/lib/get-composite-details.ts
+const getCompositeDetails = (compositeURL, dependencyDetails) => {
+	let totalSize = 0;
+	let compositeHash = "";
+	for (const fileDetails of dependencyDetails) {
+		totalSize += fileDetails.size;
+		compositeHash += fileDetails.hash === null ? "" : fileDetails.hash;
+	}
+	const md5 = crypto.createHash("md5");
+	md5.update(compositeHash);
+	return {
+		file: compositeURL,
+		hash: md5.digest("hex"),
+		size: totalSize
+	};
+};
+//#endregion
+//#region src/lib/get-string-hash.ts
+function getStringHash(input) {
+	const md5 = crypto.createHash("md5");
+	md5.update(input);
+	return md5.digest("hex");
+}
+//#endregion
+//#region src/lib/get-file-hash.ts
+const getFileHash = (file) => {
+	try {
+		return getStringHash(readFileSync(file));
+	} catch (err) {
+		throw new Error(`${errors["unable-to-get-file-hash"]} '${err instanceof Error && err.message ? err.message : ""}'`);
+	}
+};
+//#endregion
+//#region src/lib/get-file-size.ts
+const getFileSize = (file) => {
+	try {
+		const stat = fs.statSync(file);
+		if (!stat.isFile()) return null;
+		return stat.size;
+	} catch (err) {
+		throw new Error(`${errors["unable-to-get-file-size"]} '${err instanceof Error && err.message ? err.message : ""}'`);
+	}
+};
+//#endregion
+//#region src/lib/get-file-details.ts
+const getFileDetails = ({ globDirectory, globFollow, globIgnores, globPattern }) => {
+	let globbedFiles;
+	let warning = "";
+	try {
+		globbedFiles = globSync(globPattern, {
+			cwd: globDirectory,
+			follow: globFollow,
+			ignore: globIgnores
+		});
+	} catch (err) {
+		throw new Error(`${errors["unable-to-glob-files"]} '${err instanceof Error && err.message ? err.message : ""}'`);
+	}
+	const globbedFileDetails = [];
+	for (const file of globbedFiles) {
+		const fullPath = path.join(globDirectory, file);
+		const fileSize = getFileSize(fullPath);
+		if (fileSize !== null) {
+			const fileHash = getFileHash(fullPath);
+			globbedFileDetails.push({
+				file: path.relative(globDirectory, fullPath),
+				hash: fileHash,
+				size: fileSize
+			});
+		}
+	}
+	return {
+		globbedFileDetails,
+		warning
+	};
+};
+//#endregion
+//#region src/lib/get-string-details.ts
+const getStringDetails = (url, str) => ({
+	file: url,
+	hash: getStringHash(str),
+	size: str.length
+});
+//#endregion
+//#region src/lib/additional-precache-entries-transform.ts
+const additionalPrecacheEntriesTransform = (additionalPrecacheEntries) => {
+	return (manifest) => {
+		const warnings = [];
+		const stringEntries = /* @__PURE__ */ new Set();
+		for (const additionalEntry of additionalPrecacheEntries) if (typeof additionalEntry === "string") {
+			stringEntries.add(additionalEntry);
+			manifest.push({
+				revision: null,
+				size: 0,
+				url: additionalEntry
+			});
+		} else {
+			if (additionalEntry && !additionalEntry.integrity && additionalEntry.revision === void 0) stringEntries.add(additionalEntry.url);
+			manifest.push(Object.assign({ size: 0 }, additionalEntry));
+		}
+		if (stringEntries.size > 0) {
+			let urls = "\n";
+			for (const stringEntry of stringEntries) urls += `  - ${stringEntry}\n`;
+			warnings.push(errors["string-entry-warning"] + urls);
+		}
+		return {
+			manifest,
+			warnings
+		};
+	};
+};
+//#endregion
+//#region src/lib/maximum-size-transform.ts
+function maximumSizeTransform(maximumFileSizeToCacheInBytes) {
+	return (originalManifest) => {
+		const warnings = [];
+		return {
+			manifest: originalManifest.filter((entry) => {
+				if (entry.size <= maximumFileSizeToCacheInBytes) return true;
+				warnings.push(`${entry.url} is ${prettyBytes(entry.size)}, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.`);
+				return false;
+			}),
+			warnings
+		};
+	};
+}
+//#endregion
+//#region src/lib/escape-regexp.ts
+const escapeRegExp = (str) => {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+//#endregion
+//#region src/lib/modify-url-prefix-transform.ts
+function modifyURLPrefixTransform(modifyURLPrefix) {
+	if (!modifyURLPrefix || typeof modifyURLPrefix !== "object" || Array.isArray(modifyURLPrefix)) throw new Error(errors["modify-url-prefix-bad-prefixes"]);
+	if (Object.keys(modifyURLPrefix).length === 0) return (manifest) => {
+		return { manifest };
+	};
+	for (const key of Object.keys(modifyURLPrefix)) if (typeof modifyURLPrefix[key] !== "string") throw new Error(errors["modify-url-prefix-bad-prefixes"]);
+	const prefixMatchesStrings = Object.keys(modifyURLPrefix).map(escapeRegExp).join("|");
+	const modifyRegex = new RegExp(`^(${prefixMatchesStrings})`);
+	return (originalManifest) => {
+		return { manifest: originalManifest.map((entry) => {
+			if (typeof entry.url !== "string") throw new Error(errors["manifest-entry-bad-url"]);
+			entry.url = entry.url.replace(modifyRegex, (match) => {
+				return modifyURLPrefix[match];
+			});
+			return entry;
+		}) };
+	};
+}
+//#endregion
+//#region src/lib/no-revision-for-urls-matching-transform.ts
+function noRevisionForURLsMatchingTransform(regexp) {
+	if (!(regexp instanceof RegExp)) throw new Error(errors["invalid-dont-cache-bust"]);
+	return (originalManifest) => {
+		return { manifest: originalManifest.map((entry) => {
+			if (typeof entry.url !== "string") throw new Error(errors["manifest-entry-bad-url"]);
+			if (entry.url.match(regexp)) entry.revision = null;
+			return entry;
+		}) };
+	};
+}
+//#endregion
+//#region src/lib/transform-manifest.ts
+async function transformManifest({ additionalPrecacheEntries, dontCacheBustURLsMatching, fileDetails, manifestTransforms, maximumFileSizeToCacheInBytes, modifyURLPrefix, transformParam, disablePrecacheManifest }) {
+	if (disablePrecacheManifest) return {
+		count: 0,
+		size: 0,
+		manifestEntries: void 0,
+		warnings: []
+	};
+	const allWarnings = [];
+	const normalizedManifest = fileDetails.map((fileDetails) => ({
+		url: fileDetails.file.replace(/\\/g, "/"),
+		revision: fileDetails.hash,
+		size: fileDetails.size
+	}));
+	const transformsToApply = [];
+	if (maximumFileSizeToCacheInBytes) transformsToApply.push(maximumSizeTransform(maximumFileSizeToCacheInBytes));
+	if (modifyURLPrefix) transformsToApply.push(modifyURLPrefixTransform(modifyURLPrefix));
+	if (dontCacheBustURLsMatching) transformsToApply.push(noRevisionForURLsMatchingTransform(dontCacheBustURLsMatching));
+	if (manifestTransforms) transformsToApply.push(...manifestTransforms);
+	if (additionalPrecacheEntries) transformsToApply.push(additionalPrecacheEntriesTransform(additionalPrecacheEntries));
+	let transformedManifest = normalizedManifest;
+	for (const transform of transformsToApply) {
+		const result = await transform(transformedManifest, transformParam);
+		if (!("manifest" in result)) throw new Error(errors["bad-manifest-transforms-return-value"]);
+		transformedManifest = result.manifest;
+		allWarnings.push(...result.warnings || []);
+	}
+	const count = transformedManifest.length;
+	let size = 0;
+	for (const manifestEntry of transformedManifest) {
+		size += manifestEntry.size || 0;
+		delete manifestEntry.size;
+	}
+	return {
+		count,
+		size,
+		manifestEntries: transformedManifest,
+		warnings: allWarnings
+	};
+}
+//#endregion
+//#region src/lib/get-file-manifest-entries.ts
+const getFileManifestEntries = async ({ additionalPrecacheEntries, dontCacheBustURLsMatching, globDirectory, globFollow, globIgnores, globPatterns = [], globStrict, manifestTransforms, maximumFileSizeToCacheInBytes, modifyURLPrefix, templatedURLs, disablePrecacheManifest }) => {
+	if (disablePrecacheManifest) return {
+		count: 0,
+		size: 0,
+		manifestEntries: void 0,
+		warnings: []
+	};
+	const warnings = [];
+	const allFileDetails = /* @__PURE__ */ new Map();
+	try {
+		for (const globPattern of globPatterns) {
+			const { globbedFileDetails, warning } = getFileDetails({
+				globDirectory,
+				globFollow,
+				globIgnores,
+				globPattern,
+				globStrict
+			});
+			if (warning) warnings.push(warning);
+			for (const details of globbedFileDetails) if (details && !allFileDetails.has(details.file)) allFileDetails.set(details.file, details);
+		}
+	} catch (error) {
+		if (error instanceof Error && error.message) warnings.push(error.message);
+	}
+	if (templatedURLs) for (const url of Object.keys(templatedURLs)) {
+		assert(!allFileDetails.has(url), errors["templated-url-matches-glob"]);
+		const dependencies = templatedURLs[url];
+		if (Array.isArray(dependencies)) {
+			const details = dependencies.reduce((previous, globPattern) => {
+				try {
+					const { globbedFileDetails, warning } = getFileDetails({
+						globDirectory,
+						globFollow,
+						globIgnores,
+						globPattern,
+						globStrict
+					});
+					if (warning) warnings.push(warning);
+					return previous.concat(globbedFileDetails);
+				} catch (error) {
+					const debugObj = {};
+					debugObj[url] = dependencies;
+					throw new Error(`${errors["bad-template-urls-asset"]} '${globPattern}' from '${JSON.stringify(debugObj)}':\n${error instanceof Error ? error.toString() : ""}`);
+				}
+			}, []);
+			if (details.length === 0) throw new Error(`${errors["bad-template-urls-asset"]} The glob pattern '${dependencies.toString()}' did not match anything.`);
+			allFileDetails.set(url, getCompositeDetails(url, details));
+		} else if (typeof dependencies === "string") allFileDetails.set(url, getStringDetails(url, dependencies));
+	}
+	const transformedManifest = await transformManifest({
+		additionalPrecacheEntries,
+		dontCacheBustURLsMatching,
+		manifestTransforms,
+		maximumFileSizeToCacheInBytes,
+		modifyURLPrefix,
+		fileDetails: Array.from(allFileDetails.values()),
+		disablePrecacheManifest
+	});
+	transformedManifest.warnings.push(...warnings);
+	return transformedManifest;
+};
+//#endregion
+//#region src/lib/validate-options.ts
+const validateGetManifestOptions = async (input) => {
+	const result = await (await import("./chunks/get-manifest-C45pHnFK.js").then((n) => n.n)).getManifestOptions.spa(input, { error: validationErrorMap });
+	if (!result.success) throw new SerwistConfigError({
+		moduleName: "@serwist/build",
+		message: z.prettifyError(result.error)
+	});
+	return result.data;
+};
+const validateInjectManifestOptions = async (input) => {
+	const result = await (await import("./chunks/inject-manifest-8Ec3euyW.js").then((n) => n.r)).injectManifestOptions.spa(input, { error: validationErrorMap });
+	if (!result.success) throw new SerwistConfigError({
+		moduleName: "@serwist/build",
+		message: z.prettifyError(result.error)
+	});
+	return result.data;
+};
+//#endregion
+//#region src/get-manifest.ts
+/**
+* This method returns a list of URLs to precache, referred to as a "precache
+* manifest", along with details about the number of entries and their size,
+* based on the options you provide.
+*
+* ```
+* // The following lists some common options; see the rest of the documentation
+* // for the full set of options and defaults.
+* const {count, manifestEntries, size, warnings} = await getManifest({
+*   dontCacheBustURLsMatching: [new RegExp('...')],
+*   globDirectory: '...',
+*   globPatterns: ['...', '...'],
+*   maximumFileSizeToCacheInBytes: ...,
+* });
+* ```
+*/
+const getManifest = async (config) => {
+	return await getFileManifestEntries(await validateGetManifestOptions(config));
+};
+//#endregion
+//#region src/lib/get-source-map-url.ts
+const innerRegex = /[#@] sourceMappingURL=([^\s'"]*)/;
+const regex = RegExp(`(?:/\\*(?:\\s*\r?\n(?://)?)?(?:${innerRegex.source})\\s*\\*/|//(?:${innerRegex.source}))\\s*`);
+function getSourceMapURL(srcContents) {
+	const match = srcContents.match(regex);
+	return match ? match[1] || match[2] || "" : null;
+}
+//#endregion
+//#region src/lib/rebase-path.ts
+function rebasePath({ baseDirectory, file }) {
+	const absolutePath = path.resolve(file);
+	const relativePath = path.relative(baseDirectory, absolutePath);
+	return toUnix(path.normalize(relativePath));
+}
+//#endregion
+//#region src/lib/replace-and-update-source-map.ts
+/**
+* Adapted from https://github.com/nsams/sourcemap-aware-replace, with modern
+* JavaScript updates, along with additional properties copied from originalMap.
+*
+* @param options
+* @returns An object containing both
+* originalSource with the replacement applied, and the modified originalMap.
+* @private
+*/
+async function replaceAndUpdateSourceMap({ jsFilename, originalMap, originalSource, replaceString, searchString }) {
+	const generator = new SourceMapGenerator({ file: jsFilename });
+	const consumer = await new SourceMapConsumer(originalMap);
+	let pos;
+	let src = originalSource;
+	const replacements = [];
+	let lineNum = 0;
+	let filePos = 0;
+	const lines = src.split("\n");
+	for (let line of lines) {
+		lineNum++;
+		let searchPos = 0;
+		while ((pos = line.indexOf(searchString, searchPos)) !== -1) {
+			src = src.substring(0, filePos + pos) + replaceString + src.substring(filePos + pos + searchString.length);
+			line = line.substring(0, pos) + replaceString + line.substring(pos + searchString.length);
+			replacements.push({
+				line: lineNum,
+				column: pos
+			});
+			searchPos = pos + replaceString.length;
+		}
+		filePos += line.length + 1;
+	}
+	replacements.reverse();
+	consumer.eachMapping((mapping) => {
+		for (const replacement of replacements) if (replacement.line === mapping.generatedLine && mapping.generatedColumn > replacement.column) {
+			const offset = searchString.length - replaceString.length;
+			mapping.generatedColumn -= offset;
+		}
+		if (mapping.source) {
+			const newMapping = {
+				generated: {
+					line: mapping.generatedLine,
+					column: mapping.generatedColumn
+				},
+				original: {
+					line: mapping.originalLine,
+					column: mapping.originalColumn
+				},
+				source: mapping.source
+			};
+			return generator.addMapping(newMapping);
+		}
+		return mapping;
+	});
+	consumer.destroy();
+	const updatedSourceMap = Object.assign(JSON.parse(generator.toString()), {
+		names: originalMap.names,
+		sourceRoot: originalMap.sourceRoot,
+		sources: originalMap.sources,
+		sourcesContent: originalMap.sourcesContent
+	});
+	return {
+		map: JSON.stringify(updatedSourceMap),
+		source: src
+	};
+}
+//#endregion
+//#region src/lib/translate-url-to-sourcemap-paths.ts
+function translateURLToSourcemapPaths(url, swSrc, swDest) {
+	let destPath;
+	let srcPath;
+	let warning;
+	if (url && !url.startsWith("data:")) {
+		const possibleSrcPath = path.resolve(path.dirname(swSrc), url);
+		if (fs.existsSync(possibleSrcPath)) {
+			srcPath = toUnix(possibleSrcPath);
+			destPath = toUnix(path.resolve(path.dirname(swDest), url));
+		} else warning = `${errors["cant-find-sourcemap"]} ${possibleSrcPath}`;
+	}
+	return {
+		destPath,
+		srcPath,
+		warning
+	};
+}
+//#endregion
+//#region src/inject-manifest.ts
+/**
+* This method creates a list of URLs to precache, referred to as a "precache
+* manifest", based on the options you provide.
+*
+* The manifest is injected into the `swSrc` file, and the placeholder string
+* `injectionPoint` determines where in the file the manifest should go.
+*
+* The final service worker file, with the manifest injected, is written to
+* disk at `swDest`.
+*
+* This method will not compile or bundle your `swSrc` file; it just handles
+* injecting the manifest.
+*
+* ```
+* // The following lists some common options; see the rest of the documentation
+* // for the full set of options and defaults.
+* const {count, size, warnings} = await injectManifest({
+*   dontCacheBustURLsMatching: [new RegExp('...')],
+*   globDirectory: '...',
+*   globPatterns: ['...', '...'],
+*   maximumFileSizeToCacheInBytes: ...,
+*   swDest: '...',
+*   swSrc: '...',
+* });
+* ```
+*/
+const injectManifest = async (config) => {
+	const options = await validateInjectManifestOptions(config);
+	for (const file of [options.swSrc, options.swDest]) options.globIgnores.push(rebasePath({
+		file,
+		baseDirectory: options.globDirectory
+	}));
+	const globalRegexp = new RegExp(escapeRegExp(options.injectionPoint), "g");
+	const { count, size, manifestEntries, warnings } = await getFileManifestEntries(options);
+	let swFileContents;
+	try {
+		swFileContents = await fsp.readFile(options.swSrc, "utf8");
+	} catch (error) {
+		throw new Error(`${errors["invalid-sw-src"]} ${error instanceof Error && error.message ? error.message : ""}`);
+	}
+	const injectionResults = swFileContents.match(globalRegexp);
+	const injectionPoint = options.injectionPoint ? options.injectionPoint : "";
+	if (!injectionResults) {
+		if (path.resolve(options.swSrc) === path.resolve(options.swDest)) throw new Error(`${errors["same-src-and-dest"]} ${injectionPoint}`);
+		throw new Error(`${errors["injection-point-not-found"]} ${injectionPoint}`);
+	}
+	assert(injectionResults.length === 1, `${errors["multiple-injection-points"]} ${injectionPoint}`);
+	const manifestString = manifestEntries === void 0 ? "undefined" : JSON.stringify(manifestEntries);
+	const filesToWrite = {};
+	const { destPath, srcPath, warning } = translateURLToSourcemapPaths(getSourceMapURL(swFileContents), options.swSrc, options.swDest);
+	if (warning) warnings.push(warning);
+	if (srcPath && destPath) {
+		const { map, source } = await replaceAndUpdateSourceMap({
+			originalMap: JSON.parse(await fsp.readFile(srcPath, "utf-8")),
+			jsFilename: toUnix(path.basename(options.swDest)),
+			originalSource: swFileContents,
+			replaceString: manifestString,
+			searchString: options.injectionPoint
+		});
+		filesToWrite[options.swDest] = source;
+		filesToWrite[destPath] = map;
+	} else filesToWrite[options.swDest] = swFileContents.replace(globalRegexp, manifestString);
+	for (const [file, contents] of Object.entries(filesToWrite)) {
+		try {
+			await fsp.mkdir(path.dirname(file), { recursive: true });
+		} catch (error) {
+			throw new Error(`${errors["unable-to-make-sw-directory"]} '${error instanceof Error && error.message ? error.message : ""}'`);
+		}
+		await fsp.writeFile(file, contents);
+	}
+	return {
+		count,
+		size,
+		warnings,
+		filePaths: Object.keys(filesToWrite).map((f) => toUnix(path.resolve(f)))
+	};
+};
+//#endregion
+//#region src/index.ts
+/**
+* Use `JSON.stringify` instead.
+*
+* @deprecated
+*/
+const stringify = JSON.stringify;
+//#endregion
+export { DEFAULT_GLOB_PATTERNS, errors, escapeRegExp, getFileManifestEntries, getManifest, getSourceMapURL, injectManifest, rebasePath, replaceAndUpdateSourceMap, stringify, transformManifest, translateURLToSourcemapPaths, validateGetManifestOptions, validateInjectManifestOptions };
+
+//# sourceMappingURL=index.mjs.map
