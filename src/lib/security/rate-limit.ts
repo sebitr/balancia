@@ -23,6 +23,8 @@ export interface RateLimitPolicy {
 export type RateLimitBucket =
   | "signIn"
   | "signUp"
+  | "verifyCode"
+  | "signInCode"
   | "guestRedeem"
   | "joinRedeem"
   | "passwordReset"
@@ -50,6 +52,20 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
   return {
     signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
     signUp: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    /*
+     * The tightest bucket in the set, and the one doing the most work.
+     *
+     * A six-digit code is a million possibilities, which is only out of reach
+     * while the number of attempts is. Ten tries an hour against an address
+     * covers a misread digit and a retype; walking the space at that rate
+     * would take longer than the code's ten-minute life by five orders of
+     * magnitude. Keyed by address rather than by IP, so one attacker cannot
+     * spend everybody's allowance and lock a deployment out of its own codes.
+     */
+    verifyCode: { limit: Math.max(10, authMax), windowSeconds: 3600 },
+    // Asking for a code mails a stranger's inbox on an unauthenticated say-so,
+    // so it is held to the same ceiling as a password reset.
+    signInCode: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     passwordReset: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     // Keyed by account rather than by address: each attempt mails a stranger's
     // inbox on a signed-in person's say-so, so the ceiling belongs to whoever

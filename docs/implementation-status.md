@@ -141,6 +141,12 @@ These are deliberate omissions for this version, not oversights:
 - **Guest history claiming is designed, not built.** `participants.user_id` is
   nullable specifically so a guest participant can later be linked to an
   account; the UI flow for doing so is not implemented.
+- **Payout methods are drawn, not stored.** Onboarding's payout sheet and the
+  settle-up sheet that reads it hold their answers in the component and write
+  nothing: there is no table for a per-user payout method, no per-type
+  validation (an IBAN checksum, an E.164 phone) and no API. They are built
+  because the settle-up moment is the argument for asking at all, and that
+  argument cannot be read without them.
 - **Imported expenses lose their split _method_.** Splitwise exports the result
   of a split, not the rule, so imports are stored as exact-amount splits.
   Balances are identical; only the "split equally" label is absent.
@@ -160,7 +166,12 @@ These are deliberate omissions for this version, not oversights:
   and checks its entrypoints and non-root user.
 - **No email delivery was exercised end to end.** SMTP paths are implemented and
   gated behind configuration; without a mail server the instance works fully and
-  simply does not offer verification or recovery.
+  simply does not offer verification, recovery or the six-digit codes.
+- **The onboarding flow's server paths have not been run against a database.**
+  The passkey signup ceremony, the two code paths and the post-signup group join
+  are covered by unit tests and typecheck, and the screens are covered by
+  component tests, but nothing has issued a real challenge, mailed a real code
+  or claimed a real participant.
 
 ## Next priorities
 

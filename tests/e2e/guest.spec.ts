@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import {
   addParticipant,
+  attachVirtualAuthenticator,
   createGroup,
   createInviteLink,
   expectToast,
   registerAndSignIn,
-  TEST_PASSWORD,
   uniqueEmail,
 } from "./helpers";
 
@@ -46,7 +46,22 @@ test("invite a guest and participate through the secure link", async ({
   await expect(
     guestPage.getByRole("heading", { name: "Guest group" }),
   ).toBeVisible();
-  await guestPage.getByRole("link", { name: "Continue as guest" }).click();
+
+  /*
+   * The guest route, which is four taps and asks for one thing.
+   *
+   * Every screen between here and the group is deliberate: a name to be known
+   * by, the balance that name arrives at, and the list of what is left to set
+   * up. None of them asks for an address, which is the whole point of the
+   * guest option.
+   */
+  await guestPage.getByRole("button", { name: /Continue as a guest/ }).click();
+  await guestPage.getByRole("button", { name: "Join as a guest" }).click();
+  await guestPage.getByRole("button", { name: "See the group" }).click();
+  await expect(
+    guestPage.getByText("Guest access lives in this browser only"),
+  ).toBeVisible();
+  await guestPage.getByRole("button", { name: "Go to the group" }).click();
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
 
   // The guest sees the group and is labelled as a guest. Both are addressed
@@ -161,8 +176,15 @@ test("a guest keeps their group and expenses by creating an account", async ({
 
   const guestContext = await browser.newContext();
   const guestPage = await guestContext.newPage();
+  // The account is created with a passkey, so this browser needs something to
+  // create one with.
+  await attachVirtualAuthenticator(guestPage);
+
   await guestPage.goto(inviteUrl);
-  await guestPage.getByRole("link", { name: "Continue as guest" }).click();
+  await guestPage.getByRole("button", { name: /Continue as a guest/ }).click();
+  await guestPage.getByRole("button", { name: "Join as a guest" }).click();
+  await guestPage.getByRole("button", { name: "See the group" }).click();
+  await guestPage.getByRole("button", { name: "Go to the group" }).click();
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
 
   // Something worth not losing.
@@ -180,38 +202,45 @@ test("a guest keeps their group and expenses by creating an account", async ({
   await widget.getByRole("link", { name: "Create your account" }).click();
   await expect(guestPage).toHaveURL(/\/register$/);
 
-  // The group already knows their name; they are not asked for it twice.
-  await expect(guestPage.getByLabel("Name")).toHaveValue("Grace");
-  await guestPage.getByLabel("Email").fill(uniqueEmail("guest"));
-  await guestPage.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
-  await guestPage.getByLabel("Confirm password").fill(TEST_PASSWORD);
-  await guestPage.getByRole("button", { name: "Create account" }).click();
-
-  // The confirmation lists what came across, line by line.
-  await expect(guestPage).toHaveURL(/\/register\/done\?group=/);
-  await expect(
-    guestPage.getByRole("heading", { name: "You're set, Grace" }),
-  ).toBeVisible();
-  await expect(guestPage.getByText("Member since today")).toBeVisible();
-  await expect(guestPage.getByText("Groceries and firewood")).toBeVisible();
-  await expect(guestPage.getByText("Kept")).toBeVisible();
-  await expect(
-    guestPage.getByText("The old guest link no longer opens this group."),
-  ).toBeVisible();
-
-  // And the group opens as a member: no guest badge, no widget.
-  await guestPage.getByRole("link", { name: "Go to Conversion" }).click();
-  await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
-  await expect(guestPage.getByRole("status")).toHaveCount(0);
-  await expect(guestPage.getByText("Guest", { exact: true })).toHaveCount(0);
-
-  // The dashboard is theirs now, and it holds the group they arrived through.
-  await guestPage.goto("/dashboard");
+  /*
+   * Not a cold arrival, whatever the URL says.
+   *
+   * There is a group behind this person, so they are shown it — and they are
+   * not offered the guest option, which is what they already have.
+   */
   await expect(guestPage.getByText("Conversion").first()).toBeVisible();
+  await expect(
+    guestPage.getByRole("button", { name: /Continue as a guest/ }),
+  ).toBeHidden();
 
-  // The link that got them here is spent.
-  await guestPage.goto(inviteUrl);
-  await expect(guestPage).toHaveURL(/\/join\/error/);
+  await guestPage.getByRole("button", { name: "Create an account" }).click();
+  await guestPage
+    .getByPlaceholder("you@example.com")
+    .fill(uniqueEmail("guest"));
+  await guestPage
+    .getByRole("button", { name: /Continue with a passkey/ })
+    .click();
+
+  // The name the group knows them by is already in the field; this screen is
+  // naming an account that now exists rather than asking for one.
+  await expect(
+    guestPage.getByRole("textbox", { name: "Your name" }),
+  ).toHaveValue("Grace");
+  await guestPage.getByRole("button", { name: "Continue" }).click();
+
+  // The group came across with the account, and so did the expense filed
+  // under the guest's name. The badge that said "Guest" is gone.
+  await expect(
+    guestPage.getByRole("heading", { name: /You're in, Grace/ }),
+  ).toBeVisible();
+  await guestPage.getByRole("button", { name: "See the group" }).click();
+  await expect(guestPage.getByText("Account created")).toBeVisible();
+  await expect(guestPage.getByText("Claim your account")).toBeHidden();
+
+  await guestPage.getByRole("button", { name: "Go to the group" }).click();
+  await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
+  await guestPage.goto(`/groups/${groupId}/expenses`);
+  await expect(guestPage.getByText("Groceries and firewood")).toBeVisible();
 
   await ownerContext.close();
   await guestContext.close();

@@ -1440,6 +1440,175 @@
       "signIn": "Se connecter"
     }
   },
+  "onboarding": {
+    "back": "Retour",
+    "since": "depuis le {date}",
+    "stepWelcome": "Invitation",
+    "stepWhoYouAre": "Qui tu es",
+    "stepConfirm": "Confirmation",
+    "stepKeepIt": "Garder",
+    "stepAccount": "Compte",
+    "stepProfile": "Profil",
+    "stepDone": "Terminé",
+    "stepGroup": "Groupe",
+    "stepFirstGroup": "Premier groupe",
+    "welcome": {
+      "personalTitle": "{inviter} t'a ajouté à {group}",
+      "personalTitleNoInviter": "Tu as été ajouté à {group}",
+      "personalSub": "Vois où tu en es, ajoute ce que tu as payé, et soldez les comptes à la fin.",
+      "sharedTitle": "{group}, et un seul lien pour tout le monde",
+      "sharedSub": "Ce lien est le même pour tous, il ne peut donc pas savoir lequel d'entre vous vient de l'ouvrir.",
+      "sharedNote": "Compte, connexion ou invité — on te le demandera une fois qu'on saura qui tu es.",
+      "findMyself": "Me trouver dans la liste",
+      "coldTitle": "Où j'en suis ?",
+      "coldSub": "Le suivi des dépenses partagées, auto-hébergé. Ajoute ce que tu as payé, et Balancia calcule qui rembourse qui.",
+      "createAccount": "Créer un compte",
+      "haveAccount": "J'ai déjà un compte",
+      "or": "ou",
+      "guest": "Continuer en invité",
+      "guestNote": "Juste un prénom. Rien de ce que tu fais ici n'est perdu si tu crées un compte plus tard."
+    },
+    "whichOne": {
+      "title": "Lequel de ces noms est le tien ?",
+      "sub": "Ce sont les noms sous lesquels le groupe a enregistré ses dépenses. En choisir un reprend aussi son solde.",
+      "filed": "{count, plural, one {# dépense enregistrée} other {# dépenses enregistrées}}",
+      "newHere": "Aucun — je suis nouveau ici",
+      "newHereNamed": "Aucun — je suis {name}, et je suis nouveau ici"
+    },
+    "confirm": {
+      "title": "C'est bien toi ? Reprendre ce nom reprend aussi le solde.",
+      "position": "Sa position",
+      "filed": "{count, plural, one {# dépense enregistrée} other {# dépenses enregistrées}}",
+      "filedBy": "{count, plural, one {# dépense enregistrée par {inviter}} other {# dépenses enregistrées par {inviter}}}",
+      "yes": "Oui, c'est moi",
+      "no": "Non, remontre-moi la liste"
+    },
+    "keepIt": {
+      "title": "Tu es {name} — comment on garde ça ?",
+      "sub": "Un compte garde le groupe, ton solde et {count, plural, =0 {tout ce qui est à ton nom} one {la # dépense maintenant à ton nom} other {les # dépenses maintenant à ton nom}} — sur n'importe quel appareil, pas seulement dans ce navigateur.",
+      "createAccount": "Créer un compte",
+      "haveAccount": "J'ai déjà un compte"
+    },
+    "identity": {
+      "title": "Ton e-mail, et un geste",
+      "signInTitle": "Content de te revoir",
+      "sub": "Aucun mot de passe à inventer, aucun champ de confirmation à retaper.",
+      "sentSub": "On a envoyé six chiffres à {email}.",
+      "emailLabel": "Adresse e-mail",
+      "emailPlaceholder": "toi@exemple.com",
+      "codeLabel": "Le code à six chiffres",
+      "codeHint": "Les codes se remplissent depuis le clavier sur iOS et Android.",
+      "verify": "Vérifier",
+      "resend": "Envoyer un autre code",
+      "withPasskey": "Continuer avec une passkey",
+      "signInWithPasskey": "Se connecter avec une passkey",
+      "orCode": "M'envoyer un code par e-mail",
+      "emailMeACode": "M'envoyer un code par e-mail",
+      "passkeyFailed": "Cette passkey n'a pas pu être enregistrée.",
+      "codeFailed": "Le code n'a pas pu être envoyé. Réessaie dans un instant.",
+      "codeWrong": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
+      "noCredentialRoute": "Ce navigateur ne gère pas les passkeys, et cette instance ne peut pas envoyer d'e-mails. Utilise un mot de passe pour créer ton compte.",
+      "usePassword": "Se connecter avec un mot de passe",
+      "usePasswordSignUp": "Créer un compte avec un mot de passe"
+    },
+    "profile": {
+      "title": "Dernière chose — ton nom",
+      "sub": "La photo est facultative et prend deux gestes. Touche le cercle si tu en as envie.",
+      "guestTitle": "Comment le groupe doit-il t'appeler ?",
+      "guestSub": "Un seul champ, et c'est parti.",
+      "guestNote": "L'accès invité vit dans ce navigateur et nulle part ailleurs. Créer un compte plus tard garde le groupe, ton solde et toutes les dépenses que tu as ajoutées.",
+      "newMemberTitle": "Ajoute-toi au groupe",
+      "newMemberSub": "Aucun nom de la liste n'était le tien, tu pars donc de zéro — aucune dépense n'est encore à ton nom.",
+      "nameLabel": "Ton nom",
+      "namePlaceholder": "Ton nom",
+      "photoAdd": "Ajouter une photo",
+      "continue": "Continuer",
+      "createAccount": "Créer mon compte",
+      "joinAsGuest": "Rejoindre en invité",
+      "nameFailed": "Ce nom n'a pas pu être enregistré."
+    },
+    "arrival": {
+      "title": "Tu y es, {name}",
+      "sub": "Trois gestes, un code. Le reste peut attendre.",
+      "welcomeBackTitle": "Content de te revoir, {name}",
+      "welcomeBackSub": "Rien n'a changé pendant ton absence.",
+      "guestTitle": "Tu y es, en invité",
+      "guestSub": "Tout fonctionne — ajoute des dépenses, consulte ton solde. Crée ton compte quand tu veux le garder.",
+      "claimedTitle": "Tu y es, {name}",
+      "claimedSub": "{count, plural, =0 {Rien n'était encore enregistré à ton nom.} one {# dépense était déjà enregistrée à ton nom. Elle est à toi.} other {# dépenses étaient déjà enregistrées à ton nom. Elles sont à toi.}}",
+      "seeGroup": "Voir le groupe"
+    },
+    "firstGroup": {
+      "title": "Tu y es, {name}",
+      "emptyTitle": "Aucun groupe pour l'instant",
+      "emptyBody": "Un groupe, c'est un voyage, une colocation, un dîner — ce que tu partages, et avec qui tu le partages.",
+      "createGroup": "Créer ton premier groupe"
+    },
+    "checklist": {
+      "title": "Finir la configuration",
+      "count": "{done} sur {total}",
+      "position": "Ta position",
+      "guestBadge": "Invité",
+      "settleTitle": "{name} veut te rembourser",
+      "settleNote": "Touche pour choisir comment il doit t'envoyer l'argent",
+      "continue": "Aller au groupe",
+      "accountLabel": "Compte créé",
+      "accountNotePasskey": "Passkey enregistrée sur ce téléphone",
+      "accountNoteVerified": "{email} vérifiée",
+      "accountNotePassword": "Mot de passe enregistré",
+      "claimLabel": "Crée ton compte",
+      "claimNote": "L'accès invité vit uniquement dans ce navigateur",
+      "profileLabel": "Nom et photo",
+      "profileNotePhoto": "{name}, avec une photo",
+      "profileNoteInitials": "{name}, initiales pour l'instant",
+      "payoutsLabel": "Moyen de remboursement",
+      "payoutsNoteSet": "{methods}",
+      "payoutsNoteEmpty": "Demandé quand quelqu'un te rembourse",
+      "currenciesLabel": "Choisis tes monnaies",
+      "currenciesNoteSet": "{codes}",
+      "currenciesNoteEmpty": "Ajoutes-en si tu voyages",
+      "notificationsLabel": "Activer les notifications",
+      "notificationsNotePushed": "{on} sur {total}, envoyées à cet appareil",
+      "notificationsNoteInApp": "{on} sur {total}, dans l'app uniquement"
+    },
+    "sheets": {
+      "currencies": {
+        "title": "Dans quelles monnaies dépenses-tu ?",
+        "sub": "La première est ta monnaie par défaut. Tout s'enregistre à mesure que tu touches — il n'y a aucun bouton Enregistrer dans les réglages.",
+        "detected": "Détectée depuis ton téléphone",
+        "done": "Terminé",
+        "doneCount": "{count, plural, one {Terminé — # monnaie} other {Terminé — # monnaies}}"
+      },
+      "notifications": {
+        "title": "Être prévenu quand ça compte vraiment",
+        "sub": "Cinq choses se passent dans un groupe et méritent d'être connues. Désactive celles dont tu te passes.",
+        "pushTitle": "Notifications sur cet appareil",
+        "pushNote": "Elles te parviennent même quand Balancia est fermé. Tout ce qui précède reste visible dans l'app dans tous les cas.",
+        "done": "Terminé"
+      },
+      "payouts": {
+        "title": "Comment veux-tu être remboursé ?",
+        "sub": "Celui qui te doit de l'argent voit le premier en haut. Seules les personnes de tes groupes les voient, et seulement quand elles te doivent quelque chose.",
+        "detail": "Le détail dont ils ont besoin",
+        "done": "Terminé"
+      },
+      "settleUp": {
+        "title": "{name} veut te rembourser",
+        "sub": "Comment {name} doit-il t'envoyer l'argent ? On s'en souviendra la prochaine fois.",
+        "save": "Enregistrer et prévenir {name}"
+      },
+      "claim": {
+        "title": "Crée ton compte",
+        "sub": "Il garde le groupe, ton solde et toutes les dépenses que tu as ajoutées — sur n'importe quel appareil, pas seulement dans ce navigateur.",
+        "emailLabel": "Adresse e-mail",
+        "emailPlaceholder": "toi@exemple.com",
+        "codeLabel": "Le code à six chiffres",
+        "send": "M'envoyer un code",
+        "verify": "Créer mon compte",
+        "failed": "Impossible d'enregistrer. Réessaie dans un instant."
+      }
+    }
+  },
   "inviteLink": {
     "heading": "Lien d'invitation",
     "copy": "Copier",
@@ -2059,6 +2228,24 @@
       "warningLink": "Réinitialiser ton mot de passe",
       "closing": "Aucune action n'est nécessaire si tu es à l'origine de ce changement.",
       "text": "Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par {email}.\n\nRien n'a encore changé. La nouvelle adresse doit d'abord être confirmée, et celle-ci cessera de fonctionner dès que ce sera fait.\n\nSi ce n'était pas toi, réinitialise ton mot de passe tout de suite — la personne à l'origine de cette demande a accès à ton compte :\n{url}\n\nAucune action n'est nécessaire si tu es à l'origine de ce changement."
+    },
+    "verifyCode": {
+      "subject": "{code} est ton code Balancia",
+      "title": "Ton code Balancia",
+      "preheader": "Saisis ce code dans Balancia pour confirmer ton adresse.",
+      "lead": "Saisis ce code dans Balancia pour confirmer ton adresse.",
+      "sub": "Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert.",
+      "closing": "Le code expire dans 10 minutes. Si tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail.",
+      "text": "Ton code Balancia est {code}.\n\nSaisis-le dans Balancia pour confirmer ton adresse. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dans 10 minutes.\n\nSi tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail."
+    },
+    "signInCode": {
+      "subject": "{code} est ton code de connexion Balancia",
+      "title": "Ton code de connexion Balancia",
+      "preheader": "Saisis ce code dans Balancia pour te connecter.",
+      "lead": "Saisis ce code dans Balancia pour te connecter.",
+      "sub": "Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert.",
+      "closing": "Le code expire dans 10 minutes. Si tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail.",
+      "text": "Ton code de connexion Balancia est {code}.\n\nSaisis-le dans Balancia pour te connecter. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dans 10 minutes.\n\nSi tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail."
     }
   },
   "serverErrors": {
@@ -2072,6 +2259,8 @@
     "noPassword": "Ce compte n'a pas de mot de passe défini.",
     "wrongPassword": "Ton mot de passe actuel est incorrect.",
     "invalidCredentials": "Cette combinaison d'adresse e-mail et de mot de passe n'a pas fonctionné.",
+    "invalidCode": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
+    "codeSendFailed": "Le code n'a pas pu être envoyé. Réessaie dans un instant.",
     "resetLinkInvalid": "Ce lien de réinitialisation n'est plus valide. Demandes-en un nouveau.",
     "confirmLinkInvalid": "Ce lien de confirmation n'est plus valide. Connecte-toi pour en demander un autre.",
     "signInRequired": "Connecte-toi pour modifier ton compte.",

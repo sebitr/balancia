@@ -13,7 +13,7 @@ import {
 } from "./layout";
 
 /**
- * The four transactional emails, in HTML and in plain text.
+ * The six transactional emails, in HTML and in plain text.
  *
  * Every one is sent in the recipient's language, so nothing here is a literal
  * string of copy: the catalogues under `emails.*` are the source, and the
@@ -131,6 +131,109 @@ function linkEmail(options: {
     responsive,
     rows,
   });
+}
+
+/**
+ * The two emails that end in six digits rather than a link.
+ *
+ * A code is read, not clicked, so the shape is inverted: the digits are the
+ * largest thing on the page, spaced apart so they can be transcribed a glance
+ * at a time, and there is no button to press and no URL to fall back to. They
+ * are set in the serif display face at `display` size for one reason — it is
+ * the one face in the set with unambiguous figures, and a 1 that reads as a 7
+ * costs somebody their account.
+ *
+ * Nothing here links anywhere. That is deliberate: an email that asks for a
+ * code and also offers a button teaches the reader that both are normal, which
+ * is precisely the habit a phishing mail relies on.
+ */
+function codeEmail(options: {
+  locale: string | null | undefined;
+  origin: string;
+  code: string;
+  title: string;
+  preheader: string;
+  lead: string;
+  sub: string;
+  closing: string;
+}): string {
+  const rows: string[] = [
+    cell("36px 32px 0", paragraph(escapeHtml(options.lead), type.lead)),
+    cell(
+      "20px 32px 0",
+      paragraph(escapeHtml(options.code), {
+        ...type.display,
+        weight: "bold",
+        // Wide enough that each figure is read on its own, which is how a code
+        // gets copied correctly onto a phone held in the other hand.
+        letterSpacing: "6px",
+        className: "display",
+      }),
+    ),
+    cell("16px 32px 0", paragraph(escapeHtml(options.sub), type.secondary)),
+    cell("24px 32px 0", divider()),
+    cell("20px 32px 32px", paragraph(escapeHtml(options.closing), type.small), {
+      last: true,
+    }),
+  ];
+
+  return emailDocument({
+    lang: resolveLocale(options.locale),
+    origin: options.origin,
+    title: options.title,
+    preheader: options.preheader,
+    linkColor: palette.link,
+    responsive: ["display"],
+    rows,
+  });
+}
+
+/** The code that confirms a new account's address, typed back into the flow. */
+export function renderVerifyCodeEmail(input: {
+  locale: string | null | undefined;
+  origin: string;
+  code: string;
+}): RenderedEmail {
+  const t = emailTranslator(input.locale);
+
+  return {
+    subject: t("verifyCode.subject", { code: input.code }),
+    text: t("verifyCode.text", { code: input.code }),
+    html: codeEmail({
+      locale: input.locale,
+      origin: input.origin,
+      code: input.code,
+      title: t("verifyCode.title"),
+      preheader: t("verifyCode.preheader"),
+      lead: t("verifyCode.lead"),
+      sub: t("verifyCode.sub"),
+      closing: t("verifyCode.closing"),
+    }),
+  };
+}
+
+/** The code that signs an account in when it has no password to type. */
+export function renderSignInCodeEmail(input: {
+  locale: string | null | undefined;
+  origin: string;
+  code: string;
+}): RenderedEmail {
+  const t = emailTranslator(input.locale);
+
+  return {
+    subject: t("signInCode.subject", { code: input.code }),
+    text: t("signInCode.text", { code: input.code }),
+    html: codeEmail({
+      locale: input.locale,
+      origin: input.origin,
+      code: input.code,
+      title: t("signInCode.title"),
+      preheader: t("signInCode.preheader"),
+      lead: t("signInCode.lead"),
+      sub: t("signInCode.sub"),
+      closing: t("signInCode.closing"),
+    }),
+  };
 }
 
 /** Welcome, and confirm the address the account was created with. */
