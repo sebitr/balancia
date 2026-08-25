@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 import { getClientIp, getCurrentUser } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { describeError } from "@/lib/server-errors";
 import { logger } from "@/lib/logger";
 import { trackRoute } from "@/lib/metrics/http";
 import { AuthError } from "@/modules/auth/service";
@@ -52,25 +54,21 @@ export async function POST(request: Request) {
 }
 
 async function handleStart(request: Request) {
+  const t = await getTranslations("serverErrors");
+
   if (await getCurrentUser()) {
-    return NextResponse.json(
-      { error: "You are already signed in." },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: t("alreadySignedIn") }, { status: 409 });
   }
 
   const parsed = identitySchema.safeParse(await readJson(request));
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Enter your name and email address." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: t("identityRequired") }, { status: 400 });
   }
 
   const limit = await consumeRateLimit("signUp", await getClientIp());
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Try again later." },
+      { error: t("rateLimited") },
       {
         status: 429,
         headers: { "Retry-After": String(limit.retryAfterSeconds) },
@@ -84,7 +82,7 @@ async function handleStart(request: Request) {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    return failure(error, "Could not start a passkey signup.");
+    return failure(error, "passkeySignupUnavailable");
   }
 }
 
@@ -95,16 +93,15 @@ export async function PUT(request: Request) {
 }
 
 async function handleFinish(request: Request) {
+  const t = await getTranslations("serverErrors");
+
   if (await getCurrentUser()) {
-    return NextResponse.json(
-      { error: "You are already signed in." },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: t("alreadySignedIn") }, { status: 409 });
   }
 
   const parsed = finishSchema.safeParse(await readJson(request));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Try that again." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   try {
@@ -128,7 +125,7 @@ async function handleFinish(request: Request) {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    return failure(error, "That passkey could not be registered.");
+    return failure(error, "passkeyNotRegistered");
   }
 }
 
@@ -149,15 +146,23 @@ async function context(request: Request) {
 
 /**
  * An `AuthError` is something the reader can act on — the address is taken,
- * the ceremony expired — and is theirs to read. Anything else is ours.
+ * the ceremony expired — and is theirs to read, in their own language. Anything
+ * else is ours: logged in full, answered with one sentence.
  */
-function failure(error: unknown, fallback: string) {
+async function failure(
+  error: unknown,
+  fallback: "passkeySignupUnavailable" | "passkeyNotRegistered",
+) {
   if (error instanceof AuthError) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(
+      { error: await describeError(error) },
+      { status: 400 },
+    );
   }
   logger.error(
     { err: error instanceof Error ? error.message : String(error) },
     "Passkey signup failed",
   );
-  return NextResponse.json({ error: fallback }, { status: 500 });
+  const t = await getTranslations("serverErrors");
+  return NextResponse.json({ error: t(fallback) }, { status: 500 });
 }

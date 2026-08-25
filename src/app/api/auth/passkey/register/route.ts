@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 import { getCurrentUser } from "@/lib/security/actor";
+import { describeError } from "@/lib/server-errors";
 import { AuthError } from "@/modules/auth/service";
 import {
   finishPasskeyRegistration,
@@ -25,12 +27,11 @@ export async function GET() {
 }
 
 async function handleGet() {
+  const t = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   try {
@@ -40,14 +41,17 @@ async function handleGet() {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: await describeError(error) },
+        { status: 400 },
+      );
     }
     logger.error(
       { err: error instanceof Error ? error.message : String(error) },
       "Passkey registration options failed",
     );
     return NextResponse.json(
-      { error: "Could not start passkey registration." },
+      { error: t("passkeyRegistrationUnavailable") },
       { status: 500 },
     );
   }
@@ -60,23 +64,22 @@ export async function POST(request: Request) {
 }
 
 async function handlePost(request: Request) {
+  const t = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   let body: { response?: RegistrationResponseJSON; name?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   if (!body.response) {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   try {
@@ -88,14 +91,17 @@ async function handlePost(request: Request) {
     return NextResponse.json({ id: created.id });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: await describeError(error) },
+        { status: 400 },
+      );
     }
     logger.error(
       { err: error instanceof Error ? error.message : String(error) },
       "Passkey registration failed",
     );
     return NextResponse.json(
-      { error: "That passkey could not be registered." },
+      { error: t("passkeyNotRegistered") },
       { status: 500 },
     );
   }

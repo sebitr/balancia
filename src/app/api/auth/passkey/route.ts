@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/security/actor";
+import { describeError } from "@/lib/server-errors";
 import { AuthError } from "@/modules/auth/service";
 import { deletePasskey, listPasskeys } from "@/modules/auth/webauthn";
 import { trackRoute } from "@/lib/metrics/http";
@@ -18,10 +20,8 @@ export async function GET() {
 async function handleGet() {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    const t = await getTranslations("serverErrors");
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   const credentials = await listPasskeys(user.userId);
@@ -45,22 +45,21 @@ export async function DELETE(request: Request) {
 }
 
 async function handleDelete(request: Request) {
+  const t = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   let body: { id?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
   if (!body.id) {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   try {
@@ -68,7 +67,10 @@ async function handleDelete(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+      return NextResponse.json(
+        { error: await describeError(error) },
+        { status: 404 },
+      );
     }
     throw error;
   }

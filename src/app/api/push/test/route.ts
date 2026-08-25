@@ -18,17 +18,19 @@ export async function POST() {
 }
 
 async function handlePost() {
+  const tErrors = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
-      { error: "Sign in to continue." },
+      { error: tErrors("authRequired") },
       { status: 401 },
     );
   }
 
   if (!isPushConfigured()) {
     return NextResponse.json(
-      { error: "Push notifications are not configured on this instance." },
+      { error: tErrors("pushNotConfigured") },
       { status: 503 },
     );
   }
@@ -36,7 +38,7 @@ async function handlePost() {
   const limit = await consumeRateLimit("pushTest", user.userId);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many test notifications. Try again shortly." },
+      { error: tErrors("pushTestRateLimited") },
       {
         status: 429,
         headers: { "Retry-After": String(limit.retryAfterSeconds) },
@@ -47,7 +49,7 @@ async function handlePost() {
   const devices = await listPushTargets(user.userId);
   if (devices.length === 0) {
     return NextResponse.json(
-      { error: "This device is not set up for push notifications yet." },
+      { error: tErrors("deviceNotSubscribed") },
       { status: 409 },
     );
   }
@@ -68,7 +70,7 @@ async function handlePost() {
 
   if (sent === 0) {
     return NextResponse.json(
-      { error: "The test notification could not be delivered." },
+      { error: tErrors("pushTestFailed") },
       { status: 502 },
     );
   }

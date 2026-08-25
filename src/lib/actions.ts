@@ -18,6 +18,7 @@ import { ImportError } from "@/modules/imports/service";
 import { ReminderError } from "@/modules/reminders/service";
 import { RateLimitedError } from "@/lib/security/rate-limit";
 import { reportCrash } from "@/lib/telemetry/crash-reporter";
+import { describeError } from "@/lib/server-errors";
 import {
   actionDuration,
   actionOutcomes,
@@ -84,29 +85,6 @@ function isSafeError(error: unknown): error is Error {
 }
 
 /**
- * The stable reason code a domain error may carry.
- *
- * Errors that have one are translated into the reader's language; the rest
- * fall back to their English `message`, which is still an improvement on a
- * blank failure and lets codes be added incrementally.
- */
-function codeOf(error: Error): string | null {
-  const value = (error as { code?: unknown }).code;
-  return typeof value === "string" ? value : null;
-}
-
-async function describe(error: Error): Promise<string> {
-  const code = codeOf(error);
-  if (!code) return error.message;
-  const t = await getTranslations("serverErrors");
-  const key = code as Parameters<typeof t.has>[0];
-  if (!t.has(key)) return error.message;
-  // Errors that interpolate (an upload limit, say) carry their own values.
-  const params = (error as { params?: Record<string, string | number> }).params;
-  return t(key, params);
-}
-
-/**
  * Wraps an action body so failures become `ActionResult` rather than an
  * unhandled rejection. Unexpected errors are logged in full and reported to
  * the user as a generic message.
@@ -126,7 +104,7 @@ export async function runAction<T>(
       // access. Counted apart from a failure, because an alert on "actions
       // that went wrong" should not fire on somebody mistyping a percentage.
       observe(name, "rejected", startedAt);
-      return actionError(await describe(error));
+      return actionError(await describeError(error));
     }
 
     observe(name, "failed", startedAt);
