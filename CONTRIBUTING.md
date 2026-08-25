@@ -9,7 +9,28 @@ looks like here: correct, boring, and easy for the next person to verify.
 - **Bugs and small fixes**: open a pull request directly.
 - **A new feature or anything that changes the data model**: open an issue
   first. It is much less painful to agree on an approach before the code exists.
+- **Translations**: no pull request needed, and no setup either. See below.
 - **Security issues**: do not open an issue. See [SECURITY.md](SECURITY.md).
+
+## Translating
+
+Balancia is translated on
+[Hosted Weblate](https://hosted.weblate.org/engage/balancia/). Nothing on this
+page below this section applies to translating — there is no repository to
+clone, no toolchain to install, and no pull request to open. Pick a language,
+type, and Weblate opens the pull request for you.
+
+Adding a language Balancia does not ship yet is a first-class contribution and
+the process is the same: **Start new translation**. A language ships once it is
+complete, so a partial one waits in its pull request rather than showing a
+reader English sentences in the middle of a translated screen.
+
+English is deliberately not editable there — it is the source the TypeScript
+types are generated from. If a source string is wrong or cannot be translated
+sensibly, open an issue; that report is worth more than a workaround.
+
+The details, including what a maintainer does when a new language arrives, are
+in [docs/translations.md](docs/translations.md).
 
 ## Getting set up
 

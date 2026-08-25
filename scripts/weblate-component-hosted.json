@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Messages",
+    "slug": "messages",
+    "vcs": "github",
+    "repo": "https://github.com/sebitr/balancia.git",
+    "push": "https://github.com/sebitr/balancia.git",
+    "repoweb": "https://github.com/sebitr/balancia/blob/{{branch}}/{{filename}}#L{{line}}",
+    "branch": "main",
+    "push_branch": "weblate-messages",
+    "file_format": "json-nested",
+    "filemask": "messages/*.json",
+    "template": "messages/en.json",
+    "edit_template": false,
+    "new_base": "messages/en.json",
+    "new_lang": "add",
+    "language_code_style": "bcp_lower",
+    "manage_units": false,
+    "check_flags": "icu-message-format"
+  }
+]

@@ -1,0 +1,22 @@
+# Balancia — where the public translation project lives.
+#
+# Read by wlc, Weblate's command-line client, so that `wlc show`, `wlc pull`
+# and `wlc commit` work in this checkout without being told which project they
+# mean. Nothing else reads it: not the application, not CI, and not the local
+# Weblate in compose.weblate.yaml — that one has no public URL at all, and
+# scripts/weblate.sh drives it over a bind-mounted git mirror instead.
+#
+# There is deliberately no `key` here. An API token belongs to a person rather
+# than to a repository, and this file is public. Put yours in
+# ~/.config/weblate, which wlc reads as well:
+#
+#   [keys]
+#   https://hosted.weblate.org/api/ = your-token-here
+#
+# wlc is not a dependency of this project and nothing here requires it —
+# `pipx install wlc` if you want it. Everything in docs/translations.md can be
+# done in the browser instead.
+
+[weblate]
+url = https://hosted.weblate.org/api/
+translation = balancia/messages

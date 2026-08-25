@@ -17,8 +17,9 @@
 #
 # Weblate needs a git repository it can clone and push to, and it must not be
 # this working tree: it would commit onto whichever branch happened to be
-# checked out. So it gets a bare mirror of its own at .weblate/balancia.git,
-# which is ignored by git and belongs entirely to this script.
+# checked out. So it gets a bare mirror of its own at
+# .weblate-mirror/balancia.git, which is ignored by git and belongs entirely to
+# this script.
 #
 #   sync   force-updates the mirror's main from origin/main, then tells Weblate
 #          to pull. The mirror is scratch, so forcing is safe — Weblate's own
@@ -47,7 +48,7 @@ set -eu
 
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 compose_file="$root_dir/compose.weblate.yaml"
-exchange_dir="$root_dir/.weblate"
+exchange_dir="$root_dir/.weblate-mirror"
 mirror="$exchange_dir/balancia.git"
 
 port=${WEBLATE_PORT:-8090}
@@ -136,7 +137,7 @@ require_running() {
 # Point the mirror's main at the strings Weblate should be translating.
 refresh_mirror() {
   if [ ! -d "$mirror" ]; then
-    step "Creating the mirror at .weblate/balancia.git"
+    step "Creating the mirror at .weblate-mirror/balancia.git"
     git init --bare --initial-branch=main --quiet "$mirror"
   fi
 

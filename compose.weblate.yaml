@@ -17,7 +17,7 @@
 # compose.yaml and knows nothing about any of this.
 #
 # Weblate works on a git repository, never on the working tree. It clones the
-# bare mirror the script keeps at .weblate/balancia.git, and pushes what
+# bare mirror the script keeps at .weblate-mirror/balancia.git, and pushes what
 # translators write back to the same place; scripts/weblate.sh is what moves
 # commits between that mirror and this checkout, in both directions, so that
 # nothing here can ever commit to the branch you happen to have checked out.
@@ -107,9 +107,10 @@ services:
     volumes:
       - weblate-data:/app/data
       - weblate-cache:/app/cache
-      # The exchange: .weblate/balancia.git is the bare repository Weblate
-      # clones from and pushes to. Writable, because pushing is half the point.
-      - ./.weblate:/repo
+      # The exchange: .weblate-mirror/balancia.git is the bare repository
+      # Weblate clones from and pushes to. Writable, because pushing is half
+      # the point.
+      - ./.weblate-mirror:/repo
       # The component definition, read once per `./scripts/weblate.sh up`.
       # Tracked in the repository so the file mask, the base file and the JSON
       # indentation are reviewable rather than clicked in somewhere.
