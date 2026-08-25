@@ -157,6 +157,61 @@ actually expects, and the app will fail to connect; use `ALTER ROLE` for that.
 
 ---
 
+## Running the published image
+
+Every release is also published to Docker Hub as
+[`sebitro/balancia`](https://hub.docker.com/r/sebitro/balancia), built for
+`linux/amd64` and `linux/arm64`. Pulling it instead of building it saves each
+host the app build — worth having on a small VPS, where that build is the
+heaviest thing the machine is ever asked to do.
+
+The checkout is still where configuration lives, so the quick start changes
+only in its last line:
+
+```bash
+git clone https://github.com/sebitr/balancia.git
+cd balancia
+./scripts/bootstrap.sh
+docker compose -f compose.yaml -f compose.image.yaml up -d
+```
+
+`compose.image.yaml` overrides one thing: where `app` and `worker` get their
+image. The database, the volumes, the environment and the entrypoint are
+`compose.yaml`'s, unchanged. Putting
+`COMPOSE_FILE=compose.yaml:compose.image.yaml` in `.env` makes a plain `docker
+compose up -d` mean the same thing, which keeps the rest of this guide typed
+exactly as it is written.
+
+| Tag      | What it is                                                      |
+| -------- | --------------------------------------------------------------- |
+| `latest` | The newest release. Moves under you at every pull.              |
+| `0.2.1`  | That release, permanently.                                      |
+| `0.2`    | The newest patch in that minor series.                          |
+| `edge`   | A build of `main`, published by hand. For trying something out. |
+
+Pin a version once somebody other than you depends on the instance. `latest`
+means the upgrade happens whenever you happen to pull, which is fine for a
+laptop and not for a household.
+
+Upgrading is then a pull rather than a build:
+
+```bash
+git pull
+docker compose -f compose.yaml -f compose.image.yaml pull
+docker compose -f compose.yaml -f compose.image.yaml up -d
+```
+
+`git pull` still earns its place — it is what brings a new compose file, new
+bootstrap questions and this guide up to date — but it no longer decides which
+code runs. Everything under [Upgrading](#upgrading) still applies: migrations
+come from the image's entrypoint either way.
+
+Neither choice is a commitment. An instance can move from building to pulling
+and back at any time; the volumes, the database and `.env` do not care which
+of the two put the container there.
+
+---
+
 ## Running on a domain
 
 Balancia expects to sit behind a reverse proxy that terminates TLS. HTTPS is not
@@ -473,6 +528,9 @@ Compose already wires these. For an external monitor, watch `/api/health/ready`.
 git pull
 docker compose up -d --build
 ```
+
+On an instance running the published image, that is a `pull` instead — see
+[Running the published image](#running-the-published-image).
 
 What happens, in order:
 

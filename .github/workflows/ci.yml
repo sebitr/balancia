@@ -168,7 +168,8 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
-      # Build only — nothing is pushed anywhere from CI.
+      # Build only. Publishing to Docker Hub is release.yml's job, and it
+      # happens on a version tag, not on a branch.
       - uses: docker/build-push-action@v7
         with:
           context: .
