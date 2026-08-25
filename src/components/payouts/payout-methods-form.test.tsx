@@ -14,20 +14,37 @@ import { PayoutMethodsForm } from "./payout-methods-form";
  * the account did not keep.
  */
 
-const { setPayoutMethodsAction, toastUndoable } = vi.hoisted(() => ({
-  setPayoutMethodsAction: vi.fn(),
-  toastUndoable: vi.fn(),
-}));
+const { setPayoutMethodsAction, setPayoutAddressAction, toastUndoable } =
+  vi.hoisted(() => ({
+    setPayoutMethodsAction: vi.fn(),
+    setPayoutAddressAction: vi.fn(),
+    toastUndoable: vi.fn(),
+  }));
 
-vi.mock("@/modules/payouts/actions", () => ({ setPayoutMethodsAction }));
+vi.mock("@/modules/payouts/actions", () => ({
+  setPayoutMethodsAction,
+  setPayoutAddressAction,
+}));
 vi.mock("@/components/ui/sonner", () => ({ toastUndoable, UNDO_WINDOW: 8000 }));
 
 function render(props: Partial<Parameters<typeof PayoutMethodsForm>[0]> = {}) {
   setPayoutMethodsAction.mockReset();
   setPayoutMethodsAction.mockResolvedValue({ ok: true, data: [] });
+  setPayoutAddressAction.mockReset();
+  setPayoutAddressAction.mockResolvedValue({ ok: true });
   toastUndoable.mockReset();
   const view = renderWithIntl(<PayoutMethodsForm initial={[]} {...props} />);
   return { ...view, user: userEvent.setup() };
+}
+
+/** A ticked bank row holding a Swiss IBAN, which is what opens the address. */
+const SWISS = [{ method: "bank", detail: "CH93 0076 2011 6238 5295 7" }];
+
+/** What was last sent to the server as an address. */
+function lastAddress() {
+  const call = setPayoutAddressAction.mock.calls.at(-1);
+  if (!call) throw new Error("no address was saved");
+  return call[0];
 }
 
 /** What was last sent to the server, as methods and details. */
@@ -165,5 +182,131 @@ describe("confirmations", () => {
 
     await vi.waitFor(() => expect(setPayoutMethodsAction).toHaveBeenCalled());
     expect(toastUndoable).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The address the Swiss QR code cannot be built without.
+ *
+ * Its failure mode is the quiet one. An address short of what the standard
+ * needs writes nothing, and for a while it also *said* nothing — so the
+ * complaint that reached us was "saving the address does not work", from a
+ * screen that had in fact never been asked to show one back.
+ */
+describe("the Swiss address", () => {
+  it("appears under the IBAN that needs it, and only that one", async () => {
+    const { user } = render({ initial: SWISS });
+
+    expect(screen.getByLabelText("Postcode")).toBeInTheDocument();
+
+    // A German account gets a Girocode, which carries no address at all.
+    await user.clear(screen.getByLabelText("IBAN"));
+    await user.type(
+      screen.getByLabelText("IBAN"),
+      "DE89 3704 0044 0532 0130 00",
+    );
+    expect(screen.queryByLabelText("Postcode")).toBeNull();
+  });
+
+  it("shows the address the account already holds", () => {
+    render({
+      initial: SWISS,
+      initialAddress: {
+        street: "Rue du Rhône",
+        buildingNumber: "12",
+        postalCode: "1204",
+        town: "Genève",
+        country: "CH",
+      },
+    });
+
+    expect(screen.getByLabelText("Postcode")).toHaveValue("1204");
+    expect(screen.getByLabelText("Town")).toHaveValue("Genève");
+    expect(screen.getByLabelText("Country")).toHaveValue("CH");
+  });
+
+  it("writes it once the three the standard needs are there", async () => {
+    const { user } = render({ initial: SWISS });
+
+    await user.type(screen.getByLabelText("Postcode"), "1204");
+    await user.type(screen.getByLabelText("Town"), "Genève");
+    await user.type(screen.getByLabelText("Country"), "ch");
+    await user.tab();
+
+    // Upper-cased as it is typed, so what is stored is what is on screen.
+    expect(lastAddress()).toMatchObject({
+      postalCode: "1204",
+      town: "Genève",
+      country: "CH",
+    });
+  });
+
+  it("says why a half-filled one was not written", async () => {
+    const { user } = render({ initial: SWISS });
+
+    await user.type(screen.getByLabelText("Postcode"), "1204");
+    await user.tab();
+
+    expect(await screen.findByText(/two-letter country/)).toBeInTheDocument();
+    expect(setPayoutAddressAction).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet while the block is still empty", async () => {
+    const { user } = render({ initial: SWISS });
+
+    // It opened by itself under the IBAN; nobody has typed anything yet.
+    await user.click(screen.getByLabelText("Postcode"));
+    await user.tab();
+
+    expect(screen.queryByText(/two-letter country/)).toBeNull();
+  });
+
+  it("sends one write for the five fields, not five", async () => {
+    const { user } = render({
+      initial: SWISS,
+      initialAddress: {
+        street: null,
+        buildingNumber: null,
+        postalCode: "1204",
+        town: "Genève",
+        country: "CH",
+      },
+    });
+
+    // Tabbing across an address nobody changed is not an edit.
+    await user.click(screen.getByLabelText("Postcode"));
+    await user.tab();
+    await user.tab();
+    await user.tab();
+
+    expect(setPayoutAddressAction).not.toHaveBeenCalled();
+  });
+
+  it("reports a refusal rather than dropping it", async () => {
+    const { user } = render({ initial: SWISS });
+    setPayoutAddressAction.mockResolvedValue({
+      ok: false,
+      error: "That could not be saved.",
+    });
+
+    await user.type(screen.getByLabelText("Postcode"), "1204");
+    await user.type(screen.getByLabelText("Town"), "Genève");
+    await user.type(screen.getByLabelText("Country"), "CH");
+    await user.tab();
+
+    expect(
+      await screen.findByText("That could not be saved."),
+    ).toBeInTheDocument();
+  });
+
+  it("sends nothing for a guest", async () => {
+    const { user } = render({ initial: SWISS, persist: false });
+
+    await user.type(screen.getByLabelText("Postcode"), "1204");
+    await user.type(screen.getByLabelText("Town"), "Genève");
+    await user.type(screen.getByLabelText("Country"), "CH");
+    await user.tab();
+
+    expect(setPayoutAddressAction).not.toHaveBeenCalled();
   });
 });
