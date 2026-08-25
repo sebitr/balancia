@@ -33,9 +33,7 @@
     "switcherRetry": "Impossible de charger tes groupes. Réessayer."
   },
   "theme": {
-    "toggle": "Changer de thème",
-    "toLight": "Passer au thème clair",
-    "toDark": "Passer au thème sombre"
+    "menu": "Thème"
   },
   "pwa": {
     "install": "Installer Balancia",
@@ -711,7 +709,7 @@
     "showAllGroups": "Afficher les {count} groupes",
     "showFewer": "Afficher moins",
     "theme": "Thème",
-    "themeSystem": "Comme mon appareil",
+    "themeSystem": "Auto",
     "themeSystemHelp": "Suit le clair et le sombre du système",
     "themeLight": "Clair",
     "themeLightHelp": "Crème et prune",
@@ -732,7 +730,7 @@
     "formatsNote": "Automatique suit ta langue et la région annoncée par ton navigateur.",
     "noGroups": "Tu ne fais partie d’aucun groupe pour le moment.",
     "groupPeople": "{count, plural, one {# personne} other {# personnes}}",
-    "groupYouAreAdmin": "tu es admin",
+    "groupOwner": "Propriétaire",
     "groupArchived": "archivé",
     "exportTitle": "Exporter un groupe",
     "exportHelp": "Chaque dépense, remboursement et part, dans un fichier que tu gardes.",
@@ -2211,8 +2209,8 @@
     "testSend": "Envoyer un test",
     "testSent": "Notification de test envoyée.",
     "testFailed": "Impossible d’envoyer la notification de test.",
-    "mutedTitle": "Groupes en sourdine",
-    "mutedHelp": "Un groupe en sourdine ne te notifie jamais, quoi qu’il y ait d’activé au-dessus.",
+    "mutedTitle": "Les groupes qui me préviennent",
+    "mutedHelp": "Désactive un groupe et il ne te notifie plus jamais, quoi qu’il y ait d’activé au-dessus.",
     "noGroups": "Tu ne fais encore partie d’aucun groupe.",
     "testBody": "Les notifications push fonctionnent sur cet appareil."
   },

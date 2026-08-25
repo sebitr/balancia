@@ -33,9 +33,7 @@
     "switcherRetry": "Couldn't load your groups. Try again."
   },
   "theme": {
-    "toggle": "Toggle theme",
-    "toLight": "Switch to light theme",
-    "toDark": "Switch to dark theme"
+    "menu": "Theme"
   },
   "pwa": {
     "install": "Install Balancia",
@@ -711,7 +709,7 @@
     "showAllGroups": "Show all {count} groups",
     "showFewer": "Show fewer",
     "theme": "Theme",
-    "themeSystem": "Match my device",
+    "themeSystem": "Auto",
     "themeSystemHelp": "Follows your system light and dark",
     "themeLight": "Light",
     "themeLightHelp": "Cream and plum",
@@ -732,7 +730,7 @@
     "formatsNote": "Automatic follows your language and the region your browser reports.",
     "noGroups": "You are not part of any group yet.",
     "groupPeople": "{count, plural, one {# person} other {# people}}",
-    "groupYouAreAdmin": "you are admin",
+    "groupOwner": "Owner",
     "groupArchived": "archived",
     "exportTitle": "Export a group",
     "exportHelp": "Every expense, payment and share, as a file you keep.",
@@ -2211,8 +2209,8 @@
     "testSend": "Send a test",
     "testSent": "Test notification sent.",
     "testFailed": "The test notification could not be sent.",
-    "mutedTitle": "Muted groups",
-    "mutedHelp": "A muted group never notifies you, whatever is on above.",
+    "mutedTitle": "Groups that notify me",
+    "mutedHelp": "Turn a group off and it never notifies you, whatever is on above.",
     "noGroups": "You are not part of any group yet.",
     "testBody": "Push notifications are working on this device."
   },
