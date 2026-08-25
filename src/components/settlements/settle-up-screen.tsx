@@ -12,7 +12,10 @@ import {
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
 import { PayoutHint } from "@/components/payouts/payout-hint";
-import type { PaymentQrStandard } from "@/modules/payouts/qr/payment-qr";
+import type {
+  PaymentQrRefusal,
+  PaymentQrStandard,
+} from "@/modules/payouts/qr/payment-qr";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -69,9 +72,15 @@ export interface SettledRepaymentView {
   readonly paymentMethod: string | null;
 }
 
-/** One person's preferred way of being paid, for the rows that owe them. */
+/** One debt's preferred way of being paid, for the row that owes it. */
 export interface PayoutHintView {
   readonly participantId: string;
+  /**
+   * The currency of the debt this hint belongs to. Part of the key rather
+   * than decoration: a reader can owe one person in two currencies, and the
+   * two rows are two different payments with two different codes.
+   */
+  readonly currency: string;
   readonly method: string;
   readonly detail: string;
   /**
@@ -81,6 +90,11 @@ export interface PayoutHintView {
    * the common case rather than the exception.
    */
   readonly qr: { standard: PaymentQrStandard; payload: string } | null;
+  /**
+   * Why there is no code, when it is a reason the reader can act on. Null
+   * both when there is a code and when the reason is not worth a sentence.
+   */
+  readonly qrMissing: PaymentQrRefusal | null;
 }
 
 interface Shared {
@@ -321,7 +335,9 @@ function TransferRow({
   // send it", which nobody else on this screen is asking.
   const payout = transfer.fromIsSelf
     ? shared.payoutHints.find(
-        (hint) => hint.participantId === transfer.toParticipantId,
+        (hint) =>
+          hint.participantId === transfer.toParticipantId &&
+          hint.currency === transfer.currency,
       )
     : undefined;
 
@@ -361,12 +377,14 @@ function TransferRow({
       {payout && (
         <PayoutHint
           name={transfer.toName}
+          currency={transfer.currency}
           method={payout.method}
           detail={payout.detail}
           methodLabel={tMethods(
             payout.method as Parameters<typeof tMethods>[0],
           )}
           qr={payout.qr}
+          qrMissing={payout.qrMissing}
         />
       )}
 

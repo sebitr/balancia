@@ -422,9 +422,11 @@ describe("initials", () => {
 describe("payout details", () => {
   const hint = {
     participantId: "amelie",
+    currency: "EUR",
     method: "twint",
     detail: "+41791234567",
     qr: null,
+    qrMissing: null,
   };
 
   it("says how the person being paid wants it", () => {
@@ -461,12 +463,14 @@ describe("payout details", () => {
 describe("the payment code", () => {
   const withQr = {
     participantId: "amelie",
+    currency: "EUR",
     method: "bank",
     detail: "CH9300762011623852957",
     qr: {
       standard: "swiss" as const,
       payload: ["SPC", "0200", "1", "CH9300762011623852957"].join("\n"),
     },
+    qrMissing: null,
   };
 
   it("offers it without showing it", () => {
@@ -495,5 +499,85 @@ describe("the payment code", () => {
     // with no address on file cannot have a code built for it at all.
     render({ payoutHints: [{ ...withQr, method: "twint", qr: null }] });
     expect(screen.queryByRole("button", { name: /payment code/ })).toBeNull();
+  });
+
+  it("belongs to one debt, not to one person", () => {
+    // The same creditor in two currencies is two payments. Before the hint
+    // carried a currency, both rows found the first hint and showed one
+    // amount's code twice.
+    render(
+      {
+        payoutHints: [
+          withQr,
+          { ...withQr, currency: "CHF", qr: null, qrMissing: "currency" },
+        ],
+      },
+      [
+        { currency: "EUR", yours: [transfer()], others: [] },
+        {
+          currency: "CHF",
+          yours: [transfer({ currency: "CHF", minorUnits: "6200" })],
+          others: [],
+        },
+      ],
+    );
+
+    // One row offers the code; the other says why it has none.
+    expect(
+      screen.getAllByRole("button", { name: "Show payment code" }),
+    ).toHaveLength(1);
+    expect(screen.getByText(/cannot carry CHF/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Why there is no code, on the rows that have none.
+ *
+ * The reasons are told to somebody who was expecting a code and did not get
+ * one. None of them is their mistake, and only the ones with an answer are
+ * said out loud — the server sends null for the rest rather than a sentence
+ * whose reply is "nothing".
+ */
+describe("when there is no payment code", () => {
+  const noQr = {
+    participantId: "amelie",
+    currency: "EUR",
+    method: "bank",
+    detail: "CH9300762011623852957",
+    qr: null,
+  };
+
+  it("names the address the QR-bill standard is missing", () => {
+    render({ payoutHints: [{ ...noQr, qrMissing: "addressMissing" }] });
+
+    expect(screen.getByText(/Amélie has a Swiss account/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /payment code/ })).toBeNull();
+  });
+
+  it("explains a QR-IBAN in terms of the bank rather than the format", () => {
+    render({ payoutHints: [{ ...noQr, qrMissing: "qrIban" }] });
+
+    expect(screen.getByText(/invoice references/)).toBeInTheDocument();
+  });
+
+  it("names the currency no standard carries", () => {
+    render({ payoutHints: [{ ...noQr, qrMissing: "currency" }] });
+
+    expect(screen.getByText(/cannot carry EUR/)).toBeInTheDocument();
+  });
+
+  it("says nothing at all when the reason is not one to act on", () => {
+    // A TWINT number has no code and needs no explanation: nobody expected a
+    // banking app to scan a phone number.
+    render({ payoutHints: [{ ...noQr, method: "twint", qrMissing: null }] });
+
+    expect(screen.queryByText(/Swiss account/)).toBeNull();
+    expect(screen.queryByText(/cannot carry/)).toBeNull();
+  });
+
+  it("still gives the detail to copy", () => {
+    render({ payoutHints: [{ ...noQr, qrMissing: "addressMissing" }] });
+
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
   });
 });
