@@ -17,15 +17,20 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-vi.mock("@/modules/join/actions", () => ({
-  setJoinLinkExpiryAction: vi.fn(async () => ({
-    ok: true,
-    data: { expiresAt: null },
-  })),
+const { setJoinLinkExpiryAction } = vi.hoisted(() => ({
+  setJoinLinkExpiryAction: vi.fn<
+    (
+      groupId: string,
+      choice: string,
+    ) => Promise<{ ok: boolean; data?: { expiresAt: string | null } }>
+  >(async () => ({ ok: true, data: { expiresAt: null } })),
 }));
 
+vi.mock("@/modules/join/actions", () => ({ setJoinLinkExpiryAction }));
+
+const failure = vi.fn();
 vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: (...args: unknown[]) => failure(...args) },
 }));
 
 const URL = "https://balancia.test/join/g/SECRET-TOKEN";
@@ -127,6 +132,58 @@ describe("GroupReady", () => {
     expect(screen.getByText("Never")).toBeInTheDocument();
     expect(
       screen.getByText(/stays valid until you revoke it in the group settings/),
+    ).toBeInTheDocument();
+  });
+
+  /*
+   * The three below are why the row reports what it was told to do.
+   *
+   * The sheet minted this invite and stopped listening, so the prop under
+   * this screen never moves. A sentence with a number in it read off that
+   * prop would sit under a row that had already changed its mind.
+   */
+  it("moves the sentence under the row when the expiry does", async () => {
+    const user = userEvent.setup();
+    renderReady();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "In 24 hours" }),
+    );
+
+    expect(await screen.findByText("In 24 hours")).toBeInTheDocument();
+    expect(
+      screen.getByText(/This link is valid for 1 day\./),
+    ).toBeInTheDocument();
+  });
+
+  it("swaps to the other sentence when the link stops lapsing", async () => {
+    const user = userEvent.setup();
+    renderReady();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "Never" }),
+    );
+
+    expect(
+      await screen.findByText(/stays valid until you revoke it/),
+    ).toBeInTheDocument();
+  });
+
+  it("puts the sentence back when the change is refused", async () => {
+    const user = userEvent.setup();
+    setJoinLinkExpiryAction.mockResolvedValueOnce({ ok: false });
+    renderReady();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "In 24 hours" }),
+    );
+
+    expect(failure).toHaveBeenCalled();
+    expect(
+      await screen.findByText(/This link is valid for 7 days/),
     ).toBeInTheDocument();
   });
 
