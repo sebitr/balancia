@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { IntlMessageFormat } from "intl-messageformat";
 import en from "../../messages/en.json";
@@ -14,8 +14,11 @@ import { LOCALES, negotiateLocale, isAppLocale } from "./locales";
  * `{count}` dropped in the French copy, or a plural whose categories were
  * mangled. Those fail here instead of in front of a French-speaking user.
  *
- * Nor can it see a catalogue that arrived without anyone wiring it up, which
- * is what a language added in Weblate looks like on the way in.
+ * Nor can it see a language that is ready to ship and has not been wired up,
+ * nor one that was wired up before it was ready. Weblate writes
+ * `messages/<code>.json` with every value empty the moment a language is
+ * opened for translation, so a file appearing is the start of the work rather
+ * than the end of it, and only the values say which.
  */
 
 type Tree = { [key: string]: string | Tree };
@@ -79,22 +82,77 @@ function placeholdersOf(locale: string, message: string): Set<string> {
 const english = flatten(en as unknown as Tree);
 const french = flatten(fr as unknown as Tree);
 
+/**
+ * Every catalogue `messages/` holds, flattened, by language code.
+ *
+ * Read off disk rather than imported: the whole point is to see the files
+ * nothing in `src/` names yet.
+ */
+const CATALOGUES = new Map(
+  readdirSync(new URL("../../messages", import.meta.url))
+    .filter((name) => name.endsWith(".json"))
+    .map((name): [string, Map<string, string>] => [
+      name.slice(0, -".json".length),
+      flatten(
+        JSON.parse(
+          readFileSync(
+            new URL(`../../messages/${name}`, import.meta.url),
+            "utf8",
+          ),
+        ) as Tree,
+      ),
+    ]),
+);
+
+/**
+ * The English keys a catalogue has no translation for.
+ *
+ * Weblate writes the complete key set as soon as a language is opened, every
+ * value an empty string, so a key being present says nothing — an empty value
+ * is an untranslated one. A catalogue that is missing outright counts as
+ * untranslated throughout, which is what a locale registered against a file
+ * that does not exist should look like.
+ */
+function untranslated(code: string): string[] {
+  const catalogue = CATALOGUES.get(code);
+  if (!catalogue) return [...english.keys()];
+  return [...english.keys()].filter(
+    (key) => (catalogue.get(key) ?? "").trim() === "",
+  );
+}
+
 describe("message catalogues", () => {
-  it("loads every catalogue that messages/ contains", () => {
-    // Weblate writes messages/<code>.json the moment a translator adds a
-    // language, and a catalogue the app has not been told about is invisible:
-    // no switcher entry, no negotiation, no email in it. Registering one means
-    // naming the code in six places — LOCALES and LOCALE_LABELS in
-    // src/i18n/locales.ts, then the catalogue maps in src/i18n/request.ts,
-    // src/i18n/emails.ts, src/components/pwa/offline-notice.tsx,
+  it("ships a language as soon as its catalogue is finished", () => {
+    // A finished translation nobody wired up is invisible: no switcher entry,
+    // no negotiation, no email in it. Registering one means naming the code in
+    // six places — LOCALES and LOCALE_LABELS in src/i18n/locales.ts, then the
+    // catalogue maps in src/i18n/request.ts, src/i18n/emails.ts,
+    // src/components/pwa/offline-notice.tsx,
     // src/components/i18n/language-switcher.tsx and tests/helpers/intl.tsx.
     // The last five are `Record<AppLocale, …>`, so `pnpm typecheck` names them
-    // one at a time once this test has said the file is there at all.
-    const shipped = readdirSync(new URL("../../messages", import.meta.url))
-      .filter((name) => name.endsWith(".json"))
-      .map((name) => name.slice(0, -".json".length));
+    // one at a time once this test has said the language is ready.
+    const ready = [...CATALOGUES.keys()].filter(
+      (code) => !isAppLocale(code) && untranslated(code).length === 0,
+    );
 
-    expect(shipped.sort()).toEqual([...LOCALES].sort());
+    expect(ready).toEqual([]);
+  });
+
+  it("offers no language that is still being translated", () => {
+    // The other direction, and the one that keeps the promise made in
+    // docs/translations.md: a language ships when it is complete. A locale in
+    // LOCALES whose catalogue still has gaps shows blank strings where the
+    // translation is missing — and a locale registered against a skeleton
+    // Weblate has only just written shows a blank app.
+    const gaps = [...LOCALES]
+      .map((locale) => [locale, untranslated(locale)] as const)
+      .filter(([, missing]) => missing.length > 0)
+      .map(
+        ([locale, missing]) =>
+          `${locale}: ${missing.length} untranslated, from "${missing[0]}"`,
+      );
+
+    expect(gaps).toEqual([]);
   });
 
   it("translates every English key into French", () => {
@@ -108,11 +166,8 @@ describe("message catalogues", () => {
   });
 
   it("every message is valid ICU in its own locale", () => {
-    for (const [locale, catalogue] of [
-      ["en", english],
-      ["fr", french],
-    ] as const) {
-      for (const [key, message] of catalogue) {
+    for (const locale of LOCALES) {
+      for (const [key, message] of CATALOGUES.get(locale) ?? []) {
         expect(
           () => new IntlMessageFormat(message, locale),
           `${locale}: ${key}`,
@@ -121,14 +176,18 @@ describe("message catalogues", () => {
     }
   });
 
-  it("keeps the same interpolated values in both languages", () => {
-    for (const [key, source] of english) {
-      const translated = french.get(key);
-      if (translated === undefined) continue;
-      expect(
-        [...placeholdersOf("fr", translated)].sort(),
-        `placeholders differ for "${key}"`,
-      ).toEqual([...placeholdersOf("en", source)].sort());
+  it("keeps the same interpolated values in every language", () => {
+    for (const locale of LOCALES) {
+      if (locale === "en") continue;
+      const catalogue = CATALOGUES.get(locale) ?? new Map<string, string>();
+      for (const [key, source] of english) {
+        const translated = catalogue.get(key);
+        if (translated === undefined || translated === "") continue;
+        expect(
+          [...placeholdersOf(locale, translated)].sort(),
+          `${locale}: placeholders differ for "${key}"`,
+        ).toEqual([...placeholdersOf("en", source)].sort());
+      }
     }
   });
 
