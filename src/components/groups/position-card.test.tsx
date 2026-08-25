@@ -3,7 +3,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { formatMoney, money } from "@/modules/currencies/money";
-import { PositionHero, type PositionHeroView } from "./position-hero";
+import { PositionCard, type PositionCardView } from "./position-card";
 
 /**
  * The sheet behind "How this is calculated".
@@ -24,7 +24,7 @@ import { PositionHero, type PositionHeroView } from "./position-hero";
  * bills, took the rental bookings, and has already been repaid nearly all of
  * it. 191,800.39 − 27,097.65 − 151,597.41 = 13,105.33.
  */
-const CHALET: PositionHeroView = {
+const CHALET: PositionCardView = {
   currency: "CHF",
   minorUnits: "1310533",
   counterparties: [
@@ -55,17 +55,16 @@ function chf(minorUnits: bigint): string {
 }
 
 async function openSheet(
-  positions: readonly PositionHeroView[] = [CHALET],
+  positions: readonly PositionCardView[] = [CHALET],
 ): Promise<ReturnType<typeof userEvent.setup>> {
   const user = userEvent.setup();
   renderWithIntl(
-    <PositionHero
+    <PositionCard
       positions={positions}
       groupId="g1"
       groupName="Chalet"
       senderName="Seb"
       recipients={[]}
-      canArchive={false}
     />,
   );
   await user.click(
@@ -169,7 +168,7 @@ describe("collapsing a section", () => {
 });
 
 describe("more than one currency", () => {
-  const EUROS: PositionHeroView = {
+  const EUROS: PositionCardView = {
     currency: "EUR",
     minorUnits: "-4500",
     counterparties: [],

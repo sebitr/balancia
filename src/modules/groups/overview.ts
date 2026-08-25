@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import { getDb, type Database } from "@/lib/db/client";
 import { expenses, participants, settlements } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
+import { isSpending } from "@/modules/expenses/direction";
 import { loadGroupBalances } from "@/modules/balances/service";
 import {
   contributionsOf,
@@ -106,6 +107,30 @@ export interface SettlementSuggestion {
   readonly toIsSelf: boolean;
 }
 
+/**
+ * One currency, whole — everything the overview's collapsed row shows at a
+ * glance and everything its body shows once opened.
+ *
+ * The screen groups by currency because the reader does: "am I owed, in which
+ * currency, and what do I do about it" is one question asked once per
+ * currency, not three questions asked across all of them. Grouping it here
+ * rather than in the component keeps the flat `rows` and `suggestions` below
+ * intact for the mobile API, which reads them as they are.
+ */
+export interface CurrencyOverview {
+  readonly currency: string;
+  /** All-time group spend. Income is excluded, as everywhere else. */
+  readonly totalSpent: bigint;
+  /** Spending entries behind that total — the count the settled line names. */
+  readonly expenseCount: number;
+  /** The reader's own signed balance. Zero when square, and for a guest. */
+  readonly position: bigint;
+  /** Everyone with a balance here, most negative first. Settled ones stay. */
+  readonly members: readonly BalanceRow[];
+  /** The transfers that clear this currency. Its payment count is the length. */
+  readonly transfers: readonly SettlementSuggestion[];
+}
+
 export interface GroupOverview {
   readonly participantCount: number;
   readonly expenseCount: number;
@@ -113,11 +138,36 @@ export interface GroupOverview {
   readonly span: { readonly first: string; readonly last: string } | null;
   readonly positions: readonly CurrencyPosition[];
   readonly spendingPeriods: readonly SpendingPeriod[];
+  /** Every currency with activity, each carrying its own balances. */
+  readonly currencies: readonly CurrencyOverview[];
   /** Every member with a balance, already ordered. The screen caps the list. */
   readonly rows: readonly BalanceRow[];
   readonly suggestions: readonly SettlementSuggestion[];
   /** When the reader last opened this group. Null on a first visit. */
   readonly lastOpenedAt: Date | null;
+}
+
+/**
+ * Which currency's row the overview opens on.
+ *
+ * The group's own base currency, falling back to the one it has spent most in
+ * when a group kept in separate currencies has never named a base. Product has
+ * an open question here — the currency the reader *owes* in is arguably the
+ * actionable one — so the choice is this function and nothing else, and
+ * flipping it is a one-line change with a test already pointed at it.
+ */
+export function mainCurrencyOf(
+  currencies: readonly CurrencyOverview[],
+  baseCurrency: string | null,
+): string | null {
+  if (currencies.length === 0) return null;
+  const base = currencies.find((entry) => entry.currency === baseCurrency);
+  if (base) return base.currency;
+  let largest = currencies[0];
+  for (const entry of currencies) {
+    if (entry.totalSpent > largest.totalSpent) largest = entry;
+  }
+  return largest.currency;
 }
 
 /** The three pairs of magnitudes a position is explained by. */
@@ -347,37 +397,58 @@ export async function loadGroupOverview(
     ]);
 
   const positions: CurrencyPosition[] = [];
+  const currencies: CurrencyOverview[] = [];
   const rows: BalanceRow[] = [];
   const suggestions: SettlementSuggestion[] = [];
+
+  // How many entries stand behind each currency's total. Counted off the same
+  // facts the total is summed from, and through the same gate: a currency that
+  // reports what the group spent may not count the rent it took in alongside
+  // it, or the two figures would describe different sets of entries.
+  const entryCounts = new Map<string, number>();
+  for (const fact of balances.spendingFacts) {
+    if (!isSpending(fact.direction)) continue;
+    entryCounts.set(fact.currency, (entryCounts.get(fact.currency) ?? 0) + 1);
+  }
 
   for (const entry of balances.currencies) {
     const contribution = balances.contributions.get(entry.currency);
     const revenue = balances.revenues.get(entry.currency);
     const settlement = balances.settlementsFor.get(entry.currency);
 
-    rows.push(...orderBalanceRows(entry, balances.participantNames, self));
-    suggestions.push(
-      ...(balances.suggestionsByCurrency.get(entry.currency) ?? []).map(
-        (suggestion) => ({
-          fromParticipantId: suggestion.fromParticipantId,
-          fromName:
-            balances.participantNames.get(suggestion.fromParticipantId) ?? "",
-          toParticipantId: suggestion.toParticipantId,
-          toName:
-            balances.participantNames.get(suggestion.toParticipantId) ?? "",
-          currency: suggestion.currency,
-          amount: suggestion.amount,
-          fromIsSelf: suggestion.fromParticipantId === self,
-          toIsSelf: suggestion.toParticipantId === self,
-        }),
-      ),
-    );
+    const members = orderBalanceRows(entry, balances.participantNames, self);
+    const transfers = (
+      balances.suggestionsByCurrency.get(entry.currency) ?? []
+    ).map((suggestion) => ({
+      fromParticipantId: suggestion.fromParticipantId,
+      fromName:
+        balances.participantNames.get(suggestion.fromParticipantId) ?? "",
+      toParticipantId: suggestion.toParticipantId,
+      toName: balances.participantNames.get(suggestion.toParticipantId) ?? "",
+      currency: suggestion.currency,
+      amount: suggestion.amount,
+      fromIsSelf: suggestion.fromParticipantId === self,
+      toIsSelf: suggestion.toParticipantId === self,
+    }));
+
+    rows.push(...members);
+    suggestions.push(...transfers);
+
+    const mine = self
+      ? entry.balances.find((balance) => balance.participantId === self)
+      : undefined;
+    const amount = mine?.amount ?? 0n;
+
+    currencies.push({
+      currency: entry.currency,
+      totalSpent: balances.totalSpend.get(entry.currency) ?? 0n,
+      expenseCount: entryCounts.get(entry.currency) ?? 0,
+      position: amount,
+      members,
+      transfers,
+    });
 
     if (!self) continue;
-    const mine = entry.balances.find(
-      (balance) => balance.participantId === self,
-    );
-    const amount = mine?.amount ?? 0n;
     positions.push({
       currency: entry.currency,
       amount,
@@ -411,6 +482,7 @@ export async function loadGroupOverview(
         : null,
     positions,
     spendingPeriods,
+    currencies,
     rows,
     suggestions,
     lastOpenedAt: me?.lastOpenedAt ?? null,

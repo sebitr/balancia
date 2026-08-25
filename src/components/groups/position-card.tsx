@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
-  Archive,
-  ArrowDown,
-  ArrowUp,
+  Bell,
   Check,
   ChevronDown,
   ChevronRight,
+  Minus,
   Plus,
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
+import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { RemindButton } from "@/components/reminders/remind-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +22,11 @@ import {
   SheetTitle,
   openOnContent,
 } from "@/components/ui/sheet";
-import { useNumberLocale } from "@/i18n/format-context";
 import type { RemindRecipient } from "@/modules/reminders/types";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 
-export interface PositionHeroView {
+export interface PositionCardView {
   readonly currency: string;
   readonly minorUnits: string;
   readonly counterparties: readonly {
@@ -46,199 +45,124 @@ export interface PositionHeroView {
   };
 }
 
+/** Tint, label colour and arithmetic sign, one row per direction. */
+const TILE: Record<
+  BalanceTone,
+  { readonly fill: string; readonly ink: string }
+> = {
+  positive: { fill: "bg-positive/10", ink: "text-positive" },
+  negative: { fill: "bg-negative/10", ink: "text-negative" },
+  neutral: { fill: "bg-muted", ink: "text-neutral-balance" },
+};
+
 /**
- * The first answer on the screen: a large position, its human meaning and the
- * next useful action. The existing reminder and settlement flows stay intact;
- * this card only gives them the hierarchy the mobile overview calls for.
+ * The first answer on the screen: one tile per currency, then the two things
+ * to do about them.
+ *
+ * A single hero amount used to sit here, which works for one currency and
+ * falls apart at four — the screen either picked a currency to shout and
+ * buried the rest, or stacked four heroes and became a wall. A tile grid is
+ * flat: every currency gets the same room, the reader's eye finds the red one,
+ * and the card's height grows by a row per pair rather than by a screenful.
+ *
+ * The footnote is load-bearing, not decoration. Four amounts in a grid invite
+ * being added up, and these four can never be added up; the line under them is
+ * what says so.
  */
-export function PositionHero({
+export function PositionCard({
   positions,
   groupId,
   groupName,
   senderName,
   recipients,
-  canArchive,
 }: {
-  positions: readonly PositionHeroView[];
+  positions: readonly PositionCardView[];
   groupId: string;
   groupName: string;
   senderName: string;
   recipients: readonly RemindRecipient[];
-  canArchive: boolean;
 }) {
   const t = useTranslations("group");
-  const format = useFormatter();
   const [positionOpen, setPositionOpen] = useState(false);
-  const open = positions.filter(
-    (position) => BigInt(position.minorUnits) !== 0n,
-  );
-  const single = open.length === 1 ? open[0] : null;
-  const settled = open.length === 0;
-  const mixed =
-    open.some((position) => BigInt(position.minorUnits) > 0n) &&
-    open.some((position) => BigInt(position.minorUnits) < 0n);
-  const positive = single && BigInt(single.minorUnits) > 0n;
 
-  const subline = single
-    ? positive
-      ? single.counterparties.length === 1
-        ? t("personOwesYou", { name: single.counterparties[0].name })
-        : t("peopleOweYou", { count: single.counterparties.length })
-      : single.counterparties.length === 1
-        ? t("youOwePerson", { name: single.counterparties[0].name })
-        : t("youOwePeople", {
-            names: format.list(
-              single.counterparties.map((party) => party.name),
-              { type: "conjunction" },
-            ),
-          })
-    : mixed
-      ? t("overallMixed")
-      : t("positionAcrossCurrencies");
-
-  const remindLabel =
-    recipients.length === 1
-      ? t("remindPerson", { name: recipients[0].name })
-      : t("remindAll");
-
-  /**
-   * Settling is a screen, not a form.
-   *
-   * This used to open the record-a-payment dialog directly, which asked the
-   * reader to fill in who, whom and how much — the three things the group's
-   * own balances already answer. It now goes to the settle-up screen, which
-   * states the transfers that clear the group and puts the same dialog behind
-   * each one, prefilled.
-   */
-  const settlement = (primary: boolean) => (
-    <Button
-      asChild
-      variant={primary ? "default" : "outline"}
-      size="lg"
-      className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-    >
-      <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
-        <Check aria-hidden="true" className="size-4" />
-        {t("settleUp")}
-      </Link>
-    </Button>
+  // Settled currencies are counted and shown: "across 4 currencies" is a
+  // statement about where this group has been active, and dropping the square
+  // ones would make the number shrink as the reader settles up.
+  const settled = positions.every(
+    (position) => BigInt(position.minorUnits) === 0n,
   );
 
   return (
     <>
       <section
         aria-labelledby="your-position"
-        className="flex flex-col gap-3.5 rounded-[22px] bg-card p-5 ring-1 ring-border"
+        className="flex flex-col gap-3.5 rounded-2xl bg-card p-4 ring-1 ring-border"
       >
         <h2 id="your-position" className="sr-only">
           {t("yourPosition")}
         </h2>
 
-        {settled ? (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold tracking-[0.1em] text-neutral-balance uppercase">
-              {t("allSettled")}
-            </span>
-            <p className="text-lg font-medium">{t("noOutstandingBalances")}</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            <div className="flex flex-col gap-1.5">
-              {open.map((position) => {
-                const incoming = BigInt(position.minorUnits) > 0n;
-                return (
-                  <HeroAmount
-                    key={position.currency}
-                    currency={position.currency}
-                    minorUnits={
-                      incoming
-                        ? position.minorUnits
-                        : (-BigInt(position.minorUnits)).toString()
-                    }
-                    incoming={incoming}
-                  />
-                );
-              })}
-            </div>
+        <p className="text-xs text-muted-foreground">
+          {t("positionAcross", { count: positions.length })}
+        </p>
 
-            <p className="flex items-center gap-2 text-sm">
-              <span
-                className={cn(
-                  "flex size-[18px] shrink-0 items-center justify-center rounded-full",
-                  single && BigInt(single.minorUnits) < 0n
-                    ? "bg-negative/15 text-negative"
-                    : "bg-positive/15 text-positive",
-                )}
-              >
-                {single && BigInt(single.minorUnits) < 0n ? (
-                  <ArrowUp aria-hidden="true" className="size-3" />
-                ) : (
-                  <ArrowDown aria-hidden="true" className="size-3" />
-                )}
-              </span>
-              <span className="truncate">{subline}</span>
-            </p>
-          </div>
-        )}
+        <ul className="grid grid-cols-2 gap-2">
+          {positions.map((position) => (
+            <PositionTile key={position.currency} position={position} />
+          ))}
+        </ul>
 
-        <div className="flex items-center gap-2">
+        {/* Why four amounts in a grid are not a total. */}
+        <p className="text-2xs text-pretty text-muted-foreground">
+          {t("keptApart")}
+        </p>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            asChild={!settled}
+            disabled={settled}
+            aria-disabled={settled || undefined}
+            size="lg"
+            className="h-10 flex-1 rounded-lg text-sm font-semibold"
+          >
+            {settled ? (
+              <>
+                <Check aria-hidden="true" className="size-4" />
+                {t("settleUp")}
+              </>
+            ) : (
+              <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
+                <Check aria-hidden="true" className="size-4" />
+                {t("settleUp")}
+              </Link>
+            )}
+          </Button>
+
           {settled ? (
-            <>
-              <Button
-                asChild
-                size="lg"
-                className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-              >
-                <Link href={`/groups/${groupId}/expenses/new`}>
-                  <Plus aria-hidden="true" className="size-4" />
-                  {t("addExpense")}
-                </Link>
-              </Button>
-              {canArchive && (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-                >
-                  <Link
-                    href={`/groups/${groupId}/settings`}
-                    transitionTypes={PUSH}
-                  >
-                    <Archive aria-hidden="true" className="size-4" />
-                    {t("archiveGroup")}
-                  </Link>
-                </Button>
-              )}
-            </>
-          ) : positive && recipients.length > 0 ? (
-            <>
-              <RemindButton
-                groupId={groupId}
-                groupName={groupName}
-                senderName={senderName}
-                recipients={recipients}
-                label={remindLabel}
-                variant="default"
-                className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-              />
-              {settlement(false)}
-            </>
+            <Button
+              variant="outline"
+              disabled
+              aria-disabled="true"
+              size="lg"
+              className="h-10 flex-1 rounded-lg text-sm font-medium"
+            >
+              <Bell aria-hidden="true" className="size-4" />
+              {t("remindAll")}
+            </Button>
           ) : (
-            <>
-              {settlement(true)}
-              {(mixed || recipients.length > 0) && (
-                <RemindButton
-                  groupId={groupId}
-                  groupName={groupName}
-                  senderName={senderName}
-                  recipients={recipients}
-                  label={remindLabel}
-                  variant="outline"
-                  className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-                />
-              )}
-            </>
+            <RemindButton
+              groupId={groupId}
+              groupName={groupName}
+              senderName={senderName}
+              recipients={recipients}
+              label={
+                recipients.length === 1
+                  ? t("remindPerson", { name: recipients[0].name })
+                  : t("remindAll")
+              }
+              variant="outline"
+              className="h-10 flex-1 rounded-lg text-sm font-medium"
+            />
           )}
         </div>
 
@@ -289,48 +213,77 @@ export function PositionHero({
   );
 }
 
-function HeroAmount({
-  currency,
-  minorUnits,
-  incoming,
-}: {
-  currency: string;
-  minorUnits: string;
-  incoming: boolean;
-}) {
-  const locale = useNumberLocale();
-  const parts = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    currencyDisplay: "code",
-  }).formatToParts(1);
-  const codeFirst =
-    parts.findIndex((part) => part.type === "currency") <
-    parts.findIndex((part) => part.type === "integer");
-  const code = (
-    <span className="text-xl leading-none font-semibold tracking-[-0.01em]">
-      {currency}
-    </span>
-  );
-  const amount = (
-    <Amount
-      minorUnits={minorUnits}
-      currency={currency}
-      display="none"
-      className="text-[2.5rem] leading-[0.95] font-semibold tracking-[-0.03em]"
-    />
-  );
+/**
+ * One currency's standing, in a tinted tile.
+ *
+ * The amount is unsigned and the sign is a separate glyph beside it, so the
+ * direction survives greyscale and a screen reader reads the word rather than
+ * a minus. A settled tile carries neither: it names the currency under the
+ * word "Settled" and stops, because "GBP 0.00" is a figure the reader has to
+ * parse to learn that there is nothing to parse.
+ */
+function PositionTile({ position }: { position: PositionCardView }) {
+  const t = useTranslations("money");
+  const tone = toneFor(position.minorUnits);
+  const value = BigInt(position.minorUnits);
+  const magnitude = value < 0n ? -value : value;
+
+  const label =
+    tone === "positive"
+      ? t("getsBack")
+      : tone === "negative"
+        ? t("owes")
+        : t("settled");
 
   return (
-    <p
+    <li
       className={cn(
-        "flex flex-wrap items-baseline gap-x-2 gap-y-1",
-        incoming ? "text-positive" : "text-negative",
+        "flex flex-col gap-0.5 rounded-lg px-[11px] py-[9px]",
+        TILE[tone].fill,
       )}
     >
-      {codeFirst ? code : amount}
-      {codeFirst ? amount : code}
-    </p>
+      <span
+        className={cn(
+          "text-2xs font-semibold tracking-[0.07em] uppercase",
+          TILE[tone].ink,
+        )}
+      >
+        {label}
+      </span>
+      <span
+        className={cn(
+          "flex items-center gap-[5px] text-base leading-none font-semibold tracking-[-0.01em]",
+          TILE[tone].ink,
+        )}
+      >
+        {tone !== "neutral" &&
+          (tone === "positive" ? (
+            <Plus
+              aria-hidden="true"
+              strokeWidth={2.2}
+              className="size-[15px] shrink-0"
+            />
+          ) : (
+            <Minus
+              aria-hidden="true"
+              strokeWidth={2.2}
+              className="size-[15px] shrink-0"
+            />
+          ))}
+        {tone === "neutral" ? (
+          <span>{position.currency}</span>
+        ) : (
+          // The code travels with the number rather than being set beside
+          // it: which side it belongs on is the locale's call, and Intl is
+          // the only thing here that knows.
+          <Amount
+            minorUnits={magnitude.toString()}
+            currency={position.currency}
+            display="code"
+          />
+        )}
+      </span>
+    </li>
   );
 }
 
@@ -354,7 +307,7 @@ function PositionBreakdown({
   position,
   showCurrency,
 }: {
-  position: PositionHeroView;
+  position: PositionCardView;
   showCurrency: boolean;
 }) {
   const t = useTranslations("group");
