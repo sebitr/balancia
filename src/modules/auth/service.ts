@@ -68,6 +68,8 @@ export type AuthErrorCode =
   | "noPassword"
   | "wrongPassword"
   | "invalidCredentials"
+  | "invalidCode"
+  | "codeSendFailed"
   | "resetLinkInvalid"
   | "confirmLinkInvalid"
   | "emailChangeLinkInvalid"
@@ -102,7 +104,7 @@ const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
  */
 const EMAIL_CHANGE_TTL_MS = 2 * 60 * 60 * 1000;
 
-function normalizeEmail(email: string): string {
+export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
@@ -147,6 +149,59 @@ export interface RegisterResult {
   readonly verificationRequired: boolean;
 }
 
+/**
+ * Writes the account row, and nothing else.
+ *
+ * Separate from `registerUser` because a password is only one of three ways to
+ * arrive at an account: a passkey signup writes a row with no password hash at
+ * all, and a code signup writes one that is waiting for its address to be
+ * confirmed. All three want the same INSERT, the same rule about who
+ * administers the instance, and the same reading of a duplicate email.
+ */
+export async function insertUser(
+  input: {
+    readonly email: string;
+    readonly name: string;
+    /** Null for an account whose only credential is a passkey or a code. */
+    readonly passwordHash: string | null;
+  },
+  options: { db?: Database } = {},
+): Promise<string> {
+  const db = options.db ?? getDb();
+  try {
+    const [created] = await db
+      .insert(users)
+      .values({
+        email: input.email,
+        name: input.name,
+        passwordHash: input.passwordHash,
+        /*
+         * The first account on an instance is its administrator: on a
+         * self-hosted deployment, whoever registers first is the person who
+         * just ran `docker compose up`. Decided inside the INSERT so it cannot
+         * be a read-then-write race against a second registration, and so
+         * there is no separate "claim the instance" step to forget.
+         *
+         * It grants exactly one thing today — the telemetry settings — and
+         * nothing about anybody's groups. See src/lib/security/admin.ts.
+         */
+        isAdmin: sql<boolean>`NOT EXISTS (SELECT 1 FROM ${users})`,
+      })
+      .returning({ id: users.id });
+    return created.id;
+  } catch (error) {
+    // The unique index on lower(email) is the authority on duplicates — never
+    // a pre-flight SELECT, which two concurrent registrations could both pass.
+    if (isUniqueViolation(error)) {
+      throw new AuthError(
+        "That email address is already registered. Try signing in instead.",
+        "emailTaken",
+      );
+    }
+    throw error;
+  }
+}
+
 export async function registerUser(
   input: RegisterInput,
   context: {
@@ -175,40 +230,7 @@ export async function registerUser(
   assertPasswordPolicy(input.password);
 
   const passwordHash = await hashPassword(input.password);
-
-  let userId: string;
-  try {
-    const [created] = await db
-      .insert(users)
-      .values({
-        email,
-        name,
-        passwordHash,
-        /*
-         * The first account on an instance is its administrator: on a
-         * self-hosted deployment, whoever registers first is the person who
-         * just ran `docker compose up`. Decided inside the INSERT so it cannot
-         * be a read-then-write race against a second registration, and so
-         * there is no separate "claim the instance" step to forget.
-         *
-         * It grants exactly one thing today — the telemetry settings — and
-         * nothing about anybody's groups. See src/lib/security/admin.ts.
-         */
-        isAdmin: sql<boolean>`NOT EXISTS (SELECT 1 FROM ${users})`,
-      })
-      .returning({ id: users.id });
-    userId = created.id;
-  } catch (error) {
-    // The unique index on lower(email) is the authority on duplicates — never
-    // a pre-flight SELECT, which two concurrent registrations could both pass.
-    if (isUniqueViolation(error)) {
-      throw new AuthError(
-        "That email address is already registered. Try signing in instead.",
-        "emailTaken",
-      );
-    }
-    throw error;
-  }
+  const userId = await insertUser({ email, name, passwordHash }, { db });
 
   const user: AuthenticatedUser = {
     userId,

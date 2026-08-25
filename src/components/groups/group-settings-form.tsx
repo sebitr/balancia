@@ -271,7 +271,7 @@ export function GroupSettingsForm({
           showCloseButton={false}
           // Content-height, unlike the create sheet: this is one short view
           // rather than a form with a picker behind it.
-          className="max-h-[calc(100dvh-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card p-0 text-card-foreground"
+          className="max-h-[calc(100dvh-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card pt-2.5 text-card-foreground"
         >
           <GroupIconPicker
             name={draft.name}

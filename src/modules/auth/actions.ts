@@ -22,14 +22,22 @@ import {
 } from "./service";
 import { revokeSession } from "./sessions";
 import {
-  clearGuestCookie,
   clearSessionCookie,
-  readGuestCookie,
   readSessionCookie,
   setSessionCookie,
 } from "./cookies";
-import { claimGuestSession } from "@/modules/guests/service";
-import { logger } from "@/lib/logger";
+import {
+  claimGuestIdentity,
+  settleNewSession,
+  type CodeAuthResult,
+} from "./session-handoff";
+import {
+  requestSignInCode,
+  signInWithCode,
+  startCodeSignup,
+  verifySignupCode,
+} from "./signup";
+import { normalizeCode } from "./code-format";
 import { applyStoredPreferences } from "@/i18n/cookie";
 import { resolveRequestLocale } from "@/i18n/request";
 
@@ -76,44 +84,6 @@ async function requestContext(): Promise<{
     // language the person was actually reading when they signed up.
     locale: await resolveRequestLocale(),
   };
-}
-
-/**
- * Claims the guest identity this browser is holding, if it holds one.
- *
- * Called from both sign-up and sign-in, because the session that makes a claim
- * possible arrives at different moments: an instance with SMTP configured
- * issues none until the address is verified, so for those the claim lands on
- * the first sign-in instead. It is also what makes "I already have an account"
- * work from the invite screen.
- *
- * Failures are logged and swallowed. The authentication has already succeeded,
- * and nobody should be left without a session because the link they arrived on
- * could not be retired.
- */
-async function claimGuestIdentity(userId: string): Promise<string | null> {
-  const guestToken = await readGuestCookie();
-  if (!guestToken) return null;
-
-  try {
-    const outcome = await claimGuestSession(userId, guestToken);
-    if (outcome.status === "claimed") {
-      await clearGuestCookie();
-      return outcome.groupId;
-    }
-    // A dead cookie buys nobody anything. A conflicting one is kept: the claim
-    // was skipped, so signing out should still return them to the guest.
-    if (outcome.status === "none") {
-      await clearGuestCookie();
-    }
-    return null;
-  } catch (error) {
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Guest claim failed after authentication",
-    );
-    return null;
-  }
 }
 
 export interface RegisterActionResult {
@@ -360,5 +330,174 @@ export async function deleteAccountAction(
   });
 
   if (result.ok) await clearSessionCookie();
+  return result;
+}
+
+/**
+ * The code half of onboarding.
+ *
+ * Four actions, in two pairs: ask for a code and spend it, once for an account
+ * that is being created and once for one that already exists. They are here
+ * rather than in the join module because what they do is authenticate — the
+ * group work they may also finish is delegated to `joinAfterSignup`, which
+ * takes the group from the join cookie and never from the form.
+ *
+ * The passkey path has no action of its own: WebAuthn needs a plain
+ * request/response pair either side of `navigator.credentials.create()`, so it
+ * lives in `/api/auth/passkey/signup` and ends in the same two helpers.
+ */
+
+const identitySchema = z.object({
+  name: z.string().trim().min(1, "name").max(120),
+  email: z.email("email"),
+});
+
+/**
+ * Which listed member a shared-link signup is claiming, if any.
+ *
+ * `participantId` names a row from the list the link itself produced;
+ * `displayName` is the name a person who was not on that list types instead.
+ * Both are optional, because the personal-invitation and cold routes join
+ * nothing here.
+ */
+const joinSchema = z
+  .object({
+    participantId: z.uuid().nullable().default(null),
+    displayName: z.string().trim().max(120).default(""),
+  })
+  .optional();
+
+const codeSchema = z.object({
+  email: z.email("email"),
+  code: z.string().trim().min(1, "code"),
+  join: joinSchema,
+});
+
+/**
+ * Creates the account and mails it a code.
+ *
+ * The account exists after this and cannot yet be signed in to, which is the
+ * same state registering with a password has always left behind on an instance
+ * that sends confirmation mail.
+ */
+export async function startCodeSignupAction(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = identitySchema.safeParse(input);
+  if (!parsed.success) {
+    return validationError(parsed.error.issues[0]?.message);
+  }
+
+  const context = await requestContext();
+  return runAction("auth.startCodeSignup", async () => {
+    const limit = await consumeRateLimit("signUp", context.ipAddress);
+    if (!limit.allowed) {
+      throw new RateLimitedError(limit.retryAfterSeconds);
+    }
+
+    await startCodeSignup(parsed.data, context);
+  });
+}
+
+/** Spends the code, signs the new account in, and joins whatever it arrived on. */
+export async function verifySignupCodeAction(
+  input: unknown,
+): Promise<ActionResult<CodeAuthResult>> {
+  const parsed = codeSchema.safeParse(input);
+  if (!parsed.success) {
+    return validationError(parsed.error.issues[0]?.message);
+  }
+
+  const context = await requestContext();
+  return runAction("auth.verifySignupCode", async () => {
+    // Keyed by the address rather than the caller: the guessing this stops is
+    // guessing at one account's code, and an attacker changing IP between
+    // attempts must not get a fresh allowance for it.
+    const limit = await consumeRateLimit(
+      "verifyCode",
+      parsed.data.email.toLowerCase(),
+    );
+    if (!limit.allowed) {
+      throw new RateLimitedError(limit.retryAfterSeconds);
+    }
+
+    const result = await verifySignupCode(
+      { email: parsed.data.email, code: normalizeCode(parsed.data.code) },
+      context,
+    );
+    return revalidateJoined(
+      await settleNewSession(result.user.userId, result.session, parsed.data),
+    );
+  });
+}
+
+/**
+ * Mails a sign-in code to an account that has no password to type.
+ *
+ * Always reports success. Whether the address is registered is not this
+ * endpoint's to disclose.
+ */
+export async function requestSignInCodeAction(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = z.object({ email: z.email("email") }).safeParse(input);
+  if (!parsed.success) {
+    return validationError(parsed.error.issues[0]?.message);
+  }
+
+  const context = await requestContext();
+  return runAction("auth.requestSignInCode", async () => {
+    const limit = await consumeRateLimit("signInCode", context.ipAddress);
+    if (!limit.allowed) {
+      throw new RateLimitedError(limit.retryAfterSeconds);
+    }
+
+    await requestSignInCode(parsed.data.email, context);
+  });
+}
+
+/** Signs an existing account in with a mailed code. */
+export async function signInWithCodeAction(
+  input: unknown,
+): Promise<ActionResult<CodeAuthResult>> {
+  const parsed = codeSchema.safeParse(input);
+  if (!parsed.success) {
+    return validationError(parsed.error.issues[0]?.message);
+  }
+
+  const context = await requestContext();
+  return runAction("auth.signInWithCode", async () => {
+    const limit = await consumeRateLimit(
+      "verifyCode",
+      parsed.data.email.toLowerCase(),
+    );
+    if (!limit.allowed) {
+      throw new RateLimitedError(limit.retryAfterSeconds);
+    }
+
+    const result = await signInWithCode(
+      { email: parsed.data.email, code: normalizeCode(parsed.data.code) },
+      context,
+    );
+    if (result.preferences) {
+      // Seed the display cookies from the account, so a new browser opens in
+      // the language and notation this person already chose elsewhere.
+      await applyStoredPreferences(result.preferences);
+    }
+    return revalidateJoined(
+      await settleNewSession(result.user.userId, result.session, parsed.data),
+    );
+  });
+}
+
+/**
+ * Drops the cache for a group that has just gained a member.
+ *
+ * `joinAfterSignup` cannot do this itself — it is a domain module, and
+ * `revalidatePath` is framework vocabulary — so the boundary does it on the
+ * id that came back.
+ */
+function revalidateJoined(result: CodeAuthResult): CodeAuthResult {
+  if (result.joinedGroupId) revalidatePath(`/groups/${result.joinedGroupId}`);
   return result;
 }

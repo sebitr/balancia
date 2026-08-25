@@ -311,10 +311,15 @@ function PositionBreakdown({
   showCurrency: boolean;
 }) {
   const t = useTranslations("group");
+  // Closed to start with. Opened out, the three sections and their captions
+  // run past the fold on a phone, so the one line the sheet exists to explain
+  // — the resulting balance — is the one line you cannot see. Each section
+  // states its own subtotal shut, which is the answer most of the time; the
+  // two rows behind it are for the times it is not.
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
-    expenses: true,
-    revenue: true,
-    settlements: true,
+    expenses: false,
+    revenue: false,
+    settlements: false,
   });
 
   const { currency, breakdown } = position;

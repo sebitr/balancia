@@ -53,12 +53,22 @@ export default async function GroupsSettingsPage() {
                 {initialOf(group.name)}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {group.name}
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium">
+                    {group.name}
+                  </span>
+                  {/* The role is a badge rather than a third clause in the
+                      line below, where it sat between the head count and
+                      "archived" and read as one more fact about the group
+                      rather than as what you are to it. */}
+                  {group.role === "owner" && (
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-foreground/10 px-2 text-2xs font-semibold text-muted-foreground">
+                      {t("groupOwner")}
+                    </span>
+                  )}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
                   {t("groupPeople", { count: group.participantCount })}
-                  {group.role === "owner" && ` · ${t("groupYouAreAdmin")}`}
                   {group.archivedAt && ` · ${t("groupArchived")}`}
                 </span>
               </span>

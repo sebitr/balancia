@@ -4,7 +4,8 @@ import { resolveJoinLink } from "@/lib/security/join-link";
 import { readJoinCookie } from "@/modules/auth/cookies";
 import { getDateFormatter } from "@/i18n/preferences";
 import { listClaimableMembers, loadJoinSummary } from "@/modules/join/service";
-import { JoinFlow } from "@/components/join/join-flow";
+import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
+import { getEnv } from "@/lib/env";
 
 /**
  * Where a group join link lands, once its token has left the URL.
@@ -45,7 +46,18 @@ export default async function JoinStartPage() {
     link = null;
   }
 
-  if (!link) return <JoinFlow linkGone />;
+  /*
+   * A link that no longer resolves.
+   *
+   * Passed down rather than redirected on, and that is load-bearing: finishing
+   * this flow is a Server Action, every Server Action re-renders the page it
+   * was called from, and by then the join cookie has been spent and cleared.
+   * A `redirect()` here would therefore fire on *success* and replace the
+   * reader's "you're in" screen with a dead-link page. The same component
+   * renders both, so React keeps the client state, and a flow that has already
+   * finished ignores the news entirely.
+   */
+  if (!link) return <OnboardingFlow arrival="shared" group={null} linkGone />;
 
   const [summary, claimable] = await Promise.all([
     loadJoinSummary(link.groupId),
@@ -54,20 +66,35 @@ export default async function JoinStartPage() {
 
   const dates = await getDateFormatter();
 
+  const env = getEnv();
+
   return (
-    <JoinFlow
-      summary={{
-        groupName: summary.groupName,
-        participantCount: summary.participantCount,
-        expenseCount: summary.expenseCount,
-        since: summary.since ? dates.plain(summary.since) : null,
-        totals: summary.totals.map((total) => ({
-          currency: total.currency,
-          minorUnits: total.amount.toString(),
-        })),
-        faces: summary.faces.map((face) => face.displayName),
-      }}
+    <OnboardingFlow
+      arrival="shared"
       inviterName={link.inviterName}
+      registrationAllowed={env.ALLOW_REGISTRATION}
+      codeSignupAvailable={env.smtpEnabled}
+      group={{
+        // Null until the account is in the group, which happens at the end of
+        // the flow: a shared link carries no membership of its own.
+        groupId: null,
+        summary: {
+          groupName: summary.groupName,
+          participantCount: summary.participantCount,
+          expenseCount: summary.expenseCount,
+          since: summary.since ? dates.plain(summary.since) : null,
+          totals: summary.totals.map((total) => ({
+            currency: total.currency,
+            minorUnits: total.amount.toString(),
+          })),
+          faces: summary.faces.map((face) => face.displayName),
+        },
+        // The reader has no position of their own yet — the one they may
+        // inherit belongs to the member they are about to claim, and travels
+        // on that member rather than on the group.
+        position: null,
+        settleRequest: null,
+      }}
       members={claimable.map((member) => ({
         id: member.id,
         displayName: member.displayName,

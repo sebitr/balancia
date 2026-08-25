@@ -1,5 +1,10 @@
-import { expect, test, type CDPSession, type Page } from "@playwright/test";
-import { registerAndSignIn, TEST_PASSWORD, uniqueEmail } from "./helpers";
+import { expect, test, type Page } from "@playwright/test";
+import {
+  attachVirtualAuthenticator,
+  registerAndSignIn,
+  TEST_PASSWORD,
+  uniqueEmail,
+} from "./helpers";
 
 /**
  * Passkey registration and sign-in, driven by Chrome's WebAuthn virtual
@@ -10,27 +15,6 @@ import { registerAndSignIn, TEST_PASSWORD, uniqueEmail } from "./helpers";
  * relying-party ID and the challenge it issued. Nothing is stubbed on the
  * server side.
  */
-
-async function attachVirtualAuthenticator(
-  page: Page,
-): Promise<{ client: CDPSession; authenticatorId: string }> {
-  const client = await page.context().newCDPSession(page);
-  await client.send("WebAuthn.enable");
-  const { authenticatorId } = await client.send(
-    "WebAuthn.addVirtualAuthenticator",
-    {
-      options: {
-        protocol: "ctap2",
-        transport: "internal",
-        hasResidentKey: true,
-        hasUserVerification: true,
-        isUserVerified: true,
-        automaticPresenceSimulation: true,
-      },
-    },
-  );
-  return { client, authenticatorId };
-}
 
 /**
  * Signing out, which lives at the foot of the settings hub and asks first.

@@ -81,10 +81,22 @@ function sectionFor(name: RegExp): HTMLElement {
   return card;
 }
 
+/**
+ * Opens a section. The sheet draws all three shut, so the rows inside one are
+ * a click away rather than there on arrival.
+ */
+async function expand(
+  user: ReturnType<typeof userEvent.setup>,
+  name: RegExp,
+): Promise<HTMLElement> {
+  await user.click(screen.getByRole("button", { name }));
+  return sectionFor(name);
+}
+
 describe("the position sheet's ledger", () => {
   it("subtotals expenses as what the reader paid, less their share", async () => {
-    await openSheet();
-    const section = sectionFor(/Expenses/);
+    const user = await openSheet();
+    const section = await expand(user, /Expenses/);
 
     expect(within(section).getByText(chf(19180039n))).toBeInTheDocument();
     expect(within(section).getByText(chf(31634847n))).toBeInTheDocument();
@@ -97,8 +109,8 @@ describe("the position sheet's ledger", () => {
    * no name on it.
    */
   it("gives income a section of its own instead of a remainder", async () => {
-    await openSheet();
-    const section = sectionFor(/Revenue/);
+    const user = await openSheet();
+    const section = await expand(user, /Revenue/);
 
     expect(
       within(section).getByText("Income you received"),
@@ -110,8 +122,8 @@ describe("the position sheet's ledger", () => {
   });
 
   it("subtotals repayments as what the reader sent, less what they got", async () => {
-    await openSheet();
-    const section = sectionFor(/Settlements/);
+    const user = await openSheet();
+    const section = await expand(user, /Settlements/);
 
     expect(within(section).getByText(chf(-15159741n))).toBeInTheDocument();
     expect(within(section).getByText(chf(2671n))).toBeInTheDocument();
@@ -140,13 +152,10 @@ describe("the position sheet's ledger", () => {
   });
 });
 
-describe("collapsing a section", () => {
-  it("hides its rows but keeps its subtotal on screen", async () => {
-    const user = await openSheet();
+describe("opening a section", () => {
+  it("arrives shut, with the subtotal already answering", async () => {
+    await openSheet();
     const header = screen.getByRole("button", { name: /Expenses/ });
-
-    expect(header).toHaveAttribute("aria-expanded", "true");
-    await user.click(header);
 
     expect(header).toHaveAttribute("aria-expanded", "false");
     expect(
@@ -155,15 +164,30 @@ describe("collapsing a section", () => {
     expect(screen.getByText(chf(19180039n))).toBeInTheDocument();
   });
 
+  it("shows the two rows behind that subtotal, and puts them away again", async () => {
+    const user = await openSheet();
+    const header = screen.getByRole("button", { name: /Expenses/ });
+
+    await user.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("You paid for the group")).toBeInTheDocument();
+
+    await user.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByText("You paid for the group"),
+    ).not.toBeInTheDocument();
+  });
+
   it("leaves the other sections alone", async () => {
     const user = await openSheet();
     await user.click(screen.getByRole("button", { name: /Expenses/ }));
 
     expect(screen.getByRole("button", { name: /Revenue/ })).toHaveAttribute(
       "aria-expanded",
-      "true",
+      "false",
     );
-    expect(screen.getByText("Income you received")).toBeInTheDocument();
+    expect(screen.queryByText("Income you received")).not.toBeInTheDocument();
   });
 });
 
