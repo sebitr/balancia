@@ -99,7 +99,8 @@ See the [full project status](./docs/implementation-status.md),
 - **Local categorization and receipt scanning.** Optional models run on the
   instance. Expense data is not sent to an external AI service.
 - **English and French.** Language, date format, number format and currency
-  preferences are independent.
+  preferences are independent. A language Balancia does not have yet is
+  [a browser away](https://hosted.weblate.org/engage/balancia/).
 
 ## Quick start
 
@@ -177,6 +178,7 @@ No Redis and no microservice fleet: one web app, one worker and PostgreSQL.
 - Found a bug? [Open a bug report](https://github.com/sebitr/balancia/issues/new?template=bug_report.yml).
 - Have an idea? [Open a feature request](https://github.com/sebitr/balancia/issues/new?template=feature_request.yml).
 - Want to contribute? Read [CONTRIBUTING.md](./CONTRIBUTING.md).
+- Speak another language? [Translate Balancia on Weblate](https://hosted.weblate.org/engage/balancia/) — no pull request, no setup.
 - Found a vulnerability? Follow [SECURITY.md](./SECURITY.md); do not open a
   public issue.
 
