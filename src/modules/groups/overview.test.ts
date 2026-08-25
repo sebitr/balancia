@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   counterpartiesOf,
+  mainCurrencyOf,
   orderBalanceRows,
   positionBreakdownOf,
   spendingPeriodsOf,
+  type CurrencyOverview,
 } from "./overview";
 import type { CurrencyBalances } from "@/modules/balances/engine";
 
@@ -296,5 +298,48 @@ describe("the ledger behind a position", () => {
         contribution: { paid: 900n, share: 400n },
       }).otherAdjustments,
     ).toBe(-600n);
+  });
+});
+
+/**
+ * Which row the overview lands open on.
+ *
+ * The choice is deliberately one function, because it is an open product
+ * question: the group's main currency is what ships, and the currency the
+ * reader *owes* in is the argument against it. Flipping that is a change here
+ * and nowhere else, which is the whole reason this is not inlined in the
+ * component's `useState`.
+ */
+describe("mainCurrencyOf", () => {
+  const entry = (currency: string, totalSpent: bigint): CurrencyOverview => ({
+    currency,
+    totalSpent,
+    expenseCount: 1,
+    position: 0n,
+    members: [],
+    transfers: [],
+  });
+
+  it("opens the group's base currency", () => {
+    const currencies = [entry("USD", 90000n), entry("CHF", 35000n)];
+
+    expect(mainCurrencyOf(currencies, "CHF")).toBe("CHF");
+  });
+
+  it("falls back to the most-spent currency when no base is named", () => {
+    const currencies = [entry("CHF", 35000n), entry("USD", 90000n)];
+
+    expect(mainCurrencyOf(currencies, null)).toBe("USD");
+  });
+
+  /** A base currency the group has never actually spent in names no row. */
+  it("falls back when the base currency has no activity", () => {
+    const currencies = [entry("CHF", 35000n), entry("USD", 90000n)];
+
+    expect(mainCurrencyOf(currencies, "GBP")).toBe("USD");
+  });
+
+  it("has nothing to open in a group with no currencies", () => {
+    expect(mainCurrencyOf([], "CHF")).toBeNull();
   });
 });

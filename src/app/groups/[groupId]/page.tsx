@@ -1,10 +1,9 @@
 import { after } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
-import { BalanceList } from "@/components/groups/balance-list";
+import { CurrencyBalances } from "@/components/groups/currency-balances";
 import { GroupEmptyState } from "@/components/groups/group-empty-state";
-import { PositionHero } from "@/components/groups/position-hero";
-import { SettlementList } from "@/components/groups/settlement-list";
+import { PositionCard } from "@/components/groups/position-card";
 import { SpendingCard } from "@/components/groups/spending-card";
 import { SinceLastOpened } from "@/components/activity/since-last-opened";
 import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
@@ -13,6 +12,7 @@ import { listGroupActivity } from "@/modules/activity/service";
 import { countContributions } from "@/modules/guests/service";
 import {
   loadGroupOverview,
+  mainCurrencyOf,
   markGroupOpened,
   type CurrencyPosition,
 } from "@/modules/groups/overview";
@@ -28,8 +28,6 @@ import { listRemindRecipients } from "@/modules/reminders/service";
  * rows of it here only competed with the position.
  */
 
-/** The balance list stops here and hands the rest to the balances screen. */
-const BALANCE_ROWS = 5;
 /** Enough history to find the useful lines beyond a burst of recent edits. */
 const ACTIVITY_ROWS = 12;
 
@@ -100,7 +98,7 @@ export default async function GroupOverviewPage({
       ? access.actor.displayName
       : access.actor.name;
   return (
-    <div className="flex flex-col gap-[26px]">
+    <div className="flex flex-col gap-5">
       {/* No visible title and no meta line: the switcher in the top bar
           already names the group, and counting people, expenses and days told
           the reader nothing they could act on. The heading stays for anyone
@@ -126,7 +124,7 @@ export default async function GroupOverviewPage({
       ) : (
         <>
           {access.participantId && (
-            <PositionHero
+            <PositionCard
               positions={overview.positions.map((position) => ({
                 currency: position.currency,
                 minorUnits: position.amount.toString(),
@@ -154,45 +152,43 @@ export default async function GroupOverviewPage({
               groupName={access.group.name}
               senderName={senderName}
               recipients={recipients}
-              canArchive={
-                access.permissions.manageGroupSettings &&
-                access.group.archivedAt === null
-              }
             />
           )}
 
-          {overview.rows.length > 0 && (
-            <BalanceList
-              rows={overview.rows.map((row) => ({
-                participantId: row.participantId,
-                name: row.name,
-                currency: row.currency,
-                minorUnits: row.amount.toString(),
-                isSelf: row.isSelf,
-                remindedAt: null,
+          {overview.currencies.length > 0 && (
+            <CurrencyBalances
+              currencies={overview.currencies.map((entry) => ({
+                currency: entry.currency,
+                totalSpent: entry.totalSpent.toString(),
+                expenseCount: entry.expenseCount,
+                position: entry.position.toString(),
+                members: entry.members.map((member) => ({
+                  participantId: member.participantId,
+                  name: member.name,
+                  minorUnits: member.amount.toString(),
+                  isSelf: member.isSelf,
+                })),
+                transfers: entry.transfers.map((transfer) => ({
+                  fromParticipantId: transfer.fromParticipantId,
+                  fromName: transfer.fromName,
+                  toParticipantId: transfer.toParticipantId,
+                  toName: transfer.toName,
+                  minorUnits: transfer.amount.toString(),
+                  fromIsSelf: transfer.fromIsSelf,
+                  toIsSelf: transfer.toIsSelf,
+                })),
               }))}
               groupId={groupId}
-              limit={BALANCE_ROWS}
+              groupName={access.group.name}
+              senderName={senderName}
+              recipients={recipients}
               participantCount={overview.participantCount}
+              defaultOpen={mainCurrencyOf(
+                overview.currencies,
+                access.group.baseCurrency,
+              )}
             />
           )}
-
-          <SettlementList
-            suggestions={overview.suggestions.map((suggestion) => ({
-              fromParticipantId: suggestion.fromParticipantId,
-              fromName: suggestion.fromName,
-              toParticipantId: suggestion.toParticipantId,
-              toName: suggestion.toName,
-              currency: suggestion.currency,
-              minorUnits: suggestion.amount.toString(),
-              fromIsSelf: suggestion.fromIsSelf,
-              toIsSelf: suggestion.toIsSelf,
-            }))}
-            groupId={groupId}
-            groupName={access.group.name}
-            senderName={senderName}
-            recipients={recipients}
-          />
 
           {activity.length > 0 && (
             <SinceLastOpened
