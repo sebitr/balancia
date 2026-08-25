@@ -183,6 +183,13 @@
       "when": 1787663239958,
       "tag": "0025_payout_methods",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787665199698,
+      "tag": "0026_payout_addresses",
+      "breakpoints": true
     }
   ]
 }

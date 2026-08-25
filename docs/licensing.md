@@ -52,6 +52,13 @@ The notable copyleft binary is libvips, loaded through `sharp` for image
 processing under LGPL-3.0-or-later. It remains a separate, replaceable dynamic
 library, which is the relationship the LGPL permits.
 
+QR encoding is delegated to `uqr` (MIT, no transitive dependencies), which is
+a TypeScript port of Project Nayuki's reference QR generator — both copyright
+lines are in its licence. Reed–Solomon coding and mask selection are a solved,
+well-specified problem where a bug is silent: a code that encodes wrongly still
+looks like a code. What Balancia keeps is the part that is actually its own,
+which is the payment payloads inside the symbol.
+
 Authentication is first-party except for the low-level WebAuthn protocol
 implementation in `@simplewebauthn/server` (MIT). Balancia delegates CBOR/COSE
 parsing and signature verification because duplicating security protocol code
