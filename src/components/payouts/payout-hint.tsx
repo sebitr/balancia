@@ -1,50 +1,109 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Copy, QrCode } from "lucide-react";
-import { needsDetail } from "@/modules/payouts/fields";
+import { toast } from "sonner";
+import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
+import { needsDetail, payoutFieldFor } from "@/modules/payouts/fields";
+import { findPaymentMethod } from "@/modules/settlements/payment-methods";
+import { MethodMark } from "@/components/settlements/method-mark";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { useNumberLocale } from "@/i18n/format-context";
+import { formatMoney, money } from "@/modules/currencies/money";
+import { cn } from "@/lib/utils";
 import { PaymentQr } from "./payment-qr";
 import type {
   PaymentQrRefusal,
   PaymentQrStandard,
 } from "@/modules/payouts/qr/payment-qr";
 
+/** One way somebody accepts money, as the owner listed it. */
+export interface PayoutMethodChoice {
+  readonly method: string;
+  readonly detail: string;
+}
+
 /**
- * How the person you owe wants it, shown where you are about to pay them.
+ * Every way the person you owe accepts money, shown where you are about to pay
+ * them.
  *
- * One method, not a menu: the owner ranked their own list and the top one is
- * their answer. Nothing here is fetched by name — the row only exists because
- * the balances say this reader owes this person, which is the whole of the
- * permission (see `listPayoutsOwed`).
+ * A menu, not one method. This used to show only the top of the owner's list,
+ * on the reasoning that they had ranked it and the first row was their answer.
+ * That reasoning was about *them*; the reader is the one holding the phone, and
+ * a preference is not a capability. Somebody who has TWINT and Revolut but does
+ * not bank in Switzerland cannot use the first and can use the second, and the
+ * old row left them holding an unusable number with no hint another existed. So
+ * the whole list appears, in the owner's order, with their first marked as the
+ * one they would rather have — a recommendation the reader is free to decline.
+ *
+ * Nothing here is fetched by name: the row exists only because the balances say
+ * this reader owes this person, which is the whole of the permission (see
+ * `listPayoutsOwed`).
  *
  * The detail is copyable because the alternative is transcribing an IBAN by
  * hand from one app into another, which is exactly where the digit goes wrong.
+ *
+ * What sits under the detail is whatever the method can honestly offer:
+ *
+ *  - a **bank transfer** with a code behind it opens the code, which is the one
+ *    thing here that beats copying;
+ *  - a **payment link** — PayPal.me and its kind — opens, because the address
+ *    its owner typed *is* the destination and nothing has to be guessed;
+ *  - **cash** says there is nothing to copy and names the sum, rather than
+ *    offering an empty surface and a dead button;
+ *  - everything else offers copying alone. Deep-linking into TWINT or Revolut
+ *    would need a URL scheme per provider that nothing in this repository can
+ *    verify, and a button that silently does nothing is worse than no button.
  */
 export function PayoutHint({
+  className,
   name,
+  methods,
+  picked,
+  onPick,
+  minorUnits,
   currency,
-  method,
-  detail,
-  methodLabel,
   qr = null,
   qrMissing = null,
 }: {
+  className?: string;
   name: string;
-  /** The debt's currency, which is the half of "why not" that names itself. */
+  /** Every method the payee listed, in their own order. Never empty. */
+  methods: readonly PayoutMethodChoice[];
+  /** The method whose detail is open, as a code. */
+  picked: string;
+  onPick: (method: string) => void;
+  /** The debt this row is for, which the cash line names. */
+  minorUnits: string;
   currency: string;
-  method: string;
-  detail: string;
-  /** Already translated by the caller, which holds the methods catalogue. */
-  methodLabel: string;
-  /** Built on the server; null when no standard can carry this payment. */
+  /** Built on the server from the bank entry; null when no standard fits. */
   qr?: { standard: PaymentQrStandard; payload: string } | null;
   /** Why there is no code, when the reader can act on the reason. */
   qrMissing?: PaymentQrRefusal | null;
 }) {
   const t = useTranslations("payouts");
+  const tMethods = useTranslations("paymentMethods");
+  const locale = useNumberLocale();
+  const labelId = useId();
   const [copied, setCopied] = useState(false);
-  const [showing, setShowing] = useState(false);
+  const [showingQr, setShowingQr] = useState(false);
+
+  const labelOf = (method: string): string => {
+    const known = findPaymentMethod(method);
+    return known ? tMethods(known.id) : method;
+  };
+
+  // A selection that names nothing falls back to the owner's own first choice,
+  // which is what the row showed before anybody touched it.
+  const chosen = methods.find((entry) => entry.method === picked) ?? methods[0];
+  if (!chosen) return null;
+
+  const label = labelOf(chosen.method);
+  const amount = formatMoney(money(BigInt(minorUnits), currency), {
+    locale,
+    display: "code",
+  });
 
   /**
    * The one sentence that says why there is no code, or nothing.
@@ -53,6 +112,9 @@ export function PayoutHint({
    * mistake the reader made and none of them is theirs to fix. What they came
    * for is the answer to "should I keep looking for a code", and each of these
    * says no in the terms of whoever they are paying.
+   *
+   * Under the bank chip and nowhere else: it answers "where is the code", and
+   * a code was never on offer under TWINT.
    */
   const whyNoQr = () => {
     switch (qrMissing) {
@@ -66,12 +128,13 @@ export function PayoutHint({
         return null;
     }
   };
-  const why = qr ? null : whyNoQr();
+  const why = qr || chosen.method !== "bank" ? null : whyNoQr();
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(detail);
+      await navigator.clipboard.writeText(chosen.detail);
       setCopied(true);
+      toast.success(t("detailCopied"));
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       // A browser that refuses the clipboard leaves the text on screen to be
@@ -79,79 +142,251 @@ export function PayoutHint({
     }
   };
 
-  return (
-    <div className="flex flex-col gap-2 rounded-lg bg-muted/60 px-3 py-2">
-      <div className="flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-2xs text-muted-foreground">
-            {t("settle.title", { name })}
-          </span>
-          <span className="truncate text-sm font-medium">
-            {methodLabel}
-            {needsDetail(method) && detail ? (
-              <span className="font-normal text-muted-foreground">
-                {" "}
-                · {detail}
-              </span>
-            ) : null}
-          </span>
-        </div>
+  const link = payoutFieldFor(chosen.method) === "link" ? chosen.detail : null;
+  const bankDetail = methods.find((entry) => entry.method === "bank")?.detail;
+  const hasDetail = needsDetail(chosen.method) && chosen.detail !== "";
 
-        {needsDetail(method) && detail ? (
-          <button
-            type="button"
-            onClick={() => void copy()}
-            aria-label={copied ? t("copied") : t("copy")}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
-          >
-            {copied ? (
-              <Check aria-hidden="true" className="size-4 text-positive" />
-            ) : (
-              <Copy aria-hidden="true" className="size-4" />
-            )}
-            {/* The icon changes for the eye; this is the same news for a
-              screen reader, which cannot see it change. */}
-            <span aria-live="polite" className="sr-only">
-              {copied ? t("copied") : ""}
-            </span>
-          </button>
-        ) : null}
-      </div>
+  return (
+    <div className={cn("flex flex-col gap-2.5", className)}>
+      <span id={labelId} className="text-2xs text-muted-foreground">
+        {t("settle.howToPay", { name })}
+      </span>
 
       {/*
-        Behind a tap rather than always open. Most rows on this screen are not
-        the one being paid right now, and a settle screen that is four QR codes
-        tall is one nobody reads.
+        Pressed buttons rather than a radiogroup, which is what the settle
+        drawer's own method row does. `radio` reads better — "2 of 4" — but it
+        also promises arrow keys, and honouring that promise means a roving
+        tabindex this row does not have. Two controls that look identical and
+        answer the keyboard differently is the worse outcome.
+
+        Wrapping, never scrolling sideways. A method the reader cannot see is a
+        method that does not exist, and the whole point of this row is that the
+        second and third ones are findable.
       */}
-      {why && (
-        <p className="text-xs text-pretty text-muted-foreground">{why}</p>
-      )}
-
-      {qr && (
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => setShowing((open) => !open)}
-            className="flex min-h-9 items-center gap-2 self-start rounded-lg px-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <QrCode aria-hidden="true" className="size-4" />
-            {showing ? t("qrHide") : t("qrShow")}
-          </button>
-
-          {showing && (
-            <div className="flex flex-col items-center gap-1.5 pb-1">
-              <PaymentQr
-                payload={qr.payload}
-                standard={qr.standard}
-                label={t("qrTitle")}
+      <div
+        role="group"
+        aria-labelledby={labelId}
+        className="flex flex-wrap gap-[7px]"
+      >
+        {methods.map((entry, index) => {
+          const active = entry.method === chosen.method;
+          const entryLabel = labelOf(entry.method);
+          return (
+            <button
+              key={entry.method}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onPick(entry.method)}
+              className={cn(
+                "flex h-9 items-center gap-2 rounded-lg border py-0 pr-2.5 pl-2 text-sm font-medium transition-colors",
+                active
+                  ? "border-accent bg-accent"
+                  : "border-input bg-white/5 hover:bg-white/10",
+              )}
+            >
+              <MethodMark
+                method={findPaymentMethod(entry.method) ?? null}
+                label={entryLabel}
+                size={20}
               />
+              {entryLabel}
+              {/* Only ever on the first, because "preferred" is a statement
+                  about the owner's own ordering — and with nothing to prefer it
+                  over, it is a badge that says nothing. */}
+              {index === 0 && methods.length > 1 && (
+                <span className="flex h-[18px] items-center rounded-full bg-primary/15 px-1.5 text-2xs font-semibold text-primary">
+                  {t("preferred")}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Keyed on the method so switching chips replays the entrance: without
+          it React updates the text in place and the surface never moves, which
+          reads as nothing having happened. */}
+      <div
+        key={chosen.method}
+        className="flex flex-col gap-2.5 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
+      >
+        {hasDetail ? (
+          <div className="flex items-center gap-2 rounded-lg bg-muted/60 py-2 pr-2 pl-3">
+            <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-2xs text-muted-foreground">
-                {qr.standard === "swiss" ? t("qrSwiss") : t("qrEpc")}
+                {fieldNameOf(chosen.method, label, t("fields.iban.label"))}
+              </span>
+              {/* Mono, because this is read a character at a time and typed
+                  into another app: a 1 that could be an l costs a payment. */}
+              <span className="truncate font-mono text-xs">
+                {chosen.detail}
               </span>
             </div>
-          )}
-        </div>
+
+            <button
+              type="button"
+              onClick={() => void copy()}
+              aria-label={copied ? t("copied") : t("copy")}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
+            >
+              {copied ? (
+                <Check aria-hidden="true" className="size-4 text-positive" />
+              ) : (
+                <Copy aria-hidden="true" className="size-4" />
+              )}
+              {/* The icon changes for the eye; this is the same news for a
+                screen reader, which cannot see it change. */}
+              <span aria-live="polite" className="sr-only">
+                {copied ? t("copied") : ""}
+              </span>
+            </button>
+          </div>
+        ) : (
+          /* Cash has nothing to copy and no app to open. Naming the sum is the
+             only useful thing left, and it beats an empty surface. */
+          <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            {t("cashNothing", { amount })}
+          </p>
+        )}
+
+        {why && (
+          <p className="text-xs text-pretty text-muted-foreground">{why}</p>
+        )}
+
+        {qr && chosen.method === "bank" && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowingQr(true)}
+            className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+          >
+            <QrCode aria-hidden="true" />
+            {t("qrShowSheet")}
+          </Button>
+        )}
+
+        {link && (
+          <Button
+            asChild
+            variant="outline"
+            className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+          >
+            {/* The owner typed this address for exactly this purpose, so it is
+                the one link on this screen that needs no scheme table to be
+                sure of. `noreferrer` because where somebody paid a debt from
+                is not the payee's business. */}
+            <a href={hrefOf(link)} target="_blank" rel="noopener noreferrer">
+              <ExternalLink aria-hidden="true" />
+              {t("openApp", { method: label })}
+            </a>
+          </Button>
+        )}
+      </div>
+
+      {/* Kept outside the keyed block so switching chips does not unmount an
+          open sheet. The account it names is the bank entry's, which is what
+          the code was built from — never whichever chip happens to be lit. */}
+      {qr && bankDetail && (
+        <QrSheet
+          open={showingQr}
+          onOpenChange={setShowingQr}
+          name={name}
+          amount={amount}
+          iban={bankDetail}
+          qr={qr}
+        />
       )}
     </div>
   );
+}
+
+/**
+ * The code, full width and over everything else.
+ *
+ * A sheet rather than an accordion inside the row: the code is held up to a
+ * camera, so it wants the width of the screen — and opening it in place pushed
+ * the button that records the payment off the bottom of the phone, on the one
+ * row where that button is the point.
+ */
+function QrSheet({
+  open,
+  onOpenChange,
+  name,
+  amount,
+  iban,
+  qr,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  amount: string;
+  iban: string;
+  qr: { standard: PaymentQrStandard; payload: string };
+}) {
+  const t = useTranslations("payouts");
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="mx-auto max-h-[90svh] max-w-[390px] items-center gap-3 overflow-y-auto rounded-t-[24px] bg-card px-5 pt-2.5 pb-[22px] data-[side=bottom]:border-t-0"
+      >
+        <SheetTitle className="text-base font-semibold tracking-[-0.02em]">
+          {t("qrSheetTitle", { name })}
+        </SheetTitle>
+
+        <PaymentQr
+          payload={qr.payload}
+          standard={qr.standard}
+          label={t("qrTitle")}
+        />
+
+        <div className="flex flex-col items-center gap-1 text-center">
+          <p className="text-sm font-semibold">
+            {t("qrAmountTo", { amount, name })}
+          </p>
+          <p className="font-mono text-2xs break-all text-muted-foreground">
+            {iban}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {qr.standard === "swiss" ? t("qrSwiss") : t("qrEpc")}
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => onOpenChange(false)}
+          className="h-11 w-full rounded-lg text-sm font-medium"
+        >
+          {t("qrClose")}
+        </Button>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/**
+ * What to call the field the detail sits in.
+ *
+ * An IBAN says "IBAN", because that is the word on the form at the other end.
+ * A Revtag says "Revtag" for the same reason — it is what Revolut calls the
+ * thing, and "Your handle there" beside a Revolut tile answers a question
+ * nobody asked. Everything else takes the method's own label, which is the most
+ * this can honestly say.
+ */
+function fieldNameOf(method: string, label: string, ibanLabel: string): string {
+  if (payoutFieldFor(method) === "iban") return ibanLabel;
+  if (method === "revolut") return "Revtag";
+  return label;
+}
+
+/**
+ * People write payment links without a scheme — `paypal.me/sebtr` — and a bare
+ * one in an `href` is read as a path on this site. `https` rather than the
+ * page's own protocol: this is somebody's money going somewhere.
+ */
+function hrefOf(detail: string): string {
+  return /^https?:\/\//i.test(detail) ? detail : `https://${detail}`;
 }
