@@ -5,9 +5,10 @@
  * is served. Balancia uses it for exactly one thing: running the background
  * worker inside the web process when `RUN_WORKER_IN_WEB` says to.
  *
- * That setting exists for single-container installs, where there is no
- * `worker` service to run recurring expenses, the notification sweep and push
- * delivery. Without this hook the variable was accepted by the environment
+ * Which it does by default, so this is the ordinary path rather than a special
+ * case — recurring expenses, the notification sweep and push delivery all run
+ * from here unless a deployment has a `worker` container and turned the
+ * setting off. Without this hook the variable was accepted by the environment
  * schema, forwarded by Compose, documented as the way to make delivery work —
  * and read by nothing, so setting it did nothing at all and nothing was ever
  * pushed. See docs/notifications.md.

@@ -95,6 +95,13 @@ x-dev-environment: &dev-environment
   TELEMETRY_RECEIVER: ${DEV_TELEMETRY_RECEIVER:-false}
   METRICS_ENABLED: ${DEV_METRICS_ENABLED:-true}
   METRICS_TOKEN: ${DEV_METRICS_TOKEN:-}
+  # False here, unlike production, where the app runs the jobs itself: this
+  # stack has a `worker` service in watch mode, and its log being its own is
+  # most of the point of having it. Stated rather than left to the schema —
+  # the schema's default is true, and inheriting it would give this stack two
+  # subscribers on every queue. Set DEV_RUN_WORKER_IN_WEB=true and skip the
+  # service to develop against the shape production actually ships.
+  RUN_WORKER_IN_WEB: ${DEV_RUN_WORKER_IN_WEB:-false}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

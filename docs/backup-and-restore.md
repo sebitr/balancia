@@ -93,14 +93,18 @@ needed for the database. Receipts are written once and never modified, so a
 `tar` of the volume during normal operation is safe — at worst it misses a file
 uploaded in the same second, which the next run picks up.
 
-For a guaranteed-consistent point-in-time copy, stop the app and worker (leaving
-the database up for `pg_dump`):
+For a guaranteed-consistent point-in-time copy, stop the app (leaving the
+database up for `pg_dump`):
 
 ```bash
-docker compose stop app worker
+docker compose stop app
 ./balancia-backup.sh
-docker compose start app worker
+docker compose start app
 ```
+
+Add `worker` to both commands if you gave the background jobs
+[their own container](self-hosting.md#background-jobs); without that profile
+enabled, naming a service Compose is not running is an error.
 
 ---
 
@@ -174,10 +178,10 @@ itself.
 **Just the receipts** (database is fine):
 
 ```bash
-docker compose stop app worker
+docker compose stop app
 docker run --rm -v balancia-uploads:/data -v /path/to/backup:/backup:ro \
   alpine:3.21 sh -c "rm -rf /data/* && tar xzf /backup/uploads.tar.gz -C /data"
-docker compose start app worker
+docker compose start app
 ```
 
 **Just one group**, from a custom-format dump: `pg_restore` cannot filter by

@@ -128,9 +128,11 @@ TRUSTED_ORIGINS=https://alt.example.com,https://other.example.com
 
 ### `DATABASE_POOL_MAX`
 
-Default `10`. Maximum PostgreSQL connections per process. Remember the worker
-opens its own pool, so plan for roughly `2 × DATABASE_POOL_MAX` plus pg-boss's
-own small pool against PostgreSQL's `max_connections`.
+Default `10`. Maximum PostgreSQL connections per process. The app container
+opens one pool, and pg-boss a small one of its own alongside it. If you gave
+the background jobs [their own container](#background-jobs), that is a second
+app-sized pool as well — plan for roughly `2 × DATABASE_POOL_MAX` against
+PostgreSQL's `max_connections` in that shape.
 
 ---
 
@@ -235,9 +237,10 @@ still get every notification inside the app.
 subscription to the public key that created it, so everyone has to turn
 notifications back on afterwards.
 
-**Delivery needs the worker.** Push is sent from the background worker, like
-recurring expenses. On a single-container install, set `RUN_WORKER_IN_WEB=true`
-or nothing is delivered.
+**Delivery needs the background jobs.** Push is sent from them, like recurring
+expenses, and the app container runs them itself by default — so this works out
+of the box. It stops working if `RUN_WORKER_IN_WEB` is off with nothing else
+taking over; see [Background jobs](#background-jobs).
 
 ---
 
@@ -685,6 +688,41 @@ curl -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:3000/api/metrics
 
 ---
 
+## Background jobs
+
+### `RUN_WORKER_IN_WEB`
+
+Default `true`. Runs the pg-boss worker inside the web process: recurring
+expenses, import commits, push delivery, exchange-rate refreshes and the
+nightly housekeeping sweep.
+
+On by default so that one container is the whole application. The image needs
+no companion service — behind a reverse proxy, or as the single `app` service
+of the Compose stack, it does all of its own work.
+
+Set it to `false` only when something else is running those jobs, which under
+Compose means enabling the `worker` service. That takes a second line, because
+a Compose profile is not an application setting:
+
+```
+COMPOSE_PROFILES=worker
+RUN_WORKER_IN_WEB=false
+```
+
+The two failure modes are quiet ones, so they are worth naming. With the
+profile on and this left `true`, both processes subscribe to every queue —
+pg-boss hands each job to one of them, so nothing is duplicated or corrupted,
+but nothing is gained either, and the worker logs a warning saying so. With
+this `false` and no profile, **nothing runs the jobs at all**: the app serves
+pages exactly as it should while no recurring expense is ever generated and no
+push is ever sent.
+
+`./scripts/bootstrap.sh` checks the pair on every run and offers to repair
+either one. The operational side is in
+[self-hosting.md](self-hosting.md#background-jobs).
+
+---
+
 ## Logging and operations
 
 ### `LOG_LEVEL`
@@ -735,8 +773,8 @@ psql "postgres://balancia:$POSTGRES_PASSWORD@127.0.0.1:5458/balancia"
 ### `RUN_MIGRATIONS`
 
 Docker image only. Default `true`: the entrypoint applies pending migrations
-before starting the web or worker process. Both containers doing this at once
-is safe — the runner holds a PostgreSQL advisory lock, so the second waits and
+before starting the web or worker process. Two containers doing this at once is
+safe — the runner holds a PostgreSQL advisory lock, so the second waits and
 then finds the schema current.
 
 Set to `false` to take that over yourself, e.g. to apply migrations once and

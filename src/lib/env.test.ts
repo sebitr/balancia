@@ -18,6 +18,26 @@ describe("environment validation", () => {
     expect(env.STORAGE_DRIVER).toBe("local");
   });
 
+  /**
+   * The whole reason the default stack is two containers. An instance that says
+   * nothing about background jobs must run them, because the alternative — a
+   * `.env` with no opinion and no worker service — is an app that serves every
+   * page correctly and never generates a recurring expense, never delivers a
+   * push and never prunes anything, with nothing in the log to say so.
+   */
+  it("runs the background jobs in the web process unless told otherwise", () => {
+    const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
+    expect(env.RUN_WORKER_IN_WEB).toBe(true);
+  });
+
+  it("lets a deployment with a worker container turn that off", () => {
+    const env = parseEnv({
+      ...base,
+      RUN_WORKER_IN_WEB: "false",
+    } as unknown as NodeJS.ProcessEnv);
+    expect(env.RUN_WORKER_IN_WEB).toBe(false);
+  });
+
   it("requires a database URL", () => {
     expect(() =>
       parseEnv({

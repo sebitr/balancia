@@ -105,8 +105,10 @@ matter how many runs race for it. Anything older than an hour is stamped
 without being sent: it is still in the inbox, but a card about this morning's
 coffee arriving tonight is noise.
 
-Delivery runs in the worker. On a single-container install set
-`RUN_WORKER_IN_WEB=true`, or nothing is pushed.
+Delivery runs from the background jobs, which the app container runs itself
+unless an operator moved them into a worker container. Either way it works; the
+one state where nothing is pushed is `RUN_WORKER_IN_WEB=false` with no worker
+service, which [environment.md](environment.md#background-jobs) describes.
 
 ## Privacy
 

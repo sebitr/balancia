@@ -97,7 +97,7 @@ Every field, with its complete range of possible values:
 | `features.receiptScanning`        | boolean                                                                    |
 | `features.semanticCategorization` | boolean                                                                    |
 | `features.storage`                | `local` \| `s3`                                                            |
-| `features.worker`                 | `separate` \| `in-web`                                                     |
+| `features.worker`                 | `in-web` (the default stack) \| `separate`                                 |
 | `last7Days.*`                     | Bucket labels only — see below                                             |
 
 Every entry under `last7Days` is one of
@@ -181,7 +181,7 @@ A real weekly report from an instance with a handful of people:
     "receiptScanning": true,
     "semanticCategorization": false,
     "storage": "local",
-    "worker": "separate"
+    "worker": "in-web"
   },
   "last7Days": {
     "groupsCreated": "1",

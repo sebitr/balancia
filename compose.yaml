@@ -4,13 +4,19 @@
 #
 # The first command writes a .env with this instance's own database password
 # and auth secret; it never overwrites values you have already set, so it is
-# safe in front of every `up`. The second brings up PostgreSQL 18, the web app
-# and the background worker — the last two from one image.
+# safe in front of every `up`. The second brings up PostgreSQL 18 and the web
+# app — two containers, and the app runs the background jobs itself.
 #
-# Migrations are applied by the image's entrypoint before either container
-# serves anything, so there is no separate migration step to order. Both doing
-# it at once is fine: the runner takes a PostgreSQL advisory lock, so whichever
-# starts second waits and then finds the schema already current.
+# That is the default because it is the whole application in one place: nothing
+# to keep in step, one log to read, one container to restart. A large instance
+# that would rather keep the jobs off the web container's event loop turns the
+# `worker` service on; it is a profile, and the two lines it needs are at the
+# bottom of this file.
+#
+# Migrations are applied by the image's entrypoint before the app serves
+# anything, so there is no separate migration step to order. Two containers
+# doing it at once is fine as well: the runner takes a PostgreSQL advisory
+# lock, so whichever starts second waits and then finds the schema current.
 
 name: balancia
 
@@ -101,11 +107,13 @@ x-app-environment: &app-environment
   # a private network — the app port below is reachable by whoever can reach it.
   METRICS_ENABLED: ${METRICS_ENABLED:-false}
   METRICS_TOKEN: ${METRICS_TOKEN:-}
-  # This stack runs a dedicated worker container, so the web process must not
-  # also run one — two of them would generate every recurring expense twice.
-  # It is forwarded rather than omitted so that `docker compose up app` alone
-  # is a usable single-container install.
-  RUN_WORKER_IN_WEB: ${RUN_WORKER_IN_WEB:-false}
+  # The web container runs the background jobs itself, which is what makes this
+  # stack two containers rather than three. Set it to false in .env — together
+  # with COMPOSE_PROFILES=worker, which starts the service below — to move them
+  # into a process of their own. Setting one without the other is the mistake
+  # this pair invites: without the profile nothing runs the jobs, and without
+  # the false both processes serve the same queues.
+  RUN_WORKER_IN_WEB: ${RUN_WORKER_IN_WEB:-true}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
@@ -178,7 +186,17 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
 
+  # Optional. Off unless COMPOSE_PROFILES=worker is set, because the app above
+  # already does this work — see RUN_WORKER_IN_WEB. Worth turning on when a job
+  # is heavy enough to be felt in request latency: a large import commit, or
+  # server-side receipt reading on a small machine. Both settings move together:
+  #
+  #   COMPOSE_PROFILES=worker
+  #   RUN_WORKER_IN_WEB=false
+  #
+  # `./scripts/bootstrap.sh` writes the second when it finds the first.
   worker:
+    profiles: ["worker"]
     build:
       context: .
       dockerfile: Dockerfile

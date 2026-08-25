@@ -80,6 +80,10 @@ export default defineConfig({
       // Every request in the suite comes from one address; the per-IP auth
       // limit would otherwise trip partway through a run.
       AUTH_RATE_LIMIT_MAX: "100000",
+      // The server under test serves pages and nothing else. On by default in
+      // production, and it would have this run install pg-boss schedules
+      // against the e2e database and sweep it between assertions.
+      RUN_WORKER_IN_WEB: "false",
     },
   },
 });

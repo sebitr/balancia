@@ -2,11 +2,11 @@
  * What the worker actually does: the queues it serves, and on what schedule.
  *
  * Kept apart from `index.ts` because these registrations run in two shapes —
- * as the dedicated `worker` container, and inside the web process when a
- * single-container install sets `RUN_WORKER_IN_WEB` (see
- * `src/instrumentation.ts`). One copy, so the two can never drift: a queue
- * added here is served by both, and a deployment cannot end up quietly
- * missing half the background work.
+ * inside the web process, which is the default and what `RUN_WORKER_IN_WEB`
+ * selects (see `src/instrumentation.ts`), and as the dedicated `worker`
+ * container for a deployment that turned that off. One copy, so the two can
+ * never drift: a queue added here is served by both, and a deployment cannot
+ * end up quietly missing half the background work.
  */
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -64,8 +64,8 @@ const NOTIFICATION_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
  * Floor on the gap between two anonymous usage reports.
  *
  * The schedule is weekly; this is what makes "weekly" true even when the job
- * runs twice — a pg-boss retry, or a single-container install where the web
- * process and a worker container both installed the schedule.
+ * runs twice — a pg-boss retry, or a deployment where the web process and a
+ * worker container both installed the schedule.
  */
 const MIN_REPORT_INTERVAL_MS = 6 * 24 * 60 * 60 * 1000;
 
@@ -173,9 +173,9 @@ export async function startWorker(): Promise<void> {
       const settings = await getEffectiveTelemetry({ fresh: true });
 
       // One report a week, whatever else happens. A retried job, a second
-      // scheduler in a single-container install and an administrator pressing
-      // "send test report" the day before all arrive here, and none of them is
-      // a reason to send a second time.
+      // scheduler in a deployment running both shapes, and an administrator
+      // pressing "send test report" the day before all arrive here, and none
+      // of them is a reason to send a second time.
       const lastSent = settings.stored.lastReportSentAt;
       if (
         lastSent &&

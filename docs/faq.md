@@ -142,8 +142,9 @@ The basic install is three commands after cloning the repository:
 docker compose up -d --build
 ```
 
-Docker Compose starts PostgreSQL, runs migrations, launches the web app and
-launches one background worker. A production instance also needs a domain,
+Docker Compose starts PostgreSQL, runs migrations and launches the web app,
+which runs its own background jobs — two containers in total. A production
+instance also needs a domain,
 HTTPS, backups, updates and monitoring. The
 [self-hosting guide](self-hosting.md) includes Caddy, Traefik and nginx examples.
 
