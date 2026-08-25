@@ -249,6 +249,7 @@ export function ChecklistScreen({
         onOpenChange={(next) => setOpen(next ? "payouts" : null)}
         entries={payouts}
         onChange={setPayouts}
+        persist={!guest}
       />
 
       {group?.settleRequest && (
@@ -258,6 +259,7 @@ export function ChecklistScreen({
           request={group.settleRequest}
           entries={payouts}
           onChange={setPayouts}
+          persist={!guest}
         />
       )}
 

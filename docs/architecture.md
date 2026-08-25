@@ -112,6 +112,10 @@ Redis — background jobs are queued in PostgreSQL through pg-boss.
   `oauth_identities` (an external provider's stable subject, unique per
   provider, so an account can have a password, passkeys, an Apple link, or any
   combination).
+  `payout_methods` (per account, ordered, one row per method) says how somebody
+  wants to be paid back; it is read only for people the reader owes money to,
+  and never included in a group export, because it belongs to the person rather
+  than to the trip.
   `participants` are group-scoped identities, optionally linked to a user
   (`user_id` nullable). Guests are participants without a linked user who
   authenticate through invite tokens → guest sessions.

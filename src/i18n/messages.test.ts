@@ -159,6 +159,11 @@ describe("message catalogues", () => {
       // too — only the two generic methods, `bank` and `cash`, translate.
       "paymentMethods.interac",
       "paymentMethods.payconiq",
+      // Sample values, not sentences: a Swiss phone number and a Swiss IBAN,
+      // shown greyed in the field so somebody can see the shape expected of
+      // them. There is nothing in either to translate.
+      "payouts.fields.phone.placeholder",
+      "payouts.fields.iban.placeholder",
     ]);
 
     const identical = [...english].filter(

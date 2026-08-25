@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
+import { PayoutHint } from "@/components/payouts/payout-hint";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,13 @@ export interface SettledRepaymentView {
   readonly paymentMethod: string | null;
 }
 
+/** One person's preferred way of being paid, for the rows that owe them. */
+export interface PayoutHintView {
+  readonly participantId: string;
+  readonly method: string;
+  readonly detail: string;
+}
+
 interface Shared {
   readonly groupId: string;
   readonly groupName: string;
@@ -74,6 +82,13 @@ interface Shared {
   readonly recipients: readonly RemindRecipient[];
   readonly currencyMode: "separate" | "converted";
   readonly baseCurrency: string | null;
+  /**
+   * Only ever the people this reader owes. The page collects them from the
+   * transfers it has already computed, so there is no way to ask about anybody
+   * else — which is the whole of the rule that payout details are visible to
+   * the people who owe you and to nobody else.
+   */
+  readonly payoutHints: readonly PayoutHintView[];
 }
 
 export function SettleUpScreen({
@@ -255,6 +270,7 @@ function TransferRow({
   ...shared
 }: Shared & { transfer: SettleUpTransferView }) {
   const t = useTranslations("settleUp");
+  const tMethods = useTranslations("paymentMethods");
   const format = useFormatter();
   const involved = transfer.fromIsSelf || transfer.toIsSelf;
 
@@ -293,6 +309,14 @@ function TransferRow({
     to: transfer.toName,
   });
 
+  // Shown only on a row the reader is the one paying: it answers "where do I
+  // send it", which nobody else on this screen is asking.
+  const payout = transfer.fromIsSelf
+    ? shared.payoutHints.find(
+        (hint) => hint.participantId === transfer.toParticipantId,
+      )
+    : undefined;
+
   return (
     <div
       className={cn(
@@ -325,6 +349,17 @@ function TransferRow({
 
         <TransferAmount transfer={transfer} />
       </div>
+
+      {payout && (
+        <PayoutHint
+          name={transfer.toName}
+          method={payout.method}
+          detail={payout.detail}
+          methodLabel={tMethods(
+            payout.method as Parameters<typeof tMethods>[0],
+          )}
+        />
+      )}
 
       <div className="flex items-center gap-2">
         {transfer.fromIsSelf ? (

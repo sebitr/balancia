@@ -176,6 +176,13 @@
       "when": 1787659947873,
       "tag": "0024_onboarding_passkey_signup_and_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787663239958,
+      "tag": "0025_payout_methods",
+      "breakpoints": true
     }
   ]
 }

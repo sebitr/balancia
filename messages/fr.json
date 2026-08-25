@@ -2854,6 +2854,56 @@
     "wise": "Wise",
     "zelle": "Zelle"
   },
+  "payouts": {
+    "title": "Comment on te rembourse",
+    "sub": "Celui qui te doit de l'argent voit le premier en haut. Seules les personnes de tes groupes les voient, et seulement quand elles te doivent quelque chose.",
+    "empty": "Rien pour l'instant — on te le demandera la première fois que quelqu'un te remboursera.",
+    "saved": "Enregistré",
+    "saveFailed": "Impossible d'enregistrer.",
+    "fields": {
+      "phone": {
+        "label": "Numéro de téléphone",
+        "placeholder": "+41 79 123 45 67"
+      },
+      "iban": {
+        "label": "IBAN",
+        "placeholder": "CH93 0076 2011 6238 5295 7"
+      },
+      "email": {
+        "label": "E-mail du compte",
+        "placeholder": "toi@exemple.com"
+      },
+      "handle": {
+        "label": "Ton identifiant sur ce service",
+        "placeholder": "@toi"
+      },
+      "link": {
+        "label": "Lien de paiement",
+        "placeholder": "paypal.me/toi"
+      },
+      "text": {
+        "label": "Le détail dont ils ont besoin",
+        "placeholder": "Ce qu'ils doivent saisir"
+      }
+    },
+    "errors": {
+      "required": "Il faut un détail ici pour que quelqu'un puisse l'utiliser.",
+      "tooLong": "C'est plus long que tout ce que quelqu'un aura à saisir.",
+      "phone": "Écris le numéro avec son indicatif, comme +41 79 123 45 67.",
+      "iban": "Cet IBAN ne tombe pas juste — c'est presque toujours un caractère.",
+      "email": "Cela ne ressemble pas à une adresse e-mail.",
+      "link": "Écris le lien en entier, comme paypal.me/toi.",
+      "unknownMethod": "Ce moyen de paiement n'est pas connu de Balancia.",
+      "invalid": "Ce détail ne peut pas être enregistré tel quel."
+    },
+    "settle": {
+      "title": "Comment {name} veut être remboursé",
+      "none": "{name} n'a pas indiqué comment être remboursé. Demande-lui, ou rembourse-le comme d'habitude.",
+      "guest": "{name} est un invité, il n'y a donc aucun compte pour enregistrer un moyen de remboursement."
+    },
+    "copy": "Copier",
+    "copied": "Copié"
+  },
   "countries": {
     "CH": "Suisse",
     "FR": "France",

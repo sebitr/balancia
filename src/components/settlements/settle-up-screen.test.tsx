@@ -66,6 +66,7 @@ function render(
       recipients={[]}
       currencyMode="separate"
       baseCurrency={null}
+      payoutHints={[]}
       {...props}
     />,
   );
@@ -406,5 +407,45 @@ describe("initials", () => {
 
   it("survives the padding people leave in a display name", () => {
     expect(initialsOf("  lena  koch  ")).toBe("LK");
+  });
+});
+
+/**
+ * Where to send it.
+ *
+ * The hint is shown on the rows the reader is paying and nowhere else — not
+ * because the other rows would be uninteresting, but because a payout detail
+ * is readable by the people who owe its owner money and by nobody else, and
+ * this screen is the only place that decides which rows those are.
+ */
+describe("payout details", () => {
+  const hint = {
+    participantId: "amelie",
+    method: "twint",
+    detail: "+41791234567",
+  };
+
+  it("says how the person being paid wants it", () => {
+    render({ payoutHints: [hint] });
+
+    expect(screen.getByText(/How Amélie wants it/)).toBeInTheDocument();
+    expect(screen.getByText(/\+41791234567/)).toBeInTheDocument();
+  });
+
+  it("offers to copy the detail rather than have it transcribed", () => {
+    render({ payoutHints: [hint] });
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
+  it("shows nothing on a row the reader is not the one paying", () => {
+    // The reader is the one paying here, so a hint for *them* is a hint for
+    // the wrong side of the row.
+    render({ payoutHints: [{ ...hint, participantId: "seb" }] });
+    expect(screen.queryByText(/wants it/)).toBeNull();
+  });
+
+  it("shows nothing when the person has not said", () => {
+    render({ payoutHints: [] });
+    expect(screen.queryByText(/wants it/)).toBeNull();
   });
 });
