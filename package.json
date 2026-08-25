@@ -45,7 +45,8 @@
     "push:keys": "tsx scripts/generate-push-keys.ts",
     "semantic:install": "tsx scripts/fetch-semantic-model.ts",
     "ocr:install": "tsx scripts/fetch-ocr-model.ts",
-    "ocr:eval": "tsx scripts/ocr-eval.ts"
+    "ocr:eval": "tsx scripts/ocr-eval.ts",
+    "pretypecheck": "next typegen"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1115.0",
