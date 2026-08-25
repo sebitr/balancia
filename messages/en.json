@@ -2579,7 +2579,7 @@
       "from": "From",
       "to": "To",
       "outstanding": "Outstanding",
-      "owes": "{from} owes {to}",
+      "paysBack": "{from} pays {to} back",
       "nothingOutstanding": "Everyone is settled up.",
       "paidBy": "Paid by",
       "other": "Other",

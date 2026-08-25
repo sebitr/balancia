@@ -128,15 +128,18 @@ export function AmountCard({
         <button
           type="button"
           onClick={onOpenCurrency}
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-3 text-xs font-semibold transition-colors active:bg-white/14"
+          // The code is read together with the figure beside it, so it is
+          // sized to be read from the same distance — the top of the scale
+          // rather than the bottom of it, and the chip grown to hold it.
+          className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3.5 text-2xl leading-none font-semibold tracking-[-0.02em] transition-colors active:bg-white/14"
         >
           {flag && (
-            <span aria-hidden="true" className="text-base leading-none">
+            <span aria-hidden="true" className="text-xl leading-none">
               {flag}
             </span>
           )}
           {currency}
-          <ChevronDown aria-hidden="true" className="size-[13px]" />
+          <ChevronDown aria-hidden="true" className="size-4.5" />
         </button>
       </div>
 

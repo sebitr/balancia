@@ -196,7 +196,7 @@ export function OutstandingList({
               >
                 <MemberAvatar name={pair.fromName} selected={active} />
                 <span className="flex-1 truncate text-sm">
-                  {t("owes", { from: pair.fromName, to: pair.toName })}
+                  {t("paysBack", { from: pair.fromName, to: pair.toName })}
                 </span>
                 <span
                   className={cn(
