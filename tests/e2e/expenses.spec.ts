@@ -172,13 +172,19 @@ test("records a multi-currency expense in a converted group", async ({
   await page.getByRole("button", { name: "Add expense" }).click();
   await expectEntrySaved(page, "Expense added");
 
-  // Listed in its original currency…
+  /*
+   * Listed at the rate it was recorded with: a converted group's list speaks
+   * the group's currency, so 110 USD at 0.92 reads as €101.20. Asserting the
+   * converted figure rather than the typed one is what actually pins the
+   * arithmetic down — the original amount would pass even if the rate were
+   * dropped on the floor.
+   */
   await page.goto(`/groups/${groupId}/expenses`);
-  await expect(page.getByText("$110.00")).toBeVisible();
+  await expect(page.getByText("€101.20")).toBeVisible();
 
-  // …but balanced in the group's base currency.
+  // And balanced in that same base currency.
   await page.goto(`/groups/${groupId}/settle`);
-  await expect(page.getByText(/EUR/).first()).toBeVisible();
+  await expect(page.getByText(/EUR|€/).first()).toBeVisible();
 });
 
 test("configures a recurring expense", async ({ page }) => {

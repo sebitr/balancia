@@ -127,7 +127,9 @@ test("revoking a link ends the guest's access immediately", async ({
   // link and its two actions; revoking needs no confirmation of its own,
   // because issuing a fresh link is all it takes to undo.
   await ownerPage.getByRole("button", { name: "I’ve copied it" }).click();
-  await ownerPage.getByRole("button", { name: "Revoke" }).click();
+  // Exactly "Revoke": the group's own invite card sits further down the same
+  // page with a "Revoke link" of its own, and this is the person's.
+  await ownerPage.getByRole("button", { name: "Revoke", exact: true }).click();
   await expect(
     ownerPage.getByRole("button", { name: "Create invite link" }),
   ).toBeVisible();
