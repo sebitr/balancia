@@ -30,6 +30,18 @@ export const verificationPurposeEnum = pgEnum("verification_purpose", [
   "email_verification",
   "password_reset",
   "email_change",
+  /**
+   * The two short numeric codes, kept apart from the long link tokens above
+   * on purpose.
+   *
+   * A six-digit code has a millionth of the entropy of a link token, so it is
+   * only ever safe to check against one named account. Giving each its own
+   * purpose means no path that looks a token up by hash alone can ever be
+   * handed one — see `codeHash` in `modules/auth/codes.ts`, which peppers the
+   * digits with the account id for the same reason.
+   */
+  "email_verification_code",
+  "sign_in_code",
 ]);
 
 export const oauthProviderEnum = pgEnum("oauth_provider", ["apple"]);
@@ -284,8 +296,27 @@ export const webauthnChallenges = pgTable(
     /** Null for a usernameless authentication ceremony. */
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     challenge: text("challenge").notNull(),
-    /** "registration" | "authentication". */
+    /** "registration" | "authentication" | "signup". */
     kind: text("kind").notNull(),
+    /**
+     * The account a "signup" ceremony will create, held here until it does.
+     *
+     * Creating the user up front and attaching the passkey afterwards would be
+     * the shorter path, and it is the wrong one: an abandoned ceremony would
+     * leave a row owning an email address with no password and no passkey —
+     * unreachable by its owner and unusable by anyone else. So the identity
+     * waits on the challenge, which already expires in five minutes and is
+     * already single-use, and the user row is written only once an
+     * authenticator has answered.
+     */
+    signupEmail: text("signup_email"),
+    signupName: text("signup_name"),
+    /**
+     * base64url handle minted for the signup ceremony and echoed back by the
+     * authenticator. Random rather than the account id, because there is no
+     * account id yet.
+     */
+    userHandle: text("user_handle"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -295,6 +326,19 @@ export const webauthnChallenges = pgTable(
   (table) => [
     uniqueIndex("webauthn_challenges_challenge_unique").on(table.challenge),
     index("webauthn_challenges_expires_idx").on(table.expiresAt),
+    // The three signup columns are one fact and travel together, and no other
+    // kind of ceremony carries them. A row that half-remembers who it was
+    // going to create cannot exist.
+    check(
+      "webauthn_challenges_signup_complete",
+      sql`(${table.kind} = 'signup') = (${table.signupEmail} IS NOT NULL AND ${table.signupName} IS NOT NULL AND ${table.userHandle} IS NOT NULL)`,
+    ),
+    // Nobody is signed in during a signup, so a signup challenge that names a
+    // user is a bug rather than a state.
+    check(
+      "webauthn_challenges_signup_anonymous",
+      sql`${table.kind} <> 'signup' OR ${table.userId} IS NULL`,
+    ),
   ],
 );
 

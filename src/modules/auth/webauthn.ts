@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import {
   generateAuthenticationOptions,
@@ -46,17 +47,37 @@ function relyingParty(): { rpID: string; origin: string; rpName: string } {
   };
 }
 
+/**
+ * The three ceremonies, which differ in who they are for.
+ *
+ * `registration` and `authentication` both belong to an account that already
+ * exists. `signup` is the one that does not: it carries the identity an
+ * account *would* be created with, and creates nothing until an authenticator
+ * has answered.
+ */
+type ChallengeKind = "registration" | "authentication" | "signup";
+
+/** The identity a signup ceremony is holding on behalf of a future account. */
+interface PendingSignup {
+  readonly email: string;
+  readonly name: string;
+  readonly userHandle: string;
+}
+
 async function storeChallenge(
   challenge: string,
-  kind: "registration" | "authentication",
+  kind: ChallengeKind,
   userId: string | null,
-  options: { db?: Database } = {},
+  options: { db?: Database; signup?: PendingSignup } = {},
 ): Promise<void> {
   const db = options.db ?? getDb();
   await db.insert(webauthnChallenges).values({
     userId,
     challenge,
     kind,
+    signupEmail: options.signup?.email ?? null,
+    signupName: options.signup?.name ?? null,
+    userHandle: options.signup?.userHandle ?? null,
     expiresAt: new Date(Date.now() + CHALLENGE_TTL_MS),
   });
 }
@@ -69,9 +90,12 @@ async function storeChallenge(
  */
 async function consumeChallenge(
   challenge: string,
-  kind: "registration" | "authentication",
+  kind: ChallengeKind,
   options: { db?: Database } = {},
-): Promise<{ userId: string | null } | null> {
+): Promise<{
+  userId: string | null;
+  signup: PendingSignup | null;
+} | null> {
   const db = options.db ?? getDb();
   const [row] = await db
     .update(webauthnChallenges)
@@ -84,9 +108,27 @@ async function consumeChallenge(
         gt(webauthnChallenges.expiresAt, new Date()),
       ),
     )
-    .returning({ userId: webauthnChallenges.userId });
+    .returning({
+      userId: webauthnChallenges.userId,
+      signupEmail: webauthnChallenges.signupEmail,
+      signupName: webauthnChallenges.signupName,
+      userHandle: webauthnChallenges.userHandle,
+    });
 
-  return row ? { userId: row.userId } : null;
+  if (!row) return null;
+  return {
+    userId: row.userId,
+    // The column check keeps these three either all present or all absent, so
+    // one test stands for the set.
+    signup:
+      row.signupEmail && row.signupName && row.userHandle
+        ? {
+            email: row.signupEmail,
+            name: row.signupName,
+            userHandle: row.userHandle,
+          }
+        : null,
+  };
 }
 
 /** Options for registering a new passkey on the signed-in user's account. */
@@ -149,7 +191,6 @@ export async function finishPasskeyRegistration(
   options: { db?: Database } = {},
 ): Promise<{ id: string }> {
   const db = options.db ?? getDb();
-  const { rpID, origin } = relyingParty();
 
   // The challenge inside the client data is what we must match, and it must be
   // one we issued for this user.
@@ -163,11 +204,37 @@ export async function finishPasskeyRegistration(
     throw new AuthError("That passkey request expired. Try again.");
   }
 
+  const verified = await verifyRegistration(response, clientChallenge);
+  return insertPasskey(userId, verified, name, { db });
+}
+
+/** What an authenticator's answer amounts to, once it has been checked. */
+export interface VerifiedRegistration {
+  readonly credentialId: string;
+  readonly publicKey: string;
+  readonly counter: number;
+  readonly deviceType: string;
+  readonly backedUp: boolean;
+  readonly transports: string | null;
+}
+
+/**
+ * Checks an attestation against a challenge, and reduces it to the columns.
+ *
+ * Split out from the storing so that a signup — which has no account to store
+ * against until this has succeeded — can verify first and create afterwards.
+ */
+async function verifyRegistration(
+  response: RegistrationResponseJSON,
+  expectedChallenge: string,
+): Promise<VerifiedRegistration> {
+  const { rpID, origin } = relyingParty();
+
   let verification;
   try {
     verification = await verifyRegistrationResponse({
       response,
-      expectedChallenge: clientChallenge,
+      expectedChallenge,
       expectedOrigin: origin,
       expectedRPID: rpID,
       requireUserVerification: false,
@@ -187,17 +254,41 @@ export async function finishPasskeyRegistration(
   const { credential, credentialDeviceType, credentialBackedUp } =
     verification.registrationInfo;
 
+  return {
+    credentialId: credential.id,
+    publicKey: Buffer.from(credential.publicKey).toString("base64url"),
+    counter: credential.counter,
+    deviceType: credentialDeviceType,
+    backedUp: credentialBackedUp,
+    transports: response.response.transports?.join(",") ?? null,
+  };
+}
+
+/**
+ * Stores a verified credential against an account.
+ *
+ * Takes a `db` so a signup can write the account and its first passkey in one
+ * transaction: an account with no credential at all is not a state anybody
+ * should be able to land in, least of all by closing a tab.
+ */
+export async function insertPasskey(
+  userId: string,
+  verified: VerifiedRegistration,
+  name: string | undefined,
+  options: { db?: Database } = {},
+): Promise<{ id: string }> {
+  const db = options.db ?? getDb();
   try {
     const [created] = await db
       .insert(passkeys)
       .values({
         userId,
-        credentialId: credential.id,
-        publicKey: Buffer.from(credential.publicKey).toString("base64url"),
-        counter: credential.counter,
-        deviceType: credentialDeviceType,
-        backedUp: credentialBackedUp,
-        transports: response.response.transports?.join(",") ?? null,
+        credentialId: verified.credentialId,
+        publicKey: verified.publicKey,
+        counter: verified.counter,
+        deviceType: verified.deviceType,
+        backedUp: verified.backedUp,
+        transports: verified.transports,
         name: name?.trim() ? name.trim().slice(0, 80) : null,
       })
       .returning({ id: passkeys.id });
@@ -214,6 +305,77 @@ export async function finishPasskeyRegistration(
     }
     throw error;
   }
+}
+
+/**
+ * Options for the passkey that will *become* an account.
+ *
+ * No account exists yet, so the WebAuthn user handle is a random value rather
+ * than a row id, and there is nothing to exclude: an authenticator that
+ * already holds a Balancia passkey for this address will say so at the
+ * database's unique index, after it has proved it holds it.
+ */
+export async function startSignupPasskeyRegistration(
+  identity: { email: string; name: string },
+  options: { db?: Database } = {},
+): Promise<PublicKeyCredentialCreationOptionsJSON> {
+  const db = options.db ?? getDb();
+  const { rpID, rpName } = relyingParty();
+  const userHandle = randomBytes(32).toString("base64url");
+
+  const registrationOptions = await generateRegistrationOptions({
+    rpName,
+    rpID,
+    userName: identity.email,
+    userDisplayName: identity.name,
+    userID: new TextEncoder().encode(userHandle),
+    attestationType: "none",
+    authenticatorSelection: {
+      // Stronger than the signed-in ceremony asks for: this credential is the
+      // only way back into the account being created, so it has to be one the
+      // authenticator can find on its own without an email typed first.
+      residentKey: "required",
+      userVerification: "preferred",
+    },
+  });
+
+  await storeChallenge(registrationOptions.challenge, "signup", null, {
+    db,
+    signup: {
+      email: identity.email,
+      name: identity.name,
+      userHandle,
+    },
+  });
+  return registrationOptions;
+}
+
+/**
+ * Verifies a signup ceremony and hands back the identity it was holding.
+ *
+ * Creates nothing: the caller owns the transaction that turns this into an
+ * account, because it also owns the group the account may be joining.
+ */
+export async function verifySignupPasskeyRegistration(
+  response: RegistrationResponseJSON,
+  options: { db?: Database } = {},
+): Promise<{
+  identity: { email: string; name: string };
+  credential: VerifiedRegistration;
+}> {
+  const db = options.db ?? getDb();
+  const clientChallenge = decodeClientDataChallenge(
+    response.response.clientDataJSON,
+  );
+  const consumed = await consumeChallenge(clientChallenge, "signup", { db });
+  if (!consumed?.signup) {
+    throw new AuthError("That passkey request expired. Try again.");
+  }
+
+  return {
+    identity: { email: consumed.signup.email, name: consumed.signup.name },
+    credential: await verifyRegistration(response, clientChallenge),
+  };
 }
 
 /**

@@ -2061,6 +2061,24 @@
       "warningLink": "Réinitialiser ton mot de passe",
       "closing": "Aucune action n'est nécessaire si tu es à l'origine de ce changement.",
       "text": "Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par {email}.\n\nRien n'a encore changé. La nouvelle adresse doit d'abord être confirmée, et celle-ci cessera de fonctionner dès que ce sera fait.\n\nSi ce n'était pas toi, réinitialise ton mot de passe tout de suite — la personne à l'origine de cette demande a accès à ton compte :\n{url}\n\nAucune action n'est nécessaire si tu es à l'origine de ce changement."
+    },
+    "verifyCode": {
+      "subject": "{code} est ton code Balancia",
+      "title": "Ton code Balancia",
+      "preheader": "Saisis ce code dans Balancia pour confirmer ton adresse.",
+      "lead": "Saisis ce code dans Balancia pour confirmer ton adresse.",
+      "sub": "Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert.",
+      "closing": "Le code expire dans 10 minutes. Si tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail.",
+      "text": "Ton code Balancia est {code}.\n\nSaisis-le dans Balancia pour confirmer ton adresse. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dans 10 minutes.\n\nSi tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail."
+    },
+    "signInCode": {
+      "subject": "{code} est ton code de connexion Balancia",
+      "title": "Ton code de connexion Balancia",
+      "preheader": "Saisis ce code dans Balancia pour te connecter.",
+      "lead": "Saisis ce code dans Balancia pour te connecter.",
+      "sub": "Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert.",
+      "closing": "Le code expire dans 10 minutes. Si tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail.",
+      "text": "Ton code de connexion Balancia est {code}.\n\nSaisis-le dans Balancia pour te connecter. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dans 10 minutes.\n\nSi tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail."
     }
   },
   "serverErrors": {
@@ -2074,6 +2092,8 @@
     "noPassword": "Ce compte n'a pas de mot de passe défini.",
     "wrongPassword": "Ton mot de passe actuel est incorrect.",
     "invalidCredentials": "Cette combinaison d'adresse e-mail et de mot de passe n'a pas fonctionné.",
+    "invalidCode": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
+    "codeSendFailed": "Le code n'a pas pu être envoyé. Réessaie dans un instant.",
     "resetLinkInvalid": "Ce lien de réinitialisation n'est plus valide. Demandes-en un nouveau.",
     "confirmLinkInvalid": "Ce lien de confirmation n'est plus valide. Connecte-toi pour en demander un autre.",
     "signInRequired": "Connecte-toi pour modifier ton compte.",

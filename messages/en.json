@@ -2061,6 +2061,24 @@
       "warningLink": "Reset your password",
       "closing": "No action needed if you asked for this change.",
       "text": "Someone asked to change your Balancia account email to {email}.\n\nNothing has changed yet. The new address has to be confirmed first, and this one stops working as soon as it is.\n\nIf it wasn't you, reset your password now — whoever asked for this has access to your account:\n{url}\n\nNo action needed if you asked for this change."
+    },
+    "verifyCode": {
+      "subject": "{code} is your Balancia code",
+      "title": "Your Balancia code",
+      "preheader": "Type this code back into Balancia to confirm your address.",
+      "lead": "Type this code back into Balancia to confirm your address.",
+      "sub": "It works once, on the screen you left open.",
+      "closing": "The code expires in 10 minutes. If you did not ask for it, nothing has been created in your name — you can ignore this email.",
+      "text": "Your Balancia code is {code}.\n\nType it back into Balancia to confirm your address. It works once, on the screen you left open, and expires in 10 minutes.\n\nIf you did not ask for it, nothing has been created in your name — you can ignore this email."
+    },
+    "signInCode": {
+      "subject": "{code} is your Balancia sign-in code",
+      "title": "Your Balancia sign-in code",
+      "preheader": "Type this code back into Balancia to sign in.",
+      "lead": "Type this code back into Balancia to sign in.",
+      "sub": "It works once, on the screen you left open.",
+      "closing": "The code expires in 10 minutes. If you did not ask to sign in, ignore this email — nobody can use the code without your inbox.",
+      "text": "Your Balancia sign-in code is {code}.\n\nType it back into Balancia to sign in. It works once, on the screen you left open, and expires in 10 minutes.\n\nIf you did not ask to sign in, ignore this email — nobody can use the code without your inbox."
     }
   },
   "serverErrors": {
@@ -2074,6 +2092,8 @@
     "noPassword": "This account does not have a password set.",
     "wrongPassword": "Your current password is not correct.",
     "invalidCredentials": "That email and password combination did not work.",
+    "invalidCode": "That code is wrong or has expired. Ask for a new one.",
+    "codeSendFailed": "The code could not be sent. Try again in a moment.",
     "resetLinkInvalid": "That reset link is no longer valid. Ask for a new one.",
     "confirmLinkInvalid": "That confirmation link is no longer valid. Sign in to request another.",
     "signInRequired": "Sign in to change your account.",
