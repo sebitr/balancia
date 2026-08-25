@@ -21,6 +21,9 @@ import { renderEmailChangeNoticeEmail } from "./templates";
 
 const FIXTURES = "tests/fixtures/emails";
 
+/** The two that end in six digits rather than a link. */
+const CODE_EMAILS = ["verify-code-email", "sign-in-code-email"];
+
 function fixture(locale: string, name: string, extension: string): string {
   return readFileSync(`${FIXTURES}/${locale}/${name}.${extension}`, "utf8");
 }
@@ -99,6 +102,7 @@ describe.each(LOCALES)("emails in %s", (locale) => {
 
   it("puts every link in the plain-text body too", () => {
     for (const [name, email] of Object.entries(rendered)) {
+      if (CODE_EMAILS.includes(name)) continue;
       const hrefs = [...email.html.matchAll(/href="([^"]+)"/g)].map(
         (match) => match[1],
       );
@@ -107,6 +111,44 @@ describe.each(LOCALES)("emails in %s", (locale) => {
         expect(email.text, `${name} → ${href}`).toContain(href);
       }
     }
+  });
+
+  it.each(CODE_EMAILS)("%s links nowhere at all", (name) => {
+    // An email that asks for a code and also offers something to click is the
+    // habit a phishing mail relies on, so this is a rule and not an accident.
+    expect(rendered[name].html).not.toMatch(/href=/);
+    expect(rendered[name].text).not.toMatch(/https?:/);
+  });
+
+  it.each(CODE_EMAILS)("%s offers the code as one selection", (name) => {
+    const html = rendered[name].html;
+    // No client will run a copy button, so `user-select:all` is the whole
+    // affordance: one tap or click takes the six figures and nothing else.
+    const code = /<p class="display"[^>]*>(\d+)<\/p>/.exec(html);
+    expect(code?.[1], "the code is one text node, not six").toBe(SAMPLE.code);
+    expect(code?.[0]).toContain("user-select:all");
+    expect(code?.[0]).toContain("-webkit-user-select:all");
+  });
+
+  it.each(CODE_EMAILS)("%s keeps the word next to the figures", (name) => {
+    const { html, text, subject } = rendered[name];
+    // iOS and Android offer a one-time code to the keyboard when they find one
+    // beside a word like "code". The subject leads with it, the panel label
+    // sits immediately above the digits, and the plain-text part names it in
+    // the first sentence — three chances at the same heuristic.
+    const code = new RegExp(`\\b${SAMPLE.code}\\b`);
+    expect(subject).toMatch(code);
+    expect(text.split("\n")[0]).toMatch(code);
+    const panel = /padding:18px 20px">\s*<p[^>]*>([^<]*)<\/p>/.exec(html);
+    expect(panel?.[1] ?? "").toMatch(/code/i);
+
+    // …and nothing else in the message may look like a candidate code. A
+    // closing line that read "expires in 10 minutes" put a second number
+    // beside the same keyword, which is how the wrong one gets offered.
+    const others = [...text.matchAll(/\d+/g)]
+      .map((match) => match[0])
+      .filter((digits) => digits !== SAMPLE.code);
+    expect(others, `competing numbers in ${name}`).toEqual([]);
   });
 
   it("carries the token exactly once as a button and once as text", () => {

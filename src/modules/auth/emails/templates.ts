@@ -3,6 +3,7 @@ import { fonts, palette } from "./tokens";
 import {
   button,
   cell,
+  codePanel,
   divider,
   emailDocument,
   escapeHtml,
@@ -143,6 +144,10 @@ function linkEmail(options: {
  * the one face in the set with unambiguous figures, and a 1 that reads as a 7
  * costs somebody their account.
  *
+ * The digits sit in `codePanel`, which is as close to a copy button as a
+ * message can get without JavaScript — see that function for why, and for why
+ * its label carries the word "code".
+ *
  * Nothing here links anywhere. That is deliberate: an email that asks for a
  * code and also offers a button teaches the reader that both are normal, which
  * is precisely the habit a phishing mail relies on.
@@ -154,6 +159,8 @@ function codeEmail(options: {
   title: string;
   preheader: string;
   lead: string;
+  /** The panel's own label, which is shared between the two code emails. */
+  codeLabel: string;
   sub: string;
   closing: string;
 }): string {
@@ -161,14 +168,18 @@ function codeEmail(options: {
     cell("36px 32px 0", paragraph(escapeHtml(options.lead), type.lead)),
     cell(
       "20px 32px 0",
-      paragraph(escapeHtml(options.code), {
-        ...type.display,
-        weight: "bold",
-        // Wide enough that each figure is read on its own, which is how a code
-        // gets copied correctly onto a phone held in the other hand.
-        letterSpacing: "6px",
-        className: "display",
-      }),
+      codePanel(
+        options.codeLabel,
+        paragraph(escapeHtml(options.code), {
+          ...type.display,
+          weight: "bold",
+          // Wide enough that each figure is read on its own, which is how a
+          // code gets copied correctly onto a phone held in the other hand.
+          letterSpacing: "6px",
+          className: "display",
+          selectable: true,
+        }),
+      ),
     ),
     cell("16px 32px 0", paragraph(escapeHtml(options.sub), type.secondary)),
     cell("24px 32px 0", divider()),
@@ -183,7 +194,7 @@ function codeEmail(options: {
     title: options.title,
     preheader: options.preheader,
     linkColor: palette.link,
-    responsive: ["display"],
+    responsive: ["panel", "display"],
     rows,
   });
 }
@@ -206,6 +217,7 @@ export function renderVerifyCodeEmail(input: {
       title: t("verifyCode.title"),
       preheader: t("verifyCode.preheader"),
       lead: t("verifyCode.lead"),
+      codeLabel: t("codeLabel"),
       sub: t("verifyCode.sub"),
       closing: t("verifyCode.closing"),
     }),
@@ -230,6 +242,7 @@ export function renderSignInCodeEmail(input: {
       title: t("signInCode.title"),
       preheader: t("signInCode.preheader"),
       lead: t("signInCode.lead"),
+      codeLabel: t("codeLabel"),
       sub: t("signInCode.sub"),
       closing: t("signInCode.closing"),
     }),

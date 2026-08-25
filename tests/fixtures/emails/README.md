@@ -31,15 +31,22 @@ structure stays diffable against those files.
 
 ## What is here
 
-Two languages, four emails, two parts each:
+Two languages, six emails, two parts each:
 
 ```
 en/  fr/
+  verify-code-email.html     .txt
+  sign-in-code-email.html    .txt
   verify-email.html          .txt
   reset-password-email.html  .txt
   confirm-new-email.html     .txt
   email-change-notice.html   .txt
 ```
+
+The two code emails have no handoff behind them, so there is nothing to diff
+them against — they are rendered because an email nothing renders is an email
+whose markup changes unreviewed. They are also the two that link nowhere, which
+the tests assert rather than merely observe.
 
 The `.txt` files carry the subject line on the first line, then a blank line,
 then the plain-text body — so a copy change shows up in the diff whichever part

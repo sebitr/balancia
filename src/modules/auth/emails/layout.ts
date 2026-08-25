@@ -95,6 +95,8 @@ export function paragraph(
     letterSpacing?: string;
     className?: string;
     marginBottom?: number;
+    /** See `codePanel`. Only the code uses this. */
+    selectable?: boolean;
   },
 ): string {
   const style = [
@@ -108,6 +110,16 @@ export function paragraph(
       ? [`letter-spacing:${options.letterSpacing}`]
       : []),
     `color:${options.color}`,
+    // Vendor-prefixed forms first: WebKit and Gecko shipped `all` behind a
+    // prefix and several mail clients are still on those engines.
+    ...(options.selectable
+      ? [
+          `-webkit-user-select:all`,
+          `-moz-user-select:all`,
+          `-ms-user-select:all`,
+          `user-select:all`,
+        ]
+      : []),
   ].join(";");
   const classAttribute = options.className
     ? ` class="${options.className}"`
@@ -154,6 +166,38 @@ export function linkFallback(href: string, label: string): string {
     `              <td width="${PANEL_WIDTH}" style="width:${PANEL_WIDTH}px;padding:14px 16px">`,
     `                <p style="margin:0 0 6px;font-family:${fonts.sans};font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:${palette.mutedInk}">${escapeHtml(label)}</p>`,
     `                <a href="${safeHref}" style="${urlStyle}">${safeHref}</a>`,
+    `              </td>`,
+    `            </tr></table>`,
+  ].join("\n");
+}
+
+/**
+ * The code, in a panel a single tap or click selects whole.
+ *
+ * There is no copy button here and there cannot be one: a mail client runs no
+ * JavaScript, so nothing in a message can reach the clipboard. `user-select:all`
+ * is the closest an email gets — one tap on a phone, one click on a desktop,
+ * and the whole code is the selection, so the reader presses copy instead of
+ * dragging a caret across six characters they are trying not to misread.
+ *
+ * Where a client strips the property the panel is still just the code on a
+ * tinted ground, selected by hand as before; nothing depends on it landing.
+ *
+ * The label is inside the panel rather than above it for a second reason. iOS
+ * and Android offer a one-time code to the keyboard when they find one near a
+ * word like "code", and the sentence that carried that word used to sit a
+ * paragraph away. Now it sits immediately before the digits.
+ *
+ * Letter-spacing is a rendering, not a character: what the reader copies is the
+ * six figures and nothing between them.
+ */
+export function codePanel(label: string, codeParagraph: string): string {
+  return [
+    `            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${PANEL_WIDTH}" class="panel" style="width:${PANEL_WIDTH}px;background:${palette.wrapper};border-radius:10px;border-collapse:separate"><tr>`,
+    `              <td width="${PANEL_WIDTH}" style="width:${PANEL_WIDTH}px;padding:18px 20px">`,
+    `                <p style="margin:0 0 6px;font-family:${fonts.sans};font-size:12px;line-height:16px;mso-line-height-rule:exactly;color:${palette.mutedInk}">${escapeHtml(label)}</p>`,
+    // `paragraph` indents for a card cell; inside the panel it sits deeper.
+    `                ${codeParagraph.trimStart()}`,
     `              </td>`,
     `            </tr></table>`,
   ].join("\n");
