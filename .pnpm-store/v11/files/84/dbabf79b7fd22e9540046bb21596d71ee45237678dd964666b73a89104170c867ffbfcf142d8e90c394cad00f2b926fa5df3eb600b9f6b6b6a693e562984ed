@@ -1,0 +1,1 @@
+{"version":3,"file":"index.schema.mjs","names":[],"sources":["../src/schema/assert-type.ts"],"sourcesContent":["export type Equals<T, S> = [T] extends [S] ? ([S] extends [T] ? true : false) : false;\n\nexport type Assignable<T, U> = [U] extends [T] ? true : false;\n\nexport function assertType<_T extends true>() {\n  // Do nothing\n}\n"],"mappings":";;;;;AAIA,SAAgB,aAA8B,CAE9C"}

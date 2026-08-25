@@ -1,0 +1,53 @@
+{
+  "name": "@serwist/utils",
+  "version": "9.5.12",
+  "type": "module",
+  "description": "This module contains utilities used by Serwist packages.",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "keywords": [
+    "serwist",
+    "serwistjs",
+    "service worker",
+    "sw"
+  ],
+  "author": "Serwist <ducanh2912.rusty@gmail.com> (https://serwist.pages.dev/)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serwist/serwist"
+  },
+  "bugs": "https://github.com/serwist/serwist/issues",
+  "homepage": "https://serwist.pages.dev",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@types/common-tags": "1.8.4",
+    "browserslist": "4.28.6",
+    "tsdown": "0.22.12",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "browserslist": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "browserslist": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && NODE_ENV=production tsdown",
+    "dev": "tsdown --watch",
+    "lint": "biome lint ./src",
+    "typecheck": "tsc"
+  }
+}
