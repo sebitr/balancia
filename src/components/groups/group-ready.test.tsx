@@ -66,7 +66,7 @@ describe("GroupReady", () => {
     renderReady();
 
     expect(
-      screen.getByRole("heading", { name: "Lisbon, March is ready" }),
+      screen.getByRole("heading", { name: "Your group is ready!" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("balancia.test/join/g/SECRET-TOKEN"),
@@ -78,7 +78,7 @@ describe("GroupReady", () => {
 
     expect(
       screen.getByText(
-        "Send everyone the same link. Seb, Ana and 2 others can claim their own name when they open it.",
+        "Share the same link with everyone. Seb, Ana and 2 others can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe("GroupReady", () => {
 
     expect(
       screen.getByText(
-        "Send everyone the same link. Seb and Ana can claim their own name when they open it.",
+        "Share the same link with everyone. Seb and Ana can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
   });
@@ -97,7 +97,7 @@ describe("GroupReady", () => {
     renderReady({ people: ["Seb"] });
 
     expect(
-      screen.getByText(/Whoever opens it picks their own name/),
+      screen.getByText(/They can choose their existing name in the group/),
     ).toBeInTheDocument();
   });
 
@@ -115,7 +115,9 @@ describe("GroupReady", () => {
 
     expect(screen.getByText("In 7 days")).toBeInTheDocument();
     expect(
-      screen.getByText(/can ask to join until then\. You can extend or revoke/),
+      screen.getByText(
+        /This link is valid for 7 days\. You can change its duration/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -124,21 +126,21 @@ describe("GroupReady", () => {
 
     expect(screen.getByText("Never")).toBeInTheDocument();
     expect(
-      screen.getByText(/until you revoke it in group settings/),
+      screen.getByText(/stays valid until you revoke it in the group settings/),
     ).toBeInTheDocument();
   });
 
   it("explains what happens to the names that were typed in", () => {
     renderReady();
 
-    expect(screen.getByText("No duplicate people")).toBeInTheDocument();
+    expect(screen.getByText("No duplicates")).toBeInTheDocument();
   });
 
   it("lets the organiser leave without sharing anything", async () => {
     const user = userEvent.setup();
     const { onSkip } = renderReady();
 
-    await user.click(screen.getByRole("button", { name: "Skip for now" }));
+    await user.click(screen.getByRole("button", { name: "Later" }));
 
     expect(onSkip).toHaveBeenCalledOnce();
   });

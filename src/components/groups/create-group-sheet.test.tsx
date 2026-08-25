@@ -205,7 +205,7 @@ describe("CreateGroupSheet", () => {
     // The group exists, but the organiser has not been sent anywhere yet:
     // the sheet is now the screen that gives them the link.
     expect(
-      await screen.findByRole("heading", { name: "Lisbon is ready" }),
+      await screen.findByRole("heading", { name: "Your group is ready!" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("balancia.test/join/g/SECRET-TOKEN"),
@@ -217,9 +217,7 @@ describe("CreateGroupSheet", () => {
     const { user, onOpenChange } = renderSheet();
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
     await user.click(screen.getByRole("button", { name: "Create group" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Later" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(push).toHaveBeenCalledWith("/groups/g1");
@@ -234,7 +232,7 @@ describe("CreateGroupSheet", () => {
 
     expect(
       await screen.findByText(
-        "Send everyone the same link. Seb and Ana can claim their own name when they open it.",
+        "Share the same link with everyone. Seb and Ana can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
   });

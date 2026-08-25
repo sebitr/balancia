@@ -1643,10 +1643,10 @@
     "shareTitle": "{group} sur Balancia",
     "shareText": "Rejoignez {group} sur Balancia pour partager nos dépenses.",
     "skip": "Plus tard",
-    "linkExpires": "Le lien expire",
+    "linkExpires": "Expiration du lien",
     "expires": "Expire",
-    "expiryNote": "Toute personne ayant le lien peut demander à rejoindre le groupe jusque-là. Vous pouvez le prolonger ou le révoquer dans les paramètres du groupe.",
-    "expiryNoteNever": "Toute personne ayant le lien peut demander à rejoindre le groupe tant que vous ne l'avez pas révoqué dans les paramètres du groupe.",
+    "expiryNote": "Ce lien reste valable {count, plural, one {1 jour} other {# jours}}. Tu peux modifier sa durée ou le révoquer dans les paramètres.",
+    "expiryNoteNever": "Ce lien reste valable tant que tu ne l'as pas révoqué dans les paramètres.",
     "expiresNote": "Toute personne ayant le lien peut demander à rejoindre le groupe jusque-là.",
     "expiresNoteNever": "Toute personne ayant le lien peut demander à rejoindre le groupe tant que vous ne l'avez pas révoqué.",
     "expiryChoice": {
@@ -1659,8 +1659,8 @@
     "inDays": "{count, plural, one {Dans 1 jour} other {Dans # jours}}",
     "expiredValue": "Expiré",
     "expiryFailed": "La date d'expiration n'a pas pu être modifiée.",
-    "noDuplicates": "Personne en double",
-    "noDuplicatesBody": "Les noms que vous avez saisis restent non rattachés jusqu'à ce que quelqu'un les revendique : les dépenses ne se retrouvent jamais coupées en deux.",
+    "noDuplicates": "Pas de doublons",
+    "noDuplicatesBody": "Les personnes déjà ajoutées peuvent simplement choisir leur nom. Leurs dépenses et leur historique restent associés au même membre.",
     "statusActive": "Actif",
     "statusExpired": "Expiré",
     "statusRevoked": "Révoqué",
@@ -1677,9 +1677,9 @@
     "revoked": "Le lien d'invitation a été révoqué.",
     "revokeFailed": "Le lien n'a pas pu être révoqué.",
     "ready": {
-      "title": "{group}, c'est prêt",
-      "lede": "Envoyez le même lien à tout le monde. {people} pourront revendiquer leur propre nom en l'ouvrant.",
-      "ledeAlone": "Envoyez le même lien à tout le monde. Chaque personne qui l'ouvre choisit son propre nom, ou s'ajoute comme nouveau membre.",
+      "title": "Ton groupe est prêt !",
+      "lede": "Partage le même lien avec tout le monde. {people} pourront choisir leur nom dans le groupe en l'ouvrant.",
+      "ledeAlone": "Partage le même lien avec tout le monde. Chacun peut choisir son nom dans le groupe ou rejoindre comme nouveau membre.",
       "peopleTwo": "{first} et {second}",
       "peopleMany": "{first}, {second} et {count, plural, one {1 autre} other {# autres}}"
     }
