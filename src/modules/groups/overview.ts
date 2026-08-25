@@ -148,6 +148,25 @@ export interface GroupOverview {
 }
 
 /**
+ * Whether this group gets the collapsed-per-currency overview.
+ *
+ * That screen exists to stop a group's balances growing by a screenful per
+ * currency, and a group with one currency has no such problem — it would trade
+ * a hero amount readable across the room for a single tile and a row that
+ * opens onto what was already on screen. So the shape follows the money.
+ *
+ * Counted, deliberately, rather than read off `currencyMode`. A group kept in
+ * separate currencies that has so far only spent in one is a one-currency
+ * group today, whatever it is configured to become — and it goes back to the
+ * collapsed screen by itself the moment a second currency arrives.
+ */
+export function isMultiCurrency(
+  currencies: readonly CurrencyOverview[],
+): boolean {
+  return currencies.length > 1;
+}
+
+/**
  * Which currency's row the overview opens on.
  *
  * The group's own base currency, falling back to the one it has spent most in

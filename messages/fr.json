@@ -564,7 +564,19 @@
     "everyoneSquare": "Tout le monde est à jour en {currency}. {count, plural, one {# dépense} other {# dépenses}}, {amount} au total.",
     "viewSuggestedSettlement": "Voir le règlement suggéré",
     "settlementPlanMeta": "{payments, plural, one {# remboursement solde} other {# remboursements soldent}} les {currencies, plural, one {# devise} other {# devises}}",
-    "shareBarCaption": "La barre montre ta part de chaque total."
+    "shareBarCaption": "La barre montre ta part de chaque total.",
+    "everyoneBalances": "Soldes",
+    "viewAllPeople": "Voir les {count} personnes",
+    "balanceReceives": "doit recevoir",
+    "balanceOwes": "doit de l'argent",
+    "balanceSettled": "est à jour",
+    "suggestedSettlements": "Règlements suggérés",
+    "viewAll": "Tout voir",
+    "settlementDetailTitle": "{from} paie {to}",
+    "settlementDetailDescription": "Enregistre le paiement quand l'argent change de mains, ou envoie une relance.",
+    "recordPayment": "Enregistrer le paiement",
+    "sendReminder": "Envoyer une relance",
+    "archiveGroup": "Archiver le groupe"
   },
   "expensesList": {
     "eyebrow": "Transactions",
