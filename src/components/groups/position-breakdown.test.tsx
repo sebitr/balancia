@@ -131,10 +131,9 @@ describe("comparing a total against a share", () => {
 });
 
 describe("a section header", () => {
-  it("labels its subtotal as the effect on the balance, and signs it", async () => {
+  it("signs its subtotal, so the sign reads as the effect on the balance", async () => {
     await show();
 
-    expect(screen.getAllByText("Impact on your balance")).toHaveLength(3);
     expect(screen.getByText(impact(-14667n))).toBeInTheDocument();
     expect(screen.getByText(impact(-200000n))).toBeInTheDocument();
     expect(screen.getByText(impact(99667n))).toBeInTheDocument();
@@ -263,39 +262,30 @@ describe("the sentence under a pair of revenue totals", () => {
 });
 
 describe("the final balance", () => {
-  it("says who owes whom when the reader is behind", async () => {
+  it("signs the figure negative when the reader is behind", async () => {
     await show(view({}, "-115000"));
 
     expect(screen.getByText("Final balance")).toBeInTheDocument();
-    expect(
-      screen.getByText(`You owe the group ${amount(115000n)}.`),
-    ).toBeInTheDocument();
     expect(screen.getByText(impact(-115000n))).toBeInTheDocument();
   });
 
-  /** The sentence names what is owed, never the minus sign in front of it. */
-  it("says it the other way round when the group is behind", async () => {
+  it("signs it the other way round when the group is behind", async () => {
     await show(view({}, "115000"));
 
-    expect(
-      screen.getByText(`The group owes you ${amount(115000n)}.`),
-    ).toBeInTheDocument();
     expect(screen.getByText(impact(115000n))).toBeInTheDocument();
   });
 
-  it("names no figure when there is nothing outstanding", async () => {
+  /** Zero is the one balance `signDisplay: "exceptZero"` leaves bare. */
+  it("carries no sign when there is nothing outstanding", async () => {
     await show(view({}, "0"));
 
-    expect(screen.getByText("You're all settled up.")).toBeInTheDocument();
     expect(screen.getByText(amount(0n))).toBeInTheDocument();
   });
 
   it("survives a balance far larger than the design was drawn against", async () => {
     await show(view({}, "-9876543210"));
 
-    expect(
-      screen.getByText(`You owe the group ${amount(9876543210n)}.`),
-    ).toBeInTheDocument();
+    expect(screen.getByText(impact(-9876543210n))).toBeInTheDocument();
   });
 });
 
@@ -309,9 +299,7 @@ describe("currencies other than the one it was drawn in", () => {
         `You paid ${amount(14667n, "EUR")} less than your share.`,
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(`You owe the group ${amount(4500n, "EUR")}.`),
-    ).toBeInTheDocument();
+    expect(screen.getByText(impact(-4500n, "EUR"))).toBeInTheDocument();
   });
 
   /** Yen has no minor unit, so nothing in the sentence may invent one. */
@@ -331,14 +319,10 @@ describe("currencies other than the one it was drawn in", () => {
 });
 
 describe("in French", () => {
-  it("puts the same three answers in the reader's own language", async () => {
+  it("puts the sheet in the reader's own language", async () => {
     const user = await show(CHALET, "fr");
 
-    expect(screen.getAllByText("Impact sur ton solde")).toHaveLength(3);
     expect(screen.getByText("Solde final")).toBeInTheDocument();
-    expect(
-      screen.getByText(`Tu dois ${amount(115000n)} au groupe.`),
-    ).toBeInTheDocument();
 
     const section = await expand(user, /Dépenses/);
     expect(within(section).getByText("Tu as payé")).toBeInTheDocument();
