@@ -515,7 +515,6 @@
     "howCalculated": "Comment ce montant est calculé",
     "positionSheetTitle": "Détail de ton solde",
     "positionSheetDescription": "Les montants enregistrés qui donnent ton solde actuel.",
-    "positionImpactLabel": "Impact sur ton solde",
     "positionSectionExpenses": "Dépenses",
     "positionYouPaid": "Tu as payé",
     "positionYourShare": "Ta part",
@@ -534,9 +533,6 @@
     "positionSettlementsCaption": "Les remboursements déjà effectués.",
     "positionOtherAdjustments": "Autres ajustements",
     "positionResult": "Solde final",
-    "positionResultOwe": "Tu dois {amount} au groupe.",
-    "positionResultOwed": "Le groupe te doit {amount}.",
-    "positionResultSettled": "Tout est réglé.",
     "sinceYourLastVisit": "Depuis ta dernière visite",
     "spending": "Dépenses",
     "spendingPeriods": {

@@ -515,7 +515,6 @@
     "howCalculated": "How this is calculated",
     "positionSheetTitle": "Balance details",
     "positionSheetDescription": "The recorded amounts that produce your current balance.",
-    "positionImpactLabel": "Impact on your balance",
     "positionSectionExpenses": "Expenses",
     "positionYouPaid": "You paid",
     "positionYourShare": "Your share",
@@ -534,9 +533,6 @@
     "positionSettlementsCaption": "Repayments already made.",
     "positionOtherAdjustments": "Other adjustments",
     "positionResult": "Final balance",
-    "positionResultOwe": "You owe the group {amount}.",
-    "positionResultOwed": "The group owes you {amount}.",
-    "positionResultSettled": "You're all settled up.",
     "sinceYourLastVisit": "Since your last visit",
     "spending": "Spending",
     "spendingPeriods": {

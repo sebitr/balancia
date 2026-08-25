@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { Amount } from "@/components/money/amount";
-import { toneFor } from "@/components/money/balance-tone";
 import { CurrencyHeading } from "@/components/money/currency-heading";
 import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
@@ -70,12 +69,6 @@ const REVENUE_SENTENCES = {
   less: "positionRevenueLess",
 } as const;
 
-/** What the resulting balance means, in the app's own two directions. */
-const RESULT_SENTENCES = {
-  positive: "positionResultOwed",
-  negative: "positionResultOwe",
-} as const;
-
 /**
  * The ledger behind one currency's position, in three collapsible groups.
  *
@@ -94,9 +87,9 @@ const RESULT_SENTENCES = {
  * six figures inside the sections are raw totals — what was paid, what was
  * owed — and a reader asked to work out why "+290.00" and "−436.67" belong to
  * the same bill has been handed the arithmetic back. So each row states its
- * amount plainly, each section header labels its subtotal as the impact on
- * the balance, and the sentence under the pair says which way the difference
- * ran, in words that survive without the sign.
+ * amount plainly, the signed figure in each section header is the subtotal's
+ * effect on the balance, and the sentence under the pair says which way the
+ * difference ran, in words that survive without the sign.
  */
 export function PositionBreakdown({
   position,
@@ -134,7 +127,6 @@ export function PositionBreakdown({
 
   const expenses = compareToShare(paid, share);
   const revenue = compareToShare(revenueReceived, revenueCredited);
-  const tone = toneFor(position.minorUnits);
 
   const sections: readonly {
     key: SectionKey;
@@ -237,24 +229,13 @@ export function PositionBreakdown({
                   />
                   {section.title}
                 </span>
-                {/* The label rides above the figure rather than beside it:
-                    stacked, it costs the header no width and stays inside the
-                    44px the row already reserves, where an inline "Impact on
-                    your balance:" would push the amount off a narrow phone.
-                    It is also what tells a screen reader that this signed
-                    number is an effect rather than an amount. */}
-                <span className="flex shrink-0 flex-col items-end gap-0.5">
-                  <span className="text-2xs leading-none text-muted-foreground">
-                    {t("positionImpactLabel")}
-                  </span>
-                  <Amount
-                    minorUnits={section.subtotal.toString()}
-                    currency={currency}
-                    display="code"
-                    signDisplay="exceptZero"
-                    className="text-xs leading-none font-semibold"
-                  />
-                </span>
+                <Amount
+                  minorUnits={section.subtotal.toString()}
+                  currency={currency}
+                  display="code"
+                  signDisplay="exceptZero"
+                  className="shrink-0 text-xs font-semibold"
+                />
               </button>
             </SectionHeading>
 
@@ -307,19 +288,7 @@ export function PositionBreakdown({
       )}
 
       <div className="flex min-h-14 items-center justify-between gap-4 rounded-2xl bg-muted px-3.5 py-3 ring-1 ring-border">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-semibold">{t("positionResult")}</span>
-          {/* The colour says the direction twice over; this says it once in
-              words, so the reader never has to read a minus sign to find out
-              whether the number beside it is theirs or the group's. */}
-          <span className="text-xs text-pretty text-muted-foreground">
-            {tone === "neutral"
-              ? t("positionResultSettled")
-              : t(RESULT_SENTENCES[tone], {
-                  amount: inline(result < 0n ? -result : result),
-                })}
-          </span>
-        </div>
+        <span className="text-sm font-semibold">{t("positionResult")}</span>
         <Amount
           minorUnits={position.minorUnits}
           currency={currency}
