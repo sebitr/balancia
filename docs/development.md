@@ -252,13 +252,13 @@ It resolves one of four methods, and no component checks a browser itself:
 | `ios-browser` | Chrome, Edge, Firefox, Opera on iOS | "Open in Safari"                 |
 | `unavailable` | Installed, or Firefox and friends   | Nothing                          |
 
-Two entry points, deliberately unequal. **The account menu** carries
+Two entry points, deliberately unequal. **Settings → Help & about** carries
 "Install Balancia" and stays available for as long as installing is possible.
 **The dashboard** additionally shows a one-time suggestion, but only on the
 branch where the visitor already belongs to a group — a new account never
 meets it on first load. Waving that suggestion away is persisted to
-`localStorage` and never asked again; the menu action is unaffected, because
-dismissal should silence a nudge, not remove a choice.
+`localStorage` and never asked again; the row in settings is unaffected,
+because dismissal should silence a nudge, not remove a choice.
 
 ### Manual QA
 

@@ -24,7 +24,9 @@ export async function GET(request: Request) {
     logger.info({ outcome }, "Email change link did not complete");
   }
 
-  const destination = (await getCurrentUser()) ? "/profile" : "/sign-in";
+  const destination = (await getCurrentUser())
+    ? "/settings/account"
+    : "/sign-in";
   return NextResponse.redirect(
     new URL(`${destination}?emailChange=${outcome}`, env.appOrigin),
     { status: 303 },

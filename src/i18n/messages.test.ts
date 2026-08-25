@@ -138,14 +138,13 @@ describe("message catalogues", () => {
     // ones have to be named here, so that "identical" stays a deliberate
     // choice rather than a translation someone forgot.
     const SAME_IN_BOTH = new Set([
-      "nav.notifications",
       "notificationsPage.metaTitle",
       "notificationsPage.title",
       "notificationsPage.bell",
-      "notificationSettings.title",
-      // The word is the same in French, and it is the menu entry as well as
-      // the page heading.
-      "nav.administration",
+      // Three rows of the settings hub whose words French borrowed unchanged.
+      "userSettings.notifications",
+      "userSettings.administration",
+      "userSettings.documentation",
       // Two dates and an en dash: there is nothing in it to translate.
       "group.metaSpan",
       // Two placeholders and a comma, same in both.

@@ -42,10 +42,18 @@ const DIRECTIONS = {
 export function Screen({
   children,
   inset,
+  className,
 }: {
   children: ReactNode;
   /** Clears the bottom bar, on the screens that have one. */
   inset?: boolean;
+  /**
+   * For a surface whose column is not the app's. The settings screens draw
+   * their own header inside the snapshot and carry it to the top edge, so they
+   * replace the padding rather than sit in it. Everything else leaves this
+   * alone and gets the column every other screen has.
+   */
+  className?: string;
 }) {
   const pathname = usePathname();
 
@@ -77,6 +85,7 @@ export function Screen({
         // iOS PWA home-indicator area. Pages without a bottom bar keep the
         // regular `py-6` inset above.
         inset && "pb-[calc(8rem+env(safe-area-inset-bottom))]",
+        className,
       )}
     >
       {children}

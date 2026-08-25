@@ -294,7 +294,7 @@ or the relay will drop your mail.
 to an existing local one automatically only when both sides have verified the
 address — Apple says it verified it, and this instance did too. Otherwise the
 person is asked to sign in the way they already can and link Apple from
-_Profile → Passkeys & security_. Without that rule, anyone able to register with
+_Settings → Sign-in & security_. Without that rule, anyone able to register with
 an address they do not own could wait to inherit the account of whoever later
 arrives through Apple. Note that an instance with no SMTP never verifies an
 address, so on one of those the deliberate path is always the one taken.

@@ -11,43 +11,31 @@ import {
   stubIosStandalone,
   stubStandalone,
 } from "../../../tests/helpers/pwa";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { InstallInstructions } from "./install-instructions";
-import { InstallMenuItem } from "./install-menu-item";
+import { InstallRow } from "./install-row";
 import { resetInstallPromptForTests } from "./use-install-prompt";
 
 /**
- * The account-menu entry point, and the sheet it opens.
+ * The deliberate entry point on Help & about, and the sheet it opens.
  *
- * The two are mounted together the way the app mounts them — the item inside a
- * menu that unmounts on close, the sheet outside it in the shell — because
- * that separation is the thing most likely to break.
+ * The two are mounted together the way the app mounts them — the row on the
+ * screen, the sheet outside it in the shell — because that separation is the
+ * thing most likely to break: the request travels through the install store,
+ * not through React state the row owns.
  */
-function renderMenu() {
+function renderRow() {
   return render(
     <>
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger asChild>
-          <Button>Account menu</Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <InstallMenuItem />
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <InstallRow />
       <InstallInstructions />
     </>,
   );
 }
 
 const installItem = () =>
-  screen.queryByRole("menuitem", { name: "Install Balancia" });
+  screen.queryByRole("button", { name: "Install Balancia" });
 
-describe("InstallMenuItem", () => {
+describe("InstallRow", () => {
   beforeEach(() => {
     localStorage.clear();
     setUserAgent(USER_AGENTS.androidChrome);
@@ -58,7 +46,7 @@ describe("InstallMenuItem", () => {
 
   describe("Android and desktop Chromium", () => {
     it("appears once the browser offers a native install", async () => {
-      renderMenu();
+      renderRow();
       expect(installItem()).toBeNull();
 
       fireBeforeInstallPrompt();
@@ -68,10 +56,10 @@ describe("InstallMenuItem", () => {
 
     it("fires the native prompt without showing instructions first", async () => {
       const user = userEvent.setup();
-      renderMenu();
+      renderRow();
       const event = fireBeforeInstallPrompt();
 
-      await user.click(await screen.findByRole("menuitem"));
+      await user.click(await screen.findByRole("button"));
 
       expect(event.prompt).toHaveBeenCalledOnce();
       expect(screen.queryByRole("dialog")).toBeNull();
@@ -80,7 +68,7 @@ describe("InstallMenuItem", () => {
     it("is offered on desktop Chromium too, where the banner is not", async () => {
       setUserAgent(USER_AGENTS.desktopChrome);
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
       fireBeforeInstallPrompt();
 
@@ -88,7 +76,7 @@ describe("InstallMenuItem", () => {
     });
 
     it("stands down once the app reports itself installed", async () => {
-      renderMenu();
+      renderRow();
       fireBeforeInstallPrompt();
       await waitFor(() => expect(installItem()).toBeInTheDocument());
 
@@ -100,7 +88,7 @@ describe("InstallMenuItem", () => {
     it("stays available after the proactive suggestion was dismissed", async () => {
       localStorage.setItem("balancia:install-dismissed", "1");
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
       fireBeforeInstallPrompt();
 
@@ -116,16 +104,16 @@ describe("InstallMenuItem", () => {
     });
 
     it("is offered even though no install event ever arrives", async () => {
-      renderMenu();
+      renderRow();
 
       await waitFor(() => expect(installItem()).toBeInTheDocument());
     });
 
     it("explains the share-sheet route rather than faking a prompt", async () => {
       const user = userEvent.setup();
-      renderMenu();
+      renderRow();
 
-      await user.click(await screen.findByRole("menuitem"));
+      await user.click(await screen.findByRole("button"));
 
       const dialog = await screen.findByRole("dialog");
       expect(dialog).toHaveTextContent("Install Balancia");
@@ -134,16 +122,16 @@ describe("InstallMenuItem", () => {
       expect(dialog).toHaveTextContent("Add");
     });
 
-    it("closes the menu and hands focus to the sheet", async () => {
+    it("hands focus to the sheet it opens", async () => {
       const user = userEvent.setup();
-      renderMenu();
+      renderRow();
 
-      await user.click(await screen.findByRole("menuitem"));
+      await user.click(await screen.findByRole("button"));
 
-      // The item unmounts with the menu; the sheet opens regardless because
-      // the request travelled through the store, not through React state.
+      // The sheet is mounted by the shell rather than by the row, and opens
+      // because the request travelled through the store rather than through
+      // React state the row owns.
       const dialog = await screen.findByRole("dialog");
-      await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
       await waitFor(() =>
         expect(dialog.contains(document.activeElement)).toBe(true),
       );
@@ -152,7 +140,7 @@ describe("InstallMenuItem", () => {
     it("recognises an iPad, which borrows a desktop Mac user agent", async () => {
       setUserAgent(USER_AGENTS.ipadSafari, 5);
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
       await waitFor(() => expect(installItem()).toBeInTheDocument());
     });
@@ -160,9 +148,9 @@ describe("InstallMenuItem", () => {
     it("says nothing once running from the home screen", async () => {
       stubIosStandalone();
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
-      await waitFor(() => expect(screen.queryByRole("menuitem")).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
       expect(installItem()).toBeNull();
     });
   });
@@ -172,9 +160,9 @@ describe("InstallMenuItem", () => {
       const user = userEvent.setup();
       setUserAgent(USER_AGENTS.iosChrome);
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
-      await user.click(await screen.findByRole("menuitem"));
+      await user.click(await screen.findByRole("button"));
 
       const dialog = await screen.findByRole("dialog");
       expect(dialog).toHaveTextContent("Safari");
@@ -187,9 +175,9 @@ describe("InstallMenuItem", () => {
       const user = userEvent.setup();
       setUserAgent(USER_AGENTS.iosEdge);
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
-      await user.click(await screen.findByRole("menuitem"));
+      await user.click(await screen.findByRole("button"));
 
       expect(await screen.findByRole("dialog")).toHaveTextContent("Safari");
     });
@@ -199,27 +187,27 @@ describe("InstallMenuItem", () => {
     it("offers nothing on Firefox for Android", async () => {
       setUserAgent(USER_AGENTS.androidFirefox);
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
-      await waitFor(() => expect(screen.queryByRole("menuitem")).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
     });
 
     it("offers nothing on desktop Firefox", async () => {
       setUserAgent(USER_AGENTS.desktopFirefox);
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
-      await waitFor(() => expect(screen.queryByRole("menuitem")).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
     });
 
     it("offers nothing in a standalone window, whatever the browser", async () => {
       stubStandalone();
       resetInstallPromptForTests();
-      renderMenu();
+      renderRow();
 
       fireBeforeInstallPrompt();
 
-      await waitFor(() => expect(screen.queryByRole("menuitem")).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
     });
   });
 });

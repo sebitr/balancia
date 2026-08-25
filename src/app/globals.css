@@ -82,6 +82,7 @@
     0 6px 14px -8px oklch(0.226 0.072 319 / 0.18);
   --color-notice-warning: var(--notice-warning);
   --color-notice-info: var(--notice-info);
+  --color-scrim: var(--scrim);
 }
 
 /*
@@ -175,6 +176,18 @@
    */
   --notice-warning: oklch(0.58 0.12 70);
   --notice-info: oklch(0.51 0.14 250);
+
+  /*
+   * What a two-step confirmation dims the page with.
+   *
+   * Darker than either theme's background and the same in both, because a
+   * scrim is not a surface: it is the absence of one, and a cream page under a
+   * cream veil reads as a page that has merely gone quiet rather than one that
+   * is waiting for an answer. Deliberately heavier than the dialog overlay —
+   * only signing out and deleting an account get this far, and both deserve
+   * the page behind them to stop competing.
+   */
+  --scrim: oklch(0.15 0.04 319 / 0.72);
 
   /* Marketing-only surface steps that have no product-shell counterpart. */
   --marketing-plum: oklch(0.226 0.072 319);

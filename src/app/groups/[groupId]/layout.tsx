@@ -53,7 +53,6 @@ export default async function GroupLayout({
           access.actor.kind === "guest"
             ? access.actor.displayName
             : access.actor.name,
-        email: access.actor.kind === "user" ? access.actor.email : undefined,
         isGuest: access.actor.kind === "guest",
       }}
       bottomNav={<GroupNav groupId={access.groupId} />}

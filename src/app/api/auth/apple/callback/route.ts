@@ -115,13 +115,13 @@ async function handlePost(request: Request) {
 
   const isLink = pending?.linkUserId !== undefined;
   const failedLink = (reason: string) =>
-    redirectTo("/profile/security", { error: reason });
+    redirectTo("/settings/security", { error: reason });
 
   if (fields.error) {
     // "user_cancelled_authorize" is somebody closing Apple's sheet. Returning
     // them to a page wearing an error message would be rude.
     if (fields.error === "user_cancelled_authorize") {
-      return isLink ? redirectTo("/profile/security") : backToSignIn();
+      return isLink ? redirectTo("/settings/security") : backToSignIn();
     }
     logger.warn(
       { reason: fields.error },
@@ -177,7 +177,7 @@ async function handlePost(request: Request) {
       );
       return failedLink("generic");
     }
-    return redirectTo("/profile/security", { linked: "apple" });
+    return redirectTo("/settings/security", { linked: "apple" });
   }
 
   const requestHeaders = await headers();

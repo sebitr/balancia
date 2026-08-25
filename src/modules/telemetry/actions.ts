@@ -28,7 +28,7 @@ import type { ScanOutcome } from "@/lib/telemetry/events";
  * server, and it is available to any signed-in participant.
  */
 
-const TELEMETRY_PATH = "/admin/telemetry";
+const TELEMETRY_PATH = "/settings/admin";
 
 /**
  * Switches the weekly anonymous usage report on or off.

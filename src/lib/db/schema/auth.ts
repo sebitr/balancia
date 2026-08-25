@@ -97,6 +97,22 @@ export const users = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /**
+     * The account's photo, as an opaque key into the storage adapter.
+     *
+     * Null is the ordinary state, not a missing value: an account without a
+     * photo is drawn as its initial on a tinted circle, which is what the
+     * whole app shows for a participant who is not a user at all. The key is
+     * server-generated like every other one — see `modules/profile/avatar.ts`.
+     */
+    avatarStorageKey: text("avatar_storage_key"),
+    /** Sniffed from the file's magic bytes, never from what was uploaded. */
+    avatarContentType: text("avatar_content_type"),
+    /**
+     * Stamped on every write so the delivery route can be cached hard and
+     * still change the moment a new photo lands: it is the cache key.
+     */
+    avatarUpdatedAt: timestamp("avatar_updated_at", { withTimezone: true }),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
   },
   (table) => [
@@ -123,6 +139,12 @@ export const users = pgTable(
     check(
       "users_number_format_known",
       sql`${table.numberFormat} IS NULL OR ${table.numberFormat} IN ('comma-dot', 'dot-comma', 'space-comma')`,
+    ),
+    // A photo is a key and the type it was sniffed as; one without the other
+    // is a row the delivery route cannot answer from, so it cannot exist.
+    check(
+      "users_avatar_complete",
+      sql`(${table.avatarStorageKey} IS NULL) = (${table.avatarContentType} IS NULL)`,
     ),
   ],
 );

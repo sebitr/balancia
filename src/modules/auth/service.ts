@@ -1,7 +1,9 @@
 import "server-only";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import {
+  groupMembers,
+  groups,
   oauthIdentities,
   passkeys,
   users,
@@ -9,6 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { getStorage } from "@/lib/storage";
 import {
   generateToken,
   hashToken,
@@ -707,6 +710,53 @@ export async function saveUserLocale(
 }
 
 /**
+ * Whether the account has a password at all.
+ *
+ * An account enrolled entirely through passkeys, or created with Apple, has
+ * none — `password_hash` is null — and `changePassword` refuses to invent one,
+ * because it has nothing to check the request against. The security screen
+ * needs to know which of the two states it is drawing: a password to change,
+ * or a password to set for the first time, which goes the long way round
+ * through a link sent to the address on the account.
+ */
+export async function hasPassword(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return Boolean(row?.passwordHash);
+}
+
+/**
+ * The name on the account.
+ *
+ * Not the name anybody sees inside a group: that is `participants.display_name`,
+ * chosen per group so the same person can be "Seb" to their flatmates and
+ * "Sébastien Trosset" to a work trip. This one is what the account itself is
+ * called — what the settings hub greets, and what a new group starts a
+ * participant off with.
+ *
+ * Trimmed and bounded by the caller; empty is refused there rather than
+ * written as a blank name nothing can render.
+ */
+export async function saveUserName(
+  userId: string,
+  name: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(users)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/**
  * The currency the home screen totals every group into.
  *
  * Null means the account has never chosen one, which is not an error: the home
@@ -1214,4 +1264,106 @@ export async function getUserById(
     name: row.name,
     emailVerified: row.emailVerifiedAt !== null,
   };
+}
+
+/**
+ * Closing an account for good.
+ *
+ * A real `DELETE`, not a flag. The schema was already built for it: everything
+ * that *is* the account cascades away — sessions, passkeys, the Apple link,
+ * pending tokens, push subscriptions, notifications and their preferences,
+ * group membership — while everything that is *history* references a
+ * `participant` rather than a user and is left standing. `participants.userId`
+ * is `ON DELETE SET NULL`, and a participant carries its own `display_name`,
+ * so every expense, split, settlement and receipt stays exactly where it was,
+ * under the name it was recorded against. That is the promise the screen makes
+ * and this is what keeps it.
+ *
+ * Deleting rather than disabling also releases the address. Somebody who
+ * closes an account and thinks better of it a week later can sign up again;
+ * a tombstone row holding `email` would have made that impossible, and the
+ * account they lost is not one anybody can get back for them.
+ *
+ * Two things the cascades cannot decide on their own:
+ *
+ *  - **A group this account owned** would be left with no owner, which is not
+ *    a crash but is a group nobody can rename, archive or manage. The
+ *    longest-standing remaining member is promoted.
+ *  - **A group with no other member at all** has just lost the only person who
+ *    could open it. Its remaining participants are names on a list, not
+ *    accounts, so there is no one to promote and no way back in. It goes with
+ *    the account rather than becoming unreachable rows.
+ *
+ * The avatar object is swept afterwards, outside the transaction: a bucket
+ * that keeps one orphan is a smaller problem than a deletion that fails
+ * because a bucket was briefly unreachable.
+ */
+export async function deleteAccount(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+
+  const [account] = await db
+    .select({ avatarKey: users.avatarStorageKey })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!account) return;
+
+  await db.transaction(async (tx) => {
+    // Every group this account belongs to, with the role it holds there.
+    const memberships = await tx
+      .select({ groupId: groupMembers.groupId, role: groupMembers.role })
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, userId));
+
+    for (const membership of memberships) {
+      const survivors = await tx
+        .select({ id: groupMembers.id, userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(
+          and(
+            eq(groupMembers.groupId, membership.groupId),
+            ne(groupMembers.userId, userId),
+          ),
+        )
+        .orderBy(groupMembers.joinedAt);
+
+      if (survivors.length === 0) {
+        // Nobody left who could ever open it.
+        await tx.delete(groups).where(eq(groups.id, membership.groupId));
+        continue;
+      }
+
+      if (membership.role === "owner") {
+        await tx
+          .update(groupMembers)
+          .set({ role: "owner" })
+          .where(eq(groupMembers.id, survivors[0].id));
+      }
+    }
+
+    // The cascades do the rest; `participants.userId` goes null and keeps its
+    // display name, which is what every expense in every group is written
+    // against.
+    await tx.delete(users).where(eq(users.id, userId));
+  });
+
+  if (account.avatarKey) {
+    try {
+      await getStorage().delete(account.avatarKey);
+    } catch (error) {
+      logger.warn(
+        {
+          err: error instanceof Error ? error.message : String(error),
+          userId,
+        },
+        "Avatar object outlived the account that owned it",
+      );
+    }
+  }
+
+  logger.info({ userId }, "Account deleted");
 }
