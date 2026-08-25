@@ -59,7 +59,7 @@ Registration refusals (email taken, registration closed, password policy) are
 | Method | Path                                                     | Body of the answer                                                                                                                                                                                           |
 | ------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | GET    | `/api/groups`                                            | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly. |
-| GET    | `/api/groups/:groupId`                                   | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, balance rows, suggested repayments, spending periods). |
+| GET    | `/api/groups/:groupId`                                   | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, per-currency overviews, balance rows, suggested repayments, spending periods). |
 | GET    | `/api/groups/:groupId/expenses?limit&offset`             | `listExpenses`, newest first, payers and shares resolved.                                                                                                                                                    |
 | GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                |
 | GET    | `/api/groups/:groupId/settlements?limit`                 | `listSettlements`, newest first.                                                                                                                                                                             |
@@ -95,6 +95,22 @@ figures read at different instants. Percentages cross as JSON numbers: they are
 ratios the server has already rounded to the decimal the screens print, not
 money, and nothing downstream does arithmetic on them. Every amount is still a
 string of minor units.
+
+The group read carries the same balances twice, on purpose. `rows` and
+`suggestions` are flattened across currencies, which is what a group with one
+currency reads; `currencies` keeps them apart, each entry holding that
+currency's own members, transfers, spend and the reader's position in it. A
+group balancing in three currencies has three of everything and never a total,
+so the flat lists cannot answer for it — and regrouping them on the client
+would put an ordering the server has already decided back in the client's
+hands.
+
+`currencies.length` is also the rule for which overview a group gets: more than
+one and the screen collapses per currency, which is the shape that exists to
+stop a group's balances growing by a screenful per currency. Count it rather
+than reading the group's `currencyMode` — a group kept in separate currencies
+that has so far only spent in one is a one-currency group today, whatever it is
+configured to become.
 
 `settle-up` fills `lastSettled` only when nothing is left to settle — it is the
 one screen with room for it. Read an empty list as "no room for it here", never
