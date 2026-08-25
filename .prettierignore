@@ -16,6 +16,9 @@ dist
 LICENSE
 # The bare git repository ./scripts/weblate.sh keeps for the local Weblate
 # to clone and push to. Git's own files, not this project's.
+.weblate-mirror
+# wlc's configuration, which is INI and has no extension to infer a parser
+# from. Prettier skips it either way; saying so keeps it from being a question.
 .weblate
 # Rendered email bodies, written by `pnpm email:render` and asserted against
 # byte for byte. Prettier would reindent the tables and rewrap the inline

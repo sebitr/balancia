@@ -22,6 +22,8 @@
   ·
   <a href="./docs/compare-tricount.md">vs tricount</a>
   ·
+  <a href="https://hosted.weblate.org/engage/balancia/">Translate</a>
+  ·
   <a href="./docs/faq.md">FAQ</a>
   ·
   <a href="./docs/README.md">Docs</a>
@@ -31,6 +33,7 @@
   <a href="https://github.com/sebitr/balancia/actions/workflows/ci.yml"><img src="https://github.com/sebitr/balancia/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/sebitr/balancia" alt="AGPL-3.0-or-later licence"></a>
   <a href="https://github.com/sebitr/balancia/pulls"><img src="https://img.shields.io/badge/contributions-welcome-5b255f" alt="Contributions welcome"></a>
+  <a href="https://hosted.weblate.org/engage/balancia/"><img src="https://hosted.weblate.org/widget/balancia/messages/svg-badge.svg" alt="Translation status"></a>
 </p>
 
 <p align="center">

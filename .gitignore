@@ -72,5 +72,6 @@ next-env.d.ts
 .ocr-eval/
 
 # the bare mirror the local Weblate clones from and pushes to, kept by
-# scripts/weblate.sh — a scratch copy of origin/main, rebuilt on demand
-/.weblate/
+# scripts/weblate.sh — a scratch copy of origin/main, rebuilt on demand. The
+# file .weblate, which names the public translation project, is tracked.
+/.weblate-mirror/
