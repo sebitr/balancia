@@ -124,7 +124,14 @@ services:
       # so that pg_upgrade can run without crossing a mount boundary, and they
       # refuse to start at all if anything is mounted at the old .../data path.
       - db-data:/var/lib/postgresql
-    # No `ports:` — PostgreSQL is reachable only on the internal network.
+    # Published, so that psql, a GUI client, drizzle-kit or a backup job can
+    # reach the database from outside the stack. On every interface the host
+    # has: whoever can reach this machine can open a connection, and the
+    # password bootstrap generated is the only thing in front of it. An
+    # operator who wants it on this host alone writes the bind address into
+    # the setting — DB_PORT=127.0.0.1:5458 — and tunnels in over SSH.
+    ports:
+      - "${DB_PORT:-5458}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U balancia -d balancia"]
       interval: 5s

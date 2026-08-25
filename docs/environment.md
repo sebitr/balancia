@@ -706,6 +706,32 @@ Seeding refuses to run when this is `production`.
 
 Compose only. Host port the app is published on. Default `3000`.
 
+### `DB_PORT`
+
+Compose only. Host port the database is published on. Default `5458`.
+
+`compose.yaml` publishes PostgreSQL so that host tooling — `psql`, a GUI
+client, `drizzle-kit`, a backup job — can reach it without going through a
+container. It is published on every interface the host has, which means the
+generated `POSTGRES_PASSWORD` is the only thing between the database and
+whoever can reach this machine.
+
+The value is written into the published-port line verbatim, so a bind address
+can be part of it:
+
+```bash
+# .env
+DB_PORT=127.0.0.1:5458
+```
+
+That keeps the port on the host itself; connect from elsewhere by tunnelling,
+`ssh -L 5458:127.0.0.1:5458 you@host`. The database is `balancia`, the user is
+`balancia`, and the password is `POSTGRES_PASSWORD` from `.env`:
+
+```bash
+psql "postgres://balancia:$POSTGRES_PASSWORD@127.0.0.1:5458/balancia"
+```
+
 ### `RUN_MIGRATIONS`
 
 Docker image only. Default `true`: the entrypoint applies pending migrations

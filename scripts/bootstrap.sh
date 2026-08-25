@@ -833,6 +833,38 @@ TEXT
     elif [ "$app_port" != 3000 ]; then
       note "${dim}Compose will publish on port ${app_port} to match.${reset}"
     fi
+
+    # Compose publishes the database as well, on ${DB_PORT:-5458}, and it
+    # fails at `up` in the same way if that one is held — by a PostgreSQL
+    # already running on this host, most often. Settled in the same breath as
+    # the app's port rather than one build later. Nothing is written when 5458
+    # is free: Compose's own default is the same number.
+    if port_taken 5458; then
+      printf '\n'
+      oops 'Something is already listening on port 5458.'
+      note '  Compose publishes the database there, for psql and other tooling'
+      note '  on this host. Another port changes only where it is published.'
+      printf '\n'
+      suggested=$(suggest_port 5459 || :)
+      while :; do
+        ask_line 'Database port' "$suggested"
+        chosen=$reply
+        if ! is_port "$chosen"; then
+          oops 'Ports are whole numbers, 1 to 65535.'
+          continue
+        fi
+        if ! port_taken "$chosen"; then
+          break
+        fi
+        oops "Port $chosen is taken as well."
+        if ask_yes_no 'Use it anyway?' n; then
+          break
+        fi
+      done
+      write_setting DB_PORT "$chosen" \
+        'Host port Compose publishes the database on. Prefix a bind address to keep it on this host: 127.0.0.1:5458'
+      note "${dim}The database will be published on port ${chosen}.${reset}"
+    fi
   fi
 
   # ── Registration ──────────────────────────────────────────────────────────
@@ -1261,6 +1293,14 @@ telemetry_summary() {
 summary() {
   printf '  %sThis instance%s\n\n' "$bold" "$reset"
   row 'Public address' "$(value_of APP_URL)"
+  # Published on every interface unless the operator put a bind address in
+  # front of the number, which is the difference worth reporting here.
+  db_port=$(value_of DB_PORT)
+  [ -n "$db_port" ] || db_port=5458
+  case $db_port in
+    *:*) row 'Database port' "$db_port, this host only" ;;
+    *) row 'Database port' "$db_port, published" ;;
+  esac
   if is_enabled ALLOW_REGISTRATION; then
     row 'Registration' 'open'
   else
