@@ -248,11 +248,17 @@ thing for its own languages.
 1. Apply for the Libre plan at <https://hosted.weblate.org/hosting/>. It is
    free for public projects; Balancia is AGPL-3.0-or-later and public, so it
    qualifies. Approval is a person reading the request, not instant.
-2. Install the [Hosted Weblate app](https://github.com/apps/hosted-weblate) on
-   the repository, from Weblate's own **Connect GitHub account** flow rather
-   than from GitHub. That one step is how Weblate clones, how it pushes the
+2. Connect GitHub from
+   <https://hosted.weblate.org/create/component/github-app/>, using the
+   **Connect GitHub account** button there, and let it carry you to GitHub and
+   back in one go. That one step is how Weblate clones, how it pushes the
    branch it opens pull requests from, and how it hears about a merge — the
    app's installation token carries all three.
+
+   Start it from that page and nowhere else. Installing the app from GitHub's
+   own listing puts the installation on your account without ever telling
+   Weblate, which leaves you connected to nothing and looking at an empty
+   repository list.
 
    Doing it this way is what makes the other two ways unnecessary: there is no
    `hosted weblate` collaborator to invite, which is only needed for SSH pushes
@@ -286,6 +292,14 @@ the script waits.
 container's git runs as a different user than the one that created it.
 `chmod -R a+rwX .weblate-mirror` fixes it, and `pnpm weblate sync` does that
 anyway on every run.
+
+**`The Weblate GitHub app installation link is no longer valid.`** The link is
+good once and briefly, so a back button, a second tab, or a detour through
+GitHub's own app listing spends it. **Connect GitHub account** on the same page
+issues a new one; take it straight through. If GitHub then says the app is
+already installed, the installation is a leftover from a spent link — open it
+under <https://github.com/settings/installations>, either grant it the
+repository and connect again, or uninstall it and start over.
 
 **A pull brought back reformatted JSON.** The indentation setting did not
 apply — the message from `pnpm weblate up` will have said so if the image
