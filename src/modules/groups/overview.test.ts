@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   counterpartiesOf,
+  isMultiCurrency,
   mainCurrencyOf,
   orderBalanceRows,
   positionBreakdownOf,
@@ -310,16 +311,46 @@ describe("the ledger behind a position", () => {
  * and nowhere else, which is the whole reason this is not inlined in the
  * component's `useState`.
  */
-describe("mainCurrencyOf", () => {
-  const entry = (currency: string, totalSpent: bigint): CurrencyOverview => ({
-    currency,
-    totalSpent,
-    expenseCount: 1,
-    position: 0n,
-    members: [],
-    transfers: [],
+const entry = (currency: string, totalSpent: bigint): CurrencyOverview => ({
+  currency,
+  totalSpent,
+  expenseCount: 1,
+  position: 0n,
+  members: [],
+  transfers: [],
+});
+
+/**
+ * Which of the two overviews a group gets.
+ *
+ * The collapsed-per-currency screen answers a problem a one-currency group
+ * does not have, so it is gated on the money rather than on configuration —
+ * and these hold the two ways a group can be single-currency without being
+ * configured that way.
+ */
+describe("isMultiCurrency", () => {
+  it("keeps the hero for a group converted to a single currency", () => {
+    expect(isMultiCurrency([entry("CHF", 35000n)])).toBe(false);
   });
 
+  /**
+   * A group kept in separate currencies that has so far only spent in one.
+   * It is a one-currency group today, and becomes the other kind by itself
+   * the moment a second currency arrives — no setting changes hands.
+   */
+  it("keeps the hero until a second currency actually has activity", () => {
+    expect(isMultiCurrency([entry("CHF", 35000n)])).toBe(false);
+    expect(isMultiCurrency([entry("CHF", 35000n), entry("EUR", 2600n)])).toBe(
+      true,
+    );
+  });
+
+  it("has no second screen to offer an empty group", () => {
+    expect(isMultiCurrency([])).toBe(false);
+  });
+});
+
+describe("mainCurrencyOf", () => {
   it("opens the group's base currency", () => {
     const currencies = [entry("USD", 90000n), entry("CHF", 35000n)];
 

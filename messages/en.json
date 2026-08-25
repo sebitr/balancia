@@ -564,7 +564,19 @@
     "everyoneSquare": "Everyone is square in {currency}. {count, plural, one {# expense} other {# expenses}}, {amount} total.",
     "viewSuggestedSettlement": "View suggested settlement",
     "settlementPlanMeta": "{payments, plural, one {# payment clears} other {# payments clear}} all {currencies, plural, one {# currency} other {# currencies}}",
-    "shareBarCaption": "Bar shows your share of each total."
+    "shareBarCaption": "Bar shows your share of each total.",
+    "everyoneBalances": "Balances",
+    "viewAllPeople": "View all {count} people",
+    "balanceReceives": "should receive",
+    "balanceOwes": "owes money",
+    "balanceSettled": "is settled",
+    "suggestedSettlements": "Suggested settlements",
+    "viewAll": "View all",
+    "settlementDetailTitle": "{from} pays {to}",
+    "settlementDetailDescription": "Record the payment when the money changes hands, or send a reminder.",
+    "recordPayment": "Record payment",
+    "sendReminder": "Send reminder",
+    "archiveGroup": "Archive group"
   },
   "expensesList": {
     "eyebrow": "Transactions",
