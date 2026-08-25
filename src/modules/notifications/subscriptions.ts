@@ -133,6 +133,30 @@ export async function deleteSubscription(
 }
 
 /**
+ * Forgets one device by the id the device list draws it with.
+ *
+ * The list cannot offer to remove a row by endpoint, because the endpoint is a
+ * capability to send to that device and deliberately never reaches a page —
+ * see `listSubscriptions`. The row id is not a capability: it identifies a
+ * row, and the `user_id` in the same statement is what decides whether the
+ * caller may delete it. Knowing an id is therefore worth nothing on its own.
+ */
+export async function deleteSubscriptionById(
+  userId: string,
+  id: string,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const rows = await db
+    .delete(pushSubscriptions)
+    .where(
+      and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.id, id)),
+    )
+    .returning({ id: pushSubscriptions.id });
+  return rows.length > 0;
+}
+
+/**
  * The material needed to actually send to someone's devices.
  *
  * Separate from `listSubscriptions` on purpose: the endpoint is a capability

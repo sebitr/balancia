@@ -46,8 +46,7 @@ function offeredUndo(): () => void {
   return newest[1].onUndo;
 }
 
-const expenses = () =>
-  screen.getByRole("switch", { name: "Expenses involving me" });
+const expenses = () => screen.getByRole("switch", { name: "Expenses I am in" });
 
 describe("NotificationPreferencesForm", () => {
   it("writes a switch as it is flicked, and offers to flick it back", async () => {

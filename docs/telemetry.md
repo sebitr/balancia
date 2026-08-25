@@ -806,4 +806,4 @@ than leaving a reader to check the network tab.
 | `src/lib/telemetry/settings.ts`  | Deployment ceiling × administrator switch                 |
 | `src/lib/metrics/`               | Local Prometheus metrics — unrelated to the above         |
 | `src/lib/analytics/umami.ts`     | Public-page counts, gated on the same opt-in (§17)        |
-| `src/app/(app)/admin/telemetry/` | The administration page                                   |
+| `src/app/settings/admin/`        | The administration screen                                 |

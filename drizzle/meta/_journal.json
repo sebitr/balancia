@@ -162,6 +162,13 @@
       "when": 1787608551904,
       "tag": "0022_romantic_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1787642853294,
+      "tag": "0023_overconfident_jack_power",
+      "breakpoints": true
     }
   ]
 }

@@ -35,7 +35,7 @@ export async function savePreferencesAction(
       imports: Boolean(preferences.imports),
       reminders: Boolean(preferences.reminders),
     });
-    revalidatePath("/profile/notifications");
+    revalidatePath("/settings/notifications");
   });
 }
 
@@ -57,7 +57,7 @@ export async function setGroupMutedAction(
   return runAction("setGroupMuted", async () => {
     const access = await authorizeGroup(await getCurrentActor(), groupId);
     await setGroupMuted(user.userId, access.groupId, muted);
-    revalidatePath("/profile/notifications");
+    revalidatePath("/settings/notifications");
   });
 }
 

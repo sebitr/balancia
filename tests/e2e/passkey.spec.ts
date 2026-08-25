@@ -32,6 +32,22 @@ async function attachVirtualAuthenticator(
   return { client, authenticatorId };
 }
 
+/**
+ * Signing out, which lives at the foot of the settings hub and asks first.
+ *
+ * Two taps rather than one: it is the only action in settings with no way
+ * back, because the Undo would be raised into a page nobody is signed in to.
+ */
+async function signOut(page: Page): Promise<void> {
+  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Sign out" })
+    .click();
+  await expect(page).toHaveURL("/");
+}
+
 test.describe("passkeys", () => {
   test("registers a passkey and signs in with it", async ({ page }) => {
     const { client, authenticatorId } = await attachVirtualAuthenticator(page);
@@ -39,17 +55,16 @@ test.describe("passkeys", () => {
     const email = uniqueEmail("passkey");
     await registerAndSignIn(page, { email, name: "Passkey User" });
 
-    // Register a passkey from account security settings.
-    await page.goto("/profile/security");
+    // Register a passkey from Settings → Sign-in & security.
+    await page.goto("/settings/security");
     await expect(
-      page.getByRole("heading", { name: "Passkeys & security" }),
+      page.getByRole("heading", { name: "Sign-in & security" }),
     ).toBeVisible();
 
-    await page.getByLabel(/Name/).fill("Virtual key");
-    await page.getByRole("button", { name: "Register a passkey" }).click();
+    await page.getByRole("button", { name: "Add this device" }).click();
 
-    // It appears in the list.
-    await expect(page.getByText("Virtual key")).toBeVisible();
+    // It appears in the list, under the name the authenticator reported.
+    await expect(page.getByText("Unnamed passkey")).toBeVisible();
 
     // A real credential now exists on the authenticator — the ceremony was not
     // faked at the UI level.
@@ -59,9 +74,7 @@ test.describe("passkeys", () => {
     expect(stored.credentials.length).toBe(1);
 
     // Now sign out and back in using only the passkey.
-    await page.getByRole("button", { name: "Account menu" }).click();
-    await page.getByRole("menuitem", { name: "Sign out" }).click();
-    await expect(page).toHaveURL("/");
+    await signOut(page);
 
     await page.goto("/sign-in");
     await page.getByRole("button", { name: "Sign in with a passkey" }).click();
@@ -76,15 +89,22 @@ test.describe("passkeys", () => {
     await attachVirtualAuthenticator(page);
     await registerAndSignIn(page, { email: uniqueEmail("passkey-remove") });
 
-    await page.goto("/profile/security");
-    await page.getByLabel(/Name/).fill("Temporary key");
-    await page.getByRole("button", { name: "Register a passkey" }).click();
-    await expect(page.getByText("Temporary key")).toBeVisible();
+    await page.goto("/settings/security");
+    await page.getByRole("button", { name: "Add this device" }).click();
+    await expect(page.getByText("Unnamed passkey")).toBeVisible();
 
-    await page.getByRole("button", { name: /Remove Temporary key/ }).click();
-    await page.getByRole("button", { name: "Remove" }).click();
+    await page
+      .getByRole("button", { name: /Remove/ })
+      .first()
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Remove" })
+      .click();
 
-    await expect(page.getByText("No passkeys yet")).toBeVisible();
+    await expect(
+      page.getByText("Add this device to sign in without a password."),
+    ).toBeVisible();
   });
 
   test("offers passkey sign-in only where the browser supports it", async ({
@@ -102,12 +122,11 @@ test.describe("passkeys", () => {
     const email = uniqueEmail("both");
     await registerAndSignIn(page, { email });
 
-    await page.goto("/profile/security");
-    await page.getByRole("button", { name: "Register a passkey" }).click();
+    await page.goto("/settings/security");
+    await page.getByRole("button", { name: "Add this device" }).click();
     await expect(page.getByText("Unnamed passkey")).toBeVisible();
 
-    await page.getByRole("button", { name: "Account menu" }).click();
-    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await signOut(page);
 
     // The password is unaffected by having registered a passkey.
     await page.goto("/sign-in");

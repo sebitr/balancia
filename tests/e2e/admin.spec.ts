@@ -27,8 +27,13 @@ async function signInAsOrdinaryParticipant(page: Page): Promise<void> {
 
   // Signing out matters as well as registering twice: `/register` sends a
   // signed-in browser away, so the second registration needs a signed-out one.
-  await page.getByRole("button", { name: "Account menu" }).click();
-  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  // Sign out lives at the foot of the settings hub now, behind a confirmation.
+  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Sign out" })
+    .click();
   await expect(page).toHaveURL("/");
 
   await registerAndSignIn(page);
@@ -38,20 +43,23 @@ test.describe("telemetry administration", () => {
   test("is not offered to an ordinary participant", async ({ page }) => {
     await signInAsOrdinaryParticipant(page);
 
-    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("link", { name: "Settings" }).click();
 
+    // The hub draws every row this account is allowed to open, and no row for
+    // administration — which is presentation only; the screen behind it
+    // resolves the caller again.
     await expect(
-      page.getByRole("menuitem", { name: "Notifications" }),
+      page.getByRole("link", { name: /Notifications/ }),
     ).toBeVisible();
     await expect(
-      page.getByRole("menuitem", { name: "Administration" }),
+      page.getByRole("link", { name: /Administration/ }),
     ).toHaveCount(0);
   });
 
   test("is not reachable by typing its address", async ({ page }) => {
     await signInAsOrdinaryParticipant(page);
 
-    await page.goto("/admin/telemetry");
+    await page.goto("/settings/admin");
 
     // The not-found screen rather than a redirect or a permission message: the
     // page answers as though it does not exist, so its existence is not

@@ -6,6 +6,7 @@ import {
   expensePayers,
   expenseShares,
   expenses,
+  groupMembers,
   groups,
   importRows,
   importRuns,
@@ -780,4 +781,54 @@ export async function listImportRuns(
     .where(eq(importRuns.groupId, groupId))
     .orderBy(desc(importRuns.createdAt))
     .limit(20);
+}
+
+export interface RecentImportRun extends ImportRunSummary {
+  readonly groupId: string;
+  readonly groupName: string;
+}
+
+/**
+ * The last few imports this account started, across every group it is in.
+ *
+ * The per-group list above answers "what has been imported into *this*
+ * group", which is what the group's own import screen asks. The settings
+ * screen asks the other question — "did that import I ran last week finish?" —
+ * and the person asking it does not remember which group they ran it in.
+ *
+ * Scoped through `group_members` rather than by `created_by_user_id`: an
+ * import belongs to the group it landed in, so somebody who joined afterwards
+ * should still see that it happened, and somebody who has left should not.
+ */
+export async function listRecentImportRunsForUser(
+  userId: string,
+  options: { db?: Database; limit?: number } = {},
+): Promise<RecentImportRun[]> {
+  const db = options.db ?? getDb();
+  return db
+    .select({
+      id: importRuns.id,
+      fileName: importRuns.fileName,
+      sourceFormat: importRuns.sourceFormat,
+      status: importRuns.status,
+      rowsTotal: importRuns.rowsTotal,
+      rowsImported: importRuns.rowsImported,
+      rowsSkipped: importRuns.rowsSkipped,
+      rowsFailed: importRuns.rowsFailed,
+      createdAt: importRuns.createdAt,
+      completedAt: importRuns.completedAt,
+      groupId: importRuns.groupId,
+      groupName: groups.name,
+    })
+    .from(importRuns)
+    .innerJoin(groups, eq(groups.id, importRuns.groupId))
+    .innerJoin(
+      groupMembers,
+      and(
+        eq(groupMembers.groupId, importRuns.groupId),
+        eq(groupMembers.userId, userId),
+      ),
+    )
+    .orderBy(desc(importRuns.createdAt))
+    .limit(options.limit ?? 5);
 }

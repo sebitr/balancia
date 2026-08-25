@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import {
   saveUserFavoriteCurrencies,
   saveUserFormatPreferences,
+  saveUserName,
   saveUserPreferredCurrency,
 } from "@/modules/auth/service";
 import { isSupportedCurrency } from "@/modules/currencies/iso-4217";
@@ -102,5 +103,38 @@ export async function setFormatPreferencesAction(input: {
         numberFormat,
       });
     }
+  });
+}
+
+/**
+ * The name on the account.
+ *
+ * Saved as it is typed, after a pause, like every other field on the settings
+ * screens — so the bound is enforced here rather than trusted from a
+ * `maxLength` the field happens to carry. An empty name is refused instead of
+ * stored: every screen that draws a person falls back to an initial taken from
+ * this string, and a blank one leaves a blank circle.
+ *
+ * The dashboard is revalidated because the greeting on it is this name.
+ */
+export async function setDisplayNameAction(
+  name: string,
+): Promise<ActionResult> {
+  const t = await getTranslations("serverValidation");
+
+  const user = await getCurrentUser();
+  if (!user) {
+    const tErrors = await getTranslations("serverErrors");
+    return actionError(tErrors("signedInRequired"));
+  }
+
+  const value = name.trim();
+  if (value.length === 0) return actionError(t("name"));
+  if (value.length > 120) return actionError(t("nameTooLong"));
+
+  return runAction("setDisplayName", async () => {
+    await saveUserName(user.userId, value);
+    revalidatePath("/dashboard");
+    revalidatePath("/settings");
   });
 }

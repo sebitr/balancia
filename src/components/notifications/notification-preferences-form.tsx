@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toastUndoable } from "@/components/ui/sonner";
+import { SettingsControlRow } from "@/components/settings/settings-row";
 import { savePreferencesAction } from "@/modules/notifications/actions";
 import type { NotificationPreferences } from "@/modules/notifications/types";
 
@@ -14,14 +14,24 @@ import type { NotificationPreferences } from "@/modules/notifications/types";
  *
  * They govern the inbox as well as push: turning one off means Balancia does
  * not tell you about that kind of event, rather than telling you quietly.
+ *
+ * All five are on screen at once, with no "advanced" disclosure hiding the
+ * last two. There are five of them; a disclosure would cost a tap to reveal
+ * what a single glance can already take in, and the ones people actually want
+ * to turn off — reminders, repeating expenses — are exactly the ones that
+ * would end up behind it.
  */
 
+/**
+ * In the order somebody meets them: what other people do to your money first,
+ * then what the system does on its own.
+ */
 const CATEGORIES = [
   { key: "expenses", label: "expenses", help: "expensesHelp" },
   { key: "settlements", label: "settlements", help: "settlementsHelp" },
+  { key: "reminders", label: "reminders", help: "remindersHelp" },
   { key: "recurring", label: "recurring", help: "recurringHelp" },
   { key: "imports", label: "imports", help: "importsHelp" },
-  { key: "reminders", label: "reminders", help: "remindersHelp" },
 ] as const;
 
 export function NotificationPreferencesForm({
@@ -65,25 +75,23 @@ export function NotificationPreferencesForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       {CATEGORIES.map((category) => (
-        <div
+        <SettingsControlRow
           key={category.key}
-          className="flex items-start justify-between gap-4"
-        >
-          <div className="space-y-1">
-            <Label htmlFor={`notify-${category.key}`}>
-              {t(category.label)}
-            </Label>
-            <p className="text-xs text-muted-foreground">{t(category.help)}</p>
-          </div>
-          <Switch
-            id={`notify-${category.key}`}
-            checked={preferences[category.key]}
-            disabled={isPending}
-            onCheckedChange={(checked) => toggle(category.key, checked)}
-          />
-        </div>
+          htmlFor={`notify-${category.key}`}
+          label={t(category.label)}
+          description={t(category.help)}
+          control={
+            <Switch
+              id={`notify-${category.key}`}
+              size="lg"
+              checked={preferences[category.key]}
+              disabled={isPending}
+              onCheckedChange={(checked) => toggle(category.key, checked)}
+            />
+          }
+        />
       ))}
     </div>
   );

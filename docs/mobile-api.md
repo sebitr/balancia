@@ -109,6 +109,10 @@ The group read also carries `profile` (`description`, `icon`, `iconColor` via
 | POST   | `/api/notifications/read`                          | `{ids?: [uuid]}`; omit to mark all read                                                                                          |
 | PUT    | `/api/notifications/preferences`                   | all five category booleans                                                                                                       |
 | PATCH  | `/api/profile`                                     | `{preferredCurrency?: code\|null, favoriteCurrencies?: [code]}`                                                                  |
+| GET    | `/api/profile/avatar`                              | the caller's own photo, or 404; never anybody else's                                                                             |
+| POST   | `/api/profile/avatar`                              | `multipart/form-data` with `file`; type is sniffed, 1 MB cap, replaces and sweeps the old one                                    |
+| DELETE | `/api/profile/avatar`                              | 204; the account goes back to its initial                                                                                        |
+| DELETE | `/api/push/subscriptions/:id`                      | forget one device by its row id — the endpoint form is how a browser unsubscribes itself                                         |
 
 Every restore refuses a row that is not deleted, so a client may replay one
 safely: a second call answers 404 rather than writing a second event about

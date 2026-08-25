@@ -289,7 +289,7 @@ export function NotificationList({
             </button>
           )}
           <Link
-            href="/profile/notifications"
+            href="/settings/notifications"
             transitionTypes={PUSH}
             aria-label={t("settingsLink")}
             className={cn(ICON_BUTTON, "text-muted-foreground")}

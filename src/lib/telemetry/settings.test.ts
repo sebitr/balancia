@@ -283,7 +283,7 @@ describe("what the administration page renders", () => {
    */
   it("takes the switch positions from the resolved state, not the stored row", () => {
     const source = readFileSync(
-      path.join(process.cwd(), "src/app/(app)/admin/telemetry/page.tsx"),
+      path.join(process.cwd(), "src/app/settings/admin/page.tsx"),
       "utf8",
     );
 

@@ -11,6 +11,7 @@ import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import {
   AuthError,
   changePassword,
+  deleteAccount,
   registerUser,
   requestEmailChange,
   requestPasswordReset,
@@ -288,7 +289,7 @@ export async function unlinkAppleAction(): Promise<ActionResult> {
       throw new AuthError("Sign in to change your account.", "signInRequired");
     }
     await unlinkAppleIdentity(user.userId);
-    revalidatePath("/profile/security");
+    revalidatePath("/settings/security");
   });
 }
 
@@ -315,6 +316,49 @@ export async function changePasswordAction(
       parsed.data.currentPassword,
       parsed.data.newPassword,
     );
-    revalidatePath("/profile/security");
+    revalidatePath("/settings/security");
   });
+}
+
+/**
+ * Closing the account, from the confirmation sheet on the Account screen.
+ *
+ * Two things guard it, and neither is the sheet: the caller is resolved here
+ * rather than taken from the request, and the address they typed has to match
+ * the one on the account. A confirmation dialog is a courtesy to somebody who
+ * meant something else; it is not an authorization check, and this action is
+ * reachable without ever seeing it.
+ *
+ * The session cookie is cleared before the redirect because the session it
+ * named no longer exists — the row went with the account.
+ */
+export async function deleteAccountAction(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = z
+    .object({ email: z.string().trim().min(1, "email") })
+    .safeParse(input);
+  if (!parsed.success) {
+    return validationError(parsed.error.issues[0]?.message);
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("signedInRequired"));
+  }
+
+  if (
+    parsed.data.email.toLocaleLowerCase() !== user.email.toLocaleLowerCase()
+  ) {
+    const t = await getTranslations("serverValidation");
+    return actionError(t("emailMismatch"));
+  }
+
+  const result = await runAction("auth.deleteAccount", async () => {
+    await deleteAccount(user.userId);
+  });
+
+  if (result.ok) await clearSessionCookie();
+  return result;
 }

@@ -26,10 +26,7 @@ export function AppShell({
   children: ReactNode;
   actor: {
     label: string;
-    email?: string;
     isGuest: boolean;
-    /** Instance administrator: adds the administration entry to the menu. */
-    isAdmin?: boolean;
   };
   className?: string;
   bottomNav?: ReactNode;
@@ -72,12 +69,7 @@ export function AppShell({
             {/* Guests have no account, so nothing to notify and no bell. */}
             {!actor.isGuest && <NotificationBell />}
             <ThemeToggle />
-            <UserMenu
-              label={actor.label}
-              email={actor.email}
-              isGuest={actor.isGuest}
-              isAdmin={actor.isAdmin ?? false}
-            />
+            <UserMenu label={actor.label} isGuest={actor.isGuest} />
           </div>
         </div>
       </header>
