@@ -30,6 +30,30 @@ world. See `requestEmailChange` in `src/modules/auth/service.ts`.
 None of them is sent on an instance with no SMTP configured, because none of
 the flows behind them is offered there.
 
+## Getting the code out of the email
+
+There is no copy button, and there cannot be one. A copy button needs the
+clipboard, the clipboard needs JavaScript, and a mail client runs none. What
+the two code emails do instead is two things, neither of which is a button:
+
+- **The digits sit in a panel that `user-select:all` selects whole.** One tap
+  on a phone or one click on a desktop makes the six figures the selection, so
+  the reader presses copy rather than dragging a caret across characters they
+  are trying not to misread. What lands on the clipboard is the six figures —
+  the letter-spacing is a rendering, not a character. Clients that strip the
+  property lose nothing but the shortcut.
+- **The message is shaped so the phone offers the code itself.** iOS and
+  Android surface a one-time code to the keyboard when they find one beside a
+  word like "code". So the subject leads with the digits, the panel's own label
+  carries the word immediately above them, and the plain-text part names both
+  in its first sentence.
+
+That second point is also why no code email may contain another number. The
+closing line used to read "expires in 10 minutes", which put a second candidate
+beside the same keyword — the reliable way to be offered the wrong one. It now
+spells the duration out, and `templates.test.ts` fails on any digit in a code
+email that is not the code.
+
 ## Where they live
 
 ```
@@ -88,7 +112,8 @@ The specifics:
   across the substitution.
 - **No JavaScript, no external stylesheets, and nothing fetched from a third
   party.** The only request an email makes is for the mark, from the same
-  origin its links point at.
+  origin its links point at. This is what rules out a copy button; see
+  [Getting the code out of the email](#getting-the-code-out-of-the-email).
 - **The `<head>` block carries only media queries and the link colour.** Several
   clients drop it outright, so nothing that positions or colours an element may
   live there. Everything else is inlined on the element it styles.
@@ -131,7 +156,10 @@ becoming a comment about something that used to be the case.
 The fixtures and the unit tests catch drift, not rendering. Before shipping a
 change to the markup, put the rendered files through Litmus or Email on Acid,
 at minimum on: Gmail web, Gmail iOS and Android, Apple Mail on macOS and iOS,
-Outlook 2016/2019 on Windows, Outlook.com, and Yahoo. Check Apple Mail dark and
+Outlook 2016/2019 on Windows, Outlook.com, and Yahoo. On the two code emails,
+check the tap-to-select panel by hand on a real iPhone and a real Android
+handset — whether `user-select` survives a client's sanitiser is not something
+a fixture can tell you, and neither is whether the keyboard offers the code. Check Apple Mail dark and
 Outlook.com dark specifically — the palette was chosen to survive client-side
 inversion, and that is the assumption most worth re-checking.
 

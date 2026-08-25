@@ -2,6 +2,8 @@ import {
   renderEmailChangeEmail,
   renderEmailChangeNoticeEmail,
   renderPasswordResetEmail,
+  renderSignInCodeEmail,
+  renderVerifyCodeEmail,
   renderVerifyEmail,
   type RenderedEmail,
 } from "./templates";
@@ -16,6 +18,10 @@ import {
  * The tokens and the address are the ones the design handoff used. Keeping
  * them is what lets the rendered English files be diffed against those
  * references directly; see tests/fixtures/emails/README.md.
+ *
+ * The two code emails have no handoff to be diffed against. They are rendered
+ * anyway, because they are emails, and an email nothing renders is an email
+ * whose markup changes unreviewed.
  */
 
 const ORIGIN = "https://balancia.app";
@@ -25,11 +31,24 @@ export const SAMPLE = {
   resetToken: "AwA5-bcRwgnFpuqKIoFWklggr0jcCEh67gt7M1Qku1Y",
   changeToken: "rXk7XUERrBUbxb0TFTynNgtu1BPnlHfpVJhOHwCfYIc",
   newEmail: "sebastien@trosset.net",
+  // Six figures with no repeat and no run, so a fixture diff that drops or
+  // reorders one is visible rather than plausible.
+  code: "148293",
 } as const;
 
-/** Keyed by the design handoff's file names, which the fixtures reuse. */
+/** Keyed by the fixture file names; the four link emails reuse the handoff's. */
 export function renderAll(locale: string): Record<string, RenderedEmail> {
   return {
+    "verify-code-email": renderVerifyCodeEmail({
+      locale,
+      origin: ORIGIN,
+      code: SAMPLE.code,
+    }),
+    "sign-in-code-email": renderSignInCodeEmail({
+      locale,
+      origin: ORIGIN,
+      code: SAMPLE.code,
+    }),
     "reset-password-email": renderPasswordResetEmail({
       locale,
       origin: ORIGIN,

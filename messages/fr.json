@@ -2204,6 +2204,7 @@
     }
   },
   "emails": {
+    "codeLabel": "Ton code — appuie ou clique pour sélectionner",
     "fallbackLabel": "Ou colle ce lien dans ton navigateur",
     "verify": {
       "subject": "Confirme ton adresse e-mail Balancia",
@@ -2253,8 +2254,8 @@
       "preheader": "Saisis ce code dans Balancia pour confirmer ton adresse.",
       "lead": "Saisis ce code dans Balancia pour confirmer ton adresse.",
       "sub": "Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert.",
-      "closing": "Le code expire dans 10 minutes. Si tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail.",
-      "text": "Ton code Balancia est {code}.\n\nSaisis-le dans Balancia pour confirmer ton adresse. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dans 10 minutes.\n\nSi tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail."
+      "closing": "Le code expire dix minutes après son envoi. Si tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail.",
+      "text": "Ton code Balancia est {code}.\n\nSaisis-le dans Balancia pour confirmer ton adresse. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dix minutes après son envoi.\n\nSi tu n'es pas à l'origine de cette demande, rien n'a été créé en ton nom — tu peux ignorer cet e-mail."
     },
     "signInCode": {
       "subject": "{code} est ton code de connexion Balancia",
@@ -2262,8 +2263,8 @@
       "preheader": "Saisis ce code dans Balancia pour te connecter.",
       "lead": "Saisis ce code dans Balancia pour te connecter.",
       "sub": "Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert.",
-      "closing": "Le code expire dans 10 minutes. Si tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail.",
-      "text": "Ton code de connexion Balancia est {code}.\n\nSaisis-le dans Balancia pour te connecter. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dans 10 minutes.\n\nSi tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail."
+      "closing": "Le code expire dix minutes après son envoi. Si tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail.",
+      "text": "Ton code de connexion Balancia est {code}.\n\nSaisis-le dans Balancia pour te connecter. Il fonctionne une seule fois, sur l'écran que tu as laissé ouvert, et expire dix minutes après son envoi.\n\nSi tu n'as pas demandé à te connecter, ignore cet e-mail — personne ne peut utiliser le code sans accéder à ta boîte mail."
     }
   },
   "serverErrors": {
