@@ -7,7 +7,7 @@ import { SettingsCard } from "@/components/settings/settings-card";
 import { PayoutMethodsForm } from "@/components/payouts/payout-methods-form";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
-import { listPayoutMethods } from "@/modules/payouts/service";
+import { getPayoutAddress, listPayoutMethods } from "@/modules/payouts/service";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("userSettings");
@@ -32,9 +32,18 @@ export default async function MoneySettingsPage() {
 
   const t = await getTranslations("userSettings");
   const tPayouts = await getTranslations("payouts");
-  const [currency, payouts] = await Promise.all([
+  /*
+   * The address is loaded with the methods, not instead of them.
+   *
+   * It is only ever asked for under a Swiss IBAN, but it has to be *read*
+   * whether or not one is on file: a form that writes an address and then
+   * comes back empty is one somebody re-types until they conclude it does not
+   * save. That is what this screen did before.
+   */
+  const [currency, payouts, address] = await Promise.all([
     getUserPreferredCurrency(user.userId),
     listPayoutMethods(user.userId),
+    getPayoutAddress(user.userId),
   ]);
 
   return (
@@ -51,7 +60,7 @@ export default async function MoneySettingsPage() {
       {/* Payout details sit with the currencies rather than on the account
           screen: this is about money moving, not about who you are. */}
       <SettingsCard title={tPayouts("title")} description={tPayouts("sub")}>
-        <PayoutMethodsForm initial={payouts} />
+        <PayoutMethodsForm initial={payouts} initialAddress={address} />
       </SettingsCard>
 
       <p className="shrink-0 px-1.5 text-xs leading-relaxed text-pretty text-muted-foreground">

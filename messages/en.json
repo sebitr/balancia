@@ -2965,6 +2965,7 @@
     "addressPostalCode": "Postcode",
     "addressTown": "Town",
     "addressCountry": "Country",
+    "addressCountryPlaceholder": "CH",
     "addressRemove": "Remove my address",
     "qrTitle": "Scan to pay",
     "qrSwiss": "Swiss QR-bill — open your banking app and scan",
