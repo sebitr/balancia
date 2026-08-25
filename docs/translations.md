@@ -248,14 +248,30 @@ thing for its own languages.
 1. Apply for the Libre plan at <https://hosted.weblate.org/hosting/>. It is
    free for public projects; Balancia is AGPL-3.0-or-later and public, so it
    qualifies. Approval is a person reading the request, not instant.
-2. Create the component from `scripts/weblate-component-hosted.json`.
-3. Give Weblate's GitHub account write access to the repository, so it can push
-   the branch it opens pull requests from. Without it, Weblate falls back to
-   opening them from a fork of its own, which works but makes the pull requests
-   harder to follow.
-4. Add a webhook from GitHub to Weblate, so that merging new English strings
-   makes them appear for translators without waiting for a poll.
-5. Set the JSON indentation and the cleanup add-on, per the section above.
+2. Install the [Hosted Weblate app](https://github.com/apps/hosted-weblate) on
+   the repository, from Weblate's own **Connect GitHub account** flow rather
+   than from GitHub. That one step is how Weblate clones, how it pushes the
+   branch it opens pull requests from, and how it hears about a merge — the
+   app's installation token carries all three.
+
+   Doing it this way is what makes the other two ways unnecessary: there is no
+   `hosted weblate` collaborator to invite, which is only needed for SSH pushes
+   outside the app, and no webhook to add by hand, which is only needed for
+   components imported without it. A component created without the app pushes
+   from a fork of Weblate's own and polls for changes; both work, and both are
+   worse to follow.
+
+3. Create the component by importing the connected repository, using
+   `scripts/weblate-component-hosted.json` for the field values. The API
+   (`POST /api/projects/balancia/components/`) takes the same fields, but the
+   import flow is what attaches the component to the app installation —
+   afterwards the repository URLs are read-only in the component settings,
+   deliberately, so that nobody can point an existing component at somewhere
+   else's credentials.
+4. Set the JSON indentation and the cleanup add-on, per the section above.
+5. Check that the project's licence says AGPL-3.0-**or-later**. Weblate's
+   picker offers `AGPL-3.0-only` as well, and it is the wrong one — it is shown
+   to every translator before they contribute.
 
 ## When something is wrong
 
