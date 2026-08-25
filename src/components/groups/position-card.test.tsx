@@ -11,8 +11,11 @@ import { PositionCard, type PositionCardView } from "./position-card";
  * It makes an arithmetic claim — that the balance in the hero is expenses plus
  * revenue plus repayments, and nothing else — so what these tests hold is that
  * claim: each section's subtotal is the pair inside it, the three subtotals
- * reach the resulting balance, and income is a named section rather than the
+ * reach the final balance, and income is a named section rather than the
  * unexplained remainder it used to arrive as.
+ *
+ * How those figures are worded — which of them carry a sign, and the sentences
+ * under each pair — is held next door, in position-breakdown.test.tsx.
  *
  * Amounts are compared against `formatMoney` rather than against literal
  * strings: the question here is whether the right figure reached the right
@@ -51,6 +54,14 @@ function chf(minorUnits: bigint): string {
     locale: "en",
     display: "code",
     signDisplay: "exceptZero",
+  }).replace(/\u00a0/g, " ");
+}
+
+/** A row's own total, which carries no sign: it is an amount, not an effect. */
+function raw(minorUnits: bigint): string {
+  return formatMoney(money(minorUnits, "CHF"), {
+    locale: "en",
+    display: "code",
   }).replace(/\u00a0/g, " ");
 }
 
@@ -99,8 +110,8 @@ describe("the position sheet's ledger", () => {
     const section = await expand(user, /Expenses/);
 
     expect(within(section).getByText(chf(19180039n))).toBeInTheDocument();
-    expect(within(section).getByText(chf(31634847n))).toBeInTheDocument();
-    expect(within(section).getByText(chf(-12454808n))).toBeInTheDocument();
+    expect(within(section).getByText(raw(31634847n))).toBeInTheDocument();
+    expect(within(section).getByText(raw(12454808n))).toBeInTheDocument();
   });
 
   /**
@@ -112,11 +123,9 @@ describe("the position sheet's ledger", () => {
     const user = await openSheet();
     const section = await expand(user, /Revenue/);
 
-    expect(
-      within(section).getByText("Income you received"),
-    ).toBeInTheDocument();
-    expect(within(section).getByText(chf(-3100000n))).toBeInTheDocument();
-    expect(within(section).getByText(chf(390235n))).toBeInTheDocument();
+    expect(within(section).getByText("You received")).toBeInTheDocument();
+    expect(within(section).getByText(raw(3100000n))).toBeInTheDocument();
+    expect(within(section).getByText(raw(390235n))).toBeInTheDocument();
     expect(within(section).getByText(chf(-2709765n))).toBeInTheDocument();
     expect(screen.queryByText("Other adjustments")).not.toBeInTheDocument();
   });
@@ -126,15 +135,15 @@ describe("the position sheet's ledger", () => {
     const section = await expand(user, /Settlements/);
 
     expect(within(section).getByText(chf(-15159741n))).toBeInTheDocument();
-    expect(within(section).getByText(chf(2671n))).toBeInTheDocument();
-    expect(within(section).getByText(chf(-15162412n))).toBeInTheDocument();
+    expect(within(section).getByText(raw(2671n))).toBeInTheDocument();
+    expect(within(section).getByText(raw(15162412n))).toBeInTheDocument();
   });
 
   it("reaches the balance the hero states, from the three subtotals", async () => {
     await openSheet();
 
     expect(19180039n - 2709765n - 15159741n).toBe(1310533n);
-    expect(screen.getByText("Resulting balance")).toBeInTheDocument();
+    expect(screen.getByText("Final balance")).toBeInTheDocument();
     expect(screen.getAllByText(chf(1310533n)).length).toBeGreaterThan(0);
   });
 
@@ -158,9 +167,7 @@ describe("opening a section", () => {
     const header = screen.getByRole("button", { name: /Expenses/ });
 
     expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(
-      screen.queryByText("You paid for the group"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("You paid")).not.toBeInTheDocument();
     expect(screen.getByText(chf(19180039n))).toBeInTheDocument();
   });
 
@@ -170,13 +177,11 @@ describe("opening a section", () => {
 
     await user.click(header);
     expect(header).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("You paid for the group")).toBeInTheDocument();
+    expect(screen.getByText("You paid")).toBeInTheDocument();
 
     await user.click(header);
     expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(
-      screen.queryByText("You paid for the group"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("You paid")).not.toBeInTheDocument();
   });
 
   it("leaves the other sections alone", async () => {
@@ -187,7 +192,7 @@ describe("opening a section", () => {
       "aria-expanded",
       "false",
     );
-    expect(screen.queryByText("Income you received")).not.toBeInTheDocument();
+    expect(screen.queryByText("You received")).not.toBeInTheDocument();
   });
 });
 
@@ -209,7 +214,7 @@ describe("more than one currency", () => {
 
   /**
    * Two currencies are two ledgers, never one added together — so each keeps
-   * its own three sections and its own resulting balance, under a heading that
+   * its own three sections and its own final balance, under a heading that
    * says which currency the figures below it are in.
    */
   it("heads each ledger with its currency and repeats the sections", async () => {
@@ -218,7 +223,7 @@ describe("more than one currency", () => {
     expect(screen.getByRole("heading", { name: "CHF" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "EUR" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Expenses/ })).toHaveLength(2);
-    expect(screen.getAllByText("Resulting balance")).toHaveLength(2);
+    expect(screen.getAllByText("Final balance")).toHaveLength(2);
   });
 
   it("shows no currency heading when there is only one ledger", async () => {

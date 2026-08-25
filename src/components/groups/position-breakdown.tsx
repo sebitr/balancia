@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { Amount } from "@/components/money/amount";
+import { toneFor } from "@/components/money/balance-tone";
 import { CurrencyHeading } from "@/components/money/currency-heading";
+import { useNumberLocale } from "@/i18n/format-context";
+import { formatMoney, money } from "@/modules/currencies/money";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,6 +39,43 @@ export interface PositionView {
 
 type SectionKey = "expenses" | "revenue" | "settlements";
 
+/** Which way a pair of raw totals leans, and by how much. */
+export interface Comparison {
+  readonly side: "more" | "less" | "equal";
+  /** Never negative: the figure the sentence names, nothing when level. */
+  readonly gap: bigint;
+}
+
+/**
+ * How far one total ran ahead of the other.
+ *
+ * Level is an answer of its own rather than a gap of zero, because "you paid
+ * 0.00 less than your share" is a sentence nobody should be shown — a reader
+ * whose two figures match wants to be told they match.
+ */
+export function compareToShare(mine: bigint, share: bigint): Comparison {
+  if (mine > share) return { side: "more", gap: mine - share };
+  if (mine < share) return { side: "less", gap: share - mine };
+  return { side: "equal", gap: 0n };
+}
+
+/** The sentence a leaning pair calls for, once it is known to lean. */
+const EXPENSE_SENTENCES = {
+  more: "positionExpensesMore",
+  less: "positionExpensesLess",
+} as const;
+
+const REVENUE_SENTENCES = {
+  more: "positionRevenueMore",
+  less: "positionRevenueLess",
+} as const;
+
+/** What the resulting balance means, in the app's own two directions. */
+const RESULT_SENTENCES = {
+  positive: "positionResultOwed",
+  negative: "positionResultOwe",
+} as const;
+
 /**
  * The ledger behind one currency's position, in three collapsible groups.
  *
@@ -49,6 +89,14 @@ type SectionKey = "expenses" | "revenue" | "settlements";
  * lowers their balance. Collecting income is negative; being credited part of
  * it is positive. That is an expense run backwards, which is what income is
  * everywhere else in the app.
+ *
+ * A sign is reserved for that effect and never spent on anything else. The
+ * six figures inside the sections are raw totals — what was paid, what was
+ * owed — and a reader asked to work out why "+290.00" and "−436.67" belong to
+ * the same bill has been handed the arithmetic back. So each row states its
+ * amount plainly, each section header labels its subtotal as the impact on
+ * the balance, and the sentence under the pair says which way the difference
+ * ran, in words that survive without the sign.
  */
 export function PositionBreakdown({
   position,
@@ -58,7 +106,8 @@ export function PositionBreakdown({
   showCurrency: boolean;
 }) {
   const t = useTranslations("group");
-  // Closed to start with. Opened out, the three sections and their captions
+  const locale = useNumberLocale();
+  // Closed to start with. Opened out, the three sections and their sentences
   // run past the fold on a phone, so the one line the sheet exists to explain
   // — the resulting balance — is the one line you cannot see. Each section
   // states its own subtotal shut, which is the answer most of the time; the
@@ -79,33 +128,49 @@ export function PositionBreakdown({
   const otherAdjustments = BigInt(breakdown.otherAdjustments);
   const result = BigInt(position.minorUnits);
 
+  /** An amount set inside a sentence, in the notation the rows use. */
+  const inline = (amount: bigint) =>
+    formatMoney(money(amount, currency), { locale, display: "code" });
+
+  const expenses = compareToShare(paid, share);
+  const revenue = compareToShare(revenueReceived, revenueCredited);
+  const tone = toneFor(position.minorUnits);
+
   const sections: readonly {
     key: SectionKey;
     title: string;
-    caption: string;
+    summary: string;
     subtotal: bigint;
     rows: readonly { key: string; label: string; value: bigint }[];
   }[] = [
     {
       key: "expenses",
       title: t("positionSectionExpenses"),
-      caption: t("positionExpensesCaption"),
+      summary:
+        expenses.side === "equal"
+          ? t("positionExpensesEqual")
+          : t(EXPENSE_SENTENCES[expenses.side], {
+              amount: inline(expenses.gap),
+            }),
       subtotal: paid - share,
       rows: [
         { key: "paid", label: t("positionYouPaid"), value: paid },
-        { key: "share", label: t("positionYourShare"), value: -share },
+        { key: "share", label: t("positionYourShare"), value: share },
       ],
     },
     {
       key: "revenue",
       title: t("positionSectionRevenue"),
-      caption: t("positionRevenueCaption"),
+      summary:
+        revenue.side === "equal"
+          ? t("positionRevenueEqual")
+          : t(REVENUE_SENTENCES[revenue.side], { amount: inline(revenue.gap) }),
       subtotal: revenueCredited - revenueReceived,
       rows: [
         {
           key: "received",
           label: t("positionRevenueReceived"),
-          value: -revenueReceived,
+          value: revenueReceived,
         },
         {
           key: "credited",
@@ -117,7 +182,7 @@ export function PositionBreakdown({
     {
       key: "settlements",
       title: t("positionSectionSettlements"),
-      caption: t("positionSettlementsCaption"),
+      summary: t("positionSettlementsCaption"),
       subtotal: settlementsPaid - settlementsReceived,
       rows: [
         {
@@ -128,7 +193,7 @@ export function PositionBreakdown({
         {
           key: "settlementsReceived",
           label: t("positionSettlementsReceived"),
-          value: -settlementsReceived,
+          value: settlementsReceived,
         },
       ],
     },
@@ -172,13 +237,24 @@ export function PositionBreakdown({
                   />
                   {section.title}
                 </span>
-                <Amount
-                  minorUnits={section.subtotal.toString()}
-                  currency={currency}
-                  display="code"
-                  signDisplay="exceptZero"
-                  className="text-xs font-semibold"
-                />
+                {/* The label rides above the figure rather than beside it:
+                    stacked, it costs the header no width and stays inside the
+                    44px the row already reserves, where an inline "Impact on
+                    your balance:" would push the amount off a narrow phone.
+                    It is also what tells a screen reader that this signed
+                    number is an effect rather than an amount. */}
+                <span className="flex shrink-0 flex-col items-end gap-0.5">
+                  <span className="text-2xs leading-none text-muted-foreground">
+                    {t("positionImpactLabel")}
+                  </span>
+                  <Amount
+                    minorUnits={section.subtotal.toString()}
+                    currency={currency}
+                    display="code"
+                    signDisplay="exceptZero"
+                    className="text-xs leading-none font-semibold"
+                  />
+                </span>
               </button>
             </SectionHeading>
 
@@ -193,19 +269,21 @@ export function PositionBreakdown({
                       <dt className="text-sm text-muted-foreground">
                         {row.label}
                       </dt>
+                      {/* No sign: these are the totals themselves, and the
+                          only thing a sign here ever meant was which side of
+                          the subtraction above they stood on. */}
                       <dd className="text-sm font-medium tabular-nums">
                         <Amount
                           minorUnits={row.value.toString()}
                           currency={currency}
                           display="code"
-                          signDisplay="exceptZero"
                         />
                       </dd>
                     </div>
                   ))}
                 </dl>
                 <p className="px-3.5 pb-3 text-xs leading-[1.45] text-pretty text-muted-foreground">
-                  {section.caption}
+                  {section.summary}
                 </p>
               </div>
             )}
@@ -229,10 +307,17 @@ export function PositionBreakdown({
       )}
 
       <div className="flex min-h-14 items-center justify-between gap-4 rounded-2xl bg-muted px-3.5 py-3 ring-1 ring-border">
-        <div className="flex flex-col gap-px">
+        <div className="flex flex-col gap-0.5">
           <span className="text-sm font-semibold">{t("positionResult")}</span>
-          <span className="text-2xs text-muted-foreground">
-            {t("positionResultHint")}
+          {/* The colour says the direction twice over; this says it once in
+              words, so the reader never has to read a minus sign to find out
+              whether the number beside it is theirs or the group's. */}
+          <span className="text-xs text-pretty text-muted-foreground">
+            {tone === "neutral"
+              ? t("positionResultSettled")
+              : t(RESULT_SENTENCES[tone], {
+                  amount: inline(result < 0n ? -result : result),
+                })}
           </span>
         </div>
         <Amount
@@ -241,7 +326,7 @@ export function PositionBreakdown({
           display="code"
           signDisplay="exceptZero"
           className={cn(
-            "text-base font-semibold",
+            "shrink-0 text-base font-semibold",
             result > 0n && "text-positive",
             result < 0n && "text-negative",
             result === 0n && "text-neutral-balance",
