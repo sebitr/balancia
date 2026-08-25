@@ -43,6 +43,15 @@ export interface OnboardingRouteState {
   readonly intent: Intent;
   /** True once "none of these — I'm new here" has been taken. */
   readonly isNewMember: boolean;
+  /**
+   * An account was already signed in when this flow started.
+   *
+   * Only a shared link reaches the screens in that state — the other two
+   * arrivals turn a signed-in reader away — and what it removes is the whole
+   * credential half of the route: there is nothing to keep and nothing to
+   * prove, only which of the listed names is theirs.
+   */
+  readonly signedIn: boolean;
 }
 
 /**
@@ -58,7 +67,9 @@ export interface OnboardingRouteState {
  *  - **Shared.** Nobody knows who this is, so that is the first question:
  *    which of the listed names, or none of them. Only once there is a person
  *    on the screen — with a balance and expenses filed against it — is the
- *    account question worth asking, which is what "keep it" is for.
+ *    account question worth asking, which is what "keep it" is for. A reader
+ *    who is already signed in has answered it before arriving: they skip both
+ *    "keep it" and the account screen, and claiming the name *is* the join.
  *
  *  - **Cold.** No group exists, so there is no arrival screen to land on and
  *    nothing to be a guest of. It ends at the empty state instead.
@@ -74,9 +85,16 @@ export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
       "whichOne",
       // Claiming a listed name confirms it; being new types it instead.
       state.isNewMember ? "profile" : "confirm",
-      "keepIt",
-      // A guest has just declined the account, so there is nothing to verify.
-      ...(state.intent === "guest" ? [] : (["identity"] as const)),
+      // An account that walked in already signed in has nothing to decide
+      // here and nothing to prove: the screen it just committed on is what
+      // put it in the group.
+      ...(state.signedIn
+        ? []
+        : ([
+            "keepIt",
+            // A guest has just declined the account, so nothing to verify.
+            ...(state.intent === "guest" ? [] : (["identity"] as const)),
+          ] as const)),
       "arrival",
       "checklist",
     ];

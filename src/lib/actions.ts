@@ -15,6 +15,7 @@ import { InvalidAmountError } from "@/modules/currencies/money";
 import { RecurrenceError } from "@/modules/recurring/schedule";
 import { UploadRejectedError } from "@/modules/attachments/service";
 import { ImportError } from "@/modules/imports/service";
+import { JoinError } from "@/modules/join/service";
 import { ReminderError } from "@/modules/reminders/service";
 import { RateLimitedError } from "@/lib/security/rate-limit";
 import { reportCrash } from "@/lib/telemetry/crash-reporter";
@@ -74,6 +75,7 @@ const SAFE_ERRORS = [
   CurrencyConfigurationError,
   ImportError,
   InvalidAmountError,
+  JoinError,
   RateLimitedError,
   RecurrenceError,
   ReminderError,

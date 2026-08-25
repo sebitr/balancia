@@ -1460,6 +1460,7 @@
   },
   "onboarding": {
     "back": "Back",
+    "joinFailed": "You could not be added to the group. Try again in a moment.",
     "since": "since {date}",
     "stepWelcome": "Invitation",
     "stepWhoYouAre": "Who you are",
@@ -1477,6 +1478,7 @@
       "sharedTitle": "{group}, and one link for everyone in it",
       "sharedSub": "This link is the same for everybody, so it cannot know which of you just opened it.",
       "sharedNote": "Account, sign-in or guest — we'll ask once we know who you are.",
+      "sharedNoteSignedIn": "Signed in as {name} — we only need to know which of these is you.",
       "findMyself": "Find myself in the list",
       "coldTitle": "Where do I stand?",
       "coldSub": "Self-hosted shared expense tracking. Add what you paid for, and Balancia works out who settles with whom.",
@@ -1550,6 +1552,7 @@
       "sub": "Three taps, one code. Everything else can wait.",
       "welcomeBackTitle": "Welcome back, {name}",
       "welcomeBackSub": "Nothing changed while you were gone.",
+      "joinedSub": "{group} is on your account now, alongside your other groups.",
       "guestTitle": "You're in as a guest",
       "guestSub": "Everything works — add expenses, see your balance. Claim the account whenever you want to keep it.",
       "claimedTitle": "You're in, {name}",
@@ -2337,7 +2340,9 @@
     "pushTestRateLimited": "Too many test notifications. Try again shortly.",
     "pushTestFailed": "The test notification could not be delivered.",
     "deviceNotSubscribed": "This device is not set up for push notifications yet.",
-    "deviceNotRegistered": "That device could not be registered."
+    "deviceNotRegistered": "That device could not be registered.",
+    "joinLinkGone": "This link is no longer active. Ask the group for a new one.",
+    "joinNameTaken": "Somebody else claimed that name first. Open the link again to pick another."
   },
   "serverValidation": {
     "checkForm": "Check the form.",

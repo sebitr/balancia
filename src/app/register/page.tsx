@@ -117,7 +117,9 @@ export default async function RegisterPage() {
        * success and replaced somebody's own arrival screen with the dashboard.
        * The flow acts on this once, when it mounts.
        */
-      signedIn={actor?.kind === "user"}
+      account={
+        actor?.kind === "user" ? { name: actor.name, email: actor.email } : null
+      }
     />
   );
 }

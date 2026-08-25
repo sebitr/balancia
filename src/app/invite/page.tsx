@@ -48,7 +48,13 @@ export default async function InvitePage() {
    * people from their own arrival screen to the dashboard.
    */
   if (actor.kind === "user") {
-    return <OnboardingFlow arrival="personal" group={null} signedIn />;
+    return (
+      <OnboardingFlow
+        arrival="personal"
+        group={null}
+        account={{ name: actor.name, email: actor.email }}
+      />
+    );
   }
 
   const access = await requireGroupAccess(actor.groupId);

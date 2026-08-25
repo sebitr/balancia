@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { resolveJoinLink } from "@/lib/security/join-link";
 import { readJoinCookie } from "@/modules/auth/cookies";
+import { getCurrentUser } from "@/lib/security/actor";
 import { getDateFormatter } from "@/i18n/preferences";
 import { listClaimableMembers, loadJoinSummary } from "@/modules/join/service";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
@@ -10,11 +11,11 @@ import { getEnv } from "@/lib/env";
 /**
  * Where a group join link lands, once its token has left the URL.
  *
- * The authority for everything below is the cookie, not the reader: nobody has
- * signed in, and the group being shown is whichever group the link resolves
- * to. All the deciding happens on the client from here — the screens are a
- * state machine over data this page loads once — and only the final step comes
- * back to the server.
+ * The authority for everything below is the cookie, not the reader: whoever
+ * opened the link may be signed in or nobody at all, and either way the group
+ * being shown is whichever group the link resolves to. All the deciding
+ * happens on the client from here — the screens are a state machine over data
+ * this page loads once — and only the final step comes back to the server.
  *
  * Loading the whole claimable list up front is deliberate. It is bounded by
  * the group's size, the matching runs against it as the reader types, and
@@ -29,8 +30,15 @@ import { getEnv } from "@/lib/env";
  * passed down as `linkGone`, rendered by the *same* component so React keeps
  * the client state, and a flow that has already finished simply ignores it.
  * Whoever arrives without a usable cookie sees the dead-link screen; whoever
- * just finished sees what they earned. Signed-in readers are turned away at
- * `/join/g/[token]`, before any of this, for the same reason.
+ * just finished sees what they earned.
+ *
+ * A reader who was already signed in gets these same screens, which is the one
+ * thing this page does that its personal-invitation sibling does not. They are
+ * not a stranger to be turned away — they are the person the link was shared
+ * with, holding an account already, so the only question left is which of the
+ * listed names is theirs. `account` is what tells the flow to drop the
+ * credential half of the route; `/join/g/[token]` has already sent anybody who
+ * is *in* the group to the group itself, so nobody reaching here is a member.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -59,9 +67,10 @@ export default async function JoinStartPage() {
    */
   if (!link) return <OnboardingFlow arrival="shared" group={null} linkGone />;
 
-  const [summary, claimable] = await Promise.all([
+  const [summary, claimable, viewer] = await Promise.all([
     loadJoinSummary(link.groupId),
     listClaimableMembers(link.groupId),
+    getCurrentUser(),
   ]);
 
   const dates = await getDateFormatter();
@@ -72,6 +81,7 @@ export default async function JoinStartPage() {
     <OnboardingFlow
       arrival="shared"
       inviterName={link.inviterName}
+      account={viewer && { name: viewer.name, email: viewer.email }}
       registrationAllowed={env.ALLOW_REGISTRATION}
       codeSignupAvailable={env.smtpEnabled}
       group={{

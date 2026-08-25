@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firstNameOf } from "@/components/join/types";
+import { joinWithAccountAction } from "@/modules/join/actions";
 import {
   previousScreen,
   progressOf,
@@ -56,7 +57,7 @@ export function OnboardingFlow({
   registrationAllowed = true,
   codeSignupAvailable = true,
   linkGone = false,
-  signedIn = false,
+  account = null,
   alreadyGuest = false,
 }: {
   arrival: Arrival;
@@ -79,15 +80,18 @@ export function OnboardingFlow({
    */
   linkGone?: boolean;
   /**
-   * There is already a signed-in account in this browser.
+   * The account already signed in in this browser, if there is one.
    *
-   * Which is two different situations wearing one prop, and only the first is
-   * a reason to leave: somebody who arrived signed in has no onboarding to do,
-   * while somebody who signed in *during* the flow is still standing on it.
-   * The difference is when it became true, so it is acted on once, on mount,
-   * and never again — see below.
+   * Which is three different situations wearing one prop, and what to do about
+   * it is `arrival`'s to say. On a **shared** link it is the good case: this is
+   * the person the link was sent to, holding an account already, so the flow
+   * uses it and skips asking for one. On a **personal** invitation it is either
+   * somebody who arrived signed in — nothing here is for them — or somebody who
+   * signed in *during* the flow and is still standing on it. The difference
+   * between those last two is only *when* it became true, so it is acted on
+   * once, on mount, and never again — see below.
    */
-  signedIn?: boolean;
+  account?: { readonly name: string; readonly email: string } | null;
   /**
    * This browser is already holding a guest session for the group below.
    *
@@ -100,18 +104,36 @@ export function OnboardingFlow({
   const t = useTranslations("onboarding");
   const router = useRouter();
 
+  /*
+   * The account this browser walked in with, captured on the first render.
+   *
+   * Held rather than read, for the same reason `initialGroup` below is: every
+   * Server Action re-renders the page this flow is mounted on, and the pages
+   * resolve the account from a cookie that the flow itself may have just
+   * spent. A prop that flips mid-flow would change the *route* under somebody
+   * standing on it. When it became true is the whole question, so it is
+   * answered once.
+   */
+  const [arrivedWith] = useState(account);
+  const signedIn = arrivedWith !== null;
+
   const [intent, setIntent] = useState<Intent>(
-    registrationAllowed ? "account" : "signin",
+    // Somebody holding an account has already answered this, whatever the
+    // instance allows. Nothing asks them again.
+    signedIn ? "signin" : registrationAllowed ? "account" : "signin",
   );
   const [screen, setScreen] = useState<ScreenId>("welcome");
-  const [name, setName] = useState(knownName);
-  const [claimedId, setClaimedId] = useState<string | null>(null);
+  const [name, setName] = useState(knownName || (arrivedWith?.name ?? ""));
+  const [claimed, setClaimed] = useState<JoinMemberView | null>(null);
   const [isNewMember, setIsNewMember] = useState(false);
   /** Which way in was actually taken, for the checklist's first receipt. */
   const [credential, setCredential] = useState<"passkey" | "code" | null>(null);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(arrivedWith?.email ?? "");
   /** The group joined at the end of a shared link, once it is known. */
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
+  /** The join a signed-in account commits, while it is in flight. */
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   /*
    * The group's facts, captured on the first render and then held.
@@ -125,14 +147,15 @@ export function OnboardingFlow({
   const [initialGroup] = useState(linkGone ? null : group);
 
   const route = useMemo(
-    () => routeFor({ arrival, intent, isNewMember }),
-    [arrival, intent, isNewMember],
+    () => routeFor({ arrival, intent, isNewMember, signedIn }),
+    [arrival, intent, isNewMember, signedIn],
   );
 
   const previous = previousScreen(route, screen);
   const finished = screen === "checklist" || screen === "firstGroup";
-  const claimed = members.find((member) => member.id === claimedId) ?? null;
   const groupId = joinedGroupId ?? initialGroup?.groupId ?? null;
+  /** A shared link finished by an account that already existed. */
+  const joinsWithAccount = signedIn && arrival === "shared";
 
   /*
    * Turning away a reader who was already signed in when they arrived.
@@ -142,12 +165,16 @@ export function OnboardingFlow({
    * `redirect()` on the server would fire the moment anything in this flow
    * created a session — throwing somebody to the dashboard from the middle of
    * their own signup, one screen short of their balance. The pages therefore
-   * hand the fact down and this decides, on mount and only on mount: by the
+   * hand the account down and this decides, on mount and only on mount: by the
    * time an action has run, the effect below has long since not fired.
+   *
+   * A shared link is the exception, and the only one. Its screens are exactly
+   * what a signed-in reader needs — which of these names is you — so they run
+   * the flow rather than being bounced to a dashboard that says nothing about
+   * the group they were just invited to.
    */
-  const arrivedSignedIn = useRef(signedIn);
   useEffect(() => {
-    if (arrivedSignedIn.current) router.replace("/dashboard");
+    if (signedIn && arrival !== "shared") router.replace("/dashboard");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -162,9 +189,36 @@ export function OnboardingFlow({
     if (!previous) return;
     // Stepping back off a screen un-decides what it was about to do, so the
     // next arrival cannot inherit a stale choice from the last one.
-    if (screen === "confirm") setClaimedId(null);
+    if (screen === "confirm") setClaimed(null);
     if (screen === "profile" && arrival === "shared") setIsNewMember(false);
+    setJoinError(null);
     advance(previous);
+  };
+
+  /**
+   * Joining as the account already in this browser, which is the whole of the
+   * flow for somebody who arrived signed in.
+   *
+   * Returns the sentence to show, or null when it worked — the two screens
+   * that commit report it differently, and neither of them should have to know
+   * what the other does. Nothing advances from here: the caller does, because
+   * only the caller knows which screen it is leaving.
+   */
+  const joinWithAccount = async (member: {
+    participantId: string | null;
+    displayName: string;
+  }): Promise<string | null> => {
+    setJoinError(null);
+    setJoining(true);
+    const result = await joinWithAccountAction(member);
+    setJoining(false);
+    if (!result.ok || !result.data) {
+      const message = result.error ?? t("joinFailed");
+      setJoinError(message);
+      return message;
+    }
+    setJoinedGroupId(result.data.groupId);
+    return null;
   };
 
   /** Where a route ends: the group it produced, or the dashboard. */
@@ -236,13 +290,18 @@ export function OnboardingFlow({
             arrival={arrival}
             group={initialGroup}
             inviterName={inviterName}
+            accountName={arrivedWith?.name ?? null}
             registrationAllowed={registrationAllowed}
             guestOffered={!alreadyGuest}
             onChoose={(chosen) => {
               setIntent(chosen);
               advance(
-                routeFor({ arrival, intent: chosen, isNewMember })[1] ??
-                  "arrival",
+                routeFor({
+                  arrival,
+                  intent: chosen,
+                  isNewMember,
+                  signedIn,
+                })[1] ?? "arrival",
               );
             }}
             onFindMyself={() => advance("whichOne")}
@@ -254,15 +313,23 @@ export function OnboardingFlow({
             members={members}
             typedName={name}
             onPick={(member) => {
-              setClaimedId(member.id);
+              // Held whole rather than by id. The list is a prop, and every
+              // Server Action re-renders the page that supplied it — by which
+              // time the join cookie is spent and the list comes back empty.
+              // A screen that names the person they just claimed cannot be
+              // looking them up in it.
+              setClaimed(member);
               setIsNewMember(false);
               setName(member.displayName);
               advance("confirm");
             }}
             onNewHere={() => {
-              setClaimedId(null);
+              setClaimed(null);
               setIsNewMember(true);
-              setName("");
+              // Back to whatever was known before a name was picked, which is
+              // the account's own for somebody signed in and nothing at all
+              // for everybody else.
+              setName(knownName || (arrivedWith?.name ?? ""));
               advance("profile");
             }}
           />
@@ -272,9 +339,26 @@ export function OnboardingFlow({
           <ConfirmScreen
             member={claimed}
             inviterName={inviterName}
-            onConfirm={() => advance("keepIt")}
+            busy={joining}
+            error={joinError}
+            onConfirm={() => {
+              // For everybody else this only says "yes"; for an account that
+              // is already signed in it is the join itself, because there is
+              // no credential screen left to carry it.
+              if (!joinsWithAccount) {
+                advance("keepIt");
+                return;
+              }
+              void joinWithAccount({
+                participantId: claimed.id,
+                displayName: claimed.displayName,
+              }).then((failed) => {
+                if (!failed) advance("arrival");
+              });
+            }}
             onReject={() => {
-              setClaimedId(null);
+              setClaimed(null);
+              setJoinError(null);
               advance("whichOne");
             }}
           />
@@ -301,7 +385,7 @@ export function OnboardingFlow({
             codeSignupAvailable={codeSignupAvailable}
             join={
               arrival === "shared"
-                ? { participantId: claimedId, displayName: name }
+                ? { participantId: claimed?.id ?? null, displayName: name }
                 : undefined
             }
             onDone={(outcome) => {
@@ -311,7 +395,7 @@ export function OnboardingFlow({
               if (outcome.claimedGroupId) {
                 setJoinedGroupId(outcome.claimedGroupId);
               }
-              const next = routeFor({ arrival, intent, isNewMember });
+              const next = routeFor({ arrival, intent, isNewMember, signedIn });
               const index = next.indexOf("identity");
               advance(next[index + 1] ?? "arrival");
             }}
@@ -325,8 +409,26 @@ export function OnboardingFlow({
             isNewMember={isNewMember}
             name={name}
             onNameChange={setName}
-            /** An account exists by now on every route but the guest ones. */
-            hasAccount={credential !== null}
+            /**
+             * An account exists by now on every route but the guest ones —
+             * either this flow just made one, or the reader walked in with it.
+             */
+            hasAccount={credential !== null || signedIn}
+            /*
+              A signed-in reader who was on nobody's list types the name the
+              *group* will know them by, so the primary files a new member
+              under it rather than renaming their account. Everybody else has
+              no group to be added to yet, and the plain path applies.
+            */
+            onSubmit={
+              joinsWithAccount
+                ? (typed) =>
+                    joinWithAccount({
+                      participantId: null,
+                      displayName: typed,
+                    })
+                : undefined
+            }
             onDone={() => {
               const index = route.indexOf("profile");
               advance(route[index + 1] ?? "arrival");
@@ -338,6 +440,7 @@ export function OnboardingFlow({
           <ArrivalScreen
             intent={intent}
             claimed={claimed}
+            joinedWithAccount={joinsWithAccount}
             name={firstNameOf(name)}
             group={initialGroup}
             onContinue={() => advance("checklist")}
