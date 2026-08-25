@@ -2900,7 +2900,8 @@
       "email": "Cela ne ressemble pas à une adresse e-mail.",
       "link": "Écris le lien en entier, comme paypal.me/toi.",
       "unknownMethod": "Ce moyen de paiement n'est pas connu de Balancia.",
-      "invalid": "Ce détail ne peut pas être enregistré tel quel."
+      "invalid": "Ce détail ne peut pas être enregistré tel quel.",
+      "address": "Indique au moins un code postal, une localité et un pays sur deux lettres."
     },
     "settle": {
       "title": "Comment {name} veut être remboursé",
@@ -2908,7 +2909,23 @@
       "guest": "{name} est un invité, il n'y a donc aucun compte pour enregistrer un moyen de remboursement."
     },
     "copy": "Copier",
-    "copied": "Copié"
+    "copied": "Copié",
+    "addressTitle": "Ton adresse, pour le QR suisse",
+    "addressSub": "Une QR-facture ne peut pas être créée sans code postal, localité et pays — la norme les exige. Celui qui scanne le code pour te rembourser les voit, comme sur un virement bancaire.",
+    "addressStreet": "Rue",
+    "addressBuilding": "Numéro",
+    "addressPostalCode": "Code postal",
+    "addressTown": "Localité",
+    "addressCountry": "Pays",
+    "addressRemove": "Supprimer mon adresse",
+    "qrTitle": "Scanner pour payer",
+    "qrSwiss": "QR-facture suisse — ouvre ton app bancaire et scanne",
+    "qrEpc": "Girocode — ouvre ton app bancaire et scanne",
+    "qrShow": "Afficher le code de paiement",
+    "qrHide": "Masquer le code de paiement",
+    "qrNoneAddress": "{name} a un compte suisse mais n'a pas ajouté l'adresse exigée par la norme QR-facture.",
+    "qrNoneQrIban": "La banque de {name} émet des références de facture que Balancia ne peut pas générer, il n'y a donc aucun code à scanner.",
+    "qrNoneCurrency": "Un code de paiement ne peut pas porter des {currency}."
   },
   "countries": {
     "CH": "Suisse",

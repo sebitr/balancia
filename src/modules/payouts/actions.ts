@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import {
   PayoutValidationError,
   replacePayoutMethods,
+  savePayoutAddress,
   type PayoutMethodView,
 } from "./service";
 
@@ -74,4 +75,50 @@ export async function setPayoutMethodsAction(
     }
     throw error;
   }
+}
+
+/**
+ * The postal address a Swiss QR-bill cannot be built without.
+ *
+ * Its own action rather than a field on the one above, because it is answered
+ * at a different moment and by a smaller group of people: only somebody whose
+ * payout method is a Swiss IBAN is ever asked, and only they can clear it.
+ *
+ * Sending `null` removes it, which is the way somebody withdraws an address
+ * they would rather not have in a code other people scan.
+ */
+const addressSchema = z
+  .object({
+    street: z.string().trim().max(70).nullable().default(null),
+    buildingNumber: z.string().trim().max(16).nullable().default(null),
+    postalCode: z.string().trim().min(1).max(16),
+    town: z.string().trim().min(1).max(35),
+    country: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{2}$/)
+      .transform((value) => value.toUpperCase()),
+  })
+  .nullable();
+
+export async function setPayoutAddressAction(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = addressSchema.safeParse(input);
+  if (!parsed.success) {
+    const t = await getTranslations("payouts.errors");
+    return actionError(t("address"));
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("signedInRequired"));
+  }
+
+  const result = await runAction("payouts.setAddress", () =>
+    savePayoutAddress(user.userId, parsed.data),
+  );
+  if (result.ok) revalidatePath("/settings/money");
+  return result;
 }

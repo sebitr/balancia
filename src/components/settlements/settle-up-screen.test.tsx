@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
   SettleUpScreen,
@@ -423,6 +424,7 @@ describe("payout details", () => {
     participantId: "amelie",
     method: "twint",
     detail: "+41791234567",
+    qr: null,
   };
 
   it("says how the person being paid wants it", () => {
@@ -447,5 +449,51 @@ describe("payout details", () => {
   it("shows nothing when the person has not said", () => {
     render({ payoutHints: [] });
     expect(screen.queryByText(/wants it/)).toBeNull();
+  });
+});
+
+/**
+ * The payment code, which is behind a tap.
+ *
+ * A settle screen four QR codes tall is one nobody reads, so each row offers
+ * its own and none of them opens by itself.
+ */
+describe("the payment code", () => {
+  const withQr = {
+    participantId: "amelie",
+    method: "bank",
+    detail: "CH9300762011623852957",
+    qr: {
+      standard: "swiss" as const,
+      payload: ["SPC", "0200", "1", "CH9300762011623852957"].join("\n"),
+    },
+  };
+
+  it("offers it without showing it", () => {
+    render({ payoutHints: [withQr] });
+
+    expect(
+      screen.getByRole("button", { name: "Show payment code" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Scan to pay" })).toBeNull();
+  });
+
+  it("draws it when asked, and says which standard it is", async () => {
+    const user = userEvent.setup();
+    render({ payoutHints: [withQr] });
+
+    await user.click(screen.getByRole("button", { name: "Show payment code" }));
+
+    expect(
+      screen.getByRole("img", { name: "Scan to pay" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Swiss QR-bill/)).toBeInTheDocument();
+  });
+
+  it("offers nothing where no standard could carry the payment", () => {
+    // A TWINT number is not something a banking app scans, and a Swiss account
+    // with no address on file cannot have a code built for it at all.
+    render({ payoutHints: [{ ...withQr, method: "twint", qr: null }] });
+    expect(screen.queryByRole("button", { name: /payment code/ })).toBeNull();
   });
 });

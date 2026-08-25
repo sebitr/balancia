@@ -2900,7 +2900,8 @@
       "email": "That does not look like an email address.",
       "link": "Write the whole link, like paypal.me/you.",
       "unknownMethod": "That is not a payment method Balancia knows.",
-      "invalid": "That detail cannot be saved as it is."
+      "invalid": "That detail cannot be saved as it is.",
+      "address": "Enter at least a postcode, a town and a two-letter country."
     },
     "settle": {
       "title": "How {name} wants it",
@@ -2908,7 +2909,23 @@
       "guest": "{name} is a guest, so there is no account to hold a payment detail."
     },
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "addressTitle": "Your address, for the Swiss QR code",
+    "addressSub": "A Swiss QR-bill cannot be made without a postcode, a town and a country — the standard requires them. Whoever scans the code to pay you sees them, the same way they would on a bank transfer.",
+    "addressStreet": "Street",
+    "addressBuilding": "Number",
+    "addressPostalCode": "Postcode",
+    "addressTown": "Town",
+    "addressCountry": "Country",
+    "addressRemove": "Remove my address",
+    "qrTitle": "Scan to pay",
+    "qrSwiss": "Swiss QR-bill — open your banking app and scan",
+    "qrEpc": "Girocode — open your banking app and scan",
+    "qrShow": "Show payment code",
+    "qrHide": "Hide payment code",
+    "qrNoneAddress": "{name} has a Swiss account but has not added the address the QR-bill standard requires.",
+    "qrNoneQrIban": "{name}'s bank issues invoice references that Balancia cannot generate, so there is no code to scan.",
+    "qrNoneCurrency": "A payment code cannot carry {currency}."
   },
   "countries": {
     "CH": "Switzerland",

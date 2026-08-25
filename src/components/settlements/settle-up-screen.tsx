@@ -12,6 +12,7 @@ import {
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
 import { PayoutHint } from "@/components/payouts/payout-hint";
+import type { PaymentQrStandard } from "@/modules/payouts/qr/payment-qr";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,13 @@ export interface PayoutHintView {
   readonly participantId: string;
   readonly method: string;
   readonly detail: string;
+  /**
+   * The payment code, built on the server because only the server holds the
+   * creditor's address. Null whenever one cannot be built correctly — a
+   * missing address, a QR-IBAN, a currency neither standard carries — which is
+   * the common case rather than the exception.
+   */
+  readonly qr: { standard: PaymentQrStandard; payload: string } | null;
 }
 
 interface Shared {
@@ -358,6 +366,7 @@ function TransferRow({
           methodLabel={tMethods(
             payout.method as Parameters<typeof tMethods>[0],
           )}
+          qr={payout.qr}
         />
       )}
 
