@@ -91,7 +91,7 @@ export async function createGroup(
   await page.getByRole("button", { name: "Create group" }).click();
   // Creating a group hands over its invite link before going anywhere. Nothing
   // below needs the link, so every caller here takes the way past it.
-  await page.getByRole("button", { name: "Skip for now" }).click();
+  await page.getByRole("button", { name: "Later" }).click();
   await expect(page).toHaveURL(/\/groups\/[0-9a-f-]{36}$/);
 
   const groupId = page.url().split("/groups/")[1];
