@@ -56,26 +56,42 @@ Registration refusals (email taken, registration closed, password policy) are
 
 ## Reads
 
-| Method | Path                                                   | Body of the answer                                                                                                                                                                                           |
-| ------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/api/groups`                                          | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly. |
-| GET    | `/api/groups/:groupId`                                 | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, balance rows, suggested repayments, spending periods). |
-| GET    | `/api/groups/:groupId/expenses?limit&offset`           | `listExpenses`, newest first, payers and shares resolved.                                                                                                                                                    |
-| GET    | `/api/groups/:groupId/expenses/:expenseId`             | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                |
-| GET    | `/api/groups/:groupId/settlements?limit`               | `listSettlements`, newest first.                                                                                                                                                                             |
-| GET    | `/api/groups/:groupId/settlements/:settlementId`       | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`).                                                                                                                |
-| GET    | `/api/groups/:groupId/expenses/:expenseId/attachments` | The receipts on one expense (`id`, `fileName`, `contentType`, `byteSize`); bytes come from the per-attachment download route.                                                                                |
-| GET    | `/api/groups/:groupId/participants`                    | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                          |
-| GET    | `/api/groups/:groupId/activity?limit`                  | `listGroupActivity`, newest first (default 100, max 200).                                                                                                                                                    |
-| GET    | `/api/groups/:groupId/recurring`                       | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                           |
-| GET    | `/api/groups/:groupId/reminders`                       | `listRemindRecipients`: who owes the reader, per-currency debts, the channel a message would take, and the 24-hour lock state.                                                                               |
-| GET    | `/api/groups/:groupId/categories`                      | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                   |
-| GET    | `/api/groups/:groupId/join-link`                       | The live group-wide link's prefix and age, or `{link: null}`. The token itself only ever exists in the POST answer.                                                                                          |
-| GET    | `/api/notifications?limit&before`                      | The inbox plus `unread`. Users only.                                                                                                                                                                         |
-| GET    | `/api/notifications/preferences`                       | Category switches plus `mutedGroupIds`.                                                                                                                                                                      |
+| Method | Path                                                     | Body of the answer                                                                                                                                                                                           |
+| ------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/groups`                                            | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly. |
+| GET    | `/api/groups/:groupId`                                   | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, balance rows, suggested repayments, spending periods). |
+| GET    | `/api/groups/:groupId/expenses?limit&offset`             | `listExpenses`, newest first, payers and shares resolved.                                                                                                                                                    |
+| GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                |
+| GET    | `/api/groups/:groupId/settlements?limit`                 | `listSettlements`, newest first.                                                                                                                                                                             |
+| GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`).                                                                                                                |
+| GET    | `/api/groups/:groupId/expenses/:expenseId/attachments`   | The receipts on one expense (`id`, `fileName`, `contentType`, `byteSize`); bytes come from the per-attachment download route.                                                                                |
+| GET    | `/api/groups/:groupId/participants`                      | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                          |
+| GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200).                                                                                                                                                    |
+| GET    | `/api/groups/:groupId/recurring`                         | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                           |
+| GET    | `/api/groups/:groupId/reminders`                         | `listRemindRecipients`: who owes the reader, per-currency debts, the channel a message would take, and the 24-hour lock state.                                                                               |
+| GET    | `/api/groups/:groupId/categories`                        | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                   |
+| GET    | `/api/groups/:groupId/join-link`                         | The live group-wide link's prefix and age, or `{link: null}`. The token itself only ever exists in the POST answer.                                                                                          |
+| GET    | `/api/groups/:groupId/transactions?cursor&limit`         | One page of the group's history, expenses and repayments in one list, newest first (40 by default, 500 at most). Feed `cursor` back for the next page; a null cursor is the end.                             |
+| GET    | `/api/groups/:groupId/stats`                             | `loadGroupStats`: all three windows, every currency and the all-time records in one read.                                                                                                                    |
+| GET    | `/api/groups/:groupId/participants/:participantId/stats` | `loadMemberStats` for one member, removed people included.                                                                                                                                                   |
+| GET    | `/api/groups/:groupId/settle-up`                         | `loadSettleUp`: the shortest set of transfers that clears the group, split into the reader's own and everybody else's.                                                                                       |
+| GET    | `/api/notifications?limit&before`                        | The inbox plus `unread`. Users only.                                                                                                                                                                         |
+| GET    | `/api/notifications/preferences`                         | Category switches plus `mutedGroupIds`.                                                                                                                                                                      |
 
 The group read also carries `profile` (`description`, `icon`, `iconColor` via
 `getGroupProfile`), which `GroupAccess` deliberately omits.
+
+The two statistics reads answer with the whole screen rather than one window of
+it. Three ranges, every currency and the all-time records come out of the same
+rows, so a range switcher costs no round trip and two blocks cannot show
+figures read at different instants. Percentages cross as JSON numbers: they are
+ratios the server has already rounded to the decimal the screens print, not
+money, and nothing downstream does arithmetic on them. Every amount is still a
+string of minor units.
+
+`settle-up` fills `lastSettled` only when nothing is left to settle — it is the
+one screen with room for it. Read an empty list as "no room for it here", never
+as "this group has never settled anything".
 
 ## Writes
 
