@@ -339,7 +339,7 @@ export async function deleteAccountAction(
  * Four actions, in two pairs: ask for a code and spend it, once for an account
  * that is being created and once for one that already exists. They are here
  * rather than in the join module because what they do is authenticate — the
- * group work they may also finish is delegated to `joinAfterSignup`, which
+ * group work they may also finish is delegated to `joinFromLink`, which
  * takes the group from the join cookie and never from the form.
  *
  * The passkey path has no action of its own: WebAuthn needs a plain
@@ -493,7 +493,7 @@ export async function signInWithCodeAction(
 /**
  * Drops the cache for a group that has just gained a member.
  *
- * `joinAfterSignup` cannot do this itself — it is a domain module, and
+ * `joinFromLink` cannot do this itself — it is a domain module, and
  * `revalidatePath` is framework vocabulary — so the boundary does it on the
  * id that came back.
  */

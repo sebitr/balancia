@@ -45,14 +45,19 @@ export async function GET(
   try {
     const link = await resolveJoinLink(token);
 
-    // Somebody already signed in has an identity, so there is nothing for the
-    // flow to establish. If the account is in the group they are simply there;
-    // if it is not, joining with an existing account is a path this feature
-    // does not build yet, and the dashboard is where the app puts a signed-in
-    // reader who arrived somewhere with nothing for them.
-    //
-    // The check belongs here rather than on `/join/start`, which cannot
-    // redirect at all — see the note there.
+    /*
+     * Somebody already signed in, which is one situation and not two.
+     *
+     * An account that is already in the group has nowhere to be sent but the
+     * group: there is no identity to establish and no name left to claim. An
+     * account that is *not* in it is exactly who the link is for — they simply
+     * arrive holding the account the flow would otherwise have asked them to
+     * make, so they get the same cookie and the same screens, and `/join/start`
+     * drops the credential half of the route.
+     *
+     * The membership check belongs here rather than on `/join/start`, which
+     * cannot redirect at all — see the note there.
+     */
     const viewer = await getCurrentUser();
     if (viewer) {
       const [member] = await getDb()
@@ -65,13 +70,12 @@ export async function GET(
           ),
         )
         .limit(1);
-      return NextResponse.redirect(
-        new URL(
-          member ? `/groups/${link.groupId}` : "/dashboard",
-          env.appOrigin,
-        ),
-        { status: 303 },
-      );
+      if (member) {
+        return NextResponse.redirect(
+          new URL(`/groups/${link.groupId}`, env.appOrigin),
+          { status: 303 },
+        );
+      }
     }
 
     await setJoinCookie(token);

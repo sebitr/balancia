@@ -271,6 +271,24 @@ export async function listClaimableMembers(
   }));
 }
 
+/**
+ * A join that cannot finish, said in a sentence the joiner can act on.
+ *
+ * Both reasons are races rather than mistakes — a link revoked while somebody
+ * was reading the list, a name claimed by whoever tapped first — so they are
+ * refusals to show, not failures to log. The `code` is what `describeError`
+ * translates; see `lib/server-errors.ts`.
+ */
+export class JoinError extends Error {
+  readonly code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = "JoinError";
+    this.code = code;
+  }
+}
+
 export type JoinOutcome =
   | { readonly status: "joined"; readonly participantId: string }
   /** Somebody else linked that name first, or it was linked all along. */

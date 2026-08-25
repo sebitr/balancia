@@ -5,13 +5,14 @@ import { logger } from "@/lib/logger";
 import { claimMember, createMember, type JoinOutcome } from "./service";
 
 /**
- * Putting a brand-new account into the group whose link it arrived on.
+ * Putting an account into the group whose link it arrived on.
  *
  * This is the second half of every signup that started at a shared link, and
  * it is separate from the credential half because the credentials now differ:
  * a password signup finishes in a Server Action, a passkey signup finishes in
  * a route handler, and a code signup finishes on a second request entirely.
- * All three end here.
+ * All three end here — and so does the fourth way in, a reader who opened the
+ * link already signed in and therefore has no credential half at all.
  *
  * The group is re-resolved from the join cookie rather than taken from the
  * caller. That is the rule the whole flow rests on: the form may say which
@@ -24,7 +25,7 @@ import { claimMember, createMember, type JoinOutcome } from "./service";
  * here: an invitation has already spent its token into a guest session, and a
  * cold signup has no group to belong to yet.
  */
-export async function joinAfterSignup(
+export async function joinFromLink(
   userId: string,
   member: {
     /** The listed member being claimed, or null for somebody new. */

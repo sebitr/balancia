@@ -24,7 +24,8 @@ const state = (
   arrival: Arrival,
   intent: Intent,
   isNewMember = false,
-): OnboardingRouteState => ({ arrival, intent, isNewMember });
+  signedIn = false,
+): OnboardingRouteState => ({ arrival, intent, isNewMember, signedIn });
 
 describe("routeFor", () => {
   it("asks a personal invitation for an address, then a name", () => {
@@ -85,6 +86,38 @@ describe("routeFor", () => {
     expect(routeFor(state("shared", "guest"))).not.toContain("identity");
   });
 
+  it("asks a signed-in reader which name is theirs and nothing else", () => {
+    // The account question and the credential that answers it are both behind
+    // them, so claiming the name is the last thing they do.
+    expect(routeFor(state("shared", "signin", false, true))).toEqual([
+      "welcome",
+      "whichOne",
+      "confirm",
+      "arrival",
+      "checklist",
+    ]);
+  });
+
+  it("sends a signed-in reader who was not on the list to type a name", () => {
+    expect(routeFor(state("shared", "signin", true, true))).toEqual([
+      "welcome",
+      "whichOne",
+      "profile",
+      "arrival",
+      "checklist",
+    ]);
+  });
+
+  it("never asks a signed-in reader to keep it or to prove anything", () => {
+    for (const intent of ["account", "signin", "guest"] as Intent[]) {
+      for (const isNewMember of [false, true]) {
+        const route = routeFor(state("shared", intent, isNewMember, true));
+        expect(route).not.toContain("keepIt");
+        expect(route).not.toContain("identity");
+      }
+    }
+  });
+
   it("gives a cold arrival no group screens and no guest anything", () => {
     const route = routeFor(state("cold", "account"));
     expect(route).toEqual(["welcome", "identity", "profile", "firstGroup"]);
@@ -98,8 +131,12 @@ describe("routeFor", () => {
     for (const arrival of arrivals) {
       for (const intent of intents) {
         for (const isNewMember of [false, true]) {
-          const route = routeFor(state(arrival, intent, isNewMember));
-          expect(new Set(route).size).toBe(route.length);
+          for (const signedIn of [false, true]) {
+            const route = routeFor(
+              state(arrival, intent, isNewMember, signedIn),
+            );
+            expect(new Set(route).size).toBe(route.length);
+          }
         }
       }
     }
@@ -145,6 +182,12 @@ describe("progressOf", () => {
     }
   });
 
+  it("runs to full on the shorter route a signed-in reader takes", () => {
+    const route = routeFor(state("shared", "signin", false, true));
+    expect(progressOf(route, "welcome")).toBe(0);
+    expect(progressOf(route, "checklist")).toBe(1);
+  });
+
   it("only ever moves forwards", () => {
     const route = routeFor(state("shared", "account"));
     const measured = route.map((screen) => progressOf(route, screen));
@@ -158,8 +201,11 @@ describe("STEP_LABEL_KEYS", () => {
     for (const arrival of ["personal", "shared", "cold"] as Arrival[]) {
       for (const intent of ["account", "signin", "guest"] as Intent[]) {
         for (const isNewMember of [false, true]) {
-          for (const screen of routeFor(state(arrival, intent, isNewMember))) {
-            reachable.add(screen);
+          for (const signedIn of [false, true]) {
+            const route = routeFor(
+              state(arrival, intent, isNewMember, signedIn),
+            );
+            for (const screen of route) reachable.add(screen);
           }
         }
       }

@@ -1460,6 +1460,7 @@
   },
   "onboarding": {
     "back": "Retour",
+    "joinFailed": "Impossible de t'ajouter au groupe. Réessaie dans un instant.",
     "since": "depuis le {date}",
     "stepWelcome": "Invitation",
     "stepWhoYouAre": "Qui tu es",
@@ -1477,6 +1478,7 @@
       "sharedTitle": "{group}, et un seul lien pour tout le monde",
       "sharedSub": "Ce lien est le même pour tous, il ne peut donc pas savoir lequel d'entre vous vient de l'ouvrir.",
       "sharedNote": "Compte, connexion ou invité — on te le demandera une fois qu'on saura qui tu es.",
+      "sharedNoteSignedIn": "Connecté en tant que {name} — il ne reste qu'à savoir qui tu es dans la liste.",
       "findMyself": "Me trouver dans la liste",
       "coldTitle": "Où j'en suis ?",
       "coldSub": "Le suivi des dépenses partagées, auto-hébergé. Ajoute ce que tu as payé, et Balancia calcule qui rembourse qui.",
@@ -1550,6 +1552,7 @@
       "sub": "Trois gestes, un code. Le reste peut attendre.",
       "welcomeBackTitle": "Content de te revoir, {name}",
       "welcomeBackSub": "Rien n'a changé pendant ton absence.",
+      "joinedSub": "{group} fait maintenant partie de ton compte, avec tes autres groupes.",
       "guestTitle": "Tu y es, en invité",
       "guestSub": "Tout fonctionne — ajoute des dépenses, consulte ton solde. Crée ton compte quand tu veux le garder.",
       "claimedTitle": "Tu y es, {name}",
@@ -2337,7 +2340,9 @@
     "pushTestRateLimited": "Trop de notifications de test. Réessaie dans un instant.",
     "pushTestFailed": "La notification de test n'a pas pu être délivrée.",
     "deviceNotSubscribed": "Cet appareil n'est pas encore configuré pour les notifications push.",
-    "deviceNotRegistered": "Cet appareil n'a pas pu être enregistré."
+    "deviceNotRegistered": "Cet appareil n'a pas pu être enregistré.",
+    "joinLinkGone": "Ce lien n'est plus actif. Demande-en un nouveau au groupe.",
+    "joinNameTaken": "Quelqu'un d'autre a pris ce nom avant toi. Rouvre le lien pour en choisir un autre."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
@@ -14,9 +14,35 @@ import type { OnboardingGroupView } from "./types";
  * them, which is the half a route table cannot state.
  */
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+const router = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
+  refresh: vi.fn(),
 }));
+
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
+/**
+ * The one Server Action these screens call.
+ *
+ * Mocked rather than reached: it is a `"use server"` module that opens a
+ * database, and what is under test here is which screen runs it and what the
+ * flow does with the answer.
+ */
+const joinWithAccountAction = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/join/actions", () => ({ joinWithAccountAction }));
+
+beforeEach(() => {
+  router.push.mockClear();
+  router.replace.mockClear();
+  router.refresh.mockClear();
+  joinWithAccountAction.mockReset();
+  joinWithAccountAction.mockResolvedValue({
+    ok: true,
+    data: { groupId: "group-1" },
+  });
+});
 
 // WebAuthn does not exist in jsdom, and the hook that asks is a fact about the
 // environment rather than state — so it is stubbed rather than waited for.
@@ -264,5 +290,211 @@ describe("the cold arrival", () => {
     expect(
       screen.queryByRole("button", { name: /Email me a code/ }),
     ).toBeNull();
+  });
+});
+
+/**
+ * The reader who was already signed in when the link arrived.
+ *
+ * This is the case that used to do nothing at all: `/join/g/[token]` sent them
+ * to the dashboard, which says nothing about the group they were invited to,
+ * so the link looked broken. They get the shared link's screens now — the
+ * whole point being that the *identity* question is the only one left, since
+ * they walked in holding the account the flow would have asked them to make.
+ */
+describe("the shared link, opened by somebody already signed in", () => {
+  const account = { name: "Léa Martin", email: "lea@example.com" };
+
+  it("runs the flow rather than sending them to the dashboard", () => {
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    ).toBeInTheDocument();
+  });
+
+  it("says which account it is about to join as", () => {
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    // A link opened on a borrowed laptop is the case where somebody claims a
+    // balance as the wrong person, so the account is named before they pick.
+    expect(screen.getByText(/Signed in as Léa Martin/)).toBeInTheDocument();
+  });
+
+  it("joins the group as that account when a listed name is claimed", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+
+    // The participant is named; the group is not. It comes from the cookie on
+    // the server, which is what stops a request naming any group it likes.
+    expect(joinWithAccountAction).toHaveBeenCalledWith({
+      participantId: "member-1",
+      displayName: "Marc T.",
+    });
+    expect(
+      screen.getByRole("heading", { name: /You're in, Marc T\./ }),
+    ).toBeInTheDocument();
+  });
+
+  it("never asks them to keep it, or for a credential they already have", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+
+    expect(
+      screen.queryByRole("heading", { name: /how should we keep it/ }),
+    ).toBeNull();
+    expect(screen.queryByPlaceholderText("you@example.com")).toBeNull();
+  });
+
+  it("files a new member under the typed name for somebody not on the list", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /None of these/ }));
+
+    // Prefilled from the account, because that is the likeliest answer — and
+    // it is the participant's name being asked for, not the account's.
+    const field = screen.getByPlaceholderText("Your name");
+    await user.clear(field);
+    await user.type(field, "Léa M.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(joinWithAccountAction).toHaveBeenCalledWith({
+      participantId: null,
+      displayName: "Léa M.",
+    });
+    expect(
+      screen.getByRole("heading", { name: /You're in, Léa/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Weekend in Verbier is on your account now/),
+    ).toBeInTheDocument();
+  });
+
+  it("offers the account's own name to somebody who was not on the list", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    expect(
+      screen.getByRole("button", { name: /I'm Léa Martin, and I'm new here/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps them on the screen they refused, with the reason", async () => {
+    joinWithAccountAction.mockResolvedValue({
+      ok: false,
+      error: "Somebody else claimed that name first.",
+    });
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+
+    expect(
+      screen.getByText("Somebody else claimed that name first."),
+    ).toBeInTheDocument();
+    // Still standing on the confirmation, so the list is one tap away.
+    expect(
+      screen.getByRole("button", { name: "No, show me the list again" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * The other two arrivals, which still turn a signed-in reader away.
+ *
+ * A personal invitation is addressed to one person and has already spent its
+ * token into a guest session; there is nothing on those screens for somebody
+ * holding an account. Only the shared link is the exception.
+ */
+describe("a signed-in reader on a personal invitation", () => {
+  it("leaves for the dashboard rather than running the flow", () => {
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="personal"
+        group={null}
+        account={{ name: "Léa Martin", email: "lea@example.com" }}
+      />,
+    );
+
+    expect(router.replace).toHaveBeenCalledWith("/dashboard");
   });
 });

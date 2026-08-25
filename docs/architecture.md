@@ -203,7 +203,10 @@ largest creditor) that is presentation-only: it never alters recorded history.
   short-lived cookie and every read re-resolves it by hash, which means
   revoking the link ends every in-flight join at once because no derived
   credential outlives it. Both leave the token out of the address bar, history
-  and referrers by redirecting to a token-free URL.
+  and referrers by redirecting to a token-free URL. A group join link opened by
+  somebody already signed in runs the same screens: only the account question
+  drops out of the flow, because they walked in holding the answer. Somebody
+  already in the group is sent to the group instead — there is nothing to join.
 - The group join link is the one token stored in a form the server can read
   back, because group settings has to show the live link weeks after minting it
   — a link that can only be seen once has to be replaced to be shared with a

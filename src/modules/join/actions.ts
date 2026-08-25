@@ -15,8 +15,13 @@ import {
   revokeJoinLink,
   setJoinLinkExpiry,
 } from "@/lib/security/join-link";
-import { requirePermission } from "@/lib/security/authorization";
+import {
+  AuthenticationRequiredError,
+  requirePermission,
+} from "@/lib/security/authorization";
 import { clearJoinCookie } from "@/modules/auth/cookies";
+import { JoinError } from "./service";
+import { joinFromLink } from "./signup-join";
 import {
   DEFAULT_JOIN_LINK_EXPIRY,
   expiryDate,
@@ -25,18 +30,75 @@ import {
 } from "./expiry";
 
 /**
- * The join link's own mutations: minting it, moving its expiry, revoking it.
+ * The join link's own mutations: minting it, moving its expiry, revoking it —
+ * and the one join that finishes here.
  *
- * Finishing a join is no longer here. It creates an account and puts that
- * account in a group, and the credential half of that now happens in three
- * different places — a Server Action for a code, a route handler for a
- * passkey, a second request for either — so the group half moved to
- * `signup-join.ts`, which all three end in.
+ * A join that *creates* an account is not in this file. The credential half of
+ * that happens in three different places — a Server Action for a code, a route
+ * handler for a passkey, a second request for either — so the group half moved
+ * to `signup-join.ts`, which all three end in. What is left here is the fourth
+ * way in, which has no credential half to wait for: a reader who opened the
+ * link already signed in. For them there is nothing to create, so the group
+ * half is the whole thing, and it is a Server Action like any other.
  */
 
 /** Ends the flow without joining, so a shared phone leaves nothing behind. */
 export async function abandonJoinAction(): Promise<void> {
   await clearJoinCookie();
+}
+
+/**
+ * Puts the signed-in account into the group its join cookie names.
+ *
+ * The group is not a parameter, and that is the whole security argument: it is
+ * re-resolved from the cookie inside `joinFromLink`, so a caller may say which
+ * *participant* it is claiming — the list it chose from came from the link —
+ * but never which group it is claiming it in. Naming the group here would let
+ * any signed-in request name any group it liked.
+ *
+ * Both failures are races rather than mistakes: a link revoked while somebody
+ * was reading the list, and a name taken by whoever tapped first. They are
+ * refusals with sentences on them, not errors, so the screen the reader is
+ * standing on can say what happened and let them pick again.
+ */
+export async function joinWithAccountAction(member: {
+  participantId: string | null;
+  displayName: string;
+}): Promise<ActionResult<{ groupId: string }>> {
+  const result = await runAction("join.withAccount", async () => {
+    const user = await getCurrentUser();
+    if (!user) throw new AuthenticationRequiredError();
+
+    const joined = await joinFromLink(user.userId, {
+      participantId: member.participantId,
+      displayName: member.displayName.trim(),
+    });
+
+    // No cookie, or one that no longer resolves. `joinFromLink` has already
+    // cleared it, so there is nothing to retry with and nothing was changed.
+    if (!joined) {
+      throw new JoinError(
+        "This link is no longer active. Ask the group for a new one.",
+        "joinLinkGone",
+      );
+    }
+    if (joined.status === "taken") {
+      throw new JoinError(
+        "Somebody else claimed that name first. Open the link again to pick another.",
+        "joinNameTaken",
+      );
+    }
+
+    return { groupId: joined.groupId };
+  });
+
+  if (result.ok && result.data) {
+    // The group gained a member, and the dashboard gained a group.
+    revalidatePath(`/groups/${result.data.groupId}`);
+    revalidatePath(`/groups/${result.data.groupId}/members`);
+    revalidatePath("/dashboard");
+  }
+  return result;
 }
 
 export interface JoinLinkResult {

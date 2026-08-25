@@ -1,7 +1,7 @@
 import "server-only";
 import { logger } from "@/lib/logger";
 import { claimGuestSession } from "@/modules/guests/service";
-import { joinAfterSignup } from "@/modules/join/signup-join";
+import { joinFromLink } from "@/modules/join/signup-join";
 import { clearGuestCookie, readGuestCookie, setSessionCookie } from "./cookies";
 
 /**
@@ -81,7 +81,7 @@ export async function settleNewSession(
   const claimedGroupId = await claimGuestIdentity(userId);
 
   const joined = input.join
-    ? await joinAfterSignup(userId, {
+    ? await joinFromLink(userId, {
         participantId: input.join.participantId,
         displayName: input.join.displayName,
       })

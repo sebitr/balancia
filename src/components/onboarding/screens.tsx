@@ -150,6 +150,7 @@ export function WelcomeScreen({
   arrival,
   group,
   inviterName,
+  accountName = null,
   registrationAllowed,
   guestOffered = true,
   onChoose,
@@ -158,6 +159,8 @@ export function WelcomeScreen({
   arrival: Arrival;
   group: OnboardingGroupView | null;
   inviterName: string | null;
+  /** The account already signed in, when there is one. Shared links only. */
+  accountName?: string | null;
   registrationAllowed: boolean;
   /** False for somebody who is already a guest of this group. */
   guestOffered?: boolean;
@@ -206,8 +209,17 @@ export function WelcomeScreen({
 
       {shared ? (
         <div className="flex flex-col gap-3">
+          {/*
+            The note under the button promises what comes next, so it has to
+            know whether an account is one of the things still to be asked for.
+            Naming the account is not decoration either: a link opened on a
+            shared laptop is the case where somebody is about to claim a
+            balance as the wrong person.
+          */}
           <p className="text-center text-xs text-pretty text-muted-foreground">
-            {t("sharedNote")}
+            {accountName
+              ? t("sharedNoteSignedIn", { name: accountName })
+              : t("sharedNote")}
           </p>
           <Button size="lg" className={PRIMARY} onClick={onFindMyself}>
             {t("findMyself")}
@@ -339,11 +351,21 @@ export function WhichOneScreen({
 export function ConfirmScreen({
   member,
   inviterName,
+  busy = false,
+  error = null,
   onConfirm,
   onReject,
 }: {
   member: JoinMemberView;
   inviterName: string | null;
+  /**
+   * "Yes" is a commitment on one route and only one: an account that arrived
+   * signed in has no credential screen after this, so tapping it files the
+   * claim then and there. Hence a button that can be in flight, and a refusal
+   * that has to land somewhere.
+   */
+  busy?: boolean;
+  error?: string | null;
   onConfirm: () => void;
   onReject: () => void;
 }) {
@@ -405,16 +427,27 @@ export function ConfirmScreen({
         </ul>
       )}
 
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       <Spacer />
 
       <div className="flex flex-col gap-2.5">
-        <Button size="lg" className={PRIMARY} onClick={onConfirm}>
+        <Button
+          size="lg"
+          className={PRIMARY}
+          disabled={busy}
+          onClick={onConfirm}
+        >
+          {busy && (
+            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+          )}
           {t("yes")}
         </Button>
         <Button
           size="lg"
           variant="outline"
           className={SECONDARY}
+          disabled={busy}
           onClick={onReject}
         >
           {t("no")}
@@ -496,6 +529,7 @@ export function ProfileScreen({
   name,
   onNameChange,
   hasAccount,
+  onSubmit,
   onDone,
 }: {
   arrival: Arrival;
@@ -504,6 +538,14 @@ export function ProfileScreen({
   name: string;
   onNameChange: (name: string) => void;
   hasAccount: boolean;
+  /**
+   * What the primary does instead of renaming the account, when given.
+   *
+   * Set on one route: a signed-in account adding itself to a group under a
+   * name that is nobody else's business — the *participant's* name, not the
+   * account's. Returns the sentence to show, or null when it worked.
+   */
+  onSubmit?: (name: string) => Promise<string | null>;
   onDone: () => void;
 }) {
   const t = useTranslations("onboarding.profile");
@@ -547,6 +589,17 @@ export function ProfileScreen({
   const submit = async () => {
     if (trimmed.length === 0) return;
     setError(null);
+    if (onSubmit) {
+      setBusy(true);
+      const failed = await onSubmit(trimmed);
+      setBusy(false);
+      if (failed) {
+        setError(failed);
+        return;
+      }
+      onDone();
+      return;
+    }
     if (!hasAccount) {
       // No account yet — the name travels with the signup that follows.
       onDone();
@@ -679,12 +732,22 @@ export function ProfileScreen({
 export function ArrivalScreen({
   intent,
   claimed,
+  joinedWithAccount = false,
   name,
   group,
   onContinue,
 }: {
   intent: Intent;
   claimed: JoinMemberView | null;
+  /**
+   * An account that already existed just joined a group.
+   *
+   * `intent` cannot say this: it records what somebody *chose* to be, and
+   * these people chose nothing — they were signed in before the link was
+   * opened. Without it the screen greets them back from an absence they never
+   * had, and says nothing about the group they came for.
+   */
+  joinedWithAccount?: boolean;
   name: string;
   group: OnboardingGroupView | null;
   onContinue: () => void;
@@ -707,7 +770,7 @@ export function ArrivalScreen({
             ? t("claimedTitle", { name: claimed.displayName })
             : intent === "guest"
               ? t("guestTitle")
-              : intent === "signin"
+              : intent === "signin" && !joinedWithAccount
                 ? t("welcomeBackTitle", { name })
                 : t("title", { name })}
         </Headline>
@@ -716,9 +779,13 @@ export function ArrivalScreen({
             ? t("claimedSub", { count: claimed.expenseCount })
             : intent === "guest"
               ? t("guestSub")
-              : intent === "signin"
-                ? t("welcomeBackSub")
-                : t("sub")}
+              : joinedWithAccount
+                ? t("joinedSub", {
+                    group: group?.summary.groupName ?? "",
+                  })
+                : intent === "signin"
+                  ? t("welcomeBackSub")
+                  : t("sub")}
         </Sub>
       </div>
 
