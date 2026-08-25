@@ -120,10 +120,20 @@ export async function createInviteLink(
   await page.getByRole("button", { name: new RegExp(name) }).click();
   await page.getByRole("button", { name: "Create invite link" }).click();
 
-  // Shown once, in a code block rather than a field: it is there to be copied,
-  // never edited.
+  /*
+   * Shown once, in a code block rather than a field: it is there to be copied,
+   * never edited — and the code block is what this reads, rather than the
+   * first `/join/` on the page.
+   *
+   * This page also carries the group's own invite link, which is on screen
+   * before the button is even pressed. Matching the page for `/join/` would
+   * resolve to that one immediately and never wait for this one to arrive:
+   * the test would then walk a whole group's link through the guest flow and
+   * fail somewhere further along, saying nothing about what went wrong.
+   */
   const url = await page
-    .getByText(/\/join\//)
+    .locator("code")
+    .filter({ hasText: "/join/" })
     .first()
     .innerText();
   expect(url).toContain("/join/");

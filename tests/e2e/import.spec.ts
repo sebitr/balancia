@@ -16,7 +16,7 @@ test("imports a Splitwise CSV with a preview step", async ({ page }) => {
   const groupId = await createGroup(page, { name: "Imported trip" });
 
   await page.goto(`/groups/${groupId}/import`);
-  await page.getByLabel("Splitwise export").setInputFiles(FIXTURE);
+  await page.getByLabel("Backup or export").setInputFiles(FIXTURE);
   await page.getByRole("button", { name: "Read the file" }).click();
 
   // Preview: counts and the people found in the file.
@@ -53,7 +53,7 @@ test("re-importing the same file adds nothing", async ({ page }) => {
 
   // First import.
   await page.goto(`/groups/${groupId}/import`);
-  await page.getByLabel("Splitwise export").setInputFiles(FIXTURE);
+  await page.getByLabel("Backup or export").setInputFiles(FIXTURE);
   await page.getByRole("button", { name: "Read the file" }).click();
   await page.getByRole("button", { name: /Import 5 rows/ }).click();
   await expect(page.getByText("Import complete")).toBeVisible();
@@ -63,7 +63,7 @@ test("re-importing the same file adds nothing", async ({ page }) => {
 
   // Second import of the identical file.
   await page.goto(`/groups/${groupId}/import`);
-  await page.getByLabel("Splitwise export").setInputFiles(FIXTURE);
+  await page.getByLabel("Backup or export").setInputFiles(FIXTURE);
   await page.getByRole("button", { name: "Read the file" }).click();
 
   // The preview tells the user everything is already here.
@@ -88,10 +88,11 @@ test("refuses a file that is not a Splitwise export", async ({
   );
 
   await page.goto(`/groups/${groupId}/import`);
-  await page.getByLabel("Splitwise export").setInputFiles(badFile);
+  await page.getByLabel("Backup or export").setInputFiles(badFile);
   await page.getByRole("button", { name: "Read the file" }).click();
 
-  await expect(
-    page.getByText(/not recognised as a Splitwise export/),
-  ).toBeVisible();
+  // Not "not a Splitwise export" any more: the wizard reads Balancia backups
+  // too, so it can only say it did not recognise the file, not what it failed
+  // to be.
+  await expect(page.getByText("That file was not recognised.")).toBeVisible();
 });

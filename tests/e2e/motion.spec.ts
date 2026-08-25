@@ -102,7 +102,10 @@ test("every group screen holds still under the add-entry drawer", async ({
   const groupId = await createGroup(page, { name: "Motion" });
   await addParticipant(page, groupId, "Blaise");
 
-  for (const path of ["", "/expenses", "/balances", "/members"]) {
+  // `/settle` rather than `/balances`: the screen was renamed with the
+  // repayment drawer, and the old path now 404s — which has no bottom bar, so
+  // the drawer this is about could not even be opened over it.
+  for (const path of ["", "/expenses", "/settle", "/members"]) {
     await page.goto(`/groups/${groupId}${path}`);
     const { opening, closing } = await openAndCloseDrawer(page);
 
