@@ -126,6 +126,31 @@ function urlFor(entry: NotificationEntry): string {
 }
 
 /**
+ * The sender's message without the link back into the app.
+ *
+ * The composer puts the group's URL on a line of its own, because a reminder
+ * is written to be handed to a chat app and has to be able to find its own way
+ * home from there. A notification made no such journey: it arrives in an inbox
+ * inside the app, on a card that opens the group when tapped and carries a
+ * Settle up button under it. So the last line is dropped when it is nothing
+ * but that address — which is also how the messages already stored with it
+ * come out clean — and what is left is the sentence the sender wrote.
+ *
+ * Only a link to this notification's own destination goes. One the sender
+ * typed themselves, pointing anywhere else, is part of what they said.
+ */
+function withoutSelfLink(message: string, url: string): string {
+  const lines = message.split("\n");
+  if (lines.length < 2) return message;
+
+  const last = lines[lines.length - 1]!.trim();
+  const isSelfLink =
+    last.endsWith(url) && (last === url || /^https?:\/\/\S+$/.test(last));
+
+  return isSelfLink ? lines.slice(0, -1).join("\n").trimEnd() : message;
+}
+
+/**
  * How a sentence and its amount are written as one line.
  *
  * The separator is the same middle dot the expense list and the activity log
@@ -265,7 +290,7 @@ export function renderNotification(
           amount: debtOf(payload, locale, amountLocale),
           group: payload.groupName,
         }),
-        sentence: payload.message,
+        sentence: withoutSelfLink(payload.message, url),
         amount: null,
         url,
         // One outstanding nudge per group: a second reminder replaces the

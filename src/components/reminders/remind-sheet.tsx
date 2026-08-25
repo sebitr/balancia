@@ -165,10 +165,11 @@ export function RemindSheet({
   /**
    * The draft as it reads for one recipient: their debt, the reader's name.
    *
-   * This is the editable half. The group link rides along on every reminder —
-   * it is what turns a sentence into something the reader can act on — but it
-   * is shown as its own chip under the box rather than as text inside it, so
-   * that typing past the end of the draft can never push the URL out of view.
+   * This is the editable half. The group link rides along on a reminder that
+   * has to travel — it is what turns a sentence into something the reader can
+   * act on — but it is shown as its own chip under the box rather than as text
+   * inside it, so that typing past the end of the draft can never push the URL
+   * out of view.
    */
   const bodyFor = (recipient: RemindRecipient): string =>
     edited ??
@@ -178,7 +179,7 @@ export function RemindSheet({
       group: groupName,
     });
 
-  /** The whole message as it leaves: the draft, then the link. */
+  /** The whole message as it leaves the app: the draft, then the link. */
   const composeFor = (recipient: RemindRecipient): string => {
     const origin = typeof window === "undefined" ? "" : window.location.origin;
     return `${bodyFor(recipient)}\n${origin}/groups/${groupId}`;
@@ -244,12 +245,20 @@ export function RemindSheet({
    */
   const send = async () => {
     if (!current) return;
-    const message = composeFor(current);
 
+    /*
+     * A reminder delivered through the app carries no link. It lands in an
+     * inbox on a card that already opens the group when tapped, with a Settle
+     * up button beneath it, read by someone who is by definition already here
+     * — so the URL would only be an address for the page they are looking at.
+     * It is the trip out to a chat app that earns it.
+     */
     if (current.channel === "push") {
-      record(current, message);
+      record(current, bodyFor(current));
       return;
     }
+
+    const message = composeFor(current);
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
@@ -471,11 +480,19 @@ export function RemindSheet({
           className="min-h-[45px] resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-base leading-[1.5] shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm dark:bg-transparent"
         />
 
-        <p className="mt-2.5 flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
-          <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
-          <span className="sr-only">{t("groupLink")}</span>
-          <span className="truncate">{groupLinkLabel(groupId)}</span>
-        </p>
+        {/*
+         * Shown only for the recipients the message is handed to a chat app
+         * for. A reminder going out through the app attaches no link, and a
+         * chip promising one under the draft would be describing something
+         * that will not be sent.
+         */}
+        {current?.channel !== "push" && (
+          <p className="mt-2.5 flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
+            <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
+            <span className="sr-only">{t("groupLink")}</span>
+            <span className="truncate">{groupLinkLabel(groupId)}</span>
+          </p>
+        )}
 
         <div className="-mx-3.5 mt-2 flex justify-end border-t px-2.5 pt-2">
           <Button
