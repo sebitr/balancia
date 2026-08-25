@@ -48,20 +48,29 @@ Use **Start new translation** in Weblate, pick your language, and translate.
 Weblate creates `messages/<code>.json` and the pull request carries it.
 
 A language ships when it is complete. Balancia will not offer a half-translated
-interface: `src/i18n/messages.test.ts` requires every key English defines to be
-present, so a catalogue with gaps fails CI rather than showing English
-sentences in the middle of a translated screen. Partial work is still welcome —
-it just waits in the pull request until it is finished, by you or by someone
-else.
+interface, so a catalogue waits in `messages/` — merged, versioned, and unread
+by the application — until every string English defines has been translated.
+`src/i18n/messages.test.ts` holds both halves of that: it will not let a
+language with gaps be registered, and it will not let a finished one stay
+unregistered.
+
+Partial work is welcome, and there is no need to hold it back. Your pull
+request can merge with the language a third done; the strings you wrote are
+then in front of the next person, rather than sitting in a branch waiting for
+them.
 
 ### What a maintainer does with it
 
-A new catalogue arrives with CI already red, and this is expected rather than
-the contributor's mistake:
+Nothing, for as long as the language is unfinished. Weblate writes
+`messages/<code>.json` with every value empty the moment someone opens a
+language, and pushes that skeleton like any other change; CI stays green and
+the app goes on offering the languages it already has.
+
+When the last string is translated, CI turns red and names the language:
 
 ```
-message catalogues > loads every catalogue that messages/ contains
-  expected [ 'de', 'en', 'fr' ] to deeply equal [ 'en', 'fr' ]
+message catalogues > ships a language as soon as its catalogue is finished
+  expected [ 'de' ] to deeply equal []
 ```
 
 The app does not load a catalogue it has not been told about. Registering one
@@ -79,9 +88,9 @@ names them one at a time until they are all filled in.
 | `tests/helpers/intl.tsx`                    | the catalogue, so tests can render in it                                         |
 
 Push those onto the contributor's branch, or land them in a commit of your own
-on top. Then `pnpm test` again: the same file checks that every English key is
-translated, that the ICU placeholders match, and that nothing was left in
-English by accident.
+on top. Then `pnpm test` again: registering the language is what puts it under
+the rest of the checks in that file, which read every message in it as ICU in
+its own locale and compare its placeholders against the English source.
 
 Codes are lower case — `pt-br`, not `pt-BR`. `negotiateLocale` lower-cases what
 the browser sends before comparing, so a capital in `LOCALES` is a locale
