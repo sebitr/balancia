@@ -124,7 +124,8 @@ Open <http://localhost:3000> and create the first account.
 
 The bootstrap script generates unique secrets into `.env`, asks which optional
 features to enable, and is safe to run again. Docker Compose starts PostgreSQL,
-applies migrations, and launches the web app and its background worker.
+applies migrations, and launches the app — which runs its own background jobs,
+so that is the whole stack: two containers, one of them the database.
 
 For a public domain, upgrades, reverse proxies and production responsibilities,
 read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
@@ -170,7 +171,9 @@ Start with the **[documentation index](./docs/README.md)**, or go directly to:
 Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL 18 · Drizzle
 ORM · pg-boss · Serwist · Vitest · fast-check · Playwright.
 
-No Redis and no microservice fleet: one web app, one worker and PostgreSQL.
+No Redis and no microservice fleet: one app container and PostgreSQL. Jobs are
+queued in PostgreSQL through pg-boss and run inside the app; a larger instance
+can move them into a worker container of their own with two lines in `.env`.
 
 ## Community and support
 

@@ -5,9 +5,10 @@
  * calls the same domain services — a recurring expense generated here goes
  * through exactly the code path an interactive request would use.
  *
- * Start with `pnpm start:worker`, or as the `worker` service in Compose. A
- * single-container install runs the very same registrations inside the web
- * process instead; both come from `./run`.
+ * Start with `pnpm start:worker`, or as the `worker` service in Compose, which
+ * is off unless its profile is enabled. By default nothing runs this file at
+ * all: the web process runs the very same registrations itself. Both come from
+ * `./run`, so the two shapes cannot drift.
  */
 import { closeDb } from "@/lib/db/client";
 import { getEnv } from "@/lib/env";
@@ -23,9 +24,15 @@ async function main(): Promise<void> {
     // Both shapes at once: every queue would have two subscribers in this
     // deployment. Harmless — pg-boss hands each job to one of them — but it is
     // never what anybody meant, so say so rather than let it look intentional.
+    //
+    // This is the likely state of a deployment that enabled the `worker`
+    // profile and stopped there: RUN_WORKER_IN_WEB defaults to true, so the
+    // second half has to be written down, and this is where forgetting it
+    // surfaces.
     logger.warn(
-      "RUN_WORKER_IN_WEB is set and this dedicated worker is also running. " +
-        "The web process is serving the same queues; unset it unless that is deliberate.",
+      "RUN_WORKER_IN_WEB is on and this dedicated worker is also running. " +
+        "The web process is serving the same queues; set RUN_WORKER_IN_WEB=false " +
+        "in .env unless that is deliberate.",
     );
   }
 
