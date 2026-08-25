@@ -2766,7 +2766,7 @@
       "from": "De",
       "to": "À",
       "outstanding": "En cours",
-      "owes": "{from} doit à {to}",
+      "paysBack": "{from} rembourse {to}",
       "nothingOutstanding": "Tout le monde est à jour.",
       "paidBy": "Payé par",
       "other": "Autre",

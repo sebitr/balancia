@@ -745,7 +745,7 @@ describe("settlement", () => {
 
     await user.click(screen.getByRole("tab", { name: "Settle" }));
 
-    expect(screen.getByText("Hervé owes Seb")).toBeInTheDocument();
+    expect(screen.getByText("Hervé pays Seb back")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
       "128.40",
     );
@@ -2001,7 +2001,7 @@ describe("a drawer opened on a stated debt", () => {
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
       "128.40",
     );
-    expect(screen.getByText("Hervé owes Seb")).toBeVisible();
+    expect(screen.getByText("Hervé pays Seb back")).toBeVisible();
   });
 
   it("records that pair without anybody touching the form", async () => {
