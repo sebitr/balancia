@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -11,7 +12,10 @@ import {
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
-import { PayoutHint } from "@/components/payouts/payout-hint";
+import {
+  PayoutHint,
+  type PayoutMethodChoice,
+} from "@/components/payouts/payout-hint";
 import type {
   PaymentQrRefusal,
   PaymentQrStandard,
@@ -72,22 +76,29 @@ export interface SettledRepaymentView {
   readonly paymentMethod: string | null;
 }
 
-/** One debt's preferred way of being paid, for the row that owes it. */
+/** Every way one person accepts money, for the row that owes them. */
 export interface PayoutHintView {
   readonly participantId: string;
   /**
-   * The currency of the debt this hint belongs to. Part of the key rather
-   * than decoration: a reader can owe one person in two currencies, and the
-   * two rows are two different payments with two different codes.
+   * The currency of the debt this hint belongs to. Part of the key rather than
+   * decoration: a reader can owe one person in two currencies, and the two
+   * rows are two different payments with two different codes.
    */
   readonly currency: string;
-  readonly method: string;
-  readonly detail: string;
+  /**
+   * In the owner's own order — `payoutMethods.position` — so the first is the
+   * one they would rather have and the rest are the alternatives they are
+   * willing to take. Never empty: a participant with nothing listed produces
+   * no hint at all.
+   */
+  readonly methods: readonly PayoutMethodChoice[];
   /**
    * The payment code, built on the server because only the server holds the
-   * creditor's address. Null whenever one cannot be built correctly — a
-   * missing address, a QR-IBAN, a currency neither standard carries — which is
-   * the common case rather than the exception.
+   * creditor's address. From the `bank` entry wherever there is one, which is
+   * the only method a banking app can scan for. Null whenever a code cannot be
+   * built correctly — no bank entry, a missing address, a QR-IBAN, a currency
+   * neither standard carries — which is the common case rather than the
+   * exception.
    */
   readonly qr: { standard: PaymentQrStandard; payload: string } | null;
   /**
@@ -292,9 +303,30 @@ function TransferRow({
   ...shared
 }: Shared & { transfer: SettleUpTransferView }) {
   const t = useTranslations("settleUp");
-  const tMethods = useTranslations("paymentMethods");
   const format = useFormatter();
   const involved = transfer.fromIsSelf || transfer.toIsSelf;
+
+  // Shown only on a row the reader is the one paying: it answers "where do I
+  // send it", which nobody else on this screen is asking.
+  const payout = transfer.fromIsSelf
+    ? shared.payoutHints.find(
+        (hint) =>
+          hint.participantId === transfer.toParticipantId &&
+          hint.currency === transfer.currency,
+      )
+    : undefined;
+
+  /*
+   * Which method the reader is looking at, and therefore the one they are
+   * about to use.
+   *
+   * Held here rather than inside the hint because the record button is the
+   * other half of the answer: the drawer that opens next should already say
+   * TWINT if TWINT is what is on screen, and it cannot know that from a state
+   * kept below it. Starts on the payee's own first choice, which is what the
+   * row showed before this screen had a menu.
+   */
+  const [picked, setPicked] = useState(() => payout?.methods[0]?.method ?? "");
 
   // The face is whoever the row is about from here: the other party when the
   // reader is in the sentence, and the person who owes when they are not.
@@ -313,6 +345,9 @@ function TransferRow({
     fromParticipantId: transfer.fromParticipantId,
     toParticipantId: transfer.toParticipantId,
     currency: transfer.currency,
+    // Only ever the reader's own choice about their own debt. A row between
+    // two other people states no method, because nobody here has picked one.
+    method: picked || null,
   });
 
   // Only debts owed *to* the reader can be chased, and only through the
@@ -331,15 +366,50 @@ function TransferRow({
     to: transfer.toName,
   });
 
-  // Shown only on a row the reader is the one paying: it answers "where do I
-  // send it", which nobody else on this screen is asking.
-  const payout = transfer.fromIsSelf
-    ? shared.payoutHints.find(
-        (hint) =>
-          hint.participantId === transfer.toParticipantId &&
-          hint.currency === transfer.currency,
-      )
-    : undefined;
+  /*
+   * A row between two other people is the whole target.
+   *
+   * Nothing on it is copyable, nothing about it can be chased, and the one
+   * thing it offers — recording that they squared up — used to be a small
+   * button off to the right with sixty pixels of dead row beside it. The
+   * sentence is what the reader aims at, so the sentence is the button.
+   */
+  if (!involved) {
+    return (
+      <Link
+        href={recordHref}
+        // Two stacked lines in one control run together into "Poul pays
+        // SebRecord for them" for a screen reader, so the row states its own
+        // name rather than being read out of its parts.
+        aria-label={recordLabel}
+        className="flex min-h-[60px] items-center gap-3 border-t py-3 pr-3.5 pl-4 transition-colors hover:bg-white/4"
+      >
+        <Avatar className="size-9 shrink-0">
+          <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
+            {initialsOf(face)}
+          </AvatarFallback>
+        </Avatar>
+
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="truncate text-sm font-medium tracking-[-0.01em]">
+            {t("paysSentence", {
+              from: transfer.fromName,
+              to: transfer.toName,
+            })}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {t("recordForThem")}
+          </p>
+        </div>
+
+        <TransferAmount transfer={transfer} />
+        <ChevronRight
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+      </Link>
+    );
+  }
 
   return (
     <div
@@ -374,15 +444,18 @@ function TransferRow({
         <TransferAmount transfer={transfer} />
       </div>
 
+      {/* A rule between the debt and the ways to pay it. The row is two things
+          now — what is owed, and how to hand it over — and without the line the
+          chips read as a third row of the sentence above them. */}
       {payout && (
         <PayoutHint
+          className="border-t pt-3"
           name={transfer.toName}
+          methods={payout.methods}
+          picked={picked}
+          onPick={setPicked}
+          minorUnits={transfer.minorUnits}
           currency={transfer.currency}
-          method={payout.method}
-          detail={payout.detail}
-          methodLabel={tMethods(
-            payout.method as Parameters<typeof tMethods>[0],
-          )}
           qr={payout.qr}
           qrMissing={payout.qrMissing}
         />
@@ -390,18 +463,22 @@ function TransferRow({
 
       <div className="flex items-center gap-2">
         {transfer.fromIsSelf ? (
+          /* First person, and past tense. The button does not move the money —
+             nothing here does — so it must not read like an instruction that
+             would. What it records is something the reader has already gone
+             and done. */
           <Button
             asChild
             size="lg"
             className="h-[46px] flex-1 rounded-[14px] text-sm font-semibold"
           >
             <Link href={recordHref} aria-label={recordLabel}>
-              {t("record")}
+              {t("iPaid", { name: transfer.toName })}
             </Link>
           </Button>
         ) : (
           <>
-            {transfer.toIsSelf && recipients.length > 0 && (
+            {recipients.length > 0 && (
               <RemindButton
                 groupId={shared.groupId}
                 groupName={shared.groupName}
@@ -416,22 +493,10 @@ function TransferRow({
               asChild
               variant="outline"
               size="lg"
-              className={cn(
-                "rounded-[14px] font-medium",
-                // A row the reader is part of gets the full 44px target beside
-                // its primary action; one between two other people is the
-                // quiet case and takes the small recipe, right-aligned.
-                involved
-                  ? "h-[46px] flex-1 text-sm"
-                  : "ml-auto h-9 px-3.5 text-xs",
-              )}
+              className="h-[46px] flex-1 rounded-[14px] text-sm font-medium"
             >
               <Link href={recordHref} aria-label={recordLabel}>
-                {t("record")}
-                <ChevronRight
-                  aria-hidden="true"
-                  className="text-muted-foreground"
-                />
+                {t("iWasPaid")}
               </Link>
             </Button>
           </>

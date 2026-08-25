@@ -72,6 +72,7 @@ import {
   updateSettlementAction,
 } from "@/modules/expenses/actions";
 import { createRecurringAction } from "@/modules/recurring/actions";
+import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import {
   PAYMENT_METHOD_IDS,
   countryForTimezone,
@@ -255,6 +256,12 @@ export interface AddEntryFormProps {
     readonly toParticipantId: string;
     readonly amountMinor: string | null;
     readonly currency: string;
+    /**
+     * The payout method the settle screen was showing when it was tapped, as
+     * a `PaymentMethodId`. Null from every other link into this drawer, and
+     * from a settle screen whose reader never picked one.
+     */
+    readonly method: string | null;
   };
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
@@ -439,9 +446,15 @@ export function AddEntryForm({
    * separate handling are one: a method tapped from the list and a name typed
    * by hand are both simply text, and reopening either reads it straight back.
    */
-  const [methodLabel, setMethodLabel] = useState(
-    () => editing?.paymentMethod.trim() ?? "",
-  );
+  const [methodLabel, setMethodLabel] = useState(() => {
+    if (editing) return editing.paymentMethod.trim();
+    // The chip the reader chose on the settle screen, in the words this locale
+    // calls it. A code arrives on the URL and a label is what gets stored, so
+    // the translation happens here, once, on the way in — leaving exactly the
+    // state a tap on this form's own picker would have produced.
+    const picked = prefill?.method ?? "";
+    return isKnownPayoutMethod(picked) ? tMethods(picked) : "";
+  });
 
   const [sheet, setSheet] = useState<OpenSheet>(null);
   const [pending, setPending] = useState(false);

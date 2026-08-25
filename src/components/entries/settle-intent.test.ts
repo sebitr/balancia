@@ -3,7 +3,7 @@ import { settleIntentOf, settleIntentPath } from "./settle-intent";
 
 /**
  * The link the settle screens write and the route that reads it are two halves
- * of one contract, and the only thing holding them together is these three
+ * of one contract, and the only thing holding them together is these four
  * names. What matters here is that a half-written or hand-edited query never
  * becomes a half-filled form.
  */
@@ -26,10 +26,24 @@ describe("writing the link", () => {
       fromParticipantId: "ravi",
       toParticipantId: "seb",
       currency: "CHF",
+      method: "twint",
     };
     const query = settleIntentPath("g1", intent).split("?")[1];
 
     expect(settleIntentOf(new URLSearchParams(query))).toEqual(intent);
+  });
+
+  it("leaves the method off when the screen had none to name", () => {
+    // Every screen but settle-up links here without one, and their links
+    // should read exactly as they did before the parameter existed.
+    expect(
+      settleIntentPath("g1", {
+        fromParticipantId: "seb",
+        toParticipantId: "amelie",
+        currency: "EUR",
+        method: null,
+      }),
+    ).not.toContain("settleVia");
   });
 });
 
@@ -45,6 +59,7 @@ describe("reading the query", () => {
       fromParticipantId: "seb",
       toParticipantId: "amelie",
       currency: "EUR",
+      method: null,
     });
   });
 
@@ -90,6 +105,48 @@ describe("reading the query", () => {
       fromParticipantId: "seb",
       toParticipantId: "amelie",
       currency: "EUR",
+      method: null,
     });
+  });
+
+  /**
+   * The method is words that get stored, so what arrives here has to be a code
+   * the app can translate. Anything else is dropped rather than passed on:
+   * `?settleVia=<whatever>` must not be a way to write a settlement that says
+   * it was paid by whatever somebody typed into the address bar.
+   */
+  it("takes a method the vocabulary knows", () => {
+    expect(
+      settleIntentOf({
+        settleFrom: "seb",
+        settleTo: "amelie",
+        settleIn: "EUR",
+        settleVia: "twint",
+      })?.method,
+    ).toBe("twint");
+  });
+
+  it("drops one it does not, rather than passing it through", () => {
+    expect(
+      settleIntentOf({
+        settleFrom: "seb",
+        settleTo: "amelie",
+        settleIn: "EUR",
+        settleVia: "Pay me in gold",
+      })?.method,
+    ).toBeNull();
+  });
+
+  it("keeps the debt when only the method is nonsense", () => {
+    // Two named people and a currency are still a debt worth opening the form
+    // on; the method is the one part of this link that is optional.
+    expect(
+      settleIntentOf({
+        settleFrom: "seb",
+        settleTo: "amelie",
+        settleIn: "EUR",
+        settleVia: "nonsense",
+      }),
+    ).not.toBeNull();
   });
 });

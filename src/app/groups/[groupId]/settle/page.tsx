@@ -72,8 +72,8 @@ export default async function SettleUpPage({
   ]);
 
   const payoutHints = debts.flatMap((transfer) => {
-    const top = payouts.get(transfer.toParticipantId)?.[0];
-    if (!top) return [];
+    const methods = payouts.get(transfer.toParticipantId) ?? [];
+    if (methods.length === 0) return [];
 
     /*
      * A code is only built for a bank transfer, and only when everything the
@@ -82,20 +82,26 @@ export default async function SettleUpPage({
      * be refused — so both come back as no code at all rather than as one that
      * fails at the till.
      *
+     * The bank entry is found by name rather than read off the top of the
+     * list. The order is the owner's own preference, and somebody who would
+     * rather be paid by TWINT still has an account a bank app can pay into —
+     * taking only the first entry left their IBAN one chip away with no code
+     * behind it, for no reason but where they had dragged it.
+     *
      * The amount comes from the transfer the row is showing, so the code can
      * never name a figure that is not on screen beside it.
      */
-    const request =
-      top.method === "bank"
-        ? {
-            iban: top.detail,
-            creditorName: transfer.toName,
-            address: addresses.get(transfer.toParticipantId) ?? null,
-            minorUnits: transfer.amount.toString(),
-            currency: transfer.currency,
-            message: access.group.name,
-          }
-        : null;
+    const bank = methods.find((entry) => entry.method === "bank");
+    const request = bank
+      ? {
+          iban: bank.detail,
+          creditorName: transfer.toName,
+          address: addresses.get(transfer.toParticipantId) ?? null,
+          minorUnits: transfer.amount.toString(),
+          currency: transfer.currency,
+          message: access.group.name,
+        }
+      : null;
 
     const qr = request ? buildPaymentQr(request) : null;
 
@@ -110,12 +116,20 @@ export default async function SettleUpPage({
      */
     const missing = request && !qr ? explainMissingQr(request) : "none";
 
+    /*
+     * Every method, in the owner's order. Not a shortlist to be trimmed here:
+     * which of these the reader can actually use is a fact about the reader —
+     * which apps are on their phone, where they bank — and this side of the
+     * wire knows none of it.
+     */
     return [
       {
         participantId: transfer.toParticipantId,
         currency: transfer.currency,
-        method: top.method,
-        detail: top.detail,
+        methods: methods.map((entry) => ({
+          method: entry.method,
+          detail: entry.detail,
+        })),
         qr,
         qrMissing: missing === "none" ? null : missing,
       },
