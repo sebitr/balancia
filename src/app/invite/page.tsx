@@ -33,10 +33,23 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function InvitePage() {
   const actor = await getCurrentActor();
-  // A signed-in reader has no guest identity to introduce, and someone with no
-  // session at all reached this URL without a link.
-  if (actor?.kind === "user") redirect("/dashboard");
+  // Somebody with no session at all reached this URL without a link.
   if (!actor) redirect("/join/error?reason=invalid");
+
+  /*
+   * A signed-in reader, which is two situations and not one.
+   *
+   * Either they arrived already signed in — nothing here is for them — or they
+   * signed in a moment ago from inside the flow, and this render is the one
+   * every Server Action triggers on the page it was called from. There is no
+   * guest cookie left to load a group from in either case, so this hands the
+   * flow an empty one: it captured the group on its first render and is still
+   * holding it. Redirecting here instead, which is what this used to do, threw
+   * people from their own arrival screen to the dashboard.
+   */
+  if (actor.kind === "user") {
+    return <OnboardingFlow arrival="personal" group={null} signedIn />;
+  }
 
   const access = await requireGroupAccess(actor.groupId);
   const [overview, invitation, summary] = await Promise.all([

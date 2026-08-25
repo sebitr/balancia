@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type CDPSession, type Page } from "@playwright/test";
 
 /**
  * Shared steps for the end-to-end journeys.
@@ -33,7 +33,18 @@ export async function registerAndSignIn(
   const email = options.email ?? uniqueEmail("e2e");
   const name = options.name ?? "Ada Lovelace";
 
-  await page.goto("/register");
+  /*
+   * The password form, which is no longer what `/register` shows.
+   *
+   * `/register` leads with a passkey and falls back to a mailed code, and
+   * neither is reachable from a headless browser with no authenticator and no
+   * mail server. The password form is still there for the one instance that
+   * can offer neither, and that is what every other journey needs from this
+   * helper: an account, in as few steps as possible, so the test can get on
+   * with what it is actually about. Onboarding itself is covered by
+   * `onboarding.spec.ts`.
+   */
+  await page.goto("/register/password");
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
@@ -138,4 +149,33 @@ export async function createInviteLink(
     .innerText();
   expect(url).toContain("/join/");
   return url.trim();
+}
+
+/**
+ * Chrome's WebAuthn virtual authenticator, attached to one page.
+ *
+ * What it buys is a real ceremony rather than a stubbed one: the browser
+ * produces a genuine attestation, and the server verifies the signature, the
+ * origin, the relying-party ID and the challenge it issued. Nothing on the
+ * server side knows this authenticator is not a phone.
+ */
+export async function attachVirtualAuthenticator(
+  page: Page,
+): Promise<{ client: CDPSession; authenticatorId: string }> {
+  const client = await page.context().newCDPSession(page);
+  await client.send("WebAuthn.enable");
+  const { authenticatorId } = await client.send(
+    "WebAuthn.addVirtualAuthenticator",
+    {
+      options: {
+        protocol: "ctap2",
+        transport: "internal",
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+      },
+    },
+  );
+  return { client, authenticatorId };
 }

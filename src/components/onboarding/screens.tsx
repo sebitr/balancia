@@ -151,6 +151,7 @@ export function WelcomeScreen({
   group,
   inviterName,
   registrationAllowed,
+  guestOffered = true,
   onChoose,
   onFindMyself,
 }: {
@@ -158,6 +159,8 @@ export function WelcomeScreen({
   group: OnboardingGroupView | null;
   inviterName: string | null;
   registrationAllowed: boolean;
+  /** False for somebody who is already a guest of this group. */
+  guestOffered?: boolean;
   onChoose: (intent: Intent) => void;
   onFindMyself: () => void;
 }) {
@@ -236,7 +239,7 @@ export function WelcomeScreen({
             and belongs to the group that token came from. With no group there
             is nothing to be a guest of.
           */}
-          {!cold && (
+          {!cold && guestOffered && (
             <>
               <div className="flex items-center gap-3 py-1">
                 <span className="h-px flex-1 bg-border" />
@@ -610,6 +613,9 @@ export function ProfileScreen({
               type="file"
               accept="image/*"
               className="sr-only"
+              // Opened by the circle beside it, which already carries the
+              // label — so this is not a second thing to tab to.
+              tabIndex={-1}
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) void upload(file);

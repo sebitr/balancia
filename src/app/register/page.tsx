@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
+import { getDateFormatter } from "@/i18n/preferences";
+import { requireGroupAccess } from "@/lib/actions";
+import { loadGroupOverview } from "@/modules/groups/overview";
+import { loadJoinSummary } from "@/modules/join/service";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -30,10 +33,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RegisterPage() {
   const actor = await getCurrentActor();
-  if (actor?.kind === "user") {
-    redirect("/dashboard");
-  }
-
   const env = getEnv();
   if (!env.ALLOW_REGISTRATION) {
     const t = await getTranslations("register");
@@ -53,16 +52,72 @@ export default async function RegisterPage() {
     );
   }
 
+  /*
+   * A guest who came here to stop being one.
+   *
+   * They are not a cold arrival, whatever the URL says: there is a group
+   * behind them, a balance in it and expenses filed under their name, and all
+   * of that is what an account keeps. So they get the arrival that has a group
+   * card on it and ends on the group — minus the guest option, which is what
+   * they already have. The claim itself happens the moment a session exists;
+   * see `claimGuestIdentity`.
+   */
+  if (actor?.kind === "guest") {
+    const access = await requireGroupAccess(actor.groupId);
+    const [overview, summary] = await Promise.all([
+      loadGroupOverview(access),
+      loadJoinSummary(actor.groupId),
+    ]);
+    const dates = await getDateFormatter();
+    const position = overview.positions[0] ?? null;
+
+    return (
+      <OnboardingFlow
+        arrival="personal"
+        knownName={actor.displayName}
+        alreadyGuest
+        registrationAllowed
+        codeSignupAvailable={env.smtpEnabled}
+        group={{
+          groupId: access.groupId,
+          summary: {
+            groupName: summary.groupName,
+            participantCount: summary.participantCount,
+            expenseCount: summary.expenseCount,
+            since: summary.since ? dates.plain(summary.since) : null,
+            totals: summary.totals.map((total) => ({
+              currency: total.currency,
+              minorUnits: total.amount.toString(),
+            })),
+            faces: summary.faces.map((face) => face.displayName),
+          },
+          position: position
+            ? {
+                currency: position.currency,
+                minorUnits: position.amount.toString(),
+              }
+            : null,
+          settleRequest: null,
+        }}
+      />
+    );
+  }
+
   return (
     <OnboardingFlow
       arrival="cold"
       group={null}
-      // A guest who came here from an invitation arrives with a name the group
-      // already uses for them; asking for it again would only invite a second
-      // spelling of the same person.
-      knownName={actor?.kind === "guest" ? actor.displayName : ""}
       registrationAllowed
       codeSignupAvailable={env.smtpEnabled}
+      /*
+       * Not `redirect("/dashboard")`, which is what this was.
+       *
+       * Halfway through the flow an account exists, and the next Server Action
+       * re-renders this page with a signed-in actor — so the redirect fired on
+       * success and replaced somebody's own arrival screen with the dashboard.
+       * The flow acts on this once, when it mounts.
+       */
+      signedIn={actor?.kind === "user"}
     />
   );
 }

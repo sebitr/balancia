@@ -62,9 +62,13 @@ describe("the personal invitation", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: /Léa added you to Weekend in Verbier/ }),
+      screen.getByRole("heading", {
+        name: /Léa added you to Weekend in Verbier/,
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create an account" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create an account" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "I already have an account" }),
     ).toBeInTheDocument();
@@ -83,9 +87,15 @@ describe("the personal invitation", () => {
 
   it("hides account creation on an instance that has closed it", () => {
     renderWithIntl(
-      <OnboardingFlow arrival="personal" group={group} registrationAllowed={false} />,
+      <OnboardingFlow
+        arrival="personal"
+        group={group}
+        registrationAllowed={false}
+      />,
     );
-    expect(screen.queryByRole("button", { name: "Create an account" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Create an account" }),
+    ).toBeNull();
     expect(
       screen.getByRole("button", { name: "I already have an account" }),
     ).toBeInTheDocument();
@@ -95,14 +105,18 @@ describe("the personal invitation", () => {
     const user = userEvent.setup();
     renderWithIntl(<OnboardingFlow arrival="personal" group={group} />);
 
-    await user.click(screen.getByRole("button", { name: /Continue as a guest/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
 
     expect(
       screen.getByRole("heading", { name: "What should the group call you?" }),
     ).toBeInTheDocument();
     // No address is asked for, and the guarantee is stated rather than implied.
     expect(screen.queryByPlaceholderText("you@example.com")).toBeNull();
-    expect(screen.getByText(/Guest access lives in this browser/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Guest access lives in this browser/),
+    ).toBeInTheDocument();
   });
 });
 
@@ -117,8 +131,12 @@ describe("the shared link", () => {
     ).toBeInTheDocument();
     // The account question is deferred to "keep it", where there is something
     // concrete to keep.
-    expect(screen.queryByRole("button", { name: "Create an account" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Continue as a guest/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Create an account" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Continue as a guest/ }),
+    ).toBeNull();
   });
 
   it("shows each listed name with the balance that comes with it", async () => {
@@ -127,7 +145,9 @@ describe("the shared link", () => {
       <OnboardingFlow arrival="shared" group={group} members={members} />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Find myself in the list" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
 
     expect(
       screen.getByRole("button", { name: /Marc T\. — 6 expenses filed/ }),
@@ -143,8 +163,12 @@ describe("the shared link", () => {
       <OnboardingFlow arrival="shared" group={group} members={members} />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Find myself in the list" }));
-    await user.click(screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
 
     expect(
       screen.getByRole("heading", { name: /Is this you\?/ }),
@@ -153,7 +177,9 @@ describe("the shared link", () => {
 
     await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
     expect(
-      screen.getByRole("heading", { name: /You're Marc T\. — how should we keep it\?/ }),
+      screen.getByRole("heading", {
+        name: /You're Marc T\. — how should we keep it\?/,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -163,9 +189,15 @@ describe("the shared link", () => {
       <OnboardingFlow arrival="shared" group={group} members={members} />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Find myself in the list" }));
-    await user.click(screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }));
-    await user.click(screen.getByRole("button", { name: "No, show me the list again" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "No, show me the list again" }),
+    );
 
     expect(
       screen.getByRole("button", { name: /Marc T\. — 6 expenses filed/ }),
@@ -175,7 +207,9 @@ describe("the shared link", () => {
   it("says so when the link no longer resolves", () => {
     renderWithIntl(<OnboardingFlow arrival="shared" group={null} linkGone />);
     expect(screen.getByRole("heading")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Find myself in the list" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Find myself in the list" }),
+    ).toBeNull();
   });
 });
 
@@ -189,8 +223,12 @@ describe("the cold arrival", () => {
 
   it("offers no guest option, having no group to be a guest of", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
-    expect(screen.getByRole("button", { name: "Create an account" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Continue as a guest/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Create an account" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Continue as a guest/ }),
+    ).toBeNull();
   });
 
   it("leads with a passkey and keeps the code as the fallback", async () => {
@@ -211,7 +249,11 @@ describe("the cold arrival", () => {
   it("offers no code on an instance with no mail server", async () => {
     const user = userEvent.setup();
     renderWithIntl(
-      <OnboardingFlow arrival="cold" group={null} codeSignupAvailable={false} />,
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Create an account" }));
@@ -219,6 +261,8 @@ describe("the cold arrival", () => {
     expect(
       screen.getByRole("button", { name: /Continue with a passkey/ }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Email me a code/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Email me a code/ }),
+    ).toBeNull();
   });
 });

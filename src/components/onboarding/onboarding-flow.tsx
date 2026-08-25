@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronLeft } from "lucide-react";
@@ -56,6 +56,8 @@ export function OnboardingFlow({
   registrationAllowed = true,
   codeSignupAvailable = true,
   linkGone = false,
+  signedIn = false,
+  alreadyGuest = false,
 }: {
   arrival: Arrival;
   /** Null for a cold arrival, which has no group behind it. */
@@ -76,6 +78,24 @@ export function OnboardingFlow({
    * the spent cookie, and the state below has already moved past caring.
    */
   linkGone?: boolean;
+  /**
+   * There is already a signed-in account in this browser.
+   *
+   * Which is two different situations wearing one prop, and only the first is
+   * a reason to leave: somebody who arrived signed in has no onboarding to do,
+   * while somebody who signed in *during* the flow is still standing on it.
+   * The difference is when it became true, so it is acted on once, on mount,
+   * and never again — see below.
+   */
+  signedIn?: boolean;
+  /**
+   * This browser is already holding a guest session for the group below.
+   *
+   * They came here to stop being a guest, so the third option is not offered —
+   * it is what they already have, and a button that changes nothing is worse
+   * than no button.
+   */
+  alreadyGuest?: boolean;
 }) {
   const t = useTranslations("onboarding");
   const router = useRouter();
@@ -113,6 +133,23 @@ export function OnboardingFlow({
   const finished = screen === "checklist" || screen === "firstGroup";
   const claimed = members.find((member) => member.id === claimedId) ?? null;
   const groupId = joinedGroupId ?? initialGroup?.groupId ?? null;
+
+  /*
+   * Turning away a reader who was already signed in when they arrived.
+   *
+   * This cannot be the page's job, and the attempt is what made it necessary.
+   * Every Server Action re-renders the page it was called from, so a
+   * `redirect()` on the server would fire the moment anything in this flow
+   * created a session — throwing somebody to the dashboard from the middle of
+   * their own signup, one screen short of their balance. The pages therefore
+   * hand the fact down and this decides, on mount and only on mount: by the
+   * time an action has run, the effect below has long since not fired.
+   */
+  const arrivedSignedIn = useRef(signedIn);
+  useEffect(() => {
+    if (arrivedSignedIn.current) router.replace("/dashboard");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const advance = useCallback((to: ScreenId) => {
     setScreen(to);
@@ -200,6 +237,7 @@ export function OnboardingFlow({
             group={initialGroup}
             inviterName={inviterName}
             registrationAllowed={registrationAllowed}
+            guestOffered={!alreadyGuest}
             onChoose={(chosen) => {
               setIntent(chosen);
               advance(
