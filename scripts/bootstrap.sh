@@ -1199,6 +1199,55 @@ TEXT
       ;;
   esac
 
+  # The two halves of "give the background jobs their own container" are a
+  # Compose profile and an application setting, and nothing but this check ties
+  # them together. Enabling the profile alone leaves the web process serving
+  # the same queues as the worker — not corrupting, but not what was meant, and
+  # the only sign of it is a line in the worker's log. Checked on every run,
+  # because COMPOSE_PROFILES is edited by hand rather than answered above.
+  case ,$(value_of COMPOSE_PROFILES), in
+    *,worker,*)
+      if is_enabled RUN_WORKER_IN_WEB || ! has_value RUN_WORKER_IN_WEB; then
+        heading 'The worker container is on, and so is the web one'
+        prose <<'TEXT'
+COMPOSE_PROFILES names the worker service, so the background jobs get a
+container of their own. The app container runs them as well unless told
+not to, so both processes would subscribe to every queue. pg-boss hands
+each job to one of them, so nothing breaks — but nothing is gained.
+
+TEXT
+        if ask_yes_no 'Leave the jobs to the worker container?' y; then
+          write_setting RUN_WORKER_IN_WEB false \
+            'The worker service runs the background jobs, so the web container must not.'
+        fi
+      fi
+      ;;
+    *)
+      # The other half of the same mistake, and the damaging one: the setting
+      # turned off with no worker service to take over. No recurring expense is
+      # ever generated, no push is ever delivered, nothing is ever pruned, and
+      # the app serves pages perfectly throughout.
+      if has_value RUN_WORKER_IN_WEB && ! is_enabled RUN_WORKER_IN_WEB; then
+        heading 'Nothing on this instance runs the background jobs'
+        prose <<'TEXT'
+RUN_WORKER_IN_WEB is off, which tells the app container that something
+else is doing the work — and COMPOSE_PROFILES does not name the worker
+service, so nothing is. Recurring expenses will not be generated, push
+notifications will not be delivered and nothing will be pruned.
+
+TEXT
+        if ask_yes_no 'Run them in the app container?' y; then
+          write_setting RUN_WORKER_IN_WEB true \
+            'The app container runs the background jobs. Supersedes the line above: last one wins.'
+        else
+          note_pending "Nothing runs the background jobs on this instance.
+Set COMPOSE_PROFILES=worker in .env to start the worker service,
+or RUN_WORKER_IN_WEB=true to keep them in the app container."
+        fi
+      fi
+      ;;
+  esac
+
   # Metrics say nothing about anyone's money, but they do say how many people
   # use this instance and how much of it is failing, and the app's port is
   # published. The schema allows an empty token because a scrape target on a
@@ -1290,6 +1339,33 @@ telemetry_summary() {
   fi
 }
 
+# Where recurring expenses, push delivery and the nightly sweep actually run.
+# Worth a line because the answer is now a default rather than something that
+# was typed, and because the state where nothing runs them — the profile off
+# and the setting false — is silent everywhere else.
+worker_summary() {
+  case ,$(value_of COMPOSE_PROFILES), in
+    # A missing line counts as on in both branches: the schema's default is
+    # true, so an .env that says nothing behaves exactly like one that says so.
+    # Reading it as off here is how this line would come to under-report the
+    # very state the repair above exists to catch.
+    *,worker,*)
+      if has_value RUN_WORKER_IN_WEB && ! is_enabled RUN_WORKER_IN_WEB; then
+        printf 'worker container'
+      else
+        printf 'worker container, and the app as well'
+      fi
+      ;;
+    *)
+      if has_value RUN_WORKER_IN_WEB && ! is_enabled RUN_WORKER_IN_WEB; then
+        printf 'nothing runs them'
+      else
+        printf 'in the app container'
+      fi
+      ;;
+  esac
+}
+
 summary() {
   printf '  %sThis instance%s\n\n' "$bold" "$reset"
   row 'Public address' "$(value_of APP_URL)"
@@ -1322,6 +1398,7 @@ summary() {
   else
     row 'Outgoing email' 'off'
   fi
+  row 'Background jobs' "$(worker_summary)"
   row 'Telemetry' "$(telemetry_summary)"
   if is_enabled METRICS_ENABLED; then
     if [ -n "$(value_of METRICS_TOKEN)" ]; then

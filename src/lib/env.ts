@@ -367,8 +367,21 @@ const envSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
 
-    /** Run the pg-boss worker inside the web process (single-container setups). */
-    RUN_WORKER_IN_WEB: booleanish.default(false),
+    /**
+     * Run the pg-boss worker inside the web process.
+     *
+     * On by default, so that one container is the whole application: an
+     * operator who runs the image behind a reverse proxy, with no Compose file
+     * and no second service, still gets recurring expenses, the notification
+     * sweep and push delivery. The alternative used to be the default, which
+     * meant every such install silently did none of that.
+     *
+     * A deployment that runs the dedicated worker container sets this to
+     * false — see the `worker` profile in compose.yaml. Leaving it true there
+     * is not corrupting (pg-boss hands each job to one subscriber) but it is
+     * never what anybody meant, and `src/worker/index.ts` says so at startup.
+     */
+    RUN_WORKER_IN_WEB: booleanish.default(true),
   })
   .superRefine((value, context) => {
     const appUrl = new URL(value.APP_URL);

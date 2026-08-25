@@ -1,8 +1,9 @@
 # Self-hosting Balancia
 
 Balancia is designed to be run by one person for a handful of people, on modest
-hardware, with as few moving parts as possible: an app container, a worker
-container, and PostgreSQL. No Redis, no message broker, no external services.
+hardware, with as few moving parts as possible: an app container and
+PostgreSQL. No Redis, no message broker, no external services. The app runs its
+own background jobs, so that is the whole stack until you decide otherwise.
 
 ## Quick start
 
@@ -79,13 +80,15 @@ pipe — or with `--defaults`, it writes the secrets and leaves every optional
 feature at its documented default. The port check is part of the question, so
 it goes with it.
 
-Compose then starts three services:
+Compose then starts two services:
 
-| Service  | Role                                                               |
-| -------- | ------------------------------------------------------------------ |
-| `db`     | PostgreSQL 18. Published on `${DB_PORT:-5458}` — see below.        |
-| `app`    | The web application. Published on `${APP_PORT:-3000}`.             |
-| `worker` | Background jobs: recurring expenses, import commits, housekeeping. |
+| Service | Role                                                                               |
+| ------- | ---------------------------------------------------------------------------------- |
+| `db`    | PostgreSQL 18. Published on `${DB_PORT:-5458}` — see below.                        |
+| `app`   | The web application **and its background jobs**. Published on `${APP_PORT:-3000}`. |
+
+A third service, `worker`, is defined but not started: the app does that work
+itself. See [Background jobs](#background-jobs) below.
 
 The database port is published on every interface this host has, so that
 `psql`, a GUI client, `drizzle-kit` or a backup job can reach it directly. What
@@ -109,9 +112,9 @@ before the images are built rather than at `docker compose up`, where a port
 already held on this host fails after the build.
 
 Migrations are not a separate service. The image's entrypoint applies any
-pending ones before `app` and `worker` start, on every boot. Both doing it at
-once is safe — the runner takes a PostgreSQL advisory lock, so the second waits
-and then finds the schema already current. To take that over yourself, set
+pending ones before the app starts, on every boot. Two containers doing it at
+once is safe as well — the runner takes a PostgreSQL advisory lock, so the
+second waits and then finds the schema already current. To take that over yourself, set
 `RUN_MIGRATIONS=false` and run them explicitly:
 
 ```bash
@@ -394,6 +397,65 @@ the same as a real domain.
 
 ---
 
+## Background jobs
+
+Recurring expenses, import commits, push delivery, exchange-rate refreshes and
+the nightly housekeeping sweep are queued in PostgreSQL through pg-boss. **The
+app container runs them itself**, which is why the default stack has no third
+service, and why the image works on its own behind a reverse proxy with no
+Compose file at all.
+
+Nothing needs configuring for this. `RUN_WORKER_IN_WEB` defaults to `true`, and
+the app logs `Background worker is running inside the web process` on startup.
+If it cannot reach the queue it says so loudly and carries on serving pages — a
+queue that is down must not take the app with it — so that line's absence from
+the log is the thing to look for when a recurring expense fails to appear.
+
+### Giving the jobs their own container
+
+Worth doing when a job is heavy enough to be felt in request latency: a large
+import commit, server-side receipt reading on a small machine, or anything
+where you would rather restart the web container without waiting for in-flight
+work to drain. It costs about 128–256 MB of RAM.
+
+Two lines in `.env`, and they move together:
+
+```
+COMPOSE_PROFILES=worker
+RUN_WORKER_IN_WEB=false
+```
+
+Then `docker compose up -d --build` starts three containers. The worker runs
+the same image and the same code — `src/worker/run.ts` holds the subscriptions
+and both shapes load it, so a queue is never served by one and not the other —
+and it gets a 40s grace period on shutdown to finish what it has in hand.
+
+Setting one line without the other is the mistake to avoid, and neither half
+fails loudly on its own:
+
+| `COMPOSE_PROFILES` | `RUN_WORKER_IN_WEB` | What happens                                                                                                                          |
+| ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| unset              | `true` _(default)_  | The app runs the jobs. The intended default.                                                                                          |
+| `worker`           | `false`             | The worker container runs the jobs. The intended alternative.                                                                         |
+| `worker`           | `true`              | Both subscribe. pg-boss gives each job to one of them, so nothing breaks and nothing is gained; the worker warns about it at startup. |
+| unset              | `false`             | **Nothing runs the jobs.** Pages serve normally, and no recurring expense is generated, no push delivered, nothing pruned.            |
+
+`./scripts/bootstrap.sh` checks this pair on every run and offers to repair
+either mismatch, so it is worth running again after editing `.env` by hand.
+
+### Coming from a stack that had a worker container
+
+Instances set up before this became the default ran `app` and `worker` with
+`RUN_WORKER_IN_WEB` unset. After pulling, that unset value means `true`, so
+either keep the split by writing both lines above, or take the default and
+clear away the container that is no longer part of the stack:
+
+```bash
+docker compose up -d --build --remove-orphans
+```
+
+---
+
 ## Health checks
 
 | Endpoint                | Meaning                                                                                                                                                 |
@@ -415,10 +477,11 @@ docker compose up -d --build
 What happens, in order:
 
 1. New images build.
-2. `app` and `worker` restart. Each applies any new SQL migrations first — one
-   transaction per migration, guarded by a PostgreSQL advisory lock so the two
-   containers cannot race.
-3. Neither serves anything until its migrations succeed. If they fail, the
+2. `app` restarts, and `worker` with it where the jobs have their own
+   container. Each applies any new SQL migrations first — one transaction per
+   migration, guarded by a PostgreSQL advisory lock, so two containers cannot
+   race.
+3. Nothing is served until those migrations succeed. If they fail, the
    container exits with the error and Compose restarts it; `docker compose logs
 app` shows what went wrong.
 
@@ -546,8 +609,9 @@ that drops a column is more dangerous than a restore. To go back:
 For a household or a group of friends:
 
 - **PostgreSQL**: ~256 MB RAM is plenty.
-- **App**: ~256–512 MB RAM.
-- **Worker**: ~128–256 MB RAM.
+- **App**: ~256–512 MB RAM, background jobs included.
+- **Worker**: ~128–256 MB RAM, and only if you gave the jobs their own
+  container — see [Background jobs](#background-jobs).
 - **Disk**: the database stays small (text and integers). Receipts dominate —
   budget for how many photos you expect.
 
@@ -566,7 +630,7 @@ ARM VPS works.
 
 ```bash
 docker compose logs -f app
-docker compose logs -f worker
+docker compose logs -f app   # or `worker`, where the jobs have their own container
 ```
 
 Secrets, tokens and passwords are redacted before anything is written.
