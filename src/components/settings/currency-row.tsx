@@ -89,7 +89,7 @@ export function CurrencyRow({ current }: { current: string }) {
           // Opening on the search field would put a keyboard over the
           // favourites the sheet exists to show.
           onOpenAutoFocus={openOnContent}
-          className="h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card p-0 text-card-foreground"
+          className="h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card pt-2.5 text-card-foreground"
         >
           <CurrencyPicker
             value={code}
