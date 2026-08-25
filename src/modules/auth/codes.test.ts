@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  CODE_LENGTH,
-  isWellFormedCode,
-  normalizeCode,
-} from "./code-format";
+import { CODE_LENGTH, isWellFormedCode, normalizeCode } from "./code-format";
 import { codeHash, codesMatch, generateCode } from "./codes";
 
 /**
