@@ -54,11 +54,18 @@ describe("PositionWidget", () => {
     expect(screen.getByText("€148")).toBeVisible();
   });
 
-  it("marks incoming and outgoing totals with plus and minus signs", () => {
+  it("names the figure rather than leaving the number to speak for itself", () => {
     renderWidget();
 
-    expect(screen.getByText("+")).toBeVisible();
-    expect(screen.getByText("−")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Your position" })).toBeVisible();
+    expect(screen.getByText("Your position")).toBeVisible();
+  });
+
+  it("leaves the totals unsigned — their column labels carry direction", () => {
+    renderWidget();
+
+    expect(screen.queryByText("+")).toBeNull();
+    expect(screen.queryByText("−")).toBeNull();
   });
 
   it("shows whole units — this is a position, not a statement", () => {
