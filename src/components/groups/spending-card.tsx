@@ -127,9 +127,14 @@ export function SpendingCard({
         <Link
           href={`/groups/${groupId}/stats`}
           transitionTypes={PUSH}
+          // The caption sits under the title rather than after a middot, and
+          // two stacked lines run together into one accessible name with
+          // nothing between them. The separator the eye reads as a line break
+          // has to be spelled out for anything listening.
+          aria-label={`${t("statistics")} · ${t("statisticsCaption")}`}
           className={cn(
             "flex items-center gap-2.5 border-t px-4 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
-            compact ? "min-h-11 bg-muted/50 py-3" : "min-h-12",
+            compact ? "min-h-11 bg-muted/50 py-2.5" : "min-h-12 py-2.5",
           )}
         >
           {!compact && (
@@ -138,10 +143,11 @@ export function SpendingCard({
               className="size-[17px] shrink-0 text-primary"
             />
           )}
-          <span className="min-w-0 flex-1 truncate text-xs font-medium">
-            {t("statistics")}
-            <span className="font-normal text-muted-foreground">
-              {" · "}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-xs font-medium">
+              {t("statistics")}
+            </span>
+            <span className="truncate text-xs text-muted-foreground">
               {t("statisticsCaption")}
             </span>
           </span>
