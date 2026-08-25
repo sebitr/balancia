@@ -24,17 +24,17 @@ docker compose up -d` is a safe habit.
 
 Run from a terminal, it also asks which optional features to switch on:
 
-| Question              | Writes                    | Also does                                      |
-| --------------------- | ------------------------- | ---------------------------------------------- |
-| Public URL            | `APP_URL`, `APP_PORT`     | Rejects HTTP outside localhost and a busy port |
-| Open registration     | `ALLOW_REGISTRATION`      |                                                |
-| Exchange rates        | `EXCHANGE_RATE_PROVIDER`  |                                                |
-| Receipt scanning      | `RECEIPT_SCANNING`        | Downloads the OCR models                       |
-| Semantic categorizing | `SEMANTIC_CATEGORIZATION` | Downloads the embedding model                  |
-| Push notifications    | `PUSH_VAPID_*`            | Generates the VAPID pair                       |
-| Outgoing email        | `SMTP_*`                  |                                                |
-| Telemetry             | `TELEMETRY_MODE`          | Switches nothing on — see below                |
-| Metrics               | `METRICS_ENABLED`         | Generates `METRICS_TOKEN`                      |
+| Question              | Writes                           | Also does                                     |
+| --------------------- | -------------------------------- | --------------------------------------------- |
+| Public URL            | `APP_URL`, `APP_PORT`, `DB_PORT` | Rejects HTTP outside localhost and busy ports |
+| Open registration     | `ALLOW_REGISTRATION`             |                                               |
+| Exchange rates        | `EXCHANGE_RATE_PROVIDER`         |                                               |
+| Receipt scanning      | `RECEIPT_SCANNING`               | Downloads the OCR models                      |
+| Semantic categorizing | `SEMANTIC_CATEGORIZATION`        | Downloads the embedding model                 |
+| Push notifications    | `PUSH_VAPID_*`                   | Generates the VAPID pair                      |
+| Outgoing email        | `SMTP_*`                         |                                               |
+| Telemetry             | `TELEMETRY_MODE`                 | Switches nothing on — see below               |
+| Metrics               | `METRICS_ENABLED`                | Generates `METRICS_TOKEN`                     |
 
 Every answer is written, including the no's, so the second run asks nothing.
 The two model downloads need Node; on a host that has only Docker, one is
@@ -57,6 +57,10 @@ type; behind a proxy only `APP_PORT` changes, and the proxy has to be pointed
 at it. Whichever of `ss`, `netstat` and `lsof` the host has is what answers the
 question; on a host with none of them nothing is checked and nothing is asked.
 
+The database's published port is checked in the same breath, and asked about
+the same way. Nothing is written while `5458` is free, because that is the
+number Compose defaults to anyway.
+
 The telemetry question is the one that cannot switch a feature on. Balancia
 sends nothing until an administrator turns it on inside the application, and
 the question only writes whether they are allowed to: yes leaves the choice on
@@ -77,11 +81,32 @@ it goes with it.
 
 Compose then starts three services:
 
-| Service  | Role                                                                                          |
-| -------- | --------------------------------------------------------------------------------------------- |
-| `db`     | PostgreSQL 18. **Not published to the host**; reachable only on the internal Compose network. |
-| `app`    | The web application. Published on `${APP_PORT:-3000}`.                                        |
-| `worker` | Background jobs: recurring expenses, import commits, housekeeping.                            |
+| Service  | Role                                                               |
+| -------- | ------------------------------------------------------------------ |
+| `db`     | PostgreSQL 18. Published on `${DB_PORT:-5458}` — see below.        |
+| `app`    | The web application. Published on `${APP_PORT:-3000}`.             |
+| `worker` | Background jobs: recurring expenses, import commits, housekeeping. |
+
+The database port is published on every interface this host has, so that
+`psql`, a GUI client, `drizzle-kit` or a backup job can reach it directly. What
+stands between it and anyone who can reach this machine is the password
+`bootstrap.sh` generated — so on a host with a public address, put the bind
+address in the setting and tunnel in instead:
+
+```bash
+# .env
+DB_PORT=127.0.0.1:5458
+```
+
+```bash
+ssh -L 5458:127.0.0.1:5458 you@host
+psql "postgres://balancia:$POSTGRES_PASSWORD@127.0.0.1:5458/balancia"
+```
+
+The user and the database are both `balancia`; the password is
+`POSTGRES_PASSWORD` from `.env`. Like the app's port, this one is checked
+before the images are built rather than at `docker compose up`, where a port
+already held on this host fails after the build.
 
 Migrations are not a separate service. The image's entrypoint applies any
 pending ones before `app` and `worker` start, on every boot. Both doing it at
