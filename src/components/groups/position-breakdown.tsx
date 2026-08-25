@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { Amount } from "@/components/money/amount";
+import { CurrencyHeading } from "@/components/money/currency-heading";
 import { cn } from "@/lib/utils";
 
 /**
@@ -139,9 +140,7 @@ export function PositionBreakdown({
   return (
     <div className="flex flex-col gap-2.5">
       {showCurrency && (
-        <h3 className="px-1 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          {currency}
-        </h3>
+        <CurrencyHeading as="h3" currency={currency} className="px-1" />
       )}
 
       {sections.map((section) => {

@@ -10,6 +10,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
+import { CurrencyHeading } from "@/components/money/currency-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { hasGlyph } from "@/components/expenses/category-icon";
 import { useDateFormatter, useFormatPreferences } from "@/i18n/format-context";
@@ -307,14 +308,6 @@ function CurrencyBlock({
       <Categories entry={entry} />
       <Rhythm entry={entry} />
     </div>
-  );
-}
-
-function CurrencyHeading({ currency }: { currency: string }) {
-  return (
-    <p className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-      {currency}
-    </p>
   );
 }
 

@@ -6,6 +6,7 @@ import { CalendarOff } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/money/amount";
+import { CurrencyHeading } from "@/components/money/currency-heading";
 import {
   CATEGORY_GLYPHS,
   FALLBACK_GLYPH,
@@ -272,11 +273,7 @@ function CurrencyBlock({
 }) {
   return (
     <div className="flex flex-col gap-3.5">
-      {showCurrency && (
-        <p className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          {entry.currency}
-        </p>
-      )}
+      {showCurrency && <CurrencyHeading currency={entry.currency} />}
       <StatStrip entry={entry} viewingSelf={viewingSelf} />
       <PaidAgainstShare
         entry={entry}
