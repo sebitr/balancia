@@ -337,6 +337,38 @@ export function serializeGroupOverview(overview: GroupOverview) {
         yourShare: minor(stat.yourShare),
       })),
     })),
+    // Every currency with activity, each carrying its own balances and the
+    // transfers that clear it. `rows` and `suggestions` below are the same
+    // figures flattened across currencies, which is what the one-currency
+    // screen reads; a group with two of them needs them kept apart, and
+    // regrouping the flat lists on the client would mean the client deciding
+    // an ordering the server has already decided.
+    //
+    // The count is also the rule for which of the two overviews a group gets:
+    // more than one currency here and the screen collapses per currency.
+    currencies: overview.currencies.map((entry) => ({
+      currency: entry.currency,
+      totalSpent: minor(entry.totalSpent),
+      expenseCount: entry.expenseCount,
+      position: minor(entry.position),
+      members: entry.members.map((member) => ({
+        participantId: member.participantId,
+        name: member.name,
+        currency: member.currency,
+        amount: minor(member.amount),
+        isSelf: member.isSelf,
+      })),
+      transfers: entry.transfers.map((transfer) => ({
+        fromParticipantId: transfer.fromParticipantId,
+        fromName: transfer.fromName,
+        toParticipantId: transfer.toParticipantId,
+        toName: transfer.toName,
+        currency: transfer.currency,
+        amount: minor(transfer.amount),
+        fromIsSelf: transfer.fromIsSelf,
+        toIsSelf: transfer.toIsSelf,
+      })),
+    })),
     rows: overview.rows.map((row) => ({
       participantId: row.participantId,
       name: row.name,
