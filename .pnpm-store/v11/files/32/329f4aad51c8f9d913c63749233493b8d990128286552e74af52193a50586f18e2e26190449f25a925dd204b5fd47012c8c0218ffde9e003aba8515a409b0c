@@ -1,0 +1,243 @@
+import { t as injectManifestOptions } from "./chunks/schema-BHBmKqX3.js";
+import { createRequire } from "node:module";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { InjectManifest } from "@serwist/webpack-plugin";
+import { ChildCompilationPlugin, relativeToOutputPath } from "@serwist/webpack-plugin/internal";
+import { globSync } from "glob";
+import crypto from "node:crypto";
+import { bold, green, red, white, yellow } from "kolorist";
+import semver from "semver";
+import { SerwistConfigError, validationErrorMap } from "@serwist/build/schema";
+import { z } from "zod";
+//#region src/lib/find-first-truthy.ts
+/**
+* Find the first truthy value in an array.
+* @param arr
+* @param fn
+* @returns
+*/
+const findFirstTruthy = (arr, fn) => {
+	for (const i of arr) {
+		const resolved = fn(i);
+		if (resolved) return resolved;
+	}
+};
+//#endregion
+//#region src/lib/get-file-hash.ts
+const getFileHash = (file) => crypto.createHash("md5").update(fs.readFileSync(file)).digest("hex");
+//#endregion
+//#region src/lib/get-content-hash.ts
+const getContentHash = (file, isDev) => {
+	if (isDev) return "development";
+	return getFileHash(file).slice(0, 16);
+};
+createRequire(import.meta.url);
+//#endregion
+//#region src/lib/load-tsconfig.ts
+const loadTSConfig = (baseDir, relativeTSConfigPath) => {
+	try {
+		const tsConfigPath = findFirstTruthy([relativeTSConfigPath ?? "tsconfig.json", "jsconfig.json"], (filePath) => {
+			const resolvedPath = path.join(baseDir, filePath);
+			return fs.existsSync(resolvedPath) ? resolvedPath : void 0;
+		});
+		if (!tsConfigPath) return;
+		return JSON.parse(fs.readFileSync(tsConfigPath, "utf-8"));
+	} catch {
+		return;
+	}
+};
+//#endregion
+//#region src/lib/logger.ts
+const require = createRequire(import.meta.url);
+const LOGGING_SPACE_PREFIX = semver.gte(require("next/package.json").version, "16.0.0") ? "" : " ";
+const prefixedLog = (prefixType, ...message) => {
+	let prefix;
+	let consoleMethod;
+	switch (prefixType) {
+		case "wait":
+			prefix = `${white(bold("○"))} (serwist)`;
+			consoleMethod = "log";
+			break;
+		case "error":
+			prefix = `${red(bold("X"))} (serwist)`;
+			consoleMethod = "error";
+			break;
+		case "warn":
+			prefix = `${yellow(bold("⚠"))} (serwist)`;
+			consoleMethod = "warn";
+			break;
+		case "info":
+			prefix = `${white(bold("○"))} (serwist)`;
+			consoleMethod = "log";
+			break;
+		case "event":
+			prefix = `${green(bold("✓"))} (serwist)`;
+			consoleMethod = "log";
+			break;
+	}
+	if ((message[0] === "" || message[0] === void 0) && message.length === 1) message.shift();
+	if (message.length === 0) console[consoleMethod]("");
+	else console[consoleMethod](`${LOGGING_SPACE_PREFIX}${prefix}`, ...message);
+};
+const info = (...message) => prefixedLog("info", ...message);
+const event = (...message) => prefixedLog("event", ...message);
+//#endregion
+//#region src/lib/validator.ts
+const validateInjectManifestOptions = (input) => {
+	const result = injectManifestOptions.safeParse(input, { error: validationErrorMap });
+	if (!result.success) throw new SerwistConfigError({
+		moduleName: "@serwist/next",
+		message: z.prettifyError(result.error)
+	});
+	return result.data;
+};
+//#endregion
+//#region src/index.ts
+const dirname = "__dirname" in globalThis ? __dirname : fileURLToPath(new URL(".", import.meta.url));
+/**
+* Integrates Serwist into your Next.js app.
+* @param userOptions
+* @returns
+*/
+const withSerwistInit = (userOptions) => {
+	if (!process.env.SERWIST_SUPPRESS_TURBOPACK_WARNING && process.env.TURBOPACK && !userOptions.disable) {
+		process.env.SERWIST_SUPPRESS_TURBOPACK_WARNING = "1";
+		console.warn(`[@serwist/next] WARNING: You are using '@serwist/next' with \`next dev --turbopack\`, but it doesn't support Turbopack. Do one of the following:
+
+- Set \`disable\` to \`process.env.NODE_ENV !== "production"\`.
+
+- Use webpack by running \`next dev --webpack\` instead of \`next dev --turbopack\`.
+
+- Migrate to '@serwist/turbopack' which has experimental support for Turbopack. See https://serwist.pages.dev/docs/next/turbo for more information.
+
+- Migrate to configurator mode which has support for Turbopack. See https://serwist.pages.dev/docs/next/config for more information. 
+
+Follow https://github.com/serwist/serwist/issues/54 for progress on Serwist + Turbopack. You can also suppress this warning by setting SERWIST_SUPPRESS_TURBOPACK_WARNING=1.\n`);
+	}
+	return (nextConfig = {}) => ({
+		...nextConfig,
+		webpack(config, options) {
+			const webpack = options.webpack;
+			const { dev } = options;
+			const basePath = options.config.basePath || "/";
+			const tsConfigJson = loadTSConfig(options.dir, nextConfig?.typescript?.tsconfigPath);
+			const { cacheOnNavigation, disable, scope = basePath, swUrl, register, reloadOnOnline, globPublicPatterns, ...buildOptions } = validateInjectManifestOptions(userOptions);
+			if (typeof nextConfig.webpack === "function") config = nextConfig.webpack(config, options);
+			if (disable) {
+				options.isServer && info("Serwist is disabled.");
+				return config;
+			}
+			if (!config.plugins) config.plugins = [];
+			const _sw = path.posix.join(basePath, swUrl);
+			const _scope = path.posix.join(scope, "/");
+			config.plugins.push(new webpack.DefinePlugin({
+				"self.__SERWIST_SW_ENTRY.sw": `'${_sw}'`,
+				"self.__SERWIST_SW_ENTRY.scope": `'${_scope}'`,
+				"self.__SERWIST_SW_ENTRY.cacheOnNavigation": `${cacheOnNavigation}`,
+				"self.__SERWIST_SW_ENTRY.register": `${register}`,
+				"self.__SERWIST_SW_ENTRY.reloadOnOnline": `${reloadOnOnline}`
+			}));
+			const swEntryJs = path.join(dirname, "sw-entry.mjs");
+			const entry = config.entry;
+			config.entry = async () => {
+				const entries = await entry();
+				if (entries["main.js"] && !entries["main.js"].includes(swEntryJs)) {
+					if (Array.isArray(entries["main.js"])) entries["main.js"].unshift(swEntryJs);
+					else if (typeof entries["main.js"] === "string") entries["main.js"] = [swEntryJs, entries["main.js"]];
+				}
+				if (entries["main-app"] && !entries["main-app"].includes(swEntryJs)) {
+					if (Array.isArray(entries["main-app"])) entries["main-app"].unshift(swEntryJs);
+					else if (typeof entries["main-app"] === "string") entries["main-app"] = [swEntryJs, entries["main-app"]];
+				}
+				return entries;
+			};
+			if (!options.isServer) {
+				if (!register) {
+					info("The service worker will not be automatically registered, please call 'window.serwist.register()' in 'componentDidMount' or 'useEffect'.");
+					if (!tsConfigJson?.compilerOptions?.types?.includes("@serwist/next/typings")) info("You may also want to add '@serwist/next/typings' to your TypeScript/JavaScript configuration file at 'compilerOptions.types'.");
+				}
+				const { swSrc: userSwSrc, swDest: userSwDest, additionalPrecacheEntries, exclude, manifestTransforms = [], ...otherBuildOptions } = buildOptions;
+				let swSrc = userSwSrc;
+				let swDest = userSwDest;
+				if (!path.isAbsolute(swSrc)) swSrc = path.join(options.dir, swSrc);
+				if (!path.isAbsolute(swDest)) swDest = path.join(options.dir, swDest);
+				const publicDir = path.resolve(options.dir, "public");
+				const { dir: destDir, base: destBase } = path.parse(swDest);
+				const cleanUpList = globSync([
+					"swe-worker-*.js",
+					"swe-worker-*.js.map",
+					destBase,
+					`${destBase}.map`
+				], {
+					absolute: true,
+					nodir: true,
+					follow: true,
+					cwd: destDir
+				});
+				for (const file of cleanUpList) fs.rmSync(file, { force: true });
+				const shouldBuildSWEntryWorker = cacheOnNavigation;
+				let swEntryPublicPath;
+				let swEntryWorkerDest;
+				if (shouldBuildSWEntryWorker) {
+					const swEntryWorkerSrc = path.join(dirname, "sw-entry-worker.mjs");
+					const swEntryName = `swe-worker-${getContentHash(swEntryWorkerSrc, dev)}.js`;
+					swEntryPublicPath = path.posix.join(basePath, swEntryName);
+					swEntryWorkerDest = path.join(destDir, swEntryName);
+					config.plugins.push(new ChildCompilationPlugin({
+						src: swEntryWorkerSrc,
+						dest: swEntryWorkerDest
+					}));
+				}
+				config.plugins.push(new webpack.DefinePlugin({ "self.__SERWIST_SW_ENTRY.swEntryWorker": swEntryPublicPath && `'${swEntryPublicPath}'` }));
+				event(`Bundling the service worker script with the URL '${_sw}' and the scope '${_scope}'...`);
+				let resolvedManifestEntries = additionalPrecacheEntries;
+				if (!resolvedManifestEntries) resolvedManifestEntries = globSync(globPublicPatterns, {
+					nodir: true,
+					follow: true,
+					cwd: publicDir,
+					ignore: [
+						"swe-worker-*.js",
+						destBase,
+						`${destBase}.map`
+					]
+				}).map((f) => ({
+					url: path.posix.join(basePath, f),
+					revision: getFileHash(path.join(publicDir, f))
+				}));
+				const publicPath = config.output?.publicPath;
+				config.plugins.push(new InjectManifest({
+					swSrc,
+					swDest,
+					disablePrecacheManifest: dev,
+					additionalPrecacheEntries: dev ? [] : resolvedManifestEntries,
+					exclude: [...exclude, ({ asset, compilation }) => {
+						const swDestRelativeOutput = relativeToOutputPath(compilation, swDest);
+						const swAsset = compilation.getAsset(swDestRelativeOutput);
+						return asset.name === swAsset?.name || asset.name.startsWith("server/") || /^[^/]*\.json$/.test(asset.name) || dev && !asset.name.startsWith("static/runtime/");
+					}],
+					manifestTransforms: [...manifestTransforms, async (manifestEntries, compilation) => {
+						const publicDirRelativeOutput = relativeToOutputPath(compilation, publicDir);
+						const publicFilesPrefix = `${publicPath}${publicDirRelativeOutput}`;
+						return {
+							manifest: manifestEntries.map((m) => {
+								m.url = m.url.replace("/_next//static/image", "/_next/static/image").replace("/_next//static/media", "/_next/static/media");
+								if (m.url.startsWith(publicFilesPrefix)) m.url = path.posix.join(basePath, m.url.replace(publicFilesPrefix, ""));
+								m.url = m.url.replace(/\[/g, "%5B").replace(/\]/g, "%5D").replace(/@/g, "%40");
+								return m;
+							}),
+							warnings: []
+						};
+					}],
+					...otherBuildOptions
+				}));
+			}
+			return config;
+		}
+	});
+};
+//#endregion
+export { withSerwistInit as default, validateInjectManifestOptions };
+
+//# sourceMappingURL=index.mjs.map

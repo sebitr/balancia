@@ -1,0 +1,560 @@
+import assert from 'node:assert';
+import { DEFAULT_SCHEMA } from "./plans.js";
+const POLICY = {
+    MAX_EXPIRATION_HOURS: 24,
+    MIN_POLLING_INTERVAL_MS: 500,
+    MAX_RETENTION_DAYS: 365
+};
+// The internal compatibility flags a backend can toggle. A backend sets only the flags that differ
+// from stock PostgreSQL; everything else defaults to false. These are derived from the backend
+// profile and are not user-configurable (see resolveBackend).
+const COMPATIBILITY_FLAGS = [
+    'noSkipLocked',
+    'noMultiMutationCte',
+    'noTablePartitioning',
+    'noDeferrableConstraints',
+    'noAdvisoryLocks',
+    'noCoveringIndexes',
+    'noListenNotify',
+    'noIndexProgressView'
+];
+// The single source of truth for backend presets, mirrored by test/testHelper.ts.
+const BACKEND_PROFILES = {
+    postgres: { kind: 'standard', flags: {} },
+    cockroachdb: {
+        kind: 'distributed',
+        flags: {
+            noSkipLocked: true,
+            noMultiMutationCte: true,
+            noTablePartitioning: true,
+            noDeferrableConstraints: true,
+            noAdvisoryLocks: true,
+            noCoveringIndexes: true,
+            noListenNotify: true,
+            // Online DDL runs as a schema-change job, not the PG CONCURRENTLY path, and
+            // pg_stat_progress_create_index isn't available — so BAM can't use liveness-based reclaim.
+            noIndexProgressView: true
+        }
+    },
+    yugabytedb: {
+        kind: 'distributed',
+        flags: {
+            noAdvisoryLocks: true,
+            noTablePartitioning: true,
+            // Index builds are a distributed backfill that pg_stat_progress_create_index doesn't reflect,
+            // so liveness would misread an in-flight build as dead. BAM falls back to the timeout instead.
+            noIndexProgressView: true
+        }
+    },
+    // No noIndexProgressView: pg-boss keeps its tables coordinator-local (it never calls
+    // create_distributed_table), so CREATE INDEX CONCURRENTLY runs against ordinary local Postgres tables
+    // on the coordinator, where pg_stat_progress_create_index is accurate and liveness-based reclaim is
+    // valid. This holds ONLY while the tables stay coordinator-local — if they are ever distributed, the
+    // coordinator's progress view would misread in-flight worker builds as dead and BAM could double-build.
+    citus: { kind: 'distributed', flags: {} },
+    pglite: { kind: 'embedded', flags: {} }
+};
+function assertObjectName(value, name = 'Name') {
+    assert(/^[\w.\-/]+$/.test(value), `${name} can only contain alphanumeric characters, underscores, hyphens, periods, or forward slashes`);
+}
+function validateQueueArgs(config = {}) {
+    assert(!('deadLetter' in config) || config.deadLetter === null || (typeof config.deadLetter === 'string'), 'deadLetter must be a string');
+    assert(!('notify' in config) || typeof config.notify === 'boolean', 'notify must be a boolean');
+    if (config.deadLetter) {
+        assertObjectName(config.deadLetter, 'deadLetter');
+    }
+    validateRetryConfig(config);
+    validateExpirationConfig(config);
+    validateRetentionConfig(config);
+    validateDeletionConfig(config);
+    validateHeartbeatConfig(config);
+}
+function checkSendArgs(args) {
+    let name, data, options;
+    if (typeof args[0] === 'string') {
+        name = args[0];
+        data = args[1];
+        assert(typeof data !== 'function', 'send() cannot accept a function as the payload.  Did you intend to use work()?');
+        options = args[2];
+    }
+    else if (typeof args[0] === 'object') {
+        assert(args.length === 1, 'send object API only accepts 1 argument');
+        const job = args[0];
+        assert(job, 'boss requires all jobs to have a name');
+        name = job.name;
+        data = job.data;
+        options = job.options;
+    }
+    options = options || {};
+    assert(name, 'boss requires all jobs to have a queue name');
+    assert(typeof options === 'object', 'options should be an object');
+    options = { ...options };
+    assert(!('priority' in options) || (Number.isInteger(options.priority)), 'priority must be an integer');
+    options.priority = options.priority || 0;
+    options.startAfter = (options.startAfter instanceof Date && typeof options.startAfter.toISOString === 'function')
+        ? options.startAfter.toISOString()
+        : (+options.startAfter > 0)
+            ? '' + options.startAfter
+            : (typeof options.startAfter === 'string')
+                ? options.startAfter
+                : undefined;
+    validateRetryConfig(options);
+    validateExpirationConfig(options);
+    validateRetentionConfig(options);
+    validateDeletionConfig(options);
+    validateGroupConfig(options);
+    validateHeartbeatConfig(options);
+    return { name, data, options };
+}
+const JOB_MATCH_STRATEGIES = ['newest', 'oldest', 'all'];
+// Unlike checkSendArgs, this does NOT inject send-style defaults (e.g. priority = 0): update()
+// is a partial edit, so only the option keys the caller actually supplied may survive into the
+// payload. Normalization is limited to type coercion (startAfter) and validation.
+function checkUpdateArgs(args, { upsert = false } = {}) {
+    const verb = upsert ? 'upsert()' : 'update()';
+    let name, data, rawOptions;
+    if (typeof args[0] === 'string') {
+        name = args[0];
+        data = args[1];
+        rawOptions = args[2];
+    }
+    else if (typeof args[0] === 'object') {
+        assert(args.length === 1, `${verb} object API only accepts 1 argument`);
+        const job = args[0];
+        assert(job, 'boss requires all jobs to have a name');
+        name = job.name;
+        data = job.data;
+        rawOptions = job.options;
+    }
+    assert(name, 'boss requires all jobs to have a queue name');
+    assert(typeof data !== 'function', `${verb} cannot accept a function as the payload.  Did you intend to use work()?`);
+    const options = { ...(rawOptions || {}) };
+    assert(typeof options === 'object', 'options should be an object');
+    const { id, singletonKey, match } = options;
+    // Both update() and upsert() target by exactly one of id or singletonKey. (upsert() may also
+    // require a singletonKey at runtime on key_strict_fifo queues — enforced in the manager, which
+    // knows the policy — because an insert-on-miss there needs a key.)
+    assert((!!id) !== (!!singletonKey), `${verb} requires exactly one of id or singletonKey`);
+    assert(!(id && match !== undefined), 'match is only valid when targeting jobs by singletonKey');
+    assert(match === undefined || JOB_MATCH_STRATEGIES.includes(match), `match must be one of: ${JOB_MATCH_STRATEGIES.join(', ')}`);
+    assert(!('priority' in options) || (Number.isInteger(options.priority)), 'priority must be an integer');
+    if ('startAfter' in options) {
+        // Unlike send(), update() must honor a numeric startAfter of 0 (or negative) — the caller is
+        // explicitly pulling a deferred job forward to now. The send-style `+startAfter > 0` guard
+        // coerced 0 to undefined, which JSON.stringify then dropped, silently making the edit a no-op.
+        // Any finite number is passed through as a seconds interval ('0' -> now()); a string is kept.
+        const startAfter = options.startAfter;
+        options.startAfter = (startAfter instanceof Date && typeof startAfter.toISOString === 'function')
+            ? startAfter.toISOString()
+            : (typeof startAfter === 'number' && Number.isFinite(startAfter))
+                ? '' + startAfter
+                : (typeof startAfter === 'string')
+                    ? startAfter
+                    : undefined;
+    }
+    validateRetryConfig(options);
+    validateExpirationConfig(options);
+    validateRetentionConfig(options);
+    validateGroupConfig(options);
+    validateHeartbeatConfig(options);
+    return { name, data, options };
+}
+function validateGroupConfig(config) {
+    if (!('group' in config) || config.group === undefined || config.group === null) {
+        return;
+    }
+    assert(typeof config.group === 'object', 'group must be an object');
+    assert(typeof config.group.id === 'string' && config.group.id.length > 0, 'group.id must be a non-empty string');
+    assert(!('tier' in config.group) || (typeof config.group.tier === 'string' && config.group.tier.length > 0), 'group.tier must be a non-empty string if provided');
+}
+function validateFlowJobs(jobs) {
+    assert(Array.isArray(jobs), 'flow requires an array of jobs');
+    assert(jobs.length >= 2, 'flow requires at least 2 jobs');
+    const refs = new Set();
+    for (const job of jobs) {
+        assert(typeof job.ref === 'string' && job.ref.length > 0, 'each flow job must have a non-empty ref');
+        assert(!refs.has(job.ref), `duplicate ref: "${job.ref}"`);
+        refs.add(job.ref);
+        assert(typeof job.name === 'string' && job.name.length > 0, 'each flow job must have a non-empty name');
+        assertObjectName(job.name);
+    }
+    const hasDeps = jobs.some(j => j.dependsOn && j.dependsOn.length > 0);
+    assert(hasDeps, 'flow requires at least one job with dependsOn');
+    for (const job of jobs) {
+        if (!job.dependsOn)
+            continue;
+        assert(Array.isArray(job.dependsOn), `dependsOn for ref "${job.ref}" must be an array`);
+        for (const dep of job.dependsOn) {
+            assert(typeof dep === 'string' && dep.length > 0, 'dependsOn entries must be non-empty strings');
+            assert(dep !== job.ref, `job "${job.ref}" cannot depend on itself`);
+            assert(refs.has(dep), `dependsOn ref "${dep}" not found in flow`);
+        }
+    }
+    // Cycle detection via topological sort
+    const inDegree = new Map();
+    const edges = new Map();
+    for (const job of jobs) {
+        inDegree.set(job.ref, 0);
+        edges.set(job.ref, []);
+    }
+    for (const job of jobs) {
+        if (!job.dependsOn)
+            continue;
+        for (const dep of job.dependsOn) {
+            edges.get(dep).push(job.ref);
+            inDegree.set(job.ref, inDegree.get(job.ref) + 1);
+        }
+    }
+    const queue = [];
+    for (const [ref, deg] of inDegree) {
+        if (deg === 0)
+            queue.push(ref);
+    }
+    let visited = 0;
+    while (queue.length > 0) {
+        const current = queue.shift();
+        visited++;
+        for (const child of edges.get(current)) {
+            const newDeg = inDegree.get(child) - 1;
+            inDegree.set(child, newDeg);
+            if (newDeg === 0)
+                queue.push(child);
+        }
+    }
+    if (visited !== jobs.length) {
+        const cycle = findDependencyCycle(edges);
+        assert(false, `flow contains a dependency cycle: ${cycle.join(' -> ')}`);
+    }
+}
+function findDependencyCycle(edges) {
+    const visiting = new Set();
+    const visited = new Set();
+    const path = [];
+    function visit(ref) {
+        if (visiting.has(ref)) {
+            const start = path.indexOf(ref);
+            return [...path.slice(start), ref];
+        }
+        if (visited.has(ref))
+            return null;
+        visiting.add(ref);
+        path.push(ref);
+        for (const child of edges.get(ref) || []) {
+            const cycle = visit(child);
+            if (cycle)
+                return cycle;
+        }
+        path.pop();
+        visiting.delete(ref);
+        visited.add(ref);
+        return null;
+    }
+    let cycle = null;
+    for (const ref of edges.keys()) {
+        cycle = visit(ref);
+        if (cycle)
+            break;
+    }
+    return cycle;
+}
+function validateGroupConcurrencyValue(value, optionName) {
+    if (typeof value === 'number') {
+        assert(Number.isInteger(value) && value >= 1, `${optionName} must be an integer >= 1`);
+        return;
+    }
+    assert(typeof value === 'object', `${optionName} must be a number or an object with { default, tiers? }`);
+    assert(Number.isInteger(value.default) && value.default >= 1, `${optionName}.default must be an integer >= 1`);
+    if ('tiers' in value && value.tiers) {
+        assert(typeof value.tiers === 'object', `${optionName}.tiers must be an object`);
+        for (const [tier, limit] of Object.entries(value.tiers)) {
+            assert(typeof tier === 'string' && tier.length > 0, `${optionName} tier keys must be non-empty strings`);
+            assert(Number.isInteger(limit) && limit >= 1, `${optionName}.tiers["${tier}"] must be an integer >= 1`);
+        }
+    }
+}
+function validatePriorityRangeConfig(config) {
+    if (config.minPriority !== undefined) {
+        assert(Number.isInteger(config.minPriority), 'minPriority must be an integer');
+    }
+    if (config.maxPriority !== undefined) {
+        assert(Number.isInteger(config.maxPriority), 'maxPriority must be an integer');
+    }
+    if (config.minPriority !== undefined && config.maxPriority !== undefined) {
+        assert(config.minPriority <= config.maxPriority, 'minPriority must be <= maxPriority');
+    }
+}
+function validateGroupConcurrencyConfig(config) {
+    const hasGlobal = config.groupConcurrency != null;
+    const hasLocal = config.localGroupConcurrency != null;
+    assert(!(hasGlobal && hasLocal), 'cannot specify both groupConcurrency and localGroupConcurrency - choose one');
+    if (hasGlobal)
+        validateGroupConcurrencyValue(config.groupConcurrency, 'groupConcurrency');
+    if (hasLocal) {
+        validateGroupConcurrencyValue(config.localGroupConcurrency, 'localGroupConcurrency');
+        validateLocalGroupConcurrencyLimit(config.localGroupConcurrency, config.localConcurrency);
+    }
+}
+function validateLocalGroupConcurrencyLimit(localGroupConcurrency, localConcurrency) {
+    const effectiveLocalConcurrency = localConcurrency ?? 1;
+    if (typeof localGroupConcurrency === 'number') {
+        assert(localGroupConcurrency <= effectiveLocalConcurrency, `localGroupConcurrency (${localGroupConcurrency}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`);
+    }
+    else if (typeof localGroupConcurrency === 'object') {
+        assert(localGroupConcurrency.default <= effectiveLocalConcurrency, `localGroupConcurrency.default (${localGroupConcurrency.default}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`);
+        if (localGroupConcurrency.tiers) {
+            for (const [tier, limit] of Object.entries(localGroupConcurrency.tiers)) {
+                assert(limit <= effectiveLocalConcurrency, `localGroupConcurrency.tiers["${tier}"] (${limit}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`);
+            }
+        }
+    }
+}
+function checkWorkArgs(name, args) {
+    let options, callback;
+    assert(name, 'queue name is required');
+    if (args.length === 1) {
+        callback = args[0];
+        options = {};
+    }
+    else if (args.length > 1) {
+        options = args[0] || {};
+        callback = args[1];
+    }
+    assert(typeof callback === 'function', 'expected callback to be a function');
+    assert(typeof options === 'object', 'expected config to be an object');
+    options = { ...options };
+    applyPollingInterval(options);
+    assert(!('batchSize' in options) || (Number.isInteger(options.batchSize) && options.batchSize >= 1), 'batchSize must be an integer > 0');
+    assert(!('includeMetadata' in options) || typeof options.includeMetadata === 'boolean', 'includeMetadata must be a boolean');
+    assert(!('priority' in options) || typeof options.priority === 'boolean', 'priority must be a boolean');
+    assert(!('localConcurrency' in options) || (Number.isInteger(options.localConcurrency) && options.localConcurrency >= 1), 'localConcurrency must be an integer >= 1');
+    assert(!('perJobResults' in options) || typeof options.perJobResults === 'boolean', 'perJobResults must be a boolean');
+    validatePriorityRangeConfig(options);
+    validateGroupConcurrencyConfig(options);
+    validateHeartbeatRefreshConfig(options);
+    return { options, callback };
+}
+function checkFetchArgs(name, options) {
+    assert(name, 'missing queue name');
+    assert(!('batchSize' in options) || (Number.isInteger(options.batchSize) && options.batchSize >= 1), 'batchSize must be an integer > 0');
+    assert(!('includeMetadata' in options) || typeof options.includeMetadata === 'boolean', 'includeMetadata must be a boolean');
+    assert(!('priority' in options) || typeof options.priority === 'boolean', 'priority must be a boolean');
+    assert(!('ignoreStartAfter' in options) || typeof options.ignoreStartAfter === 'boolean', 'ignoreStartAfter must be a boolean');
+    validatePriorityRangeConfig(options);
+}
+function getConfig(value) {
+    assert(value && (typeof value === 'object' || typeof value === 'string'), 'configuration assert: string or config object is required to connect to postgres');
+    const config = (typeof value === 'string')
+        ? { connectionString: value }
+        : { ...value };
+    config.schedule = ('schedule' in config) ? config.schedule : true;
+    config.supervise = ('supervise' in config) ? config.supervise : true;
+    config.migrate = ('migrate' in config) ? config.migrate : true;
+    config.createSchema = ('createSchema' in config) ? config.createSchema : true;
+    config.useListenNotify = ('useListenNotify' in config) ? config.useListenNotify : false;
+    resolveBackend(config);
+    applySchemaConfig(config);
+    applyOpsConfig(config);
+    applyScheduleConfig(config);
+    applyBamConfig(config);
+    applyFlowConfig(config);
+    validateWarningConfig(config);
+    return config;
+}
+function applySchemaConfig(config) {
+    if (config.schema) {
+        assertPostgresObjectName(config.schema);
+    }
+    config.schema = config.schema || DEFAULT_SCHEMA;
+}
+function validateWarningConfig(config) {
+    assert(!('warningQueueSize' in config) || config.warningQueueSize >= 1, 'configuration assert: warningQueueSize must be at least 1');
+    assert(!('warningSlowQuerySeconds' in config) || config.warningSlowQuerySeconds >= 1, 'configuration assert: warningSlowQuerySeconds must be at least 1');
+    assert(!('warningRetentionDays' in config) || (Number.isInteger(config.warningRetentionDays) && config.warningRetentionDays >= 1), 'configuration assert: warningRetentionDays must be an integer >= 1');
+    assert(!('warningRetentionDays' in config) || config.warningRetentionDays <= POLICY.MAX_RETENTION_DAYS, `configuration assert: warningRetentionDays cannot exceed ${POLICY.MAX_RETENTION_DAYS} days`);
+}
+// Expands config.backend into the internal compatibility flags. The flags are derived
+// solely from the backend profile — they are not part of the public input, so a
+// deployment can't end up with an inconsistent combination.
+function resolveBackend(config) {
+    const backend = ('backend' in config) ? config.backend : 'postgres';
+    assert(backend in BACKEND_PROFILES, `configuration assert: backend must be one of ${Object.keys(BACKEND_PROFILES).join(', ')}`);
+    config.backend = backend;
+    const { flags } = BACKEND_PROFILES[backend];
+    for (const flag of COMPATIBILITY_FLAGS) {
+        config[flag] = flags[flag] ?? false;
+    }
+    // Test hook: exercise the distributed runtime paths (atomic fetch + split mutations)
+    // on top of the current backend's schema, without standing up a distributed database.
+    if (config.__test__distributed) {
+        config.noSkipLocked = true;
+        config.noMultiMutationCte = true;
+    }
+    // Test hook: exercise the advisory-lock-free SQL path (used by YugabyteDB/CockroachDB) on a
+    // plain Postgres instance, without standing up a backend whose profile sets the flag.
+    if (config.__test__noAdvisoryLocks) {
+        config.noAdvisoryLocks = true;
+    }
+    // Test hook: exercise the no-liveness BAM reclaim path (timeout-only, no CONCURRENTLY healing)
+    // used by CockroachDB/YugabyteDB, on a plain Postgres instance.
+    if (config.__test__noIndexProgressView) {
+        config.noIndexProgressView = true;
+    }
+}
+// The character rules for the contents of a quoted name, as a predicate clause returned rather than
+// thrown, so the bare-name path can ask whether quoting would actually fix a name before
+// recommending it - and explain why not when it wouldn't.
+function quotedNameProblem(resolved) {
+    // the value is interpolated into identifier positions verbatim, so a double quote inside the
+    // outer pair would close the identifier early and allow arbitrary SQL to follow.
+    if (resolved.includes('"'))
+        return 'cannot contain double quotes';
+    // a single quote would terminate the literal in the string-comparison positions, and would also
+    // break the `EXECUTE format('… ')` bodies the schema is interpolated into.
+    if (resolved.includes("'"))
+        return 'cannot contain single quotes';
+    // % is a format() specifier, and the schema is interpolated into EXECUTE format('… ${schema}.%I …')
+    // templates. an unknown specifier aborts the statement; a valid one (e.g. "a%Ib") is worse, since
+    // it silently consumes an argument and shifts every later specifier by one.
+    if (resolved.includes('%'))
+        return 'cannot contain percent signs';
+    // $ can collide with the dollar-quoted function bodies the schema appears inside.
+    if (resolved.includes('$'))
+        return 'cannot contain dollar signs';
+    // partition and table naming splits on '.', so a dot would be misread as a schema separator.
+    if (resolved.includes('.'))
+        return 'cannot contain periods';
+    // backslash is not valid in the bytea inputs the name is hashed through, and control
+    // characters can break out of the provenance comments in exported migration SQL.
+    if (resolved.includes('\\'))
+        return 'cannot contain backslashes';
+    // eslint-disable-next-line no-control-regex
+    if (/[\x00-\x1f\x7f]/.test(resolved))
+        return 'cannot contain control characters';
+    return null;
+}
+function assertPostgresObjectName(name) {
+    assert(typeof name === 'string', 'Name must be a string');
+    const quoted = name.startsWith('"') && name.endsWith('"') && name.length > 1;
+    const resolved = quoted ? name.slice(1, -1) : name;
+    assert(resolved.length > 0, 'Name cannot be empty');
+    // the limit applies to the resolved name, since that is what postgres stores and what the
+    // derived object names are built from. it is measured in bytes rather than characters because
+    // postgres truncates identifiers at NAMEDATALEN-1 (63) bytes *silently* - a name over the limit
+    // would install fine but leave the configured name and the catalog name permanently out of sync,
+    // so every nspname comparison would miss. bare names are ascii, so this only binds on quoted ones.
+    assert(Buffer.byteLength(resolved, 'utf8') <= 50, 'Name cannot exceed 50 bytes');
+    if (quoted) {
+        const problem = quotedNameProblem(resolved);
+        assert(problem === null, `Quoted name ${problem}`);
+        return;
+    }
+    // A name that is not a legal bare identifier is usable verbatim if it is quoted, so hand the
+    // caller the config value that works instead of only the rule they broke - otherwise the feature
+    // is only discoverable by finding the docs. When quoting would not help either, say which rule
+    // stops it, rather than recommending a value that also throws or leaving the caller to guess.
+    const problem = quotedNameProblem(name);
+    const remedy = problem === null
+        ? ` Pass it quoted to use it verbatim: schema: '"${name}"'`
+        : ` Quoting will not help: a quoted name ${problem}.`;
+    // Both rules are scoped to unquoted names - the message has to say so, since the quoted form
+    // accepts far more than this.
+    assert(!/\W/.test(name), `Schema name ${JSON.stringify(name)} can only contain alphanumeric characters or underscores when unquoted.${remedy}`);
+    assert(!/^\d/.test(name), `Schema name ${JSON.stringify(name)} cannot start with a number when unquoted.${remedy}`);
+}
+function assertQueueName(name) {
+    assert(name, 'Name is required');
+    assert(typeof name === 'string', 'Name must be a string');
+    assertObjectName(name);
+}
+function assertKey(key) {
+    if (!key)
+        return;
+    assert(typeof key === 'string', 'Key must be a string');
+    assertObjectName(key, 'Key');
+}
+function validateRetentionConfig(config) {
+    assert(!('retentionSeconds' in config) || config.retentionSeconds >= 1, 'configuration assert: retentionSeconds must be at least every second');
+}
+function validateExpirationConfig(config) {
+    assert(!('expireInSeconds' in config) || config.expireInSeconds >= 1, 'configuration assert: expireInSeconds must be at least every second');
+    assert(!config.expireInSeconds || config.expireInSeconds / 60 / 60 < POLICY.MAX_EXPIRATION_HOURS, `configuration assert: expiration cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+}
+function validateRetryConfig(config) {
+    assert(!('retryDelay' in config) || (Number.isInteger(config.retryDelay) && config.retryDelay >= 0), 'retryDelay must be an integer >= 0');
+    assert(!('retryLimit' in config) || (Number.isInteger(config.retryLimit) && config.retryLimit >= 0), 'retryLimit must be an integer >= 0');
+    assert(!('retryBackoff' in config) || (config.retryBackoff === true || config.retryBackoff === false), 'retryBackoff must be either true or false');
+    assert(!('retryDelayMax' in config) || config.retryDelayMax === null || config.retryBackoff === true, 'retryDelayMax can only be set if retryBackoff is true');
+    assert(!('retryDelayMax' in config) || config.retryDelayMax === null || (Number.isInteger(config.retryDelayMax) && config.retryDelayMax >= 0), 'retryDelayMax must be an integer >= 0');
+}
+function validateHeartbeatConfig(config) {
+    assert(!('heartbeatSeconds' in config) || config.heartbeatSeconds === null || (Number.isInteger(config.heartbeatSeconds) && config.heartbeatSeconds >= 10), 'heartbeatSeconds must be an integer >= 10');
+}
+function validateHeartbeatRefreshConfig(config) {
+    if (!('heartbeatRefreshSeconds' in config) || config.heartbeatRefreshSeconds == null)
+        return;
+    assert(typeof config.heartbeatRefreshSeconds === 'number' && config.heartbeatRefreshSeconds > 0, 'heartbeatRefreshSeconds must be a number > 0');
+}
+function applyPollingInterval(config) {
+    assert(!('pollingIntervalSeconds' in config) || config.pollingIntervalSeconds >= POLICY.MIN_POLLING_INTERVAL_MS / 1000, `configuration assert: pollingIntervalSeconds must be at least every ${POLICY.MIN_POLLING_INTERVAL_MS}ms`);
+    config.pollingInterval = ('pollingIntervalSeconds' in config)
+        ? config.pollingIntervalSeconds * 1000
+        : 2000;
+    assert(!('notifyPollingIntervalSeconds' in config) || config.notifyPollingIntervalSeconds >= POLICY.MIN_POLLING_INTERVAL_MS / 1000, `configuration assert: notifyPollingIntervalSeconds must be at least every ${POLICY.MIN_POLLING_INTERVAL_MS}ms`);
+    // Relaxed backstop poll used only while NOTIFY is active for the queue; falls back to
+    // pollingInterval when notify is unavailable. It must never be smaller than the base poll —
+    // that would make a notify-active queue poll more aggressively than an idle one, the opposite
+    // of the intent. When explicit, reject a value below the base; when defaulted, floor it at the
+    // base so bumping pollingIntervalSeconds past 30s can't silently leave notify smaller.
+    if ('notifyPollingIntervalSeconds' in config) {
+        config.notifyPollingInterval = config.notifyPollingIntervalSeconds * 1000;
+        assert(config.notifyPollingInterval >= config.pollingInterval, 'configuration assert: notifyPollingIntervalSeconds must be at least pollingIntervalSeconds');
+    }
+    else {
+        config.notifyPollingInterval = Math.max(30000, config.pollingInterval);
+    }
+    // Burst triggers: no transform, just validation. Both put the worker into continuous-fetch
+    // (no delay) mode; see JobPollingOptions for precedence.
+    assert(!('burstWhenReadyExceeds' in config) || (Number.isInteger(config.burstWhenReadyExceeds) && config.burstWhenReadyExceeds >= 1), 'configuration assert: burstWhenReadyExceeds must be an integer >= 1');
+    assert(!('burstWhenBatchFull' in config) || typeof config.burstWhenBatchFull === 'boolean', 'configuration assert: burstWhenBatchFull must be a boolean');
+}
+function applyOpsConfig(config) {
+    assert(!('superviseIntervalSeconds' in config) || config.superviseIntervalSeconds >= 1, 'configuration assert: superviseIntervalSeconds must be at least every second');
+    config.superviseIntervalSeconds = config.superviseIntervalSeconds || 60;
+    assert(config.superviseIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: superviseIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+    assert(!('maintenanceIntervalSeconds' in config) || config.maintenanceIntervalSeconds >= 1, 'configuration assert: maintenanceIntervalSeconds must be at least every second');
+    config.maintenanceIntervalSeconds = config.maintenanceIntervalSeconds || POLICY.MAX_EXPIRATION_HOURS * 60 * 60;
+    assert(config.maintenanceIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: maintenanceIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+    assert(!('monitorIntervalSeconds' in config) || config.monitorIntervalSeconds >= 1, 'configuration assert: monitorIntervalSeconds must be at least every second');
+    config.monitorIntervalSeconds = config.monitorIntervalSeconds || 60;
+    assert(config.monitorIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: monitorIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+    assert(!('queueCacheIntervalSeconds' in config) || config.queueCacheIntervalSeconds >= 1, 'configuration assert: queueCacheIntervalSeconds must be at least every second');
+    config.queueCacheIntervalSeconds = config.queueCacheIntervalSeconds || 60;
+    assert(config.queueCacheIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: queueCacheIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+    if ('queueStatRetentionDays' in config) {
+        assert(Number.isInteger(config.queueStatRetentionDays) && config.queueStatRetentionDays >= 1, 'configuration assert: queueStatRetentionDays must be an integer >= 1');
+        assert(config.queueStatRetentionDays <= POLICY.MAX_RETENTION_DAYS, `configuration assert: queueStatRetentionDays cannot exceed ${POLICY.MAX_RETENTION_DAYS} days`);
+    }
+    config.queueStatRetentionDays = config.queueStatRetentionDays || 7;
+}
+function validateDeletionConfig(config) {
+    assert(!('deleteAfterSeconds' in config) || config.deleteAfterSeconds >= 0, 'configuration assert: deleteAfterSeconds must be at least 0 (0 disables deletion)');
+}
+function applyScheduleConfig(config) {
+    assert(!('clockMonitorIntervalSeconds' in config) || (config.clockMonitorIntervalSeconds >= 1 && config.clockMonitorIntervalSeconds <= 600), 'configuration assert: clockMonitorIntervalSeconds must be between 1 second and 10 minutes');
+    config.clockMonitorIntervalSeconds = config.clockMonitorIntervalSeconds || 600;
+    assert(!('cronMonitorIntervalSeconds' in config) || (config.cronMonitorIntervalSeconds >= 1 && config.cronMonitorIntervalSeconds <= 45), 'configuration assert: cronMonitorIntervalSeconds must be between 1 and 45 seconds');
+    config.cronMonitorIntervalSeconds = config.cronMonitorIntervalSeconds || 30;
+    assert(!('cronWorkerIntervalSeconds' in config) || (config.cronWorkerIntervalSeconds >= 1 && config.cronWorkerIntervalSeconds <= 45), 'configuration assert: cronWorkerIntervalSeconds must be between 1 and 45 seconds');
+    config.cronWorkerIntervalSeconds = config.cronWorkerIntervalSeconds || 5;
+}
+function applyBamConfig(config) {
+    const minInterval = config.__test__bypass_bam_interval_check ? 1 : 10;
+    assert(!('bamIntervalSeconds' in config) || config.bamIntervalSeconds >= minInterval, `configuration assert: bamIntervalSeconds must be at least ${minInterval} seconds`);
+    config.bamIntervalSeconds = config.bamIntervalSeconds || 60;
+}
+function applyFlowConfig(config) {
+    const minInterval = config.__test__bypass_flow_interval_check ? 0.5 : 1;
+    assert(!('flowIntervalSeconds' in config) || config.flowIntervalSeconds >= minInterval, `configuration assert: flowIntervalSeconds must be at least ${minInterval} seconds`);
+    config.flowIntervalSeconds = config.flowIntervalSeconds || 5;
+}
+export { assertKey, assertPostgresObjectName, assertQueueName, checkFetchArgs, checkSendArgs, checkUpdateArgs, checkWorkArgs, getConfig, POLICY, validateFlowJobs, validateGroupConfig, validateQueueArgs };

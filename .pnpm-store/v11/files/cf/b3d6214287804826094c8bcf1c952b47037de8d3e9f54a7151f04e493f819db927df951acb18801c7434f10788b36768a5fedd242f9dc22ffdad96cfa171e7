@@ -1,0 +1,1 @@
+{"version":3,"file":"placeholders.d.ts","sourceRoot":"","sources":["../../src/adapters/placeholders.ts"],"names":[],"mappings":"AAAA;;;;;;;;GAQG;AACH,wBAAgB,iBAAiB,CAAE,IAAI,EAAE,MAAM,EAAE,MAAM,CAAC,EAAE,SAAS,OAAO,EAAE,GAAG;IAC7E,KAAK,EAAE,MAAM,EAAE,CAAA;IACf,SAAS,EAAE,OAAO,EAAE,CAAA;CACrB,CAcA"}

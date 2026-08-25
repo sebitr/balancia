@@ -1,0 +1,39 @@
+import { Compilation, Compiler, WebpackPluginInstance } from "webpack";
+//#region src/lib/child-compilation-plugin.d.ts
+interface ChildCompilationPluginOptions {
+  src: string;
+  dest: string;
+  plugins?: WebpackPluginInstance[];
+}
+/**
+ * Compile a file by creating a child of the hooked compiler.
+ *
+ * @private
+ */
+declare class ChildCompilationPlugin implements WebpackPluginInstance {
+  src: string;
+  dest: string;
+  plugins: WebpackPluginInstance[] | undefined;
+  constructor({ src, dest, plugins }: ChildCompilationPluginOptions);
+  /**
+   * @param compiler default compiler object passed from webpack
+   *
+   * @private
+   */
+  apply(compiler: Compiler): void;
+}
+//#endregion
+//#region src/lib/relative-to-output-path.d.ts
+/**
+ * @param compilation The webpack compilation.
+ * @param originalPath The original path value.
+ *
+ * @returns If path was not absolute, the returns path as-is.
+ * Otherwise, returns path relative to the compilation's output path.
+ *
+ * @private
+ */
+declare const relativeToOutputPath: (compilation: Compilation, originalPath: string) => string;
+//#endregion
+export { ChildCompilationPlugin, relativeToOutputPath };
+//# sourceMappingURL=index.internal.d.mts.map

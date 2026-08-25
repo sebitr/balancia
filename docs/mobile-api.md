@@ -78,6 +78,13 @@ Registration refusals (email taken, registration closed, password policy) are
 | GET    | `/api/notifications?limit&before`                        | The inbox plus `unread`. Users only.                                                                                                                                                                         |
 | GET    | `/api/notifications/preferences`                         | Category switches plus `mutedGroupIds`.                                                                                                                                                                      |
 
+Every read that carries a `category` carries a `subcategory` beside it, which
+is null far more often than not: the second level is optional everywhere, and
+an expense filed under a category with nothing beneath it is complete rather
+than half-entered. A write may send one, and the server refuses a pair that
+does not agree — `restaurants` + `fuel` is a 422, and so is a subcategory hung
+on free text an import kept verbatim.
+
 The group read also carries `profile` (`description`, `icon`, `iconColor` via
 `getGroupProfile`), which `GroupAccess` deliberately omits.
 

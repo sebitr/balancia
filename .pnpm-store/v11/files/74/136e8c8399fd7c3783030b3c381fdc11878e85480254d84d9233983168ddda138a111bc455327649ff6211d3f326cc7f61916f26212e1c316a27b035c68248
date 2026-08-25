@@ -1,0 +1,136 @@
+import { BasePartial, BaseResolved, InjectPartial, InjectResolved, OptionalSwDestPartial, OptionalSwDestResolved } from "@serwist/build";
+import { Require } from "@serwist/utils";
+import { Asset, Compilation, Compiler, WebpackPluginFunction, WebpackPluginInstance } from "webpack";
+//#region src/lib/types.d.ts
+interface ConditionCallbackOptions {
+  asset: Asset;
+  compilation: Compilation;
+}
+type ConditionCallback = (options: ConditionCallbackOptions) => boolean;
+interface WebpackPartial {
+  /**
+   * One or more chunk names whose corresponding output files should be included
+   * in the precache manifest.
+   */
+  chunks?: string[];
+  /**
+   * One or more specifiers used to exclude assets from the precache manifest.
+   * This is interpreted following
+   * [the same rules](https://webpack.js.org/configuration/module/#condition)
+   * as webpack's standard `exclude` option.
+   * @default
+   * ```
+   * [/\.map$/, /^manifest.*\.js$/]
+   * ```
+   */
+  exclude?: (string | RegExp | ConditionCallback)[];
+  /**
+   * One or more chunk names whose corresponding output files should be excluded
+   * from the precache manifest.
+   */
+  excludeChunks?: string[];
+  /**
+   * One or more specifiers used to include assets in the precache manifest.
+   * This is interpreted following
+   * [the same rules](https://webpack.js.org/configuration/module/#condition)
+   * as webpack's standard `include` option.
+   */
+  include?: (string | RegExp | ConditionCallback)[];
+}
+type WebpackResolved = Require<WebpackPartial, "exclude">;
+interface InjectPartial$1 {
+  /**
+   * When `true` (the default), the `swSrc` file will be compiled by webpack.
+   * When `false`, compilation will not occur (and `webpackCompilationPlugins`
+   * can't be used.) Set to `false` if you want to inject the manifest into,
+   * e.g., a JSON file.
+   * @default true
+   */
+  compileSrc?: boolean;
+  /**
+   * Optional webpack plugins that will be used when compiling the `swSrc`
+   * file. Only valid if `compileSrc` is `true`.
+   */
+  webpackCompilationPlugins?: WebpackPlugin[];
+}
+type InjectResolved$1 = Require<InjectPartial$1, "compileSrc">;
+interface InjectManifestOptions extends BasePartial, WebpackPartial, InjectPartial, OptionalSwDestPartial, InjectPartial$1 {}
+interface InjectManifestOptionsComplete extends BaseResolved, WebpackResolved, InjectResolved, OptionalSwDestResolved, InjectResolved$1 {}
+type WebpackPlugin = WebpackPluginFunction | WebpackPluginInstance;
+//#endregion
+//#region src/inject-manifest.d.ts
+/**
+ * This class supports compiling a service worker file provided via `swSrc`,
+ * and injecting into that service worker a list of URLs and revision
+ * information for precaching based on the webpack asset pipeline.
+ *
+ * Use an instance of `InjectManifest` in the
+ * [`plugins` array](https://webpack.js.org/concepts/plugins/#usage) of a
+ * webpack config.
+ *
+ * In addition to injecting the manifest, this plugin will perform a compilation
+ * of the `swSrc` file, using the options from the main webpack configuration.
+ *
+ * ```
+ * // The following lists some common options; see the rest of the documentation
+ * // for the full set of options and defaults.
+ * new InjectManifest({
+ *   exclude: [/.../, '...'],
+ *   maximumFileSizeToCacheInBytes: ...,
+ *   swSrc: '...',
+ * });
+ * ```
+ */
+declare class InjectManifest {
+  protected config: InjectManifestOptionsComplete;
+  private alreadyCalled;
+  private webpack;
+  /**
+   * Creates an instance of InjectManifest.
+   */
+  constructor(config: InjectManifestOptions);
+  /**
+   * @param compiler default compiler object passed from webpack
+   *
+   * @private
+   */
+  private propagateWebpackConfig;
+  /**
+   * `getManifestEntriesFromCompilation` with a few additional checks.
+   *
+   * @private
+   */
+  private getManifestEntries;
+  /**
+   * @param compiler default compiler object passed from webpack
+   *
+   * @private
+   */
+  apply(compiler: Compiler): void;
+  /**
+   * @param compiler The webpack parent compiler.
+   * @param compilation The webpack compilation.
+   *
+   * @private
+   */
+  private addSrcToAssets;
+  /**
+   * @param compiler The webpack parent compiler.
+   * @param compilation The webpack compilation.
+   *
+   * @private
+   */
+  private handleMake;
+  /**
+   * @param compilation The webpack compilation.
+   *
+   * @private
+   */
+  private addAssets;
+}
+//#endregion
+//#region src/lib/validator.d.ts
+declare const validateInjectManifestOptions: (input: unknown) => Promise<InjectManifestOptionsComplete>;
+//#endregion
+export { InjectManifest, type InjectManifestOptions, type InjectManifestOptionsComplete, type WebpackPartial, type WebpackResolved, validateInjectManifestOptions };
+//# sourceMappingURL=index.d.mts.map

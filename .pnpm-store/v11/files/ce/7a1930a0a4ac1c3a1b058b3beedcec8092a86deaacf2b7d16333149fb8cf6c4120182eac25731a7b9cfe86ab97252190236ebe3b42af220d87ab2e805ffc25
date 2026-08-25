@@ -1,0 +1,291 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+var isBrowser = typeof window !== 'undefined';
+// Inject base CSS for view transitions
+var injectBaseStyles = function () {
+    if (isBrowser) {
+        var styleId = 'theme-switch-base-style';
+        if (!document.getElementById(styleId)) {
+            var style = document.createElement('style');
+            style.id = styleId;
+            var isHighResolution = window.innerWidth >= 3000 || window.innerHeight >= 2000;
+            style.textContent = "\n        ::view-transition-old(root),\n        ::view-transition-new(root) {\n          animation: none;\n          mix-blend-mode: normal;\n          ".concat(isHighResolution ? 'transform: translateZ(0);' : '', "\n        }\n        \n        ").concat(isHighResolution
+                ? "\n        ::view-transition-group(root),\n        ::view-transition-image-pair(root),\n        ::view-transition-old(root),\n        ::view-transition-new(root) {\n          backface-visibility: hidden;\n          perspective: 1000px;\n          transform: translate3d(0, 0, 0);\n        }\n        "
+                : '', "\n      ");
+            document.head.appendChild(style);
+        }
+    }
+};
+export var ThemeAnimationType;
+(function (ThemeAnimationType) {
+    ThemeAnimationType["CIRCLE"] = "circle";
+    ThemeAnimationType["BLUR_CIRCLE"] = "blur-circle";
+    ThemeAnimationType["QR_SCAN"] = "qr-scan";
+    ThemeAnimationType["POLYGON"] = "polygon";
+    ThemeAnimationType["POLYGON_GRADIENT"] = "polygon-gradient";
+    ThemeAnimationType["GIF"] = "gif";
+})(ThemeAnimationType || (ThemeAnimationType = {}));
+export var ThemeAnimationDirection;
+(function (ThemeAnimationDirection) {
+    ThemeAnimationDirection["LTR"] = "ltr";
+    ThemeAnimationDirection["RTL"] = "rtl";
+    ThemeAnimationDirection["TTB"] = "ttb";
+    ThemeAnimationDirection["BTT"] = "btt";
+})(ThemeAnimationDirection || (ThemeAnimationDirection = {}));
+// Exponential easing curves (CSS linear() approximations) used by the
+// polygon and gif animations for a snappy reveal effect
+var EXPO_OUT_EASING = 'linear(' +
+    '0 0%, 0.1684 2.66%, 0.3165 5.49%, 0.446 8.52%,' +
+    '0.5581 11.78%, 0.6535 15.29%, 0.7341 19.11%,' +
+    '0.8011 23.3%, 0.8557 27.93%, 0.8962 32.68%,' +
+    '0.9283 38.01%, 0.9529 44.08%, 0.9711 51.14%,' +
+    '0.9833 59.06%, 0.9915 68.74%, 1 100%' +
+    ')';
+var EXPO_IN_EASING = 'linear(' +
+    '0 0%, 0.0085 31.26%, 0.0167 40.94%, 0.0289 48.86%,' +
+    '0.0471 55.92%, 0.0717 61.99%, 0.1038 67.32%,' +
+    '0.1443 72.07%, 0.1989 76.7%, 0.2659 80.89%,' +
+    '0.3465 84.71%, 0.4419 88.22%, 0.554 91.48%,' +
+    '0.6835 94.51%, 0.8316 97.34%, 1 100%' +
+    ')';
+export var useModeAnimation = function (props) {
+    var _a = props || {}, customDuration = _a.duration, customEasing = _a.easing, _b = _a.pseudoElement, pseudoElement = _b === void 0 ? '::view-transition-new(root)' : _b, _c = _a.globalClassName, globalClassName = _c === void 0 ? 'dark' : _c, _d = _a.animationType, animationType = _d === void 0 ? ThemeAnimationType.CIRCLE : _d, _e = _a.direction, direction = _e === void 0 ? ThemeAnimationDirection.LTR : _e, _f = _a.blurAmount, blurAmount = _f === void 0 ? 2 : _f, gifUrl = _a.gifUrl, _g = _a.styleId, styleId = _g === void 0 ? 'theme-switch-style' : _g, externalDarkMode = _a.isDarkMode, onDarkModeChange = _a.onDarkModeChange;
+    // Gif and polygon-gradient animations need more time to read the reveal effect
+    var propsDuration = customDuration !== null && customDuration !== void 0 ? customDuration : (animationType === ThemeAnimationType.GIF
+        ? 2000
+        : animationType === ThemeAnimationType.POLYGON_GRADIENT
+            ? 1500
+            : 750);
+    var easing = customEasing !== null && customEasing !== void 0 ? customEasing : (animationType === ThemeAnimationType.POLYGON || animationType === ThemeAnimationType.POLYGON_GRADIENT
+        ? EXPO_OUT_EASING
+        : animationType === ThemeAnimationType.GIF
+            ? EXPO_IN_EASING
+            : 'ease-in-out');
+    var isHighResolution = typeof window !== 'undefined' && (window.innerWidth >= 3000 || window.innerHeight >= 2000);
+    var duration = isHighResolution ? Math.max(propsDuration * 0.8, 500) : propsDuration;
+    // Inject base styles when the hook is initialized
+    useEffect(function () {
+        injectBaseStyles();
+    }, []);
+    var _h = useState(isBrowser ? localStorage.getItem('theme') === 'dark' : false), internalDarkMode = _h[0], setInternalDarkMode = _h[1];
+    var isDarkMode = externalDarkMode !== null && externalDarkMode !== void 0 ? externalDarkMode : internalDarkMode;
+    var setIsDarkMode = function (value) {
+        var newValue = typeof value === 'function' ? value(isDarkMode) : value;
+        if (onDarkModeChange) {
+            onDarkModeChange(newValue);
+        }
+        else {
+            setInternalDarkMode(newValue);
+        }
+    };
+    var ref = useRef(null);
+    var createBlurCircleMask = function (blur) {
+        // Using a larger viewBox and centered circle for better scaling
+        var isHighResolution = typeof window !== 'undefined' && (window.innerWidth >= 3000 || window.innerHeight >= 2000);
+        var blurFilter = isHighResolution
+            ? "<filter id=\"blur\"><feGaussianBlur stdDeviation=\"".concat(blur, "\" /></filter>")
+            : "<filter id=\"blur\"><feGaussianBlur stdDeviation=\"".concat(blur, "\" /></filter>");
+        var circleRadius = isHighResolution ? 20 : 25;
+        return "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-50 -50 100 100\"><defs>".concat(blurFilter, "</defs><circle cx=\"0\" cy=\"0\" r=\"").concat(circleRadius, "\" fill=\"white\" filter=\"url(%23blur)\"/></svg>')");
+    };
+    // Triangle with a soft gradient edge, anchored to the top-left corner
+    var createPolygonGradientMask = function () {
+        var gradient = '<linearGradient id="g" x1="0" y1="0" x2="20.5" y2="20.5" gradientUnits="userSpaceOnUse">' +
+            '<stop stop-color="white"/>' +
+            '<stop offset="0.84506" stop-color="white" stop-opacity="0.99"/>' +
+            '<stop offset="0.9506" stop-color="white" stop-opacity="0"/>' +
+            '<stop offset="1" stop-color="white" stop-opacity="0"/>' +
+            '</linearGradient>';
+        return "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><defs>".concat(gradient, "</defs><path d=\"M0 0H40L0 40V0Z\" fill=\"url(%23g)\"/></svg>')");
+    };
+    var toggleSwitchTheme = function () { return __awaiter(void 0, void 0, void 0, function () {
+        var existingStyle, _a, top, left, width, height, x, y, topLeft, topRight, bottomLeft, bottomRight, maxRadius, viewportSize, isHighResolution, scaleFactor, optimalMaskSize, finalMaskPosition, styleElement, blurFactor, finalMaskSize, styleElement, styleElement, willBeDark, circleEasing, finalMaskSize, circleMask, styleElement, trianglePath, maskPosition, polygonMask, styleElement, scanLineWidth, scanConfig, _b, position, fromSize, styleElement, _c;
+        var _d;
+        var _e;
+        return __generator(this, function (_f) {
+            switch (_f.label) {
+                case 0:
+                    if (!ref.current ||
+                        !document.startViewTransition ||
+                        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                        setIsDarkMode(function (isDarkMode) { return !isDarkMode; });
+                        return [2 /*return*/];
+                    }
+                    existingStyle = document.getElementById(styleId);
+                    if (existingStyle) {
+                        existingStyle.remove();
+                    }
+                    _a = ref.current.getBoundingClientRect(), top = _a.top, left = _a.left, width = _a.width, height = _a.height;
+                    x = left + width / 2;
+                    y = top + height / 2;
+                    topLeft = Math.hypot(x, y);
+                    topRight = Math.hypot(window.innerWidth - x, y);
+                    bottomLeft = Math.hypot(x, window.innerHeight - y);
+                    bottomRight = Math.hypot(window.innerWidth - x, window.innerHeight - y);
+                    maxRadius = Math.max(topLeft, topRight, bottomLeft, bottomRight);
+                    viewportSize = Math.max(window.innerWidth, window.innerHeight) + 200;
+                    isHighResolution = window.innerWidth >= 3000 || window.innerHeight >= 2000;
+                    scaleFactor = isHighResolution ? 2.5 : 4;
+                    optimalMaskSize = isHighResolution ? Math.min(viewportSize * scaleFactor, 5000) : viewportSize * scaleFactor;
+                    finalMaskPosition = {
+                        x: x - optimalMaskSize / 2,
+                        y: y - optimalMaskSize / 2,
+                    };
+                    if (animationType === ThemeAnimationType.BLUR_CIRCLE) {
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleId;
+                        blurFactor = isHighResolution ? 1.5 : 1.2;
+                        finalMaskSize = Math.max(optimalMaskSize, maxRadius * 2.5);
+                        styleElement.textContent = "\n        ::view-transition-group(root) {\n          animation-duration: ".concat(duration, "ms;\n          animation-timing-function: ").concat(isHighResolution
+                            ? 'cubic-bezier(0.2, 0, 0.2, 1)'
+                            : 'linear(' +
+                                '0 0%, 0.2342 12.49%, 0.4374 24.99%,' +
+                                '0.6093 37.49%, 0.6835 43.74%,' +
+                                '0.7499 49.99%, 0.8086 56.25%,' +
+                                '0.8593 62.5%, 0.9023 68.75%, 0.9375 75%,' +
+                                '0.9648 81.25%, 0.9844 87.5%,' +
+                                '0.9961 93.75%, 1 100%' +
+                                ')', ";\n          will-change: transform;\n        }\n\n        ::view-transition-new(root) {\n          mask: ").concat(createBlurCircleMask(blurAmount * blurFactor), " 0 0 / 100% 100% no-repeat;\n          mask-position: ").concat(x, "px ").concat(y, "px;\n          animation: maskScale ").concat(duration, "ms ").concat(easing, ";\n          transform-origin: ").concat(x, "px ").concat(y, "px;\n          will-change: mask-size, mask-position;\n        }\n\n        ::view-transition-old(root),\n        .dark::view-transition-old(root) {\n          animation: maskScale ").concat(duration, "ms ").concat(easing, ";\n          transform-origin: ").concat(x, "px ").concat(y, "px;\n          z-index: -1;\n          will-change: mask-size, mask-position;\n        }\n\n        @keyframes maskScale {\n          0% {\n            mask-size: 0px;\n            mask-position: ").concat(x, "px ").concat(y, "px;\n          }\n          100% {\n            mask-size: ").concat(finalMaskSize, "px;\n            mask-position: ").concat(x - finalMaskSize / 2, "px ").concat(y - finalMaskSize / 2, "px;\n          }\n        }\n      ");
+                        document.head.appendChild(styleElement);
+                    }
+                    if (animationType === ThemeAnimationType.POLYGON_GRADIENT) {
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleId;
+                        // Double animation declarations: the second (linear() easing) wins in
+                        // browsers that support it, the first is a fallback for those that don't
+                        styleElement.textContent = "\n        ::view-transition-group(root) {\n          animation-duration: ".concat(duration, "ms;\n          animation-timing-function: ease;\n          animation-timing-function: ").concat(easing, ";\n        }\n\n        ::view-transition-new(root) {\n          mask: ").concat(createPolygonGradientMask(), " top left / 0 no-repeat;\n          animation: polygonGradientScale ").concat(duration, "ms ease;\n          animation: polygonGradientScale ").concat(duration, "ms ").concat(easing, ";\n          animation-fill-mode: both;\n          will-change: mask-size;\n        }\n\n        ::view-transition-old(root),\n        .").concat(globalClassName, "::view-transition-old(root) {\n          animation: polygonGradientScale ").concat(duration, "ms ease;\n          animation: polygonGradientScale ").concat(duration, "ms ").concat(easing, ";\n          animation-fill-mode: both;\n          z-index: -1;\n          transform-origin: top left;\n        }\n\n        @keyframes polygonGradientScale {\n          to {\n            mask-size: 200vmax;\n          }\n        }\n      ");
+                        document.head.appendChild(styleElement);
+                    }
+                    if (animationType === ThemeAnimationType.GIF && gifUrl) {
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleId;
+                        styleElement.textContent = "\n        ::view-transition-group(root) {\n          animation-duration: ".concat(duration, "ms;\n          animation-timing-function: ease;\n          animation-timing-function: ").concat(easing, ";\n        }\n\n        ::view-transition-new(root) {\n          mask: url('").concat(gifUrl, "') center / 0 no-repeat;\n          animation: gifMaskScale ").concat(duration, "ms ease;\n          animation: gifMaskScale ").concat(duration, "ms ").concat(easing, ";\n          animation-fill-mode: both;\n          will-change: mask-size;\n        }\n\n        ::view-transition-old(root),\n        .").concat(globalClassName, "::view-transition-old(root) {\n          animation: gifMaskScale ").concat(duration, "ms ease;\n          animation: gifMaskScale ").concat(duration, "ms ").concat(easing, ";\n          animation-fill-mode: both;\n          z-index: -1;\n        }\n\n        @keyframes gifMaskScale {\n          0% {\n            mask-size: 0;\n          }\n          10% {\n            mask-size: 50vmax;\n          }\n          90% {\n            mask-size: 50vmax;\n          }\n          100% {\n            mask-size: 2000vmax;\n          }\n        }\n      ");
+                        document.head.appendChild(styleElement);
+                    }
+                    if (animationType === ThemeAnimationType.GIF && !gifUrl) {
+                        console.warn('react-theme-switch-animation: `gifUrl` is required for the GIF animation type. Falling back to the circle animation.');
+                    }
+                    willBeDark = !isDarkMode;
+                    // The reveals below are applied as mask-based CSS animations in an
+                    // injected stylesheet, mirroring the blur-circle/polygon-gradient
+                    // mechanism. WebKit supports the View Transition API but ignores both
+                    // WAAPI animations targeting its pseudo-elements and clip-path on them
+                    // (the style computes yet never clips), which left Safari running the
+                    // default cross-fade instead of revealing from the toggle position.
+                    // Mask animations render correctly in Chromium and WebKit alike. Each
+                    // rule declares the animation twice so browsers without linear() easing
+                    // fall back gracefully.
+                    if (animationType === ThemeAnimationType.CIRCLE || (animationType === ThemeAnimationType.GIF && !gifUrl)) {
+                        circleEasing = animationType === ThemeAnimationType.CIRCLE ? easing : 'ease-in-out';
+                        finalMaskSize = Math.ceil(maxRadius * 2.1);
+                        circleMask = "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-50 -50 100 100\"><circle cx=\"0\" cy=\"0\" r=\"50\" fill=\"white\"/></svg>')";
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleId;
+                        styleElement.textContent = "\n        ".concat(pseudoElement, " {\n          mask: ").concat(circleMask, " 0 0 / 0 no-repeat;\n          animation: circleReveal ").concat(duration, "ms ease-in-out;\n          animation: circleReveal ").concat(duration, "ms ").concat(circleEasing, ";\n          animation-fill-mode: both;\n          will-change: mask-size, mask-position;\n        }\n\n        @keyframes circleReveal {\n          from {\n            mask-size: 0px;\n            mask-position: ").concat(x, "px ").concat(y, "px;\n          }\n          to {\n            mask-size: ").concat(finalMaskSize, "px;\n            mask-position: ").concat(x - finalMaskSize / 2, "px ").concat(y - finalMaskSize / 2, "px;\n          }\n        }\n      ");
+                        document.head.appendChild(styleElement);
+                    }
+                    if (animationType === ThemeAnimationType.POLYGON) {
+                        trianglePath = willBeDark ? 'M0 0H40L0 40V0Z' : 'M40 40H0L40 0V40Z';
+                        maskPosition = willBeDark ? 'top left' : 'bottom right';
+                        polygonMask = "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><path d=\"".concat(trianglePath, "\" fill=\"white\"/></svg>')");
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleId;
+                        styleElement.textContent = "\n        ".concat(pseudoElement, " {\n          mask: ").concat(polygonMask, " ").concat(maskPosition, " / 0 no-repeat;\n          animation: polygonReveal ").concat(duration, "ms ease-in-out;\n          animation: polygonReveal ").concat(duration, "ms ").concat(easing, ";\n          animation-fill-mode: both;\n          will-change: mask-size;\n        }\n\n        @keyframes polygonReveal {\n          to {\n            mask-size: 200vmax;\n          }\n        }\n      ");
+                        document.head.appendChild(styleElement);
+                    }
+                    if (animationType === ThemeAnimationType.QR_SCAN) {
+                        scanLineWidth = isHighResolution ? 8 : 4;
+                        scanConfig = (_d = {},
+                            _d[ThemeAnimationDirection.LTR] = { position: '0% 0%', fromSize: "".concat(scanLineWidth, "px 100%") },
+                            _d[ThemeAnimationDirection.RTL] = { position: '100% 0%', fromSize: "".concat(scanLineWidth, "px 100%") },
+                            _d[ThemeAnimationDirection.TTB] = { position: '0% 0%', fromSize: "100% ".concat(scanLineWidth, "px") },
+                            _d[ThemeAnimationDirection.BTT] = { position: '0% 100%', fromSize: "100% ".concat(scanLineWidth, "px") },
+                            _d);
+                        _b = (_e = scanConfig[direction]) !== null && _e !== void 0 ? _e : scanConfig[ThemeAnimationDirection.LTR], position = _b.position, fromSize = _b.fromSize;
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleId;
+                        styleElement.textContent = "\n        ".concat(pseudoElement, " {\n          mask: linear-gradient(white, white) ").concat(position, " / ").concat(fromSize, " no-repeat;\n          animation: qrScanReveal ").concat(duration, "ms ease-in-out;\n          animation: qrScanReveal ").concat(duration, "ms ").concat(easing, ";\n          animation-fill-mode: both;\n          will-change: mask-size;\n        }\n\n        @keyframes qrScanReveal {\n          from {\n            mask-size: ").concat(fromSize, ";\n          }\n          to {\n            mask-size: 100% 100%;\n          }\n        }\n      ");
+                        document.head.appendChild(styleElement);
+                    }
+                    _f.label = 1;
+                case 1:
+                    _f.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, document.startViewTransition(function () {
+                            flushSync(function () {
+                                setIsDarkMode(willBeDark);
+                            });
+                            // Apply the theme class synchronously so the "new" snapshot is always
+                            // captured in the target theme. Relying on the useEffect alone is racy:
+                            // React can defer passive effects past the snapshot capture (seen on
+                            // React 18 under load), which breaks the reveal animation.
+                            document.documentElement.classList.toggle(globalClassName, willBeDark);
+                        }).ready];
+                case 2:
+                    _f.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    _c = _f.sent();
+                    return [3 /*break*/, 4];
+                case 4:
+                    setTimeout(function () {
+                        var styleElement = document.getElementById(styleId);
+                        if (styleElement) {
+                            styleElement.remove();
+                        }
+                    }, duration);
+                    return [2 /*return*/];
+            }
+        });
+    }); };
+    useEffect(function () {
+        if (isDarkMode) {
+            document.documentElement.classList.add(globalClassName);
+            localStorage.theme = 'dark';
+        }
+        else {
+            document.documentElement.classList.remove(globalClassName);
+            localStorage.theme = 'light';
+        }
+    }, [isDarkMode, globalClassName]);
+    return {
+        ref: ref,
+        toggleSwitchTheme: toggleSwitchTheme,
+        isDarkMode: isDarkMode,
+    };
+};
