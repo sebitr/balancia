@@ -12,6 +12,7 @@ import {
   ShareButton,
   useCanShare,
 } from "@/components/groups/invite-link-controls";
+import { remainingFor } from "@/modules/join/expiry";
 
 /**
  * The moment after "Create group", and the only one where everybody the group
@@ -61,7 +62,7 @@ export function GroupReady({
           <Check aria-hidden="true" className="size-[22px]" />
         </span>
         <Heading className="font-heading text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty">
-          {t("ready.title", { group: groupName })}
+          {t("ready.title")}
         </Heading>
         <p className="text-sm text-pretty text-muted-foreground">
           {lede(t, people)}
@@ -84,7 +85,7 @@ export function GroupReady({
             now={openedAt}
           />
           <p className="text-xs text-pretty text-muted-foreground">
-            {invite.expiresAt ? t("expiryNote") : t("expiryNoteNever")}
+            {expiryNote(t, invite.expiresAt, openedAt)}
           </p>
         </Card>
       )}
@@ -155,5 +156,34 @@ function lede(
       rest.length === 0
         ? t("ready.peopleTwo", { first, second })
         : t("ready.peopleMany", { first, second, count: rest.length }),
+  });
+}
+
+/**
+ * How long the link the organiser is holding lasts, in days.
+ *
+ * The row above counts down in the units a person would say it in — hours,
+ * under two days — because it answers "when does this die". This sentence
+ * answers "how long have I got", where "24 heures" and "1 jour" are the same
+ * promise said twice, so it rounds hours up into a day and leaves the exact
+ * deadline to the row.
+ *
+ * `expired` cannot happen here: the link is minted with the group, and the
+ * clock this is measured against was read when the screen opened.
+ */
+function expiryNote(
+  t: ReturnType<typeof useTranslations<"inviteLink">>,
+  expiresAt: string | null,
+  now: string,
+): string {
+  if (expiresAt === null) return t("expiryNoteNever");
+  const remaining = remainingFor(new Date(expiresAt), new Date(now));
+  return t("expiryNote", {
+    count:
+      remaining.kind === "hours"
+        ? Math.ceil(remaining.count / 24)
+        : remaining.kind === "days"
+          ? remaining.count
+          : 1,
   });
 }
