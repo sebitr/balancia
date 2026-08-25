@@ -11,6 +11,22 @@ import { expectToast, registerAndSignIn } from "./helpers";
  */
 
 test.describe("payout methods", () => {
+  /*
+   * A Swiss browser, said out loud.
+   *
+   * Which methods this screen offers is regional: the form reads the
+   * browser's own timezone and asks `countryForTimezone` about it, and
+   * anywhere the app has no opinion falls back to `DEFAULT_METHODS` — cash,
+   * bank transfer, PayPal, Revolut. TWINT is offered to Switzerland and to
+   * nowhere else, so a test that ticks it has to say where it is standing.
+   *
+   * Left implicit, this passed on a laptop in Zurich and timed out on CI,
+   * which runs in UTC and was duly offered the fallback four. The Swiss IBAN
+   * and the +41 mobile below were always reading as Swiss; the timezone is
+   * the part that was being borrowed from whoever ran the suite.
+   */
+  test.use({ timezoneId: "Europe/Zurich" });
+
   test("keeps a detail that checks out, and refuses one that does not", async ({
     page,
   }) => {
