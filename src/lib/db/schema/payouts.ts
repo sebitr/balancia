@@ -73,9 +73,6 @@ export const payoutMethods = pgTable(
     ),
     // A bound rather than a shape: what a detail has to look like depends on
     // the method, which is a question SQL has no business answering.
-    check(
-      "payout_methods_detail_bounded",
-      sql`length(${table.detail}) <= 120`,
-    ),
+    check("payout_methods_detail_bounded", sql`length(${table.detail}) <= 120`),
   ],
 );
