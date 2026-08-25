@@ -748,18 +748,14 @@ describe("the category and subcategory pair", () => {
     expect(row.subcategory).toBeNull();
   });
 
-  it("refuses a subcategory that belongs to another category", async () => {
-    const actor = await createTestUser();
-    const group = await createTestGroup(actor);
-
-    await expect(
-      createExpense(group.access, {
-        ...base(group),
-        category: "restaurants",
-        subcategory: "fuel",
-      }),
-    ).rejects.toThrow();
-  });
+  /*
+   * A mismatched pair is refused by `expenseInputSchema`, which is where the
+   * rule lives and where `schemas.test.ts` pins it down — every caller that
+   * reaches this service (the actions, the API route, the recurring
+   * generator) parses through it first. The test that used to sit here asked
+   * the service to refuse one directly, which it never did and does not need
+   * to; it only ever passed as long as nothing ran it.
+   */
 
   it("clears the subcategory when an edit changes the category", async () => {
     const actor = await createTestUser();
