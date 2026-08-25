@@ -80,7 +80,16 @@ export type AuthErrorCode =
   | "appleLinkedElsewhere"
   | "appleAlreadyLinked"
   | "appleOnlyCredential"
-  | "appleNotLinked";
+  | "appleNotLinked"
+  | "passkeyChallengeExpired"
+  | "passkeySignInExpired"
+  | "passkeyUnverified"
+  | "passkeyUnverifiedRepeatedly"
+  | "passkeyAlreadyRegistered"
+  | "passkeyUnknown"
+  | "passkeyNotYours"
+  | "passkeySignInAgain"
+  | "malformedRequest";
 
 export class AuthError extends Error {
   constructor(

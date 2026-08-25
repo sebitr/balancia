@@ -99,9 +99,8 @@ export function SignInForm({
       const message =
         error instanceof Error && error.name === "NotAllowedError"
           ? tErrors("passkeyCancelled")
-          : error instanceof Error
-            ? error.message
-            : tErrors("passkeyFailed");
+          : (error instanceof Error ? error.message : "") ||
+            tErrors("passkeyFailed");
       setFormError(message);
     } finally {
       setPasskeyPending(false);

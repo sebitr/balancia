@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { getClientIp, getCurrentUser } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
@@ -42,17 +43,16 @@ export async function POST(request: Request) {
 }
 
 async function handlePost(request: Request) {
+  const t = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   if (!isPushConfigured()) {
     return NextResponse.json(
-      { error: "Push notifications are not configured on this instance." },
+      { error: t("pushNotConfigured") },
       { status: 503 },
     );
   }
@@ -60,7 +60,7 @@ async function handlePost(request: Request) {
   const limit = await consumeRateLimit("pushSubscribe", await getClientIp());
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Try again shortly." },
+      { error: t("pushRateLimited") },
       {
         status: 429,
         headers: { "Retry-After": String(limit.retryAfterSeconds) },
@@ -72,15 +72,15 @@ async function handlePost(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
+  // The schema's own issues are Zod's English and are about a payload the
+  // browser composed, not anything the reader typed: one sentence they can act
+  // on is the whole of what this is worth saying.
   const parsed = postSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid subscription." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   try {
@@ -92,7 +92,10 @@ async function handlePost(request: Request) {
     });
   } catch (error) {
     if (error instanceof InvalidSubscriptionError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: t("deviceNotRegistered") },
+        { status: 400 },
+      );
     }
     // Never log the endpoint: it is a capability to send to someone's device.
     logger.error(
@@ -100,7 +103,7 @@ async function handlePost(request: Request) {
       "Could not store a push subscription",
     );
     return NextResponse.json(
-      { error: "That device could not be registered." },
+      { error: t("deviceNotRegistered") },
       { status: 500 },
     );
   }
@@ -115,24 +118,23 @@ export async function DELETE(request: Request) {
 }
 
 async function handleDelete(request: Request) {
+  const t = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   const parsed = deleteSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   // Scoped to the caller inside the query, so knowing an endpoint is not

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/security/actor";
 import { trackRoute } from "@/lib/metrics/http";
 import { deleteSubscriptionById } from "@/modules/notifications/subscriptions";
@@ -29,18 +30,17 @@ async function handleDelete(
   _request: Request,
   context: RouteContext<"/api/push/subscriptions/[id]">,
 ) {
+  const t = await getTranslations("serverErrors");
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { error: "Sign in to continue." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: t("authRequired") }, { status: 401 });
   }
 
   const { id } = await context.params;
   const removed = await deleteSubscriptionById(user.userId, id);
   if (!removed) {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return NextResponse.json({ error: t("notFound") }, { status: 404 });
   }
   return new NextResponse(null, { status: 204 });
 }

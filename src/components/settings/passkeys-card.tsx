@@ -79,9 +79,8 @@ export function PasskeysCard({
         return;
       }
       toast.error(
-        registerError instanceof Error
-          ? registerError.message
-          : tPasskeys("registerFailed"),
+        (registerError instanceof Error ? registerError.message : "") ||
+          tPasskeys("registerFailed"),
       );
     } finally {
       setRegistering(false);
@@ -95,9 +94,8 @@ export function PasskeysCard({
       refresh();
     } catch (deleteError) {
       toast.error(
-        deleteError instanceof Error
-          ? deleteError.message
-          : tPasskeys("removeFailed"),
+        (deleteError instanceof Error ? deleteError.message : "") ||
+          tPasskeys("removeFailed"),
       );
     } finally {
       setRemoving(null);

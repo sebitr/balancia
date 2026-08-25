@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
 import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { describeError } from "@/lib/server-errors";
 import { AuthError } from "@/modules/auth/service";
 import {
   finishPasskeyAuthentication,
@@ -38,8 +40,9 @@ async function handleGet() {
       { err: error instanceof Error ? error.message : String(error) },
       "Passkey authentication options failed",
     );
+    const t = await getTranslations("serverErrors");
     return NextResponse.json(
-      { error: "Could not start passkey sign-in." },
+      { error: t("passkeySignInUnavailable") },
       { status: 500 },
     );
   }
@@ -52,11 +55,12 @@ export async function POST(request: Request) {
 }
 
 async function handlePost(request: Request) {
+  const t = await getTranslations("serverErrors");
   const ip = await getClientIp();
   const limit = await consumeRateLimit("signIn", ip);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Please try again later." },
+      { error: t("rateLimited") },
       {
         status: 429,
         headers: { "Retry-After": String(limit.retryAfterSeconds) },
@@ -68,10 +72,10 @@ async function handlePost(request: Request) {
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
   if (!body.response) {
-    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+    return NextResponse.json({ error: t("malformedRequest") }, { status: 400 });
   }
 
   try {
@@ -86,14 +90,17 @@ async function handlePost(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: await describeError(error) },
+        { status: 400 },
+      );
     }
     logger.error(
       { err: error instanceof Error ? error.message : String(error) },
       "Passkey authentication failed",
     );
     return NextResponse.json(
-      { error: "That passkey could not be verified." },
+      { error: t("passkeyUnverified") },
       { status: 500 },
     );
   }

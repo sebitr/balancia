@@ -19,12 +19,19 @@ export function supportsPasskeys(): boolean {
   return browserSupportsWebAuthn();
 }
 
+/**
+ * The server's sentence, already in the reader's language.
+ *
+ * Empty when there is none — a proxy answering instead of the route, a body
+ * that is not JSON. There is no `useTranslations` to reach from here, so the
+ * screen that catches the error supplies the fallback: `error.message || t(…)`.
+ */
 async function readError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: string };
-    return body.error ?? "Something went wrong.";
+    return body.error ?? "";
   } catch {
-    return "Something went wrong.";
+    return "";
   }
 }
 

@@ -146,7 +146,9 @@ export function IdentityScreen({
         setBusy(false);
         return;
       }
-      fail(thrown instanceof Error ? thrown.message : t("passkeyFailed"));
+      fail(
+        (thrown instanceof Error ? thrown.message : "") || t("passkeyFailed"),
+      );
     }
   };
 

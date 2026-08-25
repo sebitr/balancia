@@ -145,7 +145,10 @@ export async function startPasskeyRegistration(
     .where(eq(users.id, userId))
     .limit(1);
   if (!user) {
-    throw new AuthError("Sign in again to register a passkey.");
+    throw new AuthError(
+      "Sign in again to register a passkey.",
+      "passkeySignInAgain",
+    );
   }
 
   const existing = await db
@@ -201,7 +204,10 @@ export async function finishPasskeyRegistration(
     db,
   });
   if (!consumed || consumed.userId !== userId) {
-    throw new AuthError("That passkey request expired. Try again.");
+    throw new AuthError(
+      "That passkey request expired. Try again.",
+      "passkeyChallengeExpired",
+    );
   }
 
   const verified = await verifyRegistration(response, clientChallenge);
@@ -244,11 +250,17 @@ async function verifyRegistration(
       { err: error instanceof Error ? error.message : String(error) },
       "Passkey registration verification failed",
     );
-    throw new AuthError("That passkey could not be verified.");
+    throw new AuthError(
+      "That passkey could not be verified.",
+      "passkeyUnverified",
+    );
   }
 
   if (!verification.verified || !verification.registrationInfo) {
-    throw new AuthError("That passkey could not be verified.");
+    throw new AuthError(
+      "That passkey could not be verified.",
+      "passkeyUnverified",
+    );
   }
 
   const { credential, credentialDeviceType, credentialBackedUp } =
@@ -301,7 +313,10 @@ export async function insertPasskey(
     return created;
   } catch (error) {
     if (isUniqueViolation(error)) {
-      throw new AuthError("That passkey is already registered.");
+      throw new AuthError(
+        "That passkey is already registered.",
+        "passkeyAlreadyRegistered",
+      );
     }
     throw error;
   }
@@ -369,7 +384,10 @@ export async function verifySignupPasskeyRegistration(
   );
   const consumed = await consumeChallenge(clientChallenge, "signup", { db });
   if (!consumed?.signup) {
-    throw new AuthError("That passkey request expired. Try again.");
+    throw new AuthError(
+      "That passkey request expired. Try again.",
+      "passkeyChallengeExpired",
+    );
   }
 
   return {
@@ -421,7 +439,10 @@ export async function finishPasskeyAuthentication(
     db,
   });
   if (!consumed) {
-    throw new AuthError("That sign-in request expired. Try again.");
+    throw new AuthError(
+      "That sign-in request expired. Try again.",
+      "passkeySignInExpired",
+    );
   }
 
   const [stored] = await db
@@ -442,7 +463,10 @@ export async function finishPasskeyAuthentication(
     .limit(1);
 
   if (!stored || stored.disabledAt !== null) {
-    throw new AuthError("That passkey is not registered here.");
+    throw new AuthError(
+      "That passkey is not registered here.",
+      "passkeyUnknown",
+    );
   }
 
   let verification;
@@ -467,11 +491,17 @@ export async function finishPasskeyAuthentication(
       { err: error instanceof Error ? error.message : String(error) },
       "Passkey authentication verification failed",
     );
-    throw new AuthError("That passkey could not be verified.");
+    throw new AuthError(
+      "That passkey could not be verified.",
+      "passkeyUnverified",
+    );
   }
 
   if (!verification.verified) {
-    throw new AuthError("That passkey could not be verified.");
+    throw new AuthError(
+      "That passkey could not be verified.",
+      "passkeyUnverified",
+    );
   }
 
   // A counter that does not advance can mean a cloned authenticator. Some
@@ -485,6 +515,7 @@ export async function finishPasskeyAuthentication(
     );
     throw new AuthError(
       "That passkey could not be verified. If this keeps happening, remove and register it again.",
+      "passkeyUnverifiedRepeatedly",
     );
   }
 
@@ -536,7 +567,10 @@ export async function deletePasskey(
     .returning({ id: passkeys.id });
 
   if (deleted.length === 0) {
-    throw new AuthError("That passkey is not on your account.");
+    throw new AuthError(
+      "That passkey is not on your account.",
+      "passkeyNotYours",
+    );
   }
 }
 
@@ -557,7 +591,7 @@ function decodeClientDataChallenge(clientDataJSON: string): string {
     }
     return decoded.challenge;
   } catch {
-    throw new AuthError("That request was malformed.");
+    throw new AuthError("That request was malformed.", "malformedRequest");
   }
 }
 
