@@ -498,6 +498,12 @@ export function ReminderCard({
  * gesture — invisible until it is focused, because a list of sixteen rows does
  * not need sixteen visible Dismiss buttons, and unreachable by pointer, which
  * is what the swipe is for.
+ *
+ * That opaque layer is a `flow-root` so that it contains the margins of
+ * whatever it is given. A child with a vertical margin — the reminder card has
+ * one — otherwise collapses its margin straight out through a parent with no
+ * padding or border, leaving the layer short at both ends and a strip of the
+ * red reveal standing above and below the row as if it were a border.
  */
 export function Dismissible({
   onDismiss,
@@ -520,7 +526,7 @@ export function Dismissible({
         </span>
       </span>
 
-      <div ref={swipe} className="relative touch-pan-y bg-background">
+      <div ref={swipe} className="relative flow-root touch-pan-y bg-background">
         {children}
         <button
           type="button"

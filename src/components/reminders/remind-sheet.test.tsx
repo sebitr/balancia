@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RemindSheet } from "./remind-sheet";
+import { sendReminderAction } from "@/modules/reminders/actions";
 import type { RemindRecipient } from "@/modules/reminders/types";
 
 // The sheet is being tested, not the server: the action is the boundary.
@@ -278,13 +279,14 @@ describe("writing the message", () => {
   });
 
   /**
-   * The link goes out with every reminder, but it is not part of the text
-   * being edited: keeping it beside the box rather than inside it is what
-   * stops a sender typing past the end and pushing the URL out of sight.
+   * The link goes out with a reminder that has to travel, but it is not part
+   * of the text being edited: keeping it beside the box rather than inside it
+   * is what stops a sender typing past the end and pushing the URL out of
+   * sight.
    */
   it("shows the group link beside the draft, not inside it", async () => {
     const user = userEvent.setup();
-    render([recipient()]);
+    render([recipient({ channel: "share" })]);
 
     await user.click(
       screen.getByRole("button", { name: /write the message/i }),
@@ -295,6 +297,31 @@ describe("writing the message", () => {
     });
     expect(draft.value).not.toContain("/groups/g1");
     expect(screen.getByText(/\/groups\/g1$/)).toBeInTheDocument();
+  });
+
+  /**
+   * A reminder the app delivers itself lands on a card that opens the group,
+   * in front of somebody already inside it. An address for the page they are
+   * looking at is nothing to attach — so neither the message nor the chip
+   * under the draft carries one.
+   */
+  it("attaches no link to a reminder that never leaves the app", async () => {
+    const user = userEvent.setup();
+    render([recipient()]);
+
+    await user.click(
+      screen.getByRole("button", { name: /write the message/i }),
+    );
+    expect(screen.queryByText(/\/groups\/g1$/)).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Send to Jonas in Balancia" }),
+    );
+
+    await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
+    const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
+    expect(input.message).not.toContain("/groups/g1");
+    expect(input.message).toContain("€148.00");
   });
 
   it("goes back without losing who was chosen", async () => {

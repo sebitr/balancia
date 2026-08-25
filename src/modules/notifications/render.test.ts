@@ -11,9 +11,10 @@ import en from "../../../messages/en.json";
  * What a notification says when it arrives.
  *
  * The facts are the title, rendered in the reader's language; a reminder's
- * body is the sender's own words and is never touched. These tests run against
- * the shipped catalogue, so the sentence people actually receive is the one
- * being asserted.
+ * body is the sender's own words, and the only thing taken out of it is the
+ * link back to the screen the notification already opens. These tests run
+ * against the shipped catalogue, so the sentence people actually receive is
+ * the one being asserted.
  */
 
 const translate = (key: string, values?: Record<string, string | number>) => {
@@ -276,6 +277,71 @@ describe("splitting the line for a surface that has a column for the amount", ()
 
     expect(rendered.amount).toBeNull();
     expect(rendered.sentence).toBe(rendered.body);
+  });
+});
+
+/**
+ * The link the sender's message ends on.
+ *
+ * A reminder is composed to be handed to a chat app, so the group's address
+ * rides on the last line. Arriving as a notification it has made no such
+ * journey — the card opens that very group when tapped — and the URL is left
+ * standing under two sentences as the only thing on the screen a person has to
+ * read past. It comes off here, which is also what cleans up every reminder
+ * already stored with one.
+ */
+describe("a reminder that ends on a link home", () => {
+  const withLink = (message: string): ReminderPayload => ({
+    ...reminder([{ amount: "2400", currency: "EUR" }]),
+    message,
+  });
+
+  it("drops the address of the screen it already opens", () => {
+    const rendered = renderNotification(
+      entry(
+        withLink(
+          "Scientific fact: settling is quick.\nhttps://balancia.app/groups/g1",
+        ),
+      ),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Scientific fact: settling is quick.");
+    expect(rendered.body).toBe("Scientific fact: settling is quick.");
+  });
+
+  it("drops it written as a path, the way the composer writes it", () => {
+    const rendered = renderNotification(
+      entry(withLink("Still open.\n/groups/g1")),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Still open.");
+  });
+
+  /** Somebody else's link is something the sender chose to say. */
+  it("keeps a link that points somewhere else", () => {
+    const message = "The receipt is here.\nhttps://example.com/receipt.pdf";
+    const rendered = renderNotification(
+      entry(withLink(message)),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe(message);
+  });
+
+  /** A message that is only a link still has to say something. */
+  it("keeps it when the link is the whole message", () => {
+    const rendered = renderNotification(
+      entry(withLink("https://balancia.app/groups/g1")),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("https://balancia.app/groups/g1");
   });
 });
 
