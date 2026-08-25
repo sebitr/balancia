@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
@@ -19,13 +19,13 @@ import { cn } from "@/lib/utils";
  *
  * This is the screen's only raised surface — everything below it sits flat on
  * the page — so it is a contained module with a hairline ring and a lit top
- * edge rather than a drop shadow. There is no page title: the number is the
- * title.
+ * edge rather than a drop shadow. The screen has no page title of its own, so
+ * a quiet label names the figure and doubles as the region's accessible name.
  *
  * The proportional rule is decorative and hidden from assistive technology;
  * the two totals underneath say the same thing in a form a screen reader can
- * read, and the sign of the headline figure is carried by its colour and the
- * signs below it rather than by colour alone.
+ * read. Each is named by the column it sits in, so neither carries a sign —
+ * direction is in the word above the number, never in colour alone.
  *
  * Every figure here is rounded to whole units. This is an answer to "roughly
  * where do I stand?", and centimes on a five-digit total are noise; the exact
@@ -85,6 +85,7 @@ export function PositionWidget({
   const tMoney = useTranslations("money");
   const format = useFormatter();
   const [picking, setPicking] = useState(false);
+  const labelId = useId();
 
   const netUnits = net ? BigInt(net.minorUnits) : null;
   const positive = netUnits !== null && netUnits > 0n;
@@ -133,11 +134,14 @@ export function PositionWidget({
 
   return (
     <section
-      aria-label={t("positionEyebrow")}
+      aria-labelledby={labelId}
       className="overflow-hidden rounded-[20px] bg-card shadow-[inset_0_1px_0_0_oklch(1_0_0/7%)] ring-1 ring-foreground/10"
     >
       <div className="flex flex-col gap-[18px] px-[18px] pt-5 pb-4">
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-1.5">
+          <p id={labelId} className="text-xs text-muted-foreground">
+            {t("positionEyebrow")}
+          </p>
           {allSquare ? (
             <p className="text-[1.875rem] font-semibold tracking-[-0.025em] text-neutral-balance">
               {tMoney("settledUpBadge")}
@@ -249,8 +253,9 @@ export function PositionWidget({
 
       {/* Its own strip on a lighter fill, so the actions read as part of the
           widget rather than as buttons floating inside it. */}
-      {/* Wraps rather than overflowing: "Ajouter une dépense" and "Nouveau
-          groupe" do not fit side by side on a narrow phone. */}
+      {/* Wraps rather than overflowing: the two labels fit side by side on a
+          narrow phone in English and French, and a longer translation is one
+          language away. */}
       <div className="flex flex-wrap items-center gap-2 border-t bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] px-[18px] py-[13px]">
         <Button
           type="button"
@@ -317,20 +322,13 @@ function TintedTotal({
   currency: string;
   tone: "positive" | "negative";
 }) {
-  const sign = tone === "positive" ? "+" : "−";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 text-sm font-medium",
+        "text-sm font-medium",
         tone === "positive" ? "text-positive" : "text-negative",
       )}
     >
-      <span
-        aria-hidden="true"
-        className="w-3.5 shrink-0 text-center leading-none font-semibold"
-      >
-        {sign}
-      </span>
       <Amount minorUnits={minorUnits} currency={currency} fractionDigits={0} />
     </span>
   );

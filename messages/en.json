@@ -2643,7 +2643,7 @@
       "cheeky11": "{name} is not counting the days. {name} is counting {amount}.",
       "cheeky12": "The cheapest way to end this reminder is {amount} to {name}."
     },
-    "sendCaptionShare": "Balancia opens your share sheet for {name} — nothing is sent as you."
+    "sendCaptionShare": "Balancia opens your share sheet — nothing is sent as you."
   },
   "addEntry": {
     "back": "Back",

@@ -522,8 +522,8 @@ export function RemindSheet({
               rather than describing the pair in the abstract. */}
           <p className="mt-3 text-center text-xs text-balance text-muted-foreground">
             {current.channel === "push"
-              ? t("sendCaptionPush", { name: current.name })
-              : t("sendCaptionShare", { name: current.name })}
+              ? t("sendCaptionPush")
+              : t("sendCaptionShare")}
           </p>
         </>
       )}
