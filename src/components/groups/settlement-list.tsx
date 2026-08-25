@@ -173,11 +173,25 @@ export function SettlementList({
               </div>
 
               <div className="mt-4 flex flex-col gap-2">
+                {/* Recording dismisses this sheet on its way out, the way the
+                    dashboard's group picker dismisses itself once a group is
+                    chosen. What it opens is another modal — the add-entry
+                    drawer, over this same group — and a sheet left open
+                    underneath it is invisible until the drawer is closed, at
+                    which point its overlay is the topmost thing on the screen.
+                    Every tap on the group then lands on that overlay instead:
+                    the bottom bar's Add stops opening the drawer, and so does
+                    everything else, with nothing on screen to say why. */}
                 <Button
                   asChild
                   className="h-[46px] w-full rounded-[13px] font-semibold"
                 >
-                  <Link href={recordHref(active)}>{t("recordPayment")}</Link>
+                  <Link
+                    href={recordHref(active)}
+                    onClick={() => setActive(null)}
+                  >
+                    {t("recordPayment")}
+                  </Link>
                 </Button>
                 {active.toIsSelf && activeRecipients.length > 0 && (
                   <RemindButton
