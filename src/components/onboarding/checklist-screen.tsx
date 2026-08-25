@@ -15,6 +15,7 @@ import {
 } from "@/modules/auth/actions";
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { initialsOf } from "@/components/join/types";
+import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import { cn } from "@/lib/utils";
 import { CodeInput } from "./code-input";
 import {
@@ -33,7 +34,7 @@ import {
   type PayoutEntry,
 } from "./sheets";
 import { PRIMARY } from "./screens";
-import type { OnboardingGroupView } from "./types";
+import type { OnboardingGroupView, OnboardingProfileView } from "./types";
 
 /**
  * The group, and what is left to set up.
@@ -50,9 +51,17 @@ import type { OnboardingGroupView } from "./types";
  * drawn as a hollow ring with an arrow rather than a coral check — a filled
  * check would read as complete-and-important, and in greyscale would be
  * indistinguishable from done.
+ *
+ * Every row starts from what the account already has rather than from zero.
+ * That was the bug: somebody who opened a group link already signed in was
+ * shown their own photo, their own payout method and their own starred
+ * currencies as four things still to do. A receipt that cannot read the past
+ * is not a receipt. Where the whole list is already ticked the flow does not
+ * reach this screen at all — see `checklistIsComplete` in `checklist.ts`.
  */
 export function ChecklistScreen({
   group,
+  profile = null,
   isGuest,
   credential,
   email,
@@ -60,6 +69,11 @@ export function ChecklistScreen({
   onLeave,
 }: {
   group: OnboardingGroupView | null;
+  /**
+   * What the account had before this flow started. Null for a guest and for
+   * an account created a screen ago, both of which genuinely have none of it.
+   */
+  profile?: OnboardingProfileView | null;
   isGuest: boolean;
   credential: "passkey" | "code" | null;
   email: string;
@@ -70,9 +84,20 @@ export function ChecklistScreen({
 
   const [open, setOpen] = useState<ChecklistSheet | null>(null);
   const [settling, setSettling] = useState(false);
-  const [currencies, setCurrencies] = useState<readonly string[]>([]);
-  const [payouts, setPayouts] = useState<readonly PayoutEntry[]>([]);
-  const [pushEnabled, setPushEnabled] = useState(false);
+  /*
+   * Seeded from the account, then owned here.
+   *
+   * The sheets write on tap and report back through these, so what the screen
+   * shows is the account's state plus whatever has been changed since it was
+   * read — without a second round trip after every sheet dismissal.
+   */
+  const [currencies, setCurrencies] = useState<readonly string[]>(
+    profile?.currencies ?? [],
+  );
+  const [payouts, setPayouts] = useState<readonly PayoutEntry[]>(
+    profile?.payouts ?? [],
+  );
+  const [pushEnabled, setPushEnabled] = useState(profile?.pushEnabled ?? false);
   const [claimed, setClaimed] = useState(false);
   const [claimedEmail, setClaimedEmail] = useState(email);
 
@@ -83,11 +108,15 @@ export function ChecklistScreen({
     isGuest: guest,
     credential: claimed ? "code" : credential,
     email: claimedEmail || email || null,
-    hasPhoto: false,
+    hasPhoto: profile?.hasPhoto ?? false,
     name,
     currencies,
+    // Guarded rather than cast, now that this list can come from the database
+    // as well as from the sheet: a method stored by an older version, or by
+    // the mobile client, has no label here and must not take the screen down
+    // on its way past. Its own code is a poor label but a truthful one.
     payouts: payouts.map((entry) =>
-      tMethods(entry.method as Parameters<typeof tMethods>[0]),
+      isKnownPayoutMethod(entry.method) ? tMethods(entry.method) : entry.method,
     ),
     notificationsOn: 5,
     notificationCount: 5,

@@ -135,6 +135,19 @@ export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
   return [account, profile, payouts, currencies, notifications];
 }
 
+/**
+ * Nothing on the list is outstanding.
+ *
+ * Asked before the screen is reached rather than on it, because a checklist
+ * with every row already ticked is a screen that exists only to be dismissed.
+ * Derived from the rows rather than from the state so that a row added later
+ * is counted here without anybody remembering to; `urgent` is not done, which
+ * is what keeps a guest's unclaimed account from completing the list.
+ */
+export function checklistIsComplete(state: ChecklistState): boolean {
+  return checklistRows(state).every((row) => row.marker === "done");
+}
+
 /** How the header counts itself: "2 of 5". */
 export function checklistProgress(rows: readonly ChecklistRow[]): {
   done: number;

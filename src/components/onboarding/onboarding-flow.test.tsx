@@ -498,3 +498,149 @@ describe("a signed-in reader on a personal invitation", () => {
     expect(router.replace).toHaveBeenCalledWith("/dashboard");
   });
 });
+
+/**
+ * The checklist, and the account that has already done all of it.
+ *
+ * It is a receipt of what is set up, so it has to read what already was: the
+ * screen used to assume every answer was "no", which showed somebody their own
+ * photo, their own payout method and their own currencies as four things still
+ * to do. Where nothing at all is outstanding the screen does not appear.
+ */
+describe("what the checklist already knows", () => {
+  const account = { name: "Léa Martin", email: "lea@example.com" };
+
+  const everything = {
+    hasPhoto: true,
+    currencies: ["CHF", "EUR"],
+    payouts: [{ method: "bank", detail: "CH93 0076 2011 6238 5295 7" }],
+    pushEnabled: true,
+  };
+
+  /** Claims the listed name, which is the whole flow for a signed-in reader. */
+  const claim = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+  };
+
+  it("never shows the screen to somebody who has all of it", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+        profile={everything}
+      />,
+    );
+
+    await claim(user);
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    expect(screen.queryByText("Finish setting up")).toBeNull();
+    // Straight to the group, which is what the arrival screen's button says.
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+  });
+
+  it("still shows it when one thing is outstanding", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+        profile={{ ...everything, hasPhoto: false }}
+      />,
+    );
+
+    await claim(user);
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    expect(screen.getByText("Finish setting up")).toBeInTheDocument();
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("counts what was set up before as done, not as still to do", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+        profile={{ ...everything, hasPhoto: false }}
+      />,
+    );
+
+    await claim(user);
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    // Account, currencies, payouts and push: four of the five, from the
+    // profile alone. Only the photo is left.
+    expect(screen.getByText("4 of 5")).toBeInTheDocument();
+    expect(screen.getByText("CHF · EUR")).toBeInTheDocument();
+    expect(screen.getByText("Bank transfer")).toBeInTheDocument();
+    expect(screen.getByText(/pushed to this device/)).toBeInTheDocument();
+    expect(screen.getByText(/initials for now/)).toBeInTheDocument();
+  });
+
+  it("picks up a profile that only arrives once somebody signs in", async () => {
+    // The mid-flow case: on a personal invitation the account does not exist
+    // until they sign in, so the page cannot hand this down until then.
+    const user = userEvent.setup();
+    const { rerender } = renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+        profile={null}
+      />,
+    );
+
+    rerender(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        account={account}
+        profile={everything}
+      />,
+    );
+
+    await claim(user);
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    expect(screen.queryByText("Finish setting up")).toBeNull();
+  });
+
+  it("starts from zero for an account this flow just created", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Marc T\. — 6 expenses/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+
+    // No account behind them, so nothing is ticked but the one row the flow
+    // itself fills in — and the screen is very much still on the route.
+    expect(
+      screen.getByRole("heading", {
+        name: /You're Marc T\. — how should we keep it\?/,
+      }),
+    ).toBeInTheDocument();
+  });
+});
