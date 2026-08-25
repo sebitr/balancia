@@ -21,7 +21,10 @@ const now = new Date("2026-08-13T18:00:00.000Z");
 
 function enableProvider(): void {
   process.env.EXCHANGE_RATE_PROVIDER = "frankfurter";
-  process.env.EXCHANGE_RATE_API_URL = "https://rates.test/v1";
+  // A v2 root, because `env.ts` refuses a v1 one at boot — the fixture has to
+  // be a URL the app would actually accept, or every test here dies in
+  // configuration rather than in the code it is about.
+  process.env.EXCHANGE_RATE_API_URL = "https://rates.test/v2";
   resetEnvCache();
   resetRatesProviderCache();
 }
@@ -46,12 +49,22 @@ function failingProvider(): ReturnType<typeof vi.fn> {
   return mock;
 }
 
-const usdQuotes = {
-  amount: 1,
-  base: "USD",
-  date: "2026-08-13",
-  rates: { EUR: 0.86618, JPY: 159.09, GBP: 0.74352 },
-};
+/**
+ * A v2 response: one row per quote currency, each carrying the day that pair
+ * was priced.
+ *
+ * The day is per row rather than per response because Frankfurter blends
+ * providers that do not publish on the same schedule — which is the whole
+ * reason the provider reads it off each row, and why the "aged out" test below
+ * hands the same quotes back under yesterday's date.
+ */
+function usdQuotes(date = "2026-08-13") {
+  return [
+    { date, base: "USD", quote: "EUR", rate: 0.86618 },
+    { date, base: "USD", quote: "JPY", rate: 159.09 },
+    { date, base: "USD", quote: "GBP", rate: 0.74352 },
+  ];
+}
 
 beforeAll(() => {
   enableProvider();
@@ -64,7 +77,7 @@ afterEach(() => {
 
 describe("lookupRate", () => {
   it("fetches once and serves the cache afterwards", async () => {
-    const fetchMock = stubProvider(usdQuotes);
+    const fetchMock = stubProvider(usdQuotes());
 
     const first = await lookupRate({
       from: "USD",
@@ -89,7 +102,7 @@ describe("lookupRate", () => {
   });
 
   it("stores every quote in the response, so a sibling pair costs no call", async () => {
-    const fetchMock = stubProvider(usdQuotes);
+    const fetchMock = stubProvider(usdQuotes());
 
     await lookupRate({ from: "USD", to: "EUR", on: "2026-08-13", now });
     const yen = await lookupRate({
@@ -104,11 +117,8 @@ describe("lookupRate", () => {
   });
 
   it("re-asks once a provisional quote has aged out", async () => {
-    const fetchMock = stubProvider({
-      ...usdQuotes,
-      // Today's fixing is not published yet: this is yesterday's.
-      date: "2026-08-12",
-    });
+    // Today's fixing is not published yet: this is yesterday's.
+    const fetchMock = stubProvider(usdQuotes("2026-08-12"));
 
     await lookupRate({ from: "USD", to: "EUR", on: "2026-08-13", now });
     await lookupRate({ from: "USD", to: "EUR", on: "2026-08-13", now });
@@ -124,7 +134,7 @@ describe("lookupRate", () => {
   });
 
   it("serves a stale quote when the provider stops answering", async () => {
-    stubProvider({ ...usdQuotes, date: "2026-08-12" });
+    stubProvider(usdQuotes("2026-08-12"));
     await lookupRate({ from: "USD", to: "EUR", on: "2026-08-13", now });
 
     vi.unstubAllGlobals();
@@ -154,7 +164,7 @@ describe("lookupRate", () => {
     process.env.EXCHANGE_RATE_PROVIDER = "none";
     resetEnvCache();
     resetRatesProviderCache();
-    const fetchMock = stubProvider(usdQuotes);
+    const fetchMock = stubProvider(usdQuotes());
 
     await expect(
       lookupRate({ from: "USD", to: "EUR", on: "2026-08-13", now }),
@@ -165,7 +175,7 @@ describe("lookupRate", () => {
 
 describe("isProviderQuotedRate", () => {
   it("recognizes a rate this instance fetched, and rejects a typed one", async () => {
-    stubProvider(usdQuotes);
+    stubProvider(usdQuotes());
     await lookupRate({ from: "USD", to: "EUR", on: "2026-08-13", now });
 
     await expect(
@@ -229,7 +239,7 @@ describe("refreshActiveRates", () => {
       },
     ]);
 
-    const fetchMock = stubProvider(usdQuotes);
+    const fetchMock = stubProvider(usdQuotes());
     const report = await refreshActiveRates({ now });
 
     expect(report).toEqual({ pairs: 1, fetched: 1, missing: 0 });
