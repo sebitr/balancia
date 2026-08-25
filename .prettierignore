@@ -25,3 +25,9 @@ LICENSE
 # styles, which is exactly the drift these files exist to catch — and three of
 # them are identical to the design handoff, which is worth being able to prove.
 tests/fixtures/emails
+# pnpm's store, which is gitignored but still sits in the working tree of
+# anyone who has run pnpm outside the containers. Prettier does not read
+# .gitignore, so it has to be told separately — and it cannot parse the
+# vendored .d.ts files in there, so being told is the difference between
+# `format:check` passing and it erroring out on nine files it does not own.
+.pnpm-store

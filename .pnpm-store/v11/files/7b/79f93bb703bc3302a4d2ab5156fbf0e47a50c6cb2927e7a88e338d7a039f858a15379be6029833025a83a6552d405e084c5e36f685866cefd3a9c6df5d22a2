@@ -1,6 +1,0 @@
-//#region src/lib/constants.ts
-const DEFAULT_GLOB_PATTERNS = ["**/*.{js,css,html}"];
-//#endregion
-export { DEFAULT_GLOB_PATTERNS as t };
-
-//# sourceMappingURL=constants-nOu8OVD-.js.map

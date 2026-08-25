@@ -1,9 +1,0 @@
-import { n as AnyFlags, r as BooleanFlag } from "./chunks/types-DIGJFlHE.js";
-//#region src/bin.d.ts
-interface SupportedFlags extends AnyFlags {
-  debug: BooleanFlag;
-  watch: BooleanFlag;
-}
-//#endregion
-export { SupportedFlags };
-//# sourceMappingURL=bin.d.mts.map

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/dialog.ts"],
-  "sourcesContent": ["export * from '@radix-ui/react-dialog';\n"],
-  "mappings": ";AAAA,cAAc;",
-  "names": []
-}
