@@ -12,9 +12,10 @@
 # .github/workflows/release.yml, rather than a build on this host. You still
 # need `.env`, so `./scripts/bootstrap.sh` still runs first.
 #
-# `latest` follows the newest release. Pin it to a series once other people
-# depend on this instance — `sebitro/balancia:0.1` — so that an upgrade is
-# something you do rather than something that happens.
+# `latest` follows the newest release. Pin it to a version once other people
+# depend on this instance — `sebitro/balancia:0.1.0` — so that an upgrade is
+# something you do rather than something that happens. `preview` is main,
+# rebuilt on every merge, and is not for an instance anybody relies on.
 #
 # `!reset` needs Compose 2.24 or newer. It is what removes the build section
 # inherited from compose.yaml; without it, `up --build` would quietly go back

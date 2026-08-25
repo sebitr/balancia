@@ -21,6 +21,7 @@ useful guide.
 | [Self-hosting](self-hosting.md)             | First install, HTTPS, reverse proxies, upgrades and production checks |
 | [Environment reference](environment.md)     | Every configuration variable and its default                          |
 | [Backup and restore](backup-and-restore.md) | Protecting and recovering secrets, PostgreSQL data and receipts       |
+| [Docker Hub image](docker-hub.md)           | Tags, architectures and running the published image directly          |
 | [Splitwise migration](data-migration.md)    | Importing a CSV export or JSON backup safely                          |
 | [Notifications](notifications.md)           | In-app notifications, Web Push and delivery behavior                  |
 | [Email](emails.md)                          | SMTP, verification, password recovery and message previews            |

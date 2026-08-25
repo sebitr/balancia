@@ -182,14 +182,14 @@ image. The database, the volumes, the environment and the entrypoint are
 compose up -d` mean the same thing, which keeps the rest of this guide typed
 exactly as it is written.
 
-| Tag      | What it is                                                      |
-| -------- | --------------------------------------------------------------- |
-| `latest` | The newest release. Moves under you at every pull.              |
-| `0.2.1`  | That release, permanently.                                      |
-| `0.2`    | The newest patch in that minor series.                          |
-| `edge`   | A build of `main`, published by hand. For trying something out. |
+| Tag       | What it is                                                  |
+| --------- | ----------------------------------------------------------- |
+| `latest`  | The newest release. Moves under you at every pull.          |
+| `0.1.0`   | That release, permanently.                                  |
+| `preview` | `main` as it is now, rebuilt on every merge. Not a release. |
 
-Pin a version once somebody other than you depends on the instance. `latest`
+There is no floating minor series on purpose: pinning means naming a version in
+full. Do that once somebody other than you depends on the instance — `latest`
 means the upgrade happens whenever you happen to pull, which is fine for a
 laptop and not for a household.
 
