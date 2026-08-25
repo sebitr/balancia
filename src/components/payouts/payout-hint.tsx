@@ -5,7 +5,10 @@ import { useTranslations } from "next-intl";
 import { Check, Copy, QrCode } from "lucide-react";
 import { needsDetail } from "@/modules/payouts/fields";
 import { PaymentQr } from "./payment-qr";
-import type { PaymentQrStandard } from "@/modules/payouts/qr/payment-qr";
+import type {
+  PaymentQrRefusal,
+  PaymentQrStandard,
+} from "@/modules/payouts/qr/payment-qr";
 
 /**
  * How the person you owe wants it, shown where you are about to pay them.
@@ -20,22 +23,50 @@ import type { PaymentQrStandard } from "@/modules/payouts/qr/payment-qr";
  */
 export function PayoutHint({
   name,
+  currency,
   method,
   detail,
   methodLabel,
   qr = null,
+  qrMissing = null,
 }: {
   name: string;
+  /** The debt's currency, which is the half of "why not" that names itself. */
+  currency: string;
   method: string;
   detail: string;
   /** Already translated by the caller, which holds the methods catalogue. */
   methodLabel: string;
   /** Built on the server; null when no standard can carry this payment. */
   qr?: { standard: PaymentQrStandard; payload: string } | null;
+  /** Why there is no code, when the reader can act on the reason. */
+  qrMissing?: PaymentQrRefusal | null;
 }) {
   const t = useTranslations("payouts");
   const [copied, setCopied] = useState(false);
   const [showing, setShowing] = useState(false);
+
+  /**
+   * The one sentence that says why there is no code, or nothing.
+   *
+   * Written as a fact rather than as an error, because none of these is a
+   * mistake the reader made and none of them is theirs to fix. What they came
+   * for is the answer to "should I keep looking for a code", and each of these
+   * says no in the terms of whoever they are paying.
+   */
+  const whyNoQr = () => {
+    switch (qrMissing) {
+      case "addressMissing":
+        return t("qrNoneAddress", { name });
+      case "qrIban":
+        return t("qrNoneQrIban", { name });
+      case "currency":
+        return t("qrNoneCurrency", { currency });
+      default:
+        return null;
+    }
+  };
+  const why = qr ? null : whyNoQr();
 
   const copy = async () => {
     try {
@@ -92,6 +123,10 @@ export function PayoutHint({
         the one being paid right now, and a settle screen that is four QR codes
         tall is one nobody reads.
       */}
+      {why && (
+        <p className="text-xs text-pretty text-muted-foreground">{why}</p>
+      )}
+
       {qr && (
         <div className="flex flex-col gap-2">
           <button
