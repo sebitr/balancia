@@ -1,16 +1,27 @@
 # Transactional emails
 
-Balancia sends four emails, all of them about getting into an account or
+Balancia sends six emails, all of them about getting into an account or
 changing which address one belongs to. There is no marketing mail, no digest
 and no list to unsubscribe from, which is why none of them carries a footer or
 a postal address.
 
-| Email                     | Sent when                          | To                              |
-| ------------------------- | ---------------------------------- | ------------------------------- |
-| Welcome / confirm address | An account is registered           | The new account's address       |
-| Password reset            | Someone asks to recover an account | The account's address           |
-| Change of address notice  | An email change is requested       | The address the account **has** |
-| Confirm new address       | An email change is requested       | The address it is moving **to** |
+| Email                     | Sent when                                      | To                              |
+| ------------------------- | ---------------------------------------------- | ------------------------------- |
+| Welcome / confirm address | An account is registered with a password       | The new account's address       |
+| Verification code         | An account is created from the onboarding flow | The new account's address       |
+| Sign-in code              | Someone with no password asks to sign in       | The account's address           |
+| Password reset            | Someone asks to recover an account             | The account's address           |
+| Change of address notice  | An email change is requested                   | The address the account **has** |
+| Confirm new address       | An email change is requested                   | The address it is moving **to** |
+
+The two code emails are the odd ones out: they contain six digits and no link
+at all, and that is deliberate. An email that asks for a code _and_ offers a
+button teaches the reader that both are normal, which is the habit a phishing
+mail relies on. The digits are set in the serif face at display size, because
+it is the one face in the set with unambiguous figures — a 1 that reads as a 7
+costs somebody their account. Codes last ten minutes, are single-use, and are
+checked only against the account they were issued for; see `docs/architecture.md`
+and `src/modules/auth/codes.ts`.
 
 The last two are a pair: one request sends both. The notice goes first, so a
 delivery failure stops the request before a confirmation link is out in the
@@ -25,7 +36,7 @@ the flows behind them is offered there.
 src/modules/auth/emails/
   tokens.ts      the palette and the font stacks, derived from the theme
   layout.ts      the shared skeleton: card, header bar, button, panels
-  templates.ts   the four emails, as arrangements of that skeleton
+  templates.ts   the six emails, as arrangements of that skeleton
 src/lib/color/oklch.ts  OKLCH → sRGB, and the contrast maths
 messages/{en,fr}.json   every word, under `emails.*`
 public/email/mark.png   the header mark, written by `pnpm icons`
