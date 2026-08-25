@@ -37,7 +37,7 @@ import {
   startCodeSignup,
   verifySignupCode,
 } from "./signup";
-import { normalizeCode } from "./codes";
+import { normalizeCode } from "./code-format";
 import { applyStoredPreferences } from "@/i18n/cookie";
 import { resolveRequestLocale } from "@/i18n/request";
 

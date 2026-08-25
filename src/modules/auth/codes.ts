@@ -1,4 +1,5 @@
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
+import { CODE_LENGTH } from "./code-format";
 
 /**
  * The six-digit codes mailed for verification and for passwordless sign-in.
@@ -20,11 +21,10 @@ import { createHash, randomInt, timingSafeEqual } from "node:crypto";
  *    `verification_tokens` machinery as the links.
  *
  * This module is deliberately free of database and request imports so the
- * digits, the digest and the parsing can be tested on their own.
+ * digits and the digest can be tested on their own. The parsing that the
+ * browser also needs lives next door in `code-format.ts`, which opens no Node
+ * built-ins at all.
  */
-
-/** Six digits: long enough with a rate limit, short enough to retype. */
-const CODE_LENGTH = 6;
 
 /**
  * A uniformly random six-digit code, leading zeros kept.
@@ -48,22 +48,6 @@ export function codeHash(userId: string, code: string): string {
 }
 
 /**
- * Digits only, capped at six.
- *
- * People paste codes with spaces in them, and iOS offers them from the
- * keyboard with the surrounding sentence sometimes coming along. Everything
- * that is not a digit is dropped rather than rejected, so a correct code
- * typed untidily still works.
- */
-export function normalizeCode(input: string): string {
-  return input.replace(/\D/g, "").slice(0, CODE_LENGTH);
-}
-
-export function isWellFormedCode(candidate: string): boolean {
-  return new RegExp(`^\\d{${CODE_LENGTH}}$`).test(candidate);
-}
-
-/**
  * Constant-time comparison of two hex digests.
  *
  * The rate limit is what actually stops guessing; this stops the reply time
@@ -75,5 +59,3 @@ export function codesMatch(hashA: string, hashB: string): boolean {
   if (bufferA.length !== bufferB.length || bufferA.length === 0) return false;
   return timingSafeEqual(bufferA, bufferB);
 }
-
-export { CODE_LENGTH };

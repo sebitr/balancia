@@ -1442,6 +1442,175 @@
       "signIn": "Sign in"
     }
   },
+  "onboarding": {
+    "back": "Back",
+    "since": "since {date}",
+    "stepWelcome": "Invitation",
+    "stepWhoYouAre": "Who you are",
+    "stepConfirm": "Confirm",
+    "stepKeepIt": "Keep it",
+    "stepAccount": "Account",
+    "stepProfile": "Profile",
+    "stepDone": "Done",
+    "stepGroup": "Group",
+    "stepFirstGroup": "First group",
+    "welcome": {
+      "personalTitle": "{inviter} added you to {group}",
+      "personalTitleNoInviter": "You have been added to {group}",
+      "personalSub": "See where you stand, add what you paid for, and settle up when the trip ends.",
+      "sharedTitle": "{group}, and one link for everyone in it",
+      "sharedSub": "This link is the same for everybody, so it cannot know which of you just opened it.",
+      "sharedNote": "Account, sign-in or guest — we'll ask once we know who you are.",
+      "findMyself": "Find myself in the list",
+      "coldTitle": "Where do I stand?",
+      "coldSub": "Self-hosted shared expense tracking. Add what you paid for, and Balancia works out who settles with whom.",
+      "createAccount": "Create an account",
+      "haveAccount": "I already have an account",
+      "or": "or",
+      "guest": "Continue as a guest",
+      "guestNote": "Just a name. Nothing you do here is stranded if you claim it later."
+    },
+    "whichOne": {
+      "title": "Which one of these is you?",
+      "sub": "These are the names the group has been keeping expenses under. Claiming one takes its balance too.",
+      "filed": "{count, plural, one {# expense filed} other {# expenses filed}}",
+      "newHere": "None of these — I'm new here",
+      "newHereNamed": "None of these — I'm {name}, and I'm new here"
+    },
+    "confirm": {
+      "title": "Is this you? Claiming it takes the balance too.",
+      "position": "Their position",
+      "filed": "{count, plural, one {# expense filed} other {# expenses filed}}",
+      "filedBy": "{count, plural, one {# expense filed by {inviter}} other {# expenses filed by {inviter}}}",
+      "yes": "Yes, that's me",
+      "no": "No, show me the list again"
+    },
+    "keepIt": {
+      "title": "You're {name} — how should we keep it?",
+      "sub": "An account keeps the group, your balance and {count, plural, =0 {everything under your name} one {the # expense now under your name} other {the # expenses now under your name}} — on any device, not just this browser.",
+      "createAccount": "Create an account",
+      "haveAccount": "I already have an account"
+    },
+    "identity": {
+      "title": "Your email, and one tap",
+      "signInTitle": "Welcome back",
+      "sub": "No password to invent, no confirm field to retype.",
+      "sentSub": "We sent six digits to {email}.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "codeLabel": "The six-digit code",
+      "codeHint": "Codes autofill from the keyboard on iOS and Android.",
+      "verify": "Verify",
+      "resend": "Send another code",
+      "withPasskey": "Continue with a passkey",
+      "signInWithPasskey": "Sign in with a passkey",
+      "orCode": "Email me a code instead",
+      "emailMeACode": "Email me a code",
+      "passkeyFailed": "That passkey could not be registered.",
+      "codeFailed": "The code could not be sent. Try again in a moment.",
+      "codeWrong": "That code is wrong or has expired. Ask for a new one.",
+      "noCredentialRoute": "This browser cannot use a passkey, and this instance cannot send email. Use a password to sign up instead.",
+      "usePassword": "Sign in with a password",
+      "usePasswordSignUp": "Sign up with a password"
+    },
+    "profile": {
+      "title": "Last thing — your name",
+      "sub": "A photo is optional and takes two taps. Tap the circle if you feel like it.",
+      "guestTitle": "What should the group call you?",
+      "guestSub": "One field, and you are in.",
+      "guestNote": "Guest access lives in this browser and nowhere else. Claiming an account later keeps the group, your balance and every expense you added.",
+      "newMemberTitle": "Add yourself to the group",
+      "newMemberSub": "Nobody on the list was you, so you start clean — no expenses filed against your name yet.",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Your name",
+      "photoAdd": "Add a photo",
+      "continue": "Continue",
+      "createAccount": "Create my account",
+      "joinAsGuest": "Join as a guest",
+      "nameFailed": "That name could not be saved."
+    },
+    "arrival": {
+      "title": "You're in, {name}",
+      "sub": "Three taps, one code. Everything else can wait.",
+      "welcomeBackTitle": "Welcome back, {name}",
+      "welcomeBackSub": "Nothing changed while you were gone.",
+      "guestTitle": "You're in as a guest",
+      "guestSub": "Everything works — add expenses, see your balance. Claim the account whenever you want to keep it.",
+      "claimedTitle": "You're in, {name}",
+      "claimedSub": "{count, plural, =0 {Nothing was filed under your name yet.} one {# expense was already filed under your name. It's yours now.} other {# expenses were already filed under your name. They're yours now.}}",
+      "seeGroup": "See the group"
+    },
+    "firstGroup": {
+      "title": "You're in, {name}",
+      "emptyTitle": "No groups yet",
+      "emptyBody": "A group is one trip, one flat, one dinner — whatever you are splitting, and whoever you are splitting it with.",
+      "createGroup": "Create your first group"
+    },
+    "checklist": {
+      "title": "Finish setting up",
+      "count": "{done} of {total}",
+      "position": "Your position",
+      "guestBadge": "Guest",
+      "settleTitle": "{name} wants to settle up",
+      "settleNote": "Tap to choose how they should send it",
+      "continue": "Go to the group",
+      "accountLabel": "Account created",
+      "accountNotePasskey": "Passkey saved to this phone",
+      "accountNoteVerified": "Verified {email}",
+      "accountNotePassword": "Password saved",
+      "claimLabel": "Claim your account",
+      "claimNote": "Guest access lives in this browser only",
+      "profileLabel": "Name and photo",
+      "profileNotePhoto": "{name}, with a photo",
+      "profileNoteInitials": "{name}, initials for now",
+      "payoutsLabel": "Payout method",
+      "payoutsNoteSet": "{methods}",
+      "payoutsNoteEmpty": "Asked when someone settles with you",
+      "currenciesLabel": "Pick your currencies",
+      "currenciesNoteSet": "{codes}",
+      "currenciesNoteEmpty": "Add more if you travel",
+      "notificationsLabel": "Turn on notifications",
+      "notificationsNotePushed": "{on} of {total}, pushed to this device",
+      "notificationsNoteInApp": "{on} of {total}, in the app only"
+    },
+    "sheets": {
+      "currencies": {
+        "title": "Which currencies do you spend in?",
+        "sub": "The first one is your default. Changes save as you tap — there is no Save button anywhere in settings.",
+        "detected": "Detected from your phone",
+        "done": "Done",
+        "doneCount": "{count, plural, one {Done — # currency} other {Done — # currencies}}"
+      },
+      "notifications": {
+        "title": "Know when it actually matters",
+        "sub": "Five things happen in a group worth knowing about. Turn off any you would rather not hear.",
+        "pushTitle": "Push to this device",
+        "pushNote": "Reaches you when Balancia is closed. Everything above still shows up in the app either way.",
+        "done": "Done"
+      },
+      "payouts": {
+        "title": "How should people pay you back?",
+        "sub": "Whoever owes you sees the top one first. Only people in your groups can see these, and only when they owe you.",
+        "detail": "The detail they need",
+        "done": "Done"
+      },
+      "settleUp": {
+        "title": "{name} wants to settle up",
+        "sub": "How should {name} send it? We'll remember for next time.",
+        "save": "Save and tell {name}"
+      },
+      "claim": {
+        "title": "Claim this account",
+        "sub": "It keeps the group, your balance and every expense you added — on any device, not just this browser.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "codeLabel": "The six-digit code",
+        "send": "Email me a code",
+        "verify": "Create my account",
+        "failed": "That could not be saved. Try again in a moment."
+      }
+    }
+  },
   "inviteLink": {
     "heading": "Invite link",
     "copy": "Copy",

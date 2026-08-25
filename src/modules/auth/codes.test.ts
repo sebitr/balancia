@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CODE_LENGTH,
-  codeHash,
-  codesMatch,
-  generateCode,
   isWellFormedCode,
   normalizeCode,
-} from "./codes";
+} from "./code-format";
+import { codeHash, codesMatch, generateCode } from "./codes";
 
 /**
  * The properties a six-digit code has to keep, none of which are obvious from

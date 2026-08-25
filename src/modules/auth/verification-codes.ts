@@ -2,7 +2,8 @@ import "server-only";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import { verificationTokens } from "@/lib/db/schema";
-import { codeHash, codesMatch, generateCode, isWellFormedCode } from "./codes";
+import { isWellFormedCode } from "./code-format";
+import { codeHash, codesMatch, generateCode } from "./codes";
 
 /**
  * Issuing and spending the six-digit codes.
