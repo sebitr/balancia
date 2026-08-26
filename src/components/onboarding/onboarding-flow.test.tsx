@@ -95,9 +95,7 @@ describe("the personal invitation", () => {
     expect(
       screen.getByRole("button", { name: "Create an account" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "I already have an account" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
     // Two lines inside one control, which jsdom and screen readers both run
     // together — hence the stated accessible name.
     expect(
@@ -122,9 +120,7 @@ describe("the personal invitation", () => {
     expect(
       screen.queryByRole("button", { name: "Create an account" }),
     ).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "I already have an account" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
   it("asks a guest for a name and nothing else", async () => {
@@ -243,7 +239,7 @@ describe("the cold arrival", () => {
   it("describes the product, because there is no group to describe", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
     expect(
-      screen.getByRole("heading", { name: "Where do I stand?" }),
+      screen.getByRole("heading", { name: "Keep your accounts within reach" }),
     ).toBeInTheDocument();
   });
 

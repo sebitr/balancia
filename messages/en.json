@@ -1508,10 +1508,10 @@
       "sharedNote": "Account, sign-in or guest — we'll ask once we know who you are.",
       "sharedNoteSignedIn": "Signed in as {name} — we only need to know which of these is you.",
       "findMyself": "Find myself in the list",
-      "coldTitle": "Where do I stand?",
-      "coldSub": "Self-hosted shared expense tracking. Add what you paid for, and Balancia works out who settles with whom.",
+      "coldTitle": "Keep your accounts within reach",
+      "coldSub": "Create an account to get back to your groups, keep track of what you spend, and see at a glance what is left to settle.",
       "createAccount": "Create an account",
-      "haveAccount": "I already have an account",
+      "haveAccount": "Sign in",
       "or": "or",
       "guest": "Continue as a guest",
       "guestNote": "Just a name. Nothing you do here is stranded if you claim it later."
