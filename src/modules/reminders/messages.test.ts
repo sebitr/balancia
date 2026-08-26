@@ -1,14 +1,30 @@
 import { describe, expect, it } from "vitest";
+import type { RemindTone } from "./messages";
 import { DEFAULT_TONE, DRAFTS, draftsOf, pickDraft } from "./messages";
 import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
 
 describe("the message library", () => {
-  it("holds forty drafts across three tones", () => {
-    expect(DRAFTS).toHaveLength(40);
-    expect(draftsOf("gentle")).toHaveLength(14);
-    expect(draftsOf("dry")).toHaveLength(14);
-    expect(draftsOf("cheeky")).toHaveLength(12);
+  it("holds seventy drafts across three tones", () => {
+    expect(DRAFTS).toHaveLength(70);
+    expect(draftsOf("gentle")).toHaveLength(24);
+    expect(draftsOf("dry")).toHaveLength(24);
+    expect(draftsOf("cheeky")).toHaveLength(22);
+  });
+
+  /**
+   * The tones sit in one list in a fixed order, and a draft's number is part of
+   * its key. Slotting one into the middle of a tone therefore moves every key
+   * after it onto a different sentence, carrying the translations already
+   * filed against those keys with it — so a new draft goes at the end of its
+   * own tone, which is what these boundaries pin down.
+   */
+  it("keeps the tones in their agreed order and ranges", () => {
+    expect(DRAFTS.map((draft) => draft.tone)).toEqual([
+      ...Array<RemindTone>(24).fill("gentle"),
+      ...Array<RemindTone>(24).fill("dry"),
+      ...Array<RemindTone>(22).fill("cheeky"),
+    ]);
   });
 
   it("gives every draft a key of its own", () => {
@@ -51,6 +67,34 @@ describe("the message library", () => {
           true,
         );
       }
+    }
+  });
+
+  /**
+   * The two catalogues are written by different hands at different times, and
+   * the reroll picks by key: an English draft with no French twin, or a French
+   * one that dropped a `{group}` its English source interpolates, shows up as
+   * a blank or a half-finished sentence in front of whoever is being reminded.
+   * Counting the keys catches the drift in either direction — a French key
+   * English never defined would otherwise sit there unnoticed.
+   */
+  it("keeps the two catalogues the same size, placeholder for placeholder", () => {
+    const placeholdersOf = (sentence: string): string[] =>
+      [
+        ...new Set([...sentence.matchAll(/\{(\w+)\}/g)].map((m) => m[1])),
+      ].sort();
+
+    expect(Object.keys(en.remind.drafts)).toHaveLength(DRAFTS.length);
+    expect(Object.keys(fr.remind.drafts)).toHaveLength(
+      Object.keys(en.remind.drafts).length,
+    );
+
+    for (const draft of DRAFTS) {
+      const key = draft.key as keyof typeof en.remind.drafts;
+      expect(
+        placeholdersOf(fr.remind.drafts[key] as string),
+        `${draft.key}: French interpolates something English does not`,
+      ).toEqual(placeholdersOf(en.remind.drafts[key] as string));
     }
   });
 

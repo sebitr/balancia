@@ -1,5 +1,5 @@
 /**
- * The message library: twenty ways to ask, none of them accusing.
+ * The message library: seventy ways to ask, none of them accusing.
  *
  * The copy rule the whole feature rests on is that the *debt* asks, never the
  * person who tapped Remind. No draft says who sent it, none invents a deadline,
@@ -20,9 +20,12 @@ export interface Draft {
 }
 
 /**
- * Order matters: `positionOf` counts a draft's place in this list, so inserting
- * one in the middle renumbers the rest. New drafts are therefore appended
- * within their tone rather than slotted in where they read best.
+ * Order matters, because the key carries the number: slotting a draft into the
+ * middle of a tone shifts every key after it onto a different sentence, and
+ * Weblate holds each translation against the key rather than the text — so the
+ * German for `gentle15` would quietly end up under the English of `gentle16`.
+ * New drafts are therefore appended to the end of their tone rather than
+ * placed where they read best.
  *
  * A tone is worth having only if it has enough sentences that the reroll never
  * comes back around to one the sender just dismissed. Every draft below obeys
@@ -46,6 +49,16 @@ export const DRAFTS: readonly Draft[] = [
   { key: "gentle12", tone: "gentle" },
   { key: "gentle13", tone: "gentle" },
   { key: "gentle14", tone: "gentle" },
+  { key: "gentle15", tone: "gentle" },
+  { key: "gentle16", tone: "gentle" },
+  { key: "gentle17", tone: "gentle" },
+  { key: "gentle18", tone: "gentle" },
+  { key: "gentle19", tone: "gentle" },
+  { key: "gentle20", tone: "gentle" },
+  { key: "gentle21", tone: "gentle" },
+  { key: "gentle22", tone: "gentle" },
+  { key: "gentle23", tone: "gentle" },
+  { key: "gentle24", tone: "gentle" },
   { key: "dry1", tone: "dry" },
   { key: "dry2", tone: "dry" },
   { key: "dry3", tone: "dry" },
@@ -60,6 +73,16 @@ export const DRAFTS: readonly Draft[] = [
   { key: "dry12", tone: "dry" },
   { key: "dry13", tone: "dry" },
   { key: "dry14", tone: "dry" },
+  { key: "dry15", tone: "dry" },
+  { key: "dry16", tone: "dry" },
+  { key: "dry17", tone: "dry" },
+  { key: "dry18", tone: "dry" },
+  { key: "dry19", tone: "dry" },
+  { key: "dry20", tone: "dry" },
+  { key: "dry21", tone: "dry" },
+  { key: "dry22", tone: "dry" },
+  { key: "dry23", tone: "dry" },
+  { key: "dry24", tone: "dry" },
   { key: "cheeky1", tone: "cheeky" },
   { key: "cheeky2", tone: "cheeky" },
   { key: "cheeky3", tone: "cheeky" },
@@ -72,6 +95,16 @@ export const DRAFTS: readonly Draft[] = [
   { key: "cheeky10", tone: "cheeky" },
   { key: "cheeky11", tone: "cheeky" },
   { key: "cheeky12", tone: "cheeky" },
+  { key: "cheeky13", tone: "cheeky" },
+  { key: "cheeky14", tone: "cheeky" },
+  { key: "cheeky15", tone: "cheeky" },
+  { key: "cheeky16", tone: "cheeky" },
+  { key: "cheeky17", tone: "cheeky" },
+  { key: "cheeky18", tone: "cheeky" },
+  { key: "cheeky19", tone: "cheeky" },
+  { key: "cheeky20", tone: "cheeky" },
+  { key: "cheeky21", tone: "cheeky" },
+  { key: "cheeky22", tone: "cheeky" },
 ];
 
 /** Gentle is what an unconfigured group sends. Cheeky is opted into. */
