@@ -4,7 +4,6 @@ import { getTranslations } from "next-intl/server";
 import {
   AlignJustify,
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   Equal,
   Paperclip,
@@ -14,8 +13,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { getDateFormatter, getNumberLocale } from "@/i18n/preferences";
-import { Button } from "@/components/ui/button";
 import { Amount } from "@/components/money/amount";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   ACTION,
   ACTION_NEUTRAL,
@@ -51,7 +50,7 @@ import {
 } from "@/components/expenses/category-icon";
 import { signOf } from "@/modules/expenses/direction";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
-import { POP, PUSH } from "@/components/motion/transitions";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * One entry, read back.
@@ -192,17 +191,16 @@ export default async function TransactionDetailPage({
     // Clears the docked action bar, which the screen's own bottom inset only
     // knows to clear the navigation under it.
     <div className="flex flex-col gap-3 pb-[4.5rem]">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link
-            href={withQuery(`/groups/${groupId}/expenses`, listFilters)}
-            transitionTypes={POP}
-          >
-            <ArrowLeft aria-hidden="true" />
-            {tCommon("back")}
-          </Link>
-        </Button>
-      </div>
+      {/* The entry names the screen, so the card below it does not say the
+          description again — it opens on the figure, which is what the reader
+          came back for. */}
+      <PageHeader
+        title={expense.description}
+        back={{
+          href: withQuery(`/groups/${groupId}/expenses`, listFilters),
+          label: tCommon("backToTransactions"),
+        }}
+      />
 
       <DetailCard className="flex flex-col gap-3.5 p-4">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -224,15 +222,12 @@ export default async function TransactionDetailPage({
           )}
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <BigAmount
-            minorUnits={expense.amount.toString()}
-            currency={currency}
-            tone={tone}
-            locale={locale}
-          />
-          <h1 className="text-base font-medium">{expense.description}</h1>
-        </div>
+        <BigAmount
+          minorUnits={expense.amount.toString()}
+          currency={currency}
+          tone={tone}
+          locale={locale}
+        />
 
         <MetaStrip>
           <MetaField label={t("date")}>

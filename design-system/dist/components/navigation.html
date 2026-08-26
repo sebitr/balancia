@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header and the group bottom bar" -->
+<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header and the group bottom bar" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -1103,6 +1103,52 @@ a.list-row:focus-visible {
   backdrop-filter: blur(8px);
   padding: 0.75rem 1rem;
 }
+/* Screen header: the line a pushed screen opens with. */
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+}
+.screen-header-back,
+.screen-header-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--foreground);
+}
+.screen-header-close {
+  background: color-mix(in oklch, var(--foreground) 7%, transparent);
+}
+.screen-header-back svg,
+.screen-header-close svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.screen-header-close svg {
+  width: 1rem;
+  height: 1rem;
+}
+.screen-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 600;
+}
+/* No arrow above it: the title is the page's own name, not a row label. */
+.screen-title--lead {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
 .avatar {
   display: inline-flex;
   align-items: center;
@@ -1236,9 +1282,10 @@ a[aria-current="page"] .nav-icon--primary {
     <div class="page-eyebrow">Components</div>
     <h1>Navigation</h1>
     <p class="lede">
-      Two pieces only: a sticky header that carries identity, and a bottom bar
-      inside a group. There is no sidebar and no hamburger — a group has five
-      destinations and they all fit on a thumb's reach.
+      Three pieces only: a sticky header that carries identity, the line a
+      screen opens with, and a bottom bar inside a group. There is no sidebar
+      and no hamburger — a group has five destinations and they all fit on a
+      thumb's reach.
     </p>
   </header>
 
@@ -1299,6 +1346,113 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>user menu</dt>
       <dd>The only other control. Everything else belongs to the page.</dd>
     </dl>
+  </section>
+
+  <section>
+    <h2>Screen header</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      What a screen opens with: the name of the place, and the way back out of
+      it on the same line. One component —
+      <code>&lt;PageHeader&gt;</code> — and the arrow decides its shape.
+    </p>
+    <div class="frame frame--phone">
+      <div class="screen-header">
+        <span class="screen-header-back" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
+          </svg>
+        </span>
+        <span class="screen-title">Statistics</span>
+      </div>
+      <div
+        style="
+          padding: 0.25rem 0.875rem 1.5rem;
+          color: var(--muted-foreground);
+          font-size: 0.8125rem;
+        "
+      >
+        Pushed screen. The title is a row label beside its arrow.
+      </div>
+    </div>
+
+    <div class="frame frame--phone" style="margin-top: 1rem">
+      <div class="screen-header">
+        <span class="screen-title screen-title--lead">Settings</span>
+        <span class="screen-header-close" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </span>
+      </div>
+      <div
+        style="
+          padding: 0.25rem 0.875rem 1.5rem;
+          color: var(--muted-foreground);
+          font-size: 0.8125rem;
+        "
+      >
+        The root of a surface. No arrow, so the title is the page's own name —
+        and the ✕ closes the surface rather than stepping back inside it.
+      </div>
+    </div>
+
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>arrow</dt>
+      <dd>
+        A bare 34px disc, tinted on hover only. It always animates as a
+        <code>pop</code> — this is the way out, whatever it points at.
+      </dd>
+      <dt>title</dt>
+      <dd>
+        <code>text-base</code> beside an arrow, <code>text-2xl</code> without
+        one. Truncates; it never wraps to a second line.
+      </dd>
+      <dt>close</dt>
+      <dd>
+        Filled, and only where a whole surface closes. Settings is the only one
+        that has it.
+      </dd>
+      <dt>padding</dt>
+      <dd>
+        None of its own. It sits in the column its screen already has, and a
+        surface that sticks or clears a safe area says so in
+        <code>className</code>.
+      </dd>
+    </dl>
+
+    <div class="do-dont" style="margin-top: 1rem">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Give every screen reached by a push one, and let it carry the screen's
+          name — an entry's description, "Statistics", "Import data".
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Repeat what is directly underneath. A screen opening on a hero that
+          already names it — a member's face and name — takes the arrow and no
+          title.
+        </p>
+      </div>
+    </div>
   </section>
 
   <section>

@@ -5,6 +5,9 @@
   "common": {
     "cancel": "Cancel",
     "back": "Back",
+    "backToGroup": "Back to the group",
+    "backToGroupSettings": "Back to group settings",
+    "backToTransactions": "Back to transactions",
     "remove": "Remove",
     "loading": "Loading…",
     "or": "or",

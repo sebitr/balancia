@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { MemberPosition } from "@/components/members/member-position";
 import { MemberStatistics } from "@/components/members/member-statistics";
-import { POP } from "@/components/motion/transitions";
 import { requireGroupAccess } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { getDateFormatter } from "@/i18n/preferences";
@@ -142,14 +139,11 @@ export default async function MemberStatsPage({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}`} transitionTypes={POP}>
-            <ArrowLeft aria-hidden="true" />
-            {tCommon("back")}
-          </Link>
-        </Button>
-      </div>
+      {/* Untitled: the block directly below is this person's name at three
+          times the size, with their face beside it. */}
+      <PageHeader
+        back={{ href: `/groups/${groupId}`, label: tCommon("backToGroup") }}
+      />
 
       <div className="flex items-center gap-3">
         <Avatar className="size-13">

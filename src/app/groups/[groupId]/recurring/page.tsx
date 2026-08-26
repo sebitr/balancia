@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/money/amount";
 import { RecurringForm } from "@/components/recurring/recurring-form";
 import { RecurringRowActions } from "@/components/recurring/recurring-row-actions";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import { listRecurringExpenses } from "@/modules/recurring/service";
 import { listParticipants } from "@/modules/groups/service";
@@ -34,6 +35,7 @@ export default async function RecurringPage({
   ]);
 
   const t = await getTranslations("recurringPage");
+  const tCommon = await getTranslations("common");
   const dates = await getDateFormatter();
   const locale = await getLocale();
 
@@ -67,10 +69,16 @@ export default async function RecurringPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-muted-foreground">
+        {/* Reached from the shortcut at the foot of the group's settings, so
+            that is the one step back. */}
+        <PageHeader
+          title={t("title")}
+          back={{
+            href: `/groups/${groupId}/settings`,
+            label: tCommon("backToGroupSettings"),
+          }}
+        />
+        <p className="pl-10.5 text-sm text-muted-foreground">
           {t("intro", { timezone: access.group.timezone })}
         </p>
       </div>
