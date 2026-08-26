@@ -9,6 +9,7 @@ import {
   participants,
 } from "@/lib/db/schema";
 import { createJoinLink, revokeJoinLink } from "@/lib/security/join-link";
+import { GROUP_ICONS, GROUP_ICON_COLORS } from "@/modules/groups/icons";
 import { createInvitation, revokeInvitation } from "@/modules/groups/service";
 import {
   JoinLinkRefused,
@@ -128,15 +129,18 @@ describe("previewing a group-wide link", () => {
   it("carries the group's icon and accent, in the DTO's own vocabulary", async () => {
     const owner = await createTestUser();
     const group = await createTestGroup(owner);
+    // Real slugs from `modules/groups/icons`, not plausible-looking ones: the
+    // preview is where a client learns this vocabulary, and a test asserting a
+    // value the pickers cannot produce would document the wrong one.
     await getDb()
       .update(groups)
-      .set({ icon: "airplane", iconColor: "coral" })
+      .set({ icon: GROUP_ICONS[0], iconColor: GROUP_ICON_COLORS[0] })
       .where(eq(groups.id, group.groupId));
     const link = await createJoinLink(group.groupId);
 
     const preview = await previewGroupLink(link.token, null);
 
-    expect(preview.icon).toBe("airplane");
+    expect(preview.icon).toBe("plane");
     expect(preview.iconColor).toBe("coral");
   });
 
