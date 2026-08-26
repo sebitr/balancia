@@ -2967,6 +2967,8 @@
     "copied": "Copié",
     "preferred": "Préféré",
     "openApp": "Ouvrir {method}",
+    "openAppWithAmount": "S'ouvre avec {amount} déjà saisi",
+    "openAppNoAmount": "S'ouvre sur son compte — le montant reste à saisir",
     "cashNothing": "Rien à copier — remets-lui les {amount}.",
     "detailCopied": "Coordonnées copiées",
     "addressTitle": "Ton adresse, pour le QR suisse",

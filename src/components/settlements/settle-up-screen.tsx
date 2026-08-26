@@ -451,6 +451,7 @@ function TransferRow({
         <PayoutHint
           className="border-t pt-3"
           name={transfer.toName}
+          groupName={shared.groupName}
           methods={payout.methods}
           picked={picked}
           onPick={setPicked}
