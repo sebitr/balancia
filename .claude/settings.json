@@ -4,18 +4,6 @@
     "baseRef": "fresh"
   },
   "hooks": {
-    "WorktreeCreate": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/worktree-install.sh",
-            "timeout": 30,
-            "statusMessage": "Installing dependencies"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
@@ -23,6 +11,25 @@
             "type": "command",
             "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/report-branch.sh",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/worktree-install.sh",
+            "timeout": 10,
+            "statusMessage": "Checking dependencies"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "EnterWorktree",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/worktree-install.sh",
+            "timeout": 10,
+            "statusMessage": "Installing dependencies"
           }
         ]
       }
