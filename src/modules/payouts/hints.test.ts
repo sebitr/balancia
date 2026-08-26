@@ -112,7 +112,10 @@ describe("which debts get a hint", () => {
     const hints = await buildPayoutHints(
       "group",
       "Lisbon",
-      view({ currency: "EUR", yours: [transfer("me", "ada", 500n, "EUR", true)] }),
+      view({
+        currency: "EUR",
+        yours: [transfer("me", "ada", 500n, "EUR", true)],
+      }),
     );
 
     expect(hints).toEqual([]);
@@ -154,7 +157,10 @@ describe("what goes in a hint", () => {
     const [hint] = await buildPayoutHints(
       "group",
       "Lisbon",
-      view({ currency: "EUR", yours: [transfer("me", "ada", 500n, "EUR", true)] }),
+      view({
+        currency: "EUR",
+        yours: [transfer("me", "ada", 500n, "EUR", true)],
+      }),
     );
 
     expect(hint.methods.map((entry) => entry.method)).toEqual([
@@ -173,7 +179,10 @@ describe("what goes in a hint", () => {
     const [hint] = await buildPayoutHints(
       "group",
       "Lisbon",
-      view({ currency: "EUR", yours: [transfer("me", "ada", 500n, "EUR", true)] }),
+      view({
+        currency: "EUR",
+        yours: [transfer("me", "ada", 500n, "EUR", true)],
+      }),
     );
 
     // Preferring TWINT is a preference, not the absence of an account.
@@ -185,7 +194,10 @@ describe("what goes in a hint", () => {
     const [hint] = await buildPayoutHints(
       "group",
       "Lisbon",
-      view({ currency: "EUR", yours: [transfer("me", "ada", 500n, "EUR", true)] }),
+      view({
+        currency: "EUR",
+        yours: [transfer("me", "ada", 500n, "EUR", true)],
+      }),
     );
 
     expect(hint.qr).toBeNull();
@@ -197,7 +209,10 @@ describe("what goes in a hint", () => {
     const [hint] = await buildPayoutHints(
       "group",
       "Lisbon",
-      view({ currency: "CHF", yours: [transfer("me", "ada", 900n, "CHF", true)] }),
+      view({
+        currency: "CHF",
+        yours: [transfer("me", "ada", 900n, "CHF", true)],
+      }),
     );
 
     expect(hint.qr).toBeNull();
@@ -206,11 +221,16 @@ describe("what goes in a hint", () => {
 
   it("builds the Swiss code once the address is on file", async () => {
     owed({ ada: [{ method: "bank", detail: "CH93 0076 2011 6238 5295 7" }] });
-    listPayoutAddressesOwed.mockResolvedValue(new Map([["ada", SWISS_ADDRESS]]));
+    listPayoutAddressesOwed.mockResolvedValue(
+      new Map([["ada", SWISS_ADDRESS]]),
+    );
     const [hint] = await buildPayoutHints(
       "group",
       "Lisbon",
-      view({ currency: "CHF", yours: [transfer("me", "ada", 900n, "CHF", true)] }),
+      view({
+        currency: "CHF",
+        yours: [transfer("me", "ada", 900n, "CHF", true)],
+      }),
     );
 
     expect(hint.qr?.standard).toBe("swiss");
