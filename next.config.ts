@@ -25,7 +25,9 @@ const nextConfig: NextConfig = {
   },
 
   /**
-   * The collector's public paths.
+   * Public paths whose handler cannot live at the matching location.
+   *
+   * ## The collector
    *
    * `POST /v1/report` and `POST /v1/crash` are the endpoints Balancia sends to
    * (docs/telemetry.md); the handlers live under `/api/telemetry/v1/…`. The
@@ -37,11 +39,28 @@ const nextConfig: NextConfig = {
    * Mapping them everywhere costs nothing: the handler behind each path
    * answers 404 unless `TELEMETRY_RECEIVER` is on, which it is not on any
    * self-hosted installation. A rewrite to a 404 is a 404.
+   *
+   * ## The Apple App Site Association document
+   *
+   * `/.well-known/apple-app-site-association` is what lets the iOS app claim
+   * Balancia's invitation links, and it has to be served from that exact path
+   * with no extension. Next's file-system router skips dot-prefixed
+   * directories under `app/`, so the handler lives one dot away at
+   * `app/well-known/…` and this maps the real path onto it.
+   *
+   * It must stay a rewrite. Apple's fetcher requires a plain 200 and will not
+   * follow a redirect, and when it gives up it says so nowhere: no error on
+   * the device, none in the developer portal, links simply keep opening
+   * Safari. See `src/lib/apple-app-site-association.ts`.
    */
   async rewrites() {
     return [
       { source: "/v1/report", destination: "/api/telemetry/v1/report" },
       { source: "/v1/crash", destination: "/api/telemetry/v1/crash" },
+      {
+        source: "/.well-known/apple-app-site-association",
+        destination: "/well-known/apple-app-site-association",
+      },
     ];
   },
 

@@ -163,6 +163,12 @@ export const config = {
   matcher: [
     // Everything except static assets and the service worker, which must be
     // served without a nonce-bearing CSP to stay cacheable.
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/).*)",
+    //
+    // `.well-known/` is here for that same reason and one more. The Apple App
+    // Site Association document is the same bytes for everybody and is read
+    // through Apple's CDN, so a per-request nonce would make it uncacheable;
+    // and Apple's fetcher wants a plain 200, so nothing that could ever learn
+    // to redirect belongs in front of it.
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|\\.well-known/).*)",
   ],
 };

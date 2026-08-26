@@ -355,6 +355,32 @@ server {
 Any other proxy works too. Balancia has no proxy-specific behaviour — it only
 reads standard forwarded headers.
 
+### Leave `/.well-known/` alone
+
+Balancia serves `/.well-known/apple-app-site-association` itself. That file is
+what lets the iOS app open this instance's invitation links, and a proxy that
+claims the whole `/.well-known/` prefix for certificate challenges will shadow
+it — the app then silently keeps opening links in Safari, with no error on the
+device and nothing in any log to explain it.
+
+If your proxy has a rule for ACME challenges, narrow it to the path ACME
+actually uses:
+
+```nginx
+# Not `location /.well-known/`.
+location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+}
+```
+
+Caddy and Traefik handle their own challenges internally and need no such rule.
+Check it from outside the host — a `200` and `content-type: application/json`,
+with no redirect in the chain:
+
+```bash
+curl -sS -D - -o /dev/null https://balancia.example.com/.well-known/apple-app-site-association
+```
+
 ---
 
 ## Sign in with Apple
