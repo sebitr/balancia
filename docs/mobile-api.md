@@ -247,38 +247,72 @@ to sign in before telling them what they are being asked to join is a worse
 trade than it looks: they would be making an account to read an invitation they
 might decline.
 
+A personal invitation, read by a signed-out caller:
+
 ```json
 {
-  "groupId": "8f1c…",
+  "groupId": "643b5dbd-…",
   "groupName": "Lisbon, March",
-  "icon": "airplane",
-  "iconColor": "coral",
-  "memberCount": 5,
-  "invitedBy": "Amélie",
+  "invitedBy": "Amelie",
   "participantName": "Bruno",
-  "expiresAt": "2026-09-01T12:00:00.000Z",
+  "expiresAt": "2026-09-09T20:02:14.578Z",
+  "icon": "plane",
+  "iconColor": "coral",
+  "memberCount": 3,
   "alreadyMember": false
 }
 ```
 
-`icon` and `iconColor` are the group DTO's own slugs, and both are nullable — a
-group with no icon shows its initial. `participantName` is the seat a personal
-invitation is holding, and is `null` for a group-wide link, which has identified
-nobody. `invitedBy` is `null` when that account is gone. `alreadyMember` is
-`false` for a caller the request cannot name, so a signed-out reader always sees
-`false`.
+Both routes answer the same nine fields. There is no envelope and no other key
+— what a client cannot find here it will not find at runtime either:
+
+| Field             | Type              | Null?   | Notes                                                                     |
+| ----------------- | ----------------- | ------- | ------------------------------------------------------------------------- |
+| `groupId`         | string (UUID)     | never   | Bare UUID, no prefix                                                      |
+| `groupName`       | string            | never   |                                                                           |
+| `icon`            | string            | **yes** | A slug from the list below, or `null` when nobody chose one               |
+| `iconColor`       | string            | **yes** | An accent _name_ from the list below — never a hex value                  |
+| `memberCount`     | number (integer)  | never   | Participants not removed, including the reader if they are one            |
+| `invitedBy`       | string            | **yes** | Who minted the link; `null` when that account is gone                     |
+| `participantName` | string            | **yes** | The seat a personal invitation holds; always `null` for a group-wide link |
+| `expiresAt`       | string (ISO 8601) | **yes** | `null` means the link never expires — the default over this API           |
+| `alreadyMember`   | boolean           | never   | Whether the _caller_ is in the group; always `false` when signed out      |
+
+`icon` is one of exactly fifteen slugs, and `iconColor` one of exactly five,
+both from `src/modules/groups/icons.ts`, which is the single source of truth for
+the picker, the tile and the Zod schemas alike:
+
+```
+icon       plane luggage house tent car cart coffee meal party gift
+           music sport bike heart star
+iconColor  coral emerald amber plum blue
+```
+
+Accents are **named rather than stored as colour values**, so the palette can be
+retuned without rewriting rows — a client maps the name to its own colour. Note
+that the database checks only the _shape_ of a slug (`^[a-z][a-z0-9-]{0,31}$`),
+deliberately, so that adding an icon is not a migration; the write schemas
+enforce membership. A client should therefore treat an unrecognised slug as "no
+icon" rather than as an error. An empty string is never returned: both fields
+are normalised to `null` on write.
 
 **`POST` takes the link and needs an account** — 401 otherwise, checked before
 the token is resolved, so a signed-out caller cannot use it to probe whether a
-link is live. It answers `200` with
+link is live. It answers `200` with two fields, neither ever null:
 
 ```json
-{ "groupId": "8f1c…", "participantId": "3b90…" }
+{
+  "groupId": "643b5dbd-…",
+  "participantId": "aaeeacb3-…"
+}
 ```
 
-and is **idempotent**: an account already in the group gets the same body from
-the same call rather than a conflict, so a double tap is not a failure. No new
-seat is created the second time.
+`participantId` is the seat the caller now holds — the one they claimed, the one
+the invitation named, or the one just created for them.
+
+It is **idempotent**: an account already in the group gets the same body from the
+same call rather than a conflict, so a double tap is not a failure. No new seat
+is created the second time.
 
 `POST /api/join/g/:token` accepts an optional body carrying the fork the web
 offers on `/join/start`:
@@ -289,18 +323,33 @@ offers on `/join/start`:
 | `displayName`   | join as somebody new under this name               |
 | _(omitted)_     | join as somebody new under the name on the account |
 
-Without a `participantId` the joiner always becomes a **new** participant, so a
-client that wants the web's "which of these names is you?" step has to offer it
-before calling. `POST /api/join/:token` takes no body — the token names the seat.
+`POST /api/join/:token` takes no body — the token names the seat.
+
+#### The group has no claimable-member list yet
+
+`GET /api/join/g/:token` does **not** return the names a joiner could claim, so
+without a `participantId` the joiner always becomes a **new** participant. In a
+group whose members were all typed in before anybody signed up — which is the
+ordinary way a group is built — that strands their existing expenses on the
+namesake they were supposed to become.
+
+The fork is already there in `POST`, so a client that knows a `participantId` by
+some other route can claim correctly today. What is missing is the list to
+choose from. The web gets it from `listClaimableMembers` in
+`src/modules/join/service.ts` (unclaimed, not removed, with their balances), and
+exposing it here would be an additive `claimableMembers` array on the `GET` —
+absent for personal invitations, where the seat is already decided.
 
 Redeeming needs no **verified email**: verification is enforced at sign-in
 (`signInWithPassword` refuses an unverified account when SMTP is configured), so
 anything holding a session has already cleared it.
 
 Both paths are rate-limited by client IP under the same buckets the web uses —
-`joinRedeem` for the group link, `guestRedeem` for invitations — because an
-opaque token reachable unauthenticated is a guessing surface the minting routes
-are not.
+`joinRedeem` for the group link (40 per 10 minutes), `guestRedeem` for
+invitations (20 per 10 minutes) — because an opaque token reachable
+unauthenticated is a guessing surface the minting routes are not. The limiter
+runs _before_ the token is resolved, so a burst against a dead link is limited
+too, and the 429 carries `Retry-After` in seconds.
 
 #### What comes back when it will not open
 
@@ -320,29 +369,44 @@ straight into the sheet — so the rule in `src/lib/server-errors.ts` about the
 mobile API answering in English does not reach them. The `code` is what a client
 should branch on, and what lets the app show its own strings later.
 
-| Case                                     | `code`         | Status |
-| ---------------------------------------- | -------------- | ------ |
-| malformed token, or one nobody minted    | `invalid`      | 404    |
-| group deleted (its links go with it)     | `invalid`      | 404    |
-| past its `expiresAt`                     | `expired`      | 410    |
-| revoked, or replaced by a newer link     | `revoked`      | 410    |
-| group archived                           | `revoked`      | 410    |
-| the invitation's participant was removed | `revoked`      | 410    |
-| seat already held by another account     | `taken`        | 409    |
-| not signed in (`POST` only)              | `authRequired` | 401    |
-| rate limited                             | `rateLimited`  | 429    |
-| fault on this side                       | `unavailable`  | 500    |
+These seven codes are the whole vocabulary — `src/app/api/join/refusals.ts` can
+emit nothing else:
+
+| `code`         | HTTP | When                                                                                                    | Routes                 |
+| -------------- | ---- | ------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `invalid`      | 404  | Malformed token, one nobody minted, or one whose group was **deleted** (its links cascade away with it) | both, `GET` and `POST` |
+| `expired`      | 410  | Past its `expiresAt`                                                                                    | both, `GET` and `POST` |
+| `revoked`      | 410  | Revoked, replaced by a newer link, group **archived**, or the invitation's participant was **removed**  | both, `GET` and `POST` |
+| `taken`        | 409  | The seat is held by another account — see below                                                         | **`POST` only**        |
+| `authRequired` | 401  | No session. Answered before the token is read, so it never spends one                                   | **`POST` only**        |
+| `rateLimited`  | 429  | Bucket exhausted; carries `Retry-After` in seconds                                                      | both, `GET` and `POST` |
+| `unavailable`  | 500  | A fault on this side; logged in full, reported anonymously                                              | both, `GET` and `POST` |
 
 The split a client needs: **404 and 410 mean the link is dead** and only a new
-one helps; **409** means this account cannot have that particular seat; **401**
-means sign in and retry the same link; **429 and 500** mean try again.
+one helps; **409** means this account cannot have that particular seat, but the
+link is fine; **401** means sign in and retry the same link; **429 and 500** mean
+try again.
 
-Two of those rows are deliberate rather than incidental. An **archived group**
-reads as a revoked link because saying otherwise would confirm the group exists,
-matching `resolveJoinLink`. And there is **no "already spent"** — neither link
-is single-use. Both stay open until revoked or expired, redemption only stamps
-`lastUsedAt`, and a personal invitation mints a fresh 30-day guest session on
-the web every time it is opened.
+**`taken` is the one to route back rather than out.** It is what a client gets
+when the seat it asked for was claimed between reading the link and taking it —
+the race one link in a group chat makes reachable — and the link itself is still
+good, so the right response is to send the reader back to pick another name, not
+to a dead-link screen. It arrives in two situations, distinguished by the
+sentence rather than the code:
+
+- `POST /api/join/g/:token` with a `participantId` somebody else got to first.
+  Without a `participantId` this cannot happen: a brand-new seat races with
+  nobody.
+- `POST /api/join/:token` for an invitation another account already redeemed —
+  the link was minted for somebody else.
+
+Two other rows are deliberate rather than incidental. An **archived group** reads
+as a revoked link because saying otherwise would confirm the group exists,
+matching `resolveJoinLink`; a client cannot tell the two apart, and should not
+need to. And there is **no "already spent"** — neither link is single-use. Both
+stay open until revoked or expired, redemption only stamps `lastUsedAt`, and a
+personal invitation mints a fresh 30-day guest session on the web every time it
+is opened.
 
 The browser routes are unchanged and still work as they always did: `GET
 /join/<token>` mints a guest session and answers `303` to `/invite`, `GET
