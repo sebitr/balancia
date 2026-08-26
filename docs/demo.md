@@ -73,23 +73,62 @@ requests at all.
 
 ## Setting one up
 
-Two deployments, two settings.
+Two deployments, two settings. They can share a host: the demo needs no
+database, so it is one container beside the stack you already run.
 
-**On the demo host**, its own hostname:
+### The demo, in a checkout of its own
+
+A second clone rather than a second Compose file in the first, because the two
+move independently — the demo can sit on a release while main goes on, and a
+rebuild of one should never touch the other. That is also why it builds
+`balancia:demo` rather than the `balancia:local` tag `compose.yaml` uses.
 
 ```bash
-DEMO_APP_URL=https://demo.example.com
-DEMO_AUTH_SECRET=$(openssl rand -hex 32)
-docker compose -f compose.demo.yaml up -d
+git clone https://github.com/sebitr/balancia.git ~/balancia-demo
+cd ~/balancia-demo
 ```
 
-Point the reverse proxy for `demo.example.com` at `DEMO_PORT` (3001 by
-default), with TLS. A subdomain rather than a path on the main site is
-deliberate: session cookies are host-only, so the demo's cookie and a real
-session's cannot collide in the same browser. Somebody can be signed into both
-at once and neither notices.
+Write `.env` by hand — `./scripts/bootstrap.sh` is for an instance with a
+database, and this one has none:
 
-**On the real instance**, so people can find it:
+```bash
+COMPOSE_FILE=compose.demo.yaml
+DEMO_APP_URL=https://demo.example.com
+DEMO_AUTH_SECRET=<openssl rand -hex 32>
+DEMO_PORT=3001
+```
+
+`COMPOSE_FILE` is what lets every ordinary `docker compose` command in this
+directory mean the demo stack, with no `-f` to remember — the same trick
+`compose.image.yaml` documents. It is also what makes the deploy script work
+here unchanged:
+
+```bash
+docker compose up -d --build          # first time, from the server
+./scripts/deploy.sh -C balancia-demo  # afterwards, from your machine
+```
+
+`deploy.sh` pulls from origin and rebuilds, so the demo ships what is merged,
+exactly like the real instance.
+
+### The reverse proxy
+
+Point `demo.example.com` at `DEMO_PORT`, with TLS. In Caddy that is the whole
+change:
+
+```caddyfile
+demo.example.com {
+    reverse_proxy localhost:3001
+}
+```
+
+A subdomain rather than a path on the main site is deliberate: session cookies
+are host-only, so the demo's cookie and a real session's cannot collide in the
+same browser. Somebody can be signed into both at once and neither notices.
+`X-Forwarded-For` matters here as much as on the real instance — it is what the
+rate limit in front of the demo button keys on.
+
+### The link, on the real instance
 
 ```bash
 DEMO_URL=https://demo.example.com
@@ -97,7 +136,8 @@ DEMO_URL=https://demo.example.com
 
 That is what puts "Try the demo" on the homepage, beside "Create an account".
 `./scripts/bootstrap.sh` asks for it. Leave it unset and no link appears, which
-is the right default for a private instance.
+is the right default for a private instance. Deploy the real instance again for
+it to show.
 
 ## Trying it locally
 
