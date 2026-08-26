@@ -1,6 +1,7 @@
 import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { loadSettleUp } from "@/modules/settlements/settle-up";
+import { buildPayoutHints } from "@/modules/payouts/hints";
 import {
   isUuid,
   mobileApiError,
@@ -34,7 +35,18 @@ async function handleGet(context: Context) {
     const actor = await getCurrentActor();
     const access = await authorizeGroup(actor, groupId);
     const view = await loadSettleUp(access);
-    return noStore({ settleUp: serializeSettleUp(view) });
+    /*
+     * How to pay each of the reader's own debts, for the same rows the web
+     * screen puts them on. Read after the transfers and from them: a
+     * recipient's details are reachable only by appearing in a debt the
+     * balances say this reader owes.
+     */
+    const hints = await buildPayoutHints(
+      access.groupId,
+      access.group.name,
+      view,
+    );
+    return noStore({ settleUp: serializeSettleUp(view, hints) });
   } catch (error) {
     return mobileApiError(error, `${ROUTE} GET`, { groupId });
   }

@@ -23,6 +23,7 @@ import type { GroupOverview } from "@/modules/groups/overview";
 import type { GroupPosition, HomeOverview } from "@/modules/balances/overview";
 import type { GroupAccess } from "@/lib/security/authorization";
 import type { ActivityEntry } from "@/modules/activity/service";
+import type { PayoutHint } from "@/modules/payouts/hints";
 import type { RecurringSummary } from "@/modules/recurring/service";
 import type { NotificationEntry } from "@/modules/notifications/types";
 import type { GroupStats } from "@/modules/groups/group-stats";
@@ -666,7 +667,17 @@ function serializeTransfer(transfer: SettleUpTransfer) {
  * is left to settle, and a client should read an empty list as "no room for
  * it" rather than "no repayments have ever happened".
  */
-export function serializeSettleUp(view: SettleUpView) {
+export function serializeSettleUp(
+  view: SettleUpView,
+  /**
+   * How to pay each debt, when the caller has looked them up.
+   *
+   * Passed in rather than read here: this file serializes, and reaching into
+   * the payouts tables from a serializer would put a second permission
+   * decision somewhere nobody looks for one.
+   */
+  payoutHints: readonly PayoutHint[] = [],
+) {
   return {
     currencies: view.currencies.map((entry) => ({
       currency: entry.currency,
@@ -674,6 +685,18 @@ export function serializeSettleUp(view: SettleUpView) {
       others: entry.others.map(serializeTransfer),
     })),
     transferCount: view.transferCount,
+    payoutHints: payoutHints.map((hint) => ({
+      participantId: hint.participantId,
+      currency: hint.currency,
+      methods: hint.methods.map((entry) => ({
+        method: entry.method,
+        detail: entry.detail,
+      })),
+      qr: hint.qr
+        ? { standard: hint.qr.standard, payload: hint.qr.payload }
+        : null,
+      qrMissing: hint.qrMissing,
+    })),
     lastSettled: view.lastSettled.map((repayment) => ({
       id: repayment.id,
       fromName: repayment.fromName,
