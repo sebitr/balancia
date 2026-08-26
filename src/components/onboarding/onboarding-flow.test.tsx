@@ -23,15 +23,32 @@ const router = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 /**
- * The one Server Action these screens call.
+ * The Server Actions these screens call.
  *
- * Mocked rather than reached: it is a `"use server"` module that opens a
- * database, and what is under test here is which screen runs it and what the
+ * Mocked rather than reached: they are `"use server"` modules that open a
+ * database, and what is under test here is which screen runs them and what the
  * flow does with the answer.
  */
 const joinWithAccountAction = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/join/actions", () => ({ joinWithAccountAction }));
+
+const auth = vi.hoisted(() => ({
+  requestSignInCodeAction: vi.fn(),
+  signInWithCodeAction: vi.fn(),
+  startCodeSignupAction: vi.fn(),
+  verifySignupCodeAction: vi.fn(),
+}));
+
+vi.mock("@/modules/auth/actions", () => auth);
+
+const profileActions = vi.hoisted(() => ({
+  setDisplayNameAction: vi.fn(),
+  setFavoriteCurrenciesAction: vi.fn(),
+  setPreferredCurrencyAction: vi.fn(),
+}));
+
+vi.mock("@/modules/profile/actions", () => profileActions);
 
 beforeEach(() => {
   router.push.mockClear();
@@ -42,6 +59,14 @@ beforeEach(() => {
     ok: true,
     data: { groupId: "group-1" },
   });
+  for (const action of Object.values(auth)) action.mockReset();
+  auth.startCodeSignupAction.mockResolvedValue({ ok: true });
+  auth.verifySignupCodeAction.mockResolvedValue({
+    ok: true,
+    data: { joinedGroupId: null, claimedGroupId: "group-1" },
+  });
+  for (const action of Object.values(profileActions)) action.mockReset();
+  profileActions.setDisplayNameAction.mockResolvedValue({ ok: true });
 });
 
 // WebAuthn does not exist in jsdom, and the hook that asks is a fact about the
@@ -638,5 +663,85 @@ describe("what the checklist already knows", () => {
         name: /You're Marc T\. — how should we keep it\?/,
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("a guest who came to /register to stop being one", () => {
+  /*
+   * The page underneath this flow answers a different question halfway
+   * through.
+   *
+   * `/register` reads the actor to decide what kind of arrival this is: a
+   * guest gets the personal arrival, with the group they are a guest of behind
+   * it, and everybody else gets the cold one. Claiming the account is what
+   * turns the first into the second — and the profile screen's rename is a
+   * Server Action, so the page re-renders with the new answer while the reader
+   * is still standing on the flow.
+   *
+   * The arrival is therefore captured when the flow mounts, the same way the
+   * account and the group are. It was not, and the last two screens of this
+   * journey fell out of the route from under somebody halfway along it: "See
+   * the group" left for the group itself, and the checklist — the one screen
+   * that says the account now exists — was never shown at all.
+   */
+  const asAGuest = (
+    <OnboardingFlow
+      arrival="personal"
+      group={group}
+      knownName="Grace"
+      alreadyGuest
+    />
+  );
+
+  /** What the page renders from the moment the claim lands. */
+  const onceClaimed = (
+    <OnboardingFlow
+      arrival="cold"
+      group={null}
+      account={{ name: "Grace", email: "grace@example.com" }}
+    />
+  );
+
+  const createTheAccount = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "grace@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    // The sixth digit submits, so there is no button to press after this.
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+    // The name the group already knows them by is in the field already.
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+  };
+
+  it("reaches the checklist, with the account row no longer a warning", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithIntl(asAGuest);
+
+    await createTheAccount(user);
+    rerender(onceClaimed);
+
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    expect(screen.getByText("Account created")).toBeInTheDocument();
+    expect(screen.queryByText("Claim your account")).toBeNull();
+    // Leaving is the checklist's own button's job, not this one's.
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("keeps the group it was a guest of on screen after the claim", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithIntl(asAGuest);
+
+    await createTheAccount(user);
+    rerender(onceClaimed);
+
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Go to the group" }));
+
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
   });
 });
