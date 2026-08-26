@@ -58,13 +58,16 @@ const CELL_LAST =
  * emitted, so the `<head>` never carries a rule for an element that is not
  * there.
  */
-export type ResponsiveClass = "fallback" | "panel" | "display";
+export type ResponsiveClass = "fallback" | "panel" | "display" | "code";
 
 const RESPONSIVE_RULES: Record<ResponsiveClass, string> = {
   fallback: "    .fallback { width:100% !important; }",
   panel: "    .panel { width:100% !important; }",
   display:
     "    .display { font-size:27px !important; line-height:33px !important; }",
+  // The same proportional step down as `display`, from a different size and
+  // in a different face — see `fonts.figures`.
+  code: "    .code { font-size:24px !important; line-height:30px !important; }",
 };
 
 /** One body cell of the card, holding already-indented content. */

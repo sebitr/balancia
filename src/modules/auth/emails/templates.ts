@@ -36,6 +36,10 @@ export interface RenderedEmail {
 /** The type scale, so a size is chosen from the set rather than invented. */
 const type = {
   display: { size: 32, leading: 38, color: palette.ink, font: fonts.serif },
+  // Four points below `display` because Verdana's figures stand a good deal
+  // taller than Georgia's at a given size; this is the same optical size the
+  // code had when it was set in the serif face, not a quieter one.
+  code: { size: 28, leading: 34, color: palette.ink, font: fonts.figures },
   lead: { size: 19, leading: 28, color: palette.ink },
   bodyLarge: { size: 17, leading: 26, color: palette.ink },
   secondary: { size: 15, leading: 22, color: palette.mutedInk },
@@ -140,9 +144,9 @@ function linkEmail(options: {
  * A code is read, not clicked, so the shape is inverted: the digits are the
  * largest thing on the page, spaced apart so they can be transcribed a glance
  * at a time, and there is no button to press and no URL to fall back to. They
- * are set in the serif display face at `display` size for one reason — it is
- * the one face in the set with unambiguous figures, and a 1 that reads as a 7
- * costs somebody their account.
+ * are the one thing in the set that does not use a brand face at all: legible
+ * figures beat characterful ones when a 1 that reads as a 7 costs somebody
+ * their account. See `fonts.figures` for what that rules out and why.
  *
  * The digits sit in `codePanel`, which is as close to a copy button as a
  * message can get without JavaScript — see that function for why, and for why
@@ -171,12 +175,12 @@ function codeEmail(options: {
       codePanel(
         options.codeLabel,
         paragraph(escapeHtml(options.code), {
-          ...type.display,
+          ...type.code,
           weight: "bold",
           // Wide enough that each figure is read on its own, which is how a
           // code gets copied correctly onto a phone held in the other hand.
           letterSpacing: "6px",
-          className: "display",
+          className: "code",
           selectable: true,
         }),
       ),
@@ -194,7 +198,7 @@ function codeEmail(options: {
     title: options.title,
     preheader: options.preheader,
     linkColor: palette.link,
-    responsive: ["panel", "display"],
+    responsive: ["panel", "code"],
     rows,
   });
 }

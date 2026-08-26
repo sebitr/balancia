@@ -17,9 +17,10 @@ a postal address.
 The two code emails are the odd ones out: they contain six digits and no link
 at all, and that is deliberate. An email that asks for a code _and_ offers a
 button teaches the reader that both are normal, which is the habit a phishing
-mail relies on. The digits are set in the serif face at display size, because
-it is the one face in the set with unambiguous figures — a 1 that reads as a 7
-costs somebody their account. Codes last ten minutes, are single-use, and are
+mail relies on. The digits are the one thing in the set that uses no brand
+face at all — see [The face the code is set in](#the-face-the-code-is-set-in)
+— because a 1 that reads as a 7 costs somebody their account. Codes last ten
+minutes, are single-use, and are
 checked only against the account they were issued for; see `docs/architecture.md`
 and `src/modules/auth/codes.ts`.
 
@@ -29,6 +30,30 @@ world. See `requestEmailChange` in `src/modules/auth/service.ts`.
 
 None of them is sent on an instance with no SMTP configured, because none of
 the flows behind them is offered there.
+
+## The face the code is set in
+
+Every other line in these emails is Arial standing in for Instrument Sans, or
+Georgia standing in for Instrument Serif. The six digits are Verdana, and that
+is not a brand decision.
+
+Georgia sets **old-style figures**: 1 and 2 sit at x-height, 3 4 5 7 9 hang
+below the baseline, and 6 and 8 rise above it. That is what makes it lovely for
+a date inside a sentence, and exactly wrong for six digits somebody reads off
+one screen and types into another — the code arrives looking like a skyline
+rather than a row.
+
+Verdana was drawn for this: lining figures all of one height, wide counters, a
+1 with a foot serif so it cannot be a 7, and a 0 narrow enough never to be an
+O. Tahoma is the same skeleton slightly narrower, Geneva the metric cousin that
+predates both on a Mac, and every one of the three ships with the OS — the
+emails load no web font, so the stack has to be faces that are already there.
+
+It is set four points below `display` (28px, 24px on a phone) because Verdana's
+figures stand a good deal taller than Georgia's at the same size. That keeps
+the code the same optical size it has always been rather than making it louder.
+`templates.test.ts` asserts the face, so the line cannot drift back to one
+chosen for prose.
 
 ## Getting the code out of the email
 
