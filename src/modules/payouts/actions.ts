@@ -59,7 +59,7 @@ export async function setPayoutMethodsAction(
     const result = await runAction("payouts.set", () =>
       replacePayoutMethods(user.userId, parsed.data.methods),
     );
-    if (result.ok) revalidatePath("/settings/money");
+    if (result.ok) revalidatePath("/settings/payouts");
     return result;
   } catch (error) {
     if (error instanceof PayoutValidationError) {
@@ -119,6 +119,6 @@ export async function setPayoutAddressAction(
   const result = await runAction("payouts.setAddress", () =>
     savePayoutAddress(user.userId, parsed.data),
   );
-  if (result.ok) revalidatePath("/settings/money");
+  if (result.ok) revalidatePath("/settings/payouts");
   return result;
 }

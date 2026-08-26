@@ -5,8 +5,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * A card of mutually exclusive choices — theme, language, how a date is
- * written.
+ * A card of mutually exclusive choices — today, the language.
  *
  * Drawn as a list of rows with a tick rather than as rows with radio dots. At
  * this size a dot is a 16px target inside a 44px row, and the row is what
@@ -21,6 +20,11 @@ import { cn } from "@/lib/utils";
  * Selecting writes immediately — there is no Save button anywhere in settings —
  * so `onChoose` is called with the new value and the caller confirms it with a
  * toast that offers the way back.
+ *
+ * The caption sits outside the card, the way `SettingsGroup`'s does and the
+ * way the theme and accent sections on the same screen do: it names a set of
+ * choices rather than titling a panel, and inside the card it read as the
+ * first row of the list.
  */
 
 export interface Choice<T extends string> {
@@ -53,10 +57,10 @@ export function ChoiceCard<T extends string>({
   name: string;
 }) {
   return (
-    <section className="shrink-0 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+    <section className="flex shrink-0 flex-col gap-2.25">
       <h2
         id={`${name}-label`}
-        className="px-4 pt-4 pb-2 text-2xs font-semibold tracking-[0.09em] text-muted-foreground uppercase"
+        className="px-1.5 text-2xs font-semibold tracking-[0.11em] text-muted-foreground uppercase"
       >
         {label}
       </h2>
@@ -67,14 +71,14 @@ export function ChoiceCard<T extends string>({
         value={value ?? ""}
         disabled={disabled}
         onValueChange={(next) => onChoose(next as T)}
-        className="flex flex-col"
+        className="flex flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10"
       >
         {choices.map((choice, index) => (
           <RadioGroupPrimitive.Item
             key={choice.value}
             value={choice.value}
             className={cn(
-              "flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left",
+              "flex min-h-13 w-full items-center gap-3 px-4 py-3 text-left",
               "transition-colors hover:bg-foreground/4 focus-visible:ring-3",
               "focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none",
               "disabled:pointer-events-none disabled:opacity-50",

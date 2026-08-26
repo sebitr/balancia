@@ -20,11 +20,23 @@ import { cn } from "@/lib/utils";
  */
 
 /** The tile, shared by rows that link and rows that only display. */
-function IconTile({ icon: Icon }: { icon: LucideIcon }) {
+function IconTile({
+  icon: Icon,
+  accent,
+}: {
+  icon: LucideIcon;
+  accent?: boolean;
+}) {
   return (
     <span
       aria-hidden="true"
-      className="flex size-7.5 shrink-0 items-center justify-center rounded-[10px] bg-foreground/8"
+      className={cn(
+        "flex size-7.5 shrink-0 items-center justify-center rounded-[10px]",
+        // One row in the hub is tinted, and only one: the way you are paid is
+        // the only destination there that is about money leaving somebody
+        // else's account rather than about how this one is set up.
+        accent ? "bg-primary/18 text-primary" : "bg-foreground/8",
+      )}
     >
       <Icon className="size-4" strokeWidth={1.9} />
     </span>
@@ -36,28 +48,43 @@ interface RowContent {
   readonly label: string;
   /** The live value, computed from current state. Absent where there is none. */
   readonly summary?: string | null;
+  /**
+   * A summary that is not words — the overlapping payment marks, an accent
+   * dot before the theme's name. Drawn instead of `summary`, and left
+   * un-truncated, because a ring around a tile is what `truncate` would clip.
+   */
+  readonly trailing?: ReactNode;
   /** A badge after the label — "Admin" on the administration row. */
   readonly badge?: ReactNode;
+  /** Tints the icon tile with the accent. The payouts row, and only it. */
+  readonly accent?: boolean;
 }
 
 function RowBody({
   icon,
   label,
   summary,
+  trailing,
   badge,
+  accent,
   chevron,
 }: RowContent & {
   chevron: boolean;
 }) {
   return (
     <>
-      {icon && <IconTile icon={icon} />}
-      <span className="flex min-w-0 flex-1 items-center gap-2">
+      {icon && <IconTile icon={icon} accent={accent} />}
+      {/* `flex-auto`, not `flex-1`: both halves are sized from their own text,
+          so a row too narrow for both shortens each a little instead of
+          spending the whole shortfall on the label. "Appearance & language"
+          beside "Auto · English" is the row that needs it. */}
+      <span className="flex min-w-0 flex-auto items-center gap-2">
         <span className="truncate text-sm font-medium">{label}</span>
         {badge}
       </span>
-      {summary && (
-        <span className="shrink-0 truncate text-xs text-muted-foreground">
+      {trailing}
+      {!trailing && summary && (
+        <span className="min-w-0 shrink truncate text-xs text-muted-foreground">
           {summary}
         </span>
       )}
@@ -103,7 +130,9 @@ export function SettingsButtonRow({
   icon,
   label,
   summary,
+  trailing,
   badge,
+  accent,
   ...props
 }: RowContent &
   ComponentProps<"button"> & {
@@ -116,7 +145,9 @@ export function SettingsButtonRow({
         icon={icon}
         label={label}
         summary={summary}
+        trailing={trailing}
         badge={badge}
+        accent={accent}
         chevron={chevron}
       />
     </button>

@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { getEnv } from "@/lib/env";
 import type { StoredPreferences } from "@/modules/auth/service";
+import { ACCENT_COOKIE_NAME, isAccentColor } from "@/modules/profile/accent";
 import {
   DATE_FORMAT_COOKIE_NAME,
   isDateFormat,
@@ -15,7 +16,8 @@ import {
 } from "./locales";
 
 /**
- * Writes the display cookies: language, and how dates and numbers are written.
+ * Writes the display cookies: language, the accent, and how dates and numbers
+ * are written.
  *
  * Kept out of `actions.ts` on purpose: everything exported from a `"use server"`
  * module is callable by any client, and this is internal plumbing rather than
@@ -23,7 +25,7 @@ import {
  *
  * Deliberately not HttpOnly — the precached offline shell reads the language
  * one in the browser, and none of them is a secret. They share a lifetime for
- * the same reason: all three are preferences rather than session details.
+ * the same reason: every one is a preference rather than a session detail.
  */
 function displayCookieOptions() {
   return {
@@ -39,6 +41,27 @@ export async function writeLocaleCookie(locale: string): Promise<void> {
   if (!isAppLocale(locale)) return;
   const cookieStore = await cookies();
   cookieStore.set(LOCALE_COOKIE_NAME, locale, displayCookieOptions());
+}
+
+/**
+ * Writes the accent.
+ *
+ * A cookie rather than local storage, unlike the theme: the accent has to be
+ * on `<html>` in the server's own HTML or the first paint is coral and the
+ * second one is not, and a colour that changes under the reader once per visit
+ * is worse than one that takes a moment to follow them to a new device.
+ *
+ * `null` clears it, which is the coral default rather than a stored value —
+ * the same way `auto` is the absence of a notation rather than a token.
+ */
+export async function writeAccentCookie(accent: string | null): Promise<void> {
+  const cookieStore = await cookies();
+  if (accent === null) {
+    cookieStore.delete(ACCENT_COOKIE_NAME);
+    return;
+  }
+  if (!isAccentColor(accent)) return;
+  cookieStore.set(ACCENT_COOKIE_NAME, accent, displayCookieOptions());
 }
 
 /**
@@ -93,6 +116,9 @@ export async function applyStoredPreferences(
 ): Promise<void> {
   if (preferences.locale) {
     await writeLocaleCookie(preferences.locale);
+  }
+  if (preferences.accentColor !== null) {
+    await writeAccentCookie(preferences.accentColor);
   }
   const chosen = {
     dateFormat: preferences.dateFormat,

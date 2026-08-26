@@ -20,6 +20,11 @@ import { DEFAULT_LOCALE, isAppLocale, LOCALE_LABELS } from "@/i18n/locales";
  * The theme *choice* is what is named, not what it resolved to. Somebody who
  * asked to follow their phone wants to read "Match my phone", not whichever of
  * light and dark their phone happens to be in this evening.
+ *
+ * The accent needs no such care and is not passed in: the dot is painted with
+ * the live `--primary`, which the server already set on the document root, so
+ * it is right in the first frame and stays right the moment somebody changes
+ * it on the screen this row leads to.
  */
 const subscribeToNothing = () => () => {};
 
@@ -48,7 +53,17 @@ export function AppearanceSummary() {
       href="/settings/appearance"
       icon={Moon}
       label={t("appearance")}
-      summary={mounted ? `${themeLabel} · ${language}` : language}
+      trailing={
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span
+            aria-hidden="true"
+            className="size-2 shrink-0 rounded-full bg-primary"
+          />
+          <span className="truncate">
+            {mounted ? `${themeLabel} · ${language}` : language}
+          </span>
+        </span>
+      }
     />
   );
 }

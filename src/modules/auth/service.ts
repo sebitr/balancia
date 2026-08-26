@@ -268,6 +268,7 @@ export interface StoredPreferences {
   readonly locale: string | null;
   readonly dateFormat: string | null;
   readonly numberFormat: string | null;
+  readonly accentColor: string | null;
 }
 
 export interface SignInResult {
@@ -281,6 +282,7 @@ const PREFERENCE_COLUMNS = {
   locale: users.locale,
   dateFormat: users.dateFormat,
   numberFormat: users.numberFormat,
+  accentColor: users.accentColor,
 } as const;
 
 function preferencesOf(row: StoredPreferences): StoredPreferences {
@@ -288,6 +290,7 @@ function preferencesOf(row: StoredPreferences): StoredPreferences {
     locale: row.locale,
     dateFormat: row.dateFormat,
     numberFormat: row.numberFormat,
+    accentColor: row.accentColor,
   };
 }
 
@@ -873,6 +876,25 @@ export async function saveUserFormatPreferences(
   await db
     .update(users)
     .set({ ...preferences, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Which colour this account paints its accent.
+ *
+ * `null` is the same absence of a choice as the two above, and means the coral
+ * the app has always used. Which names are allowed is the check constraint's
+ * business and `modules/profile/accent.ts`'s; this only writes.
+ */
+export async function saveUserAccentColor(
+  userId: string,
+  accentColor: string | null,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(users)
+    .set({ accentColor, updatedAt: new Date() })
     .where(eq(users.id, userId));
 }
 

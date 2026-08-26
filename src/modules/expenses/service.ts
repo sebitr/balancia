@@ -900,6 +900,60 @@ export async function getExpense(
   };
 }
 
+/**
+ * The reader's own most recent entry, in their own words.
+ *
+ * Written for the notation preview in settings, which needs one real line of
+ * this account's money to show the formats against: a made-up 1 234,56 proves
+ * nothing about how *your* amounts will read, and a preview nobody recognises
+ * is a preview nobody trusts.
+ *
+ * "Their own" means an entry that lands on their balance — one they hold a
+ * share of. An expense in a group they belong to but were left out of is not
+ * theirs, and would be a stranger's dinner shown as an example of their money.
+ *
+ * Ordered by the date the entry is *for*, then by when it was written, which
+ * is the same order the group's own timeline uses: an expense back-dated to
+ * last month is not the latest thing that happened to this account.
+ *
+ * Null where there is nothing yet, which is every new account, and the caller
+ * draws the screen without a preview rather than with an invented one.
+ */
+export interface LatestEntry {
+  readonly description: string;
+  readonly direction: EntryDirection;
+  /** Minor units, as text — never a JS number. */
+  readonly amount: string;
+  readonly currency: string;
+  readonly expenseDate: string;
+}
+
+export async function getLatestEntryForUser(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<LatestEntry | null> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({
+      description: expenses.description,
+      direction: expenses.direction,
+      amount: expenses.amount,
+      currency: expenses.currency,
+      expenseDate: expenses.expenseDate,
+    })
+    .from(expenses)
+    .innerJoin(expenseShares, eq(expenseShares.expenseId, expenses.id))
+    .innerJoin(participants, eq(participants.id, expenseShares.participantId))
+    .where(and(eq(participants.userId, userId), isNull(expenses.deletedAt)))
+    .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt))
+    .limit(1);
+
+  // Minor units leave here as text, like every other amount that crosses into
+  // a Client Component: a bigint cannot be serialised, and a JS number would
+  // lose the cents this screen exists to show.
+  return row ? { ...row, amount: row.amount.toString() } : null;
+}
+
 function groupBy<T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> {
   const result = new Map<K, T[]>();
   for (const item of items) {

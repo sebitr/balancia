@@ -5,14 +5,16 @@ import { getTranslations } from "next-intl/server";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
+  saveUserAccentColor,
   saveUserFavoriteCurrencies,
   saveUserFormatPreferences,
   saveUserName,
   saveUserPreferredCurrency,
 } from "@/modules/auth/service";
 import { isSupportedCurrency } from "@/modules/currencies/iso-4217";
-import { writeFormatCookies } from "@/i18n/cookie";
+import { writeAccentCookie, writeFormatCookies } from "@/i18n/cookie";
 import { isDateFormat, isNumberFormat } from "@/i18n/format";
+import { DEFAULT_ACCENT, isAccentColor } from "@/modules/profile/accent";
 
 /**
  * Account preferences that are not authentication.
@@ -136,5 +138,33 @@ export async function setDisplayNameAction(
     await saveUserName(user.userId, value);
     revalidatePath("/dashboard");
     revalidatePath("/settings");
+  });
+}
+
+/**
+ * Which colour the app paints what is chosen, active or still to do.
+ *
+ * Written the same way the notation is, and for the same reasons: the cookie
+ * is what the next render reads, the account column is what carries the choice
+ * to the next device, and a signed-out reader gets the cookie alone rather
+ * than being told to make an account before they may have a green app.
+ *
+ * Coral is the absence of a choice rather than a value — it is what `:root`
+ * already says — so choosing it clears both, and an account that never touched
+ * this screen and one that came back to coral are the same row.
+ */
+export async function setAccentColorAction(
+  accent: string,
+): Promise<ActionResult> {
+  const t = await getTranslations("serverErrors");
+
+  if (!isAccentColor(accent)) return actionError(t("unknownAccent"));
+  const stored = accent === DEFAULT_ACCENT ? null : accent;
+
+  return runAction("setAccentColor", async () => {
+    await writeAccentCookie(stored);
+
+    const user = await getCurrentUser();
+    if (user) await saveUserAccentColor(user.userId, stored);
   });
 }

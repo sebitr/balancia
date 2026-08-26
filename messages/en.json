@@ -667,13 +667,16 @@
     "title": "Settings",
     "close": "Close settings",
     "backToSettings": "Back to settings",
-    "groupYou": "You",
-    "groupHowItReads": "How it reads",
-    "groupYourThings": "Your things",
+    "groupAccount": "Account",
+    "groupPreferences": "Preferences",
+    "groupData": "Data",
+    "groupPayments": "Payments",
+    "groupBalancia": "Balancia",
     "notifications": "Notifications",
     "security": "Sign-in & security",
     "appearance": "Appearance & language",
-    "money": "Money & formats",
+    "money": "Currency & formats",
+    "payouts": "Get paid back",
     "groups": "Your groups",
     "data": "Data & imports",
     "administration": "Administration",
@@ -735,14 +738,26 @@
     "showFewer": "Show fewer",
     "theme": "Theme",
     "themeSystem": "Auto",
-    "themeSystemHelp": "Follows your system light and dark",
+    "themeSystemHelp": "Follows your system",
     "themeLight": "Light",
     "themeLightHelp": "Cream and plum",
     "themeDark": "Dark",
     "themeDarkHelp": "Deep plum",
+    "accent": "Accent colour",
+    "accents": {
+      "coral": "Coral",
+      "amber": "Amber",
+      "mint": "Mint",
+      "ocean": "Ocean",
+      "lavender": "Lavender",
+      "raspberry": "Raspberry",
+      "plum": "Plum"
+    },
+    "accentNote": "The accent colours whatever is chosen, active or still to do. Balances keep their own colours: green when you are owed, red when you owe.",
+    "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageSaved": "Language changed",
-    "languageNote": "Language changes the words. How dates and amounts are written lives in Money & formats, so you can read English and still write 13/08/2026.",
+    "languageNote": "Language changes the words. How dates and amounts are written lives in Currency & formats, so you can read English and still write 13/08/2026.",
     "currencyTitle": "Show my totals in",
     "currencyHelp": "Every group is converted into this on your home screen. Each group keeps its own currency.",
     "currencySaved": "Preferred currency saved",
@@ -752,7 +767,13 @@
     "formatAuto": "Automatic ({sample})",
     "formatsSaved": "Format saved",
     "formatsFailed": "That format could not be saved.",
-    "formatsNote": "Automatic follows your language and the region your browser reports.",
+    "formatsNote": "Automatic follows your language and your browser’s region. Each group keeps its own currency.",
+    "preview": "Preview",
+    "previewOfYours": "your last entry, as it will read",
+    "previewOfSample": "an example, as it will read",
+    "previewSampleTitle": "Chalet in Zermatt",
+    "followsBrowser": "follows your browser",
+    "formatAutoShort": "Auto",
     "noGroups": "You are not part of any group yet.",
     "groupPeople": "{count, plural, one {# person} other {# people}}",
     "groupOwner": "Owner",
@@ -2349,7 +2370,8 @@
     "deviceNotSubscribed": "This device is not set up for push notifications yet.",
     "deviceNotRegistered": "That device could not be registered.",
     "joinLinkGone": "This link is no longer active. Ask the group for a new one.",
-    "joinNameTaken": "Somebody else claimed that name first. Open the link again to pick another."
+    "joinNameTaken": "Somebody else claimed that name first. Open the link again to pick another.",
+    "unknownAccent": "That is not an accent colour Balancia offers."
   },
   "serverValidation": {
     "checkForm": "Check the form.",
@@ -2916,8 +2938,14 @@
     "zelle": "Zelle"
   },
   "payouts": {
-    "title": "How people pay you back",
+    "title": "Get paid back",
     "sub": "Whoever owes you sees the top one first. Only people in your groups can see these, and only when they owe you.",
+    "intro": "Choose how you would rather be paid back. Your preferred method is the one people are offered first.",
+    "introPrivacy": "Only the people who owe you money see any of this.",
+    "preferred": "Preferred",
+    "makePreferred": "Make preferred",
+    "addMethod": "Add a method",
+    "removeMethod": "Remove {method}",
     "empty": "Nothing yet — you will be asked the first time somebody settles up with you.",
     "saved": "Saved",
     "saveFailed": "That could not be saved.",
@@ -2965,13 +2993,17 @@
     },
     "copy": "Copy",
     "copied": "Copied",
-    "addressTitle": "Your address, for the Swiss QR code",
-    "addressSub": "A Swiss QR-bill cannot be made without a postcode, a town and a country — the standard requires them. Whoever scans the code to pay you sees them, the same way they would on a bank transfer.",
+    "addressTitle": "Address for the Swiss QR-bill",
+    "addressSub": "These are needed to generate your QR-bill, and whoever pays you back will see them.",
     "addressStreet": "Street",
     "addressBuilding": "Number",
     "addressPostalCode": "Postcode",
     "addressTown": "Town",
     "addressCountry": "Country",
+    "addressReady": "Ready",
+    "addressIncomplete": "To complete",
+    "addressStreetHint": "Bahnhofstrasse",
+    "addressTownHint": "Zermatt",
     "addressRemove": "Remove my address",
     "qrTitle": "Scan to pay",
     "qrSwiss": "Swiss QR-bill — open your banking app and scan",
@@ -2980,7 +3012,76 @@
     "qrHide": "Hide payment code",
     "qrNoneAddress": "{name} has a Swiss account but has not added the address the QR-bill standard requires.",
     "qrNoneQrIban": "{name}'s bank issues invoice references that Balancia cannot generate, so there is no code to scan.",
-    "qrNoneCurrency": "A payment code cannot carry {currency}."
+    "qrNoneCurrency": "A payment code cannot carry {currency}.",
+    "methodFields": {
+      "wise": {
+        "label": "Wise email",
+        "placeholder": "you@example.com"
+      },
+      "zelle": {
+        "label": "Zelle email",
+        "placeholder": "you@example.com"
+      },
+      "interac": {
+        "label": "Interac email",
+        "placeholder": "you@example.com"
+      },
+      "revolut": {
+        "label": "Revtag",
+        "placeholder": "@you"
+      },
+      "cash_app": {
+        "label": "Cashtag",
+        "placeholder": "$you"
+      },
+      "monzo": {
+        "label": "Monzo.me link",
+        "placeholder": "monzo.me/you"
+      },
+      "pix": {
+        "label": "Pix key",
+        "placeholder": "phone, email or CPF"
+      },
+      "upi": {
+        "label": "UPI ID",
+        "placeholder": "you@bank"
+      },
+      "paypal": {
+        "label": "PayPal.me link",
+        "placeholder": "paypal.me/you"
+      },
+      "alipay": {
+        "label": "Alipay account",
+        "placeholder": "Whatever they have to type"
+      },
+      "apple_pay": {
+        "label": "Apple Cash",
+        "placeholder": "Whatever they have to type"
+      },
+      "google_pay": {
+        "label": "Google Pay account",
+        "placeholder": "Whatever they have to type"
+      },
+      "wechat_pay": {
+        "label": "WeChat ID",
+        "placeholder": "Whatever they have to type"
+      },
+      "crypto": {
+        "label": "Wallet address",
+        "placeholder": "Whatever they have to type"
+      }
+    },
+    "picker": {
+      "title": "Add a method",
+      "close": "Close",
+      "searchPlaceholder": "Search — twint, transfer, paypal…",
+      "searchLabel": "Search payment methods",
+      "common": "Common ways",
+      "commonIn": "Common in {country}",
+      "all": "All methods",
+      "results": "Results",
+      "useTyped": "Use “{name}”"
+    }
   },
   "countries": {
     "CH": "Switzerland",

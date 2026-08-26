@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { toastUndoable } from "@/components/ui/sonner";
+import { AccentChoices } from "./accent-choices";
 import { ChoiceCard } from "./choice-card";
+import { ThemeCards, type ThemeChoice } from "./theme-cards";
 import { setLocaleAction } from "@/i18n/actions";
 import {
   DEFAULT_LOCALE,
@@ -14,19 +16,21 @@ import {
   LOCALE_LABELS,
   type AppLocale,
 } from "@/i18n/locales";
+import type { AccentColor } from "@/modules/profile/accent";
 
 /**
- * Theme and language, as two lists of choices.
+ * Theme, accent and language — how the app looks and reads to you.
  *
- * They sit on one screen because they are the same kind of decision — how the
- * app looks and reads to you, on this account — but they are stored in
- * completely different places, and that is why this is one client component
- * rather than two.
+ * Three decisions on one screen and three different places to keep them, which
+ * is why this is one client component rather than three.
  *
  * The theme lives in the browser: `next-themes` owns it, writes it to local
- * storage and applies it before paint. Nothing is sent anywhere, so nothing
- * can fail and there is no toast — the tick moving, and the page changing
- * colour under it, is the confirmation.
+ * storage and applies it before paint. Nothing is sent anywhere, so nothing can
+ * fail and there is no toast — the ring moving, and the page changing colour
+ * under it, is the confirmation.
+ *
+ * The accent is a cookie and an account column, and paints itself before it is
+ * written; `AccentChoices` explains why.
  *
  * The language is on the account, so it is written, and the whole page is
  * re-rendered afterwards because every visible string came from the server.
@@ -36,7 +40,7 @@ import {
  */
 const subscribeToNothing = () => () => {};
 
-export function AppearanceChoices() {
+export function AppearanceChoices({ accent }: { accent: AccentColor }) {
   const router = useRouter();
   const t = useTranslations("userSettings");
   const tCommon = useTranslations("common");
@@ -73,33 +77,25 @@ export function AppearanceChoices() {
 
   return (
     <>
-      <ChoiceCard
-        name="theme"
+      <ThemeCards
         label={t("theme")}
-        // Before the provider has read storage the choice is unknown. Showing
-        // "Match my phone" would be a guess that ticks the wrong row for
-        // anybody who chose otherwise, so nothing is ticked until it is known.
+        // Before the provider has read storage the choice is unknown. Ringing
+        // "Auto" would be a guess that marks the wrong card for anybody who
+        // chose otherwise, so nothing is ringed until it is known.
         value={mounted ? ((theme ?? "system") as ThemeChoice) : null}
-        choices={[
-          {
-            value: "system",
+        choices={{
+          system: {
             label: t("themeSystem"),
             description: t("themeSystemHelp"),
           },
-          {
-            value: "light",
-            label: t("themeLight"),
-            description: t("themeLightHelp"),
-          },
-          {
-            value: "dark",
-            label: t("themeDark"),
-            description: t("themeDarkHelp"),
-          },
-        ]}
+          light: { label: t("themeLight"), description: t("themeLightHelp") },
+          dark: { label: t("themeDark"), description: t("themeDarkHelp") },
+        }}
         onChoose={(next) => setTheme(next)}
         disabled={!mounted}
       />
+
+      <AccentChoices current={accent} />
 
       <ChoiceCard
         name="language"
@@ -119,5 +115,3 @@ export function AppearanceChoices() {
     </>
   );
 }
-
-type ThemeChoice = "system" | "light" | "dark";
