@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,13 @@ import {
   type PaymentMethodId,
 } from "@/modules/settlements/payment-methods";
 import type { SwissCreditorAddress } from "@/modules/payouts/qr/swiss";
+import {
+  EMPTY_ADDRESS,
+  isBlankAddress,
+  isCompleteAddress,
+  isSwissIban,
+  sameAddress,
+} from "@/modules/payouts/address";
 
 /**
  * How people pay you back, as a list you tick.
@@ -81,16 +88,21 @@ export function PayoutMethodsForm({
 
   const [entries, setEntries] = useState<readonly PayoutEntry[]>(initial);
   const [address, setAddress] = useState<SwissCreditorAddress>(
-    initialAddress ?? {
-      street: "",
-      buildingNumber: "",
-      postalCode: "",
-      town: "",
-      country: "",
-    },
+    initialAddress ?? EMPTY_ADDRESS,
   );
+  const [addressError, setAddressError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+
+  /*
+   * What the account already holds, which is not what the fields show.
+   *
+   * An address is five fields and so five blurs, and every one of them would
+   * otherwise send the whole address again and raise its own confirmation. It
+   * is also what Undo goes back to, and null — never asked — is one of the
+   * answers it has to be able to go back to.
+   */
+  const savedAddress = useRef<SwissCreditorAddress | null>(initialAddress);
 
   /*
    * The methods to offer, most likely first.
@@ -195,18 +207,55 @@ export function PayoutMethodsForm({
     }
   };
 
-  /*
-   * Whether an address is needed at all.
+  /**
+   * Writes the address, once there is a whole one to write.
    *
-   * Only the Swiss standard requires one, so only a Swiss IBAN is asked. A
-   * German account gets a Girocode, which carries no address, and nobody is
-   * asked where they live to be paid by TWINT.
+   * Refusals used to be dropped on the floor here, which is the one thing this
+   * block must not do: an address short of what the standard needs writes
+   * nothing, and somebody who is told nothing goes away believing the QR code
+   * they cannot see is a bug elsewhere. So a half-filled address says so, and
+   * a rejected one says what the server said.
    */
-  const swissIban = entries.some(
-    (entry) =>
-      entry.method === "bank" &&
-      /^(CH|LI)/i.test(entry.detail.replace(/\s/g, "")),
-  );
+  const saveAddress = () => {
+    if (!persist) return;
+
+    if (!isCompleteAddress(address)) {
+      // Silent while it is still empty: the block opened by itself under a
+      // Swiss IBAN, and nobody has typed anything to be wrong about yet.
+      setAddressError(isBlankAddress(address) ? "" : t("errors.address"));
+      return;
+    }
+
+    setAddressError("");
+    if (sameAddress(address, savedAddress.current)) return;
+
+    const previous = savedAddress.current;
+    savedAddress.current = address;
+    startTransition(async () => {
+      const result = await setPayoutAddressAction(address);
+      if (!result.ok) {
+        savedAddress.current = previous;
+        setAddressError(result.error ?? t("saveFailed"));
+        return;
+      }
+      if (confirmations === "toast") {
+        toastUndoable(
+          t("saved"),
+          {
+            label: tCommon("undo"),
+            onUndo: () => {
+              setAddress(previous ?? EMPTY_ADDRESS);
+              savedAddress.current = previous;
+              startTransition(async () => {
+                await setPayoutAddressAction(previous);
+              });
+            },
+          },
+          { id: "payout-address" },
+        );
+      }
+    });
+  };
 
   return (
     <div className="flex flex-col gap-1">
@@ -261,19 +310,24 @@ export function PayoutMethodsForm({
                   onBlur={() => commit(id)}
                 />
                 {error && <p className="text-xs text-destructive">{error}</p>}
+
+                {/* Inside the row it belongs to rather than under the whole
+                    list: it is part of answering "pay me by transfer", and at
+                    the bottom of the card it read as a sixth payment method
+                    that had lost its tickbox. */}
+                {id === "bank" && isSwissIban(entry.detail) && (
+                  <SwissAddress
+                    address={address}
+                    onChange={setAddress}
+                    onCommit={saveAddress}
+                    error={addressError}
+                  />
+                )}
               </div>
             )}
           </div>
         );
       })}
-
-      {swissIban && (
-        <SwissAddress
-          address={address}
-          onChange={setAddress}
-          persist={persist}
-        />
-      )}
 
       {errors.form && (
         <p className="px-3 pt-1 text-sm text-destructive">{errors.form}</p>
@@ -296,43 +350,45 @@ export function PayoutMethodsForm({
 /**
  * The postal address a Swiss QR-bill cannot be built without.
  *
- * Shown only under a Swiss IBAN, and it says who will see it. That sentence is
- * the point: the address travels inside the QR code, so the person who owes
- * money reads it when they scan. That is how a bank transfer has always
- * worked, and somebody should learn it here rather than afterwards.
+ * Shown under the IBAN that needs it, and it says who will see it. That
+ * sentence is the point: the address travels inside the QR code, so the person
+ * who owes money reads it when they scan. That is how a bank transfer has
+ * always worked, and somebody should learn it here rather than afterwards.
  *
  * Street and building number are genuinely optional in the standard and are
  * left so here. Postcode, town and country are not, so nothing is written
  * until all three are there — a half-filled address is one the QR would be
- * refused for.
+ * refused for. The host says so when that is why nothing was written; this
+ * only lays the fields out and reports when one is left.
  */
 function SwissAddress({
   address,
   onChange,
-  persist,
+  onCommit,
+  error,
 }: {
   address: SwissCreditorAddress;
   onChange: (address: SwissCreditorAddress) => void;
-  persist: boolean;
+  /** A field was left. Whether that is worth a write is the host's call. */
+  onCommit: () => void;
+  error?: string;
 }) {
   const t = useTranslations("payouts");
-
-  const complete =
-    (address.postalCode ?? "").trim().length > 0 &&
-    (address.town ?? "").trim().length > 0 &&
-    /^[A-Za-z]{2}$/.test((address.country ?? "").trim());
-
-  const commit = () => {
-    if (!persist || !complete) return;
-    void setPayoutAddressAction(address);
-  };
 
   const field = (
     key: keyof SwissCreditorAddress,
     label: string,
-    className?: string,
+    props: {
+      className?: string;
+      /** What the browser should offer to fill it with. */
+      autoComplete: string;
+      maxLength?: number;
+      placeholder?: string;
+      /** Applied as it is typed, so what is stored is what is on screen. */
+      transform?: (value: string) => string;
+    },
   ) => (
-    <div className={cn("flex flex-col gap-1", className)}>
+    <div className={cn("flex flex-col gap-1", props.className)}>
       <Label
         className="text-2xs text-muted-foreground"
         htmlFor={`address-${key}`}
@@ -343,10 +399,19 @@ function SwissAddress({
         id={`address-${key}`}
         className="h-11"
         value={address[key] ?? ""}
+        autoComplete={props.autoComplete}
+        maxLength={props.maxLength}
+        placeholder={props.placeholder}
+        aria-invalid={Boolean(error)}
         onChange={(event) =>
-          onChange({ ...address, [key]: event.target.value })
+          onChange({
+            ...address,
+            [key]: props.transform
+              ? props.transform(event.target.value)
+              : event.target.value,
+          })
         }
-        onBlur={commit}
+        onBlur={onCommit}
       />
     </div>
   );
@@ -361,12 +426,39 @@ function SwissAddress({
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        {field("street", t("addressStreet"), "col-span-2")}
-        {field("buildingNumber", t("addressBuilding"))}
-        {field("postalCode", t("addressPostalCode"))}
-        {field("town", t("addressTown"), "col-span-2")}
-        {field("country", t("addressCountry"))}
+        {field("street", t("addressStreet"), {
+          className: "col-span-2",
+          autoComplete: "address-line1",
+        })}
+        {field("buildingNumber", t("addressBuilding"), {
+          autoComplete: "address-line2",
+          maxLength: 16,
+        })}
+        {field("postalCode", t("addressPostalCode"), {
+          autoComplete: "postal-code",
+          maxLength: 16,
+        })}
+        {field("town", t("addressTown"), {
+          className: "col-span-2",
+          autoComplete: "address-level2",
+          maxLength: 35,
+        })}
+        {/*
+          Two letters, and the field is built so that only two can be typed.
+          The standard wants ISO 3166-1 alpha-2 and the server refuses anything
+          else, so a box that accepted "Suisse" was a box that took an answer,
+          kept it on screen and never wrote it. `country` — as against
+          `country-name` — is the autofill token for the code itself.
+        */}
+        {field("country", t("addressCountry"), {
+          autoComplete: "country",
+          maxLength: 2,
+          placeholder: t("addressCountryPlaceholder"),
+          transform: (value) => value.toUpperCase(),
+        })}
       </div>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

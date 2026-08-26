@@ -512,10 +512,9 @@
     "noOutstandingBalances": "Aucun solde en attente",
     "remindPerson": "Relancer {name}",
     "remindAll": "Tout relancer",
-    "howCalculated": "Comment ce montant est calculé",
+    "howCalculated": "Voir le détail du solde",
     "positionSheetTitle": "Détail de ton solde",
     "positionSheetDescription": "Les montants enregistrés qui donnent ton solde actuel.",
-    "positionImpactLabel": "Impact sur ton solde",
     "positionSectionExpenses": "Dépenses",
     "positionYouPaid": "Tu as payé",
     "positionYourShare": "Ta part",
@@ -534,9 +533,6 @@
     "positionSettlementsCaption": "Les remboursements déjà effectués.",
     "positionOtherAdjustments": "Autres ajustements",
     "positionResult": "Solde final",
-    "positionResultOwe": "Tu dois {amount} au groupe.",
-    "positionResultOwed": "Le groupe te doit {amount}.",
-    "positionResultSettled": "Tout est réglé.",
     "sinceYourLastVisit": "Depuis ta dernière visite",
     "spending": "Dépenses",
     "spendingPeriods": {
@@ -546,10 +542,10 @@
       "allTime": "Depuis toujours"
     },
     "groupSpending": "Dépenses du groupe",
-    "percentYours": "{percent} % pour toi",
+    "percentYours": "Ta part : {percent} %",
     "shareBarLabel": "Ta part représente {percent} % des dépenses du groupe",
     "statistics": "Statistiques",
-    "statisticsCaption": "par personne, par catégorie",
+    "statisticsCaption": "Par personne et par catégorie",
     "emptyOverviewDescription": "Ajoute la première dépense pour commencer à suivre ce groupe. Les soldes et règlements apparaîtront dès qu'il y aura quelque chose à partager.",
     "inviteByLink": "Inviter par lien",
     "inviteByLinkDescription": "Ajoute chaque personne depuis l'onglet Personnes, puis crée un lien d'invité privé qu'elle pourra ouvrir sans compte.",
@@ -577,13 +573,14 @@
     "balanceReceives": "doit recevoir",
     "balanceOwes": "doit de l'argent",
     "balanceSettled": "est à jour",
-    "suggestedSettlements": "Règlements suggérés",
-    "viewAll": "Tout voir",
+    "suggestedSettlements": "Règlements proposés",
+    "viewAll": "Voir tout",
     "settlementDetailTitle": "{from} paie {to}",
     "settlementDetailDescription": "Enregistre le paiement quand l'argent change de mains, ou envoie une relance.",
     "recordPayment": "Enregistrer le paiement",
     "sendReminder": "Envoyer une relance",
-    "archiveGroup": "Archiver le groupe"
+    "archiveGroup": "Archiver le groupe",
+    "remind": "Envoyer un rappel"
   },
   "expensesList": {
     "eyebrow": "Transactions",
@@ -931,7 +928,10 @@
     "allSettledDescription": "Aucun virement n'est nécessaire. Les nouvelles dépenses apparaissent ici dès qu'elles changent le solde de quelqu'un.",
     "lastSettled": "Derniers règlements",
     "settledOnVia": "{when} · {method}",
-    "backToGroup": "Retour au groupe"
+    "backToGroup": "Retour au groupe",
+    "iPaid": "J'ai remboursé {name}",
+    "iWasPaid": "J'ai reçu le paiement",
+    "recordForThem": "Enregistrer pour eux"
   },
   "landing": {
     "signIn": "Se connecter",
@@ -1668,10 +1668,10 @@
     "shareTitle": "{group} sur Balancia",
     "shareText": "Rejoignez {group} sur Balancia pour partager nos dépenses.",
     "skip": "Plus tard",
-    "linkExpires": "Le lien expire",
+    "linkExpires": "Expiration du lien",
     "expires": "Expire",
-    "expiryNote": "Toute personne ayant le lien peut demander à rejoindre le groupe jusque-là. Vous pouvez le prolonger ou le révoquer dans les paramètres du groupe.",
-    "expiryNoteNever": "Toute personne ayant le lien peut demander à rejoindre le groupe tant que vous ne l'avez pas révoqué dans les paramètres du groupe.",
+    "expiryNote": "Ce lien reste valable {count, plural, one {1 jour} other {# jours}}. Tu peux modifier sa durée ou le révoquer dans les paramètres.",
+    "expiryNoteNever": "Ce lien reste valable tant que tu ne l'as pas révoqué dans les paramètres.",
     "expiresNote": "Toute personne ayant le lien peut demander à rejoindre le groupe jusque-là.",
     "expiresNoteNever": "Toute personne ayant le lien peut demander à rejoindre le groupe tant que vous ne l'avez pas révoqué.",
     "expiryChoice": {
@@ -1684,8 +1684,8 @@
     "inDays": "{count, plural, one {Dans 1 jour} other {Dans # jours}}",
     "expiredValue": "Expiré",
     "expiryFailed": "La date d'expiration n'a pas pu être modifiée.",
-    "noDuplicates": "Personne en double",
-    "noDuplicatesBody": "Les noms que vous avez saisis restent non rattachés jusqu'à ce que quelqu'un les revendique : les dépenses ne se retrouvent jamais coupées en deux.",
+    "noDuplicates": "Pas de doublons",
+    "noDuplicatesBody": "Les personnes déjà ajoutées peuvent simplement choisir leur nom. Leurs dépenses et leur historique restent associés au même membre.",
     "statusActive": "Actif",
     "statusExpired": "Expiré",
     "statusRevoked": "Révoqué",
@@ -1702,9 +1702,9 @@
     "revoked": "Le lien d'invitation a été révoqué.",
     "revokeFailed": "Le lien n'a pas pu être révoqué.",
     "ready": {
-      "title": "{group}, c'est prêt",
-      "lede": "Envoyez le même lien à tout le monde. {people} pourront revendiquer leur propre nom en l'ouvrant.",
-      "ledeAlone": "Envoyez le même lien à tout le monde. Chaque personne qui l'ouvre choisit son propre nom, ou s'ajoute comme nouveau membre.",
+      "title": "Ton groupe est prêt !",
+      "lede": "Partage le même lien avec tout le monde. {people} pourront choisir leur nom dans le groupe en l'ouvrant.",
+      "ledeAlone": "Partage le même lien avec tout le monde. Chacun peut choisir son nom dans le groupe ou rejoindre comme nouveau membre.",
       "peopleTwo": "{first} et {second}",
       "peopleMany": "{first}, {second} et {count, plural, one {1 autre} other {# autres}}"
     }
@@ -2987,9 +2987,9 @@
       "address": "Indique au moins un code postal, une localité et un pays sur deux lettres."
     },
     "settle": {
-      "title": "Comment {name} veut être remboursé",
       "none": "{name} n'a pas indiqué comment être remboursé. Demande-lui, ou rembourse-le comme d'habitude.",
-      "guest": "{name} est un invité, il n'y a donc aucun compte pour enregistrer un moyen de remboursement."
+      "guest": "{name} est un invité, il n'y a donc aucun compte pour enregistrer un moyen de remboursement.",
+      "howToPay": "Comment rembourser {name}"
     },
     "copy": "Copier",
     "copied": "Copié",
@@ -3008,8 +3008,6 @@
     "qrTitle": "Scanner pour payer",
     "qrSwiss": "QR-facture suisse — ouvre ton app bancaire et scanne",
     "qrEpc": "Girocode — ouvre ton app bancaire et scanne",
-    "qrShow": "Afficher le code de paiement",
-    "qrHide": "Masquer le code de paiement",
     "qrNoneAddress": "{name} a un compte suisse mais n'a pas ajouté l'adresse exigée par la norme QR-facture.",
     "qrNoneQrIban": "La banque de {name} émet des références de facture que Balancia ne peut pas générer, il n'y a donc aucun code à scanner.",
     "qrNoneCurrency": "Un code de paiement ne peut pas porter des {currency}.",
@@ -3081,7 +3079,15 @@
       "all": "Tous les moyens",
       "results": "Résultats",
       "useTyped": "Utiliser « {name} »"
-    }
+    },
+    "openApp": "Ouvrir {method}",
+    "cashNothing": "Rien à copier — remets-lui les {amount}.",
+    "detailCopied": "Coordonnées copiées",
+    "addressCountryPlaceholder": "CH",
+    "qrShowSheet": "Afficher le code QR",
+    "qrSheetTitle": "Scanner pour rembourser {name}",
+    "qrAmountTo": "{amount} à {name}",
+    "qrClose": "Fermer"
   },
   "countries": {
     "CH": "Suisse",

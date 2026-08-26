@@ -188,6 +188,7 @@ export async function EntryScreen({
               toParticipantId: settle.toParticipantId,
               amountMinor: stated?.amountMinor ?? null,
               currency: settle.currency,
+              method: settle.method,
             }
           : undefined
       }

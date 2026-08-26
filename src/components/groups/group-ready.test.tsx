@@ -17,15 +17,20 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-vi.mock("@/modules/join/actions", () => ({
-  setJoinLinkExpiryAction: vi.fn(async () => ({
-    ok: true,
-    data: { expiresAt: null },
-  })),
+const { setJoinLinkExpiryAction } = vi.hoisted(() => ({
+  setJoinLinkExpiryAction: vi.fn<
+    (
+      groupId: string,
+      choice: string,
+    ) => Promise<{ ok: boolean; data?: { expiresAt: string | null } }>
+  >(async () => ({ ok: true, data: { expiresAt: null } })),
 }));
 
+vi.mock("@/modules/join/actions", () => ({ setJoinLinkExpiryAction }));
+
+const failure = vi.fn();
 vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: (...args: unknown[]) => failure(...args) },
 }));
 
 const URL = "https://balancia.test/join/g/SECRET-TOKEN";
@@ -66,7 +71,7 @@ describe("GroupReady", () => {
     renderReady();
 
     expect(
-      screen.getByRole("heading", { name: "Lisbon, March is ready" }),
+      screen.getByRole("heading", { name: "Your group is ready!" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("balancia.test/join/g/SECRET-TOKEN"),
@@ -78,7 +83,7 @@ describe("GroupReady", () => {
 
     expect(
       screen.getByText(
-        "Send everyone the same link. Seb, Ana and 2 others can claim their own name when they open it.",
+        "Share the same link with everyone. Seb, Ana and 2 others can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
   });
@@ -88,7 +93,7 @@ describe("GroupReady", () => {
 
     expect(
       screen.getByText(
-        "Send everyone the same link. Seb and Ana can claim their own name when they open it.",
+        "Share the same link with everyone. Seb and Ana can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
   });
@@ -97,7 +102,7 @@ describe("GroupReady", () => {
     renderReady({ people: ["Seb"] });
 
     expect(
-      screen.getByText(/Whoever opens it picks their own name/),
+      screen.getByText(/They can choose their existing name in the group/),
     ).toBeInTheDocument();
   });
 
@@ -115,7 +120,9 @@ describe("GroupReady", () => {
 
     expect(screen.getByText("In 7 days")).toBeInTheDocument();
     expect(
-      screen.getByText(/can ask to join until then\. You can extend or revoke/),
+      screen.getByText(
+        /This link is valid for 7 days\. You can change its duration/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -124,21 +131,73 @@ describe("GroupReady", () => {
 
     expect(screen.getByText("Never")).toBeInTheDocument();
     expect(
-      screen.getByText(/until you revoke it in group settings/),
+      screen.getByText(/stays valid until you revoke it in the group settings/),
+    ).toBeInTheDocument();
+  });
+
+  /*
+   * The three below are why the row reports what it was told to do.
+   *
+   * The sheet minted this invite and stopped listening, so the prop under
+   * this screen never moves. A sentence with a number in it read off that
+   * prop would sit under a row that had already changed its mind.
+   */
+  it("moves the sentence under the row when the expiry does", async () => {
+    const user = userEvent.setup();
+    renderReady();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "In 24 hours" }),
+    );
+
+    expect(await screen.findByText("In 24 hours")).toBeInTheDocument();
+    expect(
+      screen.getByText(/This link is valid for 1 day\./),
+    ).toBeInTheDocument();
+  });
+
+  it("swaps to the other sentence when the link stops lapsing", async () => {
+    const user = userEvent.setup();
+    renderReady();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "Never" }),
+    );
+
+    expect(
+      await screen.findByText(/stays valid until you revoke it/),
+    ).toBeInTheDocument();
+  });
+
+  it("puts the sentence back when the change is refused", async () => {
+    const user = userEvent.setup();
+    setJoinLinkExpiryAction.mockResolvedValueOnce({ ok: false });
+    renderReady();
+
+    await user.click(screen.getByRole("button", { name: /In 7 days/ }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "In 24 hours" }),
+    );
+
+    expect(failure).toHaveBeenCalled();
+    expect(
+      await screen.findByText(/This link is valid for 7 days/),
     ).toBeInTheDocument();
   });
 
   it("explains what happens to the names that were typed in", () => {
     renderReady();
 
-    expect(screen.getByText("No duplicate people")).toBeInTheDocument();
+    expect(screen.getByText("No duplicates")).toBeInTheDocument();
   });
 
   it("lets the organiser leave without sharing anything", async () => {
     const user = userEvent.setup();
     const { onSkip } = renderReady();
 
-    await user.click(screen.getByRole("button", { name: "Skip for now" }));
+    await user.click(screen.getByRole("button", { name: "Later" }));
 
     expect(onSkip).toHaveBeenCalledOnce();
   });

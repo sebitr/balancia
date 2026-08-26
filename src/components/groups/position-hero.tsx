@@ -79,10 +79,7 @@ export function PositionHero({
       ? t("overallMixed")
       : t("positionAcrossCurrencies");
 
-  const remindLabel =
-    recipients.length === 1
-      ? t("remindPerson", { name: recipients[0].name })
-      : t("remindAll");
+  const remindLabel = recipients.length === 1 ? t("remind") : t("remindAll");
 
   /**
    * Settling is a screen, not a form.

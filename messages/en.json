@@ -515,7 +515,6 @@
     "howCalculated": "How this is calculated",
     "positionSheetTitle": "Balance details",
     "positionSheetDescription": "The recorded amounts that produce your current balance.",
-    "positionImpactLabel": "Impact on your balance",
     "positionSectionExpenses": "Expenses",
     "positionYouPaid": "You paid",
     "positionYourShare": "Your share",
@@ -534,9 +533,6 @@
     "positionSettlementsCaption": "Repayments already made.",
     "positionOtherAdjustments": "Other adjustments",
     "positionResult": "Final balance",
-    "positionResultOwe": "You owe the group {amount}.",
-    "positionResultOwed": "The group owes you {amount}.",
-    "positionResultSettled": "You're all settled up.",
     "sinceYourLastVisit": "Since your last visit",
     "spending": "Spending",
     "spendingPeriods": {
@@ -549,7 +545,7 @@
     "percentYours": "{percent}% yours",
     "shareBarLabel": "Your share is {percent}% of group spending",
     "statistics": "Statistics",
-    "statisticsCaption": "per person, per category",
+    "statisticsCaption": "Per person and per category",
     "emptyOverviewDescription": "Add the first expense to start tracking this group. Balances and settlements appear as soon as there is something to split.",
     "inviteByLink": "Invite by link",
     "inviteByLinkDescription": "Add each person from the People tab, then create a private guest link they can open without an account.",
@@ -583,7 +579,8 @@
     "settlementDetailDescription": "Record the payment when the money changes hands, or send a reminder.",
     "recordPayment": "Record payment",
     "sendReminder": "Send reminder",
-    "archiveGroup": "Archive group"
+    "archiveGroup": "Archive group",
+    "remind": "Send a reminder"
   },
   "expensesList": {
     "eyebrow": "Transactions",
@@ -675,7 +672,7 @@
     "notifications": "Notifications",
     "security": "Sign-in & security",
     "appearance": "Appearance & language",
-    "money": "Currency & formats",
+    "money": "Money & formats",
     "payouts": "Get paid back",
     "groups": "Your groups",
     "data": "Data & imports",
@@ -757,7 +754,7 @@
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageSaved": "Language changed",
-    "languageNote": "Language changes the words. How dates and amounts are written lives in Currency & formats, so you can read English and still write 13/08/2026.",
+    "languageNote": "Language changes the words. How dates and amounts are written lives in Money & formats, so you can read English and still write 13/08/2026.",
     "currencyTitle": "Show my totals in",
     "currencyHelp": "Every group is converted into this on your home screen. Each group keeps its own currency.",
     "currencySaved": "Preferred currency saved",
@@ -931,7 +928,10 @@
     "allSettledDescription": "No transfers are needed. New expenses show up here as soon as they change someone's balance.",
     "lastSettled": "Last settled",
     "settledOnVia": "{when} · {method}",
-    "backToGroup": "Back to the group"
+    "backToGroup": "Back to the group",
+    "iPaid": "I paid {name}",
+    "iWasPaid": "I got the payment",
+    "recordForThem": "Record for them"
   },
   "landing": {
     "signIn": "Sign in",
@@ -1667,11 +1667,11 @@
     "copyTheLink": "Copy the link",
     "shareTitle": "{group} on Balancia",
     "shareText": "Join {group} on Balancia and split what we spend together.",
-    "skip": "Skip for now",
-    "linkExpires": "Link expires",
+    "skip": "Later",
+    "linkExpires": "Link expiration",
     "expires": "Expires",
-    "expiryNote": "Anyone with the link can ask to join until then. You can extend or revoke it in group settings.",
-    "expiryNoteNever": "Anyone with the link can ask to join until you revoke it in group settings.",
+    "expiryNote": "This link is valid for {count, plural, one {1 day} other {# days}}. You can change its duration or revoke it in the group settings.",
+    "expiryNoteNever": "This link stays valid until you revoke it in the group settings.",
     "expiresNote": "Anyone with the link can ask to join until then.",
     "expiresNoteNever": "Anyone with the link can ask to join until you revoke it.",
     "expiryChoice": {
@@ -1684,8 +1684,8 @@
     "inDays": "{count, plural, one {In 1 day} other {In # days}}",
     "expiredValue": "Expired",
     "expiryFailed": "The expiry date could not be changed.",
-    "noDuplicates": "No duplicate people",
-    "noDuplicatesBody": "Names you typed by hand stay unlinked until someone claims them, so expenses never split in two.",
+    "noDuplicates": "No duplicates",
+    "noDuplicatesBody": "People already in the group can simply choose their name. Their expenses and history stay attached to the same member.",
     "statusActive": "Active",
     "statusExpired": "Expired",
     "statusRevoked": "Revoked",
@@ -1702,9 +1702,9 @@
     "revoked": "The invite link was revoked.",
     "revokeFailed": "The link could not be revoked.",
     "ready": {
-      "title": "{group} is ready",
-      "lede": "Send everyone the same link. {people} can claim their own name when they open it.",
-      "ledeAlone": "Send everyone the same link. Whoever opens it picks their own name, or adds themselves as someone new.",
+      "title": "Your group is ready!",
+      "lede": "Share the same link with everyone. {people} can choose their existing name when they open it.",
+      "ledeAlone": "Share the same link with everyone. They can choose their existing name in the group or join as a new member.",
       "peopleTwo": "{first} and {second}",
       "peopleMany": "{first}, {second} and {count, plural, one {1 other} other {# others}}"
     }
@@ -2987,9 +2987,9 @@
       "address": "Enter at least a postcode, a town and a two-letter country."
     },
     "settle": {
-      "title": "How {name} wants it",
       "none": "{name} has not said how they want to be paid. Ask them, or pay them the way you always do.",
-      "guest": "{name} is a guest, so there is no account to hold a payment detail."
+      "guest": "{name} is a guest, so there is no account to hold a payment detail.",
+      "howToPay": "How to pay {name}"
     },
     "copy": "Copy",
     "copied": "Copied",
@@ -3008,8 +3008,6 @@
     "qrTitle": "Scan to pay",
     "qrSwiss": "Swiss QR-bill — open your banking app and scan",
     "qrEpc": "Girocode — open your banking app and scan",
-    "qrShow": "Show payment code",
-    "qrHide": "Hide payment code",
     "qrNoneAddress": "{name} has a Swiss account but has not added the address the QR-bill standard requires.",
     "qrNoneQrIban": "{name}'s bank issues invoice references that Balancia cannot generate, so there is no code to scan.",
     "qrNoneCurrency": "A payment code cannot carry {currency}.",
@@ -3081,7 +3079,15 @@
       "all": "All methods",
       "results": "Results",
       "useTyped": "Use “{name}”"
-    }
+    },
+    "openApp": "Open {method}",
+    "cashNothing": "Nothing to copy — hand them the {amount}.",
+    "detailCopied": "Payment details copied",
+    "addressCountryPlaceholder": "CH",
+    "qrShowSheet": "Show QR code",
+    "qrSheetTitle": "Scan to pay {name}",
+    "qrAmountTo": "{amount} to {name}",
+    "qrClose": "Close"
   },
   "countries": {
     "CH": "Switzerland",

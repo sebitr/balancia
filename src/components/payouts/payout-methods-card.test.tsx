@@ -147,6 +147,43 @@ describe("PayoutMethodsCard", () => {
     expect(screen.getByText("To complete")).toBeInTheDocument();
   });
 
+  it("says a half-filled address is half-filled, rather than writing nothing", async () => {
+    const { user } = renderCard([{ method: "bank", detail: "" }]);
+
+    // A postcode and no town: short of what the standard needs, so nothing is
+    // written — and somebody told nothing concludes the QR code is broken.
+    await user.type(screen.getByLabelText("Postcode"), "3920");
+    await user.tab();
+
+    expect(
+      await screen.findByText(/at least a postcode, a town/),
+    ).toBeInTheDocument();
+    expect(setPayoutAddressAction).not.toHaveBeenCalled();
+  });
+
+  it("reports a refused address instead of dropping it", async () => {
+    const { user } = renderCard([{ method: "bank", detail: "" }]);
+    setPayoutAddressAction.mockResolvedValue({ ok: false, error: "Nope." });
+
+    await user.type(screen.getByLabelText("Postcode"), "3920");
+    await user.type(screen.getByLabelText("Town"), "Zermatt");
+    await user.type(screen.getByLabelText("Country"), "CH");
+    await user.tab();
+
+    expect(await screen.findByText("Nope.")).toBeInTheDocument();
+  });
+
+  it("keeps the country to the two letters that travel in the code", async () => {
+    const { user } = renderCard([{ method: "bank", detail: "" }]);
+
+    // A box that accepted "Suisse" was a box that took an answer, kept it on
+    // screen and never wrote it.
+    const country = screen.getByLabelText("Country");
+    await user.type(country, "ch");
+    expect(country).toHaveValue("CH");
+    expect(country).toHaveAttribute("maxlength", "2");
+  });
+
   it("stops asking once the IBAN is somebody else's country", async () => {
     const { user } = renderCard([{ method: "bank", detail: "" }]);
 

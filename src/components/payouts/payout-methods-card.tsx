@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toastUndoable } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import { MethodMark } from "./method-mark";
+import { MethodMark } from "@/components/settlements/method-mark";
 import { MethodPickerSheet } from "./method-picker-sheet";
 import {
   setPayoutAddressAction,
@@ -21,6 +21,13 @@ import {
 } from "@/modules/payouts/fields";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 import type { SwissCreditorAddress } from "@/modules/payouts/qr/swiss";
+import {
+  EMPTY_ADDRESS,
+  isBlankAddress,
+  isCompleteAddress,
+  isSwissIban,
+  sameAddress,
+} from "@/modules/payouts/address";
 import type { PayoutEntry } from "./payout-methods-form";
 
 /**
@@ -227,9 +234,9 @@ export function PayoutMethodsCard({
    * one sitting; asking a German account forever is what the check avoids.
    */
   const bank = entries.find((entry) => entry.method === "bank");
-  const bankIban = (bank?.detail ?? "").replace(/\s/g, "");
+  const typedIban = (bank?.detail ?? "").replace(/\s/g, "");
   const wantsAddress =
-    bank !== undefined && (bankIban.length < 2 || /^(CH|LI)/i.test(bankIban));
+    bank !== undefined && (typedIban.length < 2 || isSwissIban(typedIban));
 
   return (
     <>
@@ -251,7 +258,12 @@ export function PayoutMethodsCard({
               )}
             >
               <div className="flex min-h-11 items-center gap-2.5">
-                <MethodMark method={entry.method} label={label} />
+                <MethodMark
+                  method={findPaymentMethod(entry.method) ?? null}
+                  label={label}
+                  size={26}
+                  unbranded="tile"
+                />
                 <span className="min-w-0 truncate text-sm font-medium">
                   {label}
                 </span>
@@ -382,41 +394,84 @@ export function PayoutMethodsCard({
  *
  * Street and building number are genuinely optional in the standard and are
  * left so here. Postcode, town and country are not, so nothing is written
- * until all three are there — a half-filled address is one the QR would be
- * refused for, and the badge at the top says which of the two states this is
- * rather than leaving somebody to find out at the moment they are owed money.
+ * until all three are there — and the badge at the top says which of the two
+ * states this is, rather than leaving somebody to find out at the moment they
+ * are owed money.
+ *
+ * **A refusal is never dropped.** An address short of what the standard needs
+ * writes nothing, and somebody told nothing goes away believing the QR code
+ * they cannot see is a bug elsewhere. So a half-filled address says so, and a
+ * rejected one says what the server said.
  */
 function SwissAddress({ initial }: { initial: SwissCreditorAddress | null }) {
   const t = useTranslations("payouts");
+  const tCommon = useTranslations("common");
   const [address, setAddress] = useState<SwissCreditorAddress>(
-    initial ?? {
-      street: "",
-      buildingNumber: "",
-      postalCode: "",
-      town: "",
-      country: "",
-    },
+    initial ?? EMPTY_ADDRESS,
   );
+  const [error, setError] = useState("");
+  const [, startTransition] = useTransition();
 
-  // The server's own rule, not a looser one invented here: the standard wants
-  // an ISO 3166-1 alpha-2 code, and a write that does not carry one is refused.
-  const complete =
-    (address.postalCode ?? "").trim().length > 0 &&
-    (address.town ?? "").trim().length > 0 &&
-    /^[A-Za-z]{2}$/.test((address.country ?? "").trim());
+  /*
+   * What the account already holds, which is not what the fields show.
+   *
+   * An address is five fields and so five blurs, and every one of them would
+   * otherwise send the whole address again and raise its own confirmation. It
+   * is also what Undo goes back to, and null — never asked — is one of the
+   * answers it has to be able to go back to.
+   */
+  const saved = useRef<SwissCreditorAddress | null>(initial);
+  const complete = isCompleteAddress(address);
 
   const commit = () => {
-    if (!complete) return;
-    void setPayoutAddressAction(address);
+    if (!complete) {
+      // Silent while it is still empty: the card opened by itself with the
+      // bank row, and nobody has typed anything to be wrong about yet.
+      setError(isBlankAddress(address) ? "" : t("errors.address"));
+      return;
+    }
+
+    setError("");
+    if (sameAddress(address, saved.current)) return;
+
+    const previous = saved.current;
+    saved.current = address;
+    startTransition(async () => {
+      const result = await setPayoutAddressAction(address);
+      if (!result.ok) {
+        saved.current = previous;
+        setError(result.error ?? t("saveFailed"));
+        return;
+      }
+      toastUndoable(
+        t("saved"),
+        {
+          label: tCommon("undo"),
+          onUndo: () => {
+            setAddress(previous ?? EMPTY_ADDRESS);
+            saved.current = previous;
+            startTransition(async () => {
+              await setPayoutAddressAction(previous);
+            });
+          },
+        },
+        { id: "payout-address" },
+      );
+    });
   };
 
   const field = (
     key: keyof SwissCreditorAddress,
     label: string,
-    placeholder: string,
-    className?: string,
+    props: {
+      className?: string;
+      placeholder?: string;
+      autoComplete?: string;
+      maxLength?: number;
+      transform?: (value: string) => string;
+    } = {},
   ) => (
-    <div className={cn("flex flex-col gap-1", className)}>
+    <div className={cn("flex flex-col gap-1", props.className)}>
       <Label
         className="text-2xs text-muted-foreground"
         htmlFor={`address-${key}`}
@@ -427,9 +482,16 @@ function SwissAddress({ initial }: { initial: SwissCreditorAddress | null }) {
         id={`address-${key}`}
         className="h-9.5 rounded-[11px] bg-foreground/5 px-3"
         value={address[key] ?? ""}
-        placeholder={placeholder}
+        placeholder={props.placeholder}
+        autoComplete={props.autoComplete}
+        maxLength={props.maxLength}
         onChange={(event) =>
-          setAddress({ ...address, [key]: event.target.value })
+          setAddress({
+            ...address,
+            [key]: props.transform
+              ? props.transform(event.target.value)
+              : event.target.value,
+          })
         }
         onBlur={commit}
       />
@@ -458,14 +520,43 @@ function SwissAddress({ initial }: { initial: SwissCreditorAddress | null }) {
       </div>
 
       <div className="grid grid-cols-[1fr_84px] gap-2">
-        {field("street", t("addressStreet"), t("addressStreetHint"))}
-        {field("buildingNumber", t("addressBuilding"), "12")}
-        {field("town", t("addressTown"), t("addressTownHint"))}
-        {field("postalCode", t("addressPostalCode"), "3920")}
-        {/* Two letters, because that is what travels in the code — so the
-            field says so rather than inviting "Suisse" and refusing it. */}
-        {field("country", t("addressCountry"), "CH", "col-span-2")}
+        {field("street", t("addressStreet"), {
+          placeholder: t("addressStreetHint"),
+          autoComplete: "address-line1",
+          maxLength: 70,
+        })}
+        {field("buildingNumber", t("addressBuilding"), {
+          placeholder: "12",
+          autoComplete: "address-line2",
+          maxLength: 16,
+        })}
+        {field("town", t("addressTown"), {
+          placeholder: t("addressTownHint"),
+          autoComplete: "address-level2",
+          maxLength: 35,
+        })}
+        {field("postalCode", t("addressPostalCode"), {
+          placeholder: "3920",
+          autoComplete: "postal-code",
+          maxLength: 16,
+        })}
+        {/*
+          Two letters, and the field is built so that only two can be typed.
+          The standard wants ISO 3166-1 alpha-2 and the server refuses anything
+          else, so a box that accepted "Suisse" was a box that took an answer,
+          kept it on screen and never wrote it. `country` — as against
+          `country-name` — is the autofill token for the code itself.
+        */}
+        {field("country", t("addressCountry"), {
+          className: "col-span-2",
+          placeholder: t("addressCountryPlaceholder"),
+          autoComplete: "country",
+          maxLength: 2,
+          transform: (value) => value.toUpperCase(),
+        })}
       </div>
+
+      {error && <p className="text-2xs text-destructive">{error}</p>}
     </section>
   );
 }

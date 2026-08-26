@@ -1,3 +1,5 @@
+import { isKnownPayoutMethod } from "@/modules/payouts/fields";
+
 /**
  * A repayment the screen that opened the drawer already knows the shape of.
  *
@@ -27,10 +29,29 @@ export const SETTLE_TO_PARAM = "settleTo";
  */
 export const SETTLE_CURRENCY_PARAM = "settleIn";
 
+/**
+ * Which of the payee's methods the payer was looking at.
+ *
+ * The settle screen shows every way its reader can pay somebody back, and the
+ * one they picked there is the one they went and used — so the drawer opens
+ * with it rather than asking again about a choice already made.
+ *
+ * A code, not a label. The stored column takes words, but words are the
+ * reader's locale's business and a URL outlives the language it was written
+ * in; the drawer translates the code on arrival.
+ *
+ * Optional, unlike the other three: a debt is still a debt when nobody has
+ * said how it will be paid, and most of the links to this drawer are written
+ * by screens that show no methods at all.
+ */
+export const SETTLE_METHOD_PARAM = "settleVia";
+
 export interface SettleIntent {
   readonly fromParticipantId: string;
   readonly toParticipantId: string;
   readonly currency: string;
+  /** A `PaymentMethodId`, or null when the link named none. */
+  readonly method: string | null;
 }
 
 /**
@@ -44,13 +65,21 @@ export type ParamSource =
 /** The path that opens the add-entry drawer on this debt. */
 export function settleIntentPath(
   groupId: string,
-  intent: SettleIntent,
+  intent: {
+    readonly fromParticipantId: string;
+    readonly toParticipantId: string;
+    readonly currency: string;
+    readonly method?: string | null;
+  },
 ): string {
   const query = new URLSearchParams({
     [SETTLE_FROM_PARAM]: intent.fromParticipantId,
     [SETTLE_TO_PARAM]: intent.toParticipantId,
     [SETTLE_CURRENCY_PARAM]: intent.currency,
   });
+  // Left off entirely rather than written empty: a caller with no method to
+  // name should produce the same link it produced before there was one.
+  if (intent.method) query.set(SETTLE_METHOD_PARAM, intent.method);
   return `/groups/${groupId}/expenses/new?${query.toString()}`;
 }
 
@@ -71,6 +100,7 @@ export function settleIntentOf(source: ParamSource): SettleIntent | null {
   const from = valueOf(source, SETTLE_FROM_PARAM);
   const to = valueOf(source, SETTLE_TO_PARAM);
   const currency = valueOf(source, SETTLE_CURRENCY_PARAM);
+  const method = valueOf(source, SETTLE_METHOD_PARAM);
 
   if (!from || !to || !currency) return null;
   // Nobody repays themselves; the form refuses it too, and a query that says
@@ -81,6 +111,12 @@ export function settleIntentOf(source: ParamSource): SettleIntent | null {
     fromParticipantId: from,
     toParticipantId: to,
     currency,
+    // Checked against the vocabulary rather than passed through, because the
+    // drawer turns it into the words it will store: a code nothing can
+    // translate would be written to the column verbatim, and
+    // `?settleVia=<anything>` is not a way to choose what a settlement says
+    // it was paid by.
+    method: isKnownPayoutMethod(method) ? method : null,
   };
 }
 

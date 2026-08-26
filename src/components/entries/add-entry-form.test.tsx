@@ -1989,6 +1989,7 @@ describe("a drawer opened on a stated debt", () => {
     toParticipantId: "seb",
     amountMinor: "12840",
     currency: "CHF",
+    method: null,
   };
 
   it("opens on the settle tab with the pair and the amount filled in", () => {
@@ -2018,6 +2019,52 @@ describe("a drawer opened on a stated debt", () => {
         amount: "12840",
         currency: "CHF",
       }),
+    );
+  });
+
+  /**
+   * The chip the settle screen was showing, which is how the money moved.
+   *
+   * The label is what the column stores, so the code makes the trip and the
+   * words are looked up here — a settlement still reads "TWINT" years after
+   * the picker's list has moved on, in whatever language it was recorded in.
+   */
+  it("opens with the method the settle screen was showing", () => {
+    renderForm(
+      { prefill: { ...PREFILL, method: "twint" } },
+      "/groups/g1/expenses/new",
+    );
+
+    expect(screen.getByRole("button", { name: /TWINT/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("records it without anybody touching the picker", async () => {
+    const user = userEvent.setup();
+    renderForm(
+      { prefill: { ...PREFILL, method: "twint" } },
+      "/groups/g1/expenses/new",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ paymentMethod: "TWINT" }),
+    );
+  });
+
+  it("leaves the picker untouched when the link named no method", async () => {
+    const user = userEvent.setup();
+    renderForm({ prefill: PREFILL }, "/groups/g1/expenses/new");
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({ paymentMethod: "" }),
     );
   });
 

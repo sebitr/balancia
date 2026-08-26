@@ -239,6 +239,7 @@ export function ExpiryRow({
   expiresAt,
   now,
   disabled = false,
+  onChange,
 }: {
   groupId: string;
   label: string;
@@ -251,6 +252,16 @@ export function ExpiryRow({
    */
   now: string;
   disabled?: boolean;
+  /**
+   * Told when the reader moves the value, for a caller that says something
+   * about it elsewhere on the screen.
+   *
+   * The date and the clock it was set against travel together, because either
+   * on its own is half a subtraction. Only the reader's own changes are
+   * reported: a new `expiresAt` prop is the caller's own news arriving back,
+   * and firing on that would be this row telling it what it just said.
+   */
+  onChange?: (expiresAt: string | null, now: number) => void;
 }) {
   const t = useTranslations("inviteLink");
   const router = useRouter();
@@ -283,14 +294,18 @@ export function ExpiryRow({
     // measured against have to be the same "now", or "In 24 hours" rounds up
     // to 25 the moment they are a millisecond apart.
     const chosenAt = Date.now();
-    setValue(expiryDate(choice, new Date(chosenAt))?.toISOString() ?? null);
+    const chosen =
+      expiryDate(choice, new Date(chosenAt))?.toISOString() ?? null;
+    setValue(chosen);
     setAt(chosenAt);
+    onChange?.(chosen, chosenAt);
     setPending(true);
     try {
       const result = await setJoinLinkExpiryAction(groupId, choice);
       if (!result.ok) {
         setValue(previous.value);
         setAt(previous.at);
+        onChange?.(previous.value, previous.at);
         toast.error(result.error ?? t("expiryFailed"));
         return;
       }

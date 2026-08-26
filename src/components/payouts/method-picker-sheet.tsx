@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, Search, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { MethodMark } from "./method-mark";
+import { MethodMark } from "@/components/settlements/method-mark";
 import { cn } from "@/lib/utils";
 import {
   countryForTimezone,
@@ -216,7 +216,12 @@ function MethodRow({
           : "hover:bg-foreground/6 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
       )}
     >
-      <MethodMark method={method} label={label} size={30} />
+      <MethodMark
+        method={findPaymentMethod(method) ?? null}
+        label={label}
+        size={30}
+        unbranded="tile"
+      />
       <span className="min-w-0 flex-1 truncate text-sm">{name ?? label}</span>
       <Check
         aria-hidden="true"

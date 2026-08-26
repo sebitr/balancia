@@ -132,11 +132,7 @@ export function PositionCard({
               groupName={groupName}
               senderName={senderName}
               recipients={recipients}
-              label={
-                recipients.length === 1
-                  ? t("remindPerson", { name: recipients[0].name })
-                  : t("remindAll")
-              }
+              label={recipients.length === 1 ? t("remind") : t("remindAll")}
               variant="outline"
               className="h-10 flex-1 rounded-lg text-sm font-medium"
             />

@@ -1,6 +1,6 @@
 "use client";
 
-import { MethodMark } from "@/components/payouts/method-mark";
+import { MethodMark } from "@/components/settlements/method-mark";
 import { useTranslations } from "next-intl";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 
@@ -31,16 +31,17 @@ export function PayoutsSummary({ methods }: { methods: readonly string[] }) {
           // Overlapped and ringed in the card's own colour, so the stack reads
           // as one object rather than as three tiles that ran into each other.
           className="rounded-[8px] ring-2 ring-card"
-          style={{ marginLeft: index === 0 ? 0 : -7 }}
+          style={{ marginLeft: index === 0 ? 0 : -5 }}
         >
           <MethodMark
-            method={method}
+            method={findPaymentMethod(method) ?? null}
             label={
               findPaymentMethod(method)
                 ? tMethods(method as Parameters<typeof tMethods>[0])
                 : method
             }
             size={22}
+            unbranded="tile"
           />
         </span>
       ))}
