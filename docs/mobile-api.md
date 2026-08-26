@@ -128,6 +128,23 @@ it either — what a reader sees first is this.
 one screen with room for it. Read an empty list as "no room for it here", never
 as "this group has never settled anything".
 
+It also carries `payoutHints`: how to pay each debt the reader has been told
+they owe, matched to a row by `participantId` **and** `currency`. One hint per
+debt rather than per person, because a payment code is made of a debt — in a
+group balancing in two currencies you can owe the same person twice, and one
+code naming one amount would be wrong on one of those rows. `methods` is the
+recipient's whole list in their own order; which of them the reader can
+actually use is a fact about the reader, and this side of the wire knows none
+of it. `qr` is built only for a bank transfer and only when the standard has
+everything it needs, and `qrMissing` says why there is none when that is
+something the reader can act on — otherwise it is null and stays silent.
+
+These details are readable by exactly the people who owe their owner money,
+and that is structural rather than checked: a recipient reaches the list only
+by appearing in a transfer the group's own balances say the reader owes. There
+is no route that takes a name and answers with an IBAN, and adding one would
+be the mistake.
+
 ## Writes
 
 | Method | Path                                               | Body                                                                                                                             |
@@ -160,6 +177,8 @@ as "this group has never settled anything".
 | POST   | `/api/notifications/read`                          | `{ids?: [uuid]}`; omit to mark all read                                                                                          |
 | PUT    | `/api/notifications/preferences`                   | all five category booleans                                                                                                       |
 | PATCH  | `/api/profile`                                     | `{preferredCurrency?: code\|null, favoriteCurrencies?: [code]}`                                                                  |
+| GET    | `/api/profile/payouts`                             | the caller's own `{methods, address}` — how they want to be paid back; never anybody else's                                      |
+| PUT    | `/api/profile/payouts`                             | `{methods?: [{method, detail}], address?: {...}\|null}`; the whole ordered list, 422 `{method, reason}` on a rejected detail     |
 | GET    | `/api/profile/avatar`                              | the caller's own photo, or 404; never anybody else's                                                                             |
 | POST   | `/api/profile/avatar`                              | `multipart/form-data` with `file`; type is sniffed, 1 MB cap, replaces and sweeps the old one                                    |
 | DELETE | `/api/profile/avatar`                              | 204; the account goes back to its initial                                                                                        |
