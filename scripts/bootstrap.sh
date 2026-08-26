@@ -48,7 +48,7 @@ semantic_sentinel="$root_dir/public/models/Xenova/paraphrase-multilingual-MiniLM
 # a list as well as in the code so the prompts can say "3 of 7" — a wizard that
 # will not say how long it is stays longer than it should. One name per
 # question block; adding a block means adding a name.
-question_keys='APP_URL ALLOW_REGISTRATION EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED'
+question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED'
 
 # ── Presentation ────────────────────────────────────────────────────────────
 
@@ -884,6 +884,37 @@ TEXT
     fi
   fi
 
+  # ── Demo ──────────────────────────────────────────────────────────────────
+  # Asked, rather than left to the .env file, because the homepage stays silent
+  # about a demo nobody configured — an operator who runs one would otherwise
+  # never learn the link exists.
+  if ! has_value DEMO_URL; then
+    question 'Demo'
+    prose <<'TEXT'
+If you run a public demo of Balancia somewhere, its address goes here and
+the homepage gains a "Try the demo" button beside "Create an account".
+
+The demo itself is a separate deployment that keeps everything in memory
+and stores nothing — see docs/demo.md. Leave this blank if you do not
+run one; the button simply does not appear.
+
+TEXT
+    if ask_yes_no 'Do you run a demo of this instance?' n; then
+      while :; do
+        ask_line 'Demo address' 'https://demo.example.com'
+        case $reply in
+          http://* | https://*) break ;;
+          *) note "${dim}Needs to be an absolute URL, starting http:// or https://.${reset}" ;;
+        esac
+      done
+      write_setting DEMO_URL "$reply" \
+        'Address of the public demo. The homepage links to it. Blank hides the link.'
+    else
+      write_setting DEMO_URL '' \
+        'Address of a public demo, if you run one. Blank hides the homepage link.'
+    fi
+  fi
+
   # ── Exchange rates ────────────────────────────────────────────────────────
   if ! has_value EXCHANGE_RATE_PROVIDER; then
     question 'Exchange rates'
@@ -1248,6 +1279,32 @@ or RUN_WORKER_IN_WEB=true to keep them in the app container."
       ;;
   esac
 
+  # The one setting in this file that can make an instance's real data
+  # unreachable. DEMO_MODE replaces the database with one held in memory, so an
+  # operator who set it on the wrong stack sees an app that works perfectly and
+  # has forgotten every account. Checked on every run, and not only when it was
+  # answered above, because this is a line people paste in from docs/demo.md.
+  if is_enabled DEMO_MODE; then
+    heading 'This instance is configured as a demo'
+    prose <<'TEXT'
+DEMO_MODE is on. This container will not use PostgreSQL at all: it builds
+the schema in memory at startup, hands each visitor a throwaway account
+seeded with sample groups, and loses the lot when it restarts.
+
+That is right for a public demo and wrong for anything else — if this is
+the stack holding your real data, every account in it will be
+unreachable until DEMO_MODE is off again. Nothing is deleted; the
+database is simply not read.
+
+TEXT
+    if ask_yes_no 'Is this deployment meant to be a demo?' n; then
+      note "${dim}Leaving DEMO_MODE on. See docs/demo.md.${reset}"
+    else
+      write_setting DEMO_MODE false \
+        'Not a demo: use the real database. Supersedes the line above — last one wins.'
+    fi
+  fi
+
   # Metrics say nothing about anyone's money, but they do say how many people
   # use this instance and how much of it is failing, and the app's port is
   # published. The schema allows an empty token because a scrape target on a
@@ -1381,6 +1438,13 @@ summary() {
     row 'Registration' 'open'
   else
     row 'Registration' 'closed'
+  fi
+  if is_enabled DEMO_MODE; then
+    # Worth saying loudly rather than as a row: an operator seeing this on the
+    # stack they meant to hold real data has a problem to fix.
+    row 'Demo mode' 'ON — in memory, nothing is saved'
+  elif [ -n "$(value_of DEMO_URL)" ]; then
+    row 'Demo link' "$(value_of DEMO_URL)"
   fi
   case $(value_of EXCHANGE_RATE_PROVIDER) in
     frankfurter) row 'Exchange rates' 'frankfurter' ;;

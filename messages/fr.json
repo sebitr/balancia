@@ -999,7 +999,8 @@
         "noAds": "Gratuit, sans publicité",
         "noPaywall": "Open source",
         "guests": "Participation sans compte"
-      }
+      },
+      "tryDemo": "Essayer la démo"
     },
     "demo": {
       "groupName": "Week-end à Lisbonne",
@@ -1239,7 +1240,8 @@
       "haveAccount": "J'ai déjà un compte →",
       "contributorBody": "Vous préférez contribuer au projet ? Les issues et pull requests sont les bienvenues.",
       "contribute": "Contribuer sur GitHub",
-      "registrationClosed": "Les inscriptions sont fermées sur cette instance. Demandez un compte à l'administrateur ou utilisez un lien d'invitation si vous en avez reçu un."
+      "registrationClosed": "Les inscriptions sont fermées sur cette instance. Demandez un compte à l'administrateur ou utilisez un lien d'invitation si vous en avez reçu un.",
+      "tryDemo": "Essayer la démo d'abord →"
     },
     "footer": {
       "taglineLine1": "Dépenses partagées,",
@@ -3149,5 +3151,10 @@
     "testHelp": "Envoie le rapport ci-dessus maintenant, pour vérifier qu’il atteint la destination. Rien n’est envoyé sans cette action.",
     "testSent": "Rapport envoyé.",
     "testFailed": "Le rapport n’a pas pu être envoyé."
+  },
+  "demo": {
+    "signInBody": "Ceci est une démo. Tu obtiens tes propres groupes, déjà remplis et prêts à être modifiés — rien n'est enregistré, et tout disparaît au bout de quelques heures.",
+    "enter": "Entrer dans la démo",
+    "bannerBody": "Démo — tes modifications ne sont pas enregistrées et disparaissent au bout de quelques heures."
   }
 }

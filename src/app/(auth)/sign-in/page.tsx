@@ -85,6 +85,7 @@ export default async function SignInPage({
       appleEnabled={env.appleSignInEnabled}
       initialError={initialError}
       initialNotice={initialNotice}
+      demoMode={env.DEMO_MODE}
     />
   );
 }

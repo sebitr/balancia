@@ -1,0 +1,70 @@
+# A public demo of Balancia. One container, no database, nothing persisted.
+#
+#   docker compose -f compose.demo.yaml up -d
+#
+# Standalone rather than an overlay on compose.yaml, unlike compose.image.yaml:
+# almost everything that file sets up is a database, a volume for it, a
+# dependency on its health and a migration step, and a demo has none of those.
+# Resetting them one by one would be longer than this, and would leave a stack
+# that still looks like it has data in it.
+#
+# What the demo actually is: the app builds the whole schema in memory at
+# startup from the committed migrations, and signing in with demo / demo mints
+# a throwaway account seeded with sample groups. Two visitors never see each
+# other's data. Everything is swept after a couple of hours, and restarting the
+# container discards the lot. See docs/demo.md.
+#
+# Run it beside the real instance on its own hostname — demo.example.com — and
+# point DEMO_URL at it from the real instance's .env, which is what puts the
+# "Try the demo" button on the homepage.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: balancia:local
+    container_name: balancia-demo
+    environment:
+      DEMO_MODE: "true"
+      # The demo's own address, not the real instance's: it is what the
+      # WebAuthn relying-party ID and the CSRF origin check are derived from.
+      APP_URL: ${DEMO_APP_URL:?set DEMO_APP_URL, e.g. https://demo.example.com}
+      # Sessions do not need to survive a restart here — nothing else does —
+      # but the schema requires a value, and one that changes on every deploy
+      # would be a puzzling way to sign everybody out.
+      AUTH_SECRET: ${DEMO_AUTH_SECRET:?generate one, e.g. openssl rand -hex 32}
+      # Closed. The demo button is the way in; a real-looking account created
+      # here would be gone at the next restart, which is worse than not
+      # offering it. `demo` / `demo` is unaffected — it is not registration.
+      ALLOW_REGISTRATION: "false"
+      # No database, so no queue: pg-boss keeps its jobs in PostgreSQL. The app
+      # skips starting it in demo mode; this only stops it being asked to.
+      RUN_WORKER_IN_WEB: "false"
+      # Left on, and worth being deliberate about: the rate cache lives in the
+      # in-memory database, which every visitor shares, so this is one request
+      # to api.frankfurter.dev per currency pair per process — not per visitor.
+      # Off, the dashboard greets people with "Rates unavailable" and cannot
+      # add up a position across two currencies, which is one of the things
+      # they came to see. Set it to `none` to run the demo with no outbound
+      # requests at all.
+      EXCHANGE_RATE_PROVIDER: ${DEMO_EXCHANGE_RATE_PROVIDER:-frankfurter}
+      LOG_LEVEL: ${DEMO_LOG_LEVEL:-info}
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "${DEMO_PORT:-3001}:3000"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "curl -fsS http://127.0.0.1:3000/api/health/ready || exit 1"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Longer than the real stack's: the schema is built and every migration
+      # applied before the first request is served.
+      start_period: 60s
+    restart: unless-stopped
+    # Memory is the whole cost of a demo — every visitor's groups are rows in
+    # this process. The app caps concurrent demos and sweeps them after two
+    # hours; this is the backstop if that is ever wrong.
+    mem_limit: ${DEMO_MEMORY_LIMIT:-1g}

@@ -999,7 +999,8 @@
         "noAds": "No ads",
         "noPaywall": "Nothing behind a paywall",
         "guests": "Guests need no account"
-      }
+      },
+      "tryDemo": "Try the demo"
     },
     "demo": {
       "groupName": "Weekend in Lisbon",
@@ -1239,7 +1240,8 @@
       "haveAccount": "I already have an account →",
       "contributorBody": "Rather build than sign up? Issues and pull requests are welcome.",
       "contribute": "Contribute on GitHub",
-      "registrationClosed": "Registration is closed on this instance. Ask the administrator for an account, or use a guest invitation link if you have one."
+      "registrationClosed": "Registration is closed on this instance. Ask the administrator for an account, or use a guest invitation link if you have one.",
+      "tryDemo": "Try the demo first →"
     },
     "footer": {
       "taglineLine1": "Shared expenses,",
@@ -3149,5 +3151,10 @@
     "testHelp": "Sends the report above now, so you can confirm it reaches the endpoint. Nothing is sent unless you press it.",
     "testSent": "Report sent.",
     "testFailed": "The report could not be sent."
+  },
+  "demo": {
+    "signInBody": "This is a live demo. You get your own groups, filled in and ready to change — nothing here is saved, and it disappears after a couple of hours.",
+    "enter": "Enter the demo",
+    "bannerBody": "Demo — your changes are not saved and disappear after a couple of hours."
   }
 }

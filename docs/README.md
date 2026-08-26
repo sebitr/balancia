@@ -25,6 +25,7 @@ useful guide.
 | [Splitwise migration](data-migration.md)    | Importing a CSV export or JSON backup safely                          |
 | [Notifications](notifications.md)           | In-app notifications, Web Push and delivery behavior                  |
 | [Email](emails.md)                          | SMTP, verification, password recovery and message previews            |
+| [Running a demo](demo.md)                   | A public try-before-you-sign-up instance that stores nothing          |
 
 ## Understanding and trusting Balancia
 

@@ -49,6 +49,12 @@ Under Compose the entrypoint assembles this from `POSTGRES_PASSWORD`,
 percent-encoding the password. Set it explicitly only to point the app at a
 database outside the Compose project; an explicit value always wins.
 
+Required, with one exception: an instance running as a demo (`DEMO_MODE=true`)
+keeps everything in memory and connects to no database, so it needs none. Every
+other deployment is refused at startup without one. A demo instance that _has_
+a `DATABASE_URL` — which happens when it shares an `.env` with the real stack —
+ignores it, and says so in the log.
+
 When you do set it by hand and the password contains `/`, `#` or `?`,
 percent-encode it yourself. Those characters end the URL's authority section,
 so what follows is no longer read as a host and port and the string fails to
@@ -338,6 +344,55 @@ password guessing and account enumeration expensive.
 Rate limiting keys on the client IP, taken from `X-Forwarded-For` or
 `X-Real-IP`. If your proxy does not set those, every request looks like one
 client and the limits apply to everyone collectively.
+
+---
+
+## Demo (optional)
+
+Two settings, and they belong on two different deployments. The full guide is
+[docs/demo.md](demo.md).
+
+### `DEMO_URL`
+
+Default unset. The address of a public demo of this instance. Setting it puts a
+"Try the demo" link on the homepage, beside "Create an account".
+
+```bash
+DEMO_URL=https://demo.example.com
+```
+
+Goes on the **real** instance, not the demo one. Left unset, no link is
+rendered — which is why a self-hosted deployment never advertises somebody
+else's demo to its own users.
+
+### `DEMO_MODE`
+
+Default `false`. Turns this process **into** a demo.
+
+The instance stops using PostgreSQL entirely. It builds the whole schema in
+memory at startup from the committed migrations, and serves every query from
+there. Nothing a visitor does is written to disk; restarting the container is
+the reset. Signing in with `demo` / `demo` mints a throwaway account with its
+own seeded groups, so two visitors never see each other's data, and each is
+swept a couple of hours later.
+
+```bash
+DEMO_MODE=true
+```
+
+**Do not set this on the instance holding your real data.** There is one
+database per process and this replaces it: every real account would be
+unreachable until you turned it back off. Nothing is deleted — the database is
+simply not read — but an app that works perfectly and has forgotten everyone is
+an alarming thing to discover. `./scripts/bootstrap.sh` asks about it on every
+run for that reason.
+
+It belongs to a deployment of its own, on its own hostname, which is what
+[compose.demo.yaml](../compose.demo.yaml) is.
+
+What a demo instance does not have: background jobs (pg-boss stores its queues
+in a real database), so no recurring expenses are generated and no notification
+is delivered. `DATABASE_URL` is not required, and is ignored if present.
 
 ---
 

@@ -2,6 +2,7 @@ import "server-only";
 import { Pool, types } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { getEnv } from "@/lib/env";
+import { getDemoDatabase } from "./demo-database";
 import {
   databaseQueryDuration,
   poolConnections,
@@ -34,6 +35,17 @@ export type Database = NodePgDatabase<typeof schema>;
 
 function createPool(): Pool {
   const env = getEnv();
+  if (env.DEMO_MODE || !env.DATABASE_URL) {
+    // Unreachable through getDb(), which returns the in-memory database before
+    // it gets here. Reaching it means something asked for a real connection on
+    // an instance that has none — worth a message that says which.
+    throw new Error(
+      env.DEMO_MODE
+        ? "This is a demo instance (DEMO_MODE=true). It has no PostgreSQL connection; " +
+            "its data lives in memory. See src/lib/db/demo-database.ts."
+        : "DATABASE_URL is not set, so no connection pool can be created.",
+    );
+  }
   return new Pool({
     connectionString: env.DATABASE_URL,
     max: env.DATABASE_POOL_MAX,
@@ -94,6 +106,16 @@ function instrument(pool: Pool): Pool {
 let cachedDb: Database | undefined;
 
 export function getDb(): Database {
+  /*
+   * The whole of demo mode, as far as the rest of the application is
+   * concerned. A demo instance answers every query from PostgreSQL-in-WASM
+   * held in this process, so the ~190 call sites below this one — and the
+   * services, the balance engine and the migrations they depend on — run
+   * unchanged and unaware. See src/lib/db/demo-database.ts.
+   */
+  if (getEnv().DEMO_MODE) {
+    return getDemoDatabase();
+  }
   cachedDb ??= drizzle(getPool(), { schema, casing: "snake_case" });
   return cachedDb;
 }

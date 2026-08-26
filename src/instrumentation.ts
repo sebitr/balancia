@@ -59,7 +59,44 @@ export async function register(): Promise<void> {
   // no queue. The worker is Node-only.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  if (!getEnv().RUN_WORKER_IN_WEB) return;
+  const env = getEnv();
+
+  /*
+   * A demo instance has no PostgreSQL to connect to: it builds the schema in
+   * memory here, from the committed migrations, and `getDb()` hands that to
+   * every query for the life of the process.
+   *
+   * This must finish before the first request, and it does — Next calls
+   * `register` once per server instance and waits for it. It is also the one
+   * failure in this file that *is* fatal: an unbootstrapped demo instance can
+   * serve nothing, so it should refuse to come up rather than 500 every page.
+   */
+  if (env.DEMO_MODE) {
+    if (env.DATABASE_URL) {
+      // Usually harmless — a demo container sharing the real stack's `.env`
+      // picks one up. Said out loud all the same, because the one reading that
+      // is wrong is an operator who switched DEMO_MODE on next to real
+      // accounts and is about to wonder where they went.
+      logger.warn(
+        "DEMO_MODE is on, so DATABASE_URL is ignored: this instance serves an " +
+          "in-memory database and no account in PostgreSQL can be reached from it",
+      );
+    }
+
+    const { bootstrapDemoDatabase } = await import("@/lib/db/demo-database");
+    await bootstrapDemoDatabase();
+
+    const { startDemoSweeper } = await import("@/modules/demo/sessions");
+    startDemoSweeper();
+
+    // pg-boss keeps its queues in a real database, so there is nothing for the
+    // worker to attach to. Recurring expenses and notification delivery are
+    // the visible cost, and docs/demo.md says so.
+    logger.info("Demo mode: background jobs are off and no data is persisted");
+    return;
+  }
+
+  if (!env.RUN_WORKER_IN_WEB) return;
 
   const { startWorker } = await import("@/worker/run");
 
