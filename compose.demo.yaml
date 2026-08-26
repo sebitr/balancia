@@ -23,7 +23,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: balancia:local
+    # Its own tag, not compose.yaml's `balancia:local`. Sharing one would mean
+    # a rebuild here silently replacing the image the real stack restarts from,
+    # and the two checkouts are rarely at the same commit.
+    image: balancia:demo
     container_name: balancia-demo
     environment:
       DEMO_MODE: "true"
