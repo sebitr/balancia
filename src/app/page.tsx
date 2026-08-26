@@ -118,6 +118,12 @@ export default async function LandingPage() {
   if (await getCurrentUser()) redirect("/dashboard");
 
   const env = getEnv();
+
+  // A demo instance has no marketing to do. Whoever opened it followed a "Try
+  // the demo" link that already made the pitch, and the page they want is one
+  // click further on — so spend that click for them. The real instance keeps
+  // its homepage, which is the only place this page was ever aimed at.
+  if (env.DEMO_MODE) redirect("/sign-in");
   const [t, analytics, locale] = await Promise.all([
     getTranslations("marketing"),
     publicPageAnalytics(),

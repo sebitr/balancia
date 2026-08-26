@@ -390,6 +390,26 @@ run for that reason.
 It belongs to a deployment of its own, on its own hostname, which is what
 [compose.demo.yaml](../compose.demo.yaml) is.
 
+A demo also skips its own homepage: opening `/` there goes straight to the
+sign-in screen, because whoever followed a "Try the demo" link has already read
+the pitch. That is what `DEMO_EXIT_URL` exists to undo on the way out.
+
+### `DEMO_EXIT_URL`
+
+Default unset. Where signing out of a demo goes.
+
+```bash
+DEMO_EXIT_URL=https://balancia.example.com
+```
+
+Goes on the **demo** instance — the mirror of `DEMO_URL`, which goes on the
+real one. Since `/` on a demo redirects to the sign-in screen, there is no
+homepage there to return to; without this, signing out lands back on the screen
+the visitor just left and reads as a sign-out that failed.
+
+Read only when `DEMO_MODE` is on. On a real instance signing out goes to `/`,
+as it always has, whatever this is set to.
+
 What a demo instance does not have: background jobs (pg-boss stores its queues
 in a real database), so no recurring expenses are generated and no notification
 is delivered. `DATABASE_URL` is not required, and is ignored if present.

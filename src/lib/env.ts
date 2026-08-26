@@ -198,6 +198,24 @@ const envSchema = z
     ),
 
     /**
+     * The way out of the demo: where signing out sends someone, e.g.
+     * https://balancia.app.
+     *
+     * The mirror of DEMO_URL, and set on the *demo* instance. A demo has no
+     * homepage of its own to return to — `/` goes straight to the sign-in
+     * screen there — so without this, signing out would land back on the
+     * sign-in screen the visitor just left, which reads as a failed sign-out.
+     *
+     * Unset, that is exactly what happens, and it is the only sensible default:
+     * an instance cannot guess which site it is a demo of. Ignored entirely
+     * when DEMO_MODE is off, where signing out has always gone to `/`.
+     */
+    DEMO_EXIT_URL: optionalString.refine(
+      (value) => value === undefined || URL.canParse(value),
+      "DEMO_EXIT_URL must be an absolute URL, e.g. https://balancia.app",
+    ),
+
+    /**
      * Overrides the per-IP limit on credential endpoints (sign-in, sign-up,
      * password reset).
      *

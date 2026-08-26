@@ -122,6 +122,9 @@ x-app-environment: &app-environment
   # something to switch on here — it would replace the data this stack serves.
   # compose.demo.yaml is the stack that sets it.
   DEMO_MODE: ${DEMO_MODE:-}
+  # Where signing out goes when this *is* a demo — the real site. Belongs to
+  # compose.demo.yaml too; forwarded here so the two stacks read one schema.
+  DEMO_EXIT_URL: ${DEMO_EXIT_URL:-}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:

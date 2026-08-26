@@ -107,6 +107,9 @@ x-dev-environment: &dev-environment
   # the public demo serves from, and is the way to see what a visitor sees.
   DEMO_MODE: ${DEV_DEMO_MODE:-false}
   DEMO_URL: ${DEV_DEMO_URL:-}
+  # Only read when DEV_DEMO_MODE is on, and worth setting when it is: without
+  # it, signing out of the dev demo returns to the sign-in screen it came from.
+  DEMO_EXIT_URL: ${DEV_DEMO_EXIT_URL:-}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

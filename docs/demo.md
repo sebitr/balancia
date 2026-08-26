@@ -95,8 +95,15 @@ database, and this one has none:
 COMPOSE_FILE=compose.demo.yaml
 DEMO_APP_URL=https://demo.example.com
 DEMO_AUTH_SECRET=<openssl rand -hex 32>
+DEMO_EXIT_URL=https://balancia.example.com
 DEMO_PORT=3001
 ```
+
+`DEMO_EXIT_URL` is the way back to your real instance. A demo has no homepage
+of its own — opening `/` goes straight to the sign-in screen, since anyone
+arriving followed a link that already made the pitch — so signing out has
+nowhere to return to. Leave it unset and signing out lands on that same sign-in
+screen, which reads as though it did not work.
 
 `COMPOSE_FILE` is what lets every ordinary `docker compose` command in this
 directory mean the demo stack, with no `-f` to remember — the same trick

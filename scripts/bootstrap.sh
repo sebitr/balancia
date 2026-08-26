@@ -1299,6 +1299,37 @@ database is simply not read.
 TEXT
     if ask_yes_no 'Is this deployment meant to be a demo?' n; then
       note "${dim}Leaving DEMO_MODE on. See docs/demo.md.${reset}"
+      # Only asked here, because on any other stack the answer is unused. A
+      # demo's "/" goes to the sign-in screen, so signing out has nowhere of
+      # its own to return to and lands back where it started unless this says
+      # otherwise.
+      if ! has_value DEMO_EXIT_URL; then
+        printf '\n'
+        prose <<'TEXT'
+Signing out of a demo needs somewhere to go. A demo has no homepage of
+its own — opening it goes straight to the sign-in screen — so without an
+address here, signing out returns to that same screen and reads as
+though nothing happened.
+
+Give the address of your real instance, or leave this blank to decide
+later.
+
+TEXT
+        if ask_yes_no 'Send people to your real instance when they sign out?' y; then
+          while :; do
+            ask_line 'Real instance address' 'https://balancia.example.com'
+            case $reply in
+              http://* | https://*) break ;;
+              *) note "${dim}Needs to be an absolute URL, starting http:// or https://.${reset}" ;;
+            esac
+          done
+          write_setting DEMO_EXIT_URL "$reply" \
+            'Where signing out of this demo goes. Blank keeps it on the sign-in screen.'
+        else
+          write_setting DEMO_EXIT_URL '' \
+            'Where signing out of this demo goes. Blank keeps it on the sign-in screen.'
+        fi
+      fi
     else
       write_setting DEMO_MODE false \
         'Not a demo: use the real database. Supersedes the line above — last one wins.'
@@ -1443,6 +1474,11 @@ summary() {
     # Worth saying loudly rather than as a row: an operator seeing this on the
     # stack they meant to hold real data has a problem to fix.
     row 'Demo mode' 'ON — in memory, nothing is saved'
+    if [ -n "$(value_of DEMO_EXIT_URL)" ]; then
+      row 'Sign-out goes to' "$(value_of DEMO_EXIT_URL)"
+    else
+      row 'Sign-out goes to' 'the sign-in screen (DEMO_EXIT_URL unset)'
+    fi
   elif [ -n "$(value_of DEMO_URL)" ]; then
     row 'Demo link' "$(value_of DEMO_URL)"
   fi
