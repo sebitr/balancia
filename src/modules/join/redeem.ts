@@ -109,6 +109,12 @@ async function decorate(
       .where(
         and(eq(participants.groupId, groupId), isNull(participants.removedAt)),
       ),
+    // Deliberately *not* filtered by `removedAt`, so that this agrees with
+    // what taking the link would do. `claimMember` and `createMember` both
+    // answer `already-member` for a row this account holds whether or not it
+    // was removed, and neither restores it — so a preview that filtered
+    // removed seats out would promise a join that comes back as a no-op, and
+    // send the app to a group it cannot open.
     viewerUserId
       ? db
           .select({ id: participants.id })
@@ -117,7 +123,6 @@ async function decorate(
             and(
               eq(participants.groupId, groupId),
               eq(participants.userId, viewerUserId),
-              isNull(participants.removedAt),
             ),
           )
           .limit(1)

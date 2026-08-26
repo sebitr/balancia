@@ -102,6 +102,29 @@ describe("previewing a group-wide link", () => {
     expect(preview.alreadyMember).toBe(true);
   });
 
+  it("agrees with what taking the link would do for a removed member", async () => {
+    const owner = await createTestUser();
+    const group = await createTestGroup(owner);
+    const link = await createJoinLink(group.groupId);
+    await getDb()
+      .update(participants)
+      .set({ removedAt: new Date() })
+      .where(eq(participants.id, group.ownerParticipantId));
+
+    const preview = await previewGroupLink(link.token, owner.userId);
+    const taken = await redeemGroupLink({
+      token: link.token,
+      userId: owner.userId,
+      displayName: owner.name,
+    });
+
+    // Neither half restores a removed seat, so the preview must not offer a
+    // join that comes back as a no-op — the app would route to a group the
+    // account cannot open.
+    expect(preview.alreadyMember).toBe(true);
+    expect(taken.participantId).toBe(group.ownerParticipantId);
+  });
+
   it("carries the group's icon and accent, in the DTO's own vocabulary", async () => {
     const owner = await createTestUser();
     const group = await createTestGroup(owner);
