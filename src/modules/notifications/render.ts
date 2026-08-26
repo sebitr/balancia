@@ -226,12 +226,21 @@ export function renderNotification(
     }
 
     case "settlement": {
+      const incoming = payload.direction === "incoming";
+      // A payment has two ends, and the reader is one of them — so the
+      // counterpart is the *other* one, which on an incoming payment is
+      // whoever paid. Naming them made the deletion read "Adrien removed a
+      // payment with Adrien" every time the payer was the one who removed it.
+      // Both directions say where the money was going instead, the way
+      // recording it already did.
       const key =
         entry.type === "settlement.deleted"
-          ? "settlementDeleted"
+          ? incoming
+            ? "settlementDeletedIncoming"
+            : "settlementDeletedOutgoing"
           : entry.type === "settlement.updated"
             ? "settlementUpdated"
-            : payload.direction === "incoming"
+            : incoming
               ? "settlementIncoming"
               : "settlementOutgoing";
       return line({

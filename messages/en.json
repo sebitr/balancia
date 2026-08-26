@@ -2391,7 +2391,8 @@
     "settlementIncoming": "{actor} recorded a payment to you",
     "settlementOutgoing": "{actor} recorded your payment to {counterpart}",
     "settlementUpdated": "{actor} changed a payment with {counterpart}",
-    "settlementDeleted": "{actor} removed a payment with {counterpart}",
+    "settlementDeletedIncoming": "{actor} removed a payment to you",
+    "settlementDeletedOutgoing": "{actor} removed your payment to {counterpart}",
     "recurringGenerated": "{description} was added automatically",
     "importCompleted": "Import finished: {imported} added, {skipped} skipped, {failed} not imported",
     "reminderTitle": "{amount} from {group}"
