@@ -2967,6 +2967,8 @@
     "copied": "Copied",
     "preferred": "Preferred",
     "openApp": "Open {method}",
+    "openAppWithAmount": "Opens with {amount} already filled in",
+    "openAppNoAmount": "Opens on their account — you type the amount",
     "cashNothing": "Nothing to copy — hand them the {amount}.",
     "detailCopied": "Payment details copied",
     "addressTitle": "Your address, for the Swiss QR code",
