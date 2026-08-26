@@ -45,7 +45,8 @@ their own. No parallel token scheme to issue or revoke.
 | DELETE | `/api/auth/session` | Revokes the session and clears the cookie.                                                               |
 
 Guests are not signed in here: the `/join/[token]` and `/join/g/[token]`
-routes are already plain HTTP and set the guest cookie themselves.
+routes are already plain HTTP and set the guest cookie themselves — see
+_Invitation links_ below for how a native client redeems one.
 
 `POST /api/auth/register` is `registerUser` over JSON — `{name, email,
 password}` → 201 `{user, verificationRequired}` under the `signUp` rate
@@ -194,6 +195,76 @@ Writes require the group to be active (`requireActive`), matching the actions
 mobile client: receipts upload to `POST /api/groups/:groupId/attachments`,
 `GET /api/groups/:groupId/export?format=json|csv|xlsx` downloads the group,
 and `GET /api/rates?from&to&on` suggests an exchange rate.
+
+## Invitation links
+
+Two link shapes exist, both minted by the endpoints in _Writes_ above, both
+carrying the token as the **last path segment** — never in the query string,
+where it would reach a referrer.
+
+| Shape             | What the token identifies             | Minted by                                                          |
+| ----------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| `/join/<token>`   | one named participant of one group    | `POST /api/groups/:groupId/participants/:participantId/invitation` |
+| `/join/g/<token>` | the group, with nobody identified yet | `POST /api/groups/:groupId/join-link`                              |
+
+The token is 32 random bytes base64url-encoded — 43 characters of
+`[A-Za-z0-9_-]` — and `isWellFormedToken` accepts 40 to 64 of them. Only its
+SHA-256 hash is stored, so a link can be shown once and never again; `GET
+/api/groups/:groupId/join-link` returns an eight-character prefix for
+identifying the live link in a UI, not the link itself.
+
+### Redeeming one
+
+**Those two paths are themselves the API.** There is no `/api/…` equivalent to
+call: both are plain HTTP `GET`s that set a cookie, which is the same session
+mechanism this API uses everywhere else, so a native client redeems a link by
+requesting the URL it was handed with its own cookie storage attached.
+
+Neither requires an authenticated session — the link _is_ the credential, and a
+signed-out reader is the ordinary case. What each does differs:
+
+- `GET /join/<token>` mints a **guest session** for that participant, sets
+  `balancia_guest`, and answers `303` to `/invite`. The client can stop at the
+  `303`; the cookie is already set. `GET /api/auth/session` then reports
+  `{guest}` naming the group.
+- `GET /join/g/<token>` identifies nobody. It sets a join cookie holding the
+  link token and answers `303` to `/join/start`, where the reader picks which
+  of the group's unclaimed names is theirs. A caller who is **already signed in
+  and already a member** is sent to `/groups/:groupId` instead — that redirect
+  target is how a client tells "you are in this group already" from "carry on
+  joining". Finishing the flow is a Server Action with no JSON equivalent yet,
+  so a native client either drives `/join/start` in a web view or adds the
+  endpoint.
+
+A failure of either lands on `/join/error?reason=…` — `invalid`,
+`rate-limited`, or `unavailable`. Both are rate-limited by client IP, so a
+token cannot be brute-forced.
+
+### Expiry and revocation
+
+Both links are **reusable** until they lapse: redemption records `lastUsedAt`
+and never spends the token. A per-person link mints a fresh 30-day guest
+session every time it is opened.
+
+- `expiresInDays` is 1–365 on both mint endpoints. **Omitting it means never**
+  over this API, whereas the web's own picker defaults to a week — a client
+  that wants the web's behaviour has to say `7`.
+- `DELETE` on either endpoint revokes immediately, and revocation is checked on
+  every resolution, so it also ends joins already in flight.
+- A per-person link also dies when its participant is removed from the group.
+- A group has **one** live join link: minting a second revokes the first in the
+  same transaction, so the previously shared URL stops working.
+
+### Universal Links
+
+`/.well-known/apple-app-site-association` claims exactly these two shapes for
+the iOS app, and excludes `/join/start` and `/join/error` — both are single
+segments under `/join` that the `/join/*` claim would otherwise swallow, and
+both are browser-only screens. The document is
+`src/lib/apple-app-site-association.ts`, served through a rewrite because
+Next's router skips dot-prefixed directories under `app/`; the claim is held to
+the real URL builders by `src/lib/apple-app-site-association.test.ts`, since a
+claim that drifts away from what is minted reports nothing anywhere.
 
 ## CSRF
 
