@@ -12,14 +12,57 @@ Everything else defaults to a working localhost install. Set overrides in that
 same `.env`, next to `compose.yaml`. For local development without Docker, use
 `.env.local`.
 
-Run from a terminal, `bootstrap.sh` also asks about the optional features and
-writes the answers: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
+Run from a terminal, `bootstrap.sh` first asks whether this host pulls the
+published image or builds its own, and writes that as `COMPOSE_FILE` below.
+Then it asks about the optional features and writes those answers too: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
 `RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
 `SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`, and
 `METRICS_ENABLED`. Telemetry is asked as one question with two answers —
 whether an administrator may turn it on, and whether it starts on — and writes
 both variables. Anything it writes can be edited here afterwards; nothing here
 has to go through it.
+
+---
+
+## Compose itself
+
+Two variables in `.env` are read by Docker Compose rather than by Balancia. The
+container never sees either one; they decide what Compose brings up in the
+first place, which is why setting them has an effect that no application log
+will explain.
+
+### `COMPOSE_FILE`
+
+Which Compose files an unqualified `docker compose` command is composing.
+Written by `./scripts/bootstrap.sh` from its first question, and safe to change
+by hand afterwards.
+
+```bash
+COMPOSE_FILE=compose.yaml                       # build the app on this host
+COMPOSE_FILE=compose.yaml:compose.image.yaml    # pull sebitro/balancia
+```
+
+`compose.yaml` alone is what Compose does when the variable is absent, so an
+`.env` written before this question existed goes on building, unchanged.
+
+The published image is built for `linux/amd64` and `linux/arm64` by
+`.github/workflows/release.yml`, and pulling it saves each host the Next.js
+build — on a small server, the heaviest thing it is ever asked to do.
+`compose.image.yaml` overrides nothing else: the database, the volumes, the
+environment and the entrypoint stay `compose.yaml`'s. Reading it needs Compose
+2.24 or newer, for the `!reset` that drops the inherited build section;
+`bootstrap.sh` checks the version and does not offer the choice below it.
+
+An explicit `-f` on the command line wins over this variable, which is why
+`docker compose -f compose.dev.yaml …` still means the development stack.
+
+The operational side is in
+[self-hosting.md](self-hosting.md#running-the-published-image).
+
+### `COMPOSE_PROFILES`
+
+Which optional services start. Balancia defines one profile, `worker` — see
+[`RUN_WORKER_IN_WEB`](#run_worker_in_web), which it must be set alongside.
 
 ---
 

@@ -11,7 +11,7 @@ own background jobs, so that is the whole stack until you decide otherwise.
 git clone https://github.com/sebitr/balancia.git
 cd balancia
 ./scripts/bootstrap.sh
-docker compose up -d --build
+docker compose up -d
 ```
 
 Open <http://localhost:3000> and create the first account.
@@ -23,7 +23,12 @@ only a POSIX shell and `/dev/urandom`, and it never overwrites a value that is
 already set — so re-running it is a no-op, and `./scripts/bootstrap.sh &&
 docker compose up -d` is a safe habit.
 
-Run from a terminal, it also asks which optional features to switch on:
+Run from a terminal, the first thing it asks is where this host gets Balancia:
+pull the published image, which is the default, or build one from the checkout.
+It writes the answer as `COMPOSE_FILE`, which is what makes the plain `docker
+compose up -d` above mean either one — see [Running the published
+image](#running-the-published-image). Then it asks which optional features to
+switch on:
 
 | Question              | Writes                           | Also does                                     |
 | --------------------- | -------------------------------- | --------------------------------------------- |
@@ -165,22 +170,26 @@ Every release is also published to Docker Hub as
 host the app build — worth having on a small VPS, where that build is the
 heaviest thing the machine is ever asked to do.
 
-The checkout is still where configuration lives, so the quick start changes
-only in its last line:
+This is the first thing `bootstrap.sh` asks, and the default answer, so the
+[quick start](#quick-start) above already covers it — nothing about those four
+commands changes. What changes is one line in `.env`:
 
 ```bash
-git clone https://github.com/sebitr/balancia.git
-cd balancia
-./scripts/bootstrap.sh
-docker compose -f compose.yaml -f compose.image.yaml up -d
+COMPOSE_FILE=compose.yaml:compose.image.yaml
 ```
+
+Compose reads that out of `.env` before it composes anything, so every `docker
+compose` command in this guide then means both files with no `-f` to remember.
+Writing it by hand does exactly what answering the question does — which is how
+an instance whose `.env` predates that question moves over, and how one moves
+back: `COMPOSE_FILE=compose.yaml` builds here again.
 
 `compose.image.yaml` overrides one thing: where `app` and `worker` get their
 image. The database, the volumes, the environment and the entrypoint are
-`compose.yaml`'s, unchanged. Putting
-`COMPOSE_FILE=compose.yaml:compose.image.yaml` in `.env` makes a plain `docker
-compose up -d` mean the same thing, which keeps the rest of this guide typed
-exactly as it is written.
+`compose.yaml`'s, unchanged. It drops the build section it inherits using
+`!reset`, which arrived in Compose 2.24 — on anything older the file will not
+parse, so `bootstrap.sh` checks the version, keeps quiet about the choice and
+writes `COMPOSE_FILE=compose.yaml`.
 
 | Tag       | What it is                                                  |
 | --------- | ----------------------------------------------------------- |
@@ -197,8 +206,8 @@ Upgrading is then a pull rather than a build:
 
 ```bash
 git pull
-docker compose -f compose.yaml -f compose.image.yaml pull
-docker compose -f compose.yaml -f compose.image.yaml up -d
+docker compose pull
+docker compose up -d
 ```
 
 `git pull` still earns its place — it is what brings a new compose file, new
@@ -553,8 +562,8 @@ difference between a bad upgrade being an inconvenience and a disaster.
 
 ### Upgrading over SSH
 
-`scripts/deploy.sh` runs those same two commands on a remote host, and is meant
-to be run from a laptop rather than on the server:
+`scripts/deploy.sh` runs those same commands on a remote host, and is meant to
+be run from a laptop rather than on the server:
 
 ```bash
 ./scripts/deploy.sh
@@ -571,7 +580,11 @@ about to land. `--dry-run` stops exactly there.
 
 The pull is `--ff-only`. A deploy host that cannot fast-forward has commits of
 its own, and merging them silently is how a server ends up running something no
-branch describes; it stops and asks for a person instead. Afterwards it polls
+branch describes; it stops and asks for a person instead. It then pulls the
+app's image with `--ignore-buildable`, which is a no-op where the host builds
+its own and the whole point where it does not: `up --build` has nothing to
+build there, and would otherwise restart the code the server was already
+running. Afterwards it polls
 `docker compose ps` until every service is running — and healthy, for the two
 that have a healthcheck — so a zero exit status means the containers actually
 came back, not merely that Compose accepted the command.

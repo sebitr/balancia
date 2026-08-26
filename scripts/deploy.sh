@@ -5,12 +5,14 @@
 #
 # Over SSH, in the checkout on the server:
 #
-#   git pull --ff-only && docker compose up -d --build
+#   git pull --ff-only
+#   docker compose pull --ignore-buildable app
+#   docker compose up -d --build
 #
 # and then waits for the containers to come back healthy before it says the
-# deploy worked. Those two commands are the deploy; everything else here is the
-# checking around them, so that a run either finishes or stops somewhere it can
-# be understood.
+# deploy worked. Those three commands are the deploy; everything else here is
+# the checking around them, so that a run either finishes or stops somewhere it
+# can be understood.
 #
 # Nothing is pushed from this machine — the server pulls from origin. A deploy
 # therefore ships what is merged, not what happens to be in the working tree it
@@ -277,6 +279,19 @@ timeout=$2
 cd -- "$target"
 
 git pull --ff-only
+echo
+
+# An instance that pulls its image rather than building one gets nothing out of
+# `up --build`: compose.image.yaml removes the build section, so there is
+# nothing to build, and `up` is happy with whatever is already on the host. The
+# deploy would restart the code it was already running and report success.
+#
+# --ignore-buildable is what makes one command right for both: where the app is
+# built here it is buildable and skipped, and where it is pulled it is fetched
+# first. `app` alone, because the worker names the same image — pulling the tag
+# once is what updates both — and because it is the one service that is never
+# behind a profile.
+docker compose pull --ignore-buildable app
 echo
 
 docker compose up -d --build

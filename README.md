@@ -117,20 +117,25 @@ You need Git and Docker with the Compose plugin:
 git clone https://github.com/sebitr/balancia.git
 cd balancia
 ./scripts/bootstrap.sh
-docker compose up -d --build
+docker compose up -d
 ```
 
 Open <http://localhost:3000> and create the first account.
 
-The bootstrap script generates unique secrets into `.env`, asks which optional
-features to enable, and is safe to run again. Docker Compose starts PostgreSQL,
-applies migrations, and launches the app — which runs its own background jobs,
-so that is the whole stack: two containers, one of them the database.
+The bootstrap script generates unique secrets into `.env`, asks whether this
+host pulls Balancia or builds it, and which optional features to enable; it is
+safe to run again. Docker Compose then starts PostgreSQL, applies migrations,
+and launches the app — which runs its own background jobs, so that is the whole
+stack: two containers, one of them the database.
 
-Rather not build it? Every release is published to Docker Hub as
+Pulling is the default and the faster answer on a small server: releases are
+published to Docker Hub as
 [`sebitro/balancia`](https://hub.docker.com/r/sebitro/balancia) for amd64 and
-arm64. Keep the first three commands and make the last one
-`docker compose -f compose.yaml -f compose.image.yaml up -d`.
+arm64, so the host never runs the Next.js build. Answer no and Compose builds
+from the checkout instead, which is what you want while changing the code.
+Either answer is a single `COMPOSE_FILE` line in `.env`, and changing your mind
+later means editing it — the database, the volumes and every other setting stay
+exactly as they are.
 
 For a public domain, upgrades, reverse proxies and production responsibilities,
 read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the

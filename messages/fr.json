@@ -1160,8 +1160,8 @@
         "copied": "Copié",
         "steps": {
           "1": "Téléchargez le code source et ouvrez le projet.",
-          "2": "Générez les secrets et choisissez les fonctionnalités facultatives.",
-          "3": "Construisez et démarrez PostgreSQL, l'application et son worker."
+          "2": "Générez les secrets, choisissez de télécharger ou de construire, puis les options.",
+          "3": "Démarrez PostgreSQL, l'application et son worker."
         }
       },
       "facts": {

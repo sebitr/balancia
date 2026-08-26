@@ -27,19 +27,21 @@ Every tag is a manifest list covering **linux/amd64** and **linux/arm64**, so
 ## Running it
 
 Balancia needs a PostgreSQL database and a couple of secrets, so the shortest
-honest quick start is Compose — it brings up PostgreSQL 18 alongside the app. The repository carries a file for exactly this — it
-runs this image instead of building one:
+honest quick start is Compose — it brings up PostgreSQL 18 alongside the app,
+and the repository carries the setup script that points it at this image:
 
 ```bash
 git clone https://github.com/sebitr/balancia.git
 cd balancia
 ./scripts/bootstrap.sh
-docker compose -f compose.yaml -f compose.image.yaml up -d
+docker compose up -d
 ```
 
 `bootstrap.sh` writes a `.env` with this instance's own database password and
-auth secret, asks which optional features to switch on, and is safe to run
-again. Then open <http://localhost:3000> and create the first account.
+auth secret, asks whether this host should pull this image or build one from
+the checkout — pulling is the default — and asks which optional features to
+switch on. It is safe to run again. Then open <http://localhost:3000> and
+create the first account.
 
 To run the container yourself against a database you already have:
 
@@ -81,8 +83,8 @@ and the deployment side of them in
 ## Upgrading
 
 ```bash
-docker compose -f compose.yaml -f compose.image.yaml pull
-docker compose -f compose.yaml -f compose.image.yaml up -d
+docker compose pull
+docker compose up -d
 ```
 
 Migrations are forward-only and never destructive without warning, and an

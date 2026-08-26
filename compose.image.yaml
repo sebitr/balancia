@@ -1,16 +1,22 @@
 # Balancia from Docker Hub, instead of built from this checkout.
 #
-#   docker compose -f compose.yaml -f compose.image.yaml pull
-#   docker compose -f compose.yaml -f compose.image.yaml up -d
+# Most instances never type this filename. `./scripts/bootstrap.sh` asks which
+# way this host wants it and writes the answer as
+# COMPOSE_FILE=compose.yaml:compose.image.yaml, which is what makes an ordinary
+# command mean both files:
 #
-# Or put COMPOSE_FILE=compose.yaml:compose.image.yaml in .env and go on typing
-# plain `docker compose up -d`.
+#   docker compose pull
+#   docker compose up -d
+#
+# Naming them with -f is the same thing for one command, and needs no .env:
+#
+#   docker compose -f compose.yaml -f compose.image.yaml up -d
 #
 # Everything else is compose.yaml's and unchanged: the database, the volumes,
 # the environment, the worker's command. Only where the app and the worker get
 # their image from moves — a published multi-architecture image built by
 # .github/workflows/release.yml, rather than a build on this host. You still
-# need `.env`, so `./scripts/bootstrap.sh` still runs first.
+# need `.env`, so `./scripts/bootstrap.sh` runs first either way.
 #
 # `latest` follows the newest release. Pin it to a version once other people
 # depend on this instance — `sebitro/balancia:0.1.0` — so that an upgrade is
