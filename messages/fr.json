@@ -5,6 +5,9 @@
   "common": {
     "cancel": "Annuler",
     "back": "Retour",
+    "backToGroup": "Retour au groupe",
+    "backToGroupSettings": "Retour aux paramètres du groupe",
+    "backToTransactions": "Retour aux transactions",
     "remove": "Retirer",
     "loading": "Chargement…",
     "or": "ou",

@@ -1103,6 +1103,52 @@ a.list-row:focus-visible {
   backdrop-filter: blur(8px);
   padding: 0.75rem 1rem;
 }
+/* Screen header: the line a pushed screen opens with. */
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+}
+.screen-header-back,
+.screen-header-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--foreground);
+}
+.screen-header-close {
+  background: color-mix(in oklch, var(--foreground) 7%, transparent);
+}
+.screen-header-back svg,
+.screen-header-close svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.screen-header-close svg {
+  width: 1rem;
+  height: 1rem;
+}
+.screen-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 600;
+}
+/* No arrow above it: the title is the page's own name, not a row label. */
+.screen-title--lead {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
 .avatar {
   display: inline-flex;
   align-items: center;
@@ -1371,6 +1417,8 @@ a[aria-current="page"] .nav-icon--primary {
       apart on the same card. An arbitrary <code>text-[…]</code> in product code
       is a bug; the display numerals on the balance heroes are the one
       exception, and they are one-offs by design.
+      <code>src/components/ui/type-scale.test.ts</code> fails the build on any
+      other, so this paragraph is now checked rather than trusted.
     </p>
     <p class="note" style="margin-top: 0.75rem">
       <strong>Every step is one point larger below <code>md</code>.</strong>

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import {
-  ArrowLeft,
   ArrowLeftRight,
   ArrowRight,
   Banknote,
@@ -11,8 +10,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { getDateFormatter, getNumberLocale } from "@/i18n/preferences";
-import { Button } from "@/components/ui/button";
 import { Amount } from "@/components/money/amount";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   ACTION,
   ACTION_NEUTRAL,
@@ -36,7 +35,7 @@ import { loadGroupBalances } from "@/modules/balances/service";
 import { moneyForGroup } from "@/modules/currencies/display";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
-import { POP, PUSH } from "@/components/motion/transitions";
+import { PUSH } from "@/components/motion/transitions";
 
 /**
  * One repayment, read back.
@@ -144,17 +143,15 @@ export default async function SettlementDetailPage({
 
   return (
     <div className="flex flex-col gap-3 pb-[4.5rem]">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link
-            href={withQuery(`/groups/${groupId}/expenses`, listFilters)}
-            transitionTypes={POP}
-          >
-            <ArrowLeft aria-hidden="true" />
-            {tCommon("back")}
-          </Link>
-        </Button>
-      </div>
+      {/* Named above, so the card opens on the figure rather than repeating
+          who paid whom a line under it. */}
+      <PageHeader
+        title={description}
+        back={{
+          href: withQuery(`/groups/${groupId}/expenses`, listFilters),
+          label: tCommon("backToTransactions"),
+        }}
+      />
 
       <DetailCard className="flex flex-col gap-3.5 p-4">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -172,15 +169,12 @@ export default async function SettlementDetailPage({
           )}
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <BigAmount
-            minorUnits={settlement.amount.toString()}
-            currency={settlement.currency}
-            tone="settlement"
-            locale={locale}
-          />
-          <h1 className="text-base font-medium">{description}</h1>
-        </div>
+        <BigAmount
+          minorUnits={settlement.amount.toString()}
+          currency={settlement.currency}
+          tone="settlement"
+          locale={locale}
+        />
 
         <MetaStrip className="flex flex-wrap items-center gap-x-2.5 gap-y-3">
           <MetaField label={t("date")}>

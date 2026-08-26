@@ -313,6 +313,23 @@ ceremony. Page data comes from Server Components.
 mutations, and there is no offline data entry. That is deliberate: queueing
 financial writes would need conflict resolution this product does not have.
 
+**A screen names itself, and offers the way back, on one line.**
+`src/components/ui/page-header.tsx` is that line, and every screen reached by a
+push uses it — the settings hub and its screens, an entry, a member, the
+statistics, settling up, importing. It takes no size: pass `back` and the title
+is a row label beside the arrow at `text-base`; leave it off and the title is
+the page's own name at `text-2xl`. The arrow always animates as a `pop`,
+because it is the way out whatever it points at.
+
+Two things it deliberately does not do. It carries no padding — it sits in the
+column its screen already has, and a surface that sticks or clears a safe area
+says so in `className`, which is all `SettingsScreen` still does. And it never
+repeats what is directly beneath it: a screen opening on a hero that already
+names it takes the arrow and no title, which is why `title` is optional. The
+transcription for the Design pane is the _Screen header_ section of
+`design-system/src/pages/components/navigation.html`; change one and change the
+other.
+
 **Form controls never go below 16px on a phone.** Safari on iOS zooms the page
 in when a field smaller than that takes focus, and it does not zoom back out
 afterwards — the layout is left scaled up until the reader pinches out by hand.

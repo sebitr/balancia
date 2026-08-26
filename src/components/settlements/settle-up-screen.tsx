@@ -3,13 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  ArrowDownLeft,
-  ArrowLeft,
-  ArrowUpRight,
-  Check,
-  ChevronRight,
-} from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, ChevronRight } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
 import {
@@ -24,6 +18,7 @@ import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { useDateFormatter } from "@/i18n/format-context";
 import type { RemindRecipient } from "@/modules/reminders/types";
 import { POP } from "@/components/motion/transitions";
@@ -137,7 +132,6 @@ export function SettleUpScreen({
   participantCount: number;
 }) {
   const t = useTranslations("settleUp");
-  const tCommon = useTranslations("common");
   const converted = shared.currencyMode === "converted";
 
   const subtitle = converted
@@ -152,20 +146,20 @@ export function SettleUpScreen({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${shared.groupId}`} transitionTypes={POP}>
-            <ArrowLeft aria-hidden="true" />
-            {tCommon("back")}
-          </Link>
-        </Button>
-      </div>
-
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-[-0.025em]">
-          {t("title")}
-        </h1>
-        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+        <PageHeader
+          title={t("title")}
+          back={{
+            href: `/groups/${shared.groupId}`,
+            label: t("backToGroup"),
+          }}
+        />
+        {/* Which group, and how much of it this plan covers. It reads as a
+            line under the title, so it is indented to sit under the words
+            rather than under the arrow. */}
+        <p className="truncate pl-10.5 text-xs text-muted-foreground">
+          {subtitle}
+        </p>
       </div>
 
       {transferCount === 0 ? (

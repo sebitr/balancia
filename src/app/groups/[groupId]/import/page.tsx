@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getDateFormatter } from "@/i18n/preferences";
 import { Badge } from "@/components/ui/badge";
 import { ImportWizard } from "@/components/imports/import-wizard";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import { listImportRuns } from "@/modules/imports/service";
 
@@ -18,15 +19,20 @@ export default async function ImportPage({
 
   const runs = await listImportRuns(access.groupId);
   const t = await getTranslations("importPage");
+  const tCommon = await getTranslations("common");
   const dates = await getDateFormatter();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t("intro")}</p>
+        {/* The group, not its settings: two of the three ways in here are the
+            empty overview and the data screen of the user's own settings, and
+            the group is the one place all three readers came through. */}
+        <PageHeader
+          title={t("title")}
+          back={{ href: `/groups/${groupId}`, label: tCommon("backToGroup") }}
+        />
+        <p className="pl-10.5 text-sm text-muted-foreground">{t("intro")}</p>
       </div>
 
       <ImportWizard groupId={access.groupId} />

@@ -390,9 +390,13 @@ describe("nothing to settle", () => {
   it("offers the way back and nothing to record", () => {
     render({ transferCount: 0, lastSettled: [] }, []);
 
-    expect(
-      screen.getByRole("link", { name: "Back to the group" }),
-    ).toHaveAttribute("href", "/groups/g1");
+    // Two of them, deliberately: the arrow beside the title, and the button
+    // at the foot of a screen that has just said there is nothing to do here.
+    const back = screen.getAllByRole("link", { name: "Back to the group" });
+    expect(back).toHaveLength(2);
+    for (const link of back) {
+      expect(link).toHaveAttribute("href", "/groups/g1");
+    }
     expect(screen.queryByRole("link", { name: /record/i })).toBeNull();
   });
 });

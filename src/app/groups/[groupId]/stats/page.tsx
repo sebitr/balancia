@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { GroupStatistics } from "@/components/groups/group-statistics";
-import { POP } from "@/components/motion/transitions";
 import { requireGroupAccess } from "@/lib/actions";
 import { resolveFormatPreferences } from "@/i18n/preferences";
 import { loadGroupStats } from "@/modules/groups/group-stats-service";
@@ -64,19 +61,20 @@ export default async function GroupStatsPage({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${groupId}`} transitionTypes={POP}>
-            <ArrowLeft aria-hidden="true" />
-            {tCommon("back")}
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title={t("metaTitle")}
+        back={{
+          href: `/groups/${groupId}`,
+          label: tCommon("backToGroup"),
+        }}
+      />
 
+      {/* The screen is named above; this is which group it is about, which is
+          why it is a heading under that one rather than the page's own. */}
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-2xl font-semibold tracking-[-0.025em]">
+        <h2 className="text-2xl font-semibold tracking-[-0.025em]">
           {access.group.name}
-        </h1>
+        </h2>
         <div className="flex items-center gap-2">
           {people.length > 0 && (
             <div aria-hidden="true" className="flex shrink-0 items-center">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ActivityFeed } from "@/components/activity/activity-feed";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import { listGroupActivity } from "@/modules/activity/service";
 
@@ -24,16 +25,18 @@ export default async function GroupActivityPage({
 }: PageProps<"/groups/[groupId]/activity">) {
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
-  const [entries, t] = await Promise.all([
+  const [entries, t, tCommon] = await Promise.all([
     listGroupActivity(access.groupId, { limit: LIMIT }),
     getTranslations("group"),
+    getTranslations("common"),
   ]);
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-heading text-2xl font-semibold tracking-[-0.02em]">
-        {t("activityTitle")}
-      </h1>
+      <PageHeader
+        title={t("activityTitle")}
+        back={{ href: `/groups/${groupId}`, label: tCommon("backToGroup") }}
+      />
       <ActivityFeed entries={entries} />
     </div>
   );
