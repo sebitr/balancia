@@ -1511,10 +1511,10 @@
       "sharedNote": "Compte, connexion ou invité — on te le demandera une fois qu'on saura qui tu es.",
       "sharedNoteSignedIn": "Connecté en tant que {name} — il ne reste qu'à savoir qui tu es dans la liste.",
       "findMyself": "Me trouver dans la liste",
-      "coldTitle": "Où j'en suis ?",
-      "coldSub": "Le suivi des dépenses partagées, auto-hébergé. Ajoute ce que tu as payé, et Balancia calcule qui rembourse qui.",
+      "coldTitle": "Garde tes comptes à portée de main",
+      "coldSub": "Crée un compte pour retrouver tes groupes, suivre tes dépenses et voir facilement ce qu'il reste à régler.",
       "createAccount": "Créer un compte",
-      "haveAccount": "J'ai déjà un compte",
+      "haveAccount": "Se connecter",
       "or": "ou",
       "guest": "Continuer en invité",
       "guestNote": "Juste un prénom. Rien de ce que tu fais ici n'est perdu si tu crées un compte plus tard."

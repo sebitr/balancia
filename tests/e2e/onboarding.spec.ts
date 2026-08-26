@@ -33,7 +33,7 @@ test.describe("onboarding", () => {
     // No group card and no guest option: there is no group to describe, and
     // nothing to be a guest of.
     await expect(
-      page.getByRole("heading", { name: "Where do I stand?" }),
+      page.getByRole("heading", { name: "Keep your accounts within reach" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Continue as a guest/ }),
