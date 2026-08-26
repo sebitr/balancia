@@ -380,3 +380,79 @@ describe("the destination of a payment notification", () => {
     expect(rendered.url).toBe("/groups/g1/settle");
   });
 });
+
+/**
+ * Who a changed or deleted payment was between.
+ *
+ * The counterpart is the reader's opposite number, so on an incoming payment
+ * it is the payer — and the payer is usually also the one who touches it.
+ * Naming them produced "Adrien removed a payment with Adrien", which reads as
+ * two people and tells the reader nothing about which side they were on.
+ */
+describe("a payment being changed or deleted", () => {
+  function touched(
+    type: "settlement.updated" | "settlement.deleted",
+    direction: "incoming" | "outgoing",
+    counterpartName: string,
+  ): NotificationEntry {
+    return {
+      id: "n5",
+      groupId: "g1",
+      type,
+      category: "settlements",
+      entityType: "settlement",
+      entityId: "s1",
+      actorLabel: "Adrien",
+      payload: {
+        kind: "settlement",
+        groupName: "Maroc 2026",
+        amount: "38500",
+        currency: "AED",
+        direction,
+        counterpartName,
+      },
+      createdAt: new Date("2026-08-25T19:46:00Z"),
+      readAt: null,
+    };
+  }
+
+  it("says a deletion took money that was coming to the reader", () => {
+    const rendered = renderNotification(
+      touched("settlement.deleted", "incoming", "Adrien"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Adrien removed a payment to you");
+  });
+
+  it("names the counterpart when the reader was the one paying", () => {
+    const rendered = renderNotification(
+      touched("settlement.deleted", "outgoing", "Chloé"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Adrien removed your payment to Chloé");
+  });
+
+  it("says a change touched money that was coming to the reader", () => {
+    const rendered = renderNotification(
+      touched("settlement.updated", "incoming", "Adrien"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Adrien changed a payment to you");
+  });
+
+  it("names the counterpart when a change was to the reader's own payment", () => {
+    const rendered = renderNotification(
+      touched("settlement.updated", "outgoing", "Chloé"),
+      translate,
+      "en",
+    );
+
+    expect(rendered.sentence).toBe("Adrien changed your payment to Chloé");
+  });
+});

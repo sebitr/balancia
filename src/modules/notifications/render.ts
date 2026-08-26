@@ -226,14 +226,34 @@ export function renderNotification(
     }
 
     case "settlement": {
-      const key =
+      /*
+       * A payment sentence is picked by two things at once: what happened to
+       * the payment, and which end of it the reader is on.
+       *
+       * The second half used to be asked only when the payment was recorded.
+       * Changing or deleting one named `counterpartName` instead — the
+       * reader's opposite number, which on money coming in is whoever paid,
+       * and the payer is usually also the one doing the changing. So both
+       * sentences put the same name twice: "Adrien removed a payment with
+       * Adrien", which reads as two people and never says which side the
+       * reader was on.
+       *
+       * Every row says where the money was going, and names the counterpart
+       * only on the side where they are somebody else.
+       */
+      const [incomingKey, outgoingKey] =
         entry.type === "settlement.deleted"
-          ? "settlementDeleted"
+          ? ([
+              "settlementDeletedIncoming",
+              "settlementDeletedOutgoing",
+            ] as const)
           : entry.type === "settlement.updated"
-            ? "settlementUpdated"
-            : payload.direction === "incoming"
-              ? "settlementIncoming"
-              : "settlementOutgoing";
+            ? ([
+                "settlementUpdatedIncoming",
+                "settlementUpdatedOutgoing",
+              ] as const)
+            : (["settlementIncoming", "settlementOutgoing"] as const);
+      const key = payload.direction === "incoming" ? incomingKey : outgoingKey;
       return line({
         title,
         sentence: t(key, { actor, counterpart: payload.counterpartName }),

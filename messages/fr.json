@@ -2390,8 +2390,10 @@
     "expenseDeleted": "{actor} a supprimé {description}",
     "settlementIncoming": "{actor} a enregistré un paiement en ta faveur",
     "settlementOutgoing": "{actor} a enregistré ton paiement à {counterpart}",
-    "settlementUpdated": "{actor} a modifié un paiement avec {counterpart}",
-    "settlementDeleted": "{actor} a supprimé un paiement avec {counterpart}",
+    "settlementUpdatedIncoming": "{actor} a modifié un paiement en ta faveur",
+    "settlementUpdatedOutgoing": "{actor} a modifié ton paiement à {counterpart}",
+    "settlementDeletedIncoming": "{actor} a supprimé un paiement en ta faveur",
+    "settlementDeletedOutgoing": "{actor} a supprimé ton paiement à {counterpart}",
     "recurringGenerated": "{description} a été ajoutée automatiquement",
     "importCompleted": "Import terminé : {imported} ajoutées, {skipped} ignorées, {failed} en échec",
     "reminderTitle": "{amount} depuis {group}"
