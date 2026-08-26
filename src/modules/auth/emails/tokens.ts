@@ -52,11 +52,22 @@ export const palette = {
  * worse outcome than a safe one. Arial stands in for Instrument Sans, Georgia
  * for Instrument Serif; the tight letter-spacing on large text is what carries
  * the brand's typography across the substitution.
+ *
+ * `figures` is the exception, and it is not a brand decision. Georgia sets
+ * old-style figures: 1 and 2 sit at x-height, 3 4 5 7 9 hang below the
+ * baseline, 6 and 8 rise above it. That is what makes it a beautiful face for
+ * a date inside a sentence, and it is precisely wrong for six digits somebody
+ * has to read off a screen and type into a phone — the code arrives looking
+ * like a skyline. Verdana was drawn for exactly this: lining figures all of
+ * one height, wide counters, a 1 with a foot serif so it cannot be a 7, and a
+ * 0 narrow enough never to be an O. Tahoma is the same skeleton a little
+ * narrower, and Geneva is the metric cousin that predates both on a Mac.
  */
 export const fonts = {
   sans: "Arial,Helvetica,sans-serif",
   serif: "Georgia,'Times New Roman',serif",
   mono: "'Courier New',Courier,monospace",
+  figures: "Verdana,Tahoma,Geneva,sans-serif",
 } as const;
 
 /**

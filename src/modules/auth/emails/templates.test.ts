@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { LOCALES } from "@/i18n/locales";
 import { renderAll, SAMPLE } from "./preview";
 import { escapeHtml } from "./layout";
-import { MARK, palette } from "./tokens";
+import { fonts, MARK, palette } from "./tokens";
 import { renderEmailChangeNoticeEmail } from "./templates";
 
 /**
@@ -124,10 +124,19 @@ describe.each(LOCALES)("emails in %s", (locale) => {
     const html = rendered[name].html;
     // No client will run a copy button, so `user-select:all` is the whole
     // affordance: one tap or click takes the six figures and nothing else.
-    const code = /<p class="display"[^>]*>(\d+)<\/p>/.exec(html);
+    const code = /<p class="code"[^>]*>(\d+)<\/p>/.exec(html);
     expect(code?.[1], "the code is one text node, not six").toBe(SAMPLE.code);
     expect(code?.[0]).toContain("user-select:all");
     expect(code?.[0]).toContain("-webkit-user-select:all");
+  });
+
+  it.each(CODE_EMAILS)("%s sets the figures in a lining face", (name) => {
+    const code = /<p class="code"[^>]*>\d+<\/p>/.exec(rendered[name].html)?.[0];
+    // Georgia is the set's display face and it sets old-style figures, which
+    // put six digits on three different baselines. Whatever else this line
+    // becomes, it does not go back to a face chosen for prose.
+    expect(code).toContain(`font-family:${fonts.figures}`);
+    expect(code).not.toContain("Georgia");
   });
 
   it.each(CODE_EMAILS)("%s keeps the word next to the figures", (name) => {
