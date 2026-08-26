@@ -61,7 +61,7 @@ test.describe("passkeys", () => {
     await signOut(page);
 
     await page.goto("/sign-in");
-    await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+    await page.getByRole("button", { name: "Use a passkey" }).click();
 
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(
@@ -97,7 +97,7 @@ test.describe("passkeys", () => {
     await page.goto("/sign-in");
     // Chromium supports WebAuthn, so the option must be offered.
     await expect(
-      page.getByRole("button", { name: "Sign in with a passkey" }),
+      page.getByRole("button", { name: "Use a passkey" }),
     ).toBeVisible();
   });
 

@@ -41,7 +41,7 @@ describe("on a real instance", () => {
     renderWithIntl(<SignInForm mailEnabled={false} />);
 
     expect(
-      screen.queryByRole("button", { name: /enter the demo/i }),
+      screen.queryByRole("button", { name: /try the demo/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -62,7 +62,7 @@ describe("on a demo instance", () => {
     const user = userEvent.setup();
     renderWithIntl(<SignInForm mailEnabled={false} demoMode />);
 
-    await user.click(screen.getByRole("button", { name: /enter the demo/i }));
+    await user.click(screen.getByRole("button", { name: /try the demo/i }));
 
     expect(startDemoAction).toHaveBeenCalledOnce();
     expect(push).toHaveBeenCalledWith("/dashboard");
@@ -88,6 +88,6 @@ describe("on a demo instance", () => {
   it("says what the demo is before anyone commits to it", () => {
     renderWithIntl(<SignInForm mailEnabled={false} demoMode />);
 
-    expect(screen.getByText(/nothing here is saved/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing is kept/i)).toBeInTheDocument();
   });
 });
