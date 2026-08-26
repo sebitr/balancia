@@ -2375,7 +2375,10 @@
     "deviceNotSubscribed": "Cet appareil n'est pas encore configuré pour les notifications push.",
     "deviceNotRegistered": "Cet appareil n'a pas pu être enregistré.",
     "joinLinkGone": "Ce lien n'est plus actif. Demande-en un nouveau au groupe.",
+    "joinLinkInvalid": "Ce lien d'invitation ne fonctionne pas. Vérifie qu'il a été copié en entier, ou demande-en un nouveau à la personne qui t'a invité.",
+    "joinLinkExpired": "Ce lien a expiré. Demande-en un nouveau à quelqu'un du groupe.",
     "joinNameTaken": "Quelqu'un d'autre a pris ce nom avant toi. Rouvre le lien pour en choisir un autre.",
+    "joinSeatClaimed": "Cette invitation a déjà été utilisée par un autre compte. Demande ton propre lien à la personne qui t'a invité.",
     "unknownAccent": "Cette couleur d’accent n’est pas proposée par Balancia."
   },
   "serverValidation": {

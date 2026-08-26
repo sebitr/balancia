@@ -2375,7 +2375,10 @@
     "deviceNotSubscribed": "This device is not set up for push notifications yet.",
     "deviceNotRegistered": "That device could not be registered.",
     "joinLinkGone": "This link is no longer active. Ask the group for a new one.",
+    "joinLinkInvalid": "This invitation link does not work. Check it was copied in full, or ask whoever invited you for a fresh one.",
+    "joinLinkExpired": "This link has expired. Ask somebody in the group for a fresh one.",
     "joinNameTaken": "Somebody else claimed that name first. Open the link again to pick another.",
+    "joinSeatClaimed": "This invitation was already used by a different account. Ask whoever invited you for your own link.",
     "unknownAccent": "That is not an accent colour Balancia offers."
   },
   "serverValidation": {
