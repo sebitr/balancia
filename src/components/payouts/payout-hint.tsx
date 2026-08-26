@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
 import { needsDetail, payoutFieldFor } from "@/modules/payouts/fields";
+import { payoutDeepLink } from "@/modules/payouts/deep-links";
+import { useAppLinksWork } from "./use-app-links-work";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 import { MethodMark } from "@/components/settlements/method-mark";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -59,6 +61,7 @@ export interface PayoutMethodChoice {
 export function PayoutHint({
   className,
   name,
+  groupName,
   methods,
   picked,
   onPick,
@@ -69,6 +72,8 @@ export function PayoutHint({
 }: {
   className?: string;
   name: string;
+  /** What the payment is for, where a provider's link carries a note. */
+  groupName: string;
   /** Every method the payee listed, in their own order. Never empty. */
   methods: readonly PayoutMethodChoice[];
   /** The method whose detail is open, as a code. */
@@ -88,6 +93,7 @@ export function PayoutHint({
   const labelId = useId();
   const [copied, setCopied] = useState(false);
   const [showingQr, setShowingQr] = useState(false);
+  const appLinksWork = useAppLinksWork();
 
   const labelOf = (method: string): string => {
     const known = findPaymentMethod(method);
@@ -142,7 +148,24 @@ export function PayoutHint({
     }
   };
 
-  const link = payoutFieldFor(chosen.method) === "link" ? chosen.detail : null;
+  /*
+   * The link that opens the app with the payment already written out, if this
+   * provider publishes one a payer can build. Most do not — see `deep-links`,
+   * where each absence has a reason beside it.
+   *
+   * A custom scheme resolves to nothing without the app, so those wait until
+   * the browser looks like something that could have it. An https link needs no
+   * such care: it falls back to the provider's own page by itself.
+   */
+  const app = payoutDeepLink({
+    method: chosen.method,
+    detail: chosen.detail,
+    minorUnits,
+    currency,
+    note: groupName,
+  });
+  const link = app && (app.kind === "universal" || appLinksWork) ? app : null;
+
   const bankDetail = methods.find((entry) => entry.method === "bank")?.detail;
   const hasDetail = needsDetail(chosen.method) && chosen.detail !== "";
 
@@ -266,20 +289,30 @@ export function PayoutHint({
         )}
 
         {link && (
-          <Button
-            asChild
-            variant="outline"
-            className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
-          >
-            {/* The owner typed this address for exactly this purpose, so it is
-                the one link on this screen that needs no scheme table to be
-                sure of. `noreferrer` because where somebody paid a debt from
-                is not the payee's business. */}
-            <a href={hrefOf(link)} target="_blank" rel="noopener noreferrer">
-              <ExternalLink aria-hidden="true" />
-              {t("openApp", { method: label })}
-            </a>
-          </Button>
+          <div className="flex flex-col gap-1.5">
+            <Button
+              asChild
+              variant="outline"
+              className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+            >
+              {/* `noreferrer` because where somebody paid a debt from is not
+                  the payee's business. */}
+              <a href={link.href} target="_blank" rel="noopener noreferrer">
+                <ExternalLink aria-hidden="true" />
+                {t("openApp", { method: label })}
+              </a>
+            </Button>
+
+            {/* Said out loud, because the difference decides whether the payer
+                still has to type the figure once they are over there — and
+                finding that out after the app has opened is finding it out too
+                late to have kept the number in mind. */}
+            <span className="px-0.5 text-2xs text-muted-foreground">
+              {link.carriesAmount
+                ? t("openAppWithAmount", { amount })
+                : t("openAppNoAmount")}
+            </span>
+          </div>
         )}
       </div>
 
@@ -380,13 +413,4 @@ function fieldNameOf(method: string, label: string, ibanLabel: string): string {
   if (payoutFieldFor(method) === "iban") return ibanLabel;
   if (method === "revolut") return "Revtag";
   return label;
-}
-
-/**
- * People write payment links without a scheme — `paypal.me/sebtr` — and a bare
- * one in an `href` is read as a path on this site. `https` rather than the
- * page's own protocol: this is somebody's money going somewhere.
- */
-function hrefOf(detail: string): string {
-  return /^https?:\/\//i.test(detail) ? detail : `https://${detail}`;
 }

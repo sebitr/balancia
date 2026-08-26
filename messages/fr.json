@@ -3087,7 +3087,9 @@
     "qrShowSheet": "Afficher le code QR",
     "qrSheetTitle": "Scanner pour rembourser {name}",
     "qrAmountTo": "{amount} à {name}",
-    "qrClose": "Fermer"
+    "qrClose": "Fermer",
+    "openAppWithAmount": "S'ouvre avec {amount} déjà saisi",
+    "openAppNoAmount": "S'ouvre sur son compte — le montant reste à saisir"
   },
   "countries": {
     "CH": "Suisse",

@@ -3087,7 +3087,9 @@
     "qrShowSheet": "Show QR code",
     "qrSheetTitle": "Scan to pay {name}",
     "qrAmountTo": "{amount} to {name}",
-    "qrClose": "Close"
+    "qrClose": "Close",
+    "openAppWithAmount": "Opens with {amount} already filled in",
+    "openAppNoAmount": "Opens on their account — you type the amount"
   },
   "countries": {
     "CH": "Switzerland",

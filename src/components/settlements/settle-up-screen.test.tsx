@@ -666,6 +666,137 @@ describe("the payment code", () => {
 });
 
 /**
+ * Opening the app the money actually moves in.
+ *
+ * Only where the provider publishes a link a payer can build — see
+ * `modules/payouts/deep-links`, which is where the table and every absence
+ * from it are argued. What matters at this level is that the button says
+ * whether the sum travelled with it, because finding that out after the app
+ * has opened is finding it out too late to have kept the number in mind.
+ */
+describe("opening the provider", () => {
+  function showing(method: string, detail: string, currency = "EUR") {
+    return [
+      {
+        payoutHints: [
+          {
+            participantId: "amelie",
+            currency,
+            methods: [{ method, detail }],
+            qr: null,
+            qrMissing: null,
+          },
+        ],
+      },
+      [{ currency, yours: [transfer({ currency })], others: [] }],
+    ] as const;
+  }
+
+  it("opens PayPal on the sum, which its link can carry in any currency", () => {
+    render(...showing("paypal", "paypal.me/amelie"));
+
+    const open = screen.getByRole("link", { name: "Open PayPal" });
+    expect(open).toHaveAttribute("href", "https://paypal.me/amelie/148.60EUR");
+    expect(
+      screen.getByText("Opens with EUR 148.60 already filled in"),
+    ).toBeVisible();
+  });
+
+  it("opens Revolut on the person, and says the amount is still to type", () => {
+    render(...showing("revolut", "@amelie"));
+
+    expect(screen.getByRole("link", { name: "Open Revolut" })).toHaveAttribute(
+      "href",
+      "https://revolut.me/amelie",
+    );
+    expect(
+      screen.getByText("Opens on their account — you type the amount"),
+    ).toBeVisible();
+  });
+
+  it("will not write a euro figure into Venmo's dollar field", () => {
+    // The single worst thing this feature could do: a payment that is wrong by
+    // a third and looks entirely correct while it happens.
+    render(...showing("venmo", "@amelie", "EUR"));
+
+    const open = screen.getByRole("link", { name: "Open Venmo" });
+    expect(open.getAttribute("href")).not.toContain("amount");
+    expect(
+      screen.getByText("Opens on their account — you type the amount"),
+    ).toBeVisible();
+  });
+
+  it("offers nothing where the provider publishes no link a payer can build", () => {
+    // TWINT mints paylinks against a merchant registration, so a phone number
+    // buys you nothing. The number is still there to copy.
+    render(...showing("twint", "+41791234567"));
+
+    expect(screen.queryByRole("link", { name: /^Open/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
+  it("keeps a custom scheme off a browser that could not answer it", () => {
+    // `upi://` does nothing at all without the app, and the default stub
+    // reports the pointer of a desktop. A dead button is exactly what this
+    // feature exists to avoid.
+    render(...showing("upi", "amelie@okhdfcbank", "INR"));
+
+    expect(screen.queryByRole("link", { name: /^Open/ })).toBeNull();
+  });
+
+  it("offers it on a phone, where an app is there to take it", () => {
+    // The other half, and the half worth having: a coarse pointer with real
+    // touch points is a phone, and every Indian payment app registers this
+    // intent — so the payer picks their own rather than being sent to one.
+    withPhonePointer(() => {
+      render(...showing("upi", "amelie@okhdfcbank", "INR"));
+    });
+
+    expect(screen.getByRole("link", { name: "Open UPI" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("upi://pay?pa=amelie%40okhdfcbank"),
+    );
+    expect(
+      screen.getByText("Opens with INR 148.60 already filled in"),
+    ).toBeVisible();
+  });
+});
+
+/**
+ * A phone, for as long as the callback runs.
+ *
+ * The shared setup stubs `matchMedia` to answer false to everything, which is
+ * a desktop — right for almost every test here and wrong for the one that has
+ * to see the other branch.
+ */
+function withPhonePointer(body: () => void): void {
+  const media = window.matchMedia;
+  const touch = Object.getOwnPropertyDescriptor(navigator, "maxTouchPoints");
+
+  window.matchMedia = ((query: string) => ({
+    matches: query.includes("pointer: coarse"),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+  Object.defineProperty(navigator, "maxTouchPoints", {
+    value: 5,
+    configurable: true,
+  });
+
+  try {
+    body();
+  } finally {
+    window.matchMedia = media;
+    if (touch) Object.defineProperty(navigator, "maxTouchPoints", touch);
+  }
+}
+
+/**
  * Why there is no code, on the rows that have none.
  *
  * The reasons are told to somebody who was expecting a code and did not get
