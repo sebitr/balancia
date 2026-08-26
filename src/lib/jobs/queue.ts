@@ -54,6 +54,16 @@ let starting: Promise<PgBoss> | undefined;
 
 async function start(): Promise<PgBoss> {
   const env = getEnv();
+  if (env.DEMO_MODE || !env.DATABASE_URL) {
+    // A demo instance is the only deployment without one: pg-boss stores its
+    // queues in PostgreSQL, and an in-memory database that vanishes on restart
+    // is no place for a job queue. `publish` short-circuits before reaching
+    // here; this covers anything that calls `getBoss()` directly.
+    throw new Error(
+      "The job queue needs a PostgreSQL connection and this instance has none " +
+        "(DEMO_MODE). Background jobs do not run on a demo.",
+    );
+  }
   const instance = new PgBoss({
     connectionString: env.DATABASE_URL,
     schema: "pgboss",
@@ -106,6 +116,10 @@ export async function publish<T extends object>(
   payload: T,
   options: SendOptions = {},
 ): Promise<string | null> {
+  // A demo instance has no queue to publish to. Silent rather than thrown:
+  // every caller already treats enqueuing as best-effort — a queue that cannot
+  // be reached must not fail the request that triggered it.
+  if (getEnv().DEMO_MODE) return null;
   const instance = await getBoss();
   return instance.send(queue, payload, options);
 }

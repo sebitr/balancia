@@ -6,6 +6,7 @@ import { InstallInstructions } from "@/components/pwa/install-instructions";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NotificationRefresh } from "@/components/notifications/notification-refresh";
 import { Screen } from "@/components/motion/screen";
+import { DemoBanner } from "@/components/demo/demo-banner";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,9 @@ export function AppShell({
     // the page sideways. `clip` rather than `hidden`: it establishes no scroll
     // container, so the header above still sticks to the viewport.
     <div className="flex min-h-dvh flex-col overflow-x-clip">
+      {/* Above the header, and not sticky: it is a standing fact about the
+          instance, not a control, and it should scroll away like one. */}
+      <DemoBanner />
       <header
         data-slot="app-header"
         // Above the bottom bar rather than level with it, so a panel hung from

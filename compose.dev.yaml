@@ -102,6 +102,11 @@ x-dev-environment: &dev-environment
   # subscribers on every queue. Set DEV_RUN_WORKER_IN_WEB=true and skip the
   # service to develop against the shape production actually ships.
   RUN_WORKER_IN_WEB: ${DEV_RUN_WORKER_IN_WEB:-false}
+  # Both off here. This stack has a database and seed data in it, which is what
+  # a developer wants; DEV_DEMO_MODE=true swaps that for the in-memory database
+  # the public demo serves from, and is the way to see what a visitor sees.
+  DEMO_MODE: ${DEV_DEMO_MODE:-false}
+  DEMO_URL: ${DEV_DEMO_URL:-}
   LOG_LEVEL: ${DEV_LOG_LEVEL:-debug}
   NEXT_TELEMETRY_DISABLED: 1
 

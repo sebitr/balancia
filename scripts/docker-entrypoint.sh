@@ -32,13 +32,6 @@ if [ -z "${DATABASE_URL:-}" ] && [ -n "${POSTGRES_PASSWORD:-}" ]; then
   export DATABASE_URL
 fi
 
-if [ "${RUN_MIGRATIONS:-true}" != "false" ]; then
-  node /app/dist/migrate.js || {
-    echo "Migrations failed — not starting. Fix the error above, then: docker compose up -d" >&2
-    exit 1
-  }
-fi
-
 # The values the application treats as true; see TRUTHY in src/lib/env.ts.
 is_enabled() {
   case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" in
@@ -46,6 +39,21 @@ is_enabled() {
     *) return 1 ;;
   esac
 }
+
+# A demo container has no database to migrate: it builds the schema in memory
+# from the same committed SQL when the server starts (see
+# src/lib/db/demo-database.ts). Skipped here rather than left to the operator
+# to remember, because the alternative is a stack that will not come up and a
+# migration error that points at a database nobody meant to have.
+if is_enabled "${DEMO_MODE:-}"; then
+  echo "DEMO_MODE is on: skipping migrations. This container keeps everything" >&2
+  echo "in memory and writes nothing to any database. See docs/demo.md." >&2
+elif [ "${RUN_MIGRATIONS:-true}" != "false" ]; then
+  node /app/dist/migrate.js || {
+    echo "Migrations failed — not starting. Fix the error above, then: docker compose up -d" >&2
+    exit 1
+  }
+fi
 
 # A feature that is switched on but cannot find its files, said out loud.
 #

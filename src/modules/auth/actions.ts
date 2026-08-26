@@ -40,6 +40,9 @@ import {
 import { normalizeCode } from "./code-format";
 import { applyStoredPreferences } from "@/i18n/cookie";
 import { resolveRequestLocale } from "@/i18n/request";
+import { getEnv } from "@/lib/env";
+import { matchesDemoCredential } from "@/modules/demo/credentials";
+import { startDemoAction } from "@/modules/demo/actions";
 
 /**
  * Authentication Server Actions.
@@ -121,6 +124,15 @@ export async function registerAction(
 }
 
 export async function signInAction(input: unknown): Promise<ActionResult> {
+  /*
+   * On a demo instance, `demo` / `demo` is a door rather than an account: it
+   * mints a fresh one with its own data. Checked before the schema because
+   * `demo` is not an email address and never has to be.
+   */
+  if (getEnv().DEMO_MODE && matchesDemoCredential(input)) {
+    return startDemoAction();
+  }
+
   const parsed = signInSchema.safeParse(input);
   if (!parsed.success) {
     return validationError(parsed.error.issues[0]?.message);

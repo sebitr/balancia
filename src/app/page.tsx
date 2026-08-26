@@ -386,6 +386,16 @@ export default async function LandingPage() {
                     : t("header.signIn")}
                   <ArrowIcon />
                 </Link>
+                {/* Second, not first: the demo is the low-commitment way in,
+                    but an account is still what the page is asking for. */}
+                {env.DEMO_URL && (
+                  <a
+                    href={env.DEMO_URL}
+                    className={`${DARK_OUTLINE_BUTTON} h-[52px] text-base`}
+                  >
+                    {t("hero.tryDemo")}
+                  </a>
+                )}
                 <a
                   href={GITHUB}
                   target="_blank"
@@ -704,6 +714,14 @@ export default async function LandingPage() {
                 <p className="max-w-[52ch] text-[15px] leading-[1.6] text-marketing-dark-muted">
                   {t("cta.registrationClosed")}
                 </p>
+              )}
+              {env.DEMO_URL && (
+                <a
+                  href={env.DEMO_URL}
+                  className="text-[15px] text-marketing-dark-trust no-underline transition-colors hover:text-marketing-cream"
+                >
+                  {t("cta.tryDemo")}
+                </a>
               )}
               <Link
                 href="/sign-in"

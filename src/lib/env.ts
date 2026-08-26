@@ -49,12 +49,17 @@ const envSchema = z
       .url("APP_URL must be an absolute URL, e.g. https://balancia.example.com")
       .default("http://localhost:3000"),
 
-    DATABASE_URL: z
-      .string()
-      .min(1, "DATABASE_URL is required")
+    /**
+     * Optional only because a demo instance genuinely has no database — see
+     * DEMO_MODE. Every other deployment is required to set it, which the
+     * `superRefine` below enforces with a message that says so.
+     */
+    DATABASE_URL: optionalString
       .refine(
         (value) =>
-          value.startsWith("postgres://") || value.startsWith("postgresql://"),
+          value === undefined ||
+          value.startsWith("postgres://") ||
+          value.startsWith("postgresql://"),
         "DATABASE_URL must be a PostgreSQL connection string",
       )
       // Almost always an unencoded password. A literal '/', '#' or '?' ends the
@@ -62,7 +67,7 @@ const envSchema = z
       // the URL fails to parse — with a message that never mentions the
       // password. Say so here instead. ('@' and '%' parse fine.)
       .refine(
-        (value) => URL.canParse(value),
+        (value) => value === undefined || URL.canParse(value),
         "DATABASE_URL is not a parseable URL. If the password contains '/', '#' " +
           "or '?', percent-encode it — '/' becomes %2F, '#' becomes %23.",
       ),
@@ -159,6 +164,38 @@ const envSchema = z
 
     /** Disable open registration on a private instance. */
     ALLOW_REGISTRATION: booleanish.default(true),
+
+    /**
+     * Turns this whole process into a public demo.
+     *
+     * The instance stops using PostgreSQL entirely: `getDb()` returns an
+     * in-memory database built at startup from the committed migrations (see
+     * src/lib/db/demo-database.ts), so `DATABASE_URL` is not required and
+     * nothing a visitor does is written anywhere. Background jobs are off with
+     * it — pg-boss stores its queues in a real database.
+     *
+     * Signing in with `demo` / `demo` mints a throwaway account with its own
+     * seeded groups, so two visitors never see each other's data. Everything
+     * is swept after a couple of hours, and a restart is a clean slate.
+     *
+     * Meant for a deployment of its own, alongside the real one — see
+     * docs/demo.md. Turning it on next to real accounts would hide them: the
+     * process has one database and this replaces it.
+     */
+    DEMO_MODE: booleanish.default(false),
+
+    /**
+     * Where a demo of this instance lives, e.g. https://demo.balancia.app.
+     *
+     * Set on the *real* instance, not the demo one: it is what puts the "Try
+     * the demo" link on the homepage. Left unset — the default — no such link
+     * is rendered, so a self-hosted instance never advertises somebody else's
+     * demo to its own users.
+     */
+    DEMO_URL: optionalString.refine(
+      (value) => value === undefined || URL.canParse(value),
+      "DEMO_URL must be an absolute URL, e.g. https://demo.balancia.app",
+    ),
 
     /**
      * Overrides the per-IP limit on credential endpoints (sign-in, sign-up,
@@ -384,6 +421,30 @@ const envSchema = z
     RUN_WORKER_IN_WEB: booleanish.default(true),
   })
   .superRefine((value, context) => {
+    /*
+     * A demo instance builds its schema in memory and never connects to
+     * PostgreSQL, so it is the one deployment for which a connection string is
+     * not merely optional but meaningless. Everything else needs one, and gets
+     * told which of the two it is.
+     */
+    if (!value.DEMO_MODE && value.DATABASE_URL === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["DATABASE_URL"],
+        message:
+          "DATABASE_URL is required. The only exception is a demo instance " +
+          "(DEMO_MODE=true), which keeps its data in memory and connects to no database.",
+      });
+    }
+
+    /*
+     * A demo instance may well *have* a DATABASE_URL — it usually shares an
+     * `.env` with the real stack, and the entrypoint assembles one from the
+     * POSTGRES_* values. That is not a misconfiguration and is not refused
+     * here; DEMO_MODE wins and `instrumentation.ts` says so at startup, where
+     * an operator will actually see it.
+     */
+
     const appUrl = new URL(value.APP_URL);
     const rpId = value.WEBAUTHN_RP_ID ?? appUrl.hostname;
 

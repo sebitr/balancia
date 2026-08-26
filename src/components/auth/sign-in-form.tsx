@@ -7,12 +7,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
-import { KeyRound, Loader2 } from "lucide-react";
+import { KeyRound, Loader2, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signInAction } from "@/modules/auth/actions";
+import { startDemoAction } from "@/modules/demo/actions";
 import { signInWithPasskey } from "@/modules/auth/passkey-client";
 import { usePasskeySupport } from "./use-passkey-support";
 import { AppleSignInButton } from "./apple-sign-in-button";
@@ -37,6 +38,16 @@ const schema = z.object({
   password: z.string().min(1, "password"),
 });
 
+/**
+ * The same form on a demo instance, where the credential on the screen is
+ * `demo` — not an address, and refused by the rule above. The server checks
+ * for it before its own schema for the same reason.
+ */
+const demoSchema = z.object({
+  email: z.string().min(1, "email"),
+  password: z.string().min(1, "password"),
+});
+
 type FormValues = z.infer<typeof schema>;
 
 type ValidationKey = "email" | "password";
@@ -51,23 +62,28 @@ export function SignInForm({
   initialError = null,
   /** The same, for something that went right — a confirmed address. */
   initialNotice = null,
+  /** This instance is a public demo: offer the way in, and say what it is. */
+  demoMode = false,
 }: {
   mailEnabled: boolean;
   appleEnabled?: boolean;
   initialError?: string | null;
   initialNotice?: string | null;
+  demoMode?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("auth.signIn");
   const tValidation = useTranslations("auth.validation");
   const tErrors = useTranslations("auth.errors");
   const tCommon = useTranslations("common");
+  const tDemo = useTranslations("demo");
   const [formError, setFormError] = useState<string | null>(initialError);
   const [passkeyPending, setPasskeyPending] = useState(false);
+  const [demoPending, setDemoPending] = useState(false);
   const passkeysAvailable = usePasskeySupport();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(demoMode ? demoSchema : schema),
     defaultValues: { email: "", password: "" },
   });
 
@@ -86,6 +102,22 @@ export function SignInForm({
     router.push("/dashboard");
     router.refresh();
   });
+
+  const onDemo = async () => {
+    setFormError(null);
+    setDemoPending(true);
+    try {
+      const result = await startDemoAction();
+      if (!result.ok) {
+        setFormError(result.error ?? tErrors("generic"));
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } finally {
+      setDemoPending(false);
+    }
+  };
 
   const onPasskey = async () => {
     setFormError(null);
@@ -115,6 +147,25 @@ export function SignInForm({
         </h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
+
+      {demoMode && (
+        <div className="space-y-3 rounded-lg border border-dashed p-4">
+          <p className="text-sm text-muted-foreground">{tDemo("signInBody")}</p>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => void onDemo()}
+            disabled={demoPending}
+          >
+            {demoPending ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <PlayCircle aria-hidden="true" />
+            )}
+            {tDemo("enter")}
+          </Button>
+        </div>
+      )}
 
       {initialNotice && !formError && (
         <Alert>

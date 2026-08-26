@@ -114,6 +114,14 @@ x-app-environment: &app-environment
   # this pair invites: without the profile nothing runs the jobs, and without
   # the false both processes serve the same queues.
   RUN_WORKER_IN_WEB: ${RUN_WORKER_IN_WEB:-true}
+  # Puts a "Try the demo" link on the homepage, pointing wherever a demo of
+  # this instance is running. Unset by default, so a self-hosted deployment
+  # never sends its own users to somebody else's demo. See docs/demo.md.
+  DEMO_URL: ${DEMO_URL:-}
+  # Turns this container *into* that demo: no database, nothing persisted. Not
+  # something to switch on here — it would replace the data this stack serves.
+  # compose.demo.yaml is the stack that sets it.
+  DEMO_MODE: ${DEMO_MODE:-}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:

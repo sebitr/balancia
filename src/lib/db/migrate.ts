@@ -21,13 +21,18 @@ export interface MigrationResult {
   readonly skipped: string[];
 }
 
-interface MigrationFile {
+export interface MigrationFile {
   readonly name: string;
   readonly sql: string;
   readonly checksum: string;
 }
 
-function loadMigrations(directory: string): MigrationFile[] {
+/** The default location of the committed migrations. */
+export function migrationsDirectory(): string {
+  return path.join(process.cwd(), "drizzle");
+}
+
+export function loadMigrations(directory: string): MigrationFile[] {
   const entries = readdirSync(directory)
     .filter((entry) => entry.endsWith(".sql"))
     .sort();
@@ -46,7 +51,7 @@ function loadMigrations(directory: string): MigrationFile[] {
  * rather than by naive `;` splitting, which would shred function bodies and
  * string literals containing semicolons.
  */
-function splitStatements(sql: string): string[] {
+export function splitStatements(sql: string): string[] {
   return sql
     .split("--> statement-breakpoint")
     .map((statement) => statement.trim())
@@ -57,8 +62,7 @@ export async function runMigrations(options: {
   databaseUrl: string;
   migrationsDir?: string;
 }): Promise<MigrationResult> {
-  const migrationsDir =
-    options.migrationsDir ?? path.join(process.cwd(), "drizzle");
+  const migrationsDir = options.migrationsDir ?? migrationsDirectory();
   const migrations = loadMigrations(migrationsDir);
 
   const client = new Client({ connectionString: options.databaseUrl });
