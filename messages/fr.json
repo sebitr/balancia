@@ -512,7 +512,6 @@
     "noOutstandingBalances": "Aucun solde en attente",
     "remindPerson": "Relancer {name}",
     "remindAll": "Tout relancer",
-    "remind": "Envoyer un rappel",
     "howCalculated": "Voir le détail du solde",
     "positionSheetTitle": "Détail de ton solde",
     "positionSheetDescription": "Les montants enregistrés qui donnent ton solde actuel.",
@@ -580,7 +579,8 @@
     "settlementDetailDescription": "Enregistre le paiement quand l'argent change de mains, ou envoie une relance.",
     "recordPayment": "Enregistrer le paiement",
     "sendReminder": "Envoyer une relance",
-    "archiveGroup": "Archiver le groupe"
+    "archiveGroup": "Archiver le groupe",
+    "remind": "Envoyer un rappel"
   },
   "expensesList": {
     "eyebrow": "Transactions",
@@ -661,16 +661,19 @@
     }
   },
   "userSettings": {
-    "title": "Réglages",
-    "close": "Fermer les réglages",
-    "backToSettings": "Retour aux réglages",
-    "groupYou": "Toi",
-    "groupHowItReads": "Affichage",
-    "groupYourThings": "Tes données",
+    "title": "Paramètres",
+    "close": "Fermer les paramètres",
+    "backToSettings": "Retour aux paramètres",
+    "groupAccount": "Compte",
+    "groupPreferences": "Préférences",
+    "groupData": "Données",
+    "groupPayments": "Paiements",
+    "groupBalancia": "Balancia",
     "notifications": "Notifications",
     "security": "Connexion et sécurité",
     "appearance": "Apparence et langue",
-    "money": "Monnaie et formats",
+    "money": "Devise et formats",
+    "payouts": "Recevoir de l’argent",
     "groups": "Tes groupes",
     "data": "Données et imports",
     "administration": "Administration",
@@ -732,14 +735,26 @@
     "showFewer": "Afficher moins",
     "theme": "Thème",
     "themeSystem": "Auto",
-    "themeSystemHelp": "Suit le clair et le sombre du système",
+    "themeSystemHelp": "Suit le système",
     "themeLight": "Clair",
     "themeLightHelp": "Crème et prune",
     "themeDark": "Sombre",
     "themeDarkHelp": "Prune profond",
+    "accent": "Couleur d’accent",
+    "accents": {
+      "coral": "Corail",
+      "amber": "Ambre",
+      "mint": "Menthe",
+      "ocean": "Océan",
+      "lavender": "Lavande",
+      "raspberry": "Framboise",
+      "plum": "Prune"
+    },
+    "accentNote": "L’accent colore ce qui est choisi, actif ou à faire. Les soldes gardent leurs couleurs : vert quand on te doit, rouge quand tu dois.",
+    "accentFailed": "Cette couleur n’a pas pu être enregistrée.",
     "language": "Langue",
     "languageSaved": "Langue changée",
-    "languageNote": "La langue change les mots. L’écriture des dates et des montants se règle dans Monnaie et formats, pour lire en français et écrire quand même 08/13/2026.",
+    "languageNote": "La langue change les mots. L’écriture des dates et des montants se règle dans Devise et formats, pour lire en français et écrire quand même 08/13/2026.",
     "currencyTitle": "Afficher mes totaux en",
     "currencyHelp": "Chaque groupe est converti dans cette monnaie sur ton écran d’accueil. Chaque groupe garde la sienne.",
     "currencySaved": "Monnaie préférée enregistrée",
@@ -749,7 +764,13 @@
     "formatAuto": "Automatique ({sample})",
     "formatsSaved": "Format enregistré",
     "formatsFailed": "Ce format n’a pas pu être enregistré.",
-    "formatsNote": "Automatique suit ta langue et la région annoncée par ton navigateur.",
+    "formatsNote": "Automatique suit ta langue et la région de ton navigateur. Chaque groupe garde sa propre monnaie.",
+    "preview": "Aperçu",
+    "previewOfYours": "ta dernière dépense, telle qu’elle s’écrira",
+    "previewOfSample": "un exemple, tel qu’il s’écrira",
+    "previewSampleTitle": "Chalet à Zermatt",
+    "followsBrowser": "suit ton navigateur",
+    "formatAutoShort": "Auto",
     "noGroups": "Tu ne fais partie d’aucun groupe pour le moment.",
     "groupPeople": "{count, plural, one {# personne} other {# personnes}}",
     "groupOwner": "Propriétaire",
@@ -901,16 +922,16 @@
     "paidSentence": "{from} a payé {to}",
     "record": "Enregistrer",
     "recordFor": "Enregistrer le paiement de {from} à {to}",
-    "iPaid": "J'ai remboursé {name}",
-    "iWasPaid": "J'ai reçu le paiement",
-    "recordForThem": "Enregistrer pour eux",
     "remindPerson": "Relancer {name}",
     "remindedWhen": "Relancée {when}",
     "allSettledTitle": "Tout le monde est à jour",
     "allSettledDescription": "Aucun virement n'est nécessaire. Les nouvelles dépenses apparaissent ici dès qu'elles changent le solde de quelqu'un.",
     "lastSettled": "Derniers règlements",
     "settledOnVia": "{when} · {method}",
-    "backToGroup": "Retour au groupe"
+    "backToGroup": "Retour au groupe",
+    "iPaid": "J'ai remboursé {name}",
+    "iWasPaid": "J'ai reçu le paiement",
+    "recordForThem": "Enregistrer pour eux"
   },
   "landing": {
     "signIn": "Se connecter",
@@ -2349,7 +2370,8 @@
     "deviceNotSubscribed": "Cet appareil n'est pas encore configuré pour les notifications push.",
     "deviceNotRegistered": "Cet appareil n'a pas pu être enregistré.",
     "joinLinkGone": "Ce lien n'est plus actif. Demande-en un nouveau au groupe.",
-    "joinNameTaken": "Quelqu'un d'autre a pris ce nom avant toi. Rouvre le lien pour en choisir un autre."
+    "joinNameTaken": "Quelqu'un d'autre a pris ce nom avant toi. Rouvre le lien pour en choisir un autre.",
+    "unknownAccent": "Cette couleur d’accent n’est pas proposée par Balancia."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",
@@ -2916,8 +2938,14 @@
     "zelle": "Zelle"
   },
   "payouts": {
-    "title": "Comment on te rembourse",
+    "title": "Recevoir de l’argent",
     "sub": "Celui qui te doit de l'argent voit le premier en haut. Seules les personnes de tes groupes les voient, et seulement quand elles te doivent quelque chose.",
+    "intro": "Choisis comment tu préfères être remboursé. Ton moyen de paiement préféré sera proposé en premier.",
+    "introPrivacy": "Seuls les membres qui te doivent de l’argent voient ces informations.",
+    "preferred": "Préféré",
+    "makePreferred": "Définir comme préféré",
+    "addMethod": "Ajouter un moyen",
+    "removeMethod": "Retirer {method}",
     "empty": "Rien pour l'instant — on te le demandera la première fois que quelqu'un te remboursera.",
     "saved": "Enregistré",
     "saveFailed": "Impossible d'enregistrer.",
@@ -2959,37 +2987,109 @@
       "address": "Indique au moins un code postal, une localité et un pays sur deux lettres."
     },
     "settle": {
-      "howToPay": "Comment rembourser {name}",
       "none": "{name} n'a pas indiqué comment être remboursé. Demande-lui, ou rembourse-le comme d'habitude.",
-      "guest": "{name} est un invité, il n'y a donc aucun compte pour enregistrer un moyen de remboursement."
+      "guest": "{name} est un invité, il n'y a donc aucun compte pour enregistrer un moyen de remboursement.",
+      "howToPay": "Comment rembourser {name}"
     },
     "copy": "Copier",
     "copied": "Copié",
-    "preferred": "Préféré",
-    "openApp": "Ouvrir {method}",
-    "openAppWithAmount": "S'ouvre avec {amount} déjà saisi",
-    "openAppNoAmount": "S'ouvre sur son compte — le montant reste à saisir",
-    "cashNothing": "Rien à copier — remets-lui les {amount}.",
-    "detailCopied": "Coordonnées copiées",
-    "addressTitle": "Ton adresse, pour le QR suisse",
-    "addressSub": "Une QR-facture ne peut pas être créée sans code postal, localité et pays — la norme les exige. Celui qui scanne le code pour te rembourser les voit, comme sur un virement bancaire.",
+    "addressTitle": "Adresse pour le QR-facture suisse",
+    "addressSub": "Ces informations sont nécessaires pour générer ton QR-facture et seront visibles par la personne qui te rembourse.",
     "addressStreet": "Rue",
     "addressBuilding": "Numéro",
     "addressPostalCode": "Code postal",
     "addressTown": "Localité",
     "addressCountry": "Pays",
-    "addressCountryPlaceholder": "CH",
+    "addressReady": "Prête",
+    "addressIncomplete": "À compléter",
+    "addressStreetHint": "Bahnhofstrasse",
+    "addressTownHint": "Zermatt",
     "addressRemove": "Supprimer mon adresse",
     "qrTitle": "Scanner pour payer",
     "qrSwiss": "QR-facture suisse — ouvre ton app bancaire et scanne",
     "qrEpc": "Girocode — ouvre ton app bancaire et scanne",
+    "qrNoneAddress": "{name} a un compte suisse mais n'a pas ajouté l'adresse exigée par la norme QR-facture.",
+    "qrNoneQrIban": "La banque de {name} émet des références de facture que Balancia ne peut pas générer, il n'y a donc aucun code à scanner.",
+    "qrNoneCurrency": "Un code de paiement ne peut pas porter des {currency}.",
+    "methodFields": {
+      "wise": {
+        "label": "E-mail Wise",
+        "placeholder": "toi@exemple.com"
+      },
+      "zelle": {
+        "label": "E-mail Zelle",
+        "placeholder": "toi@exemple.com"
+      },
+      "interac": {
+        "label": "E-mail Interac",
+        "placeholder": "toi@exemple.com"
+      },
+      "revolut": {
+        "label": "Revtag",
+        "placeholder": "@pseudo"
+      },
+      "cash_app": {
+        "label": "Cashtag",
+        "placeholder": "$pseudo"
+      },
+      "monzo": {
+        "label": "Lien Monzo.me",
+        "placeholder": "monzo.me/pseudo"
+      },
+      "pix": {
+        "label": "Clé Pix",
+        "placeholder": "téléphone, e-mail ou CPF"
+      },
+      "upi": {
+        "label": "UPI ID",
+        "placeholder": "pseudo@banque"
+      },
+      "paypal": {
+        "label": "Lien PayPal.me",
+        "placeholder": "paypal.me/pseudo"
+      },
+      "alipay": {
+        "label": "Compte Alipay",
+        "placeholder": "Ce qu’ils doivent saisir"
+      },
+      "apple_pay": {
+        "label": "Apple Cash",
+        "placeholder": "Ce qu’ils doivent saisir"
+      },
+      "google_pay": {
+        "label": "Compte Google Pay",
+        "placeholder": "Ce qu’ils doivent saisir"
+      },
+      "wechat_pay": {
+        "label": "ID WeChat",
+        "placeholder": "Ce qu’ils doivent saisir"
+      },
+      "crypto": {
+        "label": "Adresse du portefeuille",
+        "placeholder": "Ce qu’ils doivent saisir"
+      }
+    },
+    "picker": {
+      "title": "Ajouter un moyen",
+      "close": "Fermer",
+      "searchPlaceholder": "Chercher — twint, virement, paypal…",
+      "searchLabel": "Chercher un moyen de paiement",
+      "common": "Courant",
+      "commonIn": "Courant en {country}",
+      "all": "Tous les moyens",
+      "results": "Résultats",
+      "useTyped": "Utiliser « {name} »"
+    },
+    "openApp": "Ouvrir {method}",
+    "cashNothing": "Rien à copier — remets-lui les {amount}.",
+    "detailCopied": "Coordonnées copiées",
+    "addressCountryPlaceholder": "CH",
     "qrShowSheet": "Afficher le code QR",
     "qrSheetTitle": "Scanner pour rembourser {name}",
     "qrAmountTo": "{amount} à {name}",
     "qrClose": "Fermer",
-    "qrNoneAddress": "{name} a un compte suisse mais n'a pas ajouté l'adresse exigée par la norme QR-facture.",
-    "qrNoneQrIban": "La banque de {name} émet des références de facture que Balancia ne peut pas générer, il n'y a donc aucun code à scanner.",
-    "qrNoneCurrency": "Un code de paiement ne peut pas porter des {currency}."
+    "openAppWithAmount": "S'ouvre avec {amount} déjà saisi",
+    "openAppNoAmount": "S'ouvre sur son compte — le montant reste à saisir"
   },
   "countries": {
     "CH": "Suisse",

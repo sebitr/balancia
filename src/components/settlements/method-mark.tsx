@@ -32,42 +32,55 @@ import type { PaymentMethod } from "@/modules/settlements/payment-methods";
  * settle screen's chip row draws the same tile at a smaller size. Two of these
  * would be two answers to "did the operator supply a logo", and the second one
  * to be written is the one that forgets the fallback.
+ *
+ * `unbranded` is how cash and bank transfer are drawn, and it is the one thing
+ * that differs between the two places this appears. Beside a sentence about
+ * paying somebody, a banknote and a bank say what they are faster than any
+ * word. In a *column* of tiles — the payout list, the picker — a loose glyph
+ * among tiles reads as a missing tile, so there the initial takes the app's own
+ * surface instead: still not a brand, still honestly not one of ours.
  */
 export function MethodMark({
   method,
   label,
   size = 22,
+  unbranded = "glyph",
 }: {
   /** The listed method, or null for a name typed on the settle screen. */
   method: PaymentMethod | null;
   label: string;
   size?: number;
+  /** How cash and bank transfer are drawn. See the note above. */
+  unbranded?: "glyph" | "tile";
 }) {
   const [logoLoaded, setLogoLoaded] = useState(false);
   const radius = size / 3.4;
 
-  if (method === null) {
-    return (
-      <span
-        aria-hidden="true"
-        className="flex shrink-0 items-center justify-center bg-white/10 font-semibold text-foreground shadow-[inset_0_0_0_1px_oklch(1_0_0_/_0.16)]"
-        style={{
-          width: size,
-          height: size,
-          borderRadius: radius,
-          fontSize: size * 0.5,
-        }}
-      >
-        {label.trim().charAt(0).toUpperCase()}
-      </span>
-    );
-  }
+  const neutral = (
+    <span
+      aria-hidden="true"
+      className="flex shrink-0 items-center justify-center bg-white/10 font-semibold text-foreground shadow-[inset_0_0_0_1px_oklch(1_0_0_/_0.16)]"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        fontSize: size * 0.5,
+      }}
+    >
+      {label.trim().charAt(0).toUpperCase()}
+    </span>
+  );
 
-  if (method.kind === "cash") {
-    return <Banknote aria-hidden="true" className="size-5 shrink-0" />;
-  }
-  if (method.kind === "bank") {
-    return <Landmark aria-hidden="true" className="size-5 shrink-0" />;
+  // A name somebody typed has no brand at all, whichever way it is asked for.
+  if (method === null) return neutral;
+
+  if (method.kind === "cash" || method.kind === "bank") {
+    if (unbranded === "tile") return neutral;
+    return method.kind === "cash" ? (
+      <Banknote aria-hidden="true" className="size-5 shrink-0" />
+    ) : (
+      <Landmark aria-hidden="true" className="size-5 shrink-0" />
+    );
   }
 
   return (

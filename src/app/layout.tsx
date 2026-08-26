@@ -4,9 +4,13 @@ import { GeistMono } from "geist/font/mono";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { FormatPreferencesProvider } from "@/i18n/format-context";
-import { resolveFormatPreferences } from "@/i18n/preferences";
+import {
+  resolveAccentColor,
+  resolveFormatPreferences,
+} from "@/i18n/preferences";
 import { CurrencyFavoritesProvider } from "@/components/money/currency-favorites";
 import { resolveCurrencyFavorites } from "@/modules/currencies/preferences";
+import { accentTokens } from "@/modules/profile/accent";
 import { getEnv } from "@/lib/env";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
@@ -73,6 +77,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Starred currencies, for every picker below. One value per reader, so it is
   // resolved here rather than in each of the seven forms that opens one.
   const favorites = await resolveCurrencyFavorites();
+  // The accent, painted onto the root element in the server's own HTML. An
+  // inline declaration outranks both `:root` and `.dark`, so the three tokens
+  // it sets are the ones every accent in the app reads.
+  const accent = await resolveAccentColor();
 
   return (
     <html
@@ -81,6 +89,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       // element before React hydrates, which is a mismatch by construction.
       suppressHydrationWarning
       className={`${instrumentSans.variable} ${instrumentSerif.variable} ${GeistMono.variable} h-full antialiased`}
+      style={accentTokens(accent)}
     >
       <body className="flex min-h-full flex-col">
         <SerwistRegister />

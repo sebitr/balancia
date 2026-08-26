@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  *
  * `SettingsGroup` is the hub's unit: a small uppercase label sitting outside a
  * card of rows. The label is outside because it names a *set of destinations*
- * rather than titling a panel — "You", "How it reads" — and a caption inside
+ * rather than titling a panel — "Account", "Payments" — and a caption inside
  * the card would read as the first row of it.
  *
  * `SettingsCard` is the detail screens' unit: a title inside the card, because

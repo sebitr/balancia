@@ -91,6 +91,15 @@ export const users = pgTable(
     /** How numbers are written ("comma-dot", "dot-comma", "space-comma"). */
     numberFormat: text("number_format"),
     /**
+     * Which colour the app paints what is chosen, active or still to do.
+     *
+     * A name from `modules/profile/accent.ts` — "mint", not an oklch triple —
+     * so the palette can be retuned without a migration, and so a value that
+     * reaches `--primary` is one of seven rather than whatever was stored.
+     * Null is the coral the app has always used.
+     */
+    accentColor: text("accent_color"),
+    /**
      * Instance administrator: the person who runs this installation.
      *
      * Distinct from `group_members.role`, which is about one group's expenses.
@@ -151,6 +160,11 @@ export const users = pgTable(
     check(
       "users_number_format_known",
       sql`${table.numberFormat} IS NULL OR ${table.numberFormat} IN ('comma-dot', 'dot-comma', 'space-comma')`,
+    ),
+    // Same rule as the two above: NULL is "never chose one", which is coral.
+    check(
+      "users_accent_color_known",
+      sql`${table.accentColor} IS NULL OR ${table.accentColor} IN ('coral', 'amber', 'mint', 'ocean', 'lavender', 'raspberry', 'plum')`,
     ),
     // A photo is a key and the type it was sniffed as; one without the other
     // is a row the delivery route cannot answer from, so it cannot exist.

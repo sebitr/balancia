@@ -16,6 +16,11 @@ import {
   type NumberFormat,
 } from "./format";
 import { resolveRequestLocale } from "./request";
+import {
+  ACCENT_COOKIE_NAME,
+  resolveAccent,
+  type AccentColor,
+} from "@/modules/profile/accent";
 
 /**
  * Per-request resolution of how this reader writes dates and numbers.
@@ -78,4 +83,25 @@ export async function getDateFormatter(): Promise<DateFormatter> {
 /** The locale a Server Component should format money and numbers with. */
 export async function getNumberLocale(): Promise<string> {
   return (await resolveFormatPreferences()).numberLocale;
+}
+
+/**
+ * Which accent this request paints with.
+ *
+ * Read here rather than in `modules/profile` because reading a cookie is a
+ * request-context job, and the domain modules stay framework-free — the same
+ * reason the notation above is resolved here and not in `auth/service`.
+ *
+ * From the cookie alone. The account column exists so the choice follows
+ * somebody to a new device, and sign-in copies it into the cookie there — see
+ * `applyStoredPreferences`. A database round trip in front of the root layout,
+ * on every render, for a value that has not changed since the last one, would
+ * be a poor trade for skipping that copy.
+ *
+ * An unknown value resolves to coral rather than reaching `--primary`: the
+ * cookie is not HttpOnly, so anything at all can be in it.
+ */
+export async function resolveAccentColor(): Promise<AccentColor> {
+  const cookieStore = await cookies();
+  return resolveAccent(cookieStore.get(ACCENT_COOKIE_NAME)?.value);
 }

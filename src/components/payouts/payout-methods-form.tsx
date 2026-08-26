@@ -23,6 +23,13 @@ import {
   type PaymentMethodId,
 } from "@/modules/settlements/payment-methods";
 import type { SwissCreditorAddress } from "@/modules/payouts/qr/swiss";
+import {
+  EMPTY_ADDRESS,
+  isBlankAddress,
+  isCompleteAddress,
+  isSwissIban,
+  sameAddress,
+} from "@/modules/payouts/address";
 
 /**
  * How people pay you back, as a list you tick.
@@ -453,56 +460,5 @@ function SwissAddress({
 
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
-  );
-}
-
-/** What "no address" looks like in the fields; the account holds null. */
-const EMPTY_ADDRESS: SwissCreditorAddress = {
-  street: "",
-  buildingNumber: "",
-  postalCode: "",
-  town: "",
-  country: "",
-};
-
-const ADDRESS_FIELDS = [
-  "street",
-  "buildingNumber",
-  "postalCode",
-  "town",
-  "country",
-] as const;
-
-/**
- * Whether an address is needed at all.
- *
- * Only the Swiss standard requires one, so only a Swiss IBAN is asked. A
- * German account gets a Girocode, which carries no address, and nobody is
- * asked where they live to be paid by TWINT.
- */
-function isSwissIban(detail: string): boolean {
-  return /^(CH|LI)/i.test(detail.replace(/\s/g, ""));
-}
-
-/** The three the standard will not build a code without. */
-function isCompleteAddress(address: SwissCreditorAddress): boolean {
-  return (
-    address.postalCode.trim().length > 0 &&
-    address.town.trim().length > 0 &&
-    /^[A-Za-z]{2}$/.test(address.country.trim())
-  );
-}
-
-function isBlankAddress(address: SwissCreditorAddress): boolean {
-  return ADDRESS_FIELDS.every((key) => (address[key] ?? "").trim() === "");
-}
-
-function sameAddress(
-  address: SwissCreditorAddress,
-  saved: SwissCreditorAddress | null,
-): boolean {
-  if (!saved) return false;
-  return ADDRESS_FIELDS.every(
-    (key) => (address[key] ?? "").trim() === (saved[key] ?? "").trim(),
   );
 }

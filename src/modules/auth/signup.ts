@@ -347,6 +347,7 @@ export async function signInWithCode(
       locale: users.locale,
       dateFormat: users.dateFormat,
       numberFormat: users.numberFormat,
+      accentColor: users.accentColor,
     })
     .from(users)
     .where(eq(sql`lower(${users.email})`, email))
@@ -383,6 +384,7 @@ export async function signInWithCode(
       locale: row.locale,
       dateFormat: row.dateFormat,
       numberFormat: row.numberFormat,
+      accentColor: row.accentColor,
     },
   };
 }
