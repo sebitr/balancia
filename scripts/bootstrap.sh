@@ -4,16 +4,16 @@
 #   ./scripts/bootstrap.sh
 #
 # Writes the .env next to compose.yaml: this instance's own database password
-# and auth secret, and — when there is a terminal to ask on — the answers to a
-# short set of questions about the optional features. Nothing in this
-# repository contains a usable production secret, so every install generates
-# its own.
+# and auth secret, and — when there is a terminal to ask on — whether this host
+# pulls the published image or builds its own, plus the answers to a short set
+# of questions about the optional features. Nothing in this repository contains
+# a usable production secret, so every install generates its own.
 #
 # Safe to re-run. A value already present in .env is never touched, and every
 # question writes its answer, "no" included, so nothing is ever asked twice.
 # That is what keeps it usable in front of Compose —
 #
-#   ./scripts/bootstrap.sh && docker compose up -d --build
+#   ./scripts/bootstrap.sh && docker compose up -d
 #
 # With no terminal on stdin (CI, a pipe) it asks nothing and writes only the
 # secrets, exactly as it always did.
@@ -637,6 +637,33 @@ suggest_port() {
   return 1
 }
 
+# ── Docker ──────────────────────────────────────────────────────────────────
+
+# Whether this host's Compose can read compose.image.yaml at all.
+#
+# That file removes the build section it inherits with `!reset`, and `!reset`
+# arrived in Compose 2.24. An older one does not fail politely: it stops on a
+# YAML tag it has never heard of, naming a file the operator did not knowingly
+# ask for. Cheaper to find out here, where the answer is a question that simply
+# does not get asked.
+#
+# A host with no Docker yet is not old — it is empty, and the version it
+# installs will be current — so an unreadable version is treated as new enough
+# rather than as a reason to take the choice away.
+compose_too_old() {
+  _v=$(docker compose version --short 2> /dev/null) || return 1
+  _v=${_v#v}
+  _major=${_v%%.*}
+  _rest=${_v#*.}
+  _minor=${_rest%%.*}
+  case $_major:$_minor in
+    *[!0-9:]* | *::* | :* | *:) return 1 ;;
+  esac
+  [ "$_major" -lt 2 ] && return 0
+  [ "$_major" -eq 2 ] && [ "$_minor" -lt 24 ] && return 0
+  return 1
+}
+
 # ── Command line ────────────────────────────────────────────────────────────
 
 usage() {
@@ -725,6 +752,52 @@ if [ "$interactive" -eq 1 ]; then
   for key in $question_keys; do
     has_value "$key" || questions_total=$((questions_total + 1))
   done
+
+  # ── Where the app comes from ──────────────────────────────────────────────
+  # Asked ahead of the numbered questions and left out of question_keys,
+  # because COMPOSE_FILE is not one of the application's settings: Compose
+  # reads it out of this same .env to decide which files it is composing, and
+  # the container never sees it. src/lib/env.test.ts holds that line — every
+  # name in question_keys has to be one the schema accepts.
+  #
+  # Written either way, "build" included, so that a second run does not ask
+  # again. compose.yaml alone is what Compose would have done unasked; the line
+  # is there to record that somebody chose it.
+  if ! has_value COMPOSE_FILE; then
+    if compose_too_old; then
+      heading 'This host will build Balancia'
+      prose <<'TEXT'
+The published image is read through compose.image.yaml, which needs
+Docker Compose 2.24 or newer, and this host has an older one. Building
+from source works on every version, so that is what is written — upgrade
+Compose and change the line to pull instead.
+
+TEXT
+      write_setting COMPOSE_FILE compose.yaml \
+        'Compose reads this, not the app. compose.yaml alone builds the application here; Compose 2.24 or newer can pull it instead — see compose.image.yaml.'
+    else
+      heading 'Where this host gets Balancia'
+      prose <<'TEXT'
+Every release is published to Docker Hub for amd64 and arm64, so this
+host can pull the application rather than compile it. On a small server
+that build is the heaviest thing the machine is ever asked to do, and it
+comes back at every upgrade.
+
+Build from source instead when you are changing the code, or when this
+host must not depend on a registry. Neither answer is a commitment: the
+database, the volumes and this file do not care which one put the
+container there.
+
+TEXT
+      if ask_yes_no 'Pull the published image?' y; then
+        write_setting COMPOSE_FILE compose.yaml:compose.image.yaml \
+          'Compose reads this, not the app. Plain `docker compose` now means compose.yaml plus compose.image.yaml, which pulls sebitro/balancia instead of building it.'
+      else
+        write_setting COMPOSE_FILE compose.yaml \
+          'Compose reads this, not the app. compose.yaml alone, which builds the application on this host.'
+      fi
+    fi
+  fi
 
   # ── Where people reach it ─────────────────────────────────────────────────
   if ! has_value APP_URL; then
@@ -1396,6 +1469,17 @@ telemetry_summary() {
   fi
 }
 
+# Whether `docker compose up` is about to pull the application or compile it.
+# Read back out of COMPOSE_FILE rather than remembered, because the operator
+# may have changed it by hand since — and because an .env written before this
+# question existed says nothing at all, which is Compose's own default: build.
+image_source_summary() {
+  case $(value_of COMPOSE_FILE) in
+    *compose.image.yaml*) printf 'pulled from Docker Hub' ;;
+    *) printf 'built on this host' ;;
+  esac
+}
+
 # Where recurring expenses, push delivery and the nightly sweep actually run.
 # Worth a line because the answer is now a default rather than something that
 # was typed, and because the state where nothing runs them — the profile off
@@ -1434,6 +1518,7 @@ summary() {
     *:*) row 'Database port' "$db_port, this host only" ;;
     *) row 'Database port' "$db_port, published" ;;
   esac
+  row 'Application' "$(image_source_summary)"
   if is_enabled ALLOW_REGISTRATION; then
     row 'Registration' 'open'
   else
@@ -1514,6 +1599,6 @@ if [ "$interactive" -eq 0 ] && [ "$written" -eq 1 ]; then
   printf '     terminal to be asked about them.\n'
 fi
 
-printf '\n  Next  %sdocker compose up -d --build%s\n\n' "$cyan" "$reset"
+printf '\n  Next  %sdocker compose up -d%s\n\n' "$cyan" "$reset"
 
 exit 0
