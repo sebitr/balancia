@@ -215,30 +215,139 @@ identifying the live link in a UI, not the link itself.
 
 ### Redeeming one
 
-**Those two paths are themselves the API.** There is no `/api/…` equivalent to
-call: both are plain HTTP `GET`s that set a cookie, which is the same session
-mechanism this API uses everywhere else, so a native client redeems a link by
-requesting the URL it was handed with its own cookie storage attached.
+**Reading a link and taking it are different calls.** That is the one thing
+about this pair that is not negotiable, and it is why the web routes cannot be
+reused: `GET /join/g/<token>` in a browser _spends_ the token — it sets a cookie
+and redirects — so a client that fetched the web URL to find out what a link
+was would have joined by accident. The token is gone either way.
 
-Neither requires an authenticated session — the link _is_ the credential, and a
-signed-out reader is the ordinary case. What each does differs:
+| Method | Path                 | Auth      | Effect                          |
+| ------ | -------------------- | --------- | ------------------------------- |
+| GET    | `/api/join/g/:token` | anonymous | describes a group-wide link     |
+| POST   | `/api/join/g/:token` | required  | takes it                        |
+| GET    | `/api/join/:token`   | anonymous | describes a personal invitation |
+| POST   | `/api/join/:token`   | required  | takes it                        |
 
-- `GET /join/<token>` mints a **guest session** for that participant, sets
-  `balancia_guest`, and answers `303` to `/invite`. The client can stop at the
-  `303`; the cookie is already set. `GET /api/auth/session` then reports
-  `{guest}` naming the group.
-- `GET /join/g/<token>` identifies nobody. It sets a join cookie holding the
-  link token and answers `303` to `/join/start`, where the reader picks which
-  of the group's unclaimed names is theirs. A caller who is **already signed in
-  and already a member** is sent to `/groups/:groupId` instead — that redirect
-  target is how a client tells "you are in this group already" from "carry on
-  joining". Finishing the flow is a Server Action with no JSON equivalent yet,
-  so a native client either drives `/join/start` in a web view or adds the
-  endpoint.
+The two namespaces mirror the web's rather than collapsing into one
+`/api/join/:token`: the tokens live in different tables (`group_join_links` and
+`guest_invitations`), and the client always knows which kind it holds because
+the URL it was opened with said so.
 
-A failure of either lands on `/join/error?reason=…` — `invalid`,
-`rate-limited`, or `unavailable`. Both are rate-limited by client IP, so a
-token cannot be brute-forced.
+**`GET` changes nothing.** No cookie, no guest session, no `lastUsedAt`, nobody
+bound to a participant. Safe to call twice, safe to call and abandon — which is
+what lets a sheet say _"Join Lisbon, March?"_ before anybody agrees to it.
+`src/modules/join/redeem.integration.test.ts` asserts each of those separately,
+because the failure would be invisible: a preview that quietly spent the link
+still looks like a working preview.
+
+It also answers **anonymously**, on purpose. The link is the authority — the
+rule the whole join flow rests on, stated in `src/modules/join/service.ts` — and
+what comes back is what the web already shows any holder of one. Asking somebody
+to sign in before telling them what they are being asked to join is a worse
+trade than it looks: they would be making an account to read an invitation they
+might decline.
+
+```json
+{
+  "groupId": "8f1c…",
+  "groupName": "Lisbon, March",
+  "icon": "airplane",
+  "iconColor": "coral",
+  "memberCount": 5,
+  "invitedBy": "Amélie",
+  "participantName": "Bruno",
+  "expiresAt": "2026-09-01T12:00:00.000Z",
+  "alreadyMember": false
+}
+```
+
+`icon` and `iconColor` are the group DTO's own slugs, and both are nullable — a
+group with no icon shows its initial. `participantName` is the seat a personal
+invitation is holding, and is `null` for a group-wide link, which has identified
+nobody. `invitedBy` is `null` when that account is gone. `alreadyMember` is
+`false` for a caller the request cannot name, so a signed-out reader always sees
+`false`.
+
+**`POST` takes the link and needs an account** — 401 otherwise, checked before
+the token is resolved, so a signed-out caller cannot use it to probe whether a
+link is live. It answers `200` with
+
+```json
+{ "groupId": "8f1c…", "participantId": "3b90…" }
+```
+
+and is **idempotent**: an account already in the group gets the same body from
+the same call rather than a conflict, so a double tap is not a failure. No new
+seat is created the second time.
+
+`POST /api/join/g/:token` accepts an optional body carrying the fork the web
+offers on `/join/start`:
+
+| Field           | Effect                                             |
+| --------------- | -------------------------------------------------- |
+| `participantId` | claim that unclaimed seat, keeping its history     |
+| `displayName`   | join as somebody new under this name               |
+| _(omitted)_     | join as somebody new under the name on the account |
+
+Without a `participantId` the joiner always becomes a **new** participant, so a
+client that wants the web's "which of these names is you?" step has to offer it
+before calling. `POST /api/join/:token` takes no body — the token names the seat.
+
+Redeeming needs no **verified email**: verification is enforced at sign-in
+(`signInWithPassword` refuses an unverified account when SMTP is configured), so
+anything holding a session has already cleared it.
+
+Both paths are rate-limited by client IP under the same buckets the web uses —
+`joinRedeem` for the group link, `guestRedeem` for invitations — because an
+opaque token reachable unauthenticated is a guessing surface the minting routes
+are not.
+
+#### What comes back when it will not open
+
+Refusals carry a sentence **and** a stable `code`:
+
+```json
+{
+  "error": "This link has expired. Ask somebody in the group for a fresh one.",
+  "code": "expired"
+}
+```
+
+Unlike the rest of this API, that sentence is **translated** into the caller's
+language, negotiated from the locale cookie or `Accept-Language`. These are the
+only responses here a reader sees rather than a developer — the app puts them
+straight into the sheet — so the rule in `src/lib/server-errors.ts` about the
+mobile API answering in English does not reach them. The `code` is what a client
+should branch on, and what lets the app show its own strings later.
+
+| Case                                     | `code`         | Status |
+| ---------------------------------------- | -------------- | ------ |
+| malformed token, or one nobody minted    | `invalid`      | 404    |
+| group deleted (its links go with it)     | `invalid`      | 404    |
+| past its `expiresAt`                     | `expired`      | 410    |
+| revoked, or replaced by a newer link     | `revoked`      | 410    |
+| group archived                           | `revoked`      | 410    |
+| the invitation's participant was removed | `revoked`      | 410    |
+| seat already held by another account     | `taken`        | 409    |
+| not signed in (`POST` only)              | `authRequired` | 401    |
+| rate limited                             | `rateLimited`  | 429    |
+| fault on this side                       | `unavailable`  | 500    |
+
+The split a client needs: **404 and 410 mean the link is dead** and only a new
+one helps; **409** means this account cannot have that particular seat; **401**
+means sign in and retry the same link; **429 and 500** mean try again.
+
+Two of those rows are deliberate rather than incidental. An **archived group**
+reads as a revoked link because saying otherwise would confirm the group exists,
+matching `resolveJoinLink`. And there is **no "already spent"** — neither link
+is single-use. Both stay open until revoked or expired, redemption only stamps
+`lastUsedAt`, and a personal invitation mints a fresh 30-day guest session on
+the web every time it is opened.
+
+The browser routes are unchanged and still work as they always did: `GET
+/join/<token>` mints a guest session and answers `303` to `/invite`, `GET
+/join/g/<token>` sets the join cookie and answers `303` to `/join/start`, and
+failures land on `/join/error?reason=…`.
 
 ### Expiry and revocation
 
