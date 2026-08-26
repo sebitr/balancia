@@ -55,7 +55,7 @@ import type {
  * from the checklist at the end, or from the moment they pay off.
  */
 export function OnboardingFlow({
-  arrival,
+  arrival: arrivalProp,
   group,
   members = [],
   inviterName = null,
@@ -132,6 +132,29 @@ export function OnboardingFlow({
    */
   const [arrivedWith] = useState(account);
   const signedIn = arrivedWith !== null;
+
+  /*
+   * How this person got here, captured on the first render for the same
+   * reason, and the one that decides the whole route.
+   *
+   * `/register` is the page that can change its mind: it reads the actor to
+   * choose between the personal arrival — a guest, with the group they are a
+   * guest of behind them — and the cold one. Claiming the account is exactly
+   * what turns the first into the second, and the profile screen's rename is
+   * a Server Action, so the page re-renders with the new answer while the
+   * reader is still standing on the flow.
+   *
+   * Read live, that pulled the last two screens out of the route from under
+   * them: a cold arrival has no arrival screen and no checklist, so "See the
+   * group" stopped leading to the list that says the account now exists and
+   * left for the group instead. How somebody arrived is a fact about the past
+   * and cannot stop being true halfway along.
+   *
+   * The prop is shadowed rather than renamed throughout on purpose: nothing
+   * below can reach the live one by accident, and a use added later reads the
+   * held copy without anybody having to know this paragraph exists.
+   */
+  const [arrival] = useState(arrivalProp);
 
   const [intent, setIntent] = useState<Intent>(
     // Somebody holding an account has already answered this, whatever the
