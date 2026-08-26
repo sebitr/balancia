@@ -111,8 +111,8 @@ Comments should explain **why**, not what. A comment restating the code is
 noise; a comment explaining a non-obvious constraint is the reason the next
 person does not break it.
 
-Write user-facing strings in plain language. "That email and password
-combination did not work" beats "Authentication failed (401)".
+Write user-facing strings in plain language. "Incorrect email or password"
+beats "Authentication failed (401)".
 
 ### Accessibility
 

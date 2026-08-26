@@ -81,13 +81,13 @@
   },
   "auth": {
     "signIn": {
-      "title": "Welcome back",
-      "subtitle": "Sign in to see your groups and balances.",
-      "email": "Email",
+      "title": "Back to your groups",
+      "subtitle": "Sign in to access your groups and track your balances.",
+      "email": "Email address",
       "password": "Password",
       "forgotPassword": "Forgot password?",
       "submit": "Sign in",
-      "withPasskey": "Sign in with a passkey",
+      "withPasskey": "Use a passkey",
       "noAccount": "No account yet?",
       "createOne": "Create one",
       "metaTitle": "Sign in"
@@ -2313,7 +2313,7 @@
     "mailNotConfigured": "That needs email, which is not configured on this instance. Ask the administrator for help.",
     "noPassword": "This account does not have a password set.",
     "wrongPassword": "Your current password is not correct.",
-    "invalidCredentials": "That email and password combination did not work.",
+    "invalidCredentials": "Incorrect email or password.",
     "invalidCode": "That code is wrong or has expired. Ask for a new one.",
     "codeSendFailed": "The code could not be sent. Try again in a moment.",
     "resetLinkInvalid": "That reset link is no longer valid. Ask for a new one.",
@@ -3188,8 +3188,8 @@
     "testFailed": "The report could not be sent."
   },
   "demo": {
-    "signInBody": "This is a live demo. You get your own groups, filled in and ready to change — nothing here is saved, and it disappears after a couple of hours.",
-    "enter": "Enter the demo",
+    "signInBody": "Explore Balancia with ready-made demo groups. Nothing is kept, and the data is deleted after a couple of hours.",
+    "enter": "Try the demo",
     "bannerBody": "Demo — your changes are not saved and disappear after a couple of hours."
   }
 }

@@ -102,7 +102,7 @@ export class AuthError extends Error {
 }
 
 /** One message for every credential failure, on purpose. */
-const INVALID_CREDENTIALS = "That email and password combination did not work.";
+const INVALID_CREDENTIALS = "Incorrect email or password.";
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
