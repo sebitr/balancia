@@ -43,6 +43,7 @@ import { resolveRequestLocale } from "@/i18n/request";
 import { getEnv } from "@/lib/env";
 import { matchesDemoCredential } from "@/modules/demo/credentials";
 import { startDemoAction } from "@/modules/demo/actions";
+import { signOutDestination } from "@/modules/demo/exit";
 
 /**
  * Authentication Server Actions.
@@ -163,7 +164,7 @@ export async function signOutAction(): Promise<void> {
     await revokeSession(token);
   }
   await clearSessionCookie();
-  redirect("/");
+  redirect(signOutDestination(getEnv()));
 }
 
 export async function requestPasswordResetAction(

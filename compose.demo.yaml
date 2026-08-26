@@ -33,6 +33,11 @@ services:
       # The demo's own address, not the real instance's: it is what the
       # WebAuthn relying-party ID and the CSRF origin check are derived from.
       APP_URL: ${DEMO_APP_URL:?set DEMO_APP_URL, e.g. https://demo.example.com}
+      # The way out. `/` on a demo goes straight to the sign-in screen, so
+      # there is no homepage here to return to when someone signs out — this
+      # sends them to the real one instead. Unset and they land back on the
+      # sign-in screen, which reads as a sign-out that did not work.
+      DEMO_EXIT_URL: ${DEMO_EXIT_URL:-}
       # Sessions do not need to survive a restart here — nothing else does —
       # but the schema requires a value, and one that changes on every deploy
       # would be a puzzling way to sign everybody out.
