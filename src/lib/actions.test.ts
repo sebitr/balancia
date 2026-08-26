@@ -80,7 +80,7 @@ describe("runAction", () => {
    * level as though the server had actually broken.
    */
   it.each([
-    "That email and password combination did not work.",
+    "Incorrect email or password.",
     "Confirm your email address before signing in. Check your inbox for the link.",
     "That email address is already registered. Try signing in instead.",
     "Your current password is not correct.",

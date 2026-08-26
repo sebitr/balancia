@@ -81,13 +81,13 @@
   },
   "auth": {
     "signIn": {
-      "title": "Ravi de te revoir",
-      "subtitle": "Connecte-toi pour voir tes groupes et tes soldes.",
-      "email": "E-mail",
+      "title": "Retrouve tes groupes",
+      "subtitle": "Connecte-toi pour accéder à tes groupes et suivre tes soldes.",
+      "email": "Adresse e-mail",
       "password": "Mot de passe",
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
-      "withPasskey": "Se connecter avec une clé d'accès",
+      "withPasskey": "Utiliser une clé d'accès",
       "noAccount": "Pas encore de compte ?",
       "createOne": "Créer un compte",
       "metaTitle": "Connexion"
@@ -2313,7 +2313,7 @@
     "mailNotConfigured": "Cela nécessite l'e-mail, qui n'est pas configuré sur cette instance. Contacte l'administrateur.",
     "noPassword": "Ce compte n'a pas de mot de passe défini.",
     "wrongPassword": "Ton mot de passe actuel est incorrect.",
-    "invalidCredentials": "Cette combinaison d'adresse e-mail et de mot de passe n'a pas fonctionné.",
+    "invalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
     "invalidCode": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
     "codeSendFailed": "Le code n'a pas pu être envoyé. Réessaie dans un instant.",
     "resetLinkInvalid": "Ce lien de réinitialisation n'est plus valide. Demandes-en un nouveau.",
@@ -3188,8 +3188,8 @@
     "testFailed": "Le rapport n’a pas pu être envoyé."
   },
   "demo": {
-    "signInBody": "Ceci est une démo. Tu obtiens tes propres groupes, déjà remplis et prêts à être modifiés — rien n'est enregistré, et tout disparaît au bout de quelques heures.",
-    "enter": "Entrer dans la démo",
+    "signInBody": "Teste Balancia avec des groupes de démonstration prêts à l'emploi. Rien n'est conservé et les données sont supprimées après quelques heures.",
+    "enter": "Essayer la démo",
     "bannerBody": "Démo — tes modifications ne sont pas enregistrées et disparaissent au bout de quelques heures."
   }
 }
