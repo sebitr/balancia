@@ -58,6 +58,19 @@ describe("normalizeMerchant", () => {
     );
   });
 
+  it("offers the same text with the payment words still on it", () => {
+    // The stripped form identifies the merchant and keys a learned mapping;
+    // the kept form is what phrase matching reads, because those words open
+    // ordinary phrases as well as card descriptors.
+    const purchase = normalizeMerchant("Achat de voiture");
+    expect(purchase.normalizedMerchant).toBe("de voiture");
+    expect(purchase.withLeadingWords).toBe("achat de voiture");
+
+    // Identical when nothing was stripped, which is the common case.
+    const plain = normalizeMerchant("MIGROS 1234");
+    expect(plain.withLeadingWords).toBe(plain.normalizedMerchant);
+  });
+
   it("keeps a `carte` that opens a term rather than a card", () => {
     // "Carte" fronts a payment descriptor and it also fronts several ordinary
     // French terms. Stripping it from those deleted the only word that

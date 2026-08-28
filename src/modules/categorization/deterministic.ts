@@ -127,8 +127,13 @@ export function prepareText(input: ClassifyTransactionInput): PreparedText {
   // For matching: the description usually *is* the merchant, so running it
   // through the same normalization keeps `CB NETFLIX.COM 12/05` from
   // contributing a date.
-  const matchable = [normalized.normalizedMerchant, ...parts].map(
-    (part) => normalizeMerchant(part).normalizedMerchant || part,
+  //
+  // `withLeadingWords` rather than `normalizedMerchant`, because a payment
+  // word stripped off a *description* takes an ordinary phrase with it —
+  // `achat de voiture` and `visa application` both lost the half that said
+  // what they were. Merchant matching below still uses the stripped form.
+  const matchable = [normalized.withLeadingWords, ...parts].map(
+    (part) => normalizeMerchant(part).withLeadingWords || part,
   );
 
   // For the model: identifiers removed, but accents, case and word order left
@@ -247,6 +252,33 @@ export function collectDeterministicSignals(
     }
   }
 
+  // What names a child names its parent. See `DERIVED_BY_CATEGORY`.
+  for (const [category, derived] of DERIVED_BY_CATEGORY) {
+    if (suppressed.has(category)) continue;
+
+    for (const merchant of derived.merchants) {
+      const score = merchantScore(prepared.merchantTokens, merchant);
+      if (score !== null) {
+        add(category, { group: "merchant", token: merchant.token, score });
+      }
+    }
+
+    const excluded = (EXCLUDES_BY_CATEGORY.get(category) ?? []).some((phrase) =>
+      containsTokenRun(prepared.textStems, phrase.stems),
+    );
+    if (excluded) continue;
+
+    for (const phrase of derived.phrases) {
+      if (containsTokenRun(prepared.textStems, phrase.stems)) {
+        add(category, {
+          group: "phrase",
+          token: phrase.token,
+          score: SIGNAL_WEIGHTS.strongPhrase,
+        });
+      }
+    }
+  }
+
   // Repetition leans towards a subscription without ever deciding one: on its
   // own 0.15 is far below every threshold.
   if (input.recurring && !suppressed.has("subscriptions")) {
@@ -350,3 +382,102 @@ const COMPILED_SUBCATEGORIES: ReadonlyMap<
     })),
   ]),
 );
+
+/** A category's excludes, pooled across the several entries it may have. */
+const EXCLUDES_BY_CATEGORY: ReadonlyMap<
+  ExpenseCategory,
+  readonly CompiledPhrase[]
+> = (() => {
+  const pooled = new Map<ExpenseCategory, CompiledPhrase[]>();
+  for (const seed of COMPILED_SEEDS) {
+    const bucket = pooled.get(seed.id) ?? [];
+    bucket.push(...seed.excludes);
+    pooled.set(seed.id, bucket);
+  }
+  return pooled;
+})();
+
+/**
+ * Category evidence read off the subcategory rules.
+ *
+ * `SUBCATEGORY_SEEDS` is consulted only *after* a category is settled, so a
+ * word that appears there and nowhere else names a subcategory of nothing —
+ * the rule is written, compiles, reads as coverage, and can never fire.
+ * Auditing the file found 272 of them: `shurgard`, `foot locker`, `basefit`,
+ * `dishwasher`, `toothpaste`, `hiking`, whole shelves of brands that no rule
+ * could reach.
+ *
+ * The standing answer was to write each word twice, once at each level. That
+ * is a rule nobody can keep — it had already been missed 272 times — and it is
+ * derivable, because the second level is held to the *higher* bar: a rule only
+ * goes there when something names that subcategory outright, and whatever
+ * names `transport / train` beyond argument has named `transport` beyond
+ * argument too.
+ *
+ * Two things are deliberately not lifted:
+ *
+ *  - **A brand the category itself calls ambiguous.** `total` is a filling
+ *    station and the commonest word on a receipt; `coop` is a supermarket, a
+ *    pharmacy and a petrol pump. Where a category lists a brand in
+ *    `ambiguousMerchants` it has already said what that brand is worth, and
+ *    this must not overrule it.
+ *  - **Anything the category already carries**, which would only be a second
+ *    signal in the same group, where the strongest already wins.
+ *
+ * Excludes and override suppression still apply, so a category that has stood
+ * down stays down.
+ */
+const DERIVED_BY_CATEGORY: ReadonlyMap<
+  ExpenseCategory,
+  {
+    readonly merchants: readonly CompiledPhrase[];
+    readonly phrases: readonly CompiledPhrase[];
+  }
+> = (() => {
+  const ambiguous = new Map<ExpenseCategory, Set<string>>();
+  const known = new Map<ExpenseCategory, Set<string>>();
+  for (const seed of COMPILED_SEEDS) {
+    const a = ambiguous.get(seed.id) ?? new Set<string>();
+    for (const rule of seed.ambiguous) a.add(rule.token);
+    ambiguous.set(seed.id, a);
+
+    // Deliberately not `seed.keywords`: a word the category only leans on at
+    // 0.45 is a word the subcategory rules assert outright, and the higher
+    // bar is the one that should answer. `salon de thé` was a weak hint at
+    // restaurants and a settled `cafe` rule, and the hint was winning.
+    const k = known.get(seed.id) ?? new Set<string>();
+    for (const rule of [...seed.merchants, ...seed.fragments])
+      k.add(rule.token);
+    for (const rule of seed.phrases) k.add(rule.token);
+    known.set(seed.id, k);
+  }
+
+  const derived = new Map<
+    ExpenseCategory,
+    { merchants: CompiledPhrase[]; phrases: CompiledPhrase[] }
+  >();
+  for (const [category, rules] of COMPILED_SUBCATEGORIES) {
+    const skipMerchant = ambiguous.get(category) ?? new Set<string>();
+    const seen = known.get(category) ?? new Set<string>();
+    const merchants: CompiledPhrase[] = [];
+    const phrases: CompiledPhrase[] = [];
+    for (const rule of rules) {
+      for (const merchant of rule.merchants) {
+        if (skipMerchant.has(merchant.token) || seen.has(merchant.token)) {
+          continue;
+        }
+        seen.add(merchant.token);
+        merchants.push(merchant);
+      }
+      for (const phrase of rule.phrases) {
+        if (seen.has(phrase.token)) continue;
+        seen.add(phrase.token);
+        phrases.push(phrase);
+      }
+    }
+    derived.set(category, { merchants, phrases });
+  }
+  return derived;
+})();
+
+/** Compiled once, like the category seeds. */

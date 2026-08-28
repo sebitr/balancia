@@ -49,7 +49,10 @@ description / notes
         ▼
   contextual overrides ─┐
   merchant match       ─┤
-  strong phrases       ─┼──► signals ──► ranked categories
+  strong phrases       ─┤
+  subcategory rules,   ─┼──► signals ──► ranked categories
+    read as their      ─┤
+    parent's evidence  ─┤
   weak keywords        ─┤
   recurring bonus      ─┘
         │
@@ -556,13 +559,34 @@ Existing rows keep their old string until a migration rewrites them;
 `loadMappings()` translates a retired pair on read and discards anything else,
 so a category that was removed outright cannot come back through an old row.
 
-### The category has to be reachable first
+### The category is read off the subcategory rule
 
 `SUBCATEGORY_SEEDS` is consulted only _after_ a category is settled, so a
-brand or phrase that appears there and nowhere else names a subcategory of
-nothing. `Midas` was exactly that for an afternoon: a `vehicle_maintenance`
-rule under a category no rule could reach. Whatever names the subcategory
-usually has to name the category too.
+brand or phrase appearing there and nowhere else used to name a subcategory of
+nothing — written, compiled, reading as coverage, and unable to fire. `Midas`
+was exactly that for an afternoon. Auditing the file found **272** more:
+`shurgard`, `foot locker`, `basefit`, `dishwasher`, `toothpaste`, `hiking`.
+
+The standing answer was to write each word twice, once at each level. Nobody
+can keep that rule — it had already been missed 272 times — and it is
+derivable, because the second level is held to the _higher_ bar: a rule only
+goes there when something names that subcategory outright, and whatever names
+`transport / train` beyond argument has named `transport` beyond argument.
+
+So `DERIVED_BY_CATEGORY` in `deterministic.ts` lifts every subcategory rule to
+its parent, at the same weight it would have carried as a category rule. Two
+things are deliberately not lifted:
+
+- **A brand the category itself calls ambiguous.** `total` is a filling
+  station and the commonest word on a receipt; `coop` is a supermarket, a
+  pharmacy and a petrol pump. A category that listed a brand in
+  `ambiguousMerchants` has already said what it is worth.
+- **Anything the category already carries as a merchant or strong phrase**,
+  which would only be a second signal in a group where the strongest wins.
+
+A category's `excludes` and any override suppression still apply, so a
+category that has stood down stays down. Adding a subcategory rule therefore
+needs no matching category rule — write it once, at the level it belongs to.
 
 ### Add a subcategory rule
 

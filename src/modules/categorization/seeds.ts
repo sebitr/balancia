@@ -426,6 +426,9 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "eau de parfum",
       "eau de toilette",
       "eau de cologne",
+      // Formula is bought in the same aisle as milk and is not milk: the
+      // taxonomy files it under the child it feeds.
+      "lait infantile",
     ],
     ambiguousMerchants: [
       // Forecourt and kiosk formats: groceries as often as fuel or a sandwich.
@@ -767,6 +770,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "pack de bière",
       "case of beer",
       "six pack",
+      // And the same line drawn around wine: the shop is groceries, the bar
+      // is here, and "vin" alone was answering for both.
+      "cave à vin",
+      "caviste",
+      "wine shop",
     ],
   },
   {
@@ -1531,8 +1539,19 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
      * Sunglasses are bought, not prescribed. Without this the `lunettes` that
      * means an optician answered for the pair on a beach towel, and did it at
      * 0.90 with nothing to argue against it.
+     *
+     * The animal words are the same rule from the other side: a clinic is a
+     * clinic and a hospital is a hospital, but when the patient has four legs
+     * the bill is `pets`, which is a question people ask on its own.
      */
-    excludes: ["lunettes de soleil", "sunglasses"],
+    excludes: [
+      "lunettes de soleil",
+      "sunglasses",
+      "vétérinaire",
+      "veterinaire",
+      "veterinary",
+      "animal",
+    ],
   },
   {
     id: "entertainment",
@@ -1822,7 +1841,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
      * and not a room. The two tied at 0.90 and this one won on nothing but
      * being written first.
      */
-    excludes: ["alimentaire"],
+    excludes: [
+      "alimentaire",
+      // "Room" is a bed everywhere except here, where it is a pot of tea.
+      "tea room",
+    ],
   },
   {
     id: "activities",
@@ -1976,6 +1999,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "present for",
       "carte cadeau",
       "bon cadeau",
+      // A gym is somewhere people go every week, not an outing they booked.
+      // `fitness` is a weak keyword here and a settled `health / fitness` rule
+      // there, and the keyword was answering for both.
+      "fitness club",
+      "club de fitness",
+      "salle de sport",
+      "gym membership",
     ],
     merchantFragments: [
       "musee",
@@ -2238,7 +2268,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "phone plan",
       "passeport",
       "passport",
-      "visa",
+      // The document, not the card that paid for the subscription: a bare
+      // "visa" now survives normalization on a card descriptor, and this
+      // exclude was never meant to catch those.
+      "visa application",
+      "demande de visa",
       "assurance",
       "insurance",
     ],
@@ -3263,14 +3297,7 @@ export const SUBCATEGORY_SEEDS: {
       id: "restaurant",
       phrases: {
         en: ["restaurant", "steakhouse"],
-        fr: [
-          "restaurant",
-          "brasserie",
-          "bistrot",
-          "trattoria",
-          "pizzeria",
-          "auberge",
-        ],
+        fr: ["restaurant", "brasserie", "bistrot", "trattoria", "pizzeria"],
       },
     },
   ],
@@ -3618,6 +3645,15 @@ export const SUBCATEGORY_SEEDS: {
         fr: ["taxe déchets", "taxe au sac", "ramassage des ordures"],
       },
     },
+    {
+      // Before `rent`, because "garantie de loyer" carries the word `loyer`
+      // and the deposit is the more specific of the two.
+      id: "security_deposit",
+      phrases: {
+        en: ["security deposit", "rental deposit"],
+        fr: ["dépôt de garantie", "caution du bail", "garantie de loyer"],
+      },
+    },
     { id: "rent", phrases: { en: ["rent"], fr: ["loyer"] } },
     {
       id: "mortgage",
@@ -3640,13 +3676,6 @@ export const SUBCATEGORY_SEEDS: {
           "achat de la maison",
           "achat appartement",
         ],
-      },
-    },
-    {
-      id: "security_deposit",
-      phrases: {
-        en: ["security deposit", "rental deposit"],
-        fr: ["dépôt de garantie", "caution du bail", "garantie de loyer"],
       },
     },
     {
@@ -3730,8 +3759,10 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
+      // Not `melectronics`: it is Migros' electronics shop, and the store
+      // format already sends it to `shopping`.
       id: "appliances",
-      merchants: ["fust", "melectronics"],
+      merchants: ["fust"],
       phrases: {
         en: [
           "appliance",
@@ -3840,21 +3871,6 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
-      id: "shoes",
-      merchants: [
-        "foot locker",
-        "dosenbach",
-        "ochsner shoes",
-        "courir",
-        "sarenza",
-        "deichmann",
-      ],
-      phrases: {
-        en: ["shoes", "trainers", "sneakers", "boots"],
-        fr: ["chaussures", "baskets", "souliers", "bottes"],
-      },
-    },
-    {
       id: "accessories",
       merchants: ["swatch", "pandora", "claires", "bijou brigitte"],
       phrases: {
@@ -3879,7 +3895,8 @@ export const SUBCATEGORY_SEEDS: {
         "interdiscount",
         "brack",
         "conrad",
-        "boulanger",
+        // Not `boulanger`: the French electronics chain is spelled exactly
+        // like the man who sells bread, and in this app the bread wins.
       ],
       phrases: {
         en: ["electronics", "laptop", "headphones", "smartphone"],
@@ -3955,6 +3972,26 @@ export const SUBCATEGORY_SEEDS: {
       phrases: {
         en: ["phone repair", "screen repair", "shoe repair", "watch repair"],
         fr: ["réparation téléphone", "réparation écran", "cordonnerie"],
+      },
+    },
+    {
+      /**
+       * After `sporting_goods` and `repairs`, both of which name a pair of
+       * shoes on their way to naming something else: "running shoes" is
+       * sports kit and "shoe repair" is a cobbler.
+       */
+      id: "shoes",
+      merchants: [
+        "foot locker",
+        "dosenbach",
+        "ochsner shoes",
+        "courir",
+        "sarenza",
+        "deichmann",
+      ],
+      phrases: {
+        en: ["shoes", "trainers", "sneakers", "boots"],
+        fr: ["chaussures", "baskets", "souliers", "bottes"],
       },
     },
     {
@@ -4175,7 +4212,9 @@ export const SUBCATEGORY_SEEDS: {
         "holmes place",
       ],
       phrases: {
-        en: ["gym membership", "gym", "fitness club", "personal trainer"],
+        // Not "personal trainer": `trainers` is what half of Europe calls a
+        // pair of shoes, and the stem is the same word.
+        en: ["gym membership", "gym", "fitness club"],
         fr: [
           "abonnement salle de sport",
           "salle de sport",
@@ -4422,7 +4461,8 @@ export const SUBCATEGORY_SEEDS: {
           "via ferrata",
           "plongée",
           "accrobranche",
-          "escalade",
+          // Not the bare "escalade": a "salle d'escalade" is an indoor wall,
+          // which is `sports`, and the word cannot answer for both.
           "forfait de ski",
           "forfait ski",
           "remontées mécaniques",
@@ -4738,17 +4778,21 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
-      id: "veterinary",
-      phrases: {
-        en: ["vet", "veterinarian", "veterinary", "animal hospital"],
-        fr: ["vétérinaire", "clinique vétérinaire"],
-      },
-    },
-    {
+      /**
+       * Before `veterinary`: "médicament vétérinaire" is a bottle bought at
+       * the counter, and the vet in it is only who prescribed it.
+       */
       id: "medication",
       phrases: {
         en: ["flea treatment", "worming tablets", "pet medication"],
         fr: ["antipuces", "vermifuge", "médicament vétérinaire"],
+      },
+    },
+    {
+      id: "veterinary",
+      phrases: {
+        en: ["vet", "veterinarian", "veterinary", "animal hospital"],
+        fr: ["vétérinaire", "clinique vétérinaire"],
       },
     },
     {
@@ -4819,18 +4863,22 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
+      /**
+       * Before `donations`: a church donation is a donation, and it is the
+       * word "church" that says which kind.
+       */
+      id: "religious_giving",
+      phrases: {
+        en: ["church donation", "tithe"],
+        fr: ["denier du culte", "don à l'église", "quête"],
+      },
+    },
+    {
       id: "donations",
       merchants: ["gofundme", "helloasso", "leetchi"],
       phrases: {
         en: ["donation", "fundraiser"],
         fr: ["don", "collecte de fonds", "cagnotte"],
-      },
-    },
-    {
-      id: "religious_giving",
-      phrases: {
-        en: ["church donation", "tithe"],
-        fr: ["denier du culte", "don à l'église", "quête"],
       },
     },
     {

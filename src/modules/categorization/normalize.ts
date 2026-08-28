@@ -245,8 +245,26 @@ const TRAILING_PLACES = new Set([
 export interface NormalizedMerchant {
   /** Exactly what the caller passed, untouched. */
   readonly rawMerchant: string;
-  /** Folded, de-noised, prefix-free text used for every comparison. */
+  /** Folded, de-noised, prefix-free text used to identify the *merchant*. */
   readonly normalizedMerchant: string;
+  /**
+   * The same, with the leading payment words left on, for matching *words*.
+   *
+   * Stripping `achat`, `carte`, `credit` and the rest is right for a merchant:
+   * it is what makes `CB CARREFOUR 12/05` and `carrefour` the same key, and
+   * that key is what a learned mapping is stored under. It is wrong for a
+   * description, because those words also open ordinary phrases, and the
+   * stripping deleted the half that identified them — `achat de voiture` came
+   * through as `de voiture`, `visa application` as `application`, and every
+   * seed rule written that way was unreachable however plainly someone typed
+   * it.
+   *
+   * Keeping them is safe in the direction that matters: a phrase that matched
+   * the shorter form still matches this one, so this can only ever add
+   * evidence. `merchantTokens` stays on `normalizedMerchant`, so brand
+   * matching and mapping keys are untouched.
+   */
+  readonly withLeadingWords: string;
   /** The processor that fronted the payment, when one was recognised. */
   readonly processor: string | null;
   /** True when the text was *only* a processor, with no merchant behind it. */
@@ -290,6 +308,7 @@ export function normalizeMerchant(
     }
     start += 1;
   }
+  const leadingWords = tokens.slice(0, start);
   tokens = tokens.slice(start);
 
   // A processor named without a separator ("paypal europe") is still just the
@@ -307,6 +326,7 @@ export function normalizeMerchant(
   return {
     rawMerchant,
     normalizedMerchant,
+    withLeadingWords: [...leadingWords, ...tokens].join(" "),
     processor,
     processorOnly: processor !== null && normalizedMerchant === "",
   };

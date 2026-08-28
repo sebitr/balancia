@@ -873,6 +873,54 @@ describe("subcategories", () => {
     expect(categoryOf("Ferries to Corsica")).toBe("transport");
   });
 
+  /**
+   * A rule only goes in `SUBCATEGORY_SEEDS` when something names that
+   * subcategory outright, which is a higher bar than the category needs — so
+   * the category is read off the same rule rather than written twice. Before
+   * this, 272 subcategory words named a subcategory of nothing: the rule was
+   * written, compiled, read as coverage, and could never fire.
+   */
+  it("lets a brand only the second level knows reach the first", () => {
+    expect(pairOf("Shurgard")).toEqual(["home", "storage"]);
+    expect(pairOf("Foot Locker")).toEqual(["shopping", "shoes"]);
+    expect(pairOf("Basefit")).toEqual(["health", "fitness"]);
+    expect(pairOf("Pampers")).toEqual(["kids_family", "baby"]);
+    expect(pairOf("Dishwasher")).toEqual(["home", "appliances"]);
+    expect(pairOf("Toothpaste")).toEqual(["personal_care", "toiletries"]);
+  });
+
+  it("does not let it overrule a brand the category calls ambiguous", () => {
+    // `coop` is a supermarket, a pharmacy and a filling station, and
+    // `groceries` says so in `ambiguousMerchants`. Reading it off the
+    // `supermarket` rule would quietly promote it to 0.95 and settle a
+    // question the category deliberately left open.
+    expect(classify("COOP").decision).not.toBe("auto_assigned");
+    expect(classify("SHELL").decision).not.toBe("auto_assigned");
+  });
+
+  it("keeps a payment word that a phrase needs", () => {
+    // Stripping `achat`, `visa` and the rest is right for a merchant key and
+    // wrong for a description: it deleted the half that said what the row was.
+    expect(pairOf("Achat de voiture")).toEqual([
+      "transport",
+      "vehicle_purchase",
+    ]);
+    expect(pairOf("Visa application")).toEqual([
+      "finance_admin",
+      "passport_visa",
+    ]);
+    expect(pairOf("Crédit auto")).toEqual(["transport", "vehicle_financing"]);
+  });
+
+  it("reads who the patient is before which building they are in", () => {
+    // `clinique` and `hospital` are health words, but the bill for an animal
+    // is what the dog costs, which is a question asked on its own.
+    expect(pairOf("Clinique vétérinaire")).toEqual(["pets", "veterinary"]);
+    expect(pairOf("Animal hospital")).toEqual(["pets", "veterinary"]);
+    // And a gym is somewhere people go weekly, not an outing they booked.
+    expect(pairOf("Club de fitness")).toEqual(["health", "fitness"]);
+  });
+
   it("never returns a subcategory that does not belong to its category", () => {
     for (const [text] of named) {
       const result = classifyTransactionSync({
