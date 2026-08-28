@@ -155,5 +155,6 @@ export const groupMembers = pgTable(
     ),
     index("group_members_user_idx").on(table.userId),
     index("group_members_group_idx").on(table.groupId),
+    index("group_members_participant_idx").on(table.participantId),
   ],
 );

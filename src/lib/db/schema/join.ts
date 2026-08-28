@@ -67,5 +67,6 @@ export const groupJoinLinks = pgTable(
     uniqueIndex("group_join_links_active_group_unique")
       .on(table.groupId)
       .where(sql`${table.revokedAt} IS NULL`),
+    index("group_join_links_created_by_idx").on(table.createdByUserId),
   ],
 );

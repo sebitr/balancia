@@ -340,6 +340,7 @@ export const webauthnChallenges = pgTable(
   (table) => [
     uniqueIndex("webauthn_challenges_challenge_unique").on(table.challenge),
     index("webauthn_challenges_expires_idx").on(table.expiresAt),
+    index("webauthn_challenges_user_idx").on(table.userId),
     // The three signup columns are one fact and travel together, and no other
     // kind of ceremony carries them. A row that half-remembers who it was
     // going to create cannot exist.

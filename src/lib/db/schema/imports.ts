@@ -87,6 +87,7 @@ export const importRuns = pgTable(
   (table) => [
     index("import_runs_group_idx").on(table.groupId, table.createdAt.desc()),
     index("import_runs_status_idx").on(table.status),
+    index("import_runs_created_by_idx").on(table.createdByUserId),
   ],
 );
 
@@ -159,6 +160,7 @@ export const importedFingerprints = pgTable(
       table.groupId,
       table.fingerprint,
     ),
+    index("imported_fingerprints_run_idx").on(table.importRunId),
   ],
 );
 
@@ -200,5 +202,6 @@ export const attachments = pgTable(
     index("attachments_group_idx").on(table.groupId),
     // Orphan sweep: uploads never attached to an expense.
     index("attachments_orphan_idx").on(table.createdAt),
+    index("attachments_uploaded_by_idx").on(table.uploadedByParticipantId),
   ],
 );

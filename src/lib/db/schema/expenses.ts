@@ -141,6 +141,9 @@ export const expenses = pgTable(
       .on(table.groupId)
       .where(sql`${table.deletedAt} IS NULL`),
     index("expenses_recurring_idx").on(table.recurringExpenseId),
+    // The author column is a `set null` target that nothing else indexes, so
+    // removing a participant scanned this table once per row it cleared.
+    index("expenses_created_by_idx").on(table.createdByParticipantId),
     check("expenses_amount_non_negative", sql`${table.amount} >= 0`),
     check("expenses_currency_format", sql`${table.currency} ~ '^[A-Z]{3}$'`),
     check(
@@ -270,6 +273,9 @@ export const settlements = pgTable(
       .where(sql`${table.deletedAt} IS NULL`),
     index("settlements_from_idx").on(table.fromParticipantId),
     index("settlements_to_idx").on(table.toParticipantId),
+    // As above: the two directional columns are indexed, the author column was
+    // not, and it is a foreign key that participant removal has to clear.
+    index("settlements_created_by_idx").on(table.createdByParticipantId),
     check("settlements_amount_positive", sql`${table.amount} > 0`),
     check("settlements_currency_format", sql`${table.currency} ~ '^[A-Z]{3}$'`),
     check(
