@@ -35,28 +35,38 @@ export async function ActivityFeed({
 
   return (
     <ol className="space-y-3">
-      {entries.map((entry) => (
-        <li key={entry.id} className="flex gap-3 text-sm">
-          <span
-            aria-hidden="true"
-            className="mt-2 size-1.5 shrink-0 rounded-full bg-border"
-          />
-          <span className="min-w-0">
-            <span className="block">
-              <span className="font-medium">{actorOf(entry, translate)}</span>{" "}
-              <span className="text-muted-foreground">
-                {describeActivity(entry, translate)}
+      {entries.map((entry, index) => {
+        const actor = actorOf(entry, translate);
+        // Named once per run of events by the same person; see the same rule
+        // in since-last-opened.tsx.
+        const repeats =
+          index > 0 && actorOf(entries[index - 1]!, translate) === actor;
+
+        return (
+          <li key={entry.id} className="flex gap-3 text-sm">
+            <span
+              aria-hidden="true"
+              className="mt-2 size-1.5 shrink-0 rounded-full bg-border"
+            />
+            <span className="min-w-0">
+              <span className="block">
+                <span className={repeats ? "sr-only" : "font-medium"}>
+                  {actor}{" "}
+                </span>
+                <span className="text-muted-foreground">
+                  {describeActivity(entry, translate)}
+                </span>
               </span>
+              <time
+                dateTime={entry.createdAt.toISOString()}
+                className="text-xs text-muted-foreground"
+              >
+                {dates.at(entry.createdAt, { time: "short" })}
+              </time>
             </span>
-            <time
-              dateTime={entry.createdAt.toISOString()}
-              className="text-xs text-muted-foreground"
-            >
-              {dates.at(entry.createdAt, { time: "short" })}
-            </time>
-          </span>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ol>
   );
 }
