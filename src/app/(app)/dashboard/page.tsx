@@ -216,6 +216,14 @@ export default async function DashboardPage() {
             nudge on its first load. */}
           <InstallPrompt />
 
+          {/* This label has to stay neutral about direction, in every
+              language. `directionOf` files a group holding a debt in one
+              currency and a credit in another under this section on purpose —
+              without a rate it has no single sign, and prompting someone to
+              look is the harmless mistake. Its row still shows both figures,
+              so a heading that says "you owe money" is contradicted by the
+              green number underneath it. "Needs you" is not; the French said
+              "Tu dois de l'argent" and was. */}
           {buckets.needsYou.length > 0 && (
             <Section label={t("sectionNeedsYou")}>
               <GroupList groups={buckets.needsYou.map(toRow)} now={nowIso} />
