@@ -17,7 +17,7 @@ Started, on a branch, not yet merged.
 
 Agreed on, not started. Pick from the top.
 
-<!-- - [ ] Item — pointer to the doc or file that explains it -->
+- [ ] Use the whole window on a desktop, instead of a phone column with a bottom bar — `src/components/layout/app-shell.tsx`
 
 ## Someday
 
