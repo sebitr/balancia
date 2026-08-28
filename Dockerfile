@@ -7,8 +7,11 @@
 # stage so the runtime layer carries no build toolchain, no dev dependencies
 # and no source beyond what is executed.
 #
-# Builds for linux/amd64 and linux/arm64: nothing here is architecture-specific
-# and native modules (sharp is a dev dependency only) are avoided at runtime.
+# Builds for linux/amd64 and linux/arm64. Nothing written here is
+# architecture-specific, and the one native module that reaches the runtime
+# stage — sharp, which arrives as an optional dependency of `next` rather than
+# as ours — publishes prebuilt binaries for both. `pnpm icons` uses sharp too,
+# but that is a devDependency and runs on the developer's machine.
 
 ARG NODE_VERSION=24-alpine
 

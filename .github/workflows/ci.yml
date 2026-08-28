@@ -200,9 +200,16 @@ jobs:
       # is copied from. That is one word in the Dockerfile, and nothing else
       # notices when it changes back: `pnpm audit --prod` reads the lockfile,
       # not the image. Name a few of the heaviest and let the image answer.
+      #
+      # `sharp` is deliberately not on this list. It is a devDependency here —
+      # `pnpm icons` renders the PWA set with it — but it is also an *optional*
+      # dependency of `next`, which is where the copy in the image comes from.
+      # Asserting its absence would be asserting that Next.js shipped without
+      # its image optimizer, which is not this job's business to demand.
       - name: Confirm no dev dependencies were shipped
         run: |
-          for pkg in typescript esbuild vitest jsdom drizzle-kit sharp @playwright/test; do
+          for pkg in typescript esbuild vitest jsdom drizzle-kit @playwright/test \
+                     prettier eslint tailwindcss tsx; do
             if docker run --rm --entrypoint test balancia:ci -d "/app/node_modules/$pkg"; then
               echo "::error::$pkg is present in the runtime image"
               exit 1
