@@ -1,6 +1,6 @@
 import "server-only";
 import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
-import { getDb, type Database } from "@/lib/db/client";
+import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import { participants, settlements } from "@/lib/db/schema";
 import {
@@ -100,7 +100,7 @@ export async function createSettlement(
       capturedAt: options.now,
     });
 
-    const [settlement] = await tx
+    const insertedSettlement = await tx
       .insert(settlements)
       .values({
         groupId: access.groupId,
@@ -124,6 +124,7 @@ export async function createSettlement(
         createdByParticipantId: access.participantId,
       })
       .returning({ id: settlements.id });
+    const settlement = onlyRow(insertedSettlement, "the settlement insert");
 
     await recordActivity(tx, {
       groupId: access.groupId,
@@ -285,7 +286,8 @@ export async function deleteSettlement(
         toParticipantId: settlements.toParticipantId,
       });
 
-    if (deleted.length === 0) {
+    const [deletedSettlement] = deleted;
+    if (!deletedSettlement) {
       throw new AuthorizationError(
         "That settlement is not part of this group.",
         "notInGroup",
@@ -299,18 +301,18 @@ export async function deleteSettlement(
       entityId: settlementId,
       ...activityActorFrom(access),
       metadata: {
-        amount: deleted[0].amount.toString(),
-        currency: deleted[0].currency,
+        amount: deletedSettlement.amount.toString(),
+        currency: deletedSettlement.currency,
       },
     });
 
     return recordSettlementNotification(tx, access, {
       type: "settlement.deleted",
       settlementId,
-      fromParticipantId: deleted[0].fromParticipantId,
-      toParticipantId: deleted[0].toParticipantId,
-      amount: deleted[0].amount,
-      currency: deleted[0].currency,
+      fromParticipantId: deletedSettlement.fromParticipantId,
+      toParticipantId: deletedSettlement.toParticipantId,
+      amount: deletedSettlement.amount,
+      currency: deletedSettlement.currency,
     });
   });
 
@@ -350,7 +352,8 @@ export async function restoreSettlement(
         currency: settlements.currency,
       });
 
-    if (restored.length === 0) {
+    const [restoredSettlement] = restored;
+    if (!restoredSettlement) {
       throw new AuthorizationError(
         "That settlement is not part of this group.",
         "notInGroup",
@@ -364,8 +367,8 @@ export async function restoreSettlement(
       entityId: settlementId,
       ...activityActorFrom(access),
       metadata: {
-        amount: restored[0].amount.toString(),
-        currency: restored[0].currency,
+        amount: restoredSettlement.amount.toString(),
+        currency: restoredSettlement.currency,
       },
     });
   });

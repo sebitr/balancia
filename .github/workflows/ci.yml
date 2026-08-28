@@ -38,6 +38,9 @@ jobs:
 
       - run: pnpm lint
       - run: pnpm typecheck
+      # The money and session modules are held to `noUncheckedIndexedAccess`
+      # on top of the repository's settings. See scripts/check-strict-indexing.sh.
+      - run: pnpm typecheck:indexing
       - run: pnpm format:check
 
   unit:

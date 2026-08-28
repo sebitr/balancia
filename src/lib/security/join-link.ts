@@ -1,6 +1,6 @@
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { getDb, type Database } from "@/lib/db/client";
+import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { getEnv } from "@/lib/env";
 import { groupJoinLinks, groups, users } from "@/lib/db/schema";
 import { open, seal } from "./secret-box";
@@ -177,7 +177,7 @@ export async function createJoinLink(
         ),
       );
 
-    const [created] = await tx
+    const createdRows = await tx
       .insert(groupJoinLinks)
       .values({
         groupId,
@@ -189,6 +189,7 @@ export async function createJoinLink(
         createdAt: now,
       })
       .returning({ id: groupJoinLinks.id });
+    const created = onlyRow(createdRows, "the join link insert");
 
     return { token: token.raw, linkId: created.id, prefix: token.prefix };
   });

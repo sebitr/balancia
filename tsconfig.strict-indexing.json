@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true
+  },
+  "include": [
+    "src/modules/balances/**/*.ts",
+    "src/modules/currencies/**/*.ts",
+    "src/modules/expenses/**/*.ts",
+    "src/modules/settlements/**/*.ts",
+    "src/lib/security/**/*.ts"
+  ]
+}

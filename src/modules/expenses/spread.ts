@@ -193,13 +193,14 @@ export function spreadBands(
     }));
 
   const rest = spread.categories.slice(rankedCount);
-  if (rest.length === 0) return ranked;
+  const [firstOfRest] = rest;
+  if (!firstOfRest) return ranked;
 
   const total = rest.reduce((sum, entry) => sum + entry.total, 0n);
   return [
     ...ranked,
     {
-      key: categoryKeyOf(rest[0].category),
+      key: categoryKeyOf(firstOfRest.category),
       categories: rest.map((entry) => categoryKeyOf(entry.category)),
       total,
       share: shareOf(total),

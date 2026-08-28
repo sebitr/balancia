@@ -146,6 +146,28 @@ export function rowsAffected(result: unknown): number {
   return 0;
 }
 
+/**
+ * The one row a statement that writes one row returns.
+ *
+ * `INSERT … RETURNING` for a single value's worth of columns yields exactly one
+ * row, and every caller goes straight to a field on it. Destructuring the array
+ * says `T | undefined` regardless, so the choice at each of those call sites is
+ * a non-null assertion — which asserts the invariant without checking it — or
+ * this, which states it once and fails loudly if PostgreSQL ever disagrees.
+ *
+ * Not for reads. A `SELECT … LIMIT 1` that finds nothing is an ordinary answer,
+ * and those callers already branch on it.
+ */
+export function onlyRow<T>(rows: readonly T[], what: string): T {
+  const [row] = rows;
+  if (!row) {
+    throw new Error(
+      `Expected ${what} to return exactly one row, got ${rows.length}`,
+    );
+  }
+  return row;
+}
+
 /** Closes the pool. Used by the worker's graceful shutdown and by tests. */
 export async function closeDb(): Promise<void> {
   const pool = globalThis.__balanciaPool;

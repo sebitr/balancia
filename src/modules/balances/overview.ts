@@ -332,7 +332,7 @@ function counterpartyOf(
   if (creditors.size === 0) return null;
   if (creditors.size === 1) {
     const [only] = [...creditors];
-    const name = balances.participantNames.get(only);
+    const name = only ? balances.participantNames.get(only) : undefined;
     return name ? { kind: "single", name } : { kind: "several", count: 1 };
   }
   return { kind: "several", count: creditors.size };

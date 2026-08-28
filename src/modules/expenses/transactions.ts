@@ -254,5 +254,5 @@ export async function firstTransactionDate(
   const dates = [expense?.date, settlement?.date].filter(
     (date): date is string => typeof date === "string",
   );
-  return dates.length === 0 ? null : dates.sort()[0];
+  return dates.sort()[0] ?? null;
 }

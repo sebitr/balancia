@@ -127,7 +127,14 @@ export function allocateByWeights(
   let cursor = 0;
   while (leftover > 0n) {
     const target = ranked[cursor % ranked.length];
-    floors[target.index] += 1n;
+    const current = target === undefined ? undefined : floors[target.index];
+    if (target === undefined || current === undefined) {
+      // Cannot happen: `ranked` and `floors` are both built from `weights`,
+      // which was checked non-empty above. Said out loud rather than asserted
+      // away, because this loop is what makes the parts sum to the total.
+      throw new AllocationError("Allocation ran out of parts to adjust");
+    }
+    floors[target.index] = current + 1n;
     leftover -= 1n;
     cursor += 1;
   }
@@ -185,7 +192,11 @@ export function describeRounding(
   for (const [index, weight] of weights.entries()) {
     const exact = decimalTotal.times(weight).dividedBy(weightSum);
     const floorBig = BigInt(exact.floor().toFixed(0));
-    const actual = negative ? -allocation[index] : allocation[index];
+    const part = allocation[index];
+    if (part === undefined) {
+      throw new AllocationError("Allocation is shorter than its weights");
+    }
+    const actual = negative ? -part : part;
     const difference = actual - floorBig;
     if (difference !== 0n) {
       adjustedCount += 1;
