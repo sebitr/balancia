@@ -11,7 +11,7 @@ import {
   type PublicKeyCredentialRequestOptionsJSON,
   type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
-import { getDb, type Database } from "@/lib/db/client";
+import { getDb, rowsAffected, type Database } from "@/lib/db/client";
 import { passkeys, users, webauthnChallenges } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -603,7 +603,6 @@ export async function pruneWebauthnChallenges(
   const db = options.db ?? getDb();
   const deleted = await db
     .delete(webauthnChallenges)
-    .where(lt(webauthnChallenges.expiresAt, now))
-    .returning({ id: webauthnChallenges.id });
-  return deleted.length;
+    .where(lt(webauthnChallenges.expiresAt, now));
+  return rowsAffected(deleted);
 }

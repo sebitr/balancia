@@ -1,6 +1,6 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { getDb } from "@/lib/db/client";
+import { getDb, rowsAffected } from "@/lib/db/client";
 import { rateLimits } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 
@@ -167,9 +167,8 @@ export async function pruneRateLimits(olderThan: Date): Promise<number> {
   const db = getDb();
   const result = await db
     .delete(rateLimits)
-    .where(sql`${rateLimits.windowStart} < ${olderThan}`)
-    .returning({ id: rateLimits.id });
-  return result.length;
+    .where(sql`${rateLimits.windowStart} < ${olderThan}`);
+  return rowsAffected(result);
 }
 
 export class RateLimitedError extends Error {

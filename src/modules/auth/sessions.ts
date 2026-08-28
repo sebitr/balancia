@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
-import { getDb, type Database } from "@/lib/db/client";
+import { getDb, rowsAffected, type Database } from "@/lib/db/client";
 import { sessions, users } from "@/lib/db/schema";
 import {
   generateToken,
@@ -155,9 +155,6 @@ export async function pruneSessions(
   options: { db?: Database } = {},
 ): Promise<number> {
   const db = options.db ?? getDb();
-  const deleted = await db
-    .delete(sessions)
-    .where(lt(sessions.expiresAt, now))
-    .returning({ id: sessions.id });
-  return deleted.length;
+  const deleted = await db.delete(sessions).where(lt(sessions.expiresAt, now));
+  return rowsAffected(deleted);
 }
