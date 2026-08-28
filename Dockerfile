@@ -26,6 +26,22 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 
+# ── Stage: production dependencies ───────────────────────────────────────────
+# The same lockfile resolved again with the dev half left out, because the
+# runtime stage copies a node_modules and whatever is in it ships. Installed
+# separately rather than pruned from `deps`, so the build stage keeps the
+# toolchain it needs while this stays the only tree the image carries.
+FROM node:${NODE_VERSION} AS proddeps
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile --prod
+
 # ── Stage: build ─────────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
@@ -86,7 +102,11 @@ COPY --from=builder --chown=balancia:balancia /app/dist ./dist
 COPY --from=builder --chown=balancia:balancia /app/drizzle ./drizzle
 
 # node_modules for the bundles' external dependencies (pg, pg-boss, pino …).
-COPY --from=deps --chown=balancia:balancia /app/node_modules ./node_modules
+# From `proddeps`, not `deps`: the latter carries the build toolchain as well,
+# and copying it here put esbuild, TypeScript, Vitest, Playwright and sharp in
+# the shipped image — none of them reachable, all of them advisory surface that
+# `pnpm audit --prod` in CI does not look at.
+COPY --from=proddeps --chown=balancia:balancia /app/node_modules ./node_modules
 
 # Applies pending migrations before handing over to the command below.
 COPY --chmod=755 scripts/docker-entrypoint.sh /app/docker-entrypoint.sh

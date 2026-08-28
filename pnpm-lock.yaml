@@ -101,9 +101,6 @@ importers:
       serwist:
         specifier: ^9.5.12
         version: 9.5.12(browserslist@4.28.6)(typescript@6.0.3)
-      shadcn:
-        specifier: ^4.18.0
-        version: 4.18.0(supports-color@7.2.0)(typescript@6.0.3)
       sonner:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -201,6 +198,9 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.8.1
         version: 0.8.1(prettier@3.9.6)
+      shadcn:
+        specifier: ^4.18.0
+        version: 4.18.0(supports-color@7.2.0)(typescript@6.0.3)
       sharp:
         specifier: ^0.35.3
         version: 0.35.3(@types/node@26.2.0)
