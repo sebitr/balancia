@@ -101,6 +101,10 @@ export function AmountCard({
           type="text"
           inputMode="decimal"
           enterKeyHint="done"
+          // How the drawer finds the field to open on. Marked here rather than
+          // handed down as a ref, because the thing that needs naming is which
+          // field a reader starts in, and that is a fact about this card.
+          data-entry-amount=""
           value={amountText}
           onChange={(event) => onAmountChange(event.target.value)}
           // Nothing to submit — the entry is saved from its own button — so
