@@ -101,8 +101,11 @@ export default async function DashboardPage() {
   // The layout has already redirected when there is no user.
   if (!user) return null;
 
-  const t = await getTranslations("dashboard");
-  const preferredCurrency = await getUserPreferredCurrency(user.userId);
+  // Independent of each other; only the overview waits on the currency.
+  const [t, preferredCurrency] = await Promise.all([
+    getTranslations("dashboard"),
+    getUserPreferredCurrency(user.userId),
+  ]);
   const now = new Date();
   const overview = await loadHomeOverview(user.userId, {
     preferredCurrency,
