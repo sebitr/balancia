@@ -189,10 +189,6 @@ export function isSupportedCurrency(code: string): boolean {
   return BY_CODE.has(code);
 }
 
-export function findCurrency(code: string): CurrencyDefinition | undefined {
-  return BY_CODE.get(code);
-}
-
 export class UnknownCurrencyError extends Error {
   constructor(readonly code: string) {
     super(`Unknown or unsupported ISO 4217 currency code: ${code}`);

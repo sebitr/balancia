@@ -1,7 +1,7 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
-import { groupMembers, groups, participants } from "@/lib/db/schema";
+import { groupMembers, groups } from "@/lib/db/schema";
 
 /**
  * Central authorization.
@@ -304,30 +304,4 @@ export function requirePermission(
       "You do not have permission to perform this action in this group.",
     );
   }
-}
-
-/**
- * Resolves the participant an actor writes as. Every financial record is
- * attributed to a participant, including records created by guests.
- */
-export async function resolveActorParticipant(
-  access: GroupAccess,
-  options: { db?: Database } = {},
-): Promise<string | null> {
-  if (access.participantId) return access.participantId;
-  if (access.actor.kind !== "user") return null;
-
-  const db = options.db ?? getDb();
-  const [participant] = await db
-    .select({ id: participants.id })
-    .from(participants)
-    .where(
-      and(
-        eq(participants.groupId, access.groupId),
-        eq(participants.userId, access.actor.userId),
-        isNull(participants.removedAt),
-      ),
-    )
-    .limit(1);
-  return participant?.id ?? null;
 }

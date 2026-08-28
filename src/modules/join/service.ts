@@ -430,14 +430,4 @@ export async function createMember(
   });
 }
 
-/** One claimable member, re-read for the confirmation screen. */
-export async function findClaimableMember(
-  groupId: string,
-  participantId: string,
-  options: { db?: Database } = {},
-): Promise<ClaimableMember | null> {
-  const members = await listClaimableMembers(groupId, options);
-  return members.find((member) => member.id === participantId) ?? null;
-}
-
 export { FACE_LIMIT, RECENT_EXPENSE_LIMIT };

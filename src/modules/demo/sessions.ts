@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import { groups, users } from "@/lib/db/schema";
-import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import type { UserActor } from "@/lib/security/authorization";
 import { createSession, type CreatedSession } from "@/modules/auth/sessions";
@@ -175,11 +174,6 @@ export function liveDemoCount(): number {
   return registry().size;
 }
 
-/** Test seam: forget the registry without touching the database. */
-export function resetDemoRegistry(): void {
-  registry().clear();
-}
-
 async function enforceCapacity(db: Database, now: Date): Promise<void> {
   // Expired ones first — they are free, and usually enough.
   await sweepDemoSessions({ db, now });
@@ -214,9 +208,4 @@ async function drop(
     "Swept demo sessions",
   );
   return records.length;
-}
-
-/** Whether this process is serving a demo. */
-export function isDemoInstance(): boolean {
-  return getEnv().DEMO_MODE;
 }

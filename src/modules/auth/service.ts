@@ -1294,31 +1294,6 @@ export async function confirmEmailChange(
   return "changed";
 }
 
-export async function getUserById(
-  userId: string,
-  options: { db?: Database } = {},
-): Promise<AuthenticatedUser | null> {
-  const db = options.db ?? getDb();
-  const [row] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      emailVerifiedAt: users.emailVerifiedAt,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (!row) return null;
-  return {
-    userId: row.id,
-    email: row.email,
-    name: row.name,
-    emailVerified: row.emailVerifiedAt !== null,
-  };
-}
-
 /**
  * Closing an account for good.
  *

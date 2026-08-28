@@ -97,10 +97,6 @@ export const addParticipantSchema = z.object({
 
 export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
 
-export const updateParticipantSchema = addParticipantSchema.extend({
-  participantId: z.uuid(),
-});
-
 export const createInvitationSchema = z.object({
   participantId: z.uuid(),
   /** Optional expiry, in days from now. */

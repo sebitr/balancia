@@ -5,7 +5,6 @@ import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
 import { cn } from "@/lib/utils";
 import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
-import { Minus } from "lucide-react";
 
 /**
  * Money display primitives.
@@ -128,17 +127,3 @@ export function BalanceAmount({
 }
 
 /** A settled/zero state, phrased rather than shown as "0.00". */
-export function SettledBadge({ className }: { className?: string }) {
-  const t = useTranslations("money");
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 text-sm text-neutral-balance",
-        className,
-      )}
-    >
-      <Minus aria-hidden="true" className="size-4" />
-      {t("settledUpBadge")}
-    </span>
-  );
-}

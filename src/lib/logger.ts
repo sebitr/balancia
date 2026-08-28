@@ -48,17 +48,3 @@ export const logger = pino({
 });
 
 export type Logger = typeof logger;
-
-/**
- * Child logger carrying a correlation identifier. Requests, jobs and import
- * runs each get one so a single operation can be followed across processes.
- */
-export function withCorrelation(bindings: {
-  requestId?: string;
-  jobId?: string;
-  importRunId?: string;
-  groupId?: string;
-  userId?: string;
-}): Logger {
-  return logger.child(bindings);
-}

@@ -1,5 +1,4 @@
 import Decimal from "decimal.js";
-import { InvalidAmountError } from "@/modules/currencies/money";
 
 /**
  * Deterministic money allocation.
@@ -262,13 +261,4 @@ export function validateShares(shares: readonly Decimal[]): void {
       "sharesAllZero",
     );
   }
-}
-
-/** Parses a user-supplied decimal string (percentage or share weight). */
-export function parseWeight(input: string, label: string): Decimal {
-  const trimmed = input.trim();
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
-    throw new InvalidAmountError(`${label} must be a non-negative number`);
-  }
-  return new Decimal(trimmed);
 }

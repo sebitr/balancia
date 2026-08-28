@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { currencyExponent, getCurrency, minorUnitsPerMajor } from "./iso-4217";
+import { currencyExponent, getCurrency } from "./iso-4217";
 
 /**
  * A monetary amount: an exact integer count of minor units plus its currency.
@@ -75,10 +75,6 @@ export function addMoney(a: Money, b: Money): Money {
 export function subtractMoney(a: Money, b: Money): Money {
   assertSameCurrency(a, b);
   return { amount: a.amount - b.amount, currency: a.currency };
-}
-
-export function negateMoney(a: Money): Money {
-  return { amount: -a.amount, currency: a.currency };
 }
 
 export function sumMoney(amounts: readonly Money[], currency: string): Money {
@@ -184,13 +180,6 @@ export function deserializeMoney(value: SerializedMoney): Money {
   return money(BigInt(value.amount), value.currency);
 }
 
-/** decimal.js view of an amount in major units — used for exchange rates only. */
-export function toDecimalMajor(value: Money): Decimal {
-  return new Decimal(value.amount.toString()).dividedBy(
-    new Decimal(minorUnitsPerMajor(value.currency).toString()),
-  );
-}
-
 /**
  * Converts an amount between currencies with a frozen exchange rate.
  *
@@ -221,20 +210,6 @@ export function convertMoney(
     .times(scale)
     .toDecimalPlaces(0, MONEY_ROUNDING);
   return { amount: BigInt(converted.toFixed(0)), currency: targetCurrency };
-}
-
-/**
- * Multiplies an amount by a plain ratio (used for percentage previews), with
- * half-even rounding to whole minor units. Allocation code must not use this:
- * splitting uses `allocate` so the parts always sum back to the total.
- */
-export function multiplyMoney(value: Money, factor: Decimal | string): Money {
-  const decimalFactor =
-    factor instanceof Decimal ? factor : new Decimal(factor);
-  const result = new Decimal(value.amount.toString())
-    .times(decimalFactor)
-    .toDecimalPlaces(0, MONEY_ROUNDING);
-  return { amount: BigInt(result.toFixed(0)), currency: value.currency };
 }
 
 /**

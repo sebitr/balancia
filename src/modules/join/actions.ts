@@ -19,7 +19,6 @@ import {
   AuthenticationRequiredError,
   requirePermission,
 } from "@/lib/security/authorization";
-import { clearJoinCookie } from "@/modules/auth/cookies";
 import { JoinError } from "./service";
 import { joinFromLink } from "./signup-join";
 import {
@@ -41,11 +40,6 @@ import {
  * link already signed in. For them there is nothing to create, so the group
  * half is the whole thing, and it is a Server Action like any other.
  */
-
-/** Ends the flow without joining, so a shared phone leaves nothing behind. */
-export async function abandonJoinAction(): Promise<void> {
-  await clearJoinCookie();
-}
 
 /**
  * Puts the signed-in account into the group its join cookie names.

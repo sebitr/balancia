@@ -90,14 +90,6 @@ export function getAppleConfig(): AppleConfig | null {
   };
 }
 
-export function requireAppleConfig(): AppleConfig {
-  const config = getAppleConfig();
-  if (!config) {
-    throw new AppleAuthError("Sign in with Apple is not configured.");
-  }
-  return config;
-}
-
 function base64UrlJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
 }

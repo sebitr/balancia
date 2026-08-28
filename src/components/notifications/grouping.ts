@@ -246,10 +246,3 @@ export function buildSections(
 
   return sections;
 }
-
-/** Every row a section holds, bursts and digests unpacked. */
-export function rowsOf(item: InboxItem): readonly InboxRow[] {
-  return item.kind === "burst" || item.kind === "digest"
-    ? item.rows
-    : [item.row];
-}

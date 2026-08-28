@@ -18,7 +18,6 @@ import {
   resetPassword,
   signInWithPassword,
   unlinkAppleIdentity,
-  verifyEmail,
 } from "./service";
 import { revokeSession } from "./sessions";
 import {
@@ -242,18 +241,6 @@ export async function requestEmailChangeAction(
     const email = parsed.data.email.trim().toLowerCase();
     await requestEmailChange(user.userId, email, { locale: context.locale });
     return { email };
-  });
-}
-
-export async function verifyEmailAction(token: string): Promise<ActionResult> {
-  return runAction("auth.verifyEmail", async () => {
-    const ok = await verifyEmail(token);
-    if (!ok) {
-      throw new AuthError(
-        "That confirmation link is no longer valid. Sign in to request another.",
-        "confirmLinkInvalid",
-      );
-    }
   });
 }
 
