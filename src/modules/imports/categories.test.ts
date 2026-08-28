@@ -249,15 +249,16 @@ describe("a group label rather than a leaf", () => {
       categorizeImportedExpense(
         expense({ description: "Hotel Bellevue", category: "Transportation" }),
       ),
-      // The category is beyond doubt; which kind of lodging is not, and no
-      // rule claims to know from a hotel's name alone.
-    ).toEqual({ category: "lodging", subcategory: null });
+      // Both halves come from the same word: "Hotel" is what overrules the
+      // group, and it is also what names the child. Only "Bellevue" would
+      // have been a guess.
+    ).toEqual({ category: "lodging", subcategory: "hotel" });
 
     expect(
       categorizeImportedExpense(
         expense({ description: "Museum tickets", category: "Entertainment" }),
       ),
-    ).toEqual({ category: "activities", subcategory: null });
+    ).toEqual({ category: "activities", subcategory: "museums" });
   });
 
   it("falls back to it when the description says nothing", () => {
@@ -314,12 +315,13 @@ describe("a real export, end to end", () => {
     expect(categorize("trip-group.csv")).toEqual({
       // "Food and drink" covers both, so the description is what decides.
       // These two come from the description rather than a leaf, and a
-      // description that says only "Groceries" names no subcategory. "Taxi"
-      // does — the word is the rule.
+      // description that says only "Groceries" or "Dinner" names the parent
+      // and stops there. "Taxi" and "Museum" go on to name the child — the
+      // word is the rule.
       Groceries: pair("groceries"),
       Dinner: pair("restaurants"),
       Taxi: pair("transport", "taxi_ride_hailing"),
-      "Museum tickets": pair("activities"),
+      "Museum tickets": pair("activities", "museums"),
     });
   });
 
@@ -328,7 +330,9 @@ describe("a real export, end to end", () => {
       // "Entretien" is Splitwise's own word, and Hornbach agrees with it.
       Hornbach: pair("home", "maintenance"),
       "Décompte Electricite 25": pair("home", "electricity"),
-      "parapente cadeau célia": pair("gifts_donations"),
+      // A paraglide bought for somebody: the outing is the present, and
+      // "cadeau" is the word that says so.
+      "parapente cadeau célia": pair("gifts_donations", "gifts"),
       // "Général" says nothing, and neither of these descriptions says more.
       Revolu: pair(null),
       "Barre de son": pair(null),

@@ -114,6 +114,21 @@ const LEADING_PREFIXES = new Set([
 ]);
 
 /**
+ * Words after which a leading `carte` is a noun and not a card marker.
+ *
+ * "Carte" opens a payment descriptor ("CARTE 1234", "CARTE VISA") and it also
+ * opens several ordinary French terms, and stripping it from those deleted the
+ * only word that identified them: `carte grise` became `grise`, so the vehicle
+ * registration rule that has always been in the seed data could never fire,
+ * and `carte journalière` lost the day pass the same way.
+ *
+ * Kept as an explicit list rather than a rule about what follows, because the
+ * general shape does not hold: `CB CARREFOUR` is a card word in front of a
+ * merchant and must still be stripped, and so is `CARTE DE CREDIT`.
+ */
+const CARD_COMPOUND_HEADS = new Set(["grise", "cadeau", "journaliere"]);
+
+/**
  * Structured noise: nothing here can be part of a merchant name, and none of
  * it should reach a log, a model or an embedding.
  *
@@ -267,6 +282,12 @@ export function normalizeMerchant(
   // Leading payment words, however many are stacked ("paiement cb visa").
   let start = 0;
   while (start < tokens.length && LEADING_PREFIXES.has(tokens[start])) {
+    if (
+      tokens[start] === "carte" &&
+      CARD_COMPOUND_HEADS.has(tokens[start + 1] ?? "")
+    ) {
+      break;
+    }
     start += 1;
   }
   tokens = tokens.slice(start);

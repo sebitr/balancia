@@ -753,12 +753,124 @@ describe("subcategories", () => {
   });
 
   it("leaves the field blank rather than guessing", () => {
-    // "Restaurant Le Pont" is restaurants beyond argument — the word is what
-    // decided it. Which of the seven kinds it was is not in the descriptor,
-    // and being sure of the parent is not being sure of the child.
-    expect(pairOf("Restaurant Le Pont")).toEqual(["restaurants", null]);
-    // Same for a museum: the category is named outright, the child is not.
-    expect(pairOf("Museum tickets")).toEqual(["activities", null]);
+    // A ticket agency sells a concert, a musical and a football match through
+    // one descriptor. The category is entertainment beyond argument; which of
+    // its seven kinds this was is exactly what the row does not say, and being
+    // sure of the parent is not being sure of the child.
+    expect(pairOf("Ticketcorner")).toEqual(["entertainment", null]);
+    // A DIY shed is the upkeep of a home without saying which part of it: a
+    // tin of paint and a new tap are `renovation` and `repairs` alike.
+    expect(pairOf("COOP BAU+HOBBY LAUSANNE")).toEqual(["home", null]);
+  });
+
+  /**
+   * The other half of the same rule: a word that *does* name the child is
+   * taken at that word, and a descriptor naming the parent's own default is
+   * not thereby vague. "Restaurant Le Pont" says restaurant — the sit-down
+   * kind, as against the six siblings that each name something narrower.
+   */
+  it("names the child when the descriptor does", () => {
+    expect(pairOf("Restaurant Le Pont")).toEqual(["restaurants", "restaurant"]);
+    expect(pairOf("Museum tickets")).toEqual(["activities", "museums"]);
+  });
+
+  /**
+   * `activities` had eight subcategories and not one rule, so the whole
+   * category answered its second level with silence however plainly the row
+   * said what the outing was.
+   */
+  it("tells the kinds of an outing apart", () => {
+    expect(pairOf("Musée d'art")).toEqual(["activities", "museums"]);
+    expect(pairOf("Europapark")).toEqual(["activities", "theme_parks"]);
+    expect(pairOf("Visite guidée")).toEqual(["activities", "tours"]);
+    expect(pairOf("Excursion en montagne")).toEqual([
+      "activities",
+      "excursions",
+    ]);
+    expect(pairOf("Forfait de ski")).toEqual([
+      "activities",
+      "outdoor_activities",
+    ]);
+    expect(pairOf("Patinoire")).toEqual(["activities", "sports"]);
+    expect(pairOf("Cours de cuisine")).toEqual([
+      "activities",
+      "classes_workshops",
+    ]);
+    expect(pairOf("Escape game")).toEqual(["activities", "attractions"]);
+  });
+
+  it("reads the shelf a shop sells from", () => {
+    expect(pairOf("Sac à main")).toEqual(["shopping", "accessories"]);
+    expect(pairOf("Jeu de société")).toEqual(["shopping", "hobbies"]);
+    expect(pairOf("Galeries Lafayette")).toEqual(["shopping", "general"]);
+    expect(pairOf("Cordonnerie")).toEqual(["shopping", "repairs"]);
+  });
+
+  it("separates the bills a home sends from the work it needs", () => {
+    expect(pairOf("Mazout")).toEqual(["home", "heating"]);
+    expect(pairOf("Ramonage")).toEqual(["home", "maintenance"]);
+    expect(pairOf("Travaux de rénovation")).toEqual(["home", "renovation"]);
+    expect(pairOf("Femme de ménage")).toEqual(["home", "cleaning_service"]);
+    expect(pairOf("Papier toilette")).toEqual(["home", "household_supplies"]);
+  });
+
+  it("names what an animal costs, premium included", () => {
+    expect(pairOf("Croquettes")).toEqual(["pets", "pet_food"]);
+    expect(pairOf("Litière")).toEqual(["pets", "pet_supplies"]);
+    expect(pairOf("Assurance animaux")).toEqual(["pets", "pet_insurance"]);
+    expect(pairOf("Pension pour chien")).toEqual(["pets", "boarding"]);
+    expect(pairOf("Vermifuge")).toEqual(["pets", "medication"]);
+  });
+
+  it("keeps the occasion when a gift has one", () => {
+    // `gifts` is written last so the occasion answers first; without that
+    // order every wedding present filed as a plain gift.
+    expect(pairOf("Cadeau de mariage")).toEqual([
+      "gifts_donations",
+      "weddings",
+    ]);
+    expect(pairOf("Cadeau d'anniversaire")).toEqual([
+      "gifts_donations",
+      "birthdays",
+    ]);
+    expect(pairOf("Crémaillère")).toEqual(["gifts_donations", "celebrations"]);
+    expect(pairOf("Carte cadeau")).toEqual(["gifts_donations", "gifts"]);
+  });
+
+  /**
+   * Six descriptors that reached the wrong category, each because one word of
+   * a compound answered for the whole of it.
+   */
+  it("does not let half a phrase answer for all of it", () => {
+    // "Pension" is a small hotel until the word after it is "alimentaire".
+    expect(pairOf("Pension alimentaire")).toEqual([
+      "kids_family",
+      "child_support",
+    ]);
+    // The breakfast in a bed and breakfast is not what is being paid for.
+    expect(pairOf("Bed and breakfast")).toEqual(["lodging", "guesthouse"]);
+    // A fine is money that buys nothing, wherever it was earned.
+    expect(pairOf("Amende de stationnement")).toEqual([
+      "finance_admin",
+      "fines",
+    ]);
+    // Sunglasses are bought, not prescribed.
+    expect(pairOf("Lunettes de soleil")).toEqual(["shopping", "accessories"]);
+    // A screen is mended at a counter, not by a tradesman at the flat.
+    expect(pairOf("Réparation téléphone")).toEqual(["shopping", "repairs"]);
+    // "Carte" opens a card marker and it opens this, and the stripper took
+    // the only word that identified the row.
+    expect(pairOf("Carte grise")).toEqual([
+      "transport",
+      "vehicle_registration",
+    ]);
+  });
+
+  it("meets an irregular plural the operators actually use", () => {
+    // `singularize` takes off one trailing `s`, so "ferries" stems to
+    // "ferrie" and never met the "ferry" rule.
+    expect(pairOf("Corsica Ferries")).toEqual(["transport", "ferry"]);
+    expect(categoryOf("Ferries to Corsica")).toBe("transport");
   });
 
   it("never returns a subcategory that does not belong to its category", () => {

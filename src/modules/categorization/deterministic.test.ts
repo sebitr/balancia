@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { THRESHOLDS } from "./confidence";
 import { detectSubcategory, prepareText } from "./deterministic";
+import { singularize, tokenize } from "./normalize";
 import { SUBCATEGORY_SEEDS } from "./seeds";
 import { isValidSubcategory } from "./taxonomy";
 
@@ -97,6 +98,30 @@ describe("subcategory seeds", () => {
       expect(new Set(ids).size, `${category} repeats a subcategory`).toBe(
         ids.length,
       );
+    }
+  });
+
+  it("never gives two siblings the same word", () => {
+    // `detectSubcategory` keeps the *first* rule to reach the best score, so
+    // two siblings carrying one word would be settled by which was written
+    // first — an ordering nobody chose and no reader can see. A word that
+    // would have to sit under both is written under neither.
+    for (const [category, rules] of Object.entries(SUBCATEGORY_SEEDS)) {
+      const owner = new Map<string, string>();
+      for (const rule of rules) {
+        const values = [
+          ...(rule.merchants ?? []),
+          ...Object.values(rule.phrases ?? {}).flat(),
+        ];
+        for (const value of values) {
+          const key = tokenize(value).map(singularize).join(" ");
+          expect(
+            owner.get(key) ?? rule.id,
+            `${category}: "${value}" sits under two subcategories`,
+          ).toBe(rule.id);
+          owner.set(key, rule.id);
+        }
+      }
     }
   });
 

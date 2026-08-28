@@ -58,6 +58,28 @@ describe("normalizeMerchant", () => {
     );
   });
 
+  it("keeps a `carte` that opens a term rather than a card", () => {
+    // "Carte" fronts a payment descriptor and it also fronts several ordinary
+    // French terms. Stripping it from those deleted the only word that
+    // identified them, so the seed rules for them could never fire.
+    expect(normalizeMerchant("Carte grise").normalizedMerchant).toBe(
+      "carte grise",
+    );
+    expect(normalizeMerchant("Carte cadeau Fnac").normalizedMerchant).toBe(
+      "carte cadeau fnac",
+    );
+    expect(normalizeMerchant("Carte journalière").normalizedMerchant).toBe(
+      "carte journaliere",
+    );
+    // And still strips the ones that really are card words.
+    expect(normalizeMerchant("CARTE VISA MIGROS").normalizedMerchant).toBe(
+      "migros",
+    );
+    expect(normalizeMerchant("CARTE 1234 COOP").normalizedMerchant).toBe(
+      "coop",
+    );
+  });
+
   it("extracts the merchant behind a payment processor", () => {
     expect(normalizeMerchant("PAYPAL *SPOTIFY")).toMatchObject({
       normalizedMerchant: "spotify",

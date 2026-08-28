@@ -477,15 +477,30 @@ a description that starts with one of them either:
 
 ```
 "Achat de voiture"    → achat stripped → "de voiture"
-"Carte grise"         → carte stripped → "grise"
 "Crédit auto"         → credit stripped → "auto"
 ```
 
-Say the same thing in words that survive: `voiture d'occasion`,
-`immatriculation`, `prêt auto`, `acquisition immobilière`. The stripping is
-deliberate and worth far more than the handful of phrasings it costs —
-`CB CARREFOUR 12/05` has to become `carrefour` — but it is the trap to know
-about before writing a French rule.
+Say the same thing in words that survive: `voiture d'occasion`, `prêt auto`,
+`acquisition immobilière`. The stripping is deliberate and worth far more than
+the handful of phrasings it costs — `CB CARREFOUR 12/05` has to become
+`carrefour` — but it is the trap to know about before writing a French rule.
+
+`carte` is the one that had to be taught an exception, because it fronts as
+many nouns as it does cards. `CARD_COMPOUND_HEADS` in `normalize.ts` names the
+words after which it survives:
+
+```
+"Carte grise"         → kept → "carte grise"        (a registration document)
+"Carte cadeau"        → kept → "carte cadeau"       (the gift is the card)
+"Carte journalière"   → kept → "carte journaliere"  (a day pass)
+"CARTE VISA MIGROS"   → stripped → "migros"
+"CARTE 1234 COOP"     → stripped → "coop"
+```
+
+It is an explicit list rather than a rule about what follows, because the
+general shape does not hold: `CB CARREFOUR` is a card word in front of a
+merchant, and so is `CARTE DE CREDIT`. Add to the list when a rule you write
+starts with `carte` and never fires.
 
 ### Add a merchant
 
@@ -559,8 +574,23 @@ phrase-strength evidence can fill the field.
 The rule to hold to: a subcategory is asserted **only when something named it
 outright**. Being confident a purchase is `home` says nothing about which of
 its twenty-four children it is, and a plausible-looking guess filed under the user's
-name is worse than the blank it replaced. Partial coverage is the expected
-state — most categories name a handful of their children and no more.
+name is worse than the blank it replaced.
+
+Every subcategory in the vocabulary now carries at least one rule, but that is
+a property of the data and not a promise: a category with no rule for a child
+simply never suggests it, which is a supported outcome and not a gap to be
+filled with something plausible.
+
+Two things decide where a new rule goes:
+
+- **Order is load-bearing.** `detectSubcategory` keeps the _first_ rule to
+  reach the best score, so siblings matching at the same weight are settled by
+  which is written first. Each list runs specific to generic — `weddings`
+  before `gifts`, `fast_food` before `restaurant`, `theme_parks` before
+  `attractions` — and the generic one carries a comment saying why it is last.
+- **A word belongs to one sibling.** If it would have to sit under two to be
+  fair, it goes under neither, and the field is left for the user. A test in
+  `deterministic.test.ts` fails the build on a word that sits under two.
 
 ### Regrouping a picker pane
 
