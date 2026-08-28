@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnv } from "@/lib/env";
 import { registerRuntimeMetrics } from "@/lib/metrics/metrics";
@@ -21,11 +21,19 @@ import { trackRoute } from "@/lib/metrics/http";
  */
 export const dynamic = "force-dynamic";
 
-/** Constant-time comparison that does not leak the token's length by timing. */
+/**
+ * Constant-time comparison that does not leak the token's length by timing.
+ *
+ * `timingSafeEqual` throws on mismatched lengths, so comparing the tokens
+ * directly means returning early whenever the lengths differ — which answers
+ * "how long is the token?" in the one dimension the function exists to close.
+ * Hashing first makes both sides 32 bytes whatever went in, so the comparison
+ * runs the same way every time and the only thing timing reveals is that a
+ * request was made.
+ */
 function tokenMatches(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
+  const a = createHash("sha256").update(provided, "utf8").digest();
+  const b = createHash("sha256").update(expected, "utf8").digest();
   return timingSafeEqual(a, b);
 }
 
