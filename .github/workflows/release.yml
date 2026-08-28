@@ -8,6 +8,12 @@ name: Publish image
 # so a tag on the Docker Hub page is either a version somebody cut, the newest
 # of those, or main.
 #
+# A version tag additionally attaches scripts/bootstrap.sh to its GitHub
+# release, with the tag stamped into it. That asset is the whole installation
+# — it fetches its own Compose files and runs its helpers out of the image
+# published above, both pinned to the tag it was stamped with. See the
+# `installer` job at the bottom.
+#
 # Two repository secrets are required, and the first push fails at login
 # without them:
 #
@@ -180,3 +186,54 @@ jobs:
           repository: sebitro/balancia
           readme-filepath: ./docs/docker-hub.md
           short-description: "Self-hosted expense splitter — shared expenses, fairly balanced, on a server you control."
+
+  # The one file an installation starts from:
+  #
+  #   curl -fsSLO https://github.com/sebitr/balancia/releases/latest/download/bootstrap.sh
+  #
+  # That URL only resolves against a published release, so this job makes one
+  # where a tag was pushed without it. Versions only — main is :preview on
+  # Docker Hub and has no release to hang an asset on, and somebody who wants
+  # main's installer can fetch it raw.
+  installer:
+    name: Attach the installer to the release
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # The script fetches its Compose files, and runs its helpers out of the
+      # image, at whatever $version says. Stamping it here is what stops an
+      # installer downloaded today from setting up a mix of two releases.
+      - name: Stamp the version into it
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Anchored at both ends: a loose match would rewrite any other line
+          # that happened to mention a version.
+          sed -i "s|^version='main'\$|version='$TAG'|" scripts/bootstrap.sh
+          grep -q "^version='$TAG'\$" scripts/bootstrap.sh || {
+            echo "No version='main' line in scripts/bootstrap.sh to stamp." >&2
+            exit 1
+          }
+          # Flattened: it is downloaded on its own and run as ./bootstrap.sh,
+          # and it works out for itself that it is not in a checkout.
+          cp scripts/bootstrap.sh bootstrap.sh
+          sh -n bootstrap.sh
+
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # A pre-release is marked as one so that "latest" keeps pointing at
+          # the last stable installer — the same rule `latest=auto` applies to
+          # the image tag above.
+          prerelease=''
+          case "$TAG" in *-*) prerelease='--prerelease' ;; esac
+          gh release view "$TAG" > /dev/null 2>&1 ||
+            gh release create "$TAG" --generate-notes $prerelease
+          gh release upload "$TAG" bootstrap.sh --clobber

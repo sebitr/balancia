@@ -1,25 +1,40 @@
 #!/bin/sh
-# Balancia — first-run setup.
+# Balancia — first-run setup, and the installer.
+#
+# On its own, downloaded from a release, it is the whole installation:
+#
+#   curl -fsSLO https://github.com/sebitr/balancia/releases/latest/download/bootstrap.sh
+#   sh bootstrap.sh
+#
+# In a checkout it is what it always was, and does not download anything:
 #
 #   ./scripts/bootstrap.sh
 #
-# Writes the .env next to compose.yaml: this instance's own database password
-# and auth secret, and — when there is a terminal to ask on — whether this host
-# pulls the published image or builds its own, plus the answers to a short set
-# of questions about the optional features. Nothing in this repository contains
-# a usable production secret, so every install generates its own.
+# Either way it writes the .env next to compose.yaml: this instance's own
+# database password and auth secret, and — when there is a terminal to ask on
+# — the answers to a short set of questions about the optional features.
+# Nothing in this repository contains a usable production secret, so every
+# install generates its own.
+#
+# Downloaded on its own, it first makes somewhere to install into and fetches
+# the files Compose needs beside it. What it fetches is pinned to $version
+# below, which the release workflow stamps, so a standalone install cannot end
+# up running one release's application through another release's Compose file.
+# It never fetches anything in a checkout: the files are already there, and the
+# checkout is the version.
 #
 # Safe to re-run. A value already present in .env is never touched, and every
 # question writes its answer, "no" included, so nothing is ever asked twice.
-# That is what keeps it usable in front of Compose —
-#
-#   ./scripts/bootstrap.sh && docker compose up -d
 #
 # With no terminal on stdin (CI, a pipe) it asks nothing and writes only the
 # secrets, exactly as it always did.
 #
 #   -y, --yes, --defaults   do not ask; write the secrets and leave every
 #                           optional feature at its default, which is off
+#       --dir DIR           install into DIR rather than asking (standalone
+#                           only; ignored in a checkout)
+#       --update            re-fetch the Compose files for this version and
+#                           leave .env alone
 #   -h, --help              this text
 #
 #   --color, --no-color     settle the colour rather than detecting it
@@ -30,19 +45,68 @@
 # to colour it anyway.
 #
 # The secrets need only a POSIX shell and /dev/urandom: no openssl, no Node.
-# Two of the optional features download model files, and for those it needs
-# Node or Docker; without either it says which command to run instead.
+# A standalone install additionally needs curl or wget, and Docker — which it
+# was always going to need a minute later.
 set -eu
 
-root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-env_file="$root_dir/.env"
+# The release this script belongs to, stamped by .github/workflows/release.yml
+# when the file is attached to a release. It stays "main" in a checkout, where
+# nothing reads it, and where it is also a valid ref for anyone who fetched
+# this file raw rather than from a release.
+version='main'
 
-# One file out of each installer's manifest, used only to answer "are the
-# models already here?". They are the paths the browser itself probes before
-# offering the feature — see src/lib/ocr/config.ts and
-# src/lib/semantic/config.ts.
-ocr_sentinel="$root_dir/public/models/ocr/ppocrv6-tiny-det.onnx"
-semantic_sentinel="$root_dir/public/models/Xenova/paraphrase-multilingual-MiniLM-L12-v2/config.json"
+# Where the files beside this one come from when it arrives alone, and the
+# image the Node helpers are run from. Both are pinned to $version.
+#
+# Overridable so that a host behind a mirror — or a fork, or this script's own
+# tests — can point them somewhere else without editing the file. Neither is a
+# setting an ordinary install ever needs.
+raw_base=${BALANCIA_RAW_BASE:-'https://raw.githubusercontent.com/sebitr/balancia'}
+image_repo=${BALANCIA_IMAGE:-'sebitro/balancia'}
+version=${BALANCIA_VERSION:-$version}
+
+# What an installation needs beside this script. compose.image.yaml is fetched
+# even though only one of the two answers uses it, because that answer lives in
+# .env and changing your mind later should not need the network.
+companions='compose.yaml compose.image.yaml .env.example'
+
+# Where this script is, and where the installation it is setting up lives.
+#
+# In a checkout the two differ: the script is scripts/bootstrap.sh and the
+# installation is the repository above it. Downloaded on its own the script is
+# the only file there is, and the installation is a directory chosen below —
+# so root_dir stays empty until there is one.
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_name=$(basename -- "$0")
+
+if [ -e "$script_dir/../compose.yaml" ]; then
+  root_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+  standalone=0
+elif [ -e "$script_dir/compose.yaml" ]; then
+  # A standalone install being set up a second time: the Compose files are
+  # already beside the script, so there is nothing to fetch and nowhere to ask
+  # about. This is the path `--update` and every re-run take.
+  root_dir=$script_dir
+  standalone=1
+else
+  root_dir=''
+  standalone=1
+fi
+
+# Everything derived from where the installation is. Called again once a
+# standalone run has chosen its directory.
+resolve_paths() {
+  env_file="$root_dir/.env"
+
+  # One file out of each installer's manifest, used only to answer "are the
+  # models already here?". They are the paths the browser itself probes before
+  # offering the feature — see src/lib/ocr/config.ts and
+  # src/lib/semantic/config.ts.
+  ocr_sentinel="$root_dir/public/models/ocr/ppocrv6-tiny-det.onnx"
+  semantic_sentinel="$root_dir/public/models/Xenova/paraphrase-multilingual-MiniLM-L12-v2/config.json"
+}
+
+[ -z "$root_dir" ] || resolve_paths
 
 # The settings the questions below write, in the order they are asked. Kept as
 # a list as well as in the code so the prompts can say "3 of 7" — a wizard that
@@ -311,12 +375,17 @@ INTRO
 # downloaded, from where, and how a VAPID pair is built. Running them from here
 # means none of that is restated in shell, where it would drift.
 #
-# They are TypeScript, and two of them import from src/ without a file
-# extension, which Node's own resolver refuses — so a loader is needed however
-# Node arrives. In preference order: the repository's own tsx when the dev
-# dependencies are installed, a throwaway copy from the registry when they are
-# not, and a container for the host that runs Balancia with Docker and has no
-# Node at all.
+# How they are run depends on what is around them. All three import from src/,
+# so in a checkout they need a TypeScript loader: the repository's own tsx when
+# the dev dependencies are installed, a throwaway copy from the registry when
+# they are not, and a container for a host that has no Node at all.
+#
+# A standalone install has no src/ to import, so none of that applies. It runs
+# the same three helpers out of the published image instead, where the build
+# has already bundled them into dist/ with their imports resolved — the same
+# image the stack is about to pull anyway. That is the only way this works
+# without a checkout, and it is also the shortest path: no npm, no tsx, no
+# second image.
 #
 # A major rather than an exact version, because this is a type stripper
 # borrowed for one command, not a dependency of the application. The pinned one
@@ -326,10 +395,24 @@ tsx_version=4
 # Resolved once, on the first thing that needs it.
 ts_runner=''
 
+# The Docker tag matching $version, which is a git ref. release.yml publishes
+# a version tag without its leading "v" and main as "preview"; there is no
+# floating minor series to fall back on, so this mapping is total.
+image_tag() {
+  case $version in
+    main) printf 'preview' ;;
+    v*) printf '%s' "${version#v}" ;;
+    *) printf '%s' "$version" ;;
+  esac
+}
+
 resolve_ts_runner() {
   [ -z "$ts_runner" ] || return 0
 
-  if [ -x "$root_dir/node_modules/.bin/tsx" ]; then
+  if [ "$standalone" -eq 1 ]; then
+    command -v docker > /dev/null 2>&1 || return 1
+    ts_runner=image
+  elif [ -x "$root_dir/node_modules/.bin/tsx" ]; then
     ts_runner=repo
   elif command -v npx > /dev/null 2>&1; then
     ts_runner=npx
@@ -341,17 +424,33 @@ resolve_ts_runner() {
   fi
 }
 
-run_ts() {
+# $1 is the helper's base name — fetch-ocr-model, and so on. It is spelled
+# without a directory or an extension because the two ways of running it
+# disagree about both: scripts/fetch-ocr-model.ts in a checkout, dist/
+# fetch-ocr-model.js inside the image.
+run_helper() {
   resolve_ts_runner || return 1
+  _helper=$1
+  shift
   case $ts_runner in
-    repo) (cd "$root_dir" && ./node_modules/.bin/tsx "$@") ;;
-    npx) (cd "$root_dir" && npx --yes "tsx@$tsx_version" "$@") ;;
+    repo) (cd "$root_dir" && ./node_modules/.bin/tsx "scripts/$_helper.ts" "$@") ;;
+    npx) (cd "$root_dir" && npx --yes "tsx@$tsx_version" "scripts/$_helper.ts" "$@") ;;
     # HOME is set because npm caches under it, and the borrowed user id has no
     # home directory of its own inside the image.
     docker)
       docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp \
         --volume "$root_dir:/repo" --workdir /repo \
-        node:24-alpine npx --yes "tsx@$tsx_version" "$@"
+        node:24-alpine npx --yes "tsx@$tsx_version" "scripts/$_helper.ts" "$@"
+      ;;
+    # --entrypoint skips the image's own, which would try to reach a database
+    # that is not up yet. The working directory is what the two model fetchers
+    # resolve public/models against, so it has to be the installation and not
+    # /app — see OUTPUT_ROOT in scripts/fetch-ocr-model.ts.
+    image)
+      docker run --rm --user "$(id -u):$(id -g)" \
+        --volume "$root_dir:/out" --workdir /out \
+        --entrypoint node \
+        "$image_repo:$(image_tag)" "/app/dist/$_helper.js" "$@"
       ;;
   esac
 }
@@ -388,7 +487,7 @@ TEXT
   if ask_yes_no 'Read receipts on the device (no upload)?' y; then
     write_setting RECEIPT_OCR_LOCAL true \
       'On-device receipt reading. Needs the models in public/models.'
-    install_models scripts/fetch-ocr-model.ts OCR "$ocr_sentinel"
+    install_models fetch-ocr-model OCR "$ocr_sentinel"
     ask_yes_no 'Also offer a server-side provider?' n || return 0
   else
     # Deferred: writing it now would be wrong if they decline a provider
@@ -498,7 +597,7 @@ TEXT
 }
 
 install_models() {
-  _script=$1
+  _helper=$1
   _label=$2
   _sentinel=$3
   # Turning a feature back on after it was turned off should not re-fetch tens
@@ -509,14 +608,24 @@ install_models() {
   fi
   note "Fetching the $_label model files. This downloads once."
   printf '\n'
-  if run_ts "$_script" --yes; then
+  if run_helper "$_helper" --yes; then
     printf '\n'
     return 0
   fi
   printf '\n'
-  note_pending "The $_label models were not installed, so the feature will
+  # The command to run by hand is not the same one in both worlds, and naming
+  # the wrong one sends an operator to install a toolchain they do not need.
+  if [ "$standalone" -eq 1 ]; then
+    note_pending "The $_label models were not installed, so the feature will
+not appear. With Docker running, from this directory:
+  docker run --rm --user \"\$(id -u):\$(id -g)\" --volume \"\$PWD:/out\" \\
+    --workdir /out --entrypoint node $image_repo:$(image_tag) \\
+    /app/dist/$_helper.js --yes"
+  else
+    note_pending "The $_label models were not installed, so the feature will
 not appear. In a checkout with Node available, run:
-  pnpm install && pnpm tsx $_script --yes"
+  pnpm install && pnpm tsx scripts/$_helper.ts --yes"
+  fi
   return 0
 }
 
@@ -664,16 +773,147 @@ compose_too_old() {
   return 1
 }
 
+# ── Standalone install ──────────────────────────────────────────────────────
+
+# One file, over HTTPS, into a temporary name that is only moved into place
+# once it has arrived whole. curl and wget are both accepted because a host
+# that has one often does not have the other, and the script that fetched this
+# one may have been either.
+download() {
+  _url=$1
+  _dest=$2
+  if command -v curl > /dev/null 2>&1; then
+    curl -fsSL --retry 2 -o "$_dest.part" -- "$_url" || {
+      # A transfer that died halfway leaves the partial file behind, and the
+      # next run would find it beside the real names and wonder.
+      rm -f -- "$_dest.part"
+      return 1
+    }
+  elif command -v wget > /dev/null 2>&1; then
+    wget -q -O "$_dest.part" -- "$_url" || {
+      rm -f -- "$_dest.part"
+      return 1
+    }
+  else
+    return 127
+  fi
+  mv -- "$_dest.part" "$_dest"
+}
+
+# The files Compose needs, fetched at $version. Every one of them, every time:
+# they are a few kilobytes together, and a partial set is the state this is
+# trying to avoid. Nothing else has been written at the point this runs, so
+# failing here leaves an empty directory rather than a half-configured one.
+fetch_companions() {
+  _into=$1
+  for _file in $companions; do
+    # bootstrap.sh lives under scripts/ in the repository; the rest sit at the
+    # top. Only the destination is flattened — this directory is the install,
+    # not a copy of the tree.
+    if ! download "$raw_base/$version/$_file" "$_into/$_file"; then
+      return 1
+    fi
+  done
+}
+
+# Picks somewhere to install, fetches the Compose files into it, and leaves a
+# copy of this script there so that re-running it — and --update — work from
+# inside the installation.
+#
+# Only ever called when the script arrived on its own. In a checkout there is
+# nothing to choose and nothing to download.
+setup_standalone() {
+  _target=$install_dir
+
+  # Already standing inside an installation — a re-run, or --update. That is
+  # the answer, and asking would be asking somebody where they already are.
+  if [ -z "$_target" ] && [ -n "$root_dir" ]; then
+    _target=$root_dir
+  fi
+
+  if [ -z "$_target" ]; then
+    if [ "$interactive" -eq 1 ]; then
+      heading 'Where to install'
+      prose <<'TEXT'
+Balancia needs a directory of its own: the Compose files, and the .env
+holding this instance's secrets. Everything it stores at runtime — the
+database, uploaded receipts — lives in Docker volumes rather than here.
+
+TEXT
+      ask_line 'Directory' './balancia'
+      _target=$reply
+    else
+      _target='./balancia'
+    fi
+  fi
+
+  if ! mkdir -p -- "$_target" 2> /dev/null; then
+    printf '\n  %s✗%s  Could not create %s\n\n' "$red" "$reset" "$_target" >&2
+    exit 1
+  fi
+  root_dir=$(CDPATH= cd -- "$_target" && pwd)
+
+  # A directory that already holds an installation is one this script has run
+  # in before. Re-fetching would overwrite Compose files an operator may have
+  # edited, so it is left alone unless --update asked for it.
+  if [ -e "$root_dir/compose.yaml" ] && [ "$update" -eq 0 ]; then
+    note "Using the installation already in $root_dir."
+  else
+    if ! command -v curl > /dev/null 2>&1 && ! command -v wget > /dev/null 2>&1; then
+      printf '\n  %s✗%s  Neither curl nor wget is on this host.\n\n' "$red" "$reset" >&2
+      prose <<'TEXT'
+One of them is needed to fetch the Compose files. Install either, or
+clone the repository and run scripts/bootstrap.sh from inside it.
+
+TEXT
+      exit 1
+    fi
+    note "Fetching Balancia $version into $root_dir."
+    if ! fetch_companions "$root_dir"; then
+      printf '\n  %s✗%s  Could not download the Compose files.\n\n' "$red" "$reset" >&2
+      prose <<TEXT
+Tried: $raw_base/$version/
+
+A host with no way out to the network needs the files copied in by
+hand, or a checkout — see docs/self-hosting.md.
+
+TEXT
+      exit 1
+    fi
+  fi
+
+  # So that the installation can be set up again without going back for this
+  # file. Skipped when the script is already the one inside it, which is what
+  # every run after the first looks like.
+  if [ "$script_dir/$script_name" != "$root_dir/bootstrap.sh" ]; then
+    cp -- "$script_dir/$script_name" "$root_dir/bootstrap.sh" 2> /dev/null || :
+    chmod +x "$root_dir/bootstrap.sh" 2> /dev/null || :
+  fi
+
+  # compose.yaml mounts this read-only into the app. Docker would otherwise
+  # invent it at the first `up`, owned by root, on a host where that means the
+  # operator cannot drop a logo in without sudo.
+  mkdir -p -- "$root_dir/public/payment-methods" 2> /dev/null || :
+
+  resolve_paths
+}
+
 # ── Command line ────────────────────────────────────────────────────────────
 
 usage() {
-  printf '\n  %sBalancia first-run setup.%s Writes .env next to compose.yaml.\n\n' \
+  printf '\n  %sBalancia setup.%s Writes .env next to compose.yaml.\n\n' \
     "$bold" "$reset"
   cat <<USAGE
-    ./scripts/bootstrap.sh                generate secrets, ask about features
-    ./scripts/bootstrap.sh --defaults     generate secrets, ask nothing
+    sh bootstrap.sh                       install here, ask about features
+    sh bootstrap.sh --dir /srv/balancia   install somewhere named
+    ./scripts/bootstrap.sh --defaults     in a checkout; ask nothing
 
     -y, --yes, --defaults   do not ask; leave every optional feature off
+        --dir DIR           install into DIR instead of asking. Standalone
+                            only: in a checkout the installation is the
+                            checkout, and this is ignored
+        --update            re-fetch this version's Compose files over the
+                            ones in place, leaving .env untouched
         --color             colour the output even when stdout is not a
                             terminal — a pipe, a pager, docker run without -t
         --no-color          never colour it
@@ -685,9 +925,22 @@ USAGE
 }
 
 interactive=1
-for arg in "$@"; do
-  case $arg in
+install_dir=''
+update=0
+# --dir takes a value, so the arguments are walked rather than iterated.
+while [ $# -gt 0 ]; do
+  case $1 in
     -y | --yes | --defaults) interactive=0 ;;
+    --update) update=1 ;;
+    --dir)
+      [ $# -ge 2 ] || {
+        printf '\n  %s✗%s  --dir needs a directory\n' "$red" "$reset" >&2
+        exit 2
+      }
+      install_dir=$2
+      shift
+      ;;
+    --dir=*) install_dir=${1#--dir=} ;;
     # Already read, in the pass that set up the palette.
     --color | --colour | --no-color | --no-colour) ;;
     -h | --help)
@@ -695,11 +948,12 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      printf '\n  %s✗%s  unknown option "%s"\n' "$red" "$reset" "$arg" >&2
+      printf '\n  %s✗%s  unknown option "%s"\n' "$red" "$reset" "$1" >&2
       usage >&2
       exit 2
       ;;
   esac
+  shift
 done
 
 # Questions need somewhere to ask. Without a terminal the script is being run
@@ -713,6 +967,16 @@ done
 umask 077
 
 banner
+
+# A standalone run has no installation to write into yet — or has one and was
+# asked to refresh it. Either way it appears here, before anything is written,
+# so that a failed download leaves an empty directory and not half a setup.
+if [ "$standalone" -eq 1 ]; then
+  setup_standalone
+elif [ "$update" -eq 1 ]; then
+  note 'Nothing to update in a checkout: git is what brings new Compose files.'
+  printf '\n'
+fi
 
 if [ ! -e "$env_file" ]; then
   cat > "$env_file" <<'HEADER'
@@ -746,6 +1010,43 @@ if ! has_value POSTGRES_PASSWORD; then
   written=1
 fi
 
+# ── Where the app comes from, when there is no choice ───────────────────────
+
+# A standalone install can only pull: there is no source beside it to build.
+# Written whether or not there is anybody to ask, which is why it sits out here
+# rather than with the questions below — Compose reading compose.yaml alone
+# would try to build from a directory holding no Dockerfile, and would say so
+# only after `up`, in an error about a missing build context that names nothing
+# the operator chose.
+if [ "$standalone" -eq 1 ] && ! has_value COMPOSE_FILE; then
+  if [ "$interactive" -eq 1 ]; then
+    heading 'This host will pull Balancia'
+    prose <<'TEXT'
+This installation has no source in it, so the application is pulled
+from Docker Hub — the faster answer on a small server in any case, and
+the one most instances want.
+
+To build it here instead, clone the repository and run
+scripts/bootstrap.sh from inside it. The database and the volumes do
+not care which one put the container there, so it is a decision you can
+revisit without losing anything.
+
+TEXT
+  fi
+  write_setting COMPOSE_FILE compose.yaml:compose.image.yaml \
+    'Compose reads this, not the app. Plain `docker compose` means compose.yaml plus compose.image.yaml, which pulls sebitro/balancia. Building instead needs a checkout.'
+
+  # The one combination with no way forward: pulling needs a Compose that
+  # understands `!reset`, and building needs a source tree this install does
+  # not have. Said now rather than at `up`, where it surfaces as a YAML error
+  # naming a file the operator never chose.
+  if compose_too_old; then
+    note_pending 'Docker Compose here is older than 2.24, which cannot read
+compose.image.yaml. Upgrade Compose, or clone the repository and
+build from source instead.'
+  fi
+fi
+
 # ── Questions ───────────────────────────────────────────────────────────────
 
 if [ "$interactive" -eq 1 ]; then
@@ -763,6 +1064,9 @@ if [ "$interactive" -eq 1 ]; then
   # Written either way, "build" included, so that a second run does not ask
   # again. compose.yaml alone is what Compose would have done unasked; the line
   # is there to record that somebody chose it.
+  #
+  # A standalone install never reaches this: it has no build to choose, and the
+  # section above has already written its answer.
   if ! has_value COMPOSE_FILE; then
     if compose_too_old; then
       heading 'This host will build Balancia'
@@ -1044,7 +1348,7 @@ TEXT
     if ask_yes_no 'Enable semantic categorization?' n; then
       write_setting SEMANTIC_CATEGORIZATION true \
         'Semantic category fallback. Needs the model in public/models.'
-      install_models scripts/fetch-semantic-model.ts 'categorization' "$semantic_sentinel"
+      install_models fetch-semantic-model 'categorization' "$semantic_sentinel"
     else
       write_setting SEMANTIC_CATEGORIZATION false \
         'Semantic fallback off; the built-in rules still categorize.'
@@ -1067,7 +1371,7 @@ TEXT
       # code — the padding of a short scalar in src/lib/push/keys.ts is the
       # sort of detail a shell reimplementation would get wrong once in 256
       # keys.
-      push_keys=$(run_ts scripts/generate-push-keys.ts 2> /dev/null || :)
+      push_keys=$(run_helper generate-push-keys 2> /dev/null || :)
       push_public=$(printf '%s\n' "$push_keys" | sed -n 's/^PUSH_VAPID_PUBLIC_KEY=//p')
       push_private=$(printf '%s\n' "$push_keys" | sed -n 's/^PUSH_VAPID_PRIVATE_KEY=//p')
 
@@ -1100,10 +1404,19 @@ TEXT
         write_setting PUSH_VAPID_SUBJECT "$push_subject" \
           'Contact address carried in every VAPID token.'
       else
-        # Nothing is written, so the question comes back once Node is there.
-        note_pending 'Push keys could not be generated here. Run
+        # Nothing is written, so the question comes back on the next run —
+        # once Docker is reachable, or once there is a Node to run it with.
+        if [ "$standalone" -eq 1 ]; then
+          note_pending "Push keys could not be generated here. With Docker
+running, from this directory:
+  docker run --rm --entrypoint node $image_repo:$(image_tag) \\
+    /app/dist/generate-push-keys.js
+and copy the three lines into .env, or re-run this script later."
+        else
+          note_pending 'Push keys could not be generated here. Run
   pnpm push:keys
 and copy the three lines into .env, or re-run this script later.'
+        fi
       fi
     else
       # An explicit empty pair is what stops this being asked again; both
@@ -1265,7 +1578,7 @@ a receipt with. Without the files the scan button never appears.
 
 TEXT
     if ask_yes_no 'Install them now, ~32 MB?' y; then
-      install_models scripts/fetch-ocr-model.ts OCR "$ocr_sentinel"
+      install_models fetch-ocr-model OCR "$ocr_sentinel"
     fi
   fi
 
@@ -1277,7 +1590,7 @@ to infer with. Without the files categorization uses its built-in rules.
 
 TEXT
     if ask_yes_no 'Install it now, ~150 MB?' y; then
-      install_models scripts/fetch-semantic-model.ts 'categorization' "$semantic_sentinel"
+      install_models fetch-semantic-model 'categorization' "$semantic_sentinel"
     fi
   fi
 
@@ -1635,6 +1948,64 @@ if [ "$interactive" -eq 0 ] && [ "$written" -eq 1 ]; then
   printf '     terminal to be asked about them.\n'
 fi
 
-printf '\n  Next  %sdocker compose up -d%s\n\n' "$cyan" "$reset"
+# ── Starting it ─────────────────────────────────────────────────────────────
+
+# The address to open once it is up. APP_URL is empty on a --defaults run,
+# where nothing was asked and Compose's own default is what will be served.
+app_address() {
+  _url=$(value_of APP_URL)
+  [ -n "$_url" ] || _url="http://localhost:$(value_of APP_PORT)"
+  case $_url in
+    *:) printf 'http://localhost:3000' ;;
+    *) printf '%s' "$_url" ;;
+  esac
+}
+
+# Offered rather than printed, because printing it was the last thing standing
+# between a finished setup and a running instance — and because everybody
+# assumed this script did it anyway. It is still only an offer: "no" is the
+# door for anybody who wants to read compose.yaml first, which on a standalone
+# install is a file they have not seen yet.
+#
+# Not offered without a terminal: a run driven by something rather than
+# somebody has its own opinion about when the stack starts.
+if [ "$interactive" -eq 1 ] && command -v docker > /dev/null 2>&1; then
+  printf '\n'
+  if ask_yes_no 'Start Balancia now?' y; then
+    printf '\n'
+    if (cd "$root_dir" && docker compose up -d); then
+      printf '\n'
+      done_line "Balancia is starting — $(app_address)"
+      printf '  %s·%s  First boot applies migrations before it serves anything.\n' "$dim" "$reset"
+      if [ "$root_dir" != "$(pwd)" ]; then
+        printf '  %s·%s  It lives in %s — Compose reads .env from there.\n' \
+          "$dim" "$reset" "$root_dir"
+      fi
+      printf '  %s·%s  %sdocker compose logs -f app%s follows along.\n\n' \
+        "$dim" "$reset" "$cyan" "$reset"
+      exit 0
+    fi
+    printf '\n  %s✗%s  Compose did not start it. The error above says why;\n' "$red" "$reset" >&2
+    printf '     .env is written, so fixing that and running it again\n' >&2
+    printf '     is all that is left:\n\n' >&2
+    if [ "$root_dir" != "$(pwd)" ]; then
+      printf '       %scd %s%s\n' "$cyan" "$root_dir" "$reset" >&2
+    fi
+    printf '       %sdocker compose up -d%s\n\n' "$cyan" "$reset" >&2
+    exit 1
+  fi
+  printf '\n'
+fi
+
+# Compose reads .env from the directory it runs in, and a standalone run
+# usually finishes somewhere else — the parent of the directory it just made.
+# Naming it is the difference between this last line working when pasted and
+# failing on a missing POSTGRES_PASSWORD.
+if [ "$root_dir" = "$(pwd)" ]; then
+  printf '\n  Next  %sdocker compose up -d%s\n\n' "$cyan" "$reset"
+else
+  printf '\n  Next  %scd %s%s\n' "$cyan" "$root_dir" "$reset"
+  printf '        %sdocker compose up -d%s\n\n' "$cyan" "$reset"
+fi
 
 exit 0

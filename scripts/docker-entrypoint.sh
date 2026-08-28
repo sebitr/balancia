@@ -78,9 +78,16 @@ warn_missing_models() {
   echo "WARNING: $1 is on, but its files are not in this container." >&2
   echo "         $2 is set, and this is missing:" >&2
   echo "           $4" >&2
-  echo "         On the host run \`$5\`, then mount public/models" >&2
-  echo "         into this container — see the volume commented out in" >&2
-  echo "         compose.yaml, and docs/receipt-scanning.md." >&2
+  # bootstrap.sh rather than the pnpm command, because a standalone install
+  # has no checkout to run pnpm in — it fetches these out of this same image.
+  # The script works out which of the two applies; naming one of them here
+  # would send half the operators to install a toolchain they do not need.
+  echo "         On the host, re-run bootstrap.sh: it fetches these" >&2
+  echo "         whichever way this host can, and re-checks every run." >&2
+  echo "         In a checkout with Node, \`$5\` is the same thing." >&2
+  echo "         Then mount public/models into this container — see the" >&2
+  echo "         volume commented out in compose.yaml, and" >&2
+  echo "         docs/receipt-scanning.md." >&2
   echo "         Until then the feature simply will not appear." >&2
 }
 

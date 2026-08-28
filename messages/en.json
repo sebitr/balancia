@@ -1159,9 +1159,8 @@
         "copy": "Copy",
         "copied": "Copied",
         "steps": {
-          "1": "Downloads the source and opens the project.",
-          "2": "Generates secrets, asks whether to pull or build, and what to enable.",
-          "3": "Starts PostgreSQL, the app and its worker."
+          "1": "Fetches the one file that installs Balancia.",
+          "2": "Sets it up, asks what to enable, and starts everything."
         }
       },
       "facts": {

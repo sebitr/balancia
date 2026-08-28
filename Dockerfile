@@ -60,6 +60,26 @@ RUN pnpm exec esbuild src/worker/index.ts \
       --alias:server-only=./scripts/server-only-noop.js \
       --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"
 
+# The three setup helpers, bundled for the same reason and one more: a
+# standalone install has no checkout for them to import src/ from, so
+# scripts/bootstrap.sh runs these out of this image instead of borrowing a
+# Node and a TypeScript loader. They are the same files `pnpm ocr:install`,
+# `pnpm semantic:install` and `pnpm push:keys` run, so what gets downloaded and
+# how a VAPID pair is built stay stated once.
+#
+# --outdir rather than --outfile: three entry points, and the names have to
+# come out as dist/<name>.js because that is what bootstrap.sh calls them.
+# Both fetchers resolve public/models against the working directory, so the
+# container that runs them is given the installation as its workdir.
+RUN pnpm exec esbuild \
+      scripts/fetch-ocr-model.ts \
+      scripts/fetch-semantic-model.ts \
+      scripts/generate-push-keys.ts \
+      --bundle --platform=node --target=node24 --format=esm \
+      --outdir=dist --packages=external \
+      --alias:server-only=./scripts/server-only-noop.js \
+      --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"
+
 # ── Stage: runtime ───────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app

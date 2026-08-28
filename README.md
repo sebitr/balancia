@@ -111,31 +111,32 @@ for no payment card and does not reserve features for a paid plan.
 
 ### Self-host with Docker
 
-You need Git and Docker with the Compose plugin:
+You need Docker with the Compose plugin. That is the whole list — no Git, no
+Node, no checkout:
 
 ```bash
-git clone https://github.com/sebitr/balancia.git
-cd balancia
-./scripts/bootstrap.sh
-docker compose up -d
+curl -fsSLO https://github.com/sebitr/balancia/releases/latest/download/bootstrap.sh
+sh bootstrap.sh
 ```
 
 Open <http://localhost:3000> and create the first account.
 
-The bootstrap script generates unique secrets into `.env`, asks whether this
-host pulls Balancia or builds it, and which optional features to enable; it is
-safe to run again. Docker Compose then starts PostgreSQL, applies migrations,
-and launches the app — which runs its own background jobs, so that is the whole
-stack: two containers, one of them the database.
+`bootstrap.sh` is the installer and the setup wizard in one file. It asks where
+to install, fetches the Compose files for its own release into that directory,
+generates unique secrets into `.env`, asks which optional features to enable,
+and offers to start the stack. It is safe to run again, and every answer —
+including the no's — is written down, so it never asks twice.
 
-Pulling is the default and the faster answer on a small server: releases are
-published to Docker Hub as
-[`sebitro/balancia`](https://hub.docker.com/r/sebitro/balancia) for amd64 and
-arm64, so the host never runs the Next.js build. Answer no and Compose builds
-from the checkout instead, which is what you want while changing the code.
-Either answer is a single `COMPOSE_FILE` line in `.env`, and changing your mind
-later means editing it — the database, the volumes and every other setting stay
-exactly as they are.
+What starts is PostgreSQL and the app, which runs its own background jobs:
+two containers, one of them the database. Migrations are applied by the app
+before it serves anything.
+
+A standalone install pulls the application from Docker Hub, where releases are
+published as [`sebitro/balancia`](https://hub.docker.com/r/sebitro/balancia)
+for amd64 and arm64, so the host never runs the Next.js build. To build from
+source instead — which is what you want while changing the code — clone the
+repository and run `./scripts/bootstrap.sh` from inside it; it then asks which
+of the two you want. Either answer is a single `COMPOSE_FILE` line in `.env`.
 
 For a public domain, upgrades, reverse proxies and production responsibilities,
 read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
