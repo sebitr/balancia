@@ -120,6 +120,32 @@ export function getDb(): Database {
   return cachedDb;
 }
 
+/**
+ * How many rows a statement touched, without asking for the rows.
+ *
+ * The sweep jobs all want one number — how much did that clear — and the
+ * shortest way to get it from Drizzle is `.returning({ id })` and a `.length`,
+ * which is what every one of them used to do. That reads every deleted row
+ * back over the wire to count it, and the largest sweep is `rate_limits`,
+ * whose rows are one per bucket per window: a busy instance accumulates tens
+ * of thousands a day and then hauls all of them back to say "42891".
+ *
+ * The drivers disagree about where the count lives — node-postgres calls it
+ * `rowCount`, PGlite (which is the whole database on a demo instance) calls it
+ * `affectedRows` — and neither field is declared on Drizzle's shared result
+ * type. So it is read defensively here, once, rather than at six call sites.
+ */
+export function rowsAffected(result: unknown): number {
+  if (typeof result !== "object" || result === null) return 0;
+  const fields = result as {
+    rowCount?: unknown;
+    affectedRows?: unknown;
+  };
+  if (typeof fields.rowCount === "number") return fields.rowCount;
+  if (typeof fields.affectedRows === "number") return fields.affectedRows;
+  return 0;
+}
+
 /** Closes the pool. Used by the worker's graceful shutdown and by tests. */
 export async function closeDb(): Promise<void> {
   const pool = globalThis.__balanciaPool;

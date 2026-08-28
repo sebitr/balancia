@@ -84,5 +84,11 @@ export const activityEvents = pgTable(
       table.createdAt.desc(),
     ),
     index("activity_events_entity_idx").on(table.entityType, table.entityId),
+    // Both actor columns are `set null` targets, and PostgreSQL does not index
+    // a foreign key for you: without these, deleting one account or one group
+    // scans this table once per row it removes. This is the table that grows
+    // fastest and never shrinks, so that is the scan that matters most.
+    index("activity_events_actor_user_idx").on(table.actorUserId),
+    index("activity_events_actor_participant_idx").on(table.actorParticipantId),
   ],
 );

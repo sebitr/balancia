@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 /**
  * Opaque token generation and verification.
@@ -8,8 +8,9 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
  *  - 256 bits of cryptographically secure entropy, base64url encoded.
  *  - Only the SHA-256 hash is ever persisted, so a database leak yields no
  *    working links.
- *  - Lookups are by hash (indexed, constant work), and any secondary
- *    comparison is timing-safe.
+ *  - Lookups are by hash, which is indexed: the database compares a full
+ *    32-byte digest of an unguessable value, so there is no candidate held in
+ *    memory for a comparison to leak anything about.
  *  - The raw token never enters a log line, an activity event or a URL that
  *    outlives the redemption redirect.
  */
@@ -40,20 +41,6 @@ export function generateToken(): GeneratedToken {
 
 export function hashToken(raw: string): string {
   return createHash("sha256").update(raw, "utf8").digest("hex");
-}
-
-/**
- * Constant-time comparison of two hex hashes. Lookup is normally by indexed
- * hash equality; this exists for the paths where a candidate must be compared
- * against a value already in memory.
- */
-export function tokensMatch(hashA: string, hashB: string): boolean {
-  const bufferA = Buffer.from(hashA, "hex");
-  const bufferB = Buffer.from(hashB, "hex");
-  if (bufferA.length !== bufferB.length || bufferA.length === 0) {
-    return false;
-  }
-  return timingSafeEqual(bufferA, bufferB);
 }
 
 /**

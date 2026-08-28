@@ -1,7 +1,7 @@
 import "server-only";
 import Decimal from "decimal.js";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { getDb } from "@/lib/db/client";
+import { getDb, rowsAffected } from "@/lib/db/client";
 import { exchangeRateQuotes, expenses, groups } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
 import {
@@ -344,7 +344,6 @@ export async function pruneRateQuotes(olderThan: Date): Promise<number> {
   const db = getDb();
   const deleted = await db
     .delete(exchangeRateQuotes)
-    .where(sql`${exchangeRateQuotes.fetchedAt} < ${olderThan}`)
-    .returning({ id: exchangeRateQuotes.id });
-  return deleted.length;
+    .where(sql`${exchangeRateQuotes.fetchedAt} < ${olderThan}`);
+  return rowsAffected(deleted);
 }

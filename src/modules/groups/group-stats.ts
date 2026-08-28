@@ -3,8 +3,11 @@ import { isSpending } from "@/modules/expenses/direction";
 import { normalizeLegacyPair } from "@/modules/categorization/taxonomy";
 import {
   STATS_RANGES,
+  bucketIndexOf,
   bucketsFor,
+  monthsBetween,
   percentOf,
+  totalOf,
   windowOf,
   type Granularity,
   type StatsEntryFact,
@@ -229,13 +232,6 @@ export interface GroupStatsInput {
  */
 const MONTHLY_LIMIT = 24;
 
-/** Whole minor units of an entry, which is what either side of it sums to. */
-function totalOf(fact: GroupStatsEntryFact): bigint {
-  let total = 0n;
-  for (const payer of fact.payers) total += payer.amount;
-  return total;
-}
-
 /** Descending on minor units, which is how every list here is ordered. */
 function byAmountDesc(a: bigint, b: bigint): number {
   return b > a ? 1 : b < a ? -1 : 0;
@@ -285,21 +281,6 @@ function trendOf(buckets: readonly SpendBucket[]): number | null {
   const earlier = divide(sum(buckets.slice(0, split)), BigInt(split));
   if (earlier <= 0n) return null;
   return Number(((recent - earlier) * 100n) / earlier);
-}
-
-/** Whole months a window spans, never fewer than one. */
-function monthsBetween(from: string, to: string, timezone: string): number {
-  const start = DateTime.fromISO(from, { zone: timezone });
-  const end = DateTime.fromISO(to, { zone: timezone });
-  return Math.max(1, Math.round(end.diff(start, "months").months));
-}
-
-/** Which bucket a calendar day falls in, or null when it falls outside. */
-function bucketIndexOf(starts: readonly string[], day: string): number | null {
-  for (let index = starts.length - 1; index >= 0; index -= 1) {
-    if (day >= starts[index]) return index;
-  }
-  return null;
 }
 
 /** Inside the window, in one currency — either direction. */

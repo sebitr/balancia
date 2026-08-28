@@ -335,13 +335,3 @@ export function parseReceipt(
     confidence: Number((meanConfidence * completeness).toFixed(3)),
   };
 }
-
-/** What the parser thought each line was. For diagnosing a bad scan. */
-export function describeLines(
-  result: OcrResult,
-): readonly { text: string; label: string | null }[] {
-  return groupLines(result.boxes).map((line) => ({
-    text: line.text,
-    label: classifyLabel(line.text),
-  }));
-}

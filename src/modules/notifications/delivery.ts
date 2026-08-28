@@ -443,13 +443,3 @@ export async function pruneNotifications(
     .returning({ id: notifications.id });
   return rows.length;
 }
-
-/**
- * Timings the worker's schedule and the tests both refer to, so neither can
- * drift from the behaviour above.
- */
-export const DELIVERY_TIMING = {
-  SWEEP_DELAY_MS,
-  STALE_AFTER_MS,
-  MAX_CONSECUTIVE_FAILURES,
-} as const;

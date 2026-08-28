@@ -91,6 +91,24 @@ const envSchema = z
     /** Comma-separated extra origins allowed to call the auth API. */
     TRUSTED_ORIGINS: optionalString,
 
+    /**
+     * How many reverse proxies stand in front of Balancia.
+     *
+     * Rate limiting keys on the client address, which is read out of
+     * `X-Forwarded-For` — a header every proxy *appends* to and every client
+     * may open. Only the entries the proxies wrote can be believed, and this
+     * says how many those are, counted from the right.
+     *
+     * The default of 1 is the single proxy in docs/self-hosting.md. Raise it
+     * to 2 when something else terminates first — a CDN, or Cloudflare in
+     * front of nginx — otherwise every visitor arrives wearing that edge's
+     * address and shares one bucket with everybody else behind it. Never raise
+     * it past the number of proxies actually there: each extra hop hands one
+     * more entry back to the caller, and the entries the caller writes are the
+     * ones that make a limit free to walk through.
+     */
+    TRUSTED_PROXY_HOPS: z.coerce.number().int().min(1).max(10).default(1),
+
     /** Storage driver for receipt attachments. */
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
     STORAGE_LOCAL_PATH: z.string().default("./data/uploads"),

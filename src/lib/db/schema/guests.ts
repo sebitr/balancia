@@ -53,6 +53,7 @@ export const guestInvitations = pgTable(
     uniqueIndex("guest_invitations_active_participant_unique")
       .on(table.participantId)
       .where(sql`${table.revokedAt} IS NULL`),
+    index("guest_invitations_created_by_idx").on(table.createdByUserId),
   ],
 );
 
@@ -93,6 +94,7 @@ export const guestSessions = pgTable(
     index("guest_sessions_invitation_idx").on(table.invitationId),
     index("guest_sessions_group_idx").on(table.groupId),
     index("guest_sessions_expires_idx").on(table.expiresAt),
+    index("guest_sessions_participant_idx").on(table.participantId),
   ],
 );
 

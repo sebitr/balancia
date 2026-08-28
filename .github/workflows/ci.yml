@@ -195,6 +195,21 @@ jobs:
         run: |
           test "$(docker run --rm --entrypoint id balancia:ci -u)" != "0"
 
+      # The runtime stage copies a node_modules wholesale, so the only thing
+      # keeping the build toolchain out of the shipped image is which stage it
+      # is copied from. That is one word in the Dockerfile, and nothing else
+      # notices when it changes back: `pnpm audit --prod` reads the lockfile,
+      # not the image. Name a few of the heaviest and let the image answer.
+      - name: Confirm no dev dependencies were shipped
+        run: |
+          for pkg in typescript esbuild vitest jsdom drizzle-kit sharp @playwright/test; do
+            if docker run --rm --entrypoint test balancia:ci -d "/app/node_modules/$pkg"; then
+              echo "::error::$pkg is present in the runtime image"
+              exit 1
+            fi
+          done
+          echo "runtime image carries production dependencies only"
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest

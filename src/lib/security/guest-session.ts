@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import { getDb, type Database } from "@/lib/db/client";
+import { getDb, rowsAffected, type Database } from "@/lib/db/client";
 import { guestInvitations, guestSessions, participants } from "@/lib/db/schema";
 import { telemetry } from "@/lib/telemetry";
 import { generateToken, hashToken, isWellFormedToken } from "./tokens";
@@ -210,7 +210,6 @@ export async function pruneGuestSessions(
   const db = getDb();
   const deleted = await db
     .delete(guestSessions)
-    .where(sql`${guestSessions.expiresAt} < ${now}`)
-    .returning({ id: guestSessions.id });
-  return deleted.length;
+    .where(sql`${guestSessions.expiresAt} < ${now}`);
+  return rowsAffected(deleted);
 }

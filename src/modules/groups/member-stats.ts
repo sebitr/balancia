@@ -234,7 +234,7 @@ function amountFor(
 }
 
 /** Whole minor units of the entry, which is what either side sums to. */
-function totalOf(fact: StatsEntryFact): bigint {
+export function totalOf(fact: StatsEntryFact): bigint {
   let total = 0n;
   for (const payer of fact.payers) total += payer.amount;
   return total;
@@ -326,7 +326,10 @@ export function bucketsFor(
 }
 
 /** Which bucket a calendar day falls in, or null when it falls outside. */
-function bucketIndexOf(starts: readonly string[], day: string): number | null {
+export function bucketIndexOf(
+  starts: readonly string[],
+  day: string,
+): number | null {
   // Linear scan from the end: the series is at most a few dozen long and the
   // facts arrive roughly in date order, so this beats a map allocation.
   for (let index = starts.length - 1; index >= 0; index -= 1) {
@@ -508,7 +511,11 @@ function currenciesOf(
 }
 
 /** Whole months a window spans, for the chart's caption. */
-function monthsBetween(from: string, to: string, timezone: string): number {
+export function monthsBetween(
+  from: string,
+  to: string,
+  timezone: string,
+): number {
   const start = DateTime.fromISO(from, { zone: timezone });
   const end = DateTime.fromISO(to, { zone: timezone });
   return Math.max(1, Math.round(end.diff(start, "months").months));

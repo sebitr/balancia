@@ -61,5 +61,10 @@ export const reminders = pgTable(
       table.sentAt.desc(),
     ),
     index("reminders_group_idx").on(table.groupId, table.sentAt.desc()),
+    // Both participant columns are cascade targets. `reminders_pair_idx` names
+    // them, but not first — an index only serves a lookup that matches its
+    // leading column, so removing a participant could use neither.
+    index("reminders_from_idx").on(table.fromParticipantId),
+    index("reminders_to_idx").on(table.toParticipantId),
   ],
 );

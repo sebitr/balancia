@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getPool } from "@/lib/db/client";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { createExpense } from "@/modules/expenses/service";
 import { createGroup, listParticipants } from "@/modules/groups/service";
@@ -212,5 +213,51 @@ describe("loadHomeOverview", () => {
 
     expect(overview.buckets.settled).toHaveLength(1);
     expect(overview.lastCleared).toBeNull();
+  });
+
+  /**
+   * The home screen must not get more expensive per group.
+   *
+   * It used to: the balances were loaded one group at a time, five queries
+   * each, so somebody in a dozen groups paid sixty-one round trips for a
+   * screen that is dynamic and renders on every visit. Counting is the only
+   * way to state that, because the result is identical either way — the bug
+   * was never visible in an assertion about balances, only in the clock.
+   */
+  it("costs the same number of queries however many groups there are", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+    await groupWhereOwing(actor, "First", ["Mika"], "1000");
+
+    const pool = getPool();
+    const original = pool.query.bind(pool);
+    let queries = 0;
+    const counting = ((...args: Parameters<typeof original>) => {
+      queries += 1;
+      return original(...args);
+    }) as typeof pool.query;
+
+    pool.query = counting;
+    try {
+      await loadHomeOverview(actor.userId);
+      const withOneGroup = queries;
+
+      pool.query = original;
+      await groupWhereOwing(actor, "Second", ["Jonas"], "2000");
+      await groupWhereOwing(actor, "Third", ["Ravi"], "3000");
+      await groupWhereOwed(actor, "Fourth", ["Sam"], "4000");
+
+      queries = 0;
+      pool.query = counting;
+      await loadHomeOverview(actor.userId);
+      const withFourGroups = queries;
+
+      // Guards the guard: if the counter ever stopped seeing the queries —
+      // a driver that pooled differently, a mock left in place — both numbers
+      // would be zero and this test would pass while measuring nothing.
+      expect(withOneGroup).toBeGreaterThan(0);
+      expect(withFourGroups).toBe(withOneGroup);
+    } finally {
+      pool.query = original;
+    }
   });
 });

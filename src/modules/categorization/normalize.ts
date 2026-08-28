@@ -75,11 +75,6 @@ export function singularize(token: string): string {
   return token;
 }
 
-/** `tokenize`, then every token singularised. Text evidence only. */
-export function tokenizeStems(value: string): string[] {
-  return tokenize(value).map(singularize);
-}
-
 /** Payment processors that front for the merchant who actually got paid. */
 const PROCESSOR_PATTERN =
   /\b(paypal|sq|sumup|stripe|sq \*|zettle|izettle)\s*\*\s*/;

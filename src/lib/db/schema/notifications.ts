@@ -206,5 +206,8 @@ export const notificationGroupMutes = pgTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.groupId] }),
     index("notification_group_mutes_user_idx").on(table.userId),
+    // The primary key leads with `user_id`, so it cannot serve the other half
+    // of the pair: deleting a group had to scan for the rows muting it.
+    index("notification_group_mutes_group_idx").on(table.groupId),
   ],
 );

@@ -98,6 +98,7 @@ export const recurringExpenses = pgTable(
     index("recurring_expenses_due_idx")
       .on(table.nextRunAt)
       .where(sql`${table.deletedAt} IS NULL AND ${table.pausedAt} IS NULL`),
+    index("recurring_expenses_created_by_idx").on(table.createdByParticipantId),
     check("recurring_expenses_amount_positive", sql`${table.amount} > 0`),
     check("recurring_expenses_interval_positive", sql`${table.interval} >= 1`),
     check(

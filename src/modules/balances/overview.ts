@@ -25,7 +25,7 @@ import { isSupportedCurrency } from "@/modules/currencies/iso-4217";
 import { todayIso } from "@/modules/currencies/provider";
 import { lookupRate } from "@/modules/currencies/rates";
 import { listGroupsForUser, type GroupSummary } from "@/modules/groups/service";
-import { loadGroupBalances } from "./service";
+import { loadBalancesForGroups, loadGroupBalances } from "./service";
 
 /**
  * The home screen's read model: where the user stands across every group.
@@ -389,20 +389,24 @@ export async function loadHomeOverview(
   const now = options.now ?? new Date();
   const groups = await listGroupsForUser(userId, { db: options.db });
 
-  const unconverted: GroupPosition[] = await Promise.all(
-    groups.map(async (group) => {
-      const balances = await loadGroupBalances(
-        { groupId: group.id, group },
-        { db: options.db },
-      );
-      return {
-        group,
-        amounts: ownAmounts(group, balances.currencies),
-        net: null,
-        owedTo: counterpartyOf(group, balances),
-      };
-    }),
-  );
+  // One set of reads for every group at once, rather than one set per group:
+  // see `loadBalancesForGroups`. This is the screen that made the difference.
+  const balancesByGroup = await loadBalancesForGroups(groups, {
+    db: options.db,
+  });
+
+  const unconverted: GroupPosition[] = groups.map((group) => {
+    const balances = balancesByGroup.get(group.id);
+    if (!balances) {
+      throw new Error(`Balances missing for group ${group.id}`);
+    }
+    return {
+      group,
+      amounts: ownAmounts(group, balances.currencies),
+      net: null,
+      owedTo: counterpartyOf(group, balances),
+    };
+  });
 
   const displayCurrency = resolveDisplayCurrency(
     options.preferredCurrency ?? null,
