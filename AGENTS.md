@@ -29,6 +29,22 @@ merged. Splitting them apart afterwards cost far more than branching would have.
 Keep a branch to one topic. If a second, unrelated thing needs doing, it gets
 its own branch.
 
+# The list of work lives in TODO.md
+
+`TODO.md` at the repository root is the list of what is planned, in flight and
+recently merged. Read it before you start: an item already sitting under
+**Now** with a branch name against it is being done in another worktree right
+this minute, and picking it up again is how two chats end up writing the same
+feature twice.
+
+Move the line you are working on to **Now** and append your branch name to it.
+Move it to **Done** with the date and the pull request number when the pull
+request merges, and delete it outright if the work is abandoned. Do this as
+part of the change, in the same commit — a list updated afterwards is a list
+nobody updates.
+
+Nothing enforces this, which is exactly why it is written down here.
+
 # Adding a setting touches six files
 
 A new environment variable is never one edit. It lands in:
