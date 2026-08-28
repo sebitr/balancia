@@ -26,6 +26,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "typecheck:indexing": "./scripts/check-strict-indexing.sh",
     "test": "vitest run --project unit --project components",
     "test:unit": "vitest run --project unit",
     "test:components": "vitest run --project components",

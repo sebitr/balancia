@@ -217,10 +217,11 @@ export interface RepaymentSuggestion {
 export function simplifyDebts(
   balances: readonly ParticipantBalance[],
 ): RepaymentSuggestion[] {
-  if (balances.length === 0) {
+  const [first] = balances;
+  if (!first) {
     return [];
   }
-  const currency = balances[0].currency;
+  const currency = first.currency;
   for (const balance of balances) {
     if (balance.currency !== currency) {
       throw new BalanceError(
@@ -267,6 +268,9 @@ export function simplifyDebts(
   while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
     const debtor = debtors[debtorIndex];
     const creditor = creditors[creditorIndex];
+    // The loop condition is the bounds check; this restates it for the
+    // compiler, which cannot narrow an index from a length comparison.
+    if (!debtor || !creditor) break;
     const amount =
       debtor.remaining < creditor.remaining
         ? debtor.remaining

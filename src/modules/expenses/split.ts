@@ -50,6 +50,33 @@ export interface AllocationEntry {
   readonly amount: bigint;
 }
 
+/**
+ * Pairs each participant with the amount allocated to them.
+ *
+ * `allocateByWeights` returns one amount per weight, and the weights are built
+ * from these same rows, so the two are the same length by construction. The
+ * compiler cannot see that; nor could a future caller that got it wrong. So
+ * the pairing is stated once here rather than trusting a bare index at seven
+ * call sites.
+ */
+function pairWithAmounts(
+  rows: readonly { participantId: string }[],
+  amounts: readonly bigint[],
+): AllocationEntry[] {
+  if (amounts.length !== rows.length) {
+    throw new AllocationError(
+      `Allocation produced ${amounts.length} parts for ${rows.length} participants`,
+    );
+  }
+  return rows.map((row, index) => {
+    const amount = amounts[index];
+    if (amount === undefined) {
+      throw new AllocationError("Allocation is missing a part");
+    }
+    return { participantId: row.participantId, amount };
+  });
+}
+
 export interface SplitResult {
   readonly method: SplitMethod;
   readonly allocations: readonly AllocationEntry[];
@@ -126,10 +153,7 @@ export function resolveSplit(total: bigint, input: SplitInput): SplitResult {
       const amounts = allocateByWeights(total, weights);
       return {
         method,
-        allocations: entries.map((entry, index) => ({
-          participantId: entry.participantId,
-          amount: amounts[index],
-        })),
+        allocations: pairWithAmounts(entries, amounts),
         rounding: describeRounding(total, weights, amounts),
       };
     }
@@ -141,10 +165,7 @@ export function resolveSplit(total: bigint, input: SplitInput): SplitResult {
       validateExactAllocation(total, amounts);
       return {
         method,
-        allocations: entries.map((entry, index) => ({
-          participantId: entry.participantId,
-          amount: amounts[index],
-        })),
+        allocations: pairWithAmounts(entries, amounts),
         // Exact splits are supplied whole; nothing is redistributed.
         rounding: { adjustedCount: 0, adjustedUnits: 0n },
       };
@@ -158,10 +179,7 @@ export function resolveSplit(total: bigint, input: SplitInput): SplitResult {
       const amounts = allocateByWeights(total, percentages);
       return {
         method,
-        allocations: entries.map((entry, index) => ({
-          participantId: entry.participantId,
-          amount: amounts[index],
-        })),
+        allocations: pairWithAmounts(entries, amounts),
         rounding: describeRounding(total, percentages, amounts),
       };
     }
@@ -174,10 +192,7 @@ export function resolveSplit(total: bigint, input: SplitInput): SplitResult {
       const amounts = allocateByWeights(total, shares);
       return {
         method,
-        allocations: entries.map((entry, index) => ({
-          participantId: entry.participantId,
-          amount: amounts[index],
-        })),
+        allocations: pairWithAmounts(entries, amounts),
         rounding: describeRounding(total, shares, amounts),
       };
     }
@@ -260,10 +275,7 @@ export function convertAllocations(
     return distributeResidue(allocations, convertedTotal, originalTotal);
   }
   const amounts = allocateByWeights(convertedTotal, weights);
-  return allocations.map((allocation, index) => ({
-    participantId: allocation.participantId,
-    amount: amounts[index],
-  }));
+  return pairWithAmounts(allocations, amounts);
 }
 
 function distributeResidue(
@@ -293,11 +305,12 @@ function distributeResidue(
         targetIndex = index;
       }
     }
-    scaled[targetIndex] += residue;
+    const target = scaled[targetIndex];
+    if (target === undefined) {
+      throw new AllocationError("Allocation has no part to absorb the residue");
+    }
+    scaled[targetIndex] = target + residue;
     residue = 0n;
   }
-  return allocations.map((allocation, index) => ({
-    participantId: allocation.participantId,
-    amount: scaled[index],
-  }));
+  return pairWithAmounts(allocations, scaled);
 }

@@ -86,7 +86,8 @@ export function clientIpFrom(
     // configured — nothing in the list came from the client, so the leftmost
     // is the outermost proxy's view and the best answer available.
     const index = Math.max(0, entries.length - Math.max(1, hops));
-    return entries[index];
+    const chosen = entries[index];
+    if (chosen) return chosen;
   }
 
   const direct = realIp?.trim();

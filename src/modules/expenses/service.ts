@@ -1,6 +1,6 @@
 import "server-only";
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import { getDb, type Database } from "@/lib/db/client";
+import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import {
   attachments,
@@ -220,12 +220,12 @@ export function prepareExpense(
     payers: payerContributions.map((payer, index) => ({
       participantId: payer.participantId,
       amount: payer.amount,
-      convertedAmount: convertedPayers?.[index].amount ?? null,
+      convertedAmount: convertedPayers?.[index]?.amount ?? null,
     })),
     shares: split.allocations.map((allocation, index) => ({
       participantId: allocation.participantId,
       amount: allocation.amount,
-      convertedAmount: convertedShares?.[index].amount ?? null,
+      convertedAmount: convertedShares?.[index]?.amount ?? null,
     })),
     splitInput,
   };
@@ -261,7 +261,7 @@ export async function createExpense(
       rateSource,
     });
 
-    const [expense] = await tx
+    const inserted = await tx
       .insert(expenses)
       .values({
         groupId: access.groupId,
@@ -284,6 +284,7 @@ export async function createExpense(
         createdByParticipantId: access.participantId,
       })
       .returning({ id: expenses.id });
+    const expense = onlyRow(inserted, "the expense insert");
 
     await tx.insert(expensePayers).values(
       prepared.payers.map((payer) => ({
@@ -560,7 +561,8 @@ export async function deleteExpense(
         currency: expenses.currency,
       });
 
-    if (deleted.length === 0) {
+    const [deletedExpense] = deleted;
+    if (!deletedExpense) {
       throw new AuthorizationError(
         "That expense is not part of this group.",
         "notInGroup",
@@ -574,9 +576,9 @@ export async function deleteExpense(
       entityId: expenseId,
       ...activityActorFrom(access),
       metadata: {
-        description: deleted[0].description,
-        amount: deleted[0].amount.toString(),
-        currency: deleted[0].currency,
+        description: deletedExpense.description,
+        amount: deletedExpense.amount.toString(),
+        currency: deletedExpense.currency,
       },
     });
 
@@ -585,9 +587,9 @@ export async function deleteExpense(
     return recordExpenseNotification(tx, access, {
       type: "expense.deleted",
       expenseId,
-      description: deleted[0].description,
-      amount: deleted[0].amount,
-      currency: deleted[0].currency,
+      description: deletedExpense.description,
+      amount: deletedExpense.amount,
+      currency: deletedExpense.currency,
       participantIds: await participantsOfExpense(tx, expenseId),
     });
   });
@@ -638,7 +640,8 @@ export async function restoreExpense(
         currency: expenses.currency,
       });
 
-    if (restored.length === 0) {
+    const [restoredExpense] = restored;
+    if (!restoredExpense) {
       throw new AuthorizationError(
         "That expense is not part of this group.",
         "notInGroup",
@@ -652,9 +655,9 @@ export async function restoreExpense(
       entityId: expenseId,
       ...activityActorFrom(access),
       metadata: {
-        description: restored[0].description,
-        amount: restored[0].amount.toString(),
-        currency: restored[0].currency,
+        description: restoredExpense.description,
+        amount: restoredExpense.amount.toString(),
+        currency: restoredExpense.currency,
       },
     });
   });

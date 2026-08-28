@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import { getDb, rowsAffected, type Database } from "@/lib/db/client";
+import { getDb, onlyRow, rowsAffected, type Database } from "@/lib/db/client";
 import { guestInvitations, guestSessions, participants } from "@/lib/db/schema";
 import { telemetry } from "@/lib/telemetry";
 import { generateToken, hashToken, isWellFormedToken } from "./tokens";
@@ -88,7 +88,7 @@ export async function redeemInvitation(
   const sessionToken = generateToken();
   const expiresAt = new Date(now.getTime() + GUEST_SESSION_TTL_MS);
 
-  const [created] = await db
+  const createdRows = await db
     .insert(guestSessions)
     .values({
       invitationId: invitation.id,
@@ -100,6 +100,7 @@ export async function redeemInvitation(
       lastSeenAt: now,
     })
     .returning({ id: guestSessions.id });
+  const created = onlyRow(createdRows, "the guest session insert");
 
   await db
     .update(guestInvitations)
