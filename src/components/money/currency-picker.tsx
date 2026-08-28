@@ -230,7 +230,7 @@ function CurrencyRow({
         </span>
         {/* The slot is kept whether or not it is filled, so a row does not
             shift sideways the moment it becomes the chosen one. */}
-        <span className="flex size-5 shrink-0 items-center justify-center text-primary">
+        <span className="flex size-5 shrink-0 items-center justify-center text-primary-ink">
           <Check
             aria-hidden="true"
             strokeWidth={2.4}
@@ -245,7 +245,7 @@ function CurrencyRow({
         aria-pressed={favorite}
         className={cn(
           "flex size-[34px] shrink-0 items-center justify-center rounded-full transition-colors duration-150 hover:bg-foreground/8",
-          favorite ? "text-primary" : "text-muted-foreground/85",
+          favorite ? "text-primary-ink" : "text-muted-foreground/85",
         )}
       >
         <Star

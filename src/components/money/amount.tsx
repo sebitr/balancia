@@ -50,9 +50,9 @@ export function Amount({
 }
 
 const TONE_STYLES: Record<BalanceTone, string> = {
-  positive: "text-positive",
-  negative: "text-negative",
-  neutral: "text-neutral-balance",
+  positive: "text-positive-ink",
+  negative: "text-negative-ink",
+  neutral: "text-neutral-balance-ink",
 };
 
 /** Message keys in the `money` namespace, resolved at render time. */

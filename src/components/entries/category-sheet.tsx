@@ -238,7 +238,7 @@ export function CategorySheet({
           <button
             type="button"
             onClick={onRevert}
-            className="shrink-0 text-xs text-primary underline underline-offset-2"
+            className="shrink-0 text-xs text-primary-ink underline underline-offset-2"
           >
             {t("backToDetected")}
           </button>
@@ -382,7 +382,7 @@ function SubcategoryPane({
         </button>
         <Glyph
           aria-hidden="true"
-          className="size-[18px] shrink-0 text-primary"
+          className="size-[18px] shrink-0 text-primary-ink"
         />
         <SheetTitle className="truncate text-lg font-semibold tracking-[-0.02em]">
           {tCategories(category)}
@@ -399,7 +399,7 @@ function SubcategoryPane({
           {t("just", { category: tCategories(category) })}
         </span>
         {selected === "" && (
-          <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />
+          <Check aria-hidden="true" className="size-4 shrink-0 text-primary-ink" />
         )}
       </button>
 

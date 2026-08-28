@@ -268,7 +268,7 @@ export function PayoutMethodsCard({
                   {label}
                 </span>
                 {index === 0 ? (
-                  <span className="shrink-0 rounded-full bg-primary/16 px-1.5 py-0.5 text-2xs font-semibold text-primary">
+                  <span className="shrink-0 rounded-full bg-primary/16 px-1.5 py-0.5 text-2xs font-semibold text-primary-ink">
                     {t("preferred")}
                   </span>
                 ) : (
@@ -345,11 +345,11 @@ export function PayoutMethodsCard({
         >
           <span
             aria-hidden="true"
-            className="flex size-6.5 shrink-0 items-center justify-center rounded-lg bg-primary/16 text-primary"
+            className="flex size-6.5 shrink-0 items-center justify-center rounded-lg bg-primary/16 text-primary-ink"
           >
             <Plus className="size-3.5" strokeWidth={2.4} />
           </span>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary-ink">
             {t("addMethod")}
           </span>
         </button>
@@ -507,7 +507,7 @@ function SwissAddress({ initial }: { initial: SwissCreditorAddress | null }) {
             className={cn(
               "shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-semibold",
               complete
-                ? "bg-positive/16 text-positive"
+                ? "bg-positive/16 text-positive-ink"
                 : "bg-foreground/8 text-muted-foreground",
             )}
           >

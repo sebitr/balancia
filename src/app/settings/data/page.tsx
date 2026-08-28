@@ -82,7 +82,7 @@ export default async function DataSettingsPage() {
                 <span
                   className={cn(
                     "shrink-0 text-xs font-medium",
-                    run.status === "completed" && "text-positive",
+                    run.status === "completed" && "text-positive-ink",
                     run.status === "failed" && "text-destructive",
                     run.status !== "completed" &&
                       run.status !== "failed" &&

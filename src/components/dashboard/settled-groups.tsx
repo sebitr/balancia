@@ -208,7 +208,7 @@ function QuietRow({
           color={group.iconColor}
           name={group.name}
           muted
-          className="size-10 rounded-xl bg-foreground/[0.05] text-neutral-balance"
+          className="size-10 rounded-xl bg-foreground/[0.05] text-neutral-balance-ink"
           iconClassName="size-[19px]"
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -219,7 +219,7 @@ function QuietRow({
             <span className="text-xs text-muted-foreground">{meta}</span>
           )}
         </span>
-        <span className="shrink-0 text-xs text-neutral-balance">{word}</span>
+        <span className="shrink-0 text-xs text-neutral-balance-ink">{word}</span>
       </Link>
     </li>
   );

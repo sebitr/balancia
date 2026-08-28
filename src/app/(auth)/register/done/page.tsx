@@ -60,7 +60,7 @@ export default async function RegisterDonePage({
   return (
     <div className="flex min-h-[70dvh] flex-col justify-between gap-8">
       <div className="flex flex-col gap-4">
-        <span className="flex size-12 items-center justify-center rounded-full bg-positive/15 text-positive">
+        <span className="flex size-12 items-center justify-center rounded-full bg-positive/15 text-positive-ink">
           <Check aria-hidden="true" className="size-6" />
         </span>
 

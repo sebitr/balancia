@@ -448,16 +448,16 @@ function Flows({
       key: "flowRevenue",
       sub: t("flowRevenueSub", { count: flows.revenueCount }),
       minorUnits: flows.revenue,
-      tone: "text-positive",
-      chip: "bg-[color-mix(in_oklch,var(--positive)_14%,transparent)] text-positive",
+      tone: "text-positive-ink",
+      chip: "bg-[color-mix(in_oklch,var(--positive)_14%,transparent)] text-positive-ink",
       icon: ArrowDown,
     },
     {
       key: "flowSettlements",
       sub: t("flowSettlementsSub", { count: flows.settledCount }),
       minorUnits: flows.settled,
-      tone: "text-neutral-balance",
-      chip: "bg-foreground/[0.07] text-neutral-balance",
+      tone: "text-neutral-balance-ink",
+      chip: "bg-foreground/[0.07] text-neutral-balance-ink",
       icon: ArrowLeftRight,
     },
   ] as const;
@@ -782,8 +782,8 @@ function WhoCarries({
               <span
                 className={cn(
                   "text-right text-sm font-semibold tabular-nums",
-                  signed && value > 0n && "text-positive",
-                  signed && value < 0n && "text-negative",
+                  signed && value > 0n && "text-positive-ink",
+                  signed && value < 0n && "text-negative-ink",
                 )}
               >
                 <Amount

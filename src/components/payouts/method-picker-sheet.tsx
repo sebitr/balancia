@@ -227,7 +227,7 @@ function MethodRow({
         aria-hidden="true"
         className={cn(
           "size-4 shrink-0",
-          added ? "text-primary" : "text-transparent",
+          added ? "text-primary-ink" : "text-transparent",
         )}
         strokeWidth={2.4}
       />

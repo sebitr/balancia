@@ -73,7 +73,7 @@ export function GroupReady({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-5 pt-7 pb-6 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1">
       <div className="flex flex-col items-start gap-3">
-        <span className="flex size-12 items-center justify-center rounded-full bg-positive/15 text-positive">
+        <span className="flex size-12 items-center justify-center rounded-full bg-positive/15 text-positive-ink">
           <Check aria-hidden="true" className="size-[22px]" />
         </span>
         <Heading className="font-heading text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty">

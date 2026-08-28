@@ -125,7 +125,7 @@ const Toaster = ({
         swipeDirections={swipeDirections}
         icons={{
           success: (
-            <Glyph icon={CheckIcon} tone="bg-positive/15 text-positive" />
+            <Glyph icon={CheckIcon} tone="bg-positive/15 text-positive-ink" />
           ),
           info: (
             <Glyph icon={InfoIcon} tone="bg-notice-info/15 text-notice-info" />

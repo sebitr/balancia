@@ -151,7 +151,7 @@ export default async function MemberStatsPage({
             className={cn(
               "text-xl font-semibold",
               viewingSelf
-                ? "bg-primary/15 text-primary"
+                ? "bg-primary/15 text-primary-ink"
                 : "bg-accent text-accent-foreground",
             )}
           >

@@ -336,7 +336,7 @@ export function NotificationList({
             type="button"
             onClick={() => unquieten(group)}
             disabled={isPending}
-            className="shrink-0 rounded-lg px-2 py-1 text-2xs font-semibold text-primary transition-colors hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+            className="shrink-0 rounded-lg px-2 py-1 text-2xs font-semibold text-primary-ink transition-colors hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
             {group.snoozedUntil ? t("resume") : t("unmute")}
           </button>

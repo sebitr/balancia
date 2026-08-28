@@ -39,8 +39,8 @@ const PILL_TONE: Record<PillTone, string> = {
 };
 
 const TICK_TONE: Record<PillTone, string> = {
-  primary: "text-primary",
-  payer: "text-payer",
+  primary: "text-primary-ink",
+  payer: "text-payer-ink",
 };
 
 export function MemberAvatar({
@@ -182,7 +182,7 @@ export function ChoicePill({
       <span className="truncate">{children}</span>
       {trailing}
       {selected && !Icon && (
-        <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />
+        <Check aria-hidden="true" className="size-4 shrink-0 text-primary-ink" />
       )}
     </button>
   );

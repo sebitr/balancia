@@ -98,7 +98,7 @@ export function AttachFile({
         {pending ? t("uploading") : t("add")}
       </button>
 
-      {error && <p className="text-xs text-negative">{error}</p>}
+      {error && <p className="text-xs text-negative-ink">{error}</p>}
 
       {files.length > 0 && (
         <ul className="space-y-1">
@@ -107,7 +107,7 @@ export function AttachFile({
               key={file.id}
               className="flex items-center gap-2 text-xs text-muted-foreground"
             >
-              <Check aria-hidden="true" className="size-4 text-positive" />
+              <Check aria-hidden="true" className="size-4 text-positive-ink" />
               <span className="truncate">{file.name}</span>
               <button
                 type="button"

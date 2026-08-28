@@ -159,7 +159,7 @@ export function PushCard({ devices }: { devices: PushDevice[] }) {
                 type="button"
                 disabled={testing}
                 onClick={() => void sendTest()}
-                className="text-xs font-semibold text-primary transition-colors hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                className="text-xs font-semibold text-primary-ink transition-colors hover:text-primary-ink/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
               >
                 {t("testSend")}
               </button>

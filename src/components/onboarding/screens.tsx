@@ -761,7 +761,7 @@ export function ArrivalScreen({
         aria-hidden="true"
         className="flex size-11 items-center justify-center rounded-full bg-positive/15"
       >
-        <Check className="size-5 text-positive" />
+        <Check className="size-5 text-positive-ink" />
       </span>
 
       <div className="flex flex-col gap-2">

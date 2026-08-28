@@ -382,7 +382,7 @@ export function RemindSheet({
                 {/* Stacked, one line per currency: the euros and the yen are
                     two debts to the same person, and there is no rate here to
                     turn them into one figure. */}
-                <span className="flex shrink-0 flex-col items-end gap-0.5 text-sm font-semibold text-positive">
+                <span className="flex shrink-0 flex-col items-end gap-0.5 text-sm font-semibold text-positive-ink">
                   {recipient.debts.map((debt) => (
                     <Amount
                       key={debt.currency}
@@ -440,7 +440,7 @@ export function RemindSheet({
               group: groupName,
             })}
           </span>
-          <span className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-positive tabular-nums">
+          <span className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-positive-ink tabular-nums">
             {phrase(queueTotal)}
           </span>
         </div>
@@ -499,7 +499,7 @@ export function RemindSheet({
             variant="ghost"
             size="sm"
             onClick={shuffle}
-            className="h-7 rounded-[10px] px-2.5 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary [&_svg:not([class*='size-'])]:size-3.5"
+            className="h-7 rounded-[10px] px-2.5 text-xs font-medium text-primary-ink hover:bg-primary/10 hover:text-primary-ink [&_svg:not([class*='size-'])]:size-3.5"
           >
             <Shuffle aria-hidden="true" />
             {t("shuffle")}
@@ -624,7 +624,7 @@ function RouteBadge({
   // what the two icons mean — twice on one screen is once too many.
   const [Icon, label, tint] =
     recipient.channel === "push"
-      ? ([Bell, pushLabel, "text-positive"] as const)
+      ? ([Bell, pushLabel, "text-positive-ink"] as const)
       : ([
           Share2,
           recipient.muted ? mutedLabel : shareLabel,

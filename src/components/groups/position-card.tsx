@@ -27,9 +27,9 @@ const TILE: Record<
   BalanceTone,
   { readonly fill: string; readonly ink: string }
 > = {
-  positive: { fill: "bg-positive/10", ink: "text-positive" },
-  negative: { fill: "bg-negative/10", ink: "text-negative" },
-  neutral: { fill: "bg-muted", ink: "text-neutral-balance" },
+  positive: { fill: "bg-positive/10", ink: "text-positive-ink" },
+  negative: { fill: "bg-negative/10", ink: "text-negative-ink" },
+  neutral: { fill: "bg-muted", ink: "text-neutral-balance-ink" },
 };
 
 /**

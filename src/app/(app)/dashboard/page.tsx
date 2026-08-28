@@ -293,7 +293,7 @@ function FirstRun({
           href="?new"
           replace
           scroll={false}
-          className="shrink-0 rounded-md py-2 text-xs font-medium text-primary transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="shrink-0 rounded-md py-2 text-xs font-medium text-primary-ink transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {t("splitwiseAction")}
         </Link>

@@ -178,7 +178,7 @@ export function MoneyFormats({
 
         <div className="relative flex flex-col gap-2.5 px-4 pt-3.5 pb-3">
           <div className="flex items-center gap-2">
-            <span className="shrink-0 rounded-full bg-primary/16 px-1.5 py-0.5 text-2xs font-bold tracking-[0.09em] text-primary uppercase">
+            <span className="shrink-0 rounded-full bg-primary/16 px-1.5 py-0.5 text-2xs font-bold tracking-[0.09em] text-primary-ink uppercase">
               {t("preview")}
             </span>
             <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
@@ -226,7 +226,7 @@ export function MoneyFormats({
               {amountOf(converted)} {converted.currency}
             </span>
           )}
-          <span className="shrink-0 rounded-full bg-primary/16 px-2 py-0.5 text-xs font-semibold text-primary">
+          <span className="shrink-0 rounded-full bg-primary/16 px-2 py-0.5 text-xs font-semibold text-primary-ink">
             {code}
           </span>
           <ChevronRight
