@@ -289,6 +289,14 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "boulangerie",
         "pâtisserie",
         "viennoiseries",
+        "marché du samedi",
+        "marché paysan",
+        "marché couvert",
+        "pack de bière",
+        "eau minérale",
+        "caviste",
+        "supérette",
+        "épicerie de quartier",
       ],
     },
     weakKeywords: {
@@ -418,6 +426,9 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "eau de parfum",
       "eau de toilette",
       "eau de cologne",
+      // Formula is bought in the same aisle as milk and is not milk: the
+      // taxonomy files it under the child it feeds.
+      "lait infantile",
     ],
     ambiguousMerchants: [
       // Forecourt and kiosk formats: groceries as often as fuel or a sandwich.
@@ -747,7 +758,24 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "kebab",
       "cafeteria",
     ],
-    excludes: ["supermarket", "grocery", "supermarché"],
+    excludes: [
+      "supermarket",
+      "grocery",
+      "supermarché",
+      // "Bed and breakfast" is where the trip slept, and the breakfast in it
+      // is the half that is not being paid for. Without this it tied with
+      // `lodging` at 0.90 and won on nothing but being written first.
+      "bed and breakfast",
+      // Beer carried home from the shop, against beer poured at the bar.
+      "pack de bière",
+      "case of beer",
+      "six pack",
+      // And the same line drawn around wine: the shop is groceries, the bar
+      // is here, and "vin" alone was answering for both.
+      "cave à vin",
+      "caviste",
+      "wine shop",
+    ],
   },
   {
     id: "transport",
@@ -767,7 +795,7 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "car sharing",
         "parking",
         "car park",
-        "parking fine",
+        "parking meter",
         "toll",
         "motorway toll",
         "motorway vignette",
@@ -789,6 +817,10 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "metro",
         "underground",
         "ferry",
+        // `singularize` takes off one trailing `s`, so "ferries" stems to
+        // "ferrie" and never meets "ferry". An irregular plural is its own
+        // entry, and half the operators are named with it.
+        "ferries",
         "bike",
         "scooter",
         "vignette",
@@ -829,7 +861,9 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "autopartage",
         "parking",
         "stationnement",
-        "amende de stationnement",
+        "parcomètre",
+        "horodateur",
+        "place de parc",
         "péage",
         "autoroute",
         "vignette autoroute",
@@ -969,6 +1003,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "flixbus",
       "blablacar",
       "alsa",
+      "brittany ferries",
+      "corsica ferries",
+      "corsica linea",
+      "stena line",
+      "dfds",
+      "grimaldi lines",
+      "irish ferries",
       "uber",
       "bolt",
       "free now",
@@ -1019,6 +1060,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "socar",
       "tcs",
     ],
+    /**
+     * A fine is `finance_admin` however it was earned — money that buys
+     * neither goods nor an experience. "Amende de stationnement" tied
+     * transport against finance_admin at 0.90 and took the parking half of
+     * the phrase for the whole of it.
+     */
+    excludes: ["amende", "contravention", "parking fine", "speeding ticket"],
   },
   {
     id: "home",
@@ -1219,6 +1267,17 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "veolia",
       "suez",
     ],
+    /**
+     * The `téléphone` of a phone bill, meeting the `réparation` of a mended
+     * screen: a repair counter in a shopping centre is `shopping`, and this
+     * entry has no business answering for it.
+     */
+    excludes: [
+      "réparation téléphone",
+      "réparation écran",
+      "phone repair",
+      "screen repair",
+    ],
   },
   {
     id: "shopping",
@@ -1241,6 +1300,14 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "bookshop",
         "stationery",
         "sports equipment",
+        "handbag",
+        "sunglasses",
+        "board game",
+        "craft supplies",
+        "art supplies",
+        "shoe repair",
+        "phone repair",
+        "screen repair",
       ],
       fr: [
         "vêtements",
@@ -1258,6 +1325,14 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "librairie",
         "papeterie",
         "matériel de sport",
+        "sac à main",
+        "lunettes de soleil",
+        "jeu de société",
+        "loisirs créatifs",
+        "cordonnerie",
+        "réparation téléphone",
+        "réparation écran",
+        "maquette",
       ],
     },
     weakKeywords: {
@@ -1362,6 +1437,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "back pain",
         "neck pain",
         "therapeutic massage",
+        "psychotherapy",
+        "psychologist",
+        "psychiatrist",
+        "counselling",
+        "wheelchair",
+        "crutches",
+        "orthotics",
       ],
       fr: [
         "médecin",
@@ -1395,6 +1477,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "club de fitness",
         "mal de dos",
         "massage thérapeutique",
+        "psychothérapie",
+        "psychiatre",
+        "suivi psychologique",
+        "kinésithérapie",
+        "fauteuil roulant",
+        "béquilles",
+        "semelles orthopédiques",
       ],
     },
     merchants: [
@@ -1446,6 +1535,23 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "hospital",
       "permanence",
     ],
+    /**
+     * Sunglasses are bought, not prescribed. Without this the `lunettes` that
+     * means an optician answered for the pair on a beach towel, and did it at
+     * 0.90 with nothing to argue against it.
+     *
+     * The animal words are the same rule from the other side: a clinic is a
+     * clinic and a hospital is a hospital, but when the patient has four legs
+     * the bill is `pets`, which is a question people ask on its own.
+     */
+    excludes: [
+      "lunettes de soleil",
+      "sunglasses",
+      "vétérinaire",
+      "veterinaire",
+      "veterinary",
+      "animal",
+    ],
   },
   {
     id: "entertainment",
@@ -1467,6 +1573,12 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "game purchase",
         "event ticket",
         "gig ticket",
+        "musical",
+        "ballet",
+        "circus",
+        "vinyl record",
+        "record shop",
+        "sheet music",
       ],
       fr: [
         "cinéma",
@@ -1482,6 +1594,12 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "jeux vidéo",
         "billet spectacle",
         "billet concert",
+        "comédie musicale",
+        "ballet",
+        "cirque",
+        "disque vinyle",
+        "disquaire",
+        "partition musicale",
       ],
     },
     merchants: [
@@ -1717,6 +1835,17 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "albergo",
       "pensione",
     ],
+    /**
+     * A "pension" is a small hotel, right up until the word after it is
+     * "alimentaire" — and then it is child support, which is `kids_family`
+     * and not a room. The two tied at 0.90 and this one won on nothing but
+     * being written first.
+     */
+    excludes: [
+      "alimentaire",
+      // "Room" is a bed everywhere except here, where it is a pot of tea.
+      "tea room",
+    ],
   },
   {
     id: "activities",
@@ -1870,6 +1999,13 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "present for",
       "carte cadeau",
       "bon cadeau",
+      // A gym is somewhere people go every week, not an outing they booked.
+      // `fitness` is a weak keyword here and a settled `health / fitness` rule
+      // there, and the keyword was answering for both.
+      "fitness club",
+      "club de fitness",
+      "salle de sport",
+      "gym membership",
     ],
     merchantFragments: [
       "musee",
@@ -1930,6 +2066,14 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "broom",
         "towels",
         "coat hangers",
+        "renovation",
+        "refurbishment",
+        "home improvement",
+        "boiler service",
+        "chimney sweep",
+        "building maintenance",
+        "roofer",
+        "locksmith",
       ],
       fr: [
         "produits ménagers",
@@ -1973,6 +2117,15 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "garde-meuble",
         "literie",
         "linge de maison",
+        "rénovation",
+        "travaux de rénovation",
+        "ramonage",
+        "entretien de la chaudière",
+        "charges de copropriété",
+        "couvreur",
+        "chauffagiste",
+        "mazout",
+        "facture de chauffage",
       ],
     },
     weakKeywords: {
@@ -2047,6 +2200,17 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
     ],
     // Sells food, toys and cleaning products in the same basket.
     ambiguousMerchants: ["action"],
+    /**
+     * A screen is mended at a counter in a shopping centre, not by a
+     * tradesman at the flat. `réparation` plus the `téléphone` of a phone
+     * bill was reaching 0.95 for a category the row never mentioned.
+     */
+    excludes: [
+      "réparation téléphone",
+      "réparation écran",
+      "phone repair",
+      "screen repair",
+    ],
   },
   {
     id: "subscriptions",
@@ -2104,7 +2268,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "phone plan",
       "passeport",
       "passport",
-      "visa",
+      // The document, not the card that paid for the subscription: a bare
+      // "visa" now survives normalization on a card descriptor, and this
+      // exclude was never meant to catch those.
+      "visa application",
+      "demande de visa",
       "assurance",
       "insurance",
     ],
@@ -2150,6 +2318,8 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
       "midjourney",
       "perplexity",
       "google workspace",
+      "google play",
+      "app store",
       "protonmail",
       "proton ag",
       "nordvpn",
@@ -2218,6 +2388,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "aide aux personnes âgées",
         "pension alimentaire",
         "argent de poche",
+        "soutien familial",
+        "aide à la famille",
+        "auxiliaire de vie",
+        "soins à domicile",
+        "biberon",
       ],
     },
     merchants: ["orchestra premaman"],
@@ -2252,6 +2427,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "dog boarding",
         "dog walker",
         "microchip",
+        "flea treatment",
+        "worming tablets",
+        "cattery",
+        "kennel",
+        "pet sitting",
       ],
       fr: [
         "animal",
@@ -2267,8 +2447,14 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "assurance animaux",
         "animalerie",
         "pension pour chien",
+        "pension pour chat",
         "promeneur de chien",
         "puce électronique",
+        "vermifuge",
+        "antipuces",
+        "chenil",
+        "éducation canine",
+        "dressage",
       ],
     },
     weakKeywords: {
@@ -2316,6 +2502,11 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "flowers",
         "bouquet",
         "florist",
+        "baby shower",
+        "housewarming gift",
+        "graduation gift",
+        "church donation",
+        "tithe",
       ],
       fr: [
         "cadeau",
@@ -2335,6 +2526,12 @@ export const CATEGORY_SEEDS: readonly CategorySeed[] = [
         "bouquet de fleurs",
         "fleuriste",
         "cadeaux",
+        "crémaillère",
+        "baptême",
+        "liste de mariage",
+        "denier du culte",
+        "don à l'église",
+        "cagnotte",
       ],
     },
     merchants: [
@@ -2888,6 +3085,29 @@ export function allPhrases(
  * name a subcategory beyond argument; everything else leaves the field blank
  * for the user, which is a complete answer and not a failure.
  */
+/**
+ * The second level, keyed by the category it refines.
+ *
+ * Separate from `CATEGORY_SEEDS` rather than nested inside each entry, for the
+ * reason given above `SEED_BY_CATEGORY`: `home` and `transport` are each
+ * several entries, and hanging subcategory rules off one of them would make
+ * which entry an arbitrary and load-bearing choice.
+ *
+ * The mapped type is what keeps the two levels honest — every key must be a
+ * real category, and every `id` under it must be one of *that* category's
+ * subcategories. `groceries: [{ id: "fuel" }]` does not compile.
+ *
+ * Coverage is intentionally partial. These are the merchants and phrases that
+ * name a subcategory beyond argument; everything else leaves the field blank
+ * for the user, which is a complete answer and not a failure.
+ *
+ * **Order is load-bearing within a category.** `detectSubcategory` keeps the
+ * first rule to reach the best score, so two siblings matching at the same
+ * weight are settled by whichever is written first. Every list below therefore
+ * runs specific to generic: `weddings` before `gifts`, `fast_food` before
+ * `restaurant`, `theme_parks` before `attractions`. A word that would have to
+ * appear under two siblings to be fair is written under neither.
+ */
 export const SUBCATEGORY_SEEDS: {
   readonly [C in ExpenseCategory]?: readonly SubcategorySeed<C>[];
 } = {
@@ -2919,14 +3139,82 @@ export const SUBCATEGORY_SEEDS: {
         "edeka",
         "rewe",
         "kaufland",
+        "spar",
+        "volg",
+        "manor food",
+        "grand frais",
+        "picard",
+        "asda",
+        "morrisons",
+        "waitrose",
+        "netto",
+        "penny markt",
       ],
-      phrases: { en: ["supermarket"], fr: ["supermarché"] },
+      phrases: {
+        en: ["supermarket", "grocery shopping", "weekly shop"],
+        fr: ["supermarché", "courses de la semaine"],
+      },
     },
-    { id: "bakery", phrases: { en: ["bakery"], fr: ["boulangerie"] } },
-    { id: "butcher", phrases: { en: ["butcher"], fr: ["boucherie"] } },
+    {
+      /**
+       * The small format, which is a different shop at a different price even
+       * when the sign over the door is the same. `carrefour express` beats
+       * the bare `carrefour` above because it is the longer match, so the
+       * pair only ever has to be written once.
+       */
+      id: "convenience_store",
+      merchants: [
+        "migrolino",
+        "coop pronto",
+        "k kiosk",
+        "avec",
+        "relay",
+        "carrefour express",
+        "carrefour city",
+        "spar express",
+        "tesco express",
+        "sainsburys local",
+        "seven eleven",
+      ],
+      phrases: {
+        en: ["convenience store", "corner shop"],
+        fr: ["supérette", "épicerie de quartier", "dépanneur", "kiosque"],
+      },
+    },
+    {
+      id: "bakery",
+      merchants: ["brezelkonig", "paul boulangerie"],
+      phrases: {
+        en: ["bakery", "baker"],
+        fr: ["boulangerie", "pâtisserie", "boulanger"],
+      },
+    },
+    {
+      id: "butcher",
+      phrases: {
+        en: ["butcher", "butchers shop"],
+        fr: ["boucherie", "boucher", "charcuterie"],
+      },
+    },
     {
       id: "market",
-      phrases: { en: ["farmers market"], fr: ["marché du samedi"] },
+      phrases: {
+        en: ["farmers market", "market stall"],
+        fr: ["marché du samedi", "marché paysan", "marché couvert"],
+      },
+    },
+    {
+      /**
+       * Bottles brought home, which is groceries. The bar is `restaurants`,
+       * and the category is settled before this runs — so the two are never
+       * asked to answer the same question.
+       */
+      id: "drinks",
+      merchants: ["nicolas vins", "denner wein"],
+      phrases: {
+        en: ["bottled water", "soft drink", "case of beer", "wine shop"],
+        fr: ["eau minérale", "pack de bière", "caviste", "cave à vin"],
+      },
     },
   ],
   restaurants: [
@@ -2940,8 +3228,14 @@ export const SUBCATEGORY_SEEDS: {
         "eat ch",
         "doordash",
         "glovo",
+        "wolt",
+        "lieferando",
+        "grubhub",
       ],
-      phrases: { en: ["food delivery"], fr: ["livraison de repas"] },
+      phrases: {
+        en: ["food delivery", "meal delivery"],
+        fr: ["livraison de repas", "livraison à domicile"],
+      },
     },
     {
       id: "fast_food",
@@ -2952,15 +3246,60 @@ export const SUBCATEGORY_SEEDS: {
         "subway",
         "quick",
         "five guys",
+        "dominos pizza",
+        "pizza hut",
+        "o tacos",
+        "chipotle",
+        "holy cow",
+        "nordsee",
       ],
-      phrases: { en: ["fast food"], fr: ["restauration rapide"] },
+      phrases: {
+        en: ["fast food", "burger joint"],
+        fr: ["restauration rapide", "fast food"],
+      },
     },
     {
       id: "cafe",
-      merchants: ["starbucks", "costa coffee", "pret a manger"],
-      phrases: { en: ["coffee shop"], fr: ["salon de thé"] },
+      merchants: [
+        "starbucks",
+        "costa coffee",
+        "pret a manger",
+        "columbus cafe",
+        "tim hortons",
+        "dunkin",
+        "caffe nero",
+      ],
+      phrases: {
+        en: ["coffee shop", "tea room"],
+        fr: ["salon de thé", "coffee shop"],
+      },
     },
-    { id: "takeaway", phrases: { en: ["takeaway"], fr: ["à emporter"] } },
+    {
+      id: "takeaway",
+      phrases: {
+        en: ["takeaway", "take away", "takeout"],
+        fr: ["à emporter", "vente à emporter"],
+      },
+    },
+    {
+      id: "bar",
+      phrases: {
+        en: ["pub", "cocktail bar", "wine bar", "beer garden"],
+        fr: ["bar à vin", "pub", "apéro", "bistrot à vin"],
+      },
+    },
+    {
+      /**
+       * Last on purpose: it is the sit-down default, and every sibling above
+       * names something narrower. "Bar Restaurant du Pont" reads as the bar,
+       * because the bar is the more specific of the two words present.
+       */
+      id: "restaurant",
+      phrases: {
+        en: ["restaurant", "steakhouse"],
+        fr: ["restaurant", "brasserie", "bistrot", "trattoria", "pizzeria"],
+      },
+    },
   ],
   transport: [
     {
@@ -2978,18 +3317,49 @@ export const SUBCATEGORY_SEEDS: {
         "eni",
         "aral",
         "q8",
+        "migrol",
+        "agrola",
       ],
-      phrases: { en: ["petrol", "fuel"], fr: ["carburant", "essence"] },
+      phrases: {
+        en: ["petrol", "fuel", "diesel", "unleaded", "petrol station"],
+        fr: [
+          "carburant",
+          "essence",
+          "sans plomb",
+          "station service",
+          "plein d'essence",
+        ],
+      },
     },
     {
       id: "taxi_ride_hailing",
-      merchants: ["uber", "bolt", "lyft", "freenow", "g7"],
-      phrases: { en: ["taxi"], fr: ["taxi", "vtc"] },
+      merchants: ["uber", "bolt", "lyft", "freenow", "g7", "taxiphone"],
+      phrases: {
+        en: ["taxi", "ride hailing", "cab fare"],
+        fr: ["taxi", "vtc", "course en taxi"],
+      },
     },
     {
       id: "train",
-      merchants: ["sncf", "cff", "sbb", "ouigo", "trenitalia", "renfe", "db"],
-      phrases: { en: ["train ticket"], fr: ["billet de train"] },
+      merchants: [
+        "sncf",
+        "cff",
+        "sbb",
+        "ouigo",
+        "trenitalia",
+        "renfe",
+        "db",
+        "eurostar",
+        "thalys",
+        "tgv lyria",
+        "oebb",
+        "nightjet",
+        "interrail",
+      ],
+      phrases: {
+        en: ["train ticket", "rail ticket", "railcard"],
+        fr: ["billet de train", "billet cff", "carte de train"],
+      },
     },
     {
       id: "flights",
@@ -3003,19 +3373,111 @@ export const SUBCATEGORY_SEEDS: {
         "british airways",
         "wizz air",
         "vueling",
+        "edelweiss air",
+        "transavia",
+        "iberia",
+        "turkish airlines",
+        "emirates",
+        "qatar airways",
+        "brussels airlines",
+        "austrian airlines",
       ],
-      phrases: { en: ["flight", "plane ticket"], fr: ["billet d'avion"] },
+      phrases: {
+        en: ["flight", "plane ticket", "airline ticket", "boarding pass"],
+        fr: ["billet d'avion", "vol aller retour", "billet de vol"],
+      },
     },
-    { id: "parking", phrases: { en: ["parking"], fr: ["stationnement"] } },
-    { id: "tolls", phrases: { en: ["toll"], fr: ["péage"] } },
+    {
+      id: "ferry",
+      merchants: [
+        "cgn",
+        "brittany ferries",
+        "dfds",
+        "stena line",
+        "corsica ferries",
+        "corsica linea",
+        "grimaldi lines",
+        "irish ferries",
+      ],
+      phrases: {
+        en: ["ferry", "ferry crossing", "boat crossing"],
+        fr: ["ferry", "traversée en bateau", "billet de bateau"],
+      },
+    },
+    {
+      id: "bike_scooter",
+      merchants: [
+        "lime",
+        "tier",
+        "voi",
+        "dott",
+        "bird rides",
+        "publibike",
+        "velib",
+      ],
+      phrases: {
+        en: ["bike rental", "e scooter", "scooter rental", "bike share"],
+        fr: [
+          "location de vélo",
+          "trottinette électrique",
+          "vélo en libre service",
+        ],
+      },
+    },
+    {
+      id: "parking",
+      merchants: ["apcoa", "indigo park", "parkgest", "easypark", "parkingpay"],
+      phrases: {
+        en: ["parking", "car park", "parking meter"],
+        fr: ["stationnement", "place de parc", "parcomètre", "horodateur"],
+      },
+    },
+    {
+      id: "tolls",
+      merchants: ["vinci autoroutes", "aprr"],
+      phrases: {
+        en: ["toll", "motorway toll", "road toll"],
+        fr: ["péage", "péage autoroute", "vignette autoroutière"],
+      },
+    },
     {
       id: "car_rental",
-      merchants: ["hertz", "avis", "sixt", "europcar", "enterprise rent"],
-      phrases: { en: ["car rental"], fr: ["location de voiture"] },
+      merchants: [
+        "hertz",
+        "avis",
+        "sixt",
+        "europcar",
+        "enterprise rent",
+        "mobility carsharing",
+        "getaround",
+      ],
+      phrases: {
+        en: ["car rental", "car hire", "rental car"],
+        fr: ["location de voiture", "voiture de location"],
+      },
     },
     {
       id: "public_transport",
-      phrases: { en: ["public transport"], fr: ["transports en commun"] },
+      merchants: ["tpg", "tl lausanne", "ratp", "vbz", "zvv", "tpf"],
+      phrases: {
+        en: [
+          "public transport",
+          "bus ticket",
+          "metro ticket",
+          "tram ticket",
+          "travel pass",
+          "season ticket",
+        ],
+        fr: [
+          "transports en commun",
+          "transports publics",
+          "billet de bus",
+          "ticket de métro",
+          "abonnement général",
+          "demi-tarif",
+          "carte de transport",
+        ],
+      },
     },
     {
       id: "vehicle_maintenance",
@@ -3027,14 +3489,25 @@ export const SUBCATEGORY_SEEDS: {
         "kwik fit",
         "ats euromaster",
         "pneus online",
+        "point s",
+        "carglass",
       ],
       phrases: {
-        en: ["car repair", "garage repair", "oil change", "vehicle inspection"],
+        en: [
+          "car repair",
+          "garage repair",
+          "oil change",
+          "vehicle inspection",
+          "car service",
+          "new tyres",
+        ],
         fr: [
           "réparation voiture",
           "garage automobile",
           "vidange",
           "contrôle technique",
+          "expertise du véhicule",
+          "pneus neufs",
         ],
       },
     },
@@ -3056,7 +3529,7 @@ export const SUBCATEGORY_SEEDS: {
       id: "vehicle_lease",
       phrases: {
         en: ["car leasing", "lease payment"],
-        fr: ["leasing voiture", "mensualité leasing"],
+        fr: ["leasing voiture", "mensualité leasing", "leasing automobile"],
       },
     },
     {
@@ -3069,68 +3542,124 @@ export const SUBCATEGORY_SEEDS: {
     {
       id: "vehicle_registration",
       phrases: {
-        en: ["vehicle registration", "road tax"],
-        fr: ["carte grise", "immatriculation"],
+        en: ["vehicle registration", "road tax", "number plate"],
+        fr: [
+          "carte grise",
+          "immatriculation",
+          "taxe automobile",
+          "plaques d'immatriculation",
+        ],
       },
     },
     {
       id: "vehicle_wash",
-      phrases: { en: ["car wash"], fr: ["lavage auto", "station de lavage"] },
+      phrases: {
+        en: ["car wash"],
+        fr: ["lavage auto", "station de lavage", "lavage de la voiture"],
+      },
     },
   ],
   home: [
     {
       id: "electricity",
-      merchants: ["edf", "engie", "romande energie", "sig", "ewz"],
-      phrases: { en: ["electricity bill"], fr: ["facture d'électricité"] },
+      merchants: [
+        "edf",
+        "engie",
+        "romande energie",
+        "sig",
+        "ewz",
+        "iwb",
+        "bkw",
+        "groupe e",
+      ],
+      phrases: {
+        en: ["electricity bill", "electricity"],
+        fr: ["facture d'électricité", "électricité"],
+      },
     },
-    { id: "water", phrases: { en: ["water bill"], fr: ["facture d'eau"] } },
-    { id: "gas", phrases: { en: ["gas bill"], fr: ["facture de gaz"] } },
+    {
+      id: "water",
+      phrases: {
+        en: ["water bill", "water rates"],
+        fr: ["facture d'eau", "eau potable", "facture des eaux"],
+      },
+    },
+    {
+      id: "gas",
+      phrases: {
+        en: ["gas bill", "natural gas"],
+        fr: ["facture de gaz", "gaz naturel"],
+      },
+    },
+    {
+      /**
+       * Kept apart from `gas`, because most of Europe heats with something
+       * else: oil in a tank in the cellar, or a pipe from the district plant.
+       */
+      id: "heating",
+      phrases: {
+        en: ["heating bill", "heating oil", "district heating"],
+        fr: [
+          "facture de chauffage",
+          "mazout",
+          "fioul",
+          "chauffage à distance",
+          "frais de chauffage",
+        ],
+      },
+    },
     {
       id: "internet",
-      merchants: ["swisscom", "sunrise", "salt", "free", "orange", "bouygues"],
-      phrases: { en: ["internet bill"], fr: ["abonnement internet"] },
+      merchants: [
+        "swisscom",
+        "sunrise",
+        "salt",
+        "free",
+        "orange",
+        "bouygues",
+        "init7",
+        "netplus",
+        "sfr",
+      ],
+      phrases: {
+        en: ["internet bill", "broadband", "fibre subscription"],
+        fr: ["abonnement internet", "fibre optique", "facture internet"],
+      },
     },
     {
       id: "mobile_phone",
-      phrases: { en: ["mobile plan"], fr: ["forfait mobile"] },
+      phrases: {
+        en: ["mobile plan", "phone plan", "mobile bill", "sim card"],
+        fr: [
+          "forfait mobile",
+          "abonnement mobile",
+          "facture de téléphone",
+          "carte sim",
+        ],
+      },
+    },
+    {
+      id: "waste",
+      phrases: {
+        en: ["waste collection", "refuse collection"],
+        fr: ["taxe déchets", "taxe au sac", "ramassage des ordures"],
+      },
+    },
+    {
+      // Before `rent`, because "garantie de loyer" carries the word `loyer`
+      // and the deposit is the more specific of the two.
+      id: "security_deposit",
+      phrases: {
+        en: ["security deposit", "rental deposit"],
+        fr: ["dépôt de garantie", "caution du bail", "garantie de loyer"],
+      },
     },
     { id: "rent", phrases: { en: ["rent"], fr: ["loyer"] } },
-    { id: "mortgage", phrases: { en: ["mortgage"], fr: ["prêt immobilier"] } },
     {
-      id: "furniture",
-      merchants: ["ikea", "micasa", "conforama", "but", "maisons du monde"],
-      phrases: { en: ["furniture"], fr: ["mobilier"] },
-    },
-    {
-      id: "appliances",
-      phrases: { en: ["appliance"], fr: ["électroménager"] },
-    },
-    {
-      id: "repairs",
+      id: "mortgage",
       phrases: {
-        en: ["plumber", "electrician"],
-        fr: ["plombier", "électricien"],
-      },
-    },
-    {
-      id: "cleaning_supplies",
-      phrases: { en: ["cleaning products"], fr: ["produits d'entretien"] },
-    },
-    { id: "gardening", phrases: { en: ["gardening"], fr: ["jardinage"] } },
-    {
-      id: "moving",
-      phrases: {
-        en: ["moving company", "removal company", "removal van"],
-        fr: ["déménageur", "camion de déménagement", "société de déménagement"],
-      },
-    },
-    {
-      id: "storage",
-      merchants: ["shurgard", "annexx", "homebox"],
-      phrases: {
-        en: ["self storage", "storage unit"],
-        fr: ["garde-meuble", "box de stockage"],
+        en: ["mortgage"],
+        fr: ["prêt immobilier", "hypothèque", "intérêts hypothécaires"],
       },
     },
     {
@@ -3150,36 +3679,919 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
-      id: "security_deposit",
+      id: "property_tax",
+      phrases: { en: ["property tax"], fr: ["taxe foncière", "impôt foncier"] },
+    },
+    {
+      id: "renovation",
       phrases: {
-        en: ["security deposit", "rental deposit"],
-        fr: ["dépôt de garantie", "caution du bail"],
+        en: ["renovation", "refurbishment", "home improvement"],
+        fr: [
+          "rénovation",
+          "travaux de rénovation",
+          "réfection",
+          "remise à neuf",
+        ],
       },
     },
     {
-      id: "property_tax",
-      phrases: { en: ["property tax"], fr: ["taxe foncière"] },
+      id: "repairs",
+      phrases: {
+        en: [
+          "plumber",
+          "electrician",
+          "roofer",
+          "locksmith",
+          "handyman",
+          "leak repair",
+        ],
+        fr: [
+          "plombier",
+          "électricien",
+          "serrurier",
+          "couvreur",
+          "chauffagiste",
+          "dépannage",
+        ],
+      },
     },
     {
-      id: "waste",
-      phrases: { en: ["waste collection"], fr: ["taxe déchets"] },
+      /**
+       * Upkeep that was scheduled, against `repairs`, which is upkeep that
+       * was not. The boiler service is booked a year ahead; the plumber is
+       * called at eleven at night.
+       */
+      id: "maintenance",
+      phrases: {
+        en: ["boiler service", "chimney sweep", "building maintenance"],
+        fr: [
+          "entretien de la chaudière",
+          "ramonage",
+          "charges de copropriété",
+          "contrat d'entretien",
+        ],
+      },
+    },
+    {
+      id: "cleaning_service",
+      phrases: {
+        en: ["cleaning lady", "house cleaning", "cleaner", "cleaning service"],
+        fr: ["femme de ménage", "service de nettoyage", "société de nettoyage"],
+      },
+    },
+    {
+      id: "furniture",
+      merchants: [
+        "ikea",
+        "micasa",
+        "conforama",
+        "but",
+        "maisons du monde",
+        "jysk",
+        "pfister",
+        "interio",
+      ],
+      phrases: {
+        en: ["furniture", "sofa", "mattress", "wardrobe"],
+        // Not the bare "meuble": it is the second half of "garde-meuble",
+        // which is a storage unit and the opposite end of the same category.
+        fr: ["mobilier", "canapé", "matelas", "armoire"],
+      },
+    },
+    {
+      // Not `melectronics`: it is Migros' electronics shop, and the store
+      // format already sends it to `shopping`.
+      id: "appliances",
+      merchants: ["fust"],
+      phrases: {
+        en: [
+          "appliance",
+          "washing machine",
+          "dishwasher",
+          "tumble dryer",
+          "fridge",
+        ],
+        fr: [
+          "électroménager",
+          "lave-linge",
+          "lave-vaisselle",
+          "sèche-linge",
+          "réfrigérateur",
+          "frigo",
+        ],
+      },
+    },
+    {
+      id: "cleaning_supplies",
+      phrases: {
+        en: ["cleaning products", "detergent", "washing powder"],
+        fr: ["produits d'entretien", "lessive", "détergent"],
+      },
+    },
+    {
+      id: "household_supplies",
+      phrases: {
+        en: [
+          "household supplies",
+          "toilet paper",
+          "kitchen roll",
+          "bin bags",
+          "light bulb",
+        ],
+        fr: [
+          "produits ménagers",
+          "papier toilette",
+          "essuie-tout",
+          "sacs poubelle",
+          "ampoule",
+        ],
+      },
+    },
+    {
+      id: "gardening",
+      merchants: ["jardiland", "truffaut", "gamm vert"],
+      phrases: {
+        en: ["gardening", "garden centre", "lawn mowing", "potting soil"],
+        fr: ["jardinage", "jardinerie", "tonte de pelouse", "terreau"],
+      },
+    },
+    {
+      id: "moving",
+      merchants: ["movu"],
+      phrases: {
+        en: ["moving company", "removal company", "removal van", "house move"],
+        fr: [
+          "déménageur",
+          "camion de déménagement",
+          "société de déménagement",
+          "frais de déménagement",
+        ],
+      },
+    },
+    {
+      id: "storage",
+      merchants: ["shurgard", "annexx", "homebox"],
+      phrases: {
+        en: ["self storage", "storage unit"],
+        fr: ["garde-meuble", "box de stockage"],
+      },
+    },
+  ],
+  shopping: [
+    {
+      id: "clothing",
+      merchants: [
+        "h&m",
+        "zara",
+        "uniqlo",
+        "mango",
+        "kiabi",
+        "primark",
+        "zalando",
+        "asos",
+        "c&a",
+        "bershka",
+        "pull and bear",
+        "massimo dutti",
+        "tally weijl",
+        "vinted",
+        "shein",
+        "chicoree",
+      ],
+      phrases: {
+        en: ["clothing", "clothes", "jacket", "jeans", "t shirt"],
+        fr: [
+          "vêtements",
+          "habillement",
+          "veste",
+          "pantalon",
+          "robe",
+          "manteau",
+        ],
+      },
+    },
+    {
+      id: "accessories",
+      merchants: ["swatch", "pandora", "claires", "bijou brigitte"],
+      phrases: {
+        en: ["handbag", "jewellery", "jewelry", "wristwatch", "sunglasses"],
+        fr: [
+          "sac à main",
+          "bijoux",
+          "montre",
+          "lunettes de soleil",
+          "ceinture",
+        ],
+      },
+    },
+    {
+      id: "electronics",
+      merchants: [
+        "mediamarkt",
+        "fnac",
+        "darty",
+        "digitec",
+        "galaxus",
+        "interdiscount",
+        "brack",
+        "conrad",
+        // Not `boulanger`: the French electronics chain is spelled exactly
+        // like the man who sells bread, and in this app the bread wins.
+      ],
+      phrases: {
+        en: ["electronics", "laptop", "headphones", "smartphone"],
+        fr: ["électronique", "ordinateur portable", "écouteurs", "smartphone"],
+      },
+    },
+    {
+      id: "sporting_goods",
+      merchants: [
+        "decathlon",
+        "intersport",
+        "ochsner sport",
+        "sportxx",
+        "athleticum",
+        "go sport",
+        "sport 2000",
+      ],
+      phrases: {
+        en: ["sports equipment", "running shoes", "yoga mat"],
+        fr: ["matériel de sport", "équipement sportif", "tapis de yoga"],
+      },
+    },
+    {
+      id: "toys",
+      merchants: [
+        "franz carl weber",
+        "king jouet",
+        "la grande recre",
+        "lego store",
+        "smyths toys",
+      ],
+      phrases: {
+        en: ["toys", "toy shop"],
+        fr: ["jouets", "magasin de jouets"],
+      },
+    },
+    {
+      id: "books",
+      merchants: [
+        "orell fussli",
+        "payot librairie",
+        "cultura",
+        "waterstones",
+        "gibert joseph",
+      ],
+      phrases: {
+        en: ["bookshop", "bookstore", "paperback"],
+        fr: ["librairie", "bouquin"],
+      },
+    },
+    {
+      id: "hobbies",
+      merchants: ["hobbycraft", "boesner"],
+      phrases: {
+        en: [
+          "craft supplies",
+          "knitting wool",
+          "model kit",
+          "board game",
+          "art supplies",
+        ],
+        fr: [
+          "loisirs créatifs",
+          "laine à tricoter",
+          "maquette",
+          "jeu de société",
+          "matériel de dessin",
+        ],
+      },
+    },
+    {
+      id: "repairs",
+      phrases: {
+        en: ["phone repair", "screen repair", "shoe repair", "watch repair"],
+        fr: ["réparation téléphone", "réparation écran", "cordonnerie"],
+      },
+    },
+    {
+      /**
+       * After `sporting_goods` and `repairs`, both of which name a pair of
+       * shoes on their way to naming something else: "running shoes" is
+       * sports kit and "shoe repair" is a cobbler.
+       */
+      id: "shoes",
+      merchants: [
+        "foot locker",
+        "dosenbach",
+        "ochsner shoes",
+        "courir",
+        "sarenza",
+        "deichmann",
+      ],
+      phrases: {
+        en: ["shoes", "trainers", "sneakers", "boots"],
+        fr: ["chaussures", "baskets", "souliers", "bottes"],
+      },
+    },
+    {
+      /**
+       * The department store, which is the shop that sells the other nine.
+       * Last, so a named floor wins over the building it is in.
+       */
+      id: "general",
+      merchants: [
+        "manor",
+        "globus",
+        "galeries lafayette",
+        "printemps",
+        "el corte ingles",
+        "john lewis",
+        "loeb",
+      ],
+      phrases: { en: ["department store"], fr: ["grand magasin"] },
+    },
+  ],
+  personal_care: [
+    {
+      id: "hairdresser",
+      phrases: {
+        en: ["haircut", "hairdresser", "hair salon", "hair colour"],
+        fr: [
+          "coiffeur",
+          "salon de coiffure",
+          "coupe de cheveux",
+          "coloration cheveux",
+        ],
+      },
+    },
+    { id: "barber", phrases: { en: ["barber"], fr: ["barbier"] } },
+    {
+      id: "beauty",
+      phrases: {
+        en: ["nail salon", "manicure", "pedicure", "beauty salon", "waxing"],
+        fr: [
+          "manucure",
+          "pédicure",
+          "institut de beauté",
+          "épilation",
+          "onglerie",
+        ],
+      },
+    },
+    {
+      id: "cosmetics",
+      merchants: [
+        "sephora",
+        "marionnaud",
+        "nocibe",
+        "douglas parfumerie",
+        "yves rocher",
+        "the body shop",
+        "lush",
+        "kiko milano",
+        "rituals",
+      ],
+      phrases: {
+        en: ["cosmetics", "perfume", "make up", "lipstick"],
+        fr: ["cosmétiques", "parfum", "maquillage", "rouge à lèvres"],
+      },
+    },
+    {
+      id: "skincare",
+      phrases: {
+        en: ["skincare", "facial", "face cream", "sunscreen"],
+        fr: ["soin du visage", "crème visage", "crème solaire"],
+      },
+    },
+    {
+      id: "toiletries",
+      phrases: {
+        en: ["toiletries", "shampoo", "shower gel", "toothpaste", "deodorant"],
+        fr: [
+          "produits d'hygiène",
+          "shampoing",
+          "gel douche",
+          "dentifrice",
+          "déodorant",
+        ],
+      },
+    },
+    {
+      id: "spa",
+      phrases: {
+        en: ["spa day", "hammam", "thermal baths", "sauna"],
+        fr: ["spa", "hammam", "bains thermaux", "sauna"],
+      },
+    },
+    { id: "massage", phrases: { en: ["massage"], fr: ["massage"] } },
+    {
+      id: "laundry_dry_cleaning",
+      phrases: {
+        en: ["dry cleaning", "dry cleaner", "laundrette", "laundry service"],
+        fr: ["pressing", "blanchisserie", "laverie", "nettoyage à sec"],
+      },
+    },
+  ],
+  health: [
+    {
+      id: "pharmacy",
+      merchants: [
+        "amavita",
+        "sun store",
+        "benu pharmacie",
+        "coop vitality",
+        "pharmacie plus",
+      ],
+      phrases: {
+        en: ["pharmacy", "chemist", "prescription"],
+        fr: ["pharmacie", "ordonnance", "médicaments"],
+      },
+    },
+    {
+      id: "dentist",
+      phrases: {
+        en: ["dentist", "dental", "orthodontist"],
+        fr: ["dentiste", "dentaire", "orthodontiste"],
+      },
+    },
+    {
+      id: "doctor",
+      phrases: {
+        en: ["doctor", "gp visit", "medical consultation"],
+        fr: [
+          "médecin",
+          "consultation médicale",
+          "généraliste",
+          "cabinet médical",
+        ],
+      },
+    },
+    {
+      id: "hospital",
+      merchants: ["chuv", "inselspital", "hirslanden"],
+      phrases: {
+        en: ["hospital", "emergency room", "clinic stay"],
+        fr: ["hôpital", "clinique", "urgences", "hospitalisation"],
+      },
+    },
+    {
+      id: "therapy",
+      phrases: {
+        en: ["therapy", "psychotherapy", "psychologist", "counselling"],
+        fr: [
+          "psychologue",
+          "psychothérapie",
+          "psychiatre",
+          "suivi psychologique",
+        ],
+      },
+    },
+    {
+      id: "physiotherapy",
+      phrases: {
+        en: ["physiotherapy", "physiotherapist", "osteopath"],
+        fr: [
+          "physiothérapie",
+          "kinésithérapie",
+          "kiné",
+          "ostéopathe",
+          "chiropraticien",
+        ],
+      },
+    },
+    {
+      id: "labs_tests",
+      merchants: ["unilabs", "synlab", "viollier", "dianalabs"],
+      phrases: {
+        en: ["blood test", "laboratory", "x ray"],
+        fr: ["prise de sang", "analyse médicale", "radiographie"],
+      },
+    },
+    {
+      id: "glasses_contacts",
+      merchants: [
+        "visilab",
+        "afflelou",
+        "grand optical",
+        "optic 2000",
+        "mcoptic",
+        "krys",
+      ],
+      phrases: {
+        en: ["glasses", "contact lenses", "optician"],
+        fr: ["lunettes", "lentilles de contact", "opticien"],
+      },
+    },
+    {
+      id: "medical_devices",
+      phrases: {
+        en: [
+          "hearing aid",
+          "crutches",
+          "wheelchair",
+          "orthotics",
+          "blood pressure monitor",
+        ],
+        fr: [
+          "appareil auditif",
+          "béquilles",
+          "fauteuil roulant",
+          "semelles orthopédiques",
+          "attelle",
+        ],
+      },
+    },
+    {
+      id: "fitness",
+      merchants: [
+        "basefit",
+        "fitness park",
+        "puregym",
+        "activ fitness",
+        "holmes place",
+      ],
+      phrases: {
+        // Not "personal trainer": `trainers` is what half of Europe calls a
+        // pair of shoes, and the stem is the same word.
+        en: ["gym membership", "gym", "fitness club"],
+        fr: [
+          "abonnement salle de sport",
+          "salle de sport",
+          "club de fitness",
+          "coach sportif",
+        ],
+      },
+    },
+  ],
+  education: [
+    {
+      id: "tuition",
+      phrases: {
+        en: ["tuition", "tuition fee", "university fee", "semester fee"],
+        fr: ["frais de scolarité", "frais universitaires", "écolage"],
+      },
+    },
+    {
+      id: "school",
+      phrases: {
+        en: ["school fee", "school lunch", "school trip", "school camp"],
+        fr: [
+          "frais scolaires",
+          "cantine scolaire",
+          "sortie scolaire",
+          "camp scolaire",
+        ],
+      },
+    },
+    {
+      id: "courses",
+      merchants: [
+        "coursera",
+        "udemy",
+        "edx",
+        "openclassrooms",
+        "duolingo",
+        "babbel",
+        "skillshare",
+        "masterclass",
+        "linkedin learning",
+        "udacity",
+        "klubschule",
+      ],
+      phrases: {
+        en: ["language course", "evening class", "online course"],
+        fr: ["cours de langue", "cours du soir", "cours en ligne"],
+      },
+    },
+    {
+      id: "training",
+      phrases: {
+        en: ["professional training", "training course", "certification"],
+        fr: ["formation professionnelle", "formation continue"],
+      },
+    },
+    {
+      id: "tutoring",
+      phrases: {
+        en: ["private tutor", "tutoring"],
+        fr: ["soutien scolaire", "cours particulier", "répétiteur"],
+      },
+    },
+    {
+      id: "school_supplies",
+      phrases: {
+        en: ["school supplies", "pencil case"],
+        fr: ["fournitures scolaires", "matériel scolaire"],
+      },
+    },
+    {
+      id: "books_materials",
+      phrases: {
+        en: ["textbook", "school books", "course materials"],
+        fr: ["manuel scolaire", "livre scolaire", "support de cours"],
+      },
+    },
+    {
+      id: "exams",
+      phrases: {
+        en: ["exam fee", "exam registration"],
+        fr: ["frais d'examen", "inscription à l'examen"],
+      },
+    },
+  ],
+  entertainment: [
+    {
+      id: "cinema",
+      merchants: [
+        "pathe",
+        "ugc",
+        "gaumont",
+        "kinepolis",
+        "arena cinemas",
+        "blue cinema",
+        "cinepel",
+      ],
+      phrases: {
+        en: ["cinema", "movie ticket", "movie theatre", "movie theater"],
+        fr: ["cinéma", "place de cinéma", "séance de cinéma"],
+      },
+    },
+    {
+      id: "concerts",
+      phrases: {
+        en: ["concert", "concert ticket", "gig ticket"],
+        fr: ["concert", "billet de concert"],
+      },
+    },
+    {
+      id: "shows",
+      phrases: {
+        en: ["theatre", "theater", "musical", "opera", "comedy show", "ballet"],
+        fr: [
+          "théâtre",
+          "spectacle",
+          "opéra",
+          "comédie musicale",
+          "ballet",
+          "cirque",
+        ],
+      },
+    },
+    {
+      id: "nightlife",
+      phrases: {
+        en: ["nightclub", "night club", "karaoke", "club night"],
+        fr: ["discothèque", "boîte de nuit", "karaoké"],
+      },
+    },
+    {
+      id: "games",
+      merchants: [
+        "steam",
+        "playstation",
+        "playstation network",
+        "xbox",
+        "nintendo",
+        "epic games",
+        "riot games",
+        "blizzard",
+        "humble bundle",
+        "gog com",
+      ],
+      phrases: {
+        en: ["video game", "gaming", "game purchase"],
+        fr: ["jeu vidéo", "jeux vidéo"],
+      },
+    },
+    {
+      id: "music",
+      phrases: {
+        en: ["vinyl record", "record shop", "sheet music"],
+        fr: ["disque vinyle", "disquaire", "partition musicale"],
+      },
+    },
+    {
+      /**
+       * The ticket agencies are deliberately absent. Ticketmaster sells a
+       * concert, a musical and a football match through one descriptor, so
+       * reading a child off the brand would invent the half the row does not
+       * say — `events` answers only when the words do.
+       */
+      id: "events",
+      phrases: {
+        en: ["event ticket", "festival"],
+        fr: ["festival", "billetterie", "billet d'événement"],
+      },
+    },
+  ],
+  activities: [
+    {
+      id: "theme_parks",
+      merchants: [
+        "europapark",
+        "europa park",
+        "disneyland",
+        "parc asterix",
+        "walibi",
+        "aquaparc",
+        "alpamare",
+        "connyland",
+        "swiss vapeur parc",
+      ],
+      phrases: {
+        en: ["theme park", "amusement park", "water park"],
+        fr: ["parc d'attractions", "parc aquatique"],
+      },
+    },
+    {
+      id: "museums",
+      merchants: [
+        "musee olympique",
+        "verkehrshaus",
+        "chaplin s world",
+        "fondation beyeler",
+      ],
+      phrases: {
+        en: ["museum", "museum entry", "exhibition", "art gallery"],
+        fr: ["musée", "entrée musée", "exposition", "galerie d'art"],
+      },
+    },
+    {
+      id: "tours",
+      phrases: {
+        en: ["guided tour", "city tour", "sightseeing", "walking tour"],
+        fr: ["visite guidée", "tour de ville", "visite commentée"],
+      },
+    },
+    {
+      id: "excursions",
+      phrases: {
+        en: ["excursion", "day trip", "boat trip"],
+        fr: ["excursion", "sortie en bateau", "journée découverte"],
+      },
+    },
+    {
+      /**
+       * Doing it outside, which is where the ski pass lives: the lift is what
+       * was paid for. The lesson is `classes_workshops` below, because what
+       * was bought there was the teaching.
+       */
+      id: "outdoor_activities",
+      merchants: ["jungfraujoch", "glacier 3000"],
+      phrases: {
+        en: [
+          "hiking",
+          "kayaking",
+          "canoeing",
+          "rafting",
+          "paragliding",
+          "via ferrata",
+          "diving",
+          "snorkeling",
+          "ski pass",
+          "lift pass",
+        ],
+        fr: [
+          "randonnée",
+          "kayak",
+          "canoë",
+          "rafting",
+          "parapente",
+          "via ferrata",
+          "plongée",
+          "accrobranche",
+          // Not the bare "escalade": a "salle d'escalade" is an indoor wall,
+          // which is `sports`, and the word cannot answer for both.
+          "forfait de ski",
+          "forfait ski",
+          "remontées mécaniques",
+        ],
+      },
+    },
+    {
+      id: "sports",
+      phrases: {
+        en: [
+          "match ticket",
+          "football match",
+          "swimming pool",
+          "climbing gym",
+          "tennis court",
+          "ice rink",
+        ],
+        fr: [
+          "billet de match",
+          "piscine",
+          "salle d'escalade",
+          "court de tennis",
+          "patinoire",
+        ],
+      },
+    },
+    {
+      id: "classes_workshops",
+      phrases: {
+        en: ["cooking class", "yoga class", "pottery class", "ski lesson"],
+        fr: [
+          "cours de cuisine",
+          "cours de yoga",
+          "atelier poterie",
+          "cours de ski",
+          "dégustation",
+        ],
+      },
+    },
+    {
+      /**
+       * The paid-entry venue, and the catch-all for an outing that is not a
+       * park, a museum or a mountain. Last, so the seven above answer first.
+       */
+      id: "attractions",
+      merchants: ["papiliorama", "aquatis"],
+      phrases: {
+        en: [
+          "zoo",
+          "aquarium",
+          "cable car",
+          "observation deck",
+          "escape room",
+          "escape game",
+          "bowling",
+          "mini golf",
+          "laser game",
+          "paintball",
+          "karting",
+        ],
+        fr: [
+          "zoo",
+          "aquarium",
+          "téléphérique",
+          "funiculaire",
+          "escape game",
+          "bowling",
+          "mini golf",
+          "laser game",
+          "paintball",
+          "karting",
+        ],
+      },
     },
   ],
   lodging: [
     {
       id: "vacation_rental",
-      merchants: ["airbnb", "vrbo", "abritel"],
-      phrases: { en: ["vacation rental"], fr: ["location de vacances"] },
+      merchants: ["airbnb", "vrbo", "abritel", "interhome"],
+      phrases: {
+        en: ["vacation rental", "holiday apartment", "holiday home"],
+        fr: [
+          "location de vacances",
+          "appartement de vacances",
+          "chalet de vacances",
+        ],
+      },
     },
     {
       id: "hotel",
-      merchants: ["ibis", "novotel", "mercure", "marriott", "hilton"],
-      phrases: { en: ["hotel night"], fr: ["nuit d'hôtel"] },
+      merchants: [
+        "ibis",
+        "novotel",
+        "mercure",
+        "marriott",
+        "hilton",
+        "accor",
+        "holiday inn",
+        "best western",
+        "premier inn",
+        "motel one",
+      ],
+      phrases: {
+        en: ["hotel", "hotel night", "hotel room"],
+        fr: ["hôtel", "nuit d'hôtel", "chambre d'hôtel"],
+      },
     },
-    { id: "camping", phrases: { en: ["campsite"], fr: ["camping"] } },
     {
       id: "hostel",
-      phrases: { en: ["hostel"], fr: ["auberge de jeunesse"] },
+      merchants: ["youth hostel"],
+      phrases: {
+        en: ["hostel", "dorm bed"],
+        fr: ["auberge de jeunesse", "dortoir"],
+      },
+    },
+    {
+      id: "guesthouse",
+      phrases: {
+        en: ["guesthouse", "bed and breakfast"],
+        fr: ["chambre d'hôtes", "maison d'hôtes", "gîte", "pension de famille"],
+      },
+    },
+    {
+      id: "camping",
+      merchants: ["tcs camping"],
+      phrases: {
+        en: ["campsite", "camping pitch"],
+        fr: ["camping", "emplacement de camping"],
+      },
     },
   ],
   subscriptions: [
@@ -3193,73 +4605,131 @@ export const SUBCATEGORY_SEEDS: {
         "prime video",
         "deezer",
         "canal plus",
+        "paramount plus",
+        "crunchyroll",
+        "mubi",
+        "youtube premium",
+        "youtube music",
+        "apple music",
+        "apple tv",
+        "tidal",
+        "twitch",
       ],
       phrases: { en: ["streaming"], fr: ["streaming"] },
     },
     {
       id: "cloud_storage",
-      merchants: ["dropbox", "icloud", "google one"],
+      merchants: [
+        "dropbox",
+        "icloud",
+        "google one",
+        "google storage",
+        "backblaze",
+      ],
       phrases: { en: ["cloud storage"], fr: ["stockage cloud"] },
     },
     {
       id: "software",
-      merchants: ["adobe", "microsoft 365", "jetbrains", "github"],
-      phrases: { en: ["software licence"], fr: ["licence logicielle"] },
-    },
-  ],
-  health: [
-    { id: "pharmacy", phrases: { en: ["pharmacy"], fr: ["pharmacie"] } },
-    { id: "dentist", phrases: { en: ["dentist"], fr: ["dentiste"] } },
-    { id: "doctor", phrases: { en: ["doctor"], fr: ["médecin"] } },
-    {
-      id: "glasses_contacts",
-      phrases: { en: ["glasses"], fr: ["lunettes"] },
-    },
-    {
-      id: "physiotherapy",
+      merchants: [
+        "adobe",
+        "creative cloud",
+        "microsoft 365",
+        "office 365",
+        "jetbrains",
+        "github",
+        "notion",
+        "evernote",
+        "canva",
+        "figma",
+        "openai",
+        "anthropic",
+        "midjourney",
+        "perplexity",
+        "google workspace",
+        "nordvpn",
+        "expressvpn",
+        "1password",
+        "bitwarden",
+        "protonmail",
+      ],
       phrases: {
-        en: ["physiotherapy", "physiotherapist"],
-        fr: ["physiothérapie", "kinésithérapie", "kiné"],
+        en: ["software licence", "software license"],
+        fr: ["licence logicielle", "abonnement logiciel"],
       },
     },
     {
-      id: "labs_tests",
-      merchants: ["unilabs", "synlab", "viollier"],
+      id: "media",
+      merchants: [
+        "le monde",
+        "mediapart",
+        "le temps",
+        "24 heures",
+        "tribune de geneve",
+        "nzz",
+        "nytimes",
+        "new york times",
+        "the guardian",
+        "the economist",
+        "financial times",
+        "substack",
+        "audible",
+        "storytel",
+        "kindle unlimited",
+      ],
       phrases: {
-        en: ["blood test", "laboratory"],
-        fr: ["prise de sang", "analyse médicale"],
+        en: ["newspaper subscription", "magazine subscription"],
+        fr: ["abonnement journal", "abonnement magazine", "abonnement presse"],
       },
     },
     {
-      id: "fitness",
-      phrases: { en: ["gym membership"], fr: ["abonnement salle de sport"] },
+      id: "apps",
+      merchants: ["google play", "app store"],
+      phrases: {
+        en: ["in app purchase", "app subscription"],
+        fr: ["achat intégré", "abonnement application"],
+      },
     },
-  ],
-  entertainment: [
-    { id: "cinema", phrases: { en: ["cinema"], fr: ["cinéma"] } },
-    { id: "concerts", phrases: { en: ["concert"], fr: ["concert"] } },
-  ],
-  pets: [
-    { id: "veterinary", phrases: { en: ["vet"], fr: ["vétérinaire"] } },
-    { id: "grooming", phrases: { en: ["grooming"], fr: ["toilettage"] } },
     {
-      id: "training",
-      phrases: { en: ["dog training"], fr: ["dressage", "éducation canine"] },
+      id: "delivery_memberships",
+      merchants: ["amazon prime"],
+      phrases: {
+        en: ["prime membership", "delivery subscription"],
+        fr: ["abonnement livraison"],
+      },
+    },
+    {
+      /**
+       * Last: `membership` is a word every sibling above could also be
+       * described with, so it only answers once none of them has.
+       */
+      id: "memberships",
+      phrases: {
+        en: ["membership fee", "annual membership", "club membership"],
+        fr: ["cotisation annuelle", "adhésion", "frais d'adhésion"],
+      },
     },
   ],
   kids_family: [
     {
       id: "childcare",
       phrases: {
-        en: ["childcare", "nursery"],
-        fr: ["garde d'enfants", "crèche"],
+        en: ["childcare", "nursery", "daycare", "day care"],
+        fr: ["garde d'enfants", "crèche", "garderie", "maman de jour"],
       },
     },
     {
       id: "babysitting",
       phrases: {
-        en: ["babysitter", "babysitting"],
-        fr: ["baby-sitter", "baby-sitting"],
+        en: ["babysitter", "babysitting", "nanny"],
+        fr: ["baby-sitter", "baby-sitting", "nounou"],
+      },
+    },
+    {
+      id: "baby",
+      merchants: ["orchestra premaman", "aubert", "pampers"],
+      phrases: {
+        en: ["nappies", "diapers", "baby formula", "pushchair", "baby bottle"],
+        fr: ["couches", "lait infantile", "poussette", "biberon"],
       },
     },
     {
@@ -3270,60 +4740,104 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
+      id: "caregiving",
+      phrases: {
+        en: ["home carer", "care worker", "home help"],
+        fr: ["aide à domicile", "auxiliaire de vie", "soins à domicile"],
+      },
+    },
+    {
       id: "child_support",
-      phrases: { en: ["child support"], fr: ["pension alimentaire"] },
+      phrases: {
+        en: ["child support", "maintenance payment"],
+        fr: ["pension alimentaire"],
+      },
+    },
+    {
+      id: "family_support",
+      phrases: {
+        en: ["family support"],
+        fr: ["soutien familial", "aide à la famille"],
+      },
     },
     {
       id: "allowance",
-      phrases: { en: ["pocket money"], fr: ["argent de poche"] },
+      phrases: { en: ["pocket money", "allowance"], fr: ["argent de poche"] },
     },
   ],
-  finance_admin: [
-    { id: "bank_fees", phrases: { en: ["bank fee"], fr: ["frais bancaires"] } },
+  pets: [
     {
-      id: "exchange_fees",
-      phrases: { en: ["exchange fee"], fr: ["frais de change"] },
-    },
-    { id: "card_fees", phrases: { en: ["card fee"], fr: ["frais de carte"] } },
-    {
-      id: "taxes",
+      /**
+       * The one premium that does not live under `insurance`, because "what
+       * does the dog come to" is the question people actually ask.
+       */
+      id: "pet_insurance",
       phrases: {
-        en: ["income tax", "tax return"],
-        fr: ["impôt sur le revenu", "déclaration d'impôts"],
+        en: ["pet insurance"],
+        fr: ["assurance animaux", "assurance chien", "assurance chat"],
       },
     },
     {
-      id: "accounting",
+      /**
+       * Before `veterinary`: "médicament vétérinaire" is a bottle bought at
+       * the counter, and the vet in it is only who prescribed it.
+       */
+      id: "medication",
       phrases: {
-        en: ["accountant", "bookkeeping"],
-        fr: ["comptable", "expert-comptable"],
+        en: ["flea treatment", "worming tablets", "pet medication"],
+        fr: ["antipuces", "vermifuge", "médicament vétérinaire"],
       },
     },
     {
-      id: "legal",
+      id: "veterinary",
       phrases: {
-        en: ["lawyer", "solicitor", "notary"],
-        fr: ["avocat", "notaire"],
+        en: ["vet", "veterinarian", "veterinary", "animal hospital"],
+        fr: ["vétérinaire", "clinique vétérinaire"],
       },
     },
     {
-      id: "passport_visa",
+      id: "boarding",
       phrases: {
-        en: ["passport renewal", "visa application"],
-        fr: ["renouvellement passeport", "demande de visa"],
+        en: ["dog boarding", "cattery", "kennel", "pet sitting"],
+        fr: ["pension pour chien", "pension pour chat", "chenil"],
       },
     },
     {
-      id: "fines",
-      phrases: { en: ["speeding ticket"], fr: ["contravention"] },
+      id: "grooming",
+      phrases: { en: ["grooming", "dog groomer"], fr: ["toilettage"] },
     },
     {
-      id: "interest",
-      phrases: { en: ["interest charged"], fr: ["intérêts débiteurs"] },
+      id: "training",
+      phrases: { en: ["dog training"], fr: ["dressage", "éducation canine"] },
     },
     {
-      id: "loan_payment",
-      phrases: { en: ["loan repayment"], fr: ["remboursement de prêt"] },
+      id: "pet_food",
+      merchants: ["royal canin", "whiskas", "pedigree", "purina"],
+      phrases: {
+        en: ["pet food", "dog food", "cat food"],
+        fr: [
+          "croquettes",
+          "nourriture chien",
+          "nourriture chat",
+          "nourriture animaux",
+        ],
+      },
+    },
+    {
+      id: "pet_supplies",
+      merchants: [
+        "zooplus",
+        "bitiba",
+        "fressnapf",
+        "maxi zoo",
+        "qualipet",
+        "animalis",
+        "tom and co",
+      ],
+      phrases: {
+        en: ["cat litter", "pet store", "pet supplies"],
+        fr: ["litière", "animalerie", "accessoires pour animaux"],
+      },
     },
   ],
   gifts_donations: [
@@ -3349,127 +4863,51 @@ export const SUBCATEGORY_SEEDS: {
       },
     },
     {
+      /**
+       * Before `donations`: a church donation is a donation, and it is the
+       * word "church" that says which kind.
+       */
+      id: "religious_giving",
+      phrases: {
+        en: ["church donation", "tithe"],
+        fr: ["denier du culte", "don à l'église", "quête"],
+      },
+    },
+    {
       id: "donations",
       merchants: ["gofundme", "helloasso", "leetchi"],
       phrases: {
         en: ["donation", "fundraiser"],
-        fr: ["don", "collecte de fonds"],
+        fr: ["don", "collecte de fonds", "cagnotte"],
       },
     },
     {
       id: "weddings",
-      phrases: { en: ["wedding gift"], fr: ["cadeau de mariage"] },
+      phrases: {
+        en: ["wedding gift", "wedding present"],
+        fr: ["cadeau de mariage", "liste de mariage"],
+      },
     },
     {
       id: "birthdays",
-      phrases: { en: ["birthday present"], fr: ["cadeau d'anniversaire"] },
-    },
-  ],
-  personal_care: [
-    {
-      id: "hairdresser",
       phrases: {
-        en: ["haircut", "hairdresser", "hair salon"],
-        fr: ["coiffeur", "salon de coiffure", "coupe de cheveux"],
-      },
-    },
-    { id: "barber", phrases: { en: ["barber"], fr: ["barbier"] } },
-    {
-      id: "beauty",
-      phrases: {
-        en: ["nail salon", "manicure", "beauty salon"],
-        fr: ["manucure", "institut de beauté"],
+        en: ["birthday present", "birthday gift"],
+        fr: ["cadeau d'anniversaire"],
       },
     },
     {
-      id: "cosmetics",
-      merchants: ["sephora", "marionnaud", "nocibe", "douglas parfumerie"],
+      id: "celebrations",
       phrases: {
-        en: ["cosmetics", "perfume", "make up"],
-        fr: ["cosmétiques", "parfum", "maquillage"],
+        en: ["baby shower", "housewarming gift", "graduation gift"],
+        fr: ["baptême", "crémaillère", "cadeau de fête"],
       },
     },
     {
-      id: "skincare",
-      phrases: { en: ["skincare", "facial"], fr: ["soin du visage"] },
-    },
-    {
-      id: "toiletries",
-      phrases: { en: ["toiletries"], fr: ["produits d'hygiène"] },
-    },
-    {
-      id: "spa",
-      phrases: { en: ["spa day", "hammam"], fr: ["spa", "hammam"] },
-    },
-    { id: "massage", phrases: { en: ["massage"], fr: ["massage"] } },
-    {
-      id: "laundry_dry_cleaning",
+      /** Last: every sibling above is a gift too, and says which occasion. */
+      id: "gifts",
       phrases: {
-        en: ["dry cleaning", "dry cleaner", "laundrette"],
-        fr: ["pressing", "blanchisserie", "laverie"],
-      },
-    },
-  ],
-  education: [
-    {
-      id: "tuition",
-      phrases: {
-        en: ["tuition", "tuition fee", "university fee", "semester fee"],
-        fr: ["frais de scolarité", "frais universitaires", "écolage"],
-      },
-    },
-    {
-      id: "school",
-      phrases: {
-        en: ["school fee", "school lunch", "school trip"],
-        fr: ["frais scolaires", "cantine scolaire", "sortie scolaire"],
-      },
-    },
-    {
-      id: "courses",
-      merchants: [
-        "coursera",
-        "udemy",
-        "edx",
-        "openclassrooms",
-        "duolingo",
-        "babbel",
-      ],
-      phrases: {
-        en: ["language course", "evening class", "online course"],
-        fr: ["cours de langue", "cours du soir", "cours en ligne"],
-      },
-    },
-    {
-      id: "training",
-      phrases: {
-        en: ["professional training", "training course", "certification"],
-        fr: ["formation professionnelle", "formation continue"],
-      },
-    },
-    {
-      id: "tutoring",
-      phrases: {
-        en: ["private tutor", "tutoring"],
-        fr: ["soutien scolaire", "cours particulier"],
-      },
-    },
-    {
-      id: "school_supplies",
-      phrases: { en: ["school supplies"], fr: ["fournitures scolaires"] },
-    },
-    {
-      id: "books_materials",
-      phrases: {
-        en: ["textbook", "school books"],
-        fr: ["manuel scolaire", "livre scolaire"],
-      },
-    },
-    {
-      id: "exams",
-      phrases: {
-        en: ["exam fee", "exam registration"],
-        fr: ["frais d'examen"],
+        en: ["gift", "gift card", "gift voucher"],
+        fr: ["cadeau", "bon cadeau", "carte cadeau"],
       },
     },
   ],
@@ -3515,18 +4953,30 @@ export const SUBCATEGORY_SEEDS: {
         "harmonie mutuelle",
       ],
       phrases: {
-        en: ["health insurance"],
+        en: ["health insurance", "dental insurance"],
         fr: ["assurance maladie", "caisse maladie", "prime maladie"],
       },
     },
-    { id: "life", phrases: { en: ["life insurance"], fr: ["assurance vie"] } },
+    {
+      id: "life",
+      phrases: {
+        en: ["life insurance"],
+        fr: ["assurance vie", "assurance décès"],
+      },
+    },
     {
       id: "travel",
-      phrases: { en: ["travel insurance"], fr: ["assurance voyage"] },
+      phrases: {
+        en: ["travel insurance", "cancellation insurance"],
+        fr: ["assurance voyage", "assurance annulation"],
+      },
     },
     {
       id: "liability",
-      phrases: { en: ["liability insurance"], fr: ["responsabilité civile"] },
+      phrases: {
+        en: ["liability insurance"],
+        fr: ["responsabilité civile", "assurance rc"],
+      },
     },
     {
       id: "legal_protection",
@@ -3539,64 +4989,108 @@ export const SUBCATEGORY_SEEDS: {
       id: "disability",
       phrases: {
         en: ["disability insurance", "income protection"],
-        fr: ["assurance invalidité"],
+        fr: ["assurance invalidité", "perte de gain"],
       },
     },
   ],
-  shopping: [
+  finance_admin: [
     {
-      id: "clothing",
-      merchants: [
-        "h&m",
-        "zara",
-        "uniqlo",
-        "mango",
-        "kiabi",
-        "primark",
-        "zalando",
-        "asos",
-      ],
+      id: "bank_fees",
       phrases: {
-        en: ["clothing", "clothes"],
-        fr: ["vêtements", "habillement"],
+        en: ["bank fee", "account fee", "overdraft fee"],
+        fr: ["frais bancaires", "frais de tenue de compte", "agios"],
       },
     },
     {
-      id: "electronics",
-      merchants: [
-        "mediamarkt",
-        "fnac",
-        "darty",
-        "digitec",
-        "galaxus",
-        "interdiscount",
-      ],
-      phrases: { en: ["electronics"], fr: ["électronique"] },
+      id: "exchange_fees",
+      phrases: {
+        en: ["exchange fee", "foreign transaction fee"],
+        fr: ["frais de change"],
+      },
     },
     {
-      id: "sporting_goods",
-      merchants: [
-        "decathlon",
-        "intersport",
-        "ochsner sport",
-        "sportxx",
-        "athleticum",
-      ],
-      phrases: { en: ["sports equipment"], fr: ["matériel de sport"] },
+      id: "card_fees",
+      phrases: {
+        en: ["card fee", "annual card fee"],
+        fr: ["frais de carte", "cotisation carte"],
+      },
     },
     {
-      id: "toys",
-      merchants: ["franz carl weber", "king jouet", "la grande recre"],
-      phrases: { en: ["toys"], fr: ["jouets"] },
+      id: "interest",
+      phrases: {
+        en: ["interest charged", "interest payment"],
+        fr: ["intérêts débiteurs", "intérêts du prêt"],
+      },
     },
     {
-      id: "books",
-      merchants: ["orell fussli", "payot librairie", "cultura"],
-      phrases: { en: ["bookshop"], fr: ["librairie"] },
+      id: "loan_payment",
+      phrases: {
+        en: ["loan repayment", "loan instalment"],
+        fr: ["remboursement de prêt", "mensualité du prêt"],
+      },
     },
     {
-      id: "shoes",
-      phrases: { en: ["shoes", "trainers"], fr: ["chaussures", "baskets"] },
+      id: "taxes",
+      phrases: {
+        en: ["income tax", "tax return", "tax bill", "vat payment"],
+        fr: [
+          "impôt sur le revenu",
+          "déclaration d'impôts",
+          "acompte d'impôt",
+          "impôts",
+        ],
+      },
+    },
+    {
+      id: "government_fees",
+      phrases: {
+        en: ["residence permit", "council fee"],
+        fr: ["permis de séjour", "taxe communale", "état civil"],
+      },
+    },
+    {
+      id: "passport_visa",
+      phrases: {
+        en: ["passport renewal", "visa application"],
+        fr: ["renouvellement passeport", "demande de visa"],
+      },
+    },
+    {
+      id: "legal",
+      phrases: {
+        en: ["lawyer", "solicitor", "notary"],
+        fr: ["avocat", "notaire", "frais de justice"],
+      },
+    },
+    {
+      id: "accounting",
+      phrases: {
+        en: ["accountant", "bookkeeping"],
+        fr: ["comptable", "expert-comptable", "fiduciaire"],
+      },
+    },
+    {
+      id: "fines",
+      phrases: {
+        en: ["speeding ticket", "parking fine", "penalty notice"],
+        fr: ["contravention", "amende", "amende de stationnement"],
+      },
+    },
+    {
+      /**
+       * Last: "fee" is the word the whole category is made of, so it answers
+       * only for a charge that named nothing more specific.
+       */
+      id: "service_fees",
+      phrases: {
+        en: ["service fee", "processing fee", "handling fee", "admin fee"],
+        fr: [
+          "frais de service",
+          "frais de dossier",
+          "frais de traitement",
+          "frais administratifs",
+        ],
+      },
     },
   ],
 };

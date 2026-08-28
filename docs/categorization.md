@@ -49,7 +49,10 @@ description / notes
         ▼
   contextual overrides ─┐
   merchant match       ─┤
-  strong phrases       ─┼──► signals ──► ranked categories
+  strong phrases       ─┤
+  subcategory rules,   ─┼──► signals ──► ranked categories
+    read as their      ─┤
+    parent's evidence  ─┤
   weak keywords        ─┤
   recurring bonus      ─┘
         │
@@ -477,15 +480,30 @@ a description that starts with one of them either:
 
 ```
 "Achat de voiture"    → achat stripped → "de voiture"
-"Carte grise"         → carte stripped → "grise"
 "Crédit auto"         → credit stripped → "auto"
 ```
 
-Say the same thing in words that survive: `voiture d'occasion`,
-`immatriculation`, `prêt auto`, `acquisition immobilière`. The stripping is
-deliberate and worth far more than the handful of phrasings it costs —
-`CB CARREFOUR 12/05` has to become `carrefour` — but it is the trap to know
-about before writing a French rule.
+Say the same thing in words that survive: `voiture d'occasion`, `prêt auto`,
+`acquisition immobilière`. The stripping is deliberate and worth far more than
+the handful of phrasings it costs — `CB CARREFOUR 12/05` has to become
+`carrefour` — but it is the trap to know about before writing a French rule.
+
+`carte` is the one that had to be taught an exception, because it fronts as
+many nouns as it does cards. `CARD_COMPOUND_HEADS` in `normalize.ts` names the
+words after which it survives:
+
+```
+"Carte grise"         → kept → "carte grise"        (a registration document)
+"Carte cadeau"        → kept → "carte cadeau"       (the gift is the card)
+"Carte journalière"   → kept → "carte journaliere"  (a day pass)
+"CARTE VISA MIGROS"   → stripped → "migros"
+"CARTE 1234 COOP"     → stripped → "coop"
+```
+
+It is an explicit list rather than a rule about what follows, because the
+general shape does not hold: `CB CARREFOUR` is a card word in front of a
+merchant, and so is `CARTE DE CREDIT`. Add to the list when a rule you write
+starts with `carte` and never fires.
 
 ### Add a merchant
 
@@ -541,13 +559,34 @@ Existing rows keep their old string until a migration rewrites them;
 `loadMappings()` translates a retired pair on read and discards anything else,
 so a category that was removed outright cannot come back through an old row.
 
-### The category has to be reachable first
+### The category is read off the subcategory rule
 
 `SUBCATEGORY_SEEDS` is consulted only _after_ a category is settled, so a
-brand or phrase that appears there and nowhere else names a subcategory of
-nothing. `Midas` was exactly that for an afternoon: a `vehicle_maintenance`
-rule under a category no rule could reach. Whatever names the subcategory
-usually has to name the category too.
+brand or phrase appearing there and nowhere else used to name a subcategory of
+nothing — written, compiled, reading as coverage, and unable to fire. `Midas`
+was exactly that for an afternoon. Auditing the file found **272** more:
+`shurgard`, `foot locker`, `basefit`, `dishwasher`, `toothpaste`, `hiking`.
+
+The standing answer was to write each word twice, once at each level. Nobody
+can keep that rule — it had already been missed 272 times — and it is
+derivable, because the second level is held to the _higher_ bar: a rule only
+goes there when something names that subcategory outright, and whatever names
+`transport / train` beyond argument has named `transport` beyond argument.
+
+So `DERIVED_BY_CATEGORY` in `deterministic.ts` lifts every subcategory rule to
+its parent, at the same weight it would have carried as a category rule. Two
+things are deliberately not lifted:
+
+- **A brand the category itself calls ambiguous.** `total` is a filling
+  station and the commonest word on a receipt; `coop` is a supermarket, a
+  pharmacy and a petrol pump. A category that listed a brand in
+  `ambiguousMerchants` has already said what it is worth.
+- **Anything the category already carries as a merchant or strong phrase**,
+  which would only be a second signal in a group where the strongest wins.
+
+A category's `excludes` and any override suppression still apply, so a
+category that has stood down stays down. Adding a subcategory rule therefore
+needs no matching category rule — write it once, at the level it belongs to.
 
 ### Add a subcategory rule
 
@@ -559,8 +598,23 @@ phrase-strength evidence can fill the field.
 The rule to hold to: a subcategory is asserted **only when something named it
 outright**. Being confident a purchase is `home` says nothing about which of
 its twenty-four children it is, and a plausible-looking guess filed under the user's
-name is worse than the blank it replaced. Partial coverage is the expected
-state — most categories name a handful of their children and no more.
+name is worse than the blank it replaced.
+
+Every subcategory in the vocabulary now carries at least one rule, but that is
+a property of the data and not a promise: a category with no rule for a child
+simply never suggests it, which is a supported outcome and not a gap to be
+filled with something plausible.
+
+Two things decide where a new rule goes:
+
+- **Order is load-bearing.** `detectSubcategory` keeps the _first_ rule to
+  reach the best score, so siblings matching at the same weight are settled by
+  which is written first. Each list runs specific to generic — `weddings`
+  before `gifts`, `fast_food` before `restaurant`, `theme_parks` before
+  `attractions` — and the generic one carries a comment saying why it is last.
+- **A word belongs to one sibling.** If it would have to sit under two to be
+  fair, it goes under neither, and the field is left for the user. A test in
+  `deterministic.test.ts` fails the build on a word that sits under two.
 
 ### Regrouping a picker pane
 
