@@ -295,6 +295,13 @@ Whichever proxy you use, it has to pass:
 Getting `X-Forwarded-For` wrong means every request looks like it comes from the
 proxy, and rate limits then apply to all your users collectively.
 
+Balancia reads that header from the right, because a proxy appends to it and a
+caller may send one of their own — the last entry is the address your proxy
+saw, and anything left of it is unverifiable. One proxy is assumed. If a CDN
+terminates the connection before your proxy does, say so with
+[`TRUSTED_PROXY_HOPS`](environment.md#trusted_proxy_hops); otherwise every
+visitor arrives wearing the CDN's address.
+
 ### Caddy
 
 Caddy gets certificates automatically and sets the forwarded headers by default:

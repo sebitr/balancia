@@ -171,6 +171,32 @@ trusted; this is for the rare case of an additional legitimate front door.
 TRUSTED_ORIGINS=https://alt.example.com,https://other.example.com
 ```
 
+### `TRUSTED_PROXY_HOPS`
+
+Default `1`. How many reverse proxies stand in front of Balancia.
+
+Rate limiting keys on the client address, which is read out of the
+`X-Forwarded-For` header. That header is a list every proxy appends to and
+every caller is free to open with entries of their own, so only its rightmost
+entries — the ones the proxies wrote — mean anything. This says how many of
+them to count back.
+
+The default covers the single proxy in
+[docs/self-hosting.md](self-hosting.md). Raise it to `2` when something else
+terminates the connection first, such as Cloudflare in front of nginx:
+
+```bash
+TRUSTED_PROXY_HOPS=2
+```
+
+Getting it too low and getting it too high fail in opposite directions. Too
+low, and every visitor arrives wearing the outer proxy's address, so one
+shared bucket rate-limits all of them collectively. Too high, and each extra
+hop reaches one entry further into the part of the list the caller wrote —
+which lets a single client present a fresh address per request and walk
+straight through the limits on sign-in, registration, password reset and join
+links. Set it to the number of proxies actually in front, and no higher.
+
 ---
 
 ## Database
@@ -384,9 +410,11 @@ legitimate attempts genuinely share one address** — an automated test suite
 against a private instance. On a public deployment these limits are what make
 password guessing and account enumeration expensive.
 
-Rate limiting keys on the client IP, taken from `X-Forwarded-For` or
-`X-Real-IP`. If your proxy does not set those, every request looks like one
-client and the limits apply to everyone collectively.
+Rate limiting keys on the client IP, taken from the rightmost entry of
+`X-Forwarded-For` that a proxy wrote — see
+[`TRUSTED_PROXY_HOPS`](#trusted_proxy_hops) — and from `X-Real-IP` when there
+is no `X-Forwarded-For` at all. If your proxy sets neither, every request looks
+like one client and the limits apply to everyone collectively.
 
 ---
 
