@@ -130,6 +130,33 @@ export function AddEntryDrawer({
       <SheetContent
         side="bottom"
         showCloseButton={false}
+        /*
+         * Open on the amount, because that is the field every entry starts
+         * with. Left alone, the focus scope takes the first tabbable thing in
+         * the drawer, which is the close button — so recording an expense, the
+         * most repeated action in the app, began with a tap that entered
+         * nothing.
+         *
+         * Only when the field is empty. A drawer opened to edit an entry, or
+         * opened from a stated debt with the outstanding figure already in it,
+         * is not one the reader came to type a number into; those keep the
+         * default, which puts focus at the top of the drawer.
+         *
+         * `preventDefault` is how Radix is told the scope should not place
+         * focus itself. Note that iOS only raises the keyboard for focus it
+         * can attribute to a gesture, and a drawer that arrives with a route
+         * transition has spent that: there the caret lands and the keyboard
+         * may still wait for the first tap. Desktop and Android open ready to
+         * type, and neither platform is worse off than it was.
+         */
+        onOpenAutoFocus={(event) => {
+          const amount = event.currentTarget.querySelector<HTMLInputElement>(
+            "input[data-entry-amount]",
+          );
+          if (!amount || amount.value !== "") return;
+          event.preventDefault();
+          amount.focus({ preventScroll: true });
+        }}
         // The sheet is the scroll container the swipe-to-dismiss gesture reads,
         // so the body scrolls inside it and the chrome stays put.
         //
