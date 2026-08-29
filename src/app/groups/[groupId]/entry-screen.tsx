@@ -6,6 +6,7 @@ import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AddEntryDrawer } from "@/components/entries/add-entry-drawer";
+import { SnapshotCapture } from "@/components/offline/snapshot-capture";
 import type { EditingEntry } from "@/components/entries/add-entry-form";
 import type { DebtPair } from "@/components/entries/settle-blocks";
 import { splitValuesToText } from "@/components/expenses/expense-form-logic";
@@ -167,41 +168,62 @@ export async function EntryScreen({
     notFound();
   }
 
+  const members = participants.map((participant) => ({
+    id: participant.id,
+    displayName: participant.displayName,
+  }));
+  const selfId = access.participantId ?? participants[0].id;
+  const defaultCurrency =
+    editing?.currency ?? access.group.baseCurrency ?? "EUR";
+
   return (
-    <AddEntryDrawer
-      dismissTo={dismissTo}
-      groupId={access.groupId}
-      members={participants.map((participant) => ({
-        id: participant.id,
-        displayName: participant.displayName,
-      }))}
-      selfId={access.participantId ?? participants[0].id}
-      currencyMode={access.group.currencyMode}
-      baseCurrency={access.group.baseCurrency}
-      defaultCurrency={editing?.currency ?? access.group.baseCurrency ?? "EUR"}
-      timezone={access.group.timezone}
-      outstanding={outstanding}
-      prefill={
-        settle
-          ? {
-              fromParticipantId: settle.fromParticipantId,
-              toParticipantId: settle.toParticipantId,
-              amountMinor: stated?.amountMinor ?? null,
-              currency: settle.currency,
-              method: settle.method,
-            }
-          : undefined
-      }
-      categoryMappings={categoryMappings}
-      frequentCategories={frequentCategories}
-      semanticCategorization={isSemanticCategorizationEnabled()}
-      receiptScanning={isReceiptScanningEnabled()}
-      receiptOcrLocal={isLocalReceiptOcrEnabled()}
-      // The provider's *name*, so the interface can say where a photograph
-      // is going. Its key stays on the server and is never sent here.
-      receiptOcrProvider={configuredOcrProviderName()}
-      editing={editing}
-    />
+    <>
+      {/* Keeps a copy of exactly these inputs on the device, so this same form
+          can open with no network at all. See `SnapshotCapture`. */}
+      <SnapshotCapture
+        groupId={access.groupId}
+        groupName={access.group.name}
+        members={members}
+        selfId={selfId}
+        currencyMode={access.group.currencyMode}
+        baseCurrency={access.group.baseCurrency}
+        defaultCurrency={defaultCurrency}
+        timezone={access.group.timezone}
+        frequentCategories={frequentCategories}
+      />
+      <AddEntryDrawer
+        dismissTo={dismissTo}
+        groupId={access.groupId}
+        groupName={access.group.name}
+        members={members}
+        selfId={selfId}
+        currencyMode={access.group.currencyMode}
+        baseCurrency={access.group.baseCurrency}
+        defaultCurrency={defaultCurrency}
+        timezone={access.group.timezone}
+        outstanding={outstanding}
+        prefill={
+          settle
+            ? {
+                fromParticipantId: settle.fromParticipantId,
+                toParticipantId: settle.toParticipantId,
+                amountMinor: stated?.amountMinor ?? null,
+                currency: settle.currency,
+                method: settle.method,
+              }
+            : undefined
+        }
+        categoryMappings={categoryMappings}
+        frequentCategories={frequentCategories}
+        semanticCategorization={isSemanticCategorizationEnabled()}
+        receiptScanning={isReceiptScanningEnabled()}
+        receiptOcrLocal={isLocalReceiptOcrEnabled()}
+        // The provider's *name*, so the interface can say where a photograph
+        // is going. Its key stays on the server and is never sent here.
+        receiptOcrProvider={configuredOcrProviderName()}
+        editing={editing}
+      />
+    </>
   );
 }
 

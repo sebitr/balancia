@@ -94,7 +94,9 @@ import {
   summariseSplit,
   type EntryType,
 } from "./entry-logic";
-import { EntryTypeTabs } from "./entry-type-tabs";
+import { ALL_ENTRY_TYPES, EntryTypeTabs } from "./entry-type-tabs";
+import { enqueueEntry } from "@/lib/offline/outbox";
+import { randomKey } from "@/lib/offline/idb";
 import { ScanBanner, ScanCard, ReceiptItems } from "./receipt-blocks";
 import {
   RecurrenceSheet,
@@ -215,6 +217,12 @@ const NO_FREQUENT: readonly ExpenseCategory[] = [];
 
 export interface AddEntryFormProps {
   groupId: string;
+  /**
+   * The group's name, carried only so a queued entry can say which group it
+   * belongs to while there is no server to ask. Optional because every screen
+   * that renders this form already shows the name in its own chrome.
+   */
+  groupName?: string;
   members: readonly EntryMember[];
   /** The reader, who is the default payer. */
   selfId: string;
@@ -225,6 +233,11 @@ export interface AddEntryFormProps {
   timezone: string;
   /** Outstanding debts, most owed first, for the settle tab. */
   outstanding: readonly DebtPair[];
+  /**
+   * Which entry types this screen can offer. All three by default; the offline
+   * drawer passes the two that need no server. See `EntryTypeTabs`.
+   */
+  entryTypes?: readonly EntryType[];
   categoryMappings?: readonly LearnedMerchantMapping[];
   /** What this group files things under, most used first, for the picker. */
   frequentCategories?: readonly ExpenseCategory[];
@@ -288,6 +301,7 @@ export interface AddEntryFormProps {
 
 export function AddEntryForm({
   groupId,
+  groupName = "",
   members,
   selfId,
   currencyMode,
@@ -295,6 +309,7 @@ export function AddEntryForm({
   defaultCurrency,
   timezone,
   outstanding,
+  entryTypes = ALL_ENTRY_TYPES,
   categoryMappings = NO_MAPPINGS,
   frequentCategories = NO_FREQUENT,
   semanticCategorization = false,
@@ -780,11 +795,45 @@ export function AddEntryForm({
 
     setPending(true);
     try {
-      const { result, movedTo } = isSettle
-        ? await submitSettlement()
-        : recurrence.enabled
-          ? await submitRecurring()
-          : await submitEntry();
+      /*
+       * One key per press of the button, minted before anything is sent and
+       * used by whichever path the entry ends up taking. See
+       * `createExpenseAction` for why the online path carries it too.
+       */
+      const clientKey = queueable ? randomKey() : undefined;
+
+      // The browser says there is no network, so do not spend a request
+      // finding out. Nothing is lost by being wrong here: the queue drains on
+      // the next reconnect, which for a false alarm is seconds away.
+      if (clientKey && !navigator.onLine) {
+        await queueEntry(clientKey);
+        return;
+      }
+
+      let outcome: Outcome;
+      try {
+        outcome = isSettle
+          ? await submitSettlement()
+          : recurrence.enabled
+            ? await submitRecurring()
+            : await submitEntry(clientKey);
+      } catch (cause) {
+        /*
+         * The request did not come back. That covers a connection that dropped
+         * mid-flight as well as one that never opened, and — the case worth
+         * naming — a write the server committed whose answer was lost. All
+         * three go in the queue under the key the attempt already used, so the
+         * third writes nothing when it replays.
+         *
+         * Only what can be queued is caught. An editing or settling form has
+         * no offline path, and swallowing its failure would tell somebody
+         * their change was saved when it was not.
+         */
+        if (!clientKey) throw cause;
+        await queueEntry(clientKey);
+        return;
+      }
+      const { result, movedTo } = outcome;
 
       if (!result.ok) {
         setError(result.error ?? t("errors.saveFailed"));
@@ -814,6 +863,42 @@ export function AddEntryForm({
     }
   };
 
+  /**
+   * Whether this save can fall back to the device.
+   *
+   * A new expense or income, and nothing else. The three exclusions are all
+   * the same exclusion: an entry the server has never heard of is the only one
+   * a device can hold on its own without having to be told what happened to it
+   * meanwhile.
+   *
+   * Editing needs the row it is editing, which may have been changed or
+   * deleted by somebody else since — that is the conflict this feature does
+   * not have and does not want. A repayment needs balances, which are a
+   * running total no snapshot can keep honest. A recurring template is not an
+   * entry at all; it is an instruction to a server-side job.
+   */
+  const queueable = !isSettle && !recurrence.enabled && editing === undefined;
+
+  /**
+   * Keeps the entry on this device and says so.
+   *
+   * The confirmation is deliberately not the ordinary one. "Expense added" is
+   * a claim about the group, and this is not that yet — it is a claim about
+   * this phone. Somebody who reads the usual toast and closes the app is owed
+   * an accurate one.
+   */
+  const queueEntry = async (clientKey: string) => {
+    await enqueueEntry({
+      clientKey,
+      groupId,
+      groupName,
+      payload: expensePayload(),
+    });
+    toast.success(t("saved.queued"), { description: t("saved.queuedNote") });
+    if (onSaved) onSaved();
+    else router.refresh();
+  };
+
   const splitEntries = () =>
     effectiveIncluded.map((id) => {
       if (method === "equal") return { participantId: id };
@@ -827,9 +912,11 @@ export function AddEntryForm({
       return { participantId: id, value: (values[id] ?? "0").trim() };
     });
 
-  const submitEntry = async (): Promise<Outcome> => {
+  const submitEntry = async (clientKey?: string): Promise<Outcome> => {
     const input = expensePayload();
-    if (!editing) return { result: await createExpenseAction(groupId, input) };
+    if (!editing) {
+      return { result: await createExpenseAction(groupId, input, clientKey) };
+    }
     if (!converting) {
       return { result: await updateExpenseAction(groupId, editing.id, input) };
     }
@@ -1037,7 +1124,7 @@ export function AddEntryForm({
           children may shrink turns a long member list into a row of
           squashed avatars instead of a scroll. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [&>*]:shrink-0">
-        <EntryTypeTabs value={type} onChange={changeType} />
+        <EntryTypeTabs value={type} onChange={changeType} types={entryTypes} />
 
         {error && (
           <Alert variant="destructive">

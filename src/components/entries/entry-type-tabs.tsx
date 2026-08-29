@@ -23,16 +23,35 @@ import type { EntryType } from "./entry-logic";
  * minus `p`. A literal value here drifts the moment `--radius` is retuned.
  */
 
-const TYPES: readonly EntryType[] = ["expense", "income", "settle"];
+export const ALL_ENTRY_TYPES: readonly EntryType[] = [
+  "expense",
+  "income",
+  "settle",
+];
 
 export function EntryTypeTabs({
   value,
   onChange,
+  types = ALL_ENTRY_TYPES,
 }: {
   value: EntryType;
   onChange: (next: EntryType) => void;
+  /**
+   * Which of the three to offer. All of them, unless the caller knows one
+   * cannot work — the offline drawer drops Settle, which needs balances no
+   * device can compute on its own.
+   *
+   * A tab is removed rather than disabled: a control that is visible and
+   * refuses is a puzzle, and the reason ("we cannot know who owes whom right
+   * now") does not fit on a pill.
+   */
+  types?: readonly EntryType[];
 }) {
   const t = useTranslations("addEntry.types");
+
+  // One tab is not a choice, and a segmented control drawn around it reads as
+  // a button that does nothing.
+  if (types.length < 2) return null;
 
   return (
     <div
@@ -40,7 +59,7 @@ export function EntryTypeTabs({
       aria-label={t("label")}
       className="flex gap-1 rounded-2xl bg-muted p-1"
     >
-      {TYPES.map((type) => {
+      {types.map((type) => {
         const active = type === value;
         return (
           <button

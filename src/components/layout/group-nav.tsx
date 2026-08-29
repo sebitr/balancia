@@ -16,6 +16,8 @@ import {
   SWITCH_BACK,
   SWITCH_FORWARD,
 } from "@/components/motion/transitions";
+import { useOfflineEntry } from "@/components/offline/offline-entry";
+import { useOnline } from "@/components/offline/use-online";
 import { cn } from "@/lib/utils";
 
 /**
@@ -134,6 +136,17 @@ export function GroupNav({ groupId }: { groupId: string }) {
   const t = useTranslations("nav");
   const base = `/groups/${groupId}`;
   const activeIndex = activeIndexOf(pathname, base);
+  /*
+   * Adding an entry is a route, and a route is a request. With no network
+   * there is nothing to answer it, and the reader would get the offline shell
+   * where they expected a form — so the tap is intercepted and the same form
+   * is opened from the copy on the device instead.
+   *
+   * Only the Add tab. The other four are places to read the group, and a
+   * place that cannot be loaded should say so rather than pretend.
+   */
+  const online = useOnline();
+  const offlineEntry = useOfflineEntry();
 
   return (
     <nav
@@ -154,6 +167,12 @@ export function GroupNav({ groupId }: { groupId: string }) {
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 transitionTypes={directionFor(item, index, activeIndex)}
+                onClick={(event) => {
+                  if (item.primary && !online && offlineEntry) {
+                    event.preventDefault();
+                    offlineEntry.open();
+                  }
+                }}
                 className={cn(
                   "flex flex-col items-center rounded-xl px-1 py-2.5 text-xs font-medium transition-transform duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   item.primary

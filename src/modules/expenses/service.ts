@@ -4,11 +4,13 @@ import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import {
   attachments,
+  entryClientKeys,
   expensePayers,
   expenseShares,
   expenses,
   participants,
 } from "@/lib/db/schema";
+import { isUniqueViolation } from "@/lib/db/errors";
 import {
   AuthorizationError,
   requirePermission,
@@ -231,13 +233,64 @@ export function prepareExpense(
   };
 }
 
+/**
+ * The expense a client key has already written, or null.
+ *
+ * Read outside any transaction: this is the fast path, taken before a replay
+ * does any of the work of creating an expense. The slow path — two replays
+ * arriving at once, both finding nothing here — is caught by the unique index
+ * and re-read through this same function.
+ */
+async function expenseForClientKey(
+  db: Database,
+  groupId: string,
+  clientKey: string,
+): Promise<string | null> {
+  const [existing] = await db
+    .select({ entityId: entryClientKeys.entityId })
+    .from(entryClientKeys)
+    .where(
+      and(
+        eq(entryClientKeys.groupId, groupId),
+        eq(entryClientKeys.clientKey, clientKey),
+        eq(entryClientKeys.entityType, "expense"),
+      ),
+    )
+    .limit(1);
+  return existing?.entityId ?? null;
+}
+
+/**
+ * Records an expense.
+ *
+ * `clientKey` makes the call idempotent, and exists for the offline outbox: a
+ * device that queued an entry with no signal replays it on reconnect, and may
+ * replay it more than once — the answer came back over a connection that
+ * dropped, the tab was closed mid-flush, two tabs woke together. Each of those
+ * would otherwise write a second copy of somebody's money. With a key, the
+ * second call returns the id the first one made and writes nothing.
+ *
+ * A key is spent for good once used, deletion included. A replay arriving after
+ * the entry was deleted finds the key, hands back that id, and leaves the
+ * deletion standing — which is the right answer: the person who removed it did
+ * so knowing what it was, and a network retry is no reason to overrule them.
+ */
 export async function createExpense(
   access: GroupAccess,
   input: ExpenseInput,
-  options: { db?: Database; now?: Date } = {},
+  options: { db?: Database; now?: Date; clientKey?: string } = {},
 ): Promise<string> {
   requirePermission(access, "addExpense");
   const db = options.db ?? getDb();
+
+  if (options.clientKey) {
+    const already = await expenseForClientKey(
+      db,
+      access.groupId,
+      options.clientKey,
+    );
+    if (already) return already;
+  }
 
   // Outside the transaction: it is a cache read that only decides how the rate
   // is labelled, and it should not hold write locks open.
@@ -249,119 +302,164 @@ export async function createExpense(
     on: input.expenseDate,
   });
 
-  const created = await db.transaction(async (tx) => {
-    const referenced = [
-      ...input.payers.map((payer) => payer.participantId),
-      ...input.splitEntries.map((entry) => entry.participantId),
-    ];
-    await assertParticipantsInGroup(tx, access.groupId, referenced);
+  const write = () =>
+    db.transaction(async (tx) => {
+      const referenced = [
+        ...input.payers.map((payer) => payer.participantId),
+        ...input.splitEntries.map((entry) => entry.participantId),
+      ];
+      await assertParticipantsInGroup(tx, access.groupId, referenced);
 
-    const prepared = prepareExpense(access, input, {
-      now: options.now,
-      rateSource,
-    });
+      const prepared = prepareExpense(access, input, {
+        now: options.now,
+        rateSource,
+      });
 
-    const inserted = await tx
-      .insert(expenses)
-      .values({
+      const inserted = await tx
+        .insert(expenses)
+        .values({
+          groupId: access.groupId,
+          direction: input.direction ?? "out",
+          description: input.description,
+          notes: input.notes || null,
+          category: input.category || null,
+          subcategory: input.subcategory || null,
+          amount: prepared.amount,
+          currency: prepared.currency,
+          convertedAmount: prepared.convertedAmount,
+          convertedCurrency: prepared.convertedCurrency,
+          exchangeRate: prepared.exchangeRate,
+          exchangeRateSource: prepared.exchangeRateSource,
+          exchangeRateAt: prepared.exchangeRateAt,
+          splitMethod: input.splitMethod,
+          splitInput: prepared.splitInput,
+          expenseDate: input.expenseDate,
+          createdByActorType: access.actor.kind,
+          createdByParticipantId: access.participantId,
+        })
+        .returning({ id: expenses.id });
+      const expense = onlyRow(inserted, "the expense insert");
+
+      /*
+       * Spend the key in the same transaction as the expense it names, so the
+       * two can never disagree: either both are there or neither is. Written
+       * here rather than after the commit because a crash in between would leave
+       * an expense no replay could recognise, and the next flush would write a
+       * second one.
+       *
+       * A concurrent replay that got past the fast path lands on the unique
+       * index here and takes this whole transaction down with it — including the
+       * duplicate expense above, which is the point. The caller catches it below.
+       */
+      if (options.clientKey) {
+        await tx.insert(entryClientKeys).values({
+          groupId: access.groupId,
+          clientKey: options.clientKey,
+          entityType: "expense",
+          entityId: expense.id,
+        });
+      }
+
+      await tx.insert(expensePayers).values(
+        prepared.payers.map((payer) => ({
+          expenseId: expense.id,
+          participantId: payer.participantId,
+          amount: payer.amount,
+          convertedAmount: payer.convertedAmount,
+        })),
+      );
+
+      await tx.insert(expenseShares).values(
+        prepared.shares.map((share) => ({
+          expenseId: expense.id,
+          participantId: share.participantId,
+          amount: share.amount,
+          convertedAmount: share.convertedAmount,
+        })),
+      );
+
+      if (input.attachmentIds?.length) {
+        await linkAttachments(
+          tx,
+          access.groupId,
+          expense.id,
+          input.attachmentIds,
+        );
+      }
+
+      await recordActivity(tx, {
         groupId: access.groupId,
-        direction: input.direction ?? "out",
+        action: "expense.created",
+        entityType: "expense",
+        entityId: expense.id,
+        ...activityActorFrom(access),
+        metadata: {
+          description: input.description,
+          amount: prepared.amount.toString(),
+          currency: prepared.currency,
+          splitMethod: input.splitMethod,
+          payerCount: prepared.payers.length,
+          shareCount: prepared.shares.length,
+        },
+      });
+
+      // Whatever category was settled on teaches the classifier, in the same
+      // transaction as the expense that taught it.
+      await recordCategoryChoice(
+        access,
+        {
+          merchant: input.description,
+          category: input.category ?? null,
+          subcategory: input.subcategory ?? null,
+        },
+        { db: tx },
+      );
+
+      const notificationIds = await recordExpenseNotification(tx, access, {
+        type: "expense.created",
+        expenseId: expense.id,
         description: input.description,
-        notes: input.notes || null,
-        category: input.category || null,
-        subcategory: input.subcategory || null,
         amount: prepared.amount,
         currency: prepared.currency,
-        convertedAmount: prepared.convertedAmount,
-        convertedCurrency: prepared.convertedCurrency,
-        exchangeRate: prepared.exchangeRate,
-        exchangeRateSource: prepared.exchangeRateSource,
-        exchangeRateAt: prepared.exchangeRateAt,
-        splitMethod: input.splitMethod,
-        splitInput: prepared.splitInput,
-        expenseDate: input.expenseDate,
-        createdByActorType: access.actor.kind,
-        createdByParticipantId: access.participantId,
-      })
-      .returning({ id: expenses.id });
-    const expense = onlyRow(inserted, "the expense insert");
+        participantIds: [
+          ...prepared.payers.map((payer) => payer.participantId),
+          ...prepared.shares.map((share) => share.participantId),
+        ],
+      });
 
-    await tx.insert(expensePayers).values(
-      prepared.payers.map((payer) => ({
+      return {
         expenseId: expense.id,
-        participantId: payer.participantId,
-        amount: payer.amount,
-        convertedAmount: payer.convertedAmount,
-      })),
-    );
-
-    await tx.insert(expenseShares).values(
-      prepared.shares.map((share) => ({
-        expenseId: expense.id,
-        participantId: share.participantId,
-        amount: share.amount,
-        convertedAmount: share.convertedAmount,
-      })),
-    );
-
-    if (input.attachmentIds?.length) {
-      await linkAttachments(
-        tx,
-        access.groupId,
-        expense.id,
-        input.attachmentIds,
-      );
-    }
-
-    await recordActivity(tx, {
-      groupId: access.groupId,
-      action: "expense.created",
-      entityType: "expense",
-      entityId: expense.id,
-      ...activityActorFrom(access),
-      metadata: {
-        description: input.description,
-        amount: prepared.amount.toString(),
-        currency: prepared.currency,
-        splitMethod: input.splitMethod,
-        payerCount: prepared.payers.length,
+        notificationIds,
+        // Carried out of the transaction for telemetry: two numbers and a
+        // boolean, decided here where the prepared expense is in scope.
+        converted: prepared.exchangeRate !== null,
         shareCount: prepared.shares.length,
-      },
+      };
     });
 
-    // Whatever category was settled on teaches the classifier, in the same
-    // transaction as the expense that taught it.
-    await recordCategoryChoice(
-      access,
-      {
-        merchant: input.description,
-        category: input.category ?? null,
-        subcategory: input.subcategory ?? null,
-      },
-      { db: tx },
-    );
-
-    const notificationIds = await recordExpenseNotification(tx, access, {
-      type: "expense.created",
-      expenseId: expense.id,
-      description: input.description,
-      amount: prepared.amount,
-      currency: prepared.currency,
-      participantIds: [
-        ...prepared.payers.map((payer) => payer.participantId),
-        ...prepared.shares.map((share) => share.participantId),
-      ],
-    });
-
-    return {
-      expenseId: expense.id,
-      notificationIds,
-      // Carried out of the transaction for telemetry: two numbers and a
-      // boolean, decided here where the prepared expense is in scope.
-      converted: prepared.exchangeRate !== null,
-      shareCount: prepared.shares.length,
-    };
-  });
+  /*
+   * The backstop under the fast path above, for two replays of one entry that
+   * were both in flight before either had written its key. One commits; the
+   * other trips the unique index, rolls back the expense it was halfway
+   * through, and lands here — where the committed id is now readable.
+   *
+   * Only ever consulted for a key we sent ourselves. Any other unique
+   * violation from this transaction is a real fault and is rethrown.
+   */
+  let created: Awaited<ReturnType<typeof write>>;
+  try {
+    created = await write();
+  } catch (error) {
+    if (options.clientKey && isUniqueViolation(error)) {
+      const already = await expenseForClientKey(
+        db,
+        access.groupId,
+        options.clientKey,
+      );
+      if (already) return already;
+    }
+    throw error;
+  }
 
   const { expenseId, notificationIds } = created;
 

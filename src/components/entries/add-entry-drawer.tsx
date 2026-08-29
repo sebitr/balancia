@@ -31,6 +31,39 @@ import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 const EXIT_MS = 380;
 
 /**
+ * The drawer's own geometry, shared with the offline drawer.
+ *
+ * Two components open this same form — this one on a route, and the local one
+ * that opens with no network (`components/offline/offline-entry.tsx`). They are
+ * different shells for good reasons, but they are visibly the same drawer, and
+ * a reader who loses signal mid-trip should not watch it change shape. The
+ * notes below are why each part of it is what it is.
+ *
+ * The sheet is the scroll container the swipe-to-dismiss gesture reads, so the
+ * body scrolls inside it and the chrome stays put.
+ *
+ * The *page* surface rather than the card one, which is what leaves the row
+ * cards inside somewhere to sit. On `bg-card` they were white on white in the
+ * light theme, with only their internal hairlines to say where one card ended
+ * and the next began.
+ *
+ * The 28px gap is measured from the bottom of the safe area, not from the top
+ * of the screen: `viewport-fit=cover` means `100dvh` runs the full height of
+ * the display, so installed on a phone with an island the header — and the
+ * close button in it — sat underneath.
+ *
+ * The `max-h` says the same thing a second time, in older words. A height is
+ * one declaration, and a browser that cannot parse any part of it drops the
+ * whole thing and leaves the sheet at its content's height — which is how the
+ * close button left the screen twice. The backstop is built from `%` and
+ * `calc` alone, so it survives losing the two newest pieces, `dvh` and `min()`.
+ * It never binds while the height applies: `100%` of a fixed element is the
+ * large viewport, so it can only ever be the looser of the two.
+ */
+export const ENTRY_SHEET_CLASS =
+  "h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground";
+
+/**
  * Why the drawer is leaving, and where that leaves the reader.
  *
  * One value rather than a flag and a destination beside it, so a departure
@@ -130,28 +163,7 @@ export function AddEntryDrawer({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        // The sheet is the scroll container the swipe-to-dismiss gesture reads,
-        // so the body scrolls inside it and the chrome stays put.
-        //
-        // The *page* surface rather than the card one, which is what leaves the
-        // row cards inside somewhere to sit. On `bg-card` they were white on
-        // white in the light theme, with only their internal hairlines to say
-        // where one card ended and the next began.
-        //
-        // The 28px gap is measured from the bottom of the safe area, not from
-        // the top of the screen: `viewport-fit=cover` means `100dvh` runs the
-        // full height of the display, so installed on a phone with an island
-        // the header — and the close button in it — sat underneath.
-        //
-        // The `max-h` says the same thing a second time, in older words. A
-        // height is one declaration, and a browser that cannot parse any part
-        // of it drops the whole thing and leaves the sheet at its content's
-        // height — which is how the close button left the screen twice. The
-        // backstop is built from `%` and `calc` alone, so it survives losing
-        // the two newest pieces, `dvh` and `min()`. It never binds while the
-        // height applies: `100%` of a fixed element is the large viewport, so
-        // it can only ever be the looser of the two.
-        className="h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground"
+        className={ENTRY_SHEET_CLASS}
       >
         <AddEntryForm
           {...form}

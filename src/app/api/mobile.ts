@@ -146,6 +146,26 @@ export function isUuid(value: string): boolean {
   return uuidSchema.safeParse(value).success;
 }
 
+/**
+ * The `Idempotency-Key` header, when the caller sent a usable one.
+ *
+ * A key makes a write safe to repeat: the second call answers with what the
+ * first one created rather than creating a second. The browser's offline
+ * outbox mints one per queued entry and replays under it, and a native client
+ * with a queue of its own should do the same.
+ *
+ * A UUID is required rather than any opaque token, and a malformed header is
+ * ignored rather than refused. Both follow from what the key is for: it is a
+ * safety net, and a client that sends a key this route cannot store is better
+ * served by its write landing once than by a 400 it will retry forever. The
+ * length ceiling is the only thing standing between a header and an unbounded
+ * unique index, and a UUID gives it for free.
+ */
+export function idempotencyKey(request: Request): string | undefined {
+  const header = request.headers.get("Idempotency-Key")?.trim();
+  return header && isUuid(header) ? header : undefined;
+}
+
 function iso(value: Date | null): string | null {
   return value ? value.toISOString() : null;
 }

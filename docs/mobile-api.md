@@ -150,7 +150,7 @@ be the mistake.
 
 | Method | Path                                               | Body                                                                                                                             |
 | ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`                                                                                         |
+| POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`. Takes `Idempotency-Key` — see below                                                    |
 | PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`)                                                                        |
 | DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                      |
 | POST   | `/api/groups/:groupId/expenses/:expenseId/restore` | undo for the delete; the expense comes back under its own id, payers and shares intact                                           |
@@ -195,6 +195,34 @@ Writes require the group to be active (`requireActive`), matching the actions
 mobile client: receipts upload to `POST /api/groups/:groupId/attachments`,
 `GET /api/groups/:groupId/export?format=json|csv|xlsx` downloads the group,
 and `GET /api/rates?from&to&on` suggests an exchange rate.
+
+### Creating an expense exactly once
+
+`POST /api/groups/:groupId/expenses` accepts an **`Idempotency-Key`** header,
+and any client that queues writes should send one. A client that loses its
+connection mid-request cannot tell "never arrived" from "arrived, and the
+answer was lost on the way back"; without a key, retrying the second case
+writes a second expense and the group's balances are quietly wrong.
+
+- The value is a **UUID**, minted per entry, fixed before the first attempt and
+  reused for every retry of that same entry. A malformed header is ignored
+  rather than refused — a write landing once beats a 400 the client will retry
+  forever — so a client that sends something else gets no protection at all.
+- The key is recorded in the same transaction as the expense, so the two cannot
+  disagree. A replay answers **201 with the `expenseId` the first call
+  created** — the same answer, not a new expense. The route does not
+  distinguish the two cases in its status, because no caller needs it to: the
+  only question a queue has is whether the server has the entry, and 201 says
+  it does either way.
+- A key is spent for good, deletion included. A replay arriving after the entry
+  was deleted returns that id and leaves the deletion standing.
+- Scope is per group, so two devices may mint the same value without one
+  group's write being mistaken for another's.
+
+Only the expense create takes a key today. The browser's own offline queue
+uses this exact route rather than the Server Action the form calls when it is
+online, because an action is addressed by an id that changes on every build and
+a queued entry has to survive a deploy — see [offline entry](offline.md).
 
 ## Invitation links
 
