@@ -140,6 +140,19 @@ export function PersonRow({
   // stays a plain line rather than a control that answers with a blank.
   const expandable = may.name || may.email || may.access || may.remove;
 
+  /*
+   * What the pill does not already say.
+   *
+   * The pill carries who somebody is here — Guest, or No access. This line
+   * carries what has happened to their way in, and the two used to give the
+   * same answer twice: a guest was pilled "Invité" and captioned "Pas de
+   * compte - Invité", which is one fact wearing two labels. It also arrived
+   * punctuated two ways, an en dash here and a middle dot on the line under
+   * it, so two adjacent rows appeared to follow different rules.
+   *
+   * One separator now, and each state says something the pill cannot: whether
+   * the link has been used, or that no link was ever sent.
+   */
   const meta =
     person.access === "account"
       ? person.email
