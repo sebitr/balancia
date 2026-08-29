@@ -12,9 +12,11 @@ Everything else defaults to a working localhost install. Set overrides in that
 same `.env`, next to `compose.yaml`. For local development without Docker, use
 `.env.local`.
 
-Run from a terminal, `bootstrap.sh` first asks whether this host pulls the
-published image or builds its own, and writes that as `COMPOSE_FILE` below.
-Then it asks about the optional features and writes those answers too: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
+Run from a terminal in a checkout, `bootstrap.sh` first asks whether this host
+pulls the published image or builds its own, and writes that as `COMPOSE_FILE`
+below. A standalone install has no source to build, so it is not asked and
+`COMPOSE_FILE` is written to pull. Then, either way, it asks about the optional
+features and writes those answers too: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
 `RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
 `SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`, and
 `METRICS_ENABLED`. Telemetry is asked as one question with two answers —
@@ -34,8 +36,9 @@ will explain.
 ### `COMPOSE_FILE`
 
 Which Compose files an unqualified `docker compose` command is composing.
-Written by `./scripts/bootstrap.sh` from its first question, and safe to change
-by hand afterwards.
+Written by `bootstrap.sh` — from its first question in a checkout, and without
+asking in a standalone install, which can only pull — and safe to change by
+hand afterwards.
 
 ```bash
 COMPOSE_FILE=compose.yaml                       # build the app on this host

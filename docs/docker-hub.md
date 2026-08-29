@@ -31,17 +31,20 @@ honest quick start is Compose — it brings up PostgreSQL 18 alongside the app,
 and the repository carries the setup script that points it at this image:
 
 ```bash
-git clone https://github.com/sebitr/balancia.git
-cd balancia
-./scripts/bootstrap.sh
-docker compose up -d
+curl -fsSLO https://github.com/sebitr/balancia/releases/latest/download/bootstrap.sh
+sh bootstrap.sh
 ```
 
-`bootstrap.sh` writes a `.env` with this instance's own database password and
-auth secret, asks whether this host should pull this image or build one from
-the checkout — pulling is the default — and asks which optional features to
-switch on. It is safe to run again. Then open <http://localhost:3000> and
-create the first account.
+`bootstrap.sh` is the installer. It asks where to install, fetches the Compose
+files for its own release into that directory, writes a `.env` with this
+instance's own database password and auth secret, asks which optional features
+to switch on, and offers to start the stack. It needs no Git and no checkout,
+and it is safe to run again. Then open <http://localhost:3000> and create the
+first account.
+
+An install made this way pulls this image rather than building anything. To
+build from source instead, clone the repository and run
+`./scripts/bootstrap.sh` from inside it.
 
 To run the container yourself against a database you already have:
 

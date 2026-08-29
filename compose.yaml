@@ -1,11 +1,16 @@
 # Balancia — self-hosted deployment.
 #
-#   ./scripts/bootstrap.sh && docker compose up -d --build
+# This file is not run by hand. bootstrap.sh puts it here — beside it in a
+# standalone install, above it as scripts/bootstrap.sh in a checkout — writes
+# the .env holding this instance's own database password and auth secret, and
+# offers to bring the stack up. It never overwrites a value already set, so it
+# is safe in front of every `up`:
 #
-# The first command writes a .env with this instance's own database password
-# and auth secret; it never overwrites values you have already set, so it is
-# safe in front of every `up`. The second brings up PostgreSQL 18 and the web
-# app — two containers, and the app runs the background jobs itself.
+#   sh bootstrap.sh              # standalone
+#   ./scripts/bootstrap.sh       # in a checkout
+#
+# What comes up is PostgreSQL 18 and the web app — two containers, and the app
+# runs the background jobs itself.
 #
 # That is the default because it is the whole application in one place: nothing
 # to keep in step, one log to read, one container to restart. A large instance
@@ -26,10 +31,10 @@ x-app-environment: &app-environment
   # The entrypoint assembles DATABASE_URL from this, percent-encoding it, so
   # the password may contain anything. Set DATABASE_URL in .env to override and
   # point at a database outside this project.
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/bootstrap.sh first}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run bootstrap.sh first}
   DATABASE_URL: ${DATABASE_URL:-}
   DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
-  AUTH_SECRET: ${AUTH_SECRET:?run ./scripts/bootstrap.sh first}
+  AUTH_SECRET: ${AUTH_SECRET:?run bootstrap.sh first}
   WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Balancia}
   TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
@@ -135,7 +140,7 @@ services:
     environment:
       POSTGRES_USER: balancia
       POSTGRES_DB: balancia
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/bootstrap.sh first}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run bootstrap.sh first}
       # Deterministic collation so ordering does not shift under a locale change.
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
     volumes:

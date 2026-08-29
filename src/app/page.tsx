@@ -214,7 +214,6 @@ export default async function LandingPage() {
   const installNotes = [
     t("selfHosting.install.steps.1"),
     t("selfHosting.install.steps.2"),
-    t("selfHosting.install.steps.3"),
   ];
 
   const jsonLd = {
