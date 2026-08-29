@@ -25,6 +25,26 @@ export function describeActivity(
   const base = t.has(`actions.${entry.action}`)
     ? t(`actions.${entry.action}`)
     : entry.action;
+
+  /*
+   * The person an event was about, when the event is about a person.
+   *
+   * Every `participant.*` event has recorded a `displayName` since it was
+   * written, and nothing ever read it: the feed said "added someone to the
+   * group" twice in a row, which is the one fact those lines carry and the
+   * one they left out. `actionsNamed` is a parallel to `actions` rather than
+   * more keys inside it, so an id still maps onto exactly one action phrase
+   * and the named form is a rendering choice made here.
+   */
+  const name = entry.metadata?.displayName;
+  if (
+    typeof name === "string" &&
+    name.length > 0 &&
+    t.has(`actionsNamed.${entry.action}`)
+  ) {
+    return t(`actionsNamed.${entry.action}`, { name });
+  }
+
   const description = entry.metadata?.description;
   if (typeof description === "string" && description.length > 0) {
     return t("withDescription", { action: base, description });

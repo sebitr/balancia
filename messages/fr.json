@@ -864,6 +864,14 @@
       "reminder": {
         "sent": "a envoyé une relance"
       }
+    },
+    "actionsNamed": {
+      "participant": {
+        "created": "a ajouté {name} au groupe",
+        "updated": "a mis à jour les informations de {name}",
+        "removed": "a retiré {name} du groupe",
+        "restored": "a rétabli {name} dans le groupe"
+      }
     }
   },
   "recurring": {

@@ -864,6 +864,14 @@
       "reminder": {
         "sent": "sent a reminder"
       }
+    },
+    "actionsNamed": {
+      "participant": {
+        "created": "added {name} to the group",
+        "updated": "updated {name}'s details",
+        "removed": "removed {name} from the group",
+        "restored": "put {name} back in the group"
+      }
     }
   },
   "recurring": {
