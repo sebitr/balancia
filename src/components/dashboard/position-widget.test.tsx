@@ -130,7 +130,7 @@ describe("PositionWidget", () => {
     expect(screen.getByText("Nothing outstanding in 11 groups")).toBeVisible();
   });
 
-  it("falls back to per-currency totals when a rate is missing", () => {
+  it("leads on one figure per currency when a rate is missing", () => {
     renderWidget({
       net: null,
       owedToYou: null,
@@ -141,13 +141,34 @@ describe("PositionWidget", () => {
       ],
     });
 
+    // The header is the position, signed, not a sentence about the rates.
+    expect(screen.getByText("+CHF 210")).toBeVisible();
+    expect(screen.getByText("+€148")).toBeVisible();
+    // Why there is more than one figure, as a footnote under them.
     expect(
-      screen.getByText("Rates unavailable — showing each group's own currency"),
+      screen.getByText("One total per currency — no rate to combine them"),
     ).toBeVisible();
-    // Several honest figures rather than one invented one.
+    // The gross split stays in the columns underneath.
     expect(screen.getByText("CHF 210")).toBeVisible();
     expect(screen.getByText("€248")).toBeVisible();
     expect(screen.getByText("€100")).toBeVisible();
+  });
+
+  /** A currency that has come out level is not a position to lead with. */
+  it("leaves a currency that nets to zero out of the header", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      currencyTotals: [
+        { currency: "CHF", owedToYou: "21000", youOwe: "0" },
+        { currency: "EUR", owedToYou: "10000", youOwe: "10000" },
+      ],
+    });
+
+    expect(screen.getByText("+CHF 210")).toBeVisible();
+    expect(screen.queryByText("+€0")).not.toBeInTheDocument();
+    expect(screen.queryByText("€0")).not.toBeInTheDocument();
   });
 
   it("shows neither a figure nor a total for an account holding no balance", () => {

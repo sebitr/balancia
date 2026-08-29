@@ -61,6 +61,70 @@ export interface PositionWidgetProps {
   readonly lastCleared: { at: string; groupName: string } | null;
 }
 
+/**
+ * The position, one figure per currency, when there is no rate to combine them.
+ *
+ * These are not a consolation for the missing total — they are the position,
+ * and there is nothing approximate about them. What stood here before was the
+ * sentence explaining why there is more than one, which spent the largest type
+ * on the screen saying what the app could not do and left the figures to the
+ * columns underneath. An instance that took the defaults never turns rate
+ * suggestions on, so for anyone holding two currencies that sentence was not
+ * an edge case; it was the header.
+ *
+ * A currency that nets to zero is dropped: it is settled, and a "0" competes
+ * with the lines that are not. If every one of them nets to zero they are all
+ * kept, because a header with nothing in it says less than a row of zeroes.
+ *
+ * Each figure carries its sign, since there is no single word above these the
+ * way there is above the converted total — direction stays readable without
+ * colour, which is the rule the balance palette is built on.
+ */
+function CurrencyFigures({
+  totals,
+}: {
+  totals: PositionWidgetProps["currencyTotals"];
+}) {
+  const nets = totals.map((total) => ({
+    currency: total.currency,
+    net: BigInt(total.owedToYou) - BigInt(total.youOwe),
+  }));
+  const outstanding = nets.filter((entry) => entry.net !== 0n);
+  const shown = outstanding.length > 0 ? outstanding : nets;
+
+  // The type steps down as the list grows, so three currencies still sit in
+  // about the room one converted total would have taken.
+  const size =
+    shown.length === 1
+      ? "text-[2.875rem]"
+      : shown.length === 2
+        ? "text-[2.125rem]"
+        : "text-[1.625rem]";
+
+  return (
+    <div className="flex flex-col gap-1">
+      {shown.map(({ currency, net }) => (
+        <Amount
+          key={currency}
+          minorUnits={net.toString()}
+          currency={currency}
+          fractionDigits={0}
+          signDisplay="exceptZero"
+          className={cn(
+            size,
+            "leading-none font-semibold tracking-[-0.035em]",
+            net > 0n
+              ? "text-positive"
+              : net < 0n
+                ? "text-negative"
+                : "text-neutral-balance",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Flex weights, so the two segments read as a proportion rather than a scale. */
 function shareOf(a: bigint, b: bigint): [number, number] {
   if (a + b === 0n) return [1, 1];
@@ -147,9 +211,7 @@ export function PositionWidget({
               {tMoney("settledUpBadge")}
             </p>
           ) : ratesUnavailable ? (
-            <p className="text-sm text-muted-foreground">
-              {t("ratesUnavailable")}
-            </p>
+            <CurrencyFigures totals={currencyTotals} />
           ) : disclosure ? (
             <Popover>
               <PopoverTrigger className="self-start rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
@@ -162,6 +224,15 @@ export function PositionWidget({
             </Popover>
           ) : (
             figure
+          )}
+
+          {/* Under the figures rather than instead of them. It explains why
+              there is more than one number, which is a footnote — the numbers
+              themselves are the answer. */}
+          {ratesUnavailable && (
+            <p className="text-xs text-muted-foreground">
+              {t("ratesUnavailable")}
+            </p>
           )}
         </div>
 
