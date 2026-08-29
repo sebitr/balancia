@@ -99,7 +99,7 @@ export function BalanceList({
                     className={cn(
                       "text-2xs font-semibold",
                       person.isSelf
-                        ? "bg-primary/15 text-primary"
+                        ? "bg-primary/15 text-primary-ink"
                         : "bg-accent text-accent-foreground",
                     )}
                   >
@@ -138,7 +138,7 @@ export function BalanceList({
             <Link
               href={`/groups/${groupId}/members`}
               transitionTypes={PUSH}
-              className="flex min-h-11 items-center justify-center px-3 text-xs font-medium text-primary transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex min-h-11 items-center justify-center px-3 text-xs font-medium text-primary-ink transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               {t("viewAllPeople", { count: people })}
             </Link>
@@ -154,9 +154,9 @@ function BalanceValue({ row }: { row: BalanceRowView }) {
   return (
     <span
       className={cn(
-        toneFor(row.minorUnits) === "positive" && "text-positive",
-        toneFor(row.minorUnits) === "negative" && "text-negative",
-        toneFor(row.minorUnits) === "neutral" && "text-neutral-balance",
+        toneFor(row.minorUnits) === "positive" && "text-positive-ink",
+        toneFor(row.minorUnits) === "negative" && "text-negative-ink",
+        toneFor(row.minorUnits) === "neutral" && "text-neutral-balance-ink",
       )}
     >
       <Amount

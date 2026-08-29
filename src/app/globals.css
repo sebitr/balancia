@@ -31,11 +31,15 @@
   --color-destructive: var(--destructive);
   --color-positive: var(--positive);
   --color-positive-foreground: var(--positive-foreground);
+  --color-positive-ink: var(--positive-ink);
   --color-negative: var(--negative);
   --color-negative-foreground: var(--negative-foreground);
+  --color-negative-ink: var(--negative-ink);
   --color-neutral-balance: var(--neutral-balance);
+  --color-neutral-balance-ink: var(--neutral-balance-ink);
   --color-payer: var(--payer);
   --color-payer-foreground: var(--payer-foreground);
+  --color-payer-ink: var(--payer-ink);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -44,6 +48,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -108,7 +113,23 @@
  *   --payer     : who put the money in — the one role coral cannot carry,
  *                 because on the add screen coral already means "in the split"
  *                 and a payer is frequently also a participant in it
- * All pairings meet WCAG 2.2 AA contrast on their backgrounds.
+ *
+ * Each of those, and --primary, comes in two weights, because one value cannot
+ * do both jobs in the light theme. The plain token is the *fill*: the balance
+ * bar, the tinted badge, the coral button — a graphical object, which owes its
+ * background 3:1 (WCAG 2.2 1.4.11). The `-ink` token is the same hue taken down
+ * in lightness until it clears 4.5:1 as *text* on the lightest surface it lands
+ * on, which is what a balance figure or a link needs (WCAG 2.2 1.4.3).
+ *
+ * It is the light theme that needs this most: coral at L 0.712 reads 5.6:1 on
+ * the dark card and 2.6:1 on cream, so every light `-ink` value moves. The dark
+ * block below mostly repeats the palette it already had — except on a wash of
+ * their own fill, where `bg-primary/18` lightens the ground under the coral sat
+ * on it and takes the pair to 4.2:1; coral and the negative are nudged up for
+ * that one case. Same shape as --group-accent-* above, opposite direction.
+ *
+ * src/app/token-contrast.test.ts holds every one of these pairings to its
+ * ratio, so the ramp cannot drift back.
  */
 :root {
   --background: oklch(0.977 0.007 85);
@@ -119,6 +140,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
+  --primary-ink: oklch(0.543 0.168 30);
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -128,11 +150,15 @@
   --destructive: oklch(0.53 0.2 22);
   --positive: oklch(0.654 0.13 167);
   --positive-foreground: oklch(0.977 0.007 85);
+  --positive-ink: oklch(0.496 0.13 167);
   --negative: oklch(0.639 0.18 32);
   --negative-foreground: oklch(0.977 0.007 85);
+  --negative-ink: oklch(0.534 0.18 32);
   --neutral-balance: oklch(0.62 0.035 319);
+  --neutral-balance-ink: oklch(0.525 0.035 319);
   --payer: oklch(0.72 0.145 70);
   --payer-foreground: oklch(0.226 0.072 319);
+  --payer-ink: oklch(0.534 0.145 70);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
@@ -214,6 +240,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
+  --primary-ink: oklch(0.737 0.168 30);
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -223,11 +250,15 @@
   --destructive: oklch(0.65 0.18 22);
   --positive: oklch(0.75 0.13 167);
   --positive-foreground: oklch(0.226 0.072 319);
+  --positive-ink: oklch(0.75 0.13 167);
   --negative: oklch(0.72 0.16 32);
   --negative-foreground: oklch(0.226 0.072 319);
+  --negative-ink: oklch(0.734 0.16 32);
   --neutral-balance: oklch(0.7 0.03 319);
+  --neutral-balance-ink: oklch(0.7 0.03 319);
   --payer: oklch(0.82 0.14 78);
   --payer-foreground: oklch(0.226 0.072 319);
+  --payer-ink: oklch(0.82 0.14 78);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.712 0.168 30);

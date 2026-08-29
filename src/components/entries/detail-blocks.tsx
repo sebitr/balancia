@@ -35,9 +35,9 @@ import { cn } from "@/lib/utils";
 export type EntryTone = "expense" | "revenue" | "settlement";
 
 const CHIP_TONE: Record<EntryTone, string> = {
-  expense: "bg-primary/15 text-primary",
-  revenue: "bg-positive/15 text-positive",
-  settlement: "bg-payer/15 text-payer",
+  expense: "bg-primary/15 text-primary-ink",
+  revenue: "bg-positive/15 text-positive-ink",
+  settlement: "bg-payer/15 text-payer-ink",
 };
 
 const DISC_TONE: Record<EntryTone, string> = {
@@ -51,8 +51,8 @@ const DISC_TONE: Record<EntryTone, string> = {
  * amount on these screens that carries no sign and no colour.
  */
 const AMOUNT_TONE: Record<EntryTone, string> = {
-  expense: "text-negative",
-  revenue: "text-positive",
+  expense: "text-negative-ink",
+  revenue: "text-positive-ink",
   settlement: "",
 };
 
@@ -316,7 +316,7 @@ export type PersonTone = "other" | "self" | "payer";
 
 const AVATAR_TONE: Record<PersonTone, string> = {
   other: "bg-secondary font-semibold text-secondary-foreground",
-  self: "bg-primary/18 font-bold text-primary",
+  self: "bg-primary/18 font-bold text-primary-ink",
   payer: "bg-payer font-bold text-payer-foreground",
 };
 
@@ -474,9 +474,9 @@ export function PartyTableRow({
           className={cn(
             figure,
             "pr-3.5",
-            impact > 0n && "text-positive",
-            impact < 0n && "text-negative",
-            impact === 0n && "text-neutral-balance",
+            impact > 0n && "text-positive-ink",
+            impact < 0n && "text-negative-ink",
+            impact === 0n && "text-neutral-balance-ink",
           )}
         >
           <span aria-hidden="true">{impact < 0n ? "− " : "+ "}</span>
@@ -534,7 +534,7 @@ export function ChangeRow({
         </span>
       </span>
       {balance === 0n ? (
-        <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-neutral-balance">
+        <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-neutral-balance-ink">
           <Minus aria-hidden="true" className="size-[15px]" />
           {settledLabel}
         </span>
@@ -543,7 +543,7 @@ export function ChangeRow({
           <span
             className={cn(
               "flex items-center gap-1 text-sm font-semibold",
-              balance > 0n ? "text-positive" : "text-negative",
+              balance > 0n ? "text-positive-ink" : "text-negative-ink",
             )}
           >
             <span aria-hidden="true">{balance > 0n ? "+" : "−"}</span>

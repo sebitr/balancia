@@ -40,7 +40,7 @@ export async function GuestAccountWidget({
       role="status"
       className="gap-y-2 border-primary/30 bg-primary/6 px-4 py-3"
     >
-      <Info aria-hidden="true" className="text-primary" />
+      <Info aria-hidden="true" className="text-primary-ink" />
       <AlertTitle className="text-foreground">
         {t("title", { group: groupName })}
       </AlertTitle>

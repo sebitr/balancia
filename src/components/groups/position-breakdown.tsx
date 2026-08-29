@@ -296,9 +296,9 @@ export function PositionBreakdown({
           signDisplay="exceptZero"
           className={cn(
             "shrink-0 text-base font-semibold",
-            result > 0n && "text-positive",
-            result < 0n && "text-negative",
-            result === 0n && "text-neutral-balance",
+            result > 0n && "text-positive-ink",
+            result < 0n && "text-negative-ink",
+            result === 0n && "text-neutral-balance-ink",
           )}
         />
       </div>

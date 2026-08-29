@@ -61,7 +61,7 @@ export function AddPersonRow({
       <button
         type="button"
         onClick={onOpen}
-        className="flex min-h-[58px] w-full items-center gap-2.5 p-3.5 text-left font-semibold text-primary transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none"
+        className="flex min-h-[58px] w-full items-center gap-2.5 p-3.5 text-left font-semibold text-primary-ink transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none"
       >
         <span className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border border-dashed border-[color-mix(in_oklch,var(--primary)_45%,transparent)]">
           <Plus aria-hidden="true" className="size-[17px]" />

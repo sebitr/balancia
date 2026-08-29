@@ -127,7 +127,7 @@ export function PositionWidget({
         fractionDigits={0}
         className={cn(
           "text-[2.875rem] leading-none font-semibold tracking-[-0.035em]",
-          positive ? "text-positive" : "text-negative",
+          positive ? "text-positive-ink" : "text-negative-ink",
         )}
       />
     ) : null;
@@ -143,7 +143,7 @@ export function PositionWidget({
             {t("positionEyebrow")}
           </p>
           {allSquare ? (
-            <p className="text-[1.875rem] font-semibold tracking-[-0.025em] text-neutral-balance">
+            <p className="text-[1.875rem] font-semibold tracking-[-0.025em] text-neutral-balance-ink">
               {tMoney("settledUpBadge")}
             </p>
           ) : ratesUnavailable ? (
@@ -326,7 +326,7 @@ function TintedTotal({
     <span
       className={cn(
         "text-sm font-medium",
-        tone === "positive" ? "text-positive" : "text-negative",
+        tone === "positive" ? "text-positive-ink" : "text-negative-ink",
       )}
     >
       <Amount minorUnits={minorUnits} currency={currency} fractionDigits={0} />

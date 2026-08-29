@@ -30,7 +30,7 @@ export function ScanCard({ camera, upload }: CaptureActions) {
     <div className="w-full space-y-3 rounded-[17px] bg-card p-4 text-left shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
       <div className="flex items-center gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <ScanLine aria-hidden="true" className="size-5 text-primary" />
+          <ScanLine aria-hidden="true" className="size-5 text-primary-ink" />
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-semibold">{t("title")}</span>
@@ -172,7 +172,7 @@ export function ReceiptItems({
                 className={cn(
                   "shrink-0 rounded-full px-2 py-0.5 text-2xs",
                   missing
-                    ? "text-negative"
+                    ? "text-negative-ink"
                     : custom
                       ? "bg-primary/20 font-semibold text-foreground"
                       : "bg-white/8 text-muted-foreground",

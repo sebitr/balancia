@@ -175,9 +175,9 @@ export function fitBandsToHeight(
 }
 
 const TONE_STYLES: Record<BalanceTone, string> = {
-  positive: "text-positive",
-  negative: "text-negative",
-  neutral: "text-neutral-balance",
+  positive: "text-positive-ink",
+  negative: "text-negative-ink",
+  neutral: "text-neutral-balance-ink",
 };
 
 const TONE_SIGNS: Record<BalanceTone, string> = {
@@ -1030,7 +1030,7 @@ function TypeBadge({ kind }: { kind: "revenue" | "settlement" | "recurring" }) {
       <span
         className={cn(
           "inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full px-2 text-2xs font-semibold",
-          kind === "revenue" && "bg-positive/15 text-positive",
+          kind === "revenue" && "bg-positive/15 text-positive-ink",
           kind === "settlement" && "border text-foreground",
           kind === "recurring" && "bg-accent text-accent-foreground",
         )}

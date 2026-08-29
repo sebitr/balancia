@@ -184,7 +184,7 @@ export function ChecklistScreen({
             <h2 className="text-2xs font-semibold tracking-[0.07em] text-muted-foreground uppercase">
               {t("title")}
             </h2>
-            <span className="text-2xs font-semibold text-primary">
+            <span className="text-2xs font-semibold text-primary-ink">
               {t("count", { done: progress.done, total: progress.total })}
             </span>
           </div>
@@ -321,7 +321,7 @@ function Marker({ marker }: { marker: ChecklistMarker }) {
         aria-hidden="true"
         className="flex size-5.5 shrink-0 items-center justify-center rounded-full border-2 border-primary"
       >
-        <ArrowRight className="size-3 text-primary" />
+        <ArrowRight className="size-3 text-primary-ink" />
       </span>
     );
   }

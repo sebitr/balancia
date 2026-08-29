@@ -90,7 +90,7 @@ export function AmountCard({
         {/* The sign belongs to the figure, not to the value: it is never typed
             and must never come back out of the field. */}
         {positive && !empty && (
-          <span aria-hidden="true" className={cn(FIGURE, "text-positive")}>
+          <span aria-hidden="true" className={cn(FIGURE, "text-positive-ink")}>
             +
           </span>
         )}
@@ -115,7 +115,7 @@ export function AmountCard({
           className={cn(
             FIGURE,
             "min-w-0 flex-1 bg-transparent caret-primary outline-none placeholder:text-muted-foreground/60",
-            positive ? "text-positive" : "text-foreground",
+            positive ? "text-positive-ink" : "text-foreground",
           )}
         />
 

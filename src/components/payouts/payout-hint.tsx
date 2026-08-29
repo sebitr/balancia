@@ -217,7 +217,7 @@ export function PayoutHint({
                   about the owner's own ordering — and with nothing to prefer it
                   over, it is a badge that says nothing. */}
               {index === 0 && methods.length > 1 && (
-                <span className="flex h-[18px] items-center rounded-full bg-primary/15 px-1.5 text-2xs font-semibold text-primary">
+                <span className="flex h-[18px] items-center rounded-full bg-primary/15 px-1.5 text-2xs font-semibold text-primary-ink">
                   {t("preferred")}
                 </span>
               )}
@@ -253,7 +253,7 @@ export function PayoutHint({
               className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
             >
               {copied ? (
-                <Check aria-hidden="true" className="size-4 text-positive" />
+                <Check aria-hidden="true" className="size-4 text-positive-ink" />
               ) : (
                 <Copy aria-hidden="true" className="size-4" />
               )}

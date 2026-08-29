@@ -236,7 +236,7 @@ function Pill({
         "inline-flex h-[19px] items-center gap-1 rounded-full px-2 text-2xs font-semibold",
         tone === "solid" && "bg-secondary text-secondary-foreground",
         tone === "primary" &&
-          "bg-[color-mix(in_oklch,var(--primary)_16%,transparent)] text-primary",
+          "bg-[color-mix(in_oklch,var(--primary)_16%,transparent)] text-primary-ink",
         tone === "outline" &&
           "border border-border font-medium text-muted-foreground",
       )}
@@ -470,7 +470,7 @@ function PersonPanel({
               <span className="flex items-start gap-2">
                 <ShieldAlert
                   aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-primary"
+                  className="mt-0.5 size-4 shrink-0 text-primary-ink"
                 />
                 <span className="flex flex-col gap-0.5">
                   <span className="font-semibold">{t("copyNow")}</span>
@@ -498,7 +498,7 @@ function PersonPanel({
               </span>
               <Button
                 variant="ghost"
-                className="h-8 self-start px-2.5 font-semibold text-primary"
+                className="h-8 self-start px-2.5 font-semibold text-primary-ink"
                 onClick={onDismissReveal}
               >
                 {t("copiedIt")}
@@ -528,7 +528,7 @@ function PersonPanel({
               <span className="flex items-center gap-2 rounded-lg border border-border bg-[color-mix(in_oklch,var(--card)_70%,transparent)] px-3 py-2.5">
                 <Link2
                   aria-hidden="true"
-                  className="size-4 shrink-0 text-primary"
+                  className="size-4 shrink-0 text-primary-ink"
                 />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="text-xs font-medium">{t("linkIsLive")}</span>

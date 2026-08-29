@@ -95,7 +95,7 @@ export function MarketingLanguageSwitcher() {
               </span>
               <Check
                 aria-hidden="true"
-                className={`ml-auto size-4 text-primary ${isActive ? "opacity-100" : "opacity-0"}`}
+                className={`ml-auto size-4 text-primary-ink ${isActive ? "opacity-100" : "opacity-0"}`}
               />
             </DropdownMenuItem>
           );

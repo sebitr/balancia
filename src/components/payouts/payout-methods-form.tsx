@@ -282,7 +282,7 @@ export function PayoutMethodsForm({
                 aria-hidden="true"
                 className={cn(
                   "size-4 shrink-0 transition-colors",
-                  entry ? "text-primary" : "text-transparent",
+                  entry ? "text-primary-ink" : "text-transparent",
                 )}
               />
             </button>

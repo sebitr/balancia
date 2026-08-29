@@ -213,7 +213,7 @@ function CurrencyCard({
         </h2>
         {/* Never `0.00`: a currency nobody owes anything in has no amount, and
             printing one invites the reader to look for what it refers to. */}
-        <p className="text-sm font-medium text-neutral-balance">
+        <p className="text-sm font-medium text-neutral-balance-ink">
           {t("settledUp")}
         </p>
       </section>
@@ -514,8 +514,8 @@ function TransferAmount({ transfer }: { transfer: SettleUpTransferView }) {
     <span
       className={cn(
         "ml-auto flex shrink-0 items-center gap-1",
-        outgoing && "text-negative",
-        incoming && "text-positive",
+        outgoing && "text-negative-ink",
+        incoming && "text-positive-ink",
       )}
     >
       {outgoing && <ArrowUpRight aria-hidden="true" className="size-[15px]" />}
