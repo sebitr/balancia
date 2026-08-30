@@ -96,7 +96,10 @@ export function ImportWizard({ groupId }: { groupId: string }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <CheckCircle2 aria-hidden="true" className="size-5 text-positive-ink" />
+            <CheckCircle2
+              aria-hidden="true"
+              className="size-5 text-positive-ink"
+            />
             {t("completeTitle")}
           </CardTitle>
         </CardHeader>

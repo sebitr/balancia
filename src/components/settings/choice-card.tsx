@@ -100,7 +100,9 @@ export function ChoiceCard<T extends string>({
               aria-hidden="true"
               className={cn(
                 "size-5 shrink-0",
-                choice.value === value ? "text-primary-ink" : "text-transparent",
+                choice.value === value
+                  ? "text-primary-ink"
+                  : "text-transparent",
               )}
             />
           </RadioGroupPrimitive.Item>
