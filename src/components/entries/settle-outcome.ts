@@ -38,6 +38,16 @@ export type SettleOutcomeKind =
 export interface SettleOutcome {
   readonly kind: SettleOutcomeKind;
   /**
+   * The pair as chosen, for the sentence that names no figure.
+   *
+   * `exact` is the one outcome with nothing left to owe, so it has no
+   * `remainder` and still needs two names. Absent before a pair is picked.
+   */
+  readonly pairNames?: {
+    readonly fromName: string;
+    readonly toName: string;
+  };
+  /**
    * Who ends up owing whom, for the three sentences that name a remainder.
    *
    * Absent on the rest, because there is nothing left to owe or nothing yet
@@ -85,8 +95,11 @@ export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
   const { pair, amountMinor, hasMethod } = input;
 
   if (!pair) return { kind: "noPair" };
-  if (!hasMethod) return { kind: "noMethod" };
-  if (amountMinor <= 0n) return { kind: "zeroAmount" };
+
+  const pairNames = { fromName: pair.fromName, toName: pair.toName };
+
+  if (!hasMethod) return { kind: "noMethod", pairNames };
+  if (amountMinor <= 0n) return { kind: "zeroAmount", pairNames };
 
   /*
    * A custom pair owes nothing by definition, so every franc of this payment
@@ -97,6 +110,7 @@ export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
   if (pair.isCustom) {
     return {
       kind: "custom",
+      pairNames,
       remainder: {
         fromName: pair.toName,
         toName: pair.fromName,
@@ -110,6 +124,7 @@ export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
   if (outstanding > 0n) {
     return {
       kind: "under",
+      pairNames,
       remainder: {
         fromName: pair.fromName,
         toName: pair.toName,
@@ -122,6 +137,7 @@ export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
     // Overpaid, so the debt reverses: the payer is now owed the surplus.
     return {
       kind: "over",
+      pairNames,
       remainder: {
         fromName: pair.toName,
         toName: pair.fromName,
@@ -130,5 +146,5 @@ export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
     };
   }
 
-  return { kind: "exact" };
+  return { kind: "exact", pairNames };
 }

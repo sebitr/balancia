@@ -110,10 +110,12 @@ import { SplitSummaryRow } from "./split-summary-row";
 import {
   OutstandingList,
   PairPicker,
+  PairSheet,
   PaymentMethodRow,
   PaymentMethodSheet,
   type DebtPair,
 } from "./settle-blocks";
+import { settleOutcome, type SettleOutcome } from "./settle-outcome";
 import type { EntryMember } from "./pills";
 
 /**
@@ -149,7 +151,8 @@ import type { EntryMember } from "./pills";
  * both.
  */
 
-type OpenSheet = null | "split" | "category" | "currency" | "method" | "recur";
+type OpenSheet =
+  null | "split" | "category" | "currency" | "method" | "recur" | "pair";
 
 /**
  * An entry that already exists, as the fields that put it back on screen.
@@ -552,8 +555,62 @@ export function AddEntryForm({
     };
   }, [settleFrom, settleTo, members]);
 
-  /** Which outstanding row, if any, the current pair happens to be. */
-  const outstandingIndex = outstanding.findIndex(
+  /**
+   * A pair the reader named, rather than one the balances produced.
+   *
+   * Per entry and never saved to the group: cleared on save, on cancel, on
+   * "Add another" and on switching the type away from Settle. In storage it is
+   * an ordinary settlement — see `DebtPair.isCustom`.
+   */
+  const [customPair, setCustomPair] = useState<DebtPair | null>(null);
+
+  /**
+   * What the pair sheet holds while it is open.
+   *
+   * Kept apart from the entry's own pair so that dismissing the sheet changes
+   * nothing: half an answer is a legitimate thing to be in the middle of, and
+   * writing it straight through would leave the form pointing at a person
+   * with nobody to pay.
+   */
+  const [draftPair, setDraftPair] = useState<{
+    fromId: string | null;
+    toId: string | null;
+  }>({ fromId: null, toId: null });
+
+  /** The sheet's two names as a pair, or null while it is half-answered. */
+  const pairFrom = (draft: {
+    fromId: string | null;
+    toId: string | null;
+  }): DebtPair | null => {
+    const { fromId, toId } = draft;
+    if (fromId === null || toId === null || fromId === toId) return null;
+    const nameOf = (id: string) =>
+      members.find((member) => member.id === id)?.displayName ?? "";
+    return {
+      fromParticipantId: fromId,
+      fromName: nameOf(fromId),
+      toParticipantId: toId,
+      toName: nameOf(toId),
+      amountMinor: "0",
+      currency: baseCurrency ?? defaultCurrency,
+      amountFormatted: "",
+      isCustom: true,
+    };
+  };
+
+  /**
+   * The rows the outstanding card shows: the real debts, then the named pair.
+   *
+   * It joins the list rather than sitting beside it because it answers the
+   * same question, and it stays selectable alongside the real ones.
+   */
+  const settlePairs = useMemo(
+    () => (customPair ? [...outstanding, customPair] : outstanding),
+    [outstanding, customPair],
+  );
+
+  /** Which row, if any, the current pair happens to be. */
+  const outstandingIndex = settlePairs.findIndex(
     (pair) =>
       pair.fromParticipantId === settleFrom &&
       pair.toParticipantId === settleTo,
@@ -715,6 +772,12 @@ export function AddEntryForm({
       const pair = outstanding[0];
       if (pair) takePair(pair);
     }
+    // A named pair belongs to the settlement being written, not to the
+    // drawer. Leaving Settle ends it.
+    if (next !== "settle") {
+      setCustomPair(null);
+      setDraftPair({ fromId: null, toId: null });
+    }
   };
 
   /**
@@ -730,13 +793,59 @@ export function AddEntryForm({
     setSettleFrom(pair.fromParticipantId);
     setSettleTo(pair.toParticipantId);
     setCurrency(pair.currency);
-    setAmountText(formatMinorUnits(pair.amountMinor, pair.currency));
+    /*
+     * Every other path into Settle prefills the exact figure; a named pair is
+     * the exception, and deliberately. There is no balance to propose, so the
+     * field has to ask rather than suggest — and "0.00" would be a suggestion.
+     */
+    setAmountText(
+      pair.isCustom ? "" : formatMinorUnits(pair.amountMinor, pair.currency),
+    );
   };
 
   const selectPair = (index: number) => {
-    const pair = outstanding[index];
+    const pair = settlePairs[index];
     if (pair) takePair(pair);
   };
+
+  /**
+   * What this payment does to the ledger, as one sentence.
+   *
+   * Computed from the same values as the entry rather than described in
+   * advance: a partial payment used to announce that the two of you were
+   * settled, and a payment to somebody owed nothing announced the settling of
+   * a debt that never existed.
+   */
+  /**
+   * What the selected pair owes, or null when there is no figure to offer.
+   *
+   * Null covers both "nothing is selected" and "the pair is one the reader
+   * named", which have no balance by definition.
+   */
+  const settleBalance = useMemo(() => {
+    const row =
+      outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
+    if (!row || row.isCustom) return null;
+    return BigInt(row.amountMinor);
+  }, [settlePairs, outstandingIndex]);
+
+  const outcome = useMemo(() => {
+    const row =
+      outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
+    return settleOutcome({
+      pair:
+        selectedPair && row
+          ? {
+              fromName: selectedPair.fromName,
+              toName: selectedPair.toName,
+              owedMinor: row.isCustom ? 0n : BigInt(row.amountMinor),
+              isCustom: row.isCustom === true,
+            }
+          : null,
+      amountMinor: totalMinor.ok ? totalMinor.value : 0n,
+      hasMethod: methodLabel !== "",
+    });
+  }, [selectedPair, settlePairs, outstandingIndex, totalMinor, methodLabel]);
 
   /** Switching split method seeds sensible values instead of empty fields. */
   const changeMethod = (next: SplitMethod) => {
@@ -1145,9 +1254,11 @@ export function AddEntryForm({
             />
           ) : (
             <OutstandingList
-              pairs={outstanding}
+              pairs={settlePairs}
               selectedIndex={outstandingIndex >= 0 ? outstandingIndex : null}
               onSelect={selectPair}
+              onPickSomeoneElse={() => setSheet("pair")}
+              hasCustomPair={customPair !== null}
             />
           ))}
 
@@ -1194,6 +1305,43 @@ export function AddEntryForm({
           onOpenCurrency={() => setSheet("currency")}
           locale={locale}
         />
+
+        {/*
+         * The two things somebody does with a debt: clear it, or pay some of
+         * it. `Full` names the figure rather than saying "full", so you can
+         * see what you are restoring after typing over it. Hidden for a named
+         * pair and for a debt of nothing, both of which have no full amount
+         * to offer.
+         */}
+        {isSettle && settleBalance !== null && settleBalance > 0n && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setAmountText(
+                  formatMinorUnits(settleBalance.toString(), currency),
+                )
+              }
+              className="h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+            >
+              {t("settle.full", {
+                amount: formatMinorUnits(settleBalance.toString(), currency),
+              })}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAmountText("");
+                document
+                  .querySelector<HTMLInputElement>("input[data-entry-amount]")
+                  ?.focus();
+              }}
+              className="h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+            >
+              {t("settle.partOfIt")}
+            </button>
+          </div>
+        )}
 
         {!isSettle && (
           <RowCard>
@@ -1422,20 +1570,9 @@ export function AddEntryForm({
           />
         )}
 
-        {isSettle && selectedPair && (
+        {isSettle && (
           <p className="text-xs text-muted-foreground">
-            {methodLabel !== ""
-              ? t("settle.outcome", {
-                  from: selectedPair.fromName,
-                  to: selectedPair.toName,
-                  amount: amountFormatted,
-                  method: methodLabel,
-                })
-              : t("settle.outcomeNoMethod", {
-                  from: selectedPair.fromName,
-                  to: selectedPair.toName,
-                  amount: amountFormatted,
-                })}
+            <SettleOutcomeLine outcome={outcome} currency={currency} />
           </p>
         )}
 
@@ -1630,6 +1767,22 @@ export function AddEntryForm({
             />
           )}
 
+          {sheet === "pair" && (
+            <PairSheet
+              members={members}
+              fromId={draftPair.fromId}
+              toId={draftPair.toId}
+              onChange={setDraftPair}
+              onConfirm={() => {
+                const pair = pairFrom(draftPair);
+                if (!pair) return;
+                setCustomPair(pair);
+                takePair(pair);
+                setSheet(null);
+              }}
+            />
+          )}
+
           {sheet === "recur" && (
             <RecurrenceSheet
               state={recurrence}
@@ -1643,6 +1796,51 @@ export function AddEntryForm({
       </Sheet>
     </div>
   );
+}
+
+/**
+ * The settlement's resulting ledger, in words.
+ *
+ * The decision is `settleOutcome`'s; this only looks the sentence up and
+ * formats the figure in it. Splitting them is what lets the seven branches be
+ * tested without a renderer, and it keeps the one thing that has to stay true
+ * — which sentence — out of JSX.
+ */
+function SettleOutcomeLine({
+  outcome,
+  currency,
+}: {
+  outcome: SettleOutcome;
+  currency: string;
+}) {
+  const t = useTranslations("addEntry.settle");
+
+  if (outcome.kind === "noPair") return t("outcomeNoPair");
+  if (outcome.kind === "noMethod") return t("outcomeNoMethod");
+  if (outcome.kind === "zeroAmount") return t("outcomeZero");
+  if (outcome.kind === "exact") {
+    // The only sentence with a remainder of nothing, so it names no figure.
+    return t("outcomeExact", {
+      from: outcome.pairNames?.fromName ?? "",
+      to: outcome.pairNames?.toName ?? "",
+    });
+  }
+
+  const remainder = outcome.remainder;
+  if (!remainder) return null;
+
+  const key =
+    outcome.kind === "custom"
+      ? "outcomeCustom"
+      : outcome.kind === "under"
+        ? "outcomeUnder"
+        : "outcomeOver";
+
+  return t(key, {
+    from: remainder.fromName,
+    to: remainder.toName,
+    amount: formatMinorUnits(remainder.amountMinor.toString(), currency),
+  });
 }
 
 /**

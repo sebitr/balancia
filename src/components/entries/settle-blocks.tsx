@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Search } from "lucide-react";
+import { Check, ChevronRight, Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,15 @@ export interface DebtPair {
    */
   readonly currency: string;
   readonly amountFormatted: string;
+  /**
+   * A pair the reader named rather than one the balances produced.
+   *
+   * Per entry, never saved to the group: it is cleared on save, on cancel,
+   * on "Add another" and on switching the type away from Settle. In storage
+   * it is an ordinary settlement — the absence of a prior balance is a fact
+   * about the group at that moment, not a property of the payment.
+   */
+  readonly isCustom?: boolean;
 }
 
 /**
@@ -66,6 +75,99 @@ export interface DebtPair {
  * do. Nothing is ever disabled: a control that cannot be pressed says less
  * about why than one that does something reasonable.
  */
+/**
+ * Naming a pair the balances did not.
+ *
+ * The one sheet in this drawer with a real primary action rather than
+ * tap-to-commit, because it collects two values and neither alone is a valid
+ * answer. Which is also why the primary is guarded twice: the disabled
+ * styling is an affordance, and a programmatic click, a keyboard activation
+ * or a stale render goes straight through it. A half-built pair committed
+ * that way selects a row that does not exist and leaves the screen with no
+ * valid payer.
+ */
+export function PairSheet({
+  members,
+  fromId,
+  toId,
+  onChange,
+  onConfirm,
+}: {
+  members: readonly EntryMember[];
+  fromId: string | null;
+  toId: string | null;
+  onChange: (next: { fromId: string | null; toId: string | null }) => void;
+  onConfirm: () => void;
+}) {
+  const t = useTranslations("addEntry.settle");
+
+  const nameOf = (id: string | null) =>
+    members.find((member) => member.id === id)?.displayName ?? "";
+
+  const complete = fromId !== null && toId !== null && fromId !== toId;
+
+  const summary = !fromId
+    ? t("pairPickBoth")
+    : !toId
+      ? t("pairPickReceiver", { name: nameOf(fromId) })
+      : t("pairSummary", { from: nameOf(fromId), to: nameOf(toId) });
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <SheetTitle className="text-xl font-semibold">
+          {t("pairTitle")}
+        </SheetTitle>
+        {/* The sentence that stops the sheet being alarming. */}
+        <p className="text-xs text-muted-foreground">{t("pairSubtitle")}</p>
+      </div>
+
+      <PairSide
+        label={t("whoPays")}
+        members={members}
+        selectedId={fromId}
+        onSelect={(id) =>
+          // Picking a payer who already holds the other side clears it rather
+          // than producing a pair of one person.
+          onChange({ fromId: id, toId: toId === id ? null : toId })
+        }
+        tone="payer"
+      />
+      <PairSide
+        label={t("whoReceives")}
+        members={members}
+        selectedId={toId}
+        onSelect={(id) => onChange({ fromId, toId: id })}
+        // You cannot pay yourself, and disabling the payer here says so more
+        // quietly than an error would.
+        disabledId={fromId}
+      />
+
+      <p
+        className={cn(
+          "text-xs",
+          complete ? "text-muted-foreground" : "text-destructive-ink",
+        )}
+      >
+        {summary}
+      </p>
+
+      <button
+        type="button"
+        disabled={!complete}
+        onClick={() => {
+          // Guarded in the handler, not only in CSS.
+          if (!complete) return;
+          onConfirm();
+        }}
+        className="h-13 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-35"
+      >
+        {t("usePair")}
+      </button>
+    </div>
+  );
+}
+
 export function PairPicker({
   members,
   fromId,
@@ -123,12 +225,15 @@ function PairSide({
   selectedId,
   onSelect,
   tone = "primary",
+  disabledId,
 }: {
   label: string;
   members: readonly EntryMember[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   tone?: "primary" | "payer";
+  /** Somebody this side cannot be — the payer, in the receiving group. */
+  disabledId?: string | null;
 }) {
   return (
     <section className="space-y-2">
@@ -148,6 +253,7 @@ function PairSide({
             selected={member.id === selectedId}
             onToggle={() => onSelect(member.id)}
             tone={tone}
+            disabled={member.id === disabledId}
             choice
           />
         ))}
@@ -156,22 +262,77 @@ function PairSide({
   );
 }
 
+/**
+ * The outstanding debts, and the way out of them.
+ *
+ * The list is the fast path: almost every settlement is one of these, and
+ * prefilling the exact figure is the whole value of the screen. But leading
+ * with it once made the rarer payment impossible rather than merely
+ * secondary — somebody fronting cash to a person they owe nothing to had
+ * nowhere to record it, and the group's balances drifted quietly away from
+ * reality.
+ *
+ * So the escape hatch is the **last row of the same card**, not a button
+ * beside it. "Who is settling" is the question this card asks, and paying
+ * somebody outside the list is one of the answers — it just belongs at the
+ * bottom, where the rare answer goes.
+ */
 export function OutstandingList({
   pairs,
   selectedIndex,
   onSelect,
+  onPickSomeoneElse,
+  hasCustomPair = false,
 }: {
   pairs: readonly DebtPair[];
   selectedIndex: number | null;
   onSelect: (index: number) => void;
+  /** Opens the pair sheet. Absent on an entry being edited. */
+  onPickSomeoneElse?: () => void;
+  /** Whether one of the rows above is a pair the reader named themselves. */
+  hasCustomPair?: boolean;
 }) {
   const t = useTranslations("addEntry.settle");
 
+  const escapeHatch = onPickSomeoneElse ? (
+    <li>
+      <button
+        type="button"
+        onClick={onPickSomeoneElse}
+        className="flex w-full items-center gap-3 border-b border-white/8 p-3 text-left text-muted-foreground transition-colors last:border-b-0 hover:bg-white/4"
+      >
+        {/* Dashed, because there is no member to show yet. */}
+        <span
+          aria-hidden="true"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full border border-dashed border-white/30"
+        >
+          <Plus className="size-3.5" />
+        </span>
+        <span className="flex-1 truncate text-sm">
+          {/*
+           * Never the pair's own name: it has a selectable row of its own
+           * above, and a row that both names the selection and acts on it
+           * reads as two controls.
+           */}
+          {hasCustomPair ? t("changeWhoPays") : t("someoneElse")}
+        </span>
+        <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+      </button>
+    </li>
+  ) : null;
+
   if (pairs.length === 0) {
     return (
-      <p className="rounded-[17px] bg-card p-4 text-center text-sm text-muted-foreground shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
-        {t("nothingOutstanding")}
-      </p>
+      <section className="space-y-2">
+        <p className="rounded-[17px] bg-card p-4 text-center text-sm text-muted-foreground shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+          {t("nothingOutstanding")}
+        </p>
+        {escapeHatch && (
+          <ul className="overflow-hidden rounded-[17px] bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+            {escapeHatch}
+          </ul>
+        )}
+      </section>
     );
   }
 
@@ -206,7 +367,13 @@ export function OutstandingList({
                       : "text-muted-foreground",
                   )}
                 >
-                  {pair.amountFormatted}
+                  {/*
+                   * A pair the reader named has no balance to show, and
+                   * "0.00" would be a figure rather than the absence of one.
+                   * Present tense: the others describe a debt that exists,
+                   * this one a payment about to happen.
+                   */}
+                  {pair.isCustom ? t("noBalance") : pair.amountFormatted}
                 </span>
                 <span
                   aria-hidden="true"
