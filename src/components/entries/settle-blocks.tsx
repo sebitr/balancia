@@ -390,6 +390,7 @@ export function OutstandingList({
             </li>
           );
         })}
+        {escapeHatch}
       </ul>
     </section>
   );

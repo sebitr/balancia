@@ -2,11 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "balancia",
+      "name": "balancia-rework",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
-      "port": 3000,
-      "autoPort": true
+      "runtimeArgs": ["exec", "next", "dev", "--port", "3002"],
+      "port": 3002
     }
   ]
 }
