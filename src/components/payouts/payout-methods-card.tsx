@@ -228,15 +228,18 @@ export function PayoutMethodsCard({
    *
    * Only the Swiss standard requires one — a German account gets a Girocode,
    * which carries no address, and nobody is asked where they live to be paid
-   * by TWINT. So the card appears with the bank row, while there is still no
-   * IBAN to judge, and takes itself away again once the IBAN is clearly
-   * somebody else's country. Asking early is what lets an address be filled in
-   * one sitting; asking a German account forever is what the check avoids.
+   * by TWINT. So the card waits for the IBAN to say `CH` (or `LI`) and appears
+   * from the second character, in time to be filled in the same sitting.
+   *
+   * It used to appear with the bank row itself, before there was an IBAN to
+   * judge, and that put five empty address fields under an empty IBAN: the
+   * longest thing on the screen was a question nobody had been asked yet, and
+   * it was asked of every country until the IBAN ruled it out.
    */
-  const bank = entries.find((entry) => entry.method === "bank");
-  const typedIban = (bank?.detail ?? "").replace(/\s/g, "");
-  const wantsAddress =
-    bank !== undefined && (typedIban.length < 2 || isSwissIban(typedIban));
+  const typedIban = (
+    entries.find((entry) => entry.method === "bank")?.detail ?? ""
+  ).replace(/\s/g, "");
+  const wantsAddress = isSwissIban(typedIban);
 
   return (
     <>

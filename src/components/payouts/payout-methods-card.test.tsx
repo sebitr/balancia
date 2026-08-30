@@ -17,9 +17,9 @@ import { PayoutMethodsCard } from "./payout-methods-card";
  *  - **A refused write puts the list back.** A row showing an IBAN the account
  *    did not keep is the exact failure this screen exists to avoid.
  *
- * The Swiss address is the fourth: it appears with a bank transfer, while
- * there is still nothing to judge, and takes itself away once the IBAN
- * belongs to a country whose code carries no address.
+ * The Swiss address is the fourth: it waits for the IBAN to say `CH`, and
+ * takes itself away again once that IBAN belongs to a country whose code
+ * carries no address.
  */
 
 const { setPayoutMethodsAction, setPayoutAddressAction, toastUndoable } =
@@ -138,17 +138,25 @@ describe("PayoutMethodsCard", () => {
     expect(screen.getByRole("button", { name: "Remove Cash" })).toBeVisible();
   });
 
-  it("asks for an address with a bank row, before there is an IBAN to judge", () => {
-    renderCard([{ method: "bank", detail: "" }]);
+  it("waits for a Swiss IBAN before asking where you live", async () => {
+    const { user } = renderCard([{ method: "bank", detail: "" }]);
+
+    // An empty IBAN is not a Swiss one. Five address fields under it are five
+    // questions asked of a country that has not been named yet.
+    expect(
+      screen.queryByText("Address for the Swiss QR-bill"),
+    ).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("IBAN"), "CH9300762011623852957");
 
     expect(
-      screen.getByText("Address for the Swiss QR-bill"),
+      await screen.findByText("Address for the Swiss QR-bill"),
     ).toBeInTheDocument();
     expect(screen.getByText("To complete")).toBeInTheDocument();
   });
 
   it("says a half-filled address is half-filled, rather than writing nothing", async () => {
-    const { user } = renderCard([{ method: "bank", detail: "" }]);
+    const { user } = renderCard([BANK]);
 
     // A postcode and no town: short of what the standard needs, so nothing is
     // written — and somebody told nothing concludes the QR code is broken.
@@ -162,7 +170,7 @@ describe("PayoutMethodsCard", () => {
   });
 
   it("reports a refused address instead of dropping it", async () => {
-    const { user } = renderCard([{ method: "bank", detail: "" }]);
+    const { user } = renderCard([BANK]);
     setPayoutAddressAction.mockResolvedValue({ ok: false, error: "Nope." });
 
     await user.type(screen.getByLabelText("Postcode"), "3920");
@@ -174,7 +182,7 @@ describe("PayoutMethodsCard", () => {
   });
 
   it("keeps the country to the two letters that travel in the code", async () => {
-    const { user } = renderCard([{ method: "bank", detail: "" }]);
+    const { user } = renderCard([BANK]);
 
     // A box that accepted "Suisse" was a box that took an answer, kept it on
     // screen and never wrote it.
@@ -185,8 +193,9 @@ describe("PayoutMethodsCard", () => {
   });
 
   it("stops asking once the IBAN is somebody else's country", async () => {
-    const { user } = renderCard([{ method: "bank", detail: "" }]);
+    const { user } = renderCard([BANK]);
 
+    await user.clear(screen.getByLabelText("IBAN"));
     await user.type(screen.getByLabelText("IBAN"), "DE89370400440532013000");
 
     // A German account gets a Girocode, which carries no address at all.
