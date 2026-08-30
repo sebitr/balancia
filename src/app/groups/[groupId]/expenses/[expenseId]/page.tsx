@@ -38,6 +38,7 @@ import { DeleteEntryButton } from "@/components/entries/delete-entry-button";
 import { requireGroupAccess } from "@/lib/actions";
 import { getExpense } from "@/modules/expenses/service";
 import { getRecurrenceCadence } from "@/modules/recurring/service";
+import type { RecurrenceFrequency } from "@/modules/recurring/schedule";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
 import {
   isExpenseCategory,
@@ -398,10 +399,11 @@ export default async function TransactionDetailPage({
 
 /** One message per frequency, each covering "Monthly" and "Every 2 months". */
 const REPEAT_KEYS = {
+  daily: "repeatDaily",
   weekly: "repeatWeekly",
   monthly: "repeatMonthly",
   yearly: "repeatYearly",
-} as const;
+} as const satisfies Record<RecurrenceFrequency, string>;
 
 /**
  * The frozen rate, in the reader's notation.

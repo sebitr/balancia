@@ -64,8 +64,22 @@ export const recurringExpenses = pgTable(
     frequency: recurrenceFrequencyEnum("frequency").notNull(),
     /** Every N periods, e.g. interval 2 + weekly = fortnightly. */
     interval: integer("interval").notNull().default(1),
-    /** 1 = Monday … 7 = Sunday (ISO), for weekly recurrence. */
+    /**
+     * 1 = Monday … 7 = Sunday (ISO).
+     *
+     * Weekly, and monthly alongside `weekOfMonth` — "the second Tuesday" is
+     * the two of them together.
+     */
     weekday: integer("weekday"),
+    /**
+     * Which occurrence of `weekday` in the month: `1`–`4`, or `last`.
+     *
+     * Text rather than an integer because `last` is not a fifth week — most
+     * months do not have five of a given weekday, and counting back from the
+     * end is a different sum. Set only on monthly rules, and never together
+     * with `dayOfMonth`.
+     */
+    weekOfMonth: text("week_of_month"),
     /** 1–31; clamped to the last day for short months. */
     dayOfMonth: integer("day_of_month"),
     /** 1–12, for yearly recurrence. */
@@ -75,6 +89,15 @@ export const recurringExpenses = pgTable(
     timezone: text("timezone").notNull(),
     startDate: date("start_date").notNull(),
     endDate: date("end_date"),
+    /**
+     * Stop after this many occurrences — the other way a series ends.
+     *
+     * Not resolved to an `end_date` at creation, because "12 times" is a year
+     * on a monthly rule and a fortnight on a daily one, and the interval is
+     * still free to change afterwards. `generated_count` is what it is
+     * measured against.
+     */
+    occurrenceCount: integer("occurrence_count"),
     nextRunAt: timestamp("next_run_at", { withTimezone: true }),
     lastRunAt: timestamp("last_run_at", { withTimezone: true }),
     pausedAt: timestamp("paused_at", { withTimezone: true }),
@@ -116,6 +139,24 @@ export const recurringExpenses = pgTable(
     check(
       "recurring_expenses_end_after_start",
       sql`${table.endDate} IS NULL OR ${table.endDate} >= ${table.startDate}`,
+    ),
+    check(
+      "recurring_expenses_week_of_month_valid",
+      sql`${table.weekOfMonth} IS NULL OR ${table.weekOfMonth} IN ('1', '2', '3', '4', 'last')`,
+    ),
+    // The two ways to say which day of the month, never both at once.
+    check(
+      "recurring_expenses_month_day_exclusive",
+      sql`${table.weekOfMonth} IS NULL OR (${table.dayOfMonth} IS NULL AND ${table.weekday} IS NOT NULL)`,
+    ),
+    check(
+      "recurring_expenses_occurrence_count_positive",
+      sql`${table.occurrenceCount} IS NULL OR ${table.occurrenceCount} >= 1`,
+    ),
+    // The two ways a series ends, never both at once.
+    check(
+      "recurring_expenses_end_exclusive",
+      sql`${table.occurrenceCount} IS NULL OR ${table.endDate} IS NULL`,
     ),
   ],
 );

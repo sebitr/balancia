@@ -2241,7 +2241,16 @@
     "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}",
     "weekly": "{count, plural, one {Every week on {day}} other {Every # weeks on {day}}}",
     "monthly": "{count, plural, one {Every month on day {day}} other {Every # months on day {day}}}",
-    "yearly": "{count, plural, one {Every year on {day}/{month}} other {Every # years on {day}/{month}}}"
+    "yearly": "{count, plural, one {Every year on {day}/{month}} other {Every # years on {day}/{month}}}",
+    "daily": "{count, plural, one {Every day} other {Every # days}}",
+    "monthlyWeekday": "{count, plural, one {Every month on the {week} {day}} other {Every # months on the {week} {day}}}",
+    "week": {
+      "1": "first",
+      "2": "second",
+      "3": "third",
+      "4": "fourth",
+      "last": "last"
+    }
   },
   "settingsPage": {
     "title": "Group settings",
@@ -2280,6 +2289,7 @@
     "date": "Date",
     "repeats": "Repeats",
     "oneOff": "One-off",
+    "repeatDaily": "{count, plural, one {Daily} other {Every # days}}",
     "repeatWeekly": "{count, plural, one {Weekly} other {Every # weeks}}",
     "repeatMonthly": "{count, plural, one {Monthly} other {Every # months}}",
     "repeatYearly": "{count, plural, one {Yearly} other {Every # years}}",
@@ -2924,13 +2934,15 @@
       "frequency": {
         "weekly": "Weekly",
         "monthly": "Monthly",
-        "yearly": "Yearly"
+        "yearly": "Yearly",
+        "daily": "Daily"
       },
       "every": "Every",
       "interval": {
         "weekly": "{count, plural, one {# week} other {# weeks}}",
         "monthly": "{count, plural, one {# month} other {# months}}",
-        "yearly": "{count, plural, one {# year} other {# years}}"
+        "yearly": "{count, plural, one {# year} other {# years}}",
+        "daily": "{count, plural, one {# day} other {# days}}"
       },
       "onDay": "On day",
       "dayOfMonth": "Day {day}",
@@ -2945,7 +2957,28 @@
       "done": "Done",
       "label": "Repeats",
       "schedule": "Create this entry again on a schedule",
-      "next": "Next: {dates}"
+      "next": "Next: {dates}",
+      "onTheNth": "On the {week} {day}",
+      "byDayOfMonth": "On the {day}",
+      "byWeekday": "On the {week} {day}",
+      "lastDayOfMonth": "Last day of the month",
+      "shortMonthNote": "Months without that day use their last one.",
+      "afterTimes": "After a number of times",
+      "timesCount": "{count, plural, one {# time} other {# times}}",
+      "endsNever": "Continues until you turn it off",
+      "endsOn": "Continues until {date}",
+      "endsAfter": "{count, plural, one {Stops after # time} other {Stops after # times}}",
+      "dontRepeat": "Don’t repeat this entry",
+      "nextLabel": "Next",
+      "andAfter": "and {rule} after that",
+      "noOccurrences": "That rule never happens.",
+      "weeks": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      }
     },
     "scan": {
       "title": "Scan a receipt",

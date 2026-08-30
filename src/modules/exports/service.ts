@@ -8,6 +8,10 @@ import { listParticipants } from "@/modules/groups/service";
 import { listExpenses } from "@/modules/expenses/service";
 import { listSettlements } from "@/modules/settlements/service";
 import { listRecurringExpenses } from "@/modules/recurring/service";
+import type {
+  RecurrenceFrequency,
+  WeekOfMonth,
+} from "@/modules/recurring/schedule";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { money, toMajorString } from "@/modules/currencies/money";
 import { isSpending, type EntryDirection } from "@/modules/expenses/direction";
@@ -127,13 +131,15 @@ export interface GroupExport {
     readonly subcategory: string | null;
     readonly amount: string;
     readonly currency: string;
-    readonly frequency: "weekly" | "monthly" | "yearly";
+    readonly frequency: RecurrenceFrequency;
     readonly interval: number;
     readonly weekday: number | null;
+    readonly weekOfMonth: WeekOfMonth | null;
     readonly dayOfMonth: number | null;
     readonly monthOfYear: number | null;
     readonly startDate: string;
     readonly endDate: string | null;
+    readonly occurrenceCount: number | null;
     readonly paused: boolean;
     readonly timezone: string;
     readonly generatedCount: number;
@@ -246,10 +252,12 @@ export async function buildGroupExport(
       frequency: template.frequency,
       interval: template.interval,
       weekday: template.weekday,
+      weekOfMonth: template.weekOfMonth,
       dayOfMonth: template.dayOfMonth,
       monthOfYear: template.monthOfYear,
       startDate: template.startDate,
       endDate: template.endDate,
+      occurrenceCount: template.occurrenceCount,
       paused: template.pausedAt !== null,
       timezone: template.timezone,
       generatedCount: template.generatedCount,

@@ -24,7 +24,7 @@ export type SplitMethod = "equal" | "exact" | "percentage" | "shares";
 /** Spending or money received on the group's behalf. */
 export type EntryDirection = "out" | "in";
 
-export type RecurrenceFrequency = "weekly" | "monthly" | "yearly";
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
 /** What a receipt file turned out to be. Not its name, and not its contents. */
 export type AttachmentKind = "image" | "pdf";

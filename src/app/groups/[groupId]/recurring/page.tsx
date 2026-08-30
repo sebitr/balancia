@@ -9,6 +9,10 @@ import { RecurringRowActions } from "@/components/recurring/recurring-row-action
 import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import { listRecurringExpenses } from "@/modules/recurring/service";
+import type {
+  RecurrenceFrequency,
+  WeekOfMonth,
+} from "@/modules/recurring/schedule";
 import { listParticipants } from "@/modules/groups/service";
 
 /**
@@ -40,19 +44,32 @@ export default async function RecurringPage({
   const locale = await getLocale();
 
   const describeSchedule = (template: {
-    frequency: "weekly" | "monthly" | "yearly";
+    frequency: RecurrenceFrequency;
     interval: number;
     weekday: number | null;
+    weekOfMonth: WeekOfMonth | null;
     dayOfMonth: number | null;
     monthOfYear: number | null;
   }): string => {
     switch (template.frequency) {
+      case "daily":
+        return t("daily", { count: template.interval });
       case "weekly":
         return t("weekly", {
           count: template.interval,
           day: weekdayName(locale, template.weekday ?? 1),
         });
       case "monthly":
+        // "Every 2 months on the second Tuesday" and "every 2 months on the
+        // 3rd" are two sentences, because the second half is a different kind
+        // of thing in each.
+        if (template.weekOfMonth != null) {
+          return t("monthlyWeekday", {
+            count: template.interval,
+            week: t(`week.${template.weekOfMonth}`),
+            day: weekdayName(locale, template.weekday ?? 1),
+          });
+        }
         return t("monthly", {
           count: template.interval,
           day: template.dayOfMonth ?? 1,

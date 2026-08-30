@@ -2241,7 +2241,16 @@
     "generatedSoFar": "{count, plural, one {# générée à ce jour} other {# générées à ce jour}}",
     "weekly": "{count, plural, one {Chaque semaine le {day}} other {Toutes les # semaines le {day}}}",
     "monthly": "{count, plural, one {Chaque mois le {day}} other {Tous les # mois le {day}}}",
-    "yearly": "{count, plural, one {Chaque année le {day}/{month}} other {Tous les # ans le {day}/{month}}}"
+    "yearly": "{count, plural, one {Chaque année le {day}/{month}} other {Tous les # ans le {day}/{month}}}",
+    "daily": "{count, plural, one {Tous les jours} other {Tous les # jours}}",
+    "monthlyWeekday": "{count, plural, one {Chaque mois le {week} {day}} other {Tous les # mois le {week} {day}}}",
+    "week": {
+      "1": "premier",
+      "2": "deuxième",
+      "3": "troisième",
+      "4": "quatrième",
+      "last": "dernier"
+    }
   },
   "settingsPage": {
     "title": "Paramètres du groupe",
@@ -2280,6 +2289,7 @@
     "date": "Date",
     "repeats": "Récurrence",
     "oneOff": "Ponctuel",
+    "repeatDaily": "{count, plural, one {Chaque jour} other {Tous les # jours}}",
     "repeatWeekly": "{count, plural, one {Chaque semaine} other {Toutes les # semaines}}",
     "repeatMonthly": "{count, plural, one {Chaque mois} other {Tous les # mois}}",
     "repeatYearly": "{count, plural, one {Chaque année} other {Tous les # ans}}",
@@ -2924,13 +2934,15 @@
       "frequency": {
         "weekly": "Chaque semaine",
         "monthly": "Chaque mois",
-        "yearly": "Chaque année"
+        "yearly": "Chaque année",
+        "daily": "Quotidien"
       },
       "every": "Tous les",
       "interval": {
         "weekly": "{count, plural, one {# semaine} other {# semaines}}",
         "monthly": "{count, plural, one {# mois} other {# mois}}",
-        "yearly": "{count, plural, one {# an} other {# ans}}"
+        "yearly": "{count, plural, one {# an} other {# ans}}",
+        "daily": "{count, plural, one {# jour} other {# jours}}"
       },
       "onDay": "Le jour",
       "dayOfMonth": "Jour {day}",
@@ -2945,7 +2957,28 @@
       "done": "Terminé",
       "label": "Récurrence",
       "schedule": "Recréer cette écriture selon un calendrier",
-      "next": "Prochaines : {dates}"
+      "next": "Prochaines : {dates}",
+      "onTheNth": "Le {week} {day}",
+      "byDayOfMonth": "Le {day}",
+      "byWeekday": "Le {week} {day}",
+      "lastDayOfMonth": "Dernier jour du mois",
+      "shortMonthNote": "Les mois sans ce jour prennent leur dernier.",
+      "afterTimes": "Après un nombre de fois",
+      "timesCount": "{count, plural, one {# fois} other {# fois}}",
+      "endsNever": "Continue jusqu’à ce que tu l’arrêtes",
+      "endsOn": "Continue jusqu’au {date}",
+      "endsAfter": "{count, plural, one {S’arrête après # fois} other {S’arrête après # fois}}",
+      "dontRepeat": "Ne pas répéter cette entrée",
+      "nextLabel": "Ensuite",
+      "andAfter": "puis {rule}",
+      "noOccurrences": "Cette règle ne se produit jamais.",
+      "weeks": {
+        "1": "premier",
+        "2": "deuxième",
+        "3": "troisième",
+        "4": "quatrième",
+        "last": "dernier"
+      }
     },
     "scan": {
       "title": "Scanner un reçu",

@@ -33,7 +33,10 @@ import { recordRecurringNotification } from "@/modules/notifications/events";
 import { telemetry } from "@/lib/telemetry";
 import type { ExchangeRateSource } from "@/modules/currencies/conversion";
 import { classifyRateSource } from "@/modules/currencies/rates";
-import { isValidSubcategory } from "@/modules/categorization";
+import {
+  isCategoryOfOppositeDirection,
+  isValidSubcategoryFor,
+} from "@/modules/categorization";
 import {
   ENTRY_DIRECTIONS,
   type EntryDirection,
@@ -48,12 +51,17 @@ import {
 } from "@/modules/expenses/schemas";
 import { SPLIT_METHODS, type SplitInput } from "@/modules/expenses/split";
 import {
+  RECURRENCE_FREQUENCIES,
+  WEEKS_OF_MONTH,
   firstOccurrence,
   nextOccurrence,
   occurrenceInstant,
   occurrencesUpTo,
+  remainingOf,
   todayIn,
+  type RecurrenceFrequency,
   type RecurrenceRule,
+  type WeekOfMonth,
 } from "./schedule";
 
 /**
@@ -86,13 +94,16 @@ export const recurringInputSchema = z
     payers: z.array(payerSchema).min(1, "Add at least one payer"),
     splitMethod: z.enum(SPLIT_METHODS),
     splitEntries: z.array(splitEntrySchema).min(1),
-    frequency: z.enum(["weekly", "monthly", "yearly"]),
+    frequency: z.enum(RECURRENCE_FREQUENCIES),
     interval: z.coerce.number().int().min(1).max(52).default(1),
     weekday: z.coerce.number().int().min(1).max(7).optional(),
+    weekOfMonth: z.enum(WEEKS_OF_MONTH.map(String)).optional(),
     dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
     monthOfYear: z.coerce.number().int().min(1).max(12).optional(),
     startDate: isoDateSchema,
     endDate: isoDateSchema.optional().or(z.literal("")),
+    /** The other way a series ends. Mutually exclusive with `endDate`. */
+    count: z.coerce.number().int().min(1).max(520).optional(),
   })
   .refine((value) => BigInt(value.amount) > 0n, {
     path: ["amount"],
@@ -102,16 +113,62 @@ export const recurringInputSchema = z
     (value) => value.frequency !== "weekly" || value.weekday !== undefined,
     { path: ["weekday"], message: "Choose a day of the week" },
   )
+  /**
+   * A monthly rule says *which* day, one way or the other.
+   *
+   * "On the 3rd" and "on the second Tuesday" are the two answers, and a
+   * monthly template needs exactly one of them. Daily needs neither — every
+   * day is the answer — and weekly answered it above.
+   */
   .refine(
-    (value) => value.frequency === "weekly" || value.dayOfMonth !== undefined,
+    (value) =>
+      value.frequency !== "monthly" ||
+      value.dayOfMonth !== undefined ||
+      (value.weekOfMonth !== undefined && value.weekday !== undefined),
     { path: ["dayOfMonth"], message: "Choose a day of the month" },
   )
+  .refine(
+    (value) => value.frequency !== "yearly" || value.dayOfMonth !== undefined,
+    { path: ["dayOfMonth"], message: "Choose a day of the month" },
+  )
+  .refine(
+    (value) =>
+      value.weekOfMonth === undefined || value.dayOfMonth === undefined,
+    {
+      path: ["weekOfMonth"],
+      message:
+        "A rule is on a day of the month or on a weekday of it, not both",
+    },
+  )
+  /**
+   * A series ends one way or it ends the other.
+   *
+   * Both at once is answerable — whichever comes first — but it is not a
+   * question the sheet asks, and storing a pair nothing can produce would
+   * leave a state no screen can edit back.
+   */
+  .refine((value) => !(value.count !== undefined && value.endDate), {
+    path: ["count"],
+    message: "A series ends on a date or after a number of times, not both",
+  })
   // The same pair rule the one-off entry form enforces; a template writes the
   // column every occurrence will be born with.
-  .refine((value) => isValidSubcategory(value.category, value.subcategory), {
-    path: ["subcategory"],
-    message: "That subcategory does not belong to the chosen category",
-  });
+  .refine(
+    (value) =>
+      isValidSubcategoryFor(value.direction, value.category, value.subcategory),
+    {
+      path: ["subcategory"],
+      message: "That subcategory does not belong to the chosen category",
+    },
+  )
+  /** And it has to belong to the direction. See `expenseInputSchema`. */
+  .refine(
+    (value) => !isCategoryOfOppositeDirection(value.direction, value.category),
+    {
+      path: ["category"],
+      message: "That category belongs to the other kind of entry",
+    },
+  );
 
 export type RecurringInput = z.infer<typeof recurringInputSchema>;
 
@@ -123,13 +180,15 @@ export interface RecurringSummary {
   readonly subcategory: string | null;
   readonly amount: bigint;
   readonly currency: string;
-  readonly frequency: "weekly" | "monthly" | "yearly";
+  readonly frequency: RecurrenceFrequency;
   readonly interval: number;
   readonly weekday: number | null;
+  readonly weekOfMonth: WeekOfMonth | null;
   readonly dayOfMonth: number | null;
   readonly monthOfYear: number | null;
   readonly startDate: string;
   readonly endDate: string | null;
+  readonly occurrenceCount: number | null;
   readonly nextRunAt: Date | null;
   readonly lastRunAt: Date | null;
   readonly pausedAt: Date | null;
@@ -137,25 +196,44 @@ export interface RecurringSummary {
   readonly generatedCount: number;
 }
 
+/**
+ * The stored `week_of_month` as the rule's own type.
+ *
+ * A `text` column, so the database can hold anything a check constraint let
+ * through and a row written before the constraint existed could hold
+ * something else again. Anything unrecognised reads as "no nth-weekday rule",
+ * which degrades a template to its `dayOfMonth` rather than throwing at the
+ * worker.
+ */
+function weekOfMonthFrom(value: string | null): WeekOfMonth | null {
+  if (value === null) return null;
+  const match = WEEKS_OF_MONTH.find((week) => String(week) === value);
+  return match ?? null;
+}
+
 function ruleFrom(template: {
-  frequency: "weekly" | "monthly" | "yearly";
+  frequency: RecurrenceFrequency;
   interval: number;
   weekday: number | null;
+  weekOfMonth: string | null;
   dayOfMonth: number | null;
   monthOfYear: number | null;
   timezone: string;
   startDate: string;
   endDate: string | null;
+  occurrenceCount: number | null;
 }): RecurrenceRule {
   return {
     frequency: template.frequency,
     interval: template.interval,
     weekday: template.weekday,
+    weekOfMonth: weekOfMonthFrom(template.weekOfMonth),
     dayOfMonth: template.dayOfMonth,
     monthOfYear: template.monthOfYear,
     timezone: template.timezone,
     startDate: template.startDate,
     endDate: template.endDate,
+    count: template.occurrenceCount,
   };
 }
 
@@ -172,11 +250,13 @@ export async function createRecurringExpense(
     frequency: input.frequency,
     interval: input.interval,
     weekday: input.weekday ?? null,
+    weekOfMonth: weekOfMonthFrom(input.weekOfMonth ?? null),
     dayOfMonth: input.dayOfMonth ?? null,
     monthOfYear: input.monthOfYear ?? null,
     timezone,
     startDate: input.startDate,
     endDate: input.endDate || null,
+    count: input.count ?? null,
   };
   const first = firstOccurrence(rule);
 
@@ -210,11 +290,13 @@ export async function createRecurringExpense(
         frequency: input.frequency,
         interval: input.interval,
         weekday: input.weekday ?? null,
+        weekOfMonth: input.weekOfMonth ?? null,
         dayOfMonth: input.dayOfMonth ?? null,
         monthOfYear: input.monthOfYear ?? null,
         timezone,
         startDate: input.startDate,
         endDate: input.endDate || null,
+        occurrenceCount: input.count ?? null,
         nextRunAt: first ? occurrenceInstant(first, timezone) : null,
         createdByActorType: access.actor.kind,
         createdByParticipantId: access.participantId,
@@ -381,7 +463,7 @@ export async function listRecurringExpenses(
   options: { db?: Database } = {},
 ): Promise<RecurringSummary[]> {
   const db = options.db ?? getDb();
-  return db
+  const rows = await db
     .select({
       id: recurringExpenses.id,
       direction: recurringExpenses.direction,
@@ -393,10 +475,12 @@ export async function listRecurringExpenses(
       frequency: recurringExpenses.frequency,
       interval: recurringExpenses.interval,
       weekday: recurringExpenses.weekday,
+      weekOfMonth: recurringExpenses.weekOfMonth,
       dayOfMonth: recurringExpenses.dayOfMonth,
       monthOfYear: recurringExpenses.monthOfYear,
       startDate: recurringExpenses.startDate,
       endDate: recurringExpenses.endDate,
+      occurrenceCount: recurringExpenses.occurrenceCount,
       nextRunAt: recurringExpenses.nextRunAt,
       lastRunAt: recurringExpenses.lastRunAt,
       pausedAt: recurringExpenses.pausedAt,
@@ -414,11 +498,17 @@ export async function listRecurringExpenses(
       ),
     )
     .orderBy(asc(recurringExpenses.createdAt));
+
+  // `week_of_month` is `text`, so it is narrowed here rather than trusted.
+  return rows.map((row) => ({
+    ...row,
+    weekOfMonth: weekOfMonthFrom(row.weekOfMonth),
+  }));
 }
 
 /** How often a template runs, and nothing else. */
 export interface RecurrenceCadence {
-  readonly frequency: "weekly" | "monthly" | "yearly";
+  readonly frequency: RecurrenceFrequency;
   readonly interval: number;
 }
 
@@ -495,11 +585,13 @@ export async function generateDueOccurrences(
       frequency: recurringExpenses.frequency,
       interval: recurringExpenses.interval,
       weekday: recurringExpenses.weekday,
+      weekOfMonth: recurringExpenses.weekOfMonth,
       dayOfMonth: recurringExpenses.dayOfMonth,
       monthOfYear: recurringExpenses.monthOfYear,
       timezone: recurringExpenses.timezone,
       startDate: recurringExpenses.startDate,
       endDate: recurringExpenses.endDate,
+      occurrenceCount: recurringExpenses.occurrenceCount,
       nextRunAt: recurringExpenses.nextRunAt,
       createdByParticipantId: recurringExpenses.createdByParticipantId,
       currencyMode: groups.currencyMode,
@@ -538,10 +630,29 @@ export async function generateDueOccurrences(
       .orderBy(sql`${recurringOccurrences.occurrenceDate} DESC`)
       .limit(1);
 
+    /*
+     * How many this series has already had, which is what a rule ending after
+     * a count is measured against. Counted rather than remembered: the
+     * occurrence rows are the record, and a column tracking the same number
+     * would be a second one to keep in step.
+     *
+     * Only asked for when the answer can change a decision.
+     */
+    const alreadyGenerated =
+      rule.count == null
+        ? 0
+        : ((
+            await db
+              .select({ total: sql<number>`count(*)::int` })
+              .from(recurringOccurrences)
+              .where(eq(recurringOccurrences.recurringExpenseId, template.id))
+          )[0]?.total ?? 0);
+
     const due = occurrencesUpTo(rule, today, {
       from: lastOccurrence?.occurrenceDate ?? null,
       // Cap catch-up so a template dormant for years cannot flood a group.
       maxOccurrences: 120,
+      alreadyGenerated,
     });
 
     for (const occurrenceDate of due) {
@@ -562,9 +673,18 @@ export async function generateDueOccurrences(
     // Advance the due marker even when nothing was generated, so the template
     // is not re-scanned on every tick.
     const lastGenerated = due.at(-1) ?? lastOccurrence?.occurrenceDate ?? null;
-    const upcoming = lastGenerated
-      ? nextOccurrence(rule, lastGenerated)
-      : firstOccurrence(rule);
+    /*
+     * A series that has had all its occurrences has no next one, however
+     * happily the maths would go on producing dates. `nextOccurrence` sees a
+     * single occurrence and cannot know, so the count is applied here — the
+     * one place that knows how many there have been.
+     */
+    const exhausted = remainingOf(rule, alreadyGenerated + due.length) <= 0;
+    const upcoming = exhausted
+      ? null
+      : lastGenerated
+        ? nextOccurrence(rule, lastGenerated)
+        : firstOccurrence(rule);
 
     await db
       .update(recurringExpenses)
@@ -600,7 +720,7 @@ interface TemplateRow {
   payers: unknown;
   splitMethod: SplitInput["method"];
   splitInput: unknown;
-  frequency: "weekly" | "monthly" | "yearly";
+  frequency: RecurrenceFrequency;
   interval: number;
   weekday: number | null;
   dayOfMonth: number | null;

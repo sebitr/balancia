@@ -30,10 +30,16 @@ export const exchangeRateSourceEnum = pgEnum("exchange_rate_source", [
 
 export const actorTypeEnum = pgEnum("actor_type", ["user", "guest", "system"]);
 
+/**
+ * `daily` is last because Postgres orders an enum by the order its labels were
+ * added, and appending is the only change that needs no rewrite of the type.
+ * Nothing sorts by this column, so the order is a migration concern only.
+ */
 export const recurrenceFrequencyEnum = pgEnum("recurrence_frequency", [
   "weekly",
   "monthly",
   "yearly",
+  "daily",
 ]);
 
 /**
