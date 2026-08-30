@@ -32,7 +32,8 @@ import {
 import type { RemindDebt, RemindRecipient } from "@/modules/reminders/types";
 
 /**
- * Two steps: who owes you, and what to say to them.
+ * Two steps: who owes you, and what to say to them — or one, when only one
+ * person can be asked at all.
  *
  * The message is one draft, personalised per recipient and sent one at a time,
  * because the two halves of "send" are not the same act: where Balancia can
@@ -50,6 +51,12 @@ import type { RemindDebt, RemindRecipient } from "@/modules/reminders/types";
  * once a day, asking them per currency would spend the whole allowance on half
  * the debt. Their amounts are listed instead — beside each other in the row,
  * and both named in the one message — because two currencies have no sum.
+ *
+ * A list of one is not a choice. Where a single person can be reminded the
+ * picker is skipped and the sheet opens on the message, with no arrow back
+ * because there is nothing behind it. Nothing is hidden by that: the route
+ * their message takes is still named before it goes, on the send button and
+ * in the line under it, which is where it was always said last anyway.
  */
 
 const TONES: readonly RemindTone[] = ["gentle", "dry", "cheeky"];
@@ -92,7 +99,16 @@ export function RemindSheet({
   const locale = useNumberLocale();
   const [isPending, startTransition] = useTransition();
 
-  const [step, setStep] = useState<Step>("who");
+  /**
+   * The one person this sheet could be about, when there is only one.
+   *
+   * A locked row counts as nobody: it leaves nothing to compose, so the sheet
+   * stays on the list, where the row can say when they were last asked.
+   */
+  const soleRecipient =
+    recipients.length === 1 && !recipients[0].locked ? recipients[0] : null;
+
+  const [step, setStep] = useState<Step>(soleRecipient ? "message" : "who");
   /** Pinned once, so the "reminded 2 hours ago" lines do not drift mid-sheet. */
   const [openedAt] = useState(() => new Date());
   const [tone, setTone] = useState<RemindTone>(DEFAULT_TONE);
@@ -417,15 +433,20 @@ export function RemindSheet({
       <SheetTitle className="sr-only">{t("messageTitle")}</SheetTitle>
 
       <div className="mb-[18px] flex items-center gap-2.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("back")}
-          className="size-8 shrink-0 rounded-full text-muted-foreground [&_svg:not([class*='size-'])]:size-[19px]"
-          onClick={() => setStep("who")}
-        >
-          <ChevronLeft aria-hidden="true" />
-        </Button>
+        {/* Absent when the picker was skipped — it would go back to a list of
+            one, which is the screen that decided to get out of the way. The X
+            is still there, and still leaves. */}
+        {!soleRecipient && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("back")}
+            className="size-8 shrink-0 rounded-full text-muted-foreground [&_svg:not([class*='size-'])]:size-[19px]"
+            onClick={() => setStep("who")}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+        )}
 
         <AvatarStack names={queue.map((recipient) => recipient.name)} />
 

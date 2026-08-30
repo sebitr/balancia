@@ -76,7 +76,10 @@ describe("choosing who to remind", () => {
    * before anything is sent.
    */
   it("does not quietly push to somebody who muted the group", () => {
-    render([recipient({ channel: "share", muted: true })]);
+    render([
+      recipient({ channel: "share", muted: true }),
+      recipient({ participantId: "padi", name: "Padi", channel: "share" }),
+    ]);
 
     expect(screen.getByText("Muted")).toBeInTheDocument();
     expect(screen.queryByText("Notification")).not.toBeInTheDocument();
@@ -106,8 +109,9 @@ describe("choosing who to remind", () => {
 
   /**
    * A group that spent in two currencies owes two simplified debts between the
-   * same pair. That is one person to ask, once — so one row, one checkbox, and
-   * a count of people rather than of debts.
+   * same pair. That is one person to ask, once — so one row, not two, and a
+   * count of people rather than of debts. Somebody else is in the list only
+   * because a list of one does not show this screen at all.
    */
   it("asks somebody who owes in two currencies once, for both", () => {
     render([
@@ -117,13 +121,19 @@ describe("choosing who to remind", () => {
           { amount: "1400", currency: "JPY" },
         ],
       }),
+      recipient({
+        participantId: "padi",
+        name: "Padi",
+        debts: [{ amount: "10000", currency: "EUR" }],
+      }),
     ]);
 
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    // Two people, three debts.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
     expect(screen.getByText("€148.00")).toBeInTheDocument();
     expect(screen.getByText("¥1,400")).toBeInTheDocument();
     expect(
-      screen.getByText("1 person owes you €148.00 and ¥1,400."),
+      screen.getByText("2 people owe you €248.00 and ¥1,400."),
     ).toBeInTheDocument();
   });
 
@@ -152,9 +162,11 @@ describe("choosing who to remind", () => {
 
   it("cannot go on to a message with nobody selected", async () => {
     const user = userEvent.setup();
-    render([recipient()]);
+    render([recipient(), recipient({ participantId: "padi", name: "Padi" })]);
 
-    await user.click(screen.getByRole("checkbox"));
+    for (const box of screen.getAllByRole("checkbox")) {
+      await user.click(box);
+    }
     expect(
       screen.getByRole("button", { name: /write the message/i }),
     ).toBeDisabled();
@@ -186,14 +198,59 @@ describe("choosing who to remind", () => {
   });
 });
 
-describe("writing the message", () => {
-  it("fills the draft in with the debt and who it is owed to", async () => {
-    const user = userEvent.setup();
+/**
+ * A list of one is not a choice, and the screen that exists to make one has
+ * nothing to offer. It gets out of the way — but only when that single row
+ * could have been ticked, and only when it really is the only row.
+ */
+describe("a sheet with one person in it", () => {
+  it("opens on the message, not on a list of one", () => {
     render([recipient()]);
 
-    await user.click(
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /the message to send/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no way back to the screen it skipped", () => {
+    render([recipient()]);
+
+    expect(
+      screen.queryByRole("button", { name: /back to who/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Nobody to write to, so the row stays and says when it was last asked. */
+  it("keeps the list when the only person was reminded yesterday", () => {
+    render([
+      recipient({ locked: true, lastRemindedAt: "2026-08-14T09:00:00.000Z" }),
+    ]);
+
+    expect(
       screen.getByRole("button", { name: /write the message/i }),
-    );
+    ).toBeInTheDocument();
+  });
+
+  /** Two rows are still a list, even when only one of them can be ticked. */
+  it("keeps the list when somebody else was reminded yesterday", () => {
+    render([
+      recipient(),
+      recipient({
+        participantId: "padi",
+        name: "Padi",
+        locked: true,
+        lastRemindedAt: "2026-08-14T09:00:00.000Z",
+      }),
+    ]);
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  });
+});
+
+describe("writing the message", () => {
+  it("fills the draft in with the debt and who it is owed to", () => {
+    render([recipient()]);
 
     const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
       name: /the message to send/i,
@@ -209,8 +266,7 @@ describe("writing the message", () => {
    * Naming one of two currencies would ask for part of the debt while spending
    * the whole day's allowance, so the draft names both.
    */
-  it("names every currency the person owes in", async () => {
-    const user = userEvent.setup();
+  it("names every currency the person owes in", () => {
     render([
       recipient({
         debts: [
@@ -219,10 +275,6 @@ describe("writing the message", () => {
         ],
       }),
     ]);
-
-    await user.click(
-      screen.getByRole("button", { name: /write the message/i }),
-    );
 
     const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
       name: /the message to send/i,
@@ -231,8 +283,7 @@ describe("writing the message", () => {
   });
 
   /** One person, one send — not one per currency. */
-  it("does not queue the same person twice", async () => {
-    const user = userEvent.setup();
+  it("does not queue the same person twice", () => {
     render([
       recipient({
         debts: [
@@ -242,36 +293,22 @@ describe("writing the message", () => {
       }),
     ]);
 
-    await user.click(
-      screen.getByRole("button", { name: /write the message/i }),
-    );
-
     // Singular: one person to ask, however many currencies they owe in.
     expect(
       screen.getByText("Jonas owes you · Portugal, March"),
     ).toBeInTheDocument();
   });
 
-  it("names the channel on the button that will do the sending", async () => {
-    const user = userEvent.setup();
+  it("names the channel on the button that will do the sending", () => {
     render([recipient()]);
-
-    await user.click(
-      screen.getByRole("button", { name: /write the message/i }),
-    );
 
     expect(
       screen.getByRole("button", { name: "Send to Jonas in Balancia" }),
     ).toBeInTheDocument();
   });
 
-  it("offers to share instead when Balancia cannot deliver", async () => {
-    const user = userEvent.setup();
+  it("offers to share instead when Balancia cannot deliver", () => {
     render([recipient({ channel: "share" })]);
-
-    await user.click(
-      screen.getByRole("button", { name: /write the message/i }),
-    );
 
     expect(
       screen.getByRole("button", { name: "Share with Jonas" }),
@@ -284,13 +321,8 @@ describe("writing the message", () => {
    * is what stops a sender typing past the end and pushing the URL out of
    * sight.
    */
-  it("shows the group link beside the draft, not inside it", async () => {
-    const user = userEvent.setup();
+  it("shows the group link beside the draft, not inside it", () => {
     render([recipient({ channel: "share" })]);
-
-    await user.click(
-      screen.getByRole("button", { name: /write the message/i }),
-    );
 
     const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
       name: /the message to send/i,
@@ -309,9 +341,6 @@ describe("writing the message", () => {
     const user = userEvent.setup();
     render([recipient()]);
 
-    await user.click(
-      screen.getByRole("button", { name: /write the message/i }),
-    );
     expect(screen.queryByText(/\/groups\/g1$/)).not.toBeInTheDocument();
 
     await user.click(
