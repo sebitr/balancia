@@ -12,10 +12,14 @@ import type { PaymentQrStandard } from "@/modules/payouts/qr/payment-qr";
  * a phone held up to another phone — which is exactly how one of these gets
  * scanned in a restaurant.
  *
- * **Error correction is fixed at M** for both standards. Neither leaves it to
- * taste: the EPC guidelines specify M, and the Swiss one relies on it, because
- * the Swiss cross sits on top of the middle of the code and something has to
- * pay for the modules it covers.
+ * **Error correction is fixed at M** for every standard here. The two SEPA
+ * ones do not leave it to taste: the EPC guidelines specify M, and the Swiss
+ * one relies on it, because the Swiss cross sits on top of the middle of the
+ * code and something has to pay for the modules it covers. The rest are M
+ * because that is the level their own specifications assume, and because a
+ * code held up to another phone is read in one go or not at all — the higher
+ * levels buy resilience against a printed code being scuffed, which is not the
+ * failure this one meets.
  *
  * Rendered in plain black and white, not in the app's palette. A payment code
  * is read by a camera under a restaurant's lighting, and the contrast it needs
@@ -27,7 +31,11 @@ export function PaymentQr({
   label,
 }: {
   payload: string;
-  standard: PaymentQrStandard;
+  /**
+   * Which standard drew it, or null when the payload is an ordinary link being
+   * handed to a phone rather than a scheme's own code.
+   */
+  standard: PaymentQrStandard | null;
   /** What a screen reader is told this is; the code itself is decoration. */
   label: string;
 }) {

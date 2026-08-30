@@ -69,7 +69,17 @@ const FIELDS: Partial<Record<PaymentMethodId, PayoutFieldKind>> = {
   venmo: "handle",
   vipps: "phone",
   wero: "phone",
-  wise: "email",
+  // A Wisetag, not the email on the account. Both identify the same person to
+  // Wise, but only one of them is what `wise.com/pay/me/<wisetag>` is built
+  // from — and that link is the difference between a detail to retype and a
+  // page that opens on the right person.
+  //
+  // Details already stored under the old kind are left alone rather than
+  // migrated: an email is still a true answer to "how do I pay you on Wise",
+  // and rewriting somebody's saved detail into a Wisetag we would have to
+  // guess at is not a repair. `isSimpleHandle` refuses to build a link from
+  // one, so an old detail shows as copyable text exactly as it does today.
+  wise: "handle",
   zelle: "email",
 };
 

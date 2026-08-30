@@ -25,13 +25,27 @@ import { money, toMajorString } from "@/modules/currencies/money";
  *  - **Payee-generated.** Lydia money pots, Vipps/MobilePay payment links,
  *    Satispay and Payconiq all mint a link or a QR at the receiving end. The
  *    payer cannot derive one; only the payee can hand one over.
- *  - **Bank-mediated or code-based.** Zelle, Bizum, BLIK, PayID, Interac and
- *    Pix all happen inside the payer's own banking app, or through a code that
- *    is typed rather than followed. There is no URL to open.
+ *  - **Bank-mediated or code-based.** Zelle, Bizum, BLIK, PayID and Interac
+ *    all happen inside the payer's own banking app, or through a code that is
+ *    typed rather than followed. There is no URL to open.
  *
- * Wise is a near miss worth naming: `wise.com/pay/me/<wisetag>` is real, but
- * this app stores an *email address* for Wise (`payoutFieldFor`), and an email
- * is not a Wisetag. A link built from the wrong field is worse than none.
+ * Pix used to sit in that last group and no longer does — not because a URL
+ * appeared, but because a link was the wrong thing to look for. Its artefact
+ * is a **BR Code**, which is scanned or pasted rather than followed, and
+ * `qr/pix.ts` builds one from the key this app already stores. Swish moved out
+ * of "merchant-only" for the same reason: the token-minting deep link is the
+ * Handel flow, while the person-to-person code is four fields and no API. Both
+ * are in `qr/payment-qr.ts`, which is where a scheme whose artefact is not a
+ * URL now belongs.
+ *
+ * Wise was a near miss and is now a plain profile link. The field it stores
+ * changed from an email address to a Wisetag (`payoutFieldFor`), which is what
+ * `wise.com/pay/me/<wisetag>` is built from. Wise documents `?amount=`,
+ * `?currency=` and `?description=` on the *business* open link and says
+ * nothing about the personal one, so none of them is written here and the
+ * amount is left to the payer — an unverified parameter that silently does
+ * nothing would make `carriesAmount` a lie, and that flag is the sentence the
+ * screen shows about whether they still have to type the figure.
  *
  * ## https over custom schemes
  *
@@ -81,6 +95,14 @@ export interface PayoutLinkRequest {
   readonly currency: string;
   /** What the payment is for — a group name. Written only where it is private. */
   readonly note?: string;
+  /**
+   * Whom the money is going to, where the scheme shows it back for confirmation.
+   *
+   * Only UPI uses it, and it matters there more than its size suggests: a
+   * virtual payment address is an opaque string, so without this the payer
+   * confirms a payment against `sebtr@okhdfcbank` and nothing else.
+   */
+  readonly payeeName?: string;
 }
 
 /**
@@ -103,6 +125,8 @@ export function payoutDeepLink(
       return profile("https://revolut.me/", stripLeading(detail, "@"));
     case "monzo":
       return profile("https://monzo.me/", stripLeading(detail, "@"));
+    case "wise":
+      return profile("https://wise.com/pay/me/", stripLeading(detail, "@"));
     case "venmo":
       return venmo(stripLeading(detail, "@"), request);
     case "cash_app":
@@ -198,6 +222,15 @@ function upi(vpa: string, request: PayoutLinkRequest): PayoutDeepLink | null {
   if (!/^[a-z0-9.\-_]{2,}@[a-z][a-z0-9.\-]*$/i.test(vpa)) return null;
 
   const query = new URLSearchParams({ pa: vpa });
+  // The payee's name, which every UPI app shows on its confirmation screen.
+  // The specification lists it beside the address for exactly this reason: an
+  // address is opaque, and a person about to send money should be reading a
+  // name. Trimmed to what the field carries and dropped if it empties.
+  const payee = (request.payeeName ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 50);
+  if (payee) query.set("pn", payee);
   const rupees = request.currency.toUpperCase() === "INR";
   if (rupees) {
     query.set("am", majorOf(request));

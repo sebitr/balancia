@@ -88,12 +88,13 @@ export interface PayoutHintView {
    */
   readonly methods: readonly PayoutMethodChoice[];
   /**
-   * The payment code, built on the server because only the server holds the
-   * creditor's address. From the `bank` entry wherever there is one, which is
-   * the only method a banking app can scan for. Null whenever a code cannot be
-   * built correctly — no bank entry, a missing address, a QR-IBAN, a currency
-   * neither standard carries — which is the common case rather than the
-   * exception.
+   * The leading payment code, built on the server because only the server
+   * holds the creditor's address.
+   *
+   * Each entry in `methods` now carries its own code, and this is whichever of
+   * them is the first to have one — so it is what the row shows before the
+   * reader picks a chip, and not a separate answer. Null whenever no method
+   * can produce a code correctly, which is still the common case.
    */
   readonly qr: { standard: PaymentQrStandard; payload: string } | null;
   /**
