@@ -224,6 +224,8 @@ describe("message catalogues", () => {
       // to sit beside it are a country's business rather than a language's
       // and have moved to `payouts/examples.ts`.
       "payouts.addressStreetHint",
+      // An income category French spells exactly as English does.
+      "expenses.incomeCategories.contributions",
     ]);
 
     const identical = [...english].filter(

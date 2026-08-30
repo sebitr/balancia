@@ -178,6 +178,17 @@
       "finance_admin": "Finance & Admin",
       "other": "Other"
     },
+    "incomeCategories": {
+      "rent": "Rent",
+      "refunds": "Refunds",
+      "deposits": "Deposits returned",
+      "contributions": "Contributions",
+      "sales": "Sales",
+      "earnings": "Earnings",
+      "benefits": "Benefits & subsidies",
+      "financial": "Financial",
+      "other": "Other"
+    },
     "subcategories": {
       "groceries": {
         "supermarket": "Supermarket",
@@ -387,6 +398,65 @@
         "legal": "Legal",
         "accounting": "Accounting",
         "fines": "Fines",
+        "other": "Other"
+      }
+    },
+    "incomeSubcategories": {
+      "rent": {
+        "monthly_rent": "Monthly rent",
+        "parking": "Parking space",
+        "storage": "Storage",
+        "utilities_share": "Utilities share",
+        "short_stay": "Short stay",
+        "sublet": "Sublet",
+        "other": "Other"
+      },
+      "refunds": {
+        "purchase_return": "Purchase return",
+        "cancelled_booking": "Cancelled booking",
+        "insurance_claim": "Insurance claim",
+        "overpayment": "Overpayment",
+        "tax_refund": "Tax refund",
+        "other": "Other"
+      },
+      "deposits": {
+        "rental_deposit": "Rental deposit",
+        "utility_deposit": "Utility deposit",
+        "key_deposit": "Key deposit",
+        "other": "Other"
+      },
+      "contributions": {
+        "group_fund": "Group fund",
+        "trip_fund": "Trip fund",
+        "membership_dues": "Membership dues",
+        "gift_received": "Gift received",
+        "other": "Other"
+      },
+      "sales": {
+        "secondhand": "Secondhand",
+        "tickets": "Tickets",
+        "food_drinks": "Food & drinks",
+        "merchandise": "Merchandise",
+        "other": "Other"
+      },
+      "earnings": {
+        "salary": "Salary",
+        "freelance": "Freelance",
+        "bonus": "Bonus",
+        "tips": "Tips",
+        "other": "Other"
+      },
+      "benefits": {
+        "housing_allowance": "Housing allowance",
+        "family_allowance": "Family allowance",
+        "grant": "Grant",
+        "insurance_payout": "Insurance payout",
+        "other": "Other"
+      },
+      "financial": {
+        "interest": "Interest",
+        "dividends": "Dividends",
+        "cashback": "Cashback",
         "other": "Other"
       }
     },

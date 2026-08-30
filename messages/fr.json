@@ -178,6 +178,17 @@
       "finance_admin": "Finance & administratif",
       "other": "Autre"
     },
+    "incomeCategories": {
+      "rent": "Loyer",
+      "refunds": "Remboursements",
+      "deposits": "Cautions rendues",
+      "contributions": "Contributions",
+      "sales": "Ventes",
+      "earnings": "Revenus",
+      "benefits": "Aides & allocations",
+      "financial": "Financier",
+      "other": "Autre"
+    },
     "subcategories": {
       "groceries": {
         "supermarket": "Supermarché",
@@ -387,6 +398,65 @@
         "legal": "Frais juridiques",
         "accounting": "Comptabilité",
         "fines": "Amendes",
+        "other": "Autre"
+      }
+    },
+    "incomeSubcategories": {
+      "rent": {
+        "monthly_rent": "Loyer mensuel",
+        "parking": "Place de parc",
+        "storage": "Dépôt",
+        "utilities_share": "Part des charges",
+        "short_stay": "Location courte durée",
+        "sublet": "Sous-location",
+        "other": "Autre"
+      },
+      "refunds": {
+        "purchase_return": "Retour d'achat",
+        "cancelled_booking": "Réservation annulée",
+        "insurance_claim": "Sinistre",
+        "overpayment": "Trop-payé",
+        "tax_refund": "Remboursement d'impôts",
+        "other": "Autre"
+      },
+      "deposits": {
+        "rental_deposit": "Caution de location",
+        "utility_deposit": "Dépôt de garantie",
+        "key_deposit": "Caution de clés",
+        "other": "Autre"
+      },
+      "contributions": {
+        "group_fund": "Caisse commune",
+        "trip_fund": "Caisse voyage",
+        "membership_dues": "Cotisations",
+        "gift_received": "Cadeau reçu",
+        "other": "Autre"
+      },
+      "sales": {
+        "secondhand": "Occasion",
+        "tickets": "Billets",
+        "food_drinks": "Boissons & repas",
+        "merchandise": "Articles",
+        "other": "Autre"
+      },
+      "earnings": {
+        "salary": "Salaire",
+        "freelance": "Indépendant",
+        "bonus": "Prime",
+        "tips": "Pourboires",
+        "other": "Autre"
+      },
+      "benefits": {
+        "housing_allowance": "Aide au logement",
+        "family_allowance": "Allocations familiales",
+        "grant": "Bourse",
+        "insurance_payout": "Indemnité d'assurance",
+        "other": "Autre"
+      },
+      "financial": {
+        "interest": "Intérêts",
+        "dividends": "Dividendes",
+        "cashback": "Cashback",
         "other": "Autre"
       }
     },

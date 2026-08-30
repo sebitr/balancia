@@ -33,7 +33,7 @@ import type {
 /** A merchant rule long enough to be a name rather than a coincidence. */
 const DISTINCTIVE_TOKEN_LENGTH = 5;
 
-interface CompiledPhrase {
+export interface CompiledPhrase {
   /** Normalized form, used as the signal's explanation and dedupe key. */
   readonly token: string;
   readonly tokens: readonly string[];
@@ -58,13 +58,13 @@ interface CompiledSeed {
 }
 
 /** Merchant rules go through the same normalization as the input they meet. */
-function compileMerchant(value: string): CompiledPhrase {
+export function compileMerchant(value: string): CompiledPhrase {
   const { normalizedMerchant } = normalizeMerchant(value);
   const tokens = tokenize(normalizedMerchant);
   return { token: normalizedMerchant, tokens, stems: tokens };
 }
 
-function compilePhrase(value: string): CompiledPhrase {
+export function compilePhrase(value: string): CompiledPhrase {
   const tokens = tokenize(value);
   return { token: tokens.join(" "), tokens, stems: tokens.map(singularize) };
 }
@@ -85,7 +85,7 @@ function compileSeed(seed: CategorySeed): CompiledSeed {
   };
 }
 
-function nonEmpty(phrase: CompiledPhrase): boolean {
+export function nonEmpty(phrase: CompiledPhrase): boolean {
   return phrase.tokens.length > 0;
 }
 
@@ -302,7 +302,7 @@ export function collectDeterministicSignals(
  * A short word appearing mid-descriptor is deliberately nothing: `bp` and
  * `max` occur inside ordinary sentences.
  */
-function merchantScore(
+export function merchantScore(
   merchantTokens: readonly string[],
   rule: CompiledPhrase,
 ): number | null {

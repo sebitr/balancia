@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { isValidSubcategory } from "@/modules/categorization";
+import {
+  isCategoryOfOppositeDirection,
+  isValidSubcategoryFor,
+} from "@/modules/categorization";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
 import { PAYMENT_METHOD_MAX_LENGTH } from "@/modules/settlements/payment-methods";
 import { ENTRY_DIRECTIONS } from "./direction";
@@ -100,10 +103,30 @@ export const expenseInputSchema = z
    * form is a convenience — this is the boundary the API, the importers and
    * the recurring generator all cross.
    */
-  .refine((value) => isValidSubcategory(value.category, value.subcategory), {
-    path: ["subcategory"],
-    message: "That subcategory does not belong to the chosen category",
-  });
+  .refine(
+    (value) =>
+      isValidSubcategoryFor(value.direction, value.category, value.subcategory),
+    {
+      path: ["subcategory"],
+      message: "That subcategory does not belong to the chosen category",
+    },
+  )
+  /**
+   * And the category has to belong to the direction.
+   *
+   * Two vocabularies share this column, told apart by `direction`, so
+   * `groceries` on an income is not merely unrecognised — it is a code that
+   * means something, and something wrong. Free text still passes: an import
+   * writes labels no vocabulary has ever heard of, and that is a supported
+   * outcome. See `isCategoryOfOppositeDirection`.
+   */
+  .refine(
+    (value) => !isCategoryOfOppositeDirection(value.direction, value.category),
+    {
+      path: ["category"],
+      message: "That category belongs to the other kind of entry",
+    },
+  );
 
 export type ExpenseInput = z.infer<typeof expenseInputSchema>;
 
