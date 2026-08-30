@@ -4,7 +4,8 @@ The initial production version is complete. Everything below is implemented,
 wired end to end, and covered by tests — there are no placeholder screens and no
 `TODO` stubs in core functionality.
 
-**Audited against the source on 30 August 2026**, at `c5f803a6`. Several
+**Audited against the source on 30 August 2026**, at `c5f803a6`, and re-run at
+`146b694d` once #260 and #261 had merged underneath it. Several
 entries had outlived what they described: guest claiming, expense search and
 filtering, and keyset pagination were all listed here as unbuilt or upcoming
 while shipping, and two end-to-end failures were still named after their
@@ -54,26 +55,27 @@ a limitation here stops being true.
 ## Verification
 
 Last run on macOS with Node 24.20, pnpm 11.20 and PostgreSQL 18.6, against
-`main` at `c5f803a6`:
+this branch at `146b694d` — `main` plus the audit:
 
 | Check               | Result                                          |
 | ------------------- | ----------------------------------------------- |
 | `pnpm install`      | Succeeds                                        |
 | `pnpm lint`         | Clean                                           |
 | `pnpm typecheck`    | Clean                                           |
-| `pnpm format:check` | **Fails on 9 files** — formatting only          |
-| `pnpm test:all`     | **3130 passed**, 206 files (unit + integration) |
+| `pnpm format:check` | Clean                                           |
+| `pnpm test:all`     | **3199 passed**, 211 files (unit + integration) |
 | `pnpm test:e2e`     | Not re-run in this pass — see below             |
-| `pnpm build`        | Compiles                                        |
+| `pnpm build`        | Compiles; service worker precaches 88 URLs      |
 | `pnpm audit --prod` | No known vulnerabilities                        |
 
 The PostgreSQL note that used to sit here is settled: this run was against the
 18 that Compose ships, not the 14 an earlier one used.
 
-`pnpm format:check` is the one red row, and it is nine files of Prettier
-disagreement rather than anything behavioural — `pnpm exec prettier --write .`
-closes it. It is listed rather than quietly fixed because this table is meant
-to say what a fresh clone actually does.
+There is no red row left. `format:check` was failing on nine files when this
+audit was written, and it was listed rather than quietly fixed because a table
+that only records good news is how this file got into the state it was in; #261
+has since fixed it properly, at the source. The test count moved with it —
+#260 brought the four new payment standards and their tests.
 
 The two end-to-end failures this section used to describe — the percentage
 wording in `expenses.spec.ts` and the "1 payments" plural in `import.spec.ts` —
@@ -196,16 +198,13 @@ These are deliberate omissions for this version, not oversights:
 
 ## Next priorities
 
-1. **Restore a green `pnpm format:check`.** Nine files disagree with Prettier;
-   the command is in CI, so the branch protection this table describes is
-   currently red for a reason nobody has to read code to fix.
-2. **Run `docker compose up -d --build` on a Docker host** and confirm a healthy
+1. **Run `docker compose up -d --build` on a Docker host** and confirm a healthy
    stack, then add that to CI as an integration smoke test.
-3. **Receipts in the export.** The data leaves as JSON, CSV or XLSX and the
+2. **Receipts in the export.** The data leaves as JSON, CSV or XLSX and the
    workbook names a receipt count per expense, but the attachments themselves
    still have to be downloaded one expense at a time. A single archive would
    finish the job — and it is the last gap in the promise that a group can
    leave with everything.
-4. **A default split preference.** Every other split control is here; what is
+3. **A default split preference.** Every other split control is here; what is
    missing is remembering the one a group uses most, so the common case stops
    being retyped.
