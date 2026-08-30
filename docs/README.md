@@ -37,6 +37,7 @@ useful guide.
 | [Dependency licensing](licensing.md)              | AGPL obligations and the production dependency policy                              |
 | [Receipt scanning](receipt-scanning.md)           | Local OCR, model files, parsing and privacy                                        |
 | [Automatic categorization](categorization.md)     | Local rules, confidence and learned overrides                                      |
+| [Offline expense entry](offline.md)               | Recording with no network, the send queue and writing an expense exactly once      |
 | [Settling up](settling-up.md)                     | Payment codes and links, which schemes are supported, and why the rest are not     |
 
 ## Developing Balancia

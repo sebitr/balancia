@@ -289,3 +289,48 @@ export const settlements = pgTable(
     ),
   ],
 );
+
+/**
+ * Keys a client generated for entries it wrote before the server had heard of
+ * them — the offline outbox's protection against writing an expense twice.
+ *
+ * The shape is `imported_fingerprints`: a group, a key that is unique within
+ * it, and the row that key produced. A replay looks the key up, finds the
+ * entry it already made, and hands back that id instead of a second one.
+ *
+ * What is *not* the same is where the key comes from, and the difference
+ * matters. An import fingerprint is a hash of what the row means, because two
+ * exports of one transaction have nothing else in common. Here the client is
+ * the same device that queued the entry, so it mints a random key and keeps it
+ * with the payload — which is the only way two genuinely identical entries can
+ * both land. Four people splitting the same €3 coffee twice in one afternoon is
+ * two expenses, and a content hash would silently eat the second.
+ *
+ * `entityId` carries no foreign key, as in `imported_fingerprints`: the row it
+ * names may be soft-deleted later, and the key must go on being spent — a
+ * replay arriving after somebody deleted the entry must not resurrect it.
+ */
+export const entryClientKeys = pgTable(
+  "entry_client_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    clientKey: text("client_key").notNull(),
+    /** `expense` today; the column is here so a repayment can join later. */
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The whole guarantee, in one index. The lookup below it is a fast path;
+    // this is what holds when two replays of one entry race each other.
+    uniqueIndex("entry_client_keys_group_key_unique").on(
+      table.groupId,
+      table.clientKey,
+    ),
+  ],
+);

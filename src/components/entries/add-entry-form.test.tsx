@@ -20,6 +20,32 @@ import { AddEntryDrawer } from "./add-entry-drawer";
  * service layer's problem and is tested there; this is about the form.
  */
 
+/**
+ * The idempotency key every save carries, whichever way it goes out.
+ *
+ * Asserted by shape rather than ignored, because the shape is load-bearing:
+ * the server refuses a key that is not a UUID, and a save whose key is
+ * refused is a save that can be written twice if its answer goes missing. A
+ * bare `expect.anything()` here would pass just as happily on `undefined`.
+ */
+const CLIENT_KEY = expect.stringMatching(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+);
+
+/**
+ * What the browser reports about the network.
+ *
+ * `navigator.onLine` is read-only and jsdom leaves it at true, so it is
+ * redefined rather than assigned. The form only ever reads it to pick which
+ * path to try first — see the offline tests at the foot of this file.
+ */
+function setOnline(online: boolean): void {
+  Object.defineProperty(navigator, "onLine", {
+    value: online,
+    configurable: true,
+  });
+}
+
 const {
   createExpense,
   createSettlement,
@@ -33,6 +59,7 @@ const {
   restoreExpense,
   restoreSettlement,
   upload,
+  enqueue,
   success,
   push,
   replace,
@@ -50,6 +77,7 @@ const {
   restoreExpense: vi.fn(),
   restoreSettlement: vi.fn(),
   upload: vi.fn(),
+  enqueue: vi.fn(),
   success: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
@@ -71,6 +99,7 @@ vi.mock("@/modules/expenses/actions", () => ({
 vi.mock("@/modules/recurring/actions", () => ({
   createRecurringAction: createRecurring,
 }));
+vi.mock("@/lib/offline/outbox", () => ({ enqueueEntry: enqueue }));
 vi.mock("@/components/expenses/upload-receipt", () => ({
   uploadReceipt: upload,
 }));
@@ -133,6 +162,7 @@ function renderForm(
     restoreExpense,
     restoreSettlement,
     upload,
+    enqueue,
     success,
     push,
     replace,
@@ -159,6 +189,10 @@ function renderForm(
     ok: true,
     file: { id: "att-1", fileName: "bill.pdf" },
   });
+  enqueue.mockResolvedValue(undefined);
+  // Every test but the offline ones runs with a network, which is what the
+  // browser reports unless a test says otherwise.
+  setOnline(true);
 
   return renderWithIntl(
     <AddEntryDrawer
@@ -338,6 +372,7 @@ describe("the default expense path", () => {
         amount: "8460",
         currency: "CHF",
       }),
+      CLIENT_KEY,
     );
     expect(success).toHaveBeenCalledWith("Expense added", expect.anything());
   });
@@ -569,6 +604,7 @@ describe("attaching a file", () => {
     expect(createExpense).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ attachmentIds: ["att-1"] }),
+      CLIENT_KEY,
     );
   });
 
@@ -623,6 +659,7 @@ describe("income", () => {
     expect(createExpense).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ direction: "in", amount: "240000" }),
+      CLIENT_KEY,
     );
     expect(success).toHaveBeenCalledWith("Income added", expect.anything());
   });
@@ -721,6 +758,7 @@ describe("switching type", () => {
     expect(createExpense).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ description: "Dinner", notes: "" }),
+      CLIENT_KEY,
     );
   });
 
@@ -745,6 +783,7 @@ describe("switching type", () => {
         description: "Dinner",
         notes: "Dinner, minus the wine",
       }),
+      CLIENT_KEY,
     );
   });
 });
@@ -2119,5 +2158,113 @@ describe("a drawer opened on a stated debt", () => {
       "aria-selected",
       "true",
     );
+  });
+});
+
+/**
+ * Saving with no server to save to.
+ *
+ * The behaviour these pin is the one the feature exists for: an expense typed
+ * abroad, with the radio finding nothing, has to end up somewhere it will not
+ * be lost — and the person typing it has to be told which of the two things
+ * just happened, because "added to the group" and "held on this phone" are not
+ * the same promise.
+ */
+describe("with no network", () => {
+  it("keeps the expense on the device instead of calling the server", async () => {
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new");
+    setOnline(false);
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    expect(createExpense).not.toHaveBeenCalled();
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupId: "g1",
+        clientKey: CLIENT_KEY,
+        payload: expect.objectContaining({
+          description: "Dinner",
+          amount: "8460",
+          currency: "CHF",
+          direction: "out",
+        }),
+      }),
+    );
+  });
+
+  it("says it is on the device, not that it is in the group", async () => {
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new");
+    setOnline(false);
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    // "Expense added" would be a claim about the group's balances, which have
+    // not moved and will not until this reaches a server.
+    expect(success).toHaveBeenCalledWith(
+      "Saved on this device",
+      expect.anything(),
+    );
+  });
+
+  it("queues an entry whose request never came back", async () => {
+    // The browser said there was a network and there was not — a captive
+    // portal, a tunnel, a server that went away mid-request. Same destination,
+    // and under the key that attempt already used: if the write did land, the
+    // replay finds it and adds nothing.
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new");
+    createExpense.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    const sentKey = createExpense.mock.calls[0][2] as string;
+    expect(sentKey).toEqual(CLIENT_KEY);
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({ clientKey: sentKey }),
+    );
+  });
+
+  it("does not queue an edit to an entry the server already has", async () => {
+    // Editing offline is the case this feature deliberately does not cover:
+    // the row may have been changed or deleted by somebody else meanwhile, and
+    // replaying a stale copy over it would be exactly the conflict a
+    // create-only queue does not have. So an edit still goes to the server,
+    // and its failure surfaces rather than being swallowed into a queue.
+    const user = userEvent.setup();
+    renderForm({
+      editing: {
+        kind: "expense" as const,
+        id: "e1",
+        type: "expense" as const,
+        amountText: "84.60",
+        currency: "CHF",
+        exchangeRate: "",
+        date: "2026-08-12",
+        description: "Migros",
+        category: "groceries",
+        subcategory: "",
+        notes: "",
+        payerId: "herve",
+        settleTo: null,
+        includedIds: ["seb", "herve"],
+        splitMethod: "equal" as const,
+        splitValues: {},
+        paymentMethod: "",
+      },
+    });
+    setOnline(false);
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(updateExpense).toHaveBeenCalled();
   });
 });

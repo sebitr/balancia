@@ -4,6 +4,7 @@ import { authorizeGroup } from "@/lib/security/authorization";
 import { createExpense, listExpenses } from "@/modules/expenses/service";
 import { expenseInputSchema } from "@/modules/expenses/schemas";
 import {
+  idempotencyKey,
   invalidInput,
   isUuid,
   mobileApiError,
@@ -92,7 +93,9 @@ async function handlePost(
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
-    const expenseId = await createExpense(access, parsed.data);
+    const expenseId = await createExpense(access, parsed.data, {
+      clientKey: idempotencyKey(request),
+    });
     return noStore({ expenseId }, { status: 201 });
   } catch (error) {
     return mobileApiError(error, "/api/groups/[groupId]/expenses POST", {

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
@@ -783,5 +784,177 @@ describe("the category and subcategory pair", () => {
       .where(eq(expenses.id, expenseId));
 
     expect(row).toEqual({ category: "restaurants", subcategory: null });
+  });
+});
+
+/**
+ * Replaying an entry that was queued offline.
+ *
+ * The queue's whole risk is here. A device that lost its connection mid-write
+ * cannot tell a request that never arrived from one that arrived and whose
+ * answer was lost, so it sends again — and if the second send writes a second
+ * expense, the group's balances are wrong by the price of a dinner and nobody
+ * can see why. These run against real PostgreSQL because the guarantee is a
+ * unique index, and a unique index is not something a mock can be wrong about.
+ */
+describe("offline replay", () => {
+  const dinner = (group: Awaited<ReturnType<typeof createTestGroup>>) => ({
+    description: "Dinner",
+    notes: "",
+    category: "Food",
+    amount: "3000",
+    currency: "EUR",
+    exchangeRate: "",
+    expenseDate: isoToday(),
+    payers: [{ participantId: group.ownerParticipantId, amount: "3000" }],
+    splitMethod: "equal" as const,
+    splitEntries: [{ participantId: group.ownerParticipantId }],
+  });
+
+  it("writes one expense however many times the same key arrives", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const clientKey = randomUUID();
+
+    const first = await createExpense(group.access, dinner(group), {
+      clientKey,
+    });
+    const second = await createExpense(group.access, dinner(group), {
+      clientKey,
+    });
+    const third = await createExpense(group.access, dinner(group), {
+      clientKey,
+    });
+
+    expect(second).toBe(first);
+    expect(third).toBe(first);
+
+    const rows = await getDb()
+      .select()
+      .from(expenses)
+      .where(eq(expenses.groupId, group.groupId));
+    expect(rows).toHaveLength(1);
+  });
+
+  it("leaves the balances alone on a replay", async () => {
+    // The reason the count above matters. A second copy would show up here as
+    // €30 that nobody spent, split between people who never agreed to it.
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+    const clientKey = randomUUID();
+
+    const input = {
+      ...dinner(group),
+      splitEntries: [
+        { participantId: group.ownerParticipantId },
+        { participantId: other },
+      ],
+    };
+
+    await createExpense(group.access, input, { clientKey });
+    const after = await loadGroupBalances(group.access);
+    await createExpense(group.access, input, { clientKey });
+    const afterReplay = await loadGroupBalances(group.access);
+
+    expect(afterReplay.currencies).toEqual(after.currencies);
+  });
+
+  it("writes both when two identical expenses carry different keys", async () => {
+    // The case a content hash would get wrong, and the reason the key is
+    // minted by the client rather than derived from the row. Two identical
+    // €3 coffees on one afternoon are two expenses.
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    const first = await createExpense(group.access, dinner(group), {
+      clientKey: randomUUID(),
+    });
+    const second = await createExpense(group.access, dinner(group), {
+      clientKey: randomUUID(),
+    });
+
+    expect(second).not.toBe(first);
+    const rows = await getDb()
+      .select()
+      .from(expenses)
+      .where(eq(expenses.groupId, group.groupId));
+    expect(rows).toHaveLength(2);
+  });
+
+  it("writes one expense when two replays race each other", async () => {
+    // Two tabs waking on the same reconnect. Neither sees the other's key
+    // before writing, so both get past the lookup and the unique index is the
+    // only thing between them and a duplicate.
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const clientKey = randomUUID();
+
+    const [first, second] = await Promise.all([
+      createExpense(group.access, dinner(group), { clientKey }),
+      createExpense(group.access, dinner(group), { clientKey }),
+    ]);
+
+    expect(second).toBe(first);
+    const rows = await getDb()
+      .select()
+      .from(expenses)
+      .where(eq(expenses.groupId, group.groupId));
+    expect(rows).toHaveLength(1);
+  });
+
+  it("does not resurrect an entry that was deleted after it was written", async () => {
+    // A replay arriving after somebody removed the entry. The key is spent, so
+    // it answers with the id it already made and adds nothing — the deletion
+    // was a decision by a person who could see what they were removing, and a
+    // retry from a phone is not a reason to overturn it.
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const clientKey = randomUUID();
+
+    const expenseId = await createExpense(group.access, dinner(group), {
+      clientKey,
+    });
+    await deleteExpense(group.access, expenseId);
+
+    const replayed = await createExpense(group.access, dinner(group), {
+      clientKey,
+    });
+
+    expect(replayed).toBe(expenseId);
+    const rows = await getDb()
+      .select()
+      .from(expenses)
+      .where(eq(expenses.groupId, group.groupId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].deletedAt).not.toBeNull();
+  });
+
+  it("keeps one group's keys out of another's", async () => {
+    // The index is on (group, key), not on the key alone: two devices are
+    // free to mint the same value, and a group must never be able to swallow
+    // another group's expense by colliding with it.
+    const actor = await createTestUser();
+    const first = await createTestGroup(actor);
+    const second = await createTestGroup(actor);
+    const clientKey = randomUUID();
+
+    const a = await createExpense(first.access, dinner(first), { clientKey });
+    const b = await createExpense(second.access, dinner(second), { clientKey });
+
+    expect(b).not.toBe(a);
+  });
+
+  it("writes an ordinary expense when no key is offered at all", async () => {
+    // Every caller that is not the queue — the form online, an import, the
+    // recurring generator — passes nothing, and must go on behaving exactly as
+    // it did before any of this existed.
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+
+    const first = await createExpense(group.access, dinner(group));
+    const second = await createExpense(group.access, dinner(group));
+
+    expect(second).not.toBe(first);
   });
 });

@@ -16,7 +16,8 @@ import { passkeys, users, webauthnChallenges } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { telemetry } from "@/lib/telemetry";
-import { AuthError, isUniqueViolation } from "./service";
+import { isUniqueViolation } from "@/lib/db/errors";
+import { AuthError } from "./service";
 
 /**
  * Passkey (WebAuthn) registration and authentication.

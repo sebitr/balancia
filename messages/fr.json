@@ -1312,10 +1312,26 @@
   },
   "offline": {
     "metaTitle": "Hors ligne",
-    "title": "Tu es hors ligne",
-    "body": "Balancia a besoin d'une connexion à ton serveur pour afficher les soldes et enregistrer les dépenses. Rien n'est perdu — reconnecte-toi et tout sera là où tu l'avais laissé.",
-    "note": "Cette version ne conserve pas les dépenses sur ton appareil hors ligne : rien de ce qui serait saisi ici ne serait enregistré.",
-    "retry": "Réessayer"
+    "title": "Vous êtes hors ligne",
+    "body": "Balancia ne parvient pas à joindre votre serveur : les soldes et l'historique sont indisponibles jusque-là.",
+    "note": "Les dépenses que vous ajoutez maintenant sont conservées sur cet appareil et envoyées dès le retour du réseau.",
+    "retry": "Réessayer",
+    "groupsTitle": "Ajouter une dépense à",
+    "noGroups": "Aucun groupe n'est encore disponible hors ligne sur cet appareil. Ouvrez une fois l'écran d'ajout d'un groupe en étant connecté, et il sera là la prochaine fois."
+  },
+  "outbox": {
+    "stripOffline": "Vous êtes hors ligne. Ce groupe affiche son état lors de votre dernière connexion.",
+    "stripWaiting": "{count, plural, one {# écriture en attente de synchronisation} other {# écritures en attente de synchronisation}}",
+    "stripSyncing": "{count, plural, one {Synchronisation de # écriture…} other {Synchronisation de # écritures…}}",
+    "stripBlocked": "{count, plural, one {# écriture n'a pas pu être enregistrée} other {# écritures n'ont pas pu être enregistrées}}",
+    "sheetTitle": "En attente de synchronisation",
+    "sheetBody": "Ces écritures sont conservées sur cet appareil jusqu'à ce que votre serveur soit joignable. Elles ne figurent pas encore dans les soldes du groupe.",
+    "synced": "{count, plural, one {# écriture synchronisée} other {# écritures synchronisées}}",
+    "blockedNoAccess": "Ce groupe ne vous est plus accessible : cette écriture ne peut pas être enregistrée.",
+    "blockedRefused": "Votre serveur a refusé cette écriture. Une des personnes concernées a peut-être été retirée du groupe.",
+    "discard": "Supprimer",
+    "notSavedTitle": "Rien n'est encore enregistré pour ce groupe",
+    "notSavedBody": "Ouvrez une fois l'écran d'ajout de ce groupe avec une connexion : il fonctionnera ensuite hors ligne."
   },
   "joinError": {
     "metaTitle": "Lien d'invitation",
@@ -2925,7 +2941,9 @@
       "paymentRecorded": "Paiement enregistré",
       "changesSaved": "Modifications enregistrées",
       "deleted": "Écriture supprimée",
-      "restored": "Écriture rétablie"
+      "restored": "Écriture rétablie",
+      "queued": "Enregistré sur cet appareil",
+      "queuedNote": "La synchronisation se fera dès le retour du réseau."
     },
     "errors": {
       "amountRequired": "Saisis d'abord un montant.",
