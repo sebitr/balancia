@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Hold back the Swiss QR-bill address until the IBAN says CH — `fix/payout-address-after-iban`
 - [ ] Let the scripts read `.env.local`, so the documented setup works as written — `fix/tsx-script-env`
 - [ ] Say what actually ships: audit the status doc against the source — `docs/status-audit`
 - [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
