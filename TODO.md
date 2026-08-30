@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Say what actually ships: audit the status doc against the source — `docs/status-audit`
 - [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
 
 ## Next
