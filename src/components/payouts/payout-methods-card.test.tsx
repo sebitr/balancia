@@ -243,4 +243,61 @@ describe("PayoutMethodsCard", () => {
     expect(screen.getByLabelText("Revtag")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove Revolut" }));
   });
+
+  it("shows an example from the country the method is used in", () => {
+    renderCard([
+      { method: "satispay", detail: "" },
+      { method: "twint", detail: "" },
+    ]);
+
+    // Satispay is Italian and TWINT is Swiss, and each field says so. A Swiss
+    // number greyed into the Satispay field describes somebody else's country
+    // to the one person who cannot tell.
+    const [satispay, twint] = screen.getAllByLabelText("Phone number");
+    expect(satispay).toHaveAttribute("placeholder", "+39 312 345 6789");
+    expect(twint).toHaveAttribute("placeholder", "+41 79 123 45 67");
+  });
+
+  it("names that same example when the number comes back refused", async () => {
+    const { user } = renderCard([{ method: "satispay", detail: "" }]);
+
+    await user.type(screen.getByLabelText("Phone number"), "3123456789");
+    await user.tab();
+
+    expect(
+      await screen.findByText(/like \+39 312 345 6789\./),
+    ).toBeInTheDocument();
+  });
+
+  it("groups a number as it is typed", async () => {
+    const { user } = renderCard([{ method: "twint", detail: "" }]);
+
+    const field = screen.getByLabelText("Phone number");
+    await user.type(field, "+41791234567");
+
+    // Thirteen digits in a row is not a phone number anybody can check
+    // against the one in their own contacts.
+    expect(field).toHaveValue("+41 79 123 45 67");
+  });
+
+  it("lets a deleted digit take its separator with it", async () => {
+    const { user } = renderCard([{ method: "twint", detail: "" }]);
+
+    const field = screen.getByLabelText("Phone number");
+    await user.type(field, "+41791234");
+    expect(field).toHaveValue("+41 79 123 4");
+
+    // One press, one visible change. A field that puts the space straight
+    // back is a field that has taken the backspace key away.
+    await user.type(field, "{backspace}");
+    expect(field).toHaveValue("+41 79 123");
+  });
+
+  it("shows a stored number spaced, rather than as the server keeps it", () => {
+    renderCard([TWINT]);
+
+    expect(screen.getByLabelText("Phone number")).toHaveValue(
+      "+41 78 627 67 80",
+    );
+  });
 });

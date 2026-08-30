@@ -59,6 +59,13 @@ well-specified problem where a bug is silent: a code that encodes wrongly still
 looks like a code. What Balancia keeps is the part that is actually its own,
 which is the payment payloads inside the symbol.
 
+Phone numbers are grouped and checked with `libphonenumber-js` (MIT, no
+transitive dependencies), which carries Google's libphonenumber metadata under
+Apache-2.0 — both compatible with the AGPL. What the dependency buys is the
+numbering plan of every country, which is data rather than logic: it changes
+when a regulator says so, and a hand-written table of it is stale from the day
+it is written. The platform offers nothing equivalent.
+
 Authentication is first-party except for the low-level WebAuthn protocol
 implementation in `@simplewebauthn/server` (MIT). Balancia delegates CBOR/COSE
 parsing and signature verification because duplicating security protocol code
