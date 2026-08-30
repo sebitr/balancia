@@ -45,17 +45,28 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 
 - `src/app` — routes, layouts, route handlers, Server Actions. Thin: validate
   input, resolve the actor, call a domain service, render.
-- `src/modules/<domain>` — business logic per domain (`auth`, `groups`,
-  `participants`, `expenses`, `settlements`, `balances`, `currencies`,
-  `recurring`, `imports`, `attachments`, `activity`, `notifications`). Each
-  module owns its schemas (zod), services (transaction boundaries), repository
-  queries and tests.
+- `src/proxy.ts` — Next.js 16's `proxy` convention (the former `middleware`).
+  Runs on the Node.js runtime for every request: strict CSP with a per-request
+  nonce, and origin validation.
+- `src/modules/<domain>` — business logic per domain (`activity`,
+  `attachments`, `auth`, `balances`, `categorization`, `currencies`, `demo`,
+  `expenses`, `exports`, `groups`, `guests`, `imports`, `join`,
+  `notifications`, `payouts`, `profile`, `receipts`, `recurring`, `reminders`,
+  `settlements`, `telemetry`). Each module owns its schemas (zod), services
+  (transaction boundaries), repository queries and tests.
 - `src/lib/db` — Drizzle schema, client, migration helpers.
 - `src/lib/jobs` — pg-boss wiring shared by web and worker processes.
 - `src/lib/storage` — receipt storage adapters (local disk, S3-compatible).
 - `src/lib/push` — Web Push: VAPID signing and RFC 8291 payload encryption.
 - `src/lib/security` — authorization context, guest sessions, rate limiting,
   token hashing, headers.
+- `src/lib/offline` — the offline outbox: queued writes, replay, and the
+  IndexedDB snapshot the PWA reads when there is no network.
+- `src/lib/ocr`, `src/lib/doc-scan`, `src/lib/semantic` — on-device receipt
+  reading: text extraction, page detection and dewarping, and the model behind
+  semantic categorisation.
+- `src/lib/metrics`, `src/lib/analytics`, `src/lib/telemetry` — Prometheus
+  metrics, Umami events, and opt-in telemetry transport.
 - `src/components` — presentational and interactive React components.
 - `src/worker` — the background jobs. `run.ts` holds the queue subscriptions
   and schedules and is loaded by both shapes; `index.ts` is the standalone

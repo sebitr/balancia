@@ -182,7 +182,10 @@ export function ChoicePill({
       <span className="truncate">{children}</span>
       {trailing}
       {selected && !Icon && (
-        <Check aria-hidden="true" className="size-4 shrink-0 text-primary-ink" />
+        <Check
+          aria-hidden="true"
+          className="size-4 shrink-0 text-primary-ink"
+        />
       )}
     </button>
   );

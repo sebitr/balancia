@@ -181,6 +181,12 @@ These are deliberate omissions for this version, not oversights:
   is asserted line for line against Annex A example 3 of the Implementation
   Guidelines, and the Girocode against EPC069-12's field order and its 331-byte
   and version-13 limits — but a passing test is not a bank accepting a payment.
+  The four standards added since — SPAYD, the Polish ZBP code, the Pix BR Code
+  and Swish — are held to the same bar and carry the same caveat. The BR Code
+  is read back by a tag-length-value parser written from the specification
+  rather than from the builder, and its checksum is anchored to the published
+  CRC-16/CCITT-FALSE check value; the two values most worth a real-device check
+  are named in [settling-up.md](settling-up.md).
 - **The payout read path has no _integration_ test.** `listPayoutsOwed` is
   exercised end to end by `payouts.spec.ts`, which reads a real debt row as the
   person who owes it, so the read path does run against a database. What is

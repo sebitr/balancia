@@ -399,7 +399,10 @@ function SubcategoryPane({
           {t("just", { category: tCategories(category) })}
         </span>
         {selected === "" && (
-          <Check aria-hidden="true" className="size-4 shrink-0 text-primary-ink" />
+          <Check
+            aria-hidden="true"
+            className="size-4 shrink-0 text-primary-ink"
+          />
         )}
       </button>
 

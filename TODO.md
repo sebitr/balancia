@@ -31,6 +31,9 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-08-30 Settle up with a code the payee's own bank reads, beyond the two SEPA ones — #260
+- [x] 2026-08-30 Format the nine files that were committed unformatted — #261
+- [x] 2026-08-30 Point the offline journey at the promise the shell now makes — #262
 - [x] 2026-08-30 Record an expense with no signal, and send it on reconnect — #259
 - [x] 2026-08-26 Write down what the join routes actually answer — #245
 - [x] 2026-08-26 Build the background translator without dragging React in — #244

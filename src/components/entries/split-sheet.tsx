@@ -246,7 +246,9 @@ export function SplitSheet({
         <p
           className={cn(
             "text-xs",
-            note.tone === "error" ? "text-negative-ink" : "text-muted-foreground",
+            note.tone === "error"
+              ? "text-negative-ink"
+              : "text-muted-foreground",
           )}
         >
           {t(`notes.${note.key}`, note.params)}
