@@ -25,9 +25,13 @@ describe("payoutFieldFor", () => {
   it("knows the regional schemes by what they are built on", () => {
     expect(payoutFieldFor("twint")).toBe("phone");
     expect(payoutFieldFor("bank")).toBe("iban");
-    expect(payoutFieldFor("wise")).toBe("email");
+    expect(payoutFieldFor("zelle")).toBe("email");
     expect(payoutFieldFor("revolut")).toBe("handle");
     expect(payoutFieldFor("paypal")).toBe("link");
+    // A Wisetag rather than the email on the account: both identify the same
+    // person to Wise, and only one of them is what `wise.com/pay/me/<wisetag>`
+    // is built from.
+    expect(payoutFieldFor("wise")).toBe("handle");
   });
 
   it("falls back to an unopinionated field rather than to nothing", () => {
@@ -92,8 +96,17 @@ describe("validatePayoutDetail", () => {
   });
 
   it("checks an address where the method is an address", () => {
+    expect(validatePayoutDetail("zelle", "seb@hey.ch")).toBeNull();
+    expect(validatePayoutDetail("zelle", "seb at hey")).toBe("email");
+  });
+
+  it("leaves a Wisetag to Wise, including one saved as an email", () => {
+    // A handle's shape is the provider's business, so nothing here guesses at
+    // it — and a detail stored before the field changed is still a true answer
+    // to "how do I pay you on Wise". It is `payoutDeepLink` that declines to
+    // build a link out of one, not this.
+    expect(validatePayoutDetail("wise", "sebtr")).toBeNull();
     expect(validatePayoutDetail("wise", "seb@hey.ch")).toBeNull();
-    expect(validatePayoutDetail("wise", "seb at hey")).toBe("email");
   });
 
   it("takes a payment link with or without its scheme", () => {

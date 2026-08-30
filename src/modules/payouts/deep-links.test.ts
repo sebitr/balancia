@@ -139,6 +139,21 @@ describe("UPI", () => {
       payoutDeepLink(request({ ...upi, detail: "9876543210" })),
     ).toBeNull();
   });
+
+  it("names the payee, because an address on its own is opaque", () => {
+    // Without this the payer confirms a payment against `seb@okhdfcbank` and
+    // nothing else. The specification lists the name beside the address for
+    // exactly this reason, and every UPI app shows it.
+    const link = payoutDeepLink(request({ ...upi, payeeName: "Léa Martin" }));
+    expect(link?.href).toContain("pn=L%C3%A9a+Martin");
+  });
+
+  it("leaves the name out rather than writing an empty one", () => {
+    expect(payoutDeepLink(request({ ...upi }))?.href).not.toContain("pn=");
+    expect(
+      payoutDeepLink(request({ ...upi, payeeName: "  " }))?.href,
+    ).not.toContain("pn=");
+  });
 });
 
 describe("the profile-only links", () => {
@@ -155,6 +170,26 @@ describe("the profile-only links", () => {
     expect(
       payoutDeepLink(request({ method: "monzo", detail: "sebtr" }))?.href,
     ).toBe("https://monzo.me/sebtr");
+  });
+
+  it("opens Wise on the Wisetag", () => {
+    const link = payoutDeepLink(request({ method: "wise", detail: "@sebtr" }));
+
+    expect(link?.href).toBe("https://wise.com/pay/me/sebtr");
+    // Wise documents `?amount=` on the *business* open link and says nothing
+    // about the personal one. An unverified parameter that silently did
+    // nothing would make this flag a lie, and this flag is the sentence the
+    // screen shows about whether the payer still has to type the figure.
+    expect(link?.carriesAmount).toBe(false);
+  });
+
+  it("builds nothing from a Wise detail saved before the field changed", () => {
+    // The field used to ask for the email on the account. Those details are
+    // left alone rather than migrated, so the link has to decline them — a
+    // `wise.com/pay/me/lea@example.com` would be a 404 dressed as a payment.
+    expect(
+      payoutDeepLink(request({ method: "wise", detail: "lea@example.com" })),
+    ).toBeNull();
   });
 });
 

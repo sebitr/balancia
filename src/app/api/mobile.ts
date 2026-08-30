@@ -691,6 +691,14 @@ export function serializeSettleUp(
       methods: hint.methods.map((entry) => ({
         method: entry.method,
         detail: entry.detail,
+        // Per method, because a code is no longer only ever the bank's: Pix
+        // and Swish each have one of their own. Added beside the pair below
+        // rather than replacing it, so a client built against the old shape
+        // keeps reading the leading code exactly where it always was.
+        qr: entry.qr
+          ? { standard: entry.qr.standard, payload: entry.qr.payload }
+          : null,
+        qrMissing: entry.qrMissing,
       })),
       qr: hint.qr
         ? { standard: hint.qr.standard, payload: hint.qr.payload }

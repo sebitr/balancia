@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Settle up with a code the payee's own bank reads, beyond the two SEPA ones — `feat/payout-reach`
 - [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
 
 ## Next
