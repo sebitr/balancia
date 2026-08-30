@@ -12,6 +12,7 @@ appending at once conflict on different lines.
 Started, on a branch, not yet merged.
 
 - [ ] Settle up with a code the payee's own bank reads, beyond the two SEPA ones — `feat/payout-reach`
+- [ ] Point the offline journey at the promise the shell now makes — `fix/offline-shell-copy`
 - [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
 
 ## Next
