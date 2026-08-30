@@ -86,17 +86,22 @@ export const ENTRY_SHEET_CLASS =
  * drawer opens this same form, and a drawer that put the caret somewhere else
  * the moment the signal went would be a different drawer wearing this one's
  * clothes.
- *
- * The event Radix dispatches here is a plain `Event`, so its target is an
- * `EventTarget` until it is narrowed — the same guard `openOnContent` makes
- * before it focuses the content. Failing it leaves the default in place, which
- * is the behaviour every other sheet has.
  */
 export function openOnAmount(event: Event): void {
-  const content = event.currentTarget;
-  if (!(content instanceof HTMLElement)) return;
-
-  const amount = content.querySelector<HTMLInputElement>(
+  /*
+   * Narrowed rather than asserted. Radix raises this one itself, from the
+   * focus scope rather than from the DOM, so `currentTarget` is typed
+   * `EventTarget | null` and carries no `querySelector` — and a cast here
+   * would be a promise about a value this file does not own. `openOnContent`
+   * in `components/ui/sheet.tsx` guards the same way, and every other sheet in
+   * the app goes through it.
+   *
+   * Failing the guard returns without preventing the default, so focus lands
+   * where the scope would have put it: the behaviour of a drawer that never
+   * asked for anything else.
+   */
+  if (!(event.currentTarget instanceof HTMLElement)) return;
+  const amount = event.currentTarget.querySelector<HTMLInputElement>(
     "input[data-entry-amount]",
   );
   if (!amount || amount.value !== "") return;

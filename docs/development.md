@@ -137,34 +137,59 @@ pnpm dev:worker
 ```
 src/
   app/                    routes, layouts, route handlers
-    (auth)/               sign-in, register
-    (app)/                dashboard, profile — signed-in users
+    (auth)/               sign-in, register, forgot and reset password
+    (app)/                dashboard, profile, notifications, admin
     groups/[groupId]/     group pages — members and guests
+    join/ invite/         join links and invitations
     api/                  route handlers (auth, attachments, health)
   modules/                domain logic, by domain
     auth/                 passwords, sessions, WebAuthn, mail
     groups/               groups, participants, invitations
-    participants/
     expenses/             allocation, splits, expense service
     settlements/
+    payouts/              payout addresses, deep links, QR codes
     balances/             the balance engine (pure) and its service
     currencies/           ISO 4217, money, conversion
     recurring/            schedule maths and generation
+    categorization/       category and subcategory classification
+    receipts/             parsing scanned receipts into lines and amounts
+    attachments/          stored receipt files
     imports/              Splitwise adapters and staged import
-    attachments/          receipts
+    exports/              CSV and spreadsheet output
+    join/                 join links: redemption, expiry, matching
+    guests/               guest participants
+    reminders/            debt reminders and their wording
+    notifications/        push and email delivery
     activity/             append-only history
+    profile/              display name, avatar, accent colour
+    demo/                 demo-mode sessions and their dataset
+    telemetry/            opt-in usage reporting
   lib/
     db/                   Drizzle schema, client, migrations
     jobs/                 pg-boss wiring
     storage/              local and S3 drivers
     security/             authorization, tokens, guest sessions, rate limits
+    offline/              outbox, replay, IndexedDB snapshot
+    pwa/                  install and service-worker glue
+    push/                 VAPID signing, RFC 8291 payload encryption
+    ocr/ doc-scan/        receipt text extraction, page detection, dewarping
+    semantic/             on-device model for categorisation
+    pdf/                  PDF rendering
+    color/                OKLCH conversion and contrast maths
+    metrics/ analytics/   Prometheus metrics, Umami events
+    telemetry/            telemetry transport
   components/             React components
-  worker/                 worker entrypoint
+  worker/                 run.ts (queue subscriptions), index.ts (standalone)
   i18n/                   locale negotiation, formats, catalogue loading
-messages/                 en.json and fr.json — every translated string
+  types/                  ambient type declarations
+  proxy.ts                Next.js 16's proxy (former middleware) — CSP, origins
+  instrumentation.ts      startup hook
+messages/                 en.json and fr.json — the two shipped catalogues
 tests/
   integration/            real-database tests
   e2e/                    Playwright journeys
+  helpers/                factories and shared test utilities
+  setup/                  per-project setup files
   fixtures/               anonymised sample files
 drizzle/                  committed SQL migrations
 ```
