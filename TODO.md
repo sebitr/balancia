@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Record an expense with no signal, and send it on reconnect — `feat/offline-entry`
 - [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
 
 ## Next
