@@ -245,6 +245,17 @@ function fileInput(): HTMLInputElement {
 }
 
 describe("the drawer", () => {
+  /**
+   * The field a new entry starts in. Left to the focus scope this was the
+   * close button, so the most repeated action in the app opened on the one
+   * control that records nothing.
+   */
+  it("opens on the amount", () => {
+    renderForm();
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveFocus();
+  });
+
   it("marks the description field with a decorative glyph", () => {
     renderForm();
 
@@ -1391,6 +1402,17 @@ describe("editing an entry", () => {
   const save = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
   };
+
+  /**
+   * The counterpart to "the drawer opens on the amount": a figure that is
+   * already there is not one the reader came to type, so the drawer opens the
+   * way it always did rather than dropping a caret into their existing number.
+   */
+  it("does not steal focus into an amount that is already filled", () => {
+    renderForm({ editing: EXPENSE });
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).not.toHaveFocus();
+  });
 
   it("opens on the entry it was given", () => {
     renderForm({ editing: EXPENSE });

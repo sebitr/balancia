@@ -439,7 +439,7 @@ function Participants({
               {member.name}
             </span>
             {member.you && (
-              <span className="flex h-5 shrink-0 items-center rounded-full bg-primary/16 px-2 text-2xs font-semibold text-primary">
+              <span className="flex h-5 shrink-0 items-center rounded-full bg-primary/16 px-2 text-2xs font-semibold text-primary-ink">
                 {t("you")}
               </span>
             )}

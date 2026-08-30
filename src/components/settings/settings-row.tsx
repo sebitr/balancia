@@ -35,7 +35,7 @@ function IconTile({
         // One row in the hub is tinted, and only one: the way you are paid is
         // the only destination there that is about money leaving somebody
         // else's account rather than about how this one is set up.
-        accent ? "bg-primary/18 text-primary" : "bg-foreground/8",
+        accent ? "bg-primary/18 text-primary-ink" : "bg-foreground/8",
       )}
     >
       <Icon className="size-4" strokeWidth={1.9} />

@@ -12,7 +12,10 @@ import { useTranslations } from "next-intl";
 import { WifiOff } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AddEntryForm } from "@/components/entries/add-entry-form";
-import { ENTRY_SHEET_CLASS } from "@/components/entries/add-entry-drawer";
+import {
+  ENTRY_SHEET_CLASS,
+  openOnAmount,
+} from "@/components/entries/add-entry-drawer";
 import { loadSnapshot, type GroupSnapshot } from "@/lib/offline/snapshot";
 
 /**
@@ -103,6 +106,7 @@ function OfflineEntrySheet({
         side="bottom"
         showCloseButton={false}
         className={ENTRY_SHEET_CLASS}
+        onOpenAutoFocus={openOnAmount}
       >
         {snapshot === "loading" ? null : snapshot ? (
           <OfflineEntryForm snapshot={snapshot} onClose={onClose} />

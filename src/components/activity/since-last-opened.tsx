@@ -46,23 +46,37 @@ export async function SinceLastOpened({
       </h2>
 
       <ol className="flex flex-col gap-2.5 rounded-2xl px-3.5 py-3 ring-1 ring-border">
-        {unseen.map((entry) => (
-          <li
-            key={entry.id}
-            className="flex min-w-0 items-start gap-2.5 text-sm leading-snug"
-          >
-            <span
-              aria-hidden="true"
-              className="mt-[6px] size-[5px] shrink-0 rounded-full bg-primary"
-            />
-            <span className="min-w-0 flex-1 text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {actorOf(entry, translate)}
-              </span>{" "}
-              {describeActivity(entry, translate)}
-            </span>
-          </li>
-        ))}
+        {unseen.map((entry, index) => {
+          const actor = actorOf(entry, translate);
+          // A run of events by one person names them once. Seven lines that
+          // all began "Demo" put the part that differs a third of the way in,
+          // and the name is only news when it changes. It stays in the
+          // sentence for a screen reader, which meets each line on its own.
+          const repeats =
+            index > 0 && actorOf(unseen[index - 1]!, translate) === actor;
+
+          return (
+            <li
+              key={entry.id}
+              className="flex min-w-0 items-start gap-2.5 text-sm leading-snug"
+            >
+              <span
+                aria-hidden="true"
+                className="mt-[6px] size-[5px] shrink-0 rounded-full bg-primary"
+              />
+              <span className="min-w-0 flex-1 text-muted-foreground">
+                <span
+                  className={
+                    repeats ? "sr-only" : "font-medium text-foreground"
+                  }
+                >
+                  {actor}{" "}
+                </span>
+                {describeActivity(entry, translate)}
+              </span>
+            </li>
+          );
+        })}
       </ol>
     </section>
   );

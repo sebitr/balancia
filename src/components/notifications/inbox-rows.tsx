@@ -467,7 +467,7 @@ export function ReminderCard({
     <div className="my-2 rounded-xl border border-primary/30 bg-card p-3.5">
       <div className="flex items-start justify-between gap-2">
         <p className="flex items-center gap-1.5 text-sm font-semibold tabular-nums">
-          <Bell aria-hidden="true" className="size-3.5 shrink-0 text-primary" />
+          <Bell aria-hidden="true" className="size-3.5 shrink-0 text-primary-ink" />
           {row.title}
         </p>
         <Age value={row.createdAt} now={now} className="shrink-0" />
@@ -521,7 +521,7 @@ export function Dismissible({
         aria-hidden="true"
         className="absolute inset-0 flex items-center justify-end bg-destructive/15 pr-4"
       >
-        <span className="text-2xs font-semibold text-negative">
+        <span className="text-2xs font-semibold text-negative-ink">
           {t("dismiss")}
         </span>
       </span>
@@ -534,7 +534,7 @@ export function Dismissible({
           className={cn(
             "sr-only focus:not-sr-only focus:absolute focus:top-1 focus:right-0 focus:z-10",
             "focus:rounded-md focus:bg-destructive/15 focus:px-2 focus:py-1",
-            "focus:text-2xs focus:font-semibold focus:text-negative",
+            "focus:text-2xs focus:font-semibold focus:text-negative-ink",
             "focus:ring-2 focus:ring-ring focus:outline-none",
           )}
         >

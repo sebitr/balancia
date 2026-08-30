@@ -182,7 +182,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
                     : cn(
                         "gap-1 transition-colors",
                         isActive
-                          ? "text-primary"
+                          ? "text-primary-ink"
                           : "text-muted-foreground hover:text-foreground",
                       ),
                 )}

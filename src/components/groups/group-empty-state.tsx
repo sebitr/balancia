@@ -19,7 +19,7 @@ export function GroupEmptyState({
   return (
     <div className="flex flex-col gap-[26px]">
       <section className="flex flex-col items-center rounded-[22px] border border-dashed border-border px-5 py-9 text-center">
-        <span className="flex size-[46px] items-center justify-center rounded-full bg-accent text-primary">
+        <span className="flex size-[46px] items-center justify-center rounded-full bg-accent text-primary-ink">
           <ReceiptText aria-hidden="true" className="size-5" />
         </span>
         <h1 className="mt-4 text-lg font-semibold tracking-[-0.015em]">
@@ -65,7 +65,7 @@ export function GroupEmptyState({
         </h2>
         <div className="rounded-2xl bg-card p-4 ring-1 ring-border">
           <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-primary-ink">
               <Link2 aria-hidden="true" className="size-[18px]" />
             </span>
             <p className="text-sm leading-relaxed text-muted-foreground">
@@ -77,7 +77,7 @@ export function GroupEmptyState({
             asChild
             variant="outline"
             size="lg"
-            className="mt-4 h-[46px] w-full rounded-[13px] border-primary/45 font-semibold text-primary hover:text-primary"
+            className="mt-4 h-[46px] w-full rounded-[13px] border-primary/45 font-semibold text-primary-ink hover:text-primary-ink"
           >
             <Link href={`/groups/${groupId}/members`} transitionTypes={PUSH}>
               <Users aria-hidden="true" className="size-4" />

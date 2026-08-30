@@ -1,9 +1,9 @@
-# Balancia from Docker Hub, instead of built from this checkout.
+# Balancia from Docker Hub, instead of built from source.
 #
-# Most instances never type this filename. `./scripts/bootstrap.sh` asks which
-# way this host wants it and writes the answer as
+# Most instances never type this filename. bootstrap.sh writes the answer as
 # COMPOSE_FILE=compose.yaml:compose.image.yaml, which is what makes an ordinary
-# command mean both files:
+# command mean both files — asking first in a checkout, and without asking in a
+# standalone install, which has no source to build:
 #
 #   docker compose pull
 #   docker compose up -d
@@ -16,7 +16,7 @@
 # the environment, the worker's command. Only where the app and the worker get
 # their image from moves — a published multi-architecture image built by
 # .github/workflows/release.yml, rather than a build on this host. You still
-# need `.env`, so `./scripts/bootstrap.sh` runs first either way.
+# need `.env`, so bootstrap.sh runs first either way.
 #
 # `latest` follows the newest release. Pin it to a version once other people
 # depend on this instance — `sebitro/balancia:0.1.0` — so that an upgrade is

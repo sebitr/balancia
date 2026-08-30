@@ -431,7 +431,7 @@
     "emptyDescription": "Un voyage, une colocation, un projet — partout où des frais sont partagés. Balancia calcule qui doit quoi à qui.",
     "createGroup": "Créer un groupe",
     "positionEyebrow": "Solde total",
-    "ratesUnavailable": "Taux indisponibles — chaque groupe dans sa devise",
+    "ratesUnavailable": "Un total par devise — aucun taux pour les combiner",
     "convertedToday": "Converti en {currency} aux taux du jour",
     "convertedOn": "Converti en {currency} aux taux du {date}",
     "members": "{names}",
@@ -444,7 +444,7 @@
     "sectionArchived": "Archivés · {count}",
     "addExpense": "Dépense",
     "empty": "Rien pour l'instant",
-    "sectionNeedsYou": "Tu dois de l'argent",
+    "sectionNeedsYou": "À toi d'agir",
     "archivedGroups": "{count, plural, one {# groupe archivé} other {# groupes archivés}}",
     "nothingOutstanding": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}}",
     "nothingOutstandingSince": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}} · dernier remboursement {when} dans {group}",
@@ -864,6 +864,14 @@
       "reminder": {
         "sent": "a envoyé une relance"
       }
+    },
+    "actionsNamed": {
+      "participant": {
+        "created": "a ajouté {name} au groupe",
+        "updated": "a mis à jour les informations de {name}",
+        "removed": "a retiré {name} du groupe",
+        "restored": "a rétabli {name} dans le groupe"
+      }
     }
   },
   "recurring": {
@@ -1159,9 +1167,8 @@
         "copy": "Copier",
         "copied": "Copié",
         "steps": {
-          "1": "Téléchargez le code source et ouvrez le projet.",
-          "2": "Générez les secrets, choisissez de télécharger ou de construire, puis les options.",
-          "3": "Démarrez PostgreSQL, l'application et son worker."
+          "1": "Téléchargez le fichier unique qui installe Balancia.",
+          "2": "Il configure, propose les options, puis démarre tout."
         }
       },
       "facts": {
@@ -1929,8 +1936,8 @@
     "owner": "Propriétaire",
     "guest": "Invité",
     "noAccess": "Sans accès",
-    "metaNoAccountInvited": "Pas de compte - Invité",
-    "metaNoAccountJoined": "Pas de compte - A rejoint",
+    "metaNoAccountInvited": "Pas de compte · lien non utilisé",
+    "metaNoAccountJoined": "Pas de compte · a rejoint",
     "metaNoAccount": "Pas de compte · pas encore invité",
     "details": "Détails",
     "name": "Nom",

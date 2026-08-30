@@ -384,7 +384,7 @@ function GroupRow({
         <Check
           aria-hidden="true"
           strokeWidth={2.4}
-          className="size-4 shrink-0 text-primary"
+          className="size-4 shrink-0 text-primary-ink"
         />
       )}
     </Link>

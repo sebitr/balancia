@@ -201,7 +201,7 @@ export function InviteLinkCard({
               </span>
               <Link
                 href={`/groups/${groupId}/members`}
-                className="shrink-0 text-sm font-medium text-primary hover:underline"
+                className="shrink-0 text-sm font-medium text-primary-ink hover:underline"
               >
                 {t("peopleLink")}
               </Link>
@@ -268,7 +268,7 @@ function StatusBadge({ status }: { status: "active" | "expired" | "revoked" }) {
         design's darkened literal: that value only reads on cream, and this
         badge has to work on the dark theme too.
       */
-      <Badge className="bg-positive/15 text-positive">
+      <Badge className="bg-positive/15 text-positive-ink">
         {t("statusActive")}
       </Badge>
     );

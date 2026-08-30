@@ -213,7 +213,7 @@ function CurrencyCard({
         </h2>
         {/* Never `0.00`: a currency nobody owes anything in has no amount, and
             printing one invites the reader to look for what it refers to. */}
-        <p className="text-sm font-medium text-neutral-balance">
+        <p className="text-sm font-medium text-neutral-balance-ink">
           {t("settledUp")}
         </p>
       </section>
@@ -456,7 +456,15 @@ function TransferRow({
         />
       )}
 
-      <div className="flex items-center gap-2">
+      {/* Wraps, because one of these buttons carries a name. "Relancer Grace"
+          and "J'ai reçu le paiement" fit beside each other on a 375px phone;
+          "Relancer Katherine" and the same second button need 356px of a 311px
+          row, and `flex-1` cannot rescue that — `min-width: auto` holds every
+          flex item at its label's min-content width, so instead of shrinking,
+          the second button ran 13px off the side of the screen with its label
+          cut mid-word. Wrapping puts it on its own line, where `flex-1` gives
+          it the full width. A longer translation lands the same way. */}
+      <div className="flex flex-wrap items-center gap-2">
         {transfer.fromIsSelf ? (
           /* First person, and past tense. The button does not move the money —
              nothing here does — so it must not read like an instruction that
@@ -514,8 +522,8 @@ function TransferAmount({ transfer }: { transfer: SettleUpTransferView }) {
     <span
       className={cn(
         "ml-auto flex shrink-0 items-center gap-1",
-        outgoing && "text-negative",
-        incoming && "text-positive",
+        outgoing && "text-negative-ink",
+        incoming && "text-positive-ink",
       )}
     >
       {outgoing && <ArrowUpRight aria-hidden="true" className="size-[15px]" />}

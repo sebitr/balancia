@@ -168,7 +168,7 @@ export function CopyButton({
       onClick={() => void copy(url)}
     >
       {copied ? (
-        <Check aria-hidden="true" className="text-positive" />
+        <Check aria-hidden="true" className="text-positive-ink" />
       ) : (
         <Copy aria-hidden="true" />
       )}
@@ -213,7 +213,7 @@ export function ShareButton({
         a button that did nothing, as far as the reader can see.
       */}
       {copied ? (
-        <Check aria-hidden="true" className="text-positive" />
+        <Check aria-hidden="true" className="text-positive-ink" />
       ) : (
         <Share aria-hidden="true" />
       )}

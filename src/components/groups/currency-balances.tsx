@@ -54,9 +54,9 @@ export interface CurrencyBalanceView {
 }
 
 const TONE: Record<BalanceTone, string> = {
-  positive: "text-positive",
-  negative: "text-negative",
-  neutral: "text-neutral-balance",
+  positive: "text-positive-ink",
+  negative: "text-negative-ink",
+  neutral: "text-neutral-balance-ink",
 };
 
 /**
@@ -148,7 +148,7 @@ export function CurrencyBalances({
             <span className="flex min-w-0 items-center gap-2.5">
               <ArrowRight
                 aria-hidden="true"
-                className="size-[17px] shrink-0 text-primary"
+                className="size-[17px] shrink-0 text-primary-ink"
               />
               <span aria-hidden="true" className="flex min-w-0 flex-col">
                 <span className="truncate text-xs font-semibold">
@@ -241,7 +241,7 @@ function CurrencyRow({
 
           <span className="flex shrink-0 items-center gap-2">
             {tone === "neutral" ? (
-              <span className="flex items-center gap-[5px] text-xs font-medium text-neutral-balance">
+              <span className="flex items-center gap-[5px] text-xs font-medium text-neutral-balance-ink">
                 <Minus aria-hidden="true" className="size-[15px] shrink-0" />
                 {t("settledUpRow")}
               </span>
@@ -367,7 +367,7 @@ function MemberLine({
             className={cn(
               "text-2xs font-semibold",
               member.isSelf
-                ? "bg-primary/15 text-primary"
+                ? "bg-primary/15 text-primary-ink"
                 : "bg-accent text-accent-foreground",
             )}
           >
@@ -390,7 +390,7 @@ function MemberLine({
       </span>
 
       {tone === "neutral" ? (
-        <span className="shrink-0 text-xs font-medium text-neutral-balance">
+        <span className="shrink-0 text-xs font-medium text-neutral-balance-ink">
           {t("settledUpRow")}
         </span>
       ) : (

@@ -81,7 +81,7 @@ function ChoiceRow({
         aria-hidden="true"
         className={cn(
           "size-4 shrink-0 transition-colors",
-          checked ? "text-primary" : "text-transparent",
+          checked ? "text-primary-ink" : "text-transparent",
         )}
       />
     </button>

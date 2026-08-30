@@ -202,7 +202,7 @@ export function OutstandingList({
                   className={cn(
                     "text-sm tabular-nums",
                     active
-                      ? "font-semibold text-positive"
+                      ? "font-semibold text-positive-ink"
                       : "text-muted-foreground",
                   )}
                 >
@@ -502,7 +502,7 @@ function CustomMethodRow({
         <MethodMark method={null} label={name} size={30} />
         <span className="flex-1 truncate text-sm">{text}</span>
         {selected && (
-          <Check aria-hidden="true" className="size-4 text-primary" />
+          <Check aria-hidden="true" className="size-4 text-primary-ink" />
         )}
       </button>
     </section>
@@ -547,7 +547,7 @@ function MethodGroup({
                 <MethodMark method={method} label={label} size={30} />
                 <span className="flex-1 truncate text-sm">{label}</span>
                 {id === value && (
-                  <Check aria-hidden="true" className="size-4 text-primary" />
+                  <Check aria-hidden="true" className="size-4 text-primary-ink" />
                 )}
               </button>
             </li>

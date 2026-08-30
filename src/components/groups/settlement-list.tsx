@@ -88,7 +88,7 @@ export function SettlementList({
           <Link
             href={`/groups/${groupId}/settle`}
             transitionTypes={PUSH}
-            className="-my-2 rounded-lg px-2 py-2 text-xs font-medium text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="-my-2 rounded-lg px-2 py-2 text-xs font-medium text-primary-ink transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {t("viewAll")}
           </Link>
@@ -161,7 +161,7 @@ export function SettlementList({
               </SheetDescription>
 
               <div className="mt-5 flex items-center gap-3 rounded-2xl bg-foreground/[0.05] p-4">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-primary">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-primary-ink">
                   <Banknote aria-hidden="true" className="size-[18px]" />
                 </span>
                 <Amount
@@ -238,7 +238,7 @@ function Person({ name, self }: { name: string; self: boolean }) {
           className={cn(
             "text-2xs font-semibold",
             self
-              ? "bg-primary/15 text-primary"
+              ? "bg-primary/15 text-primary-ink"
               : "bg-accent text-accent-foreground",
           )}
         >

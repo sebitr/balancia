@@ -1251,7 +1251,7 @@ export function AddEntryForm({
                 !categoryChosen && detectedCategory !== "" ? (
                   <Sparkles
                     aria-label={t("category.detected")}
-                    className="size-3.5 shrink-0 text-payer"
+                    className="size-3.5 shrink-0 text-payer-ink"
                   />
                 ) : null
               }

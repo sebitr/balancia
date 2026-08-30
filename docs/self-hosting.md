@@ -8,27 +8,40 @@ own background jobs, so that is the whole stack until you decide otherwise.
 ## Quick start
 
 ```bash
-git clone https://github.com/sebitr/balancia.git
-cd balancia
-./scripts/bootstrap.sh
-docker compose up -d
+curl -fsSLO https://github.com/sebitr/balancia/releases/latest/download/bootstrap.sh
+sh bootstrap.sh
 ```
 
 Open <http://localhost:3000> and create the first account.
 
 ### What those commands set up
 
-`bootstrap.sh` writes a `.env` holding this instance's own secrets. It needs
-only a POSIX shell and `/dev/urandom`, and it never overwrites a value that is
-already set — so re-running it is a no-op, and `./scripts/bootstrap.sh &&
-docker compose up -d` is a safe habit.
+`bootstrap.sh` is one file that does the whole installation. Downloaded on its
+own it asks where to install — `./balancia` unless you say otherwise, or
+`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml` and
+`.env.example` into that directory and copies itself in beside them, so every
+later run happens from inside the installation.
 
-Run from a terminal, the first thing it asks is where this host gets Balancia:
-pull the published image, which is the default, or build one from the checkout.
-It writes the answer as `COMPOSE_FILE`, which is what makes the plain `docker
-compose up -d` above mean either one — see [Running the published
-image](#running-the-published-image). Then it asks which optional features to
-switch on:
+What it fetches is pinned to its own release. The script that installs 1.4.2
+downloads 1.4.2's Compose files and runs 1.4.2's image, which is why an
+installer is a release asset rather than a file on `main`: there is no way to
+end up running one release's application through another release's Compose
+file. Nothing is fetched at all in a checkout — the files are already there,
+and the checkout is the version.
+
+It then writes a `.env` holding this instance's own secrets. That part needs
+only a POSIX shell and `/dev/urandom`, and it never overwrites a value that is
+already set — so re-running it is a no-op, and running it in front of Compose
+is a safe habit.
+
+A standalone install can only pull the published image: there is no source
+beside it to build. `COMPOSE_FILE` is written to say so without asking, because
+the alternative is Compose reading `compose.yaml` alone and failing at `up`
+with a missing build context. In a checkout the question is a real one, and
+the first thing it asks: pull the published image, which is the default, or
+build one here. See [Running the published
+image](#running-the-published-image). Then, either way, it asks which optional
+features to switch on:
 
 | Question              | Writes                           | Also does                                     |
 | --------------------- | -------------------------------- | --------------------------------------------- |
@@ -43,10 +56,15 @@ switch on:
 | Metrics               | `METRICS_ENABLED`                | Generates `METRICS_TOKEN`                     |
 
 Every answer is written, including the no's, so the second run asks nothing.
-The two model downloads need Node; on a host that has only Docker, one is
-borrowed from a throwaway `node:24-alpine` container for the length of the
-download. If neither is there, the flag is still written and the script says
-which command to run.
+
+The two model downloads and the VAPID pair are the work of three helpers that
+ship with Balancia, and where they run from depends on what is around them. A
+standalone install runs them out of the published image, where the build has
+already bundled them into `dist/` — the same image the stack is about to pull,
+so nothing else has to be installed. A checkout runs them from `scripts/` with
+its own `tsx`, or borrows a Node from a throwaway `node:24-alpine` container on
+a host that has none. If neither is possible, the flag is still written and the
+script says which command to run.
 
 That is a deliberate pairing: a feature switched on whose model files are
 missing renders no button and explains nothing, so the script that writes the
@@ -205,15 +223,19 @@ laptop and not for a household.
 Upgrading is then a pull rather than a build:
 
 ```bash
-git pull
 docker compose pull
 docker compose up -d
 ```
 
-`git pull` still earns its place — it is what brings a new compose file, new
-bootstrap questions and this guide up to date — but it no longer decides which
-code runs. Everything under [Upgrading](#upgrading) still applies: migrations
-come from the image's entrypoint either way.
+In a checkout, put `git pull` in front of those — it is what brings a new
+compose file, new bootstrap questions and this guide up to date, though it no
+longer decides which code runs. A standalone install has no checkout to pull,
+so when a release changes the Compose files themselves, `sh bootstrap.sh
+--update` fetches them again and leaves `.env` alone. The release notes say
+when that is needed; most upgrades are the two commands above and nothing else.
+
+Everything under [Upgrading](#upgrading) still applies: migrations come from
+the image's entrypoint either way.
 
 Neither choice is a commitment. An instance can move from building to pulling
 and back at any time; the volumes, the database and `.env` do not care which
@@ -566,13 +588,25 @@ Compose already wires these. For an external monitor, watch `/api/health/ready`.
 
 ## Upgrading
 
+On a standalone install — the one the quick start produces, which pulls the
+published image:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+In a checkout that builds its own:
+
 ```bash
 git pull
 docker compose up -d --build
 ```
 
-On an instance running the published image, that is a `pull` instead — see
-[Running the published image](#running-the-published-image).
+Which of the two an instance is on is the `COMPOSE_FILE` line in `.env` — see
+[Running the published image](#running-the-published-image). When a release
+changes the Compose files, a standalone install picks them up with `sh
+bootstrap.sh --update`, which touches nothing else.
 
 What happens, in order:
 

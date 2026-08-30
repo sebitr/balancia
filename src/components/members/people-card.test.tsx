@@ -171,8 +171,8 @@ describe("PeopleCard", () => {
     expect(screen.getByText("No access")).toBeVisible();
     expect(screen.getAllByText("Guest")).toHaveLength(2);
     expect(screen.getByText(/No account · not invited yet/)).toBeVisible();
-    expect(screen.getByText("No account - Invited")).toBeVisible();
-    expect(screen.getByText("No account - Joined")).toBeVisible();
+    expect(screen.getByText(/No account · link not used yet/)).toBeVisible();
+    expect(screen.getByText(/No account · joined/)).toBeVisible();
   });
 
   it("opens one row at a time", async () => {

@@ -90,7 +90,7 @@ export function AmountCard({
         {/* The sign belongs to the figure, not to the value: it is never typed
             and must never come back out of the field. */}
         {positive && !empty && (
-          <span aria-hidden="true" className={cn(FIGURE, "text-positive")}>
+          <span aria-hidden="true" className={cn(FIGURE, "text-positive-ink")}>
             +
           </span>
         )}
@@ -101,6 +101,10 @@ export function AmountCard({
           type="text"
           inputMode="decimal"
           enterKeyHint="done"
+          // How the drawer finds the field to open on. Marked here rather than
+          // handed down as a ref, because the thing that needs naming is which
+          // field a reader starts in, and that is a fact about this card.
+          data-entry-amount=""
           value={amountText}
           onChange={(event) => onAmountChange(event.target.value)}
           // Nothing to submit — the entry is saved from its own button — so
@@ -115,7 +119,7 @@ export function AmountCard({
           className={cn(
             FIGURE,
             "min-w-0 flex-1 bg-transparent caret-primary outline-none placeholder:text-muted-foreground/60",
-            positive ? "text-positive" : "text-foreground",
+            positive ? "text-positive-ink" : "text-foreground",
           )}
         />
 

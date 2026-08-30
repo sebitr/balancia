@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AddEntryForm } from "@/components/entries/add-entry-form";
-import { ENTRY_SHEET_CLASS } from "@/components/entries/add-entry-drawer";
+import {
+  ENTRY_SHEET_CLASS,
+  openOnAmount,
+} from "@/components/entries/add-entry-drawer";
 import { listSnapshots, type GroupSnapshot } from "@/lib/offline/snapshot";
 import type en from "../../../messages/en.json";
 
@@ -77,6 +80,7 @@ export function OfflineGroups({
           side="bottom"
           showCloseButton={false}
           className={ENTRY_SHEET_CLASS}
+          onOpenAutoFocus={openOnAmount}
         >
           {adding && (
             <AddEntryForm

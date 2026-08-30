@@ -111,7 +111,7 @@ export function PasskeysCard({
           {tPasskeys("yourPasskeys")}
         </h2>
         {count > 0 && (
-          <span className="inline-flex h-5.5 items-center rounded-full bg-positive/15 px-2 text-2xs font-semibold text-positive">
+          <span className="inline-flex h-5.5 items-center rounded-full bg-positive/15 px-2 text-2xs font-semibold text-positive-ink">
             {t("deviceCount", { count })}
           </span>
         )}

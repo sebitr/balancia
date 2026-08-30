@@ -59,7 +59,7 @@ describe("a toast", () => {
     await raise(() => toast.success("Saved"));
 
     expect(screen.getByText("Saved")).toBeVisible();
-    expect(glyph().className).toContain("text-positive");
+    expect(glyph().className).toContain("text-positive-ink");
     expect(glyph().querySelector("svg")?.getAttribute("class")).toContain(
       "check",
     );

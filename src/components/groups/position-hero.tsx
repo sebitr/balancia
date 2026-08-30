@@ -116,7 +116,7 @@ export function PositionHero({
 
         {settled ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold tracking-[0.1em] text-neutral-balance uppercase">
+            <span className="text-2xs font-semibold tracking-[0.1em] text-neutral-balance-ink uppercase">
               {t("allSettled")}
             </span>
             <p className="text-lg font-medium">{t("noOutstandingBalances")}</p>
@@ -146,8 +146,8 @@ export function PositionHero({
                 className={cn(
                   "flex size-[18px] shrink-0 items-center justify-center rounded-full",
                   single && BigInt(single.minorUnits) < 0n
-                    ? "bg-negative/15 text-negative"
-                    : "bg-positive/15 text-positive",
+                    ? "bg-negative/15 text-negative-ink"
+                    : "bg-positive/15 text-positive-ink",
                 )}
               >
                 {single && BigInt(single.minorUnits) < 0n ? (
@@ -305,7 +305,7 @@ function HeroAmount({
     <p
       className={cn(
         "flex flex-wrap items-baseline gap-x-2 gap-y-1",
-        incoming ? "text-positive" : "text-negative",
+        incoming ? "text-positive-ink" : "text-negative-ink",
       )}
     >
       {codeFirst ? code : amount}

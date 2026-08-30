@@ -140,7 +140,7 @@ export function SpendingCard({
           {!compact && (
             <BarChart3
               aria-hidden="true"
-              className="size-[17px] shrink-0 text-primary"
+              className="size-[17px] shrink-0 text-primary-ink"
             />
           )}
           <span className="flex min-w-0 flex-1 flex-col">
