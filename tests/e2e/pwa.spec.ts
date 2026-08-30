@@ -138,15 +138,21 @@ test("the service worker never caches authentication endpoints", async ({
   expect(source).toContain("/api/auth");
 });
 
-test("shows an offline shell that explains the limitation", async ({
+test("shows an offline shell that says what will happen to an entry", async ({
   page,
 }) => {
   await page.goto("/offline");
   await expect(
     page.getByRole("heading", { name: "You are offline" }),
   ).toBeVisible();
-  // The page must be honest that offline entry is not supported.
+  /*
+   * The assertion this replaces was the opposite promise — that nothing typed
+   * here would be kept — and it was the honest one until #259 gave the shell an
+   * outbox to put an entry in. What has to stay true is that the page says
+   * which of the two it is, because somebody who reads it and closes the app is
+   * owed an accurate answer either way.
+   */
   await expect(
-    page.getByText(/does not store expenses on your device/),
+    page.getByText(/kept on this device and sent as soon as you are back/),
   ).toBeVisible();
 });
