@@ -12,6 +12,14 @@ Everything else defaults to a working localhost install. Set overrides in that
 same `.env`, next to `compose.yaml`. For local development without Docker, use
 `.env.local`.
 
+The app and the standalone scripts — `pnpm db:migrate`, `pnpm db:seed`, the
+worker, and everything else `package.json` runs through `tsx` — read the same
+files, in the same order `next dev` does: `.env.local`, then `.env`, with the
+`.env.development` and `.env.production` variants Next also honours in between.
+A variable already set in the environment beats all of them, which is how
+Compose configures a container that can see one of these files anyway — the
+development stack mounts the working tree, `.env.local` included.
+
 Run from a terminal in a checkout, `bootstrap.sh` first asks whether this host
 pulls the published image or builds its own, and writes that as `COMPOSE_FILE`
 below. A standalone install has no source to build, so it is not asked and
