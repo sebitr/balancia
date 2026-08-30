@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Narrow the drawer's focus event rather than cast it, and format the nine — `fix/main-checks`
 - [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
 
 ## Next

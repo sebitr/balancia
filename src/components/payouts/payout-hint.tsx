@@ -253,7 +253,10 @@ export function PayoutHint({
               className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
             >
               {copied ? (
-                <Check aria-hidden="true" className="size-4 text-positive-ink" />
+                <Check
+                  aria-hidden="true"
+                  className="size-4 text-positive-ink"
+                />
               ) : (
                 <Copy aria-hidden="true" className="size-4" />
               )}

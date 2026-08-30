@@ -467,7 +467,10 @@ export function ReminderCard({
     <div className="my-2 rounded-xl border border-primary/30 bg-card p-3.5">
       <div className="flex items-start justify-between gap-2">
         <p className="flex items-center gap-1.5 text-sm font-semibold tabular-nums">
-          <Bell aria-hidden="true" className="size-3.5 shrink-0 text-primary-ink" />
+          <Bell
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-primary-ink"
+          />
           {row.title}
         </p>
         <Age value={row.createdAt} now={now} className="shrink-0" />

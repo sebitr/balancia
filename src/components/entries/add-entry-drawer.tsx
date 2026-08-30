@@ -86,10 +86,17 @@ export const ENTRY_SHEET_CLASS =
  * drawer opens this same form, and a drawer that put the caret somewhere else
  * the moment the signal went would be a different drawer wearing this one's
  * clothes.
+ *
+ * The event Radix dispatches here is a plain `Event`, so its target is an
+ * `EventTarget` until it is narrowed — the same guard `openOnContent` makes
+ * before it focuses the content. Failing it leaves the default in place, which
+ * is the behaviour every other sheet has.
  */
 export function openOnAmount(event: Event): void {
-  const target = event.currentTarget as HTMLElement;
-  const amount = target.querySelector<HTMLInputElement>(
+  const content = event.currentTarget;
+  if (!(content instanceof HTMLElement)) return;
+
+  const amount = content.querySelector<HTMLInputElement>(
     "input[data-entry-amount]",
   );
   if (!amount || amount.value !== "") return;

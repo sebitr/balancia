@@ -547,7 +547,10 @@ function MethodGroup({
                 <MethodMark method={method} label={label} size={30} />
                 <span className="flex-1 truncate text-sm">{label}</span>
                 {id === value && (
-                  <Check aria-hidden="true" className="size-4 text-primary-ink" />
+                  <Check
+                    aria-hidden="true"
+                    className="size-4 text-primary-ink"
+                  />
                 )}
               </button>
             </li>

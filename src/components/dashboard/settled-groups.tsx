@@ -219,7 +219,9 @@ function QuietRow({
             <span className="text-xs text-muted-foreground">{meta}</span>
           )}
         </span>
-        <span className="shrink-0 text-xs text-neutral-balance-ink">{word}</span>
+        <span className="shrink-0 text-xs text-neutral-balance-ink">
+          {word}
+        </span>
       </Link>
     </li>
   );
