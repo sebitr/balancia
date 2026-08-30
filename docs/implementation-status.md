@@ -4,6 +4,16 @@ The initial production version is complete. Everything below is implemented,
 wired end to end, and covered by tests — there are no placeholder screens and no
 `TODO` stubs in core functionality.
 
+**Audited against the source on 30 August 2026**, at `c5f803a6`, and re-run at
+`146b694d` once #260 and #261 had merged underneath it. Several
+entries had outlived what they described: guest claiming, expense search and
+filtering, and keyset pagination were all listed here as unbuilt or upcoming
+while shipping, and two end-to-end failures were still named after their
+assertions had been fixed. A file whose whole job is to say what is and is not
+done is worse than useless when it is behind — somebody choosing this software
+reads it, and so does anybody deciding what to build next. Re-audit it whenever
+a limitation here stops being true.
+
 ## Phases
 
 | #   | Phase                                                   | Status |
@@ -35,38 +45,43 @@ wired end to end, and covered by tests — there are no placeholder screens and 
 | 24  | On-device receipt scanning (opt-in)                     | ✅     |
 | 25  | Privacy-preserving telemetry (off by default, opt-in)   | ✅     |
 | 26  | Local operational metrics (Prometheus, off by default)  | ✅     |
+| 27  | Guest access claimed into an account                    | ✅     |
+| 28  | Onboarding: passkey signup, email codes, joining a link | ✅     |
+| 29  | Payout methods and payment codes                        | ✅     |
+| 30  | Group and member statistics                             | ✅     |
+| 31  | Transaction search, filtering and keyset pagination     | ✅     |
+| 32  | Offline expense entry with a send queue                 | ✅     |
 
 ## Verification
 
-Last full run on macOS with Node 24.19, pnpm 11.20 and PostgreSQL 14.23:
+Last run on macOS with Node 24.20, pnpm 11.20 and PostgreSQL 18.6, against
+this branch at `146b694d` — `main` plus the audit:
 
-| Check               | Result                                        |
-| ------------------- | --------------------------------------------- |
-| `pnpm install`      | Succeeds                                      |
-| `pnpm lint`         | Clean                                         |
-| `pnpm typecheck`    | Clean                                         |
-| `pnpm format:check` | Clean                                         |
-| `pnpm test:all`     | **647 passed**, 50 files (unit + integration) |
-| `pnpm test:e2e`     | 25 passed, 2 failing (see below)              |
-| `pnpm build`        | Succeeds; service worker precaches 51 URLs    |
-| `pnpm audit --prod` | No known vulnerabilities                      |
+| Check               | Result                                          |
+| ------------------- | ----------------------------------------------- |
+| `pnpm install`      | Succeeds                                        |
+| `pnpm lint`         | Clean                                           |
+| `pnpm typecheck`    | Clean                                           |
+| `pnpm format:check` | Clean                                           |
+| `pnpm test:all`     | **3199 passed**, 211 files (unit + integration) |
+| `pnpm test:e2e`     | Not re-run in this pass — see below             |
+| `pnpm build`        | Compiles; service worker precaches 88 URLs      |
+| `pnpm audit --prod` | No known vulnerabilities                        |
 
-Every row above was re-run with notifications in place. Note the PostgreSQL
-version: this run used 14.23, not the 18 that Compose ships — the committed
-migrations apply cleanly on both, but a run against 18 is still the one that
-matters before release.
+The PostgreSQL note that used to sit here is settled: this run was against the
+18 that Compose ships, not the 14 an earlier one used.
 
-Two end-to-end tests are failing, both predating notifications and both in the
-expense and import areas rather than in it:
+There is no red row left. `format:check` was failing on nine files when this
+audit was written, and it was listed rather than quietly fixed because a table
+that only records good news is how this file got into the state it was in; #261
+has since fixed it properly, at the source. The test count moved with it —
+#260 brought the four new payment standards and their tests.
 
-- `expenses.spec.ts › rejects percentages that do not add up to 100` asserts on
-  the server-side wording from `allocation.ts` ("must sum to exactly 100"),
-  which the form's own client-side check now pre-empts with "Percentages must
-  add up to 100 — they currently total 90". The validation works; the
-  assertion is against the message that no longer reaches the screen.
-- `import.spec.ts › imports a Splitwise CSV with a preview step` expects the
-  literal "1 payments", while `importWizard.settlementCount` is a plural that
-  correctly renders "1 payment" for one.
+The two end-to-end failures this section used to describe — the percentage
+wording in `expenses.spec.ts` and the "1 payments" plural in `import.spec.ts` —
+are gone: neither assertion exists in those specs any more. The suite itself
+was not re-run in this pass, so the row above says so rather than claiming a
+number nobody measured.
 
 ## Notable design decisions made during implementation
 
@@ -144,9 +159,6 @@ These are deliberate omissions for this version, not oversights:
   that device.** That is when the snapshot the offline form renders from is
   written. Loading the roster on every group navigation, so that a group never
   visited could be added to, was not worth the query.
-- **Guest history claiming is designed, not built.** `participants.user_id` is
-  nullable specifically so a guest participant can later be linked to an
-  account; the UI flow for doing so is not implemented.
 - **Imported expenses lose their split _method_.** Splitwise exports the result
   of a split, not the rule, so imports are stored as exact-amount splits.
   Balances are identical; only the "split equally" label is absent.
@@ -177,26 +189,22 @@ These are deliberate omissions for this version, not oversights:
   rather than from the builder, and its checksum is anchored to the published
   CRC-16/CCITT-FALSE check value; the two values most worth a real-device check
   are named in [settling-up.md](settling-up.md).
-- **The payout read path has not been run against a database.**
-  `listPayoutsOwed` joins participants to their owner's methods and is scoped by
-  group; its permission rule — that a recipient is reachable only by appearing
-  in a debt the balances computed — is structural rather than covered by a test
-  that tries to break it.
-- **The onboarding flow's server paths have not been run against a database.**
-  The passkey signup ceremony, the two code paths and the post-signup group join
-  are covered by unit tests and typecheck, and the screens are covered by
-  component tests, but nothing has issued a real challenge, mailed a real code
-  or claimed a real participant.
+- **The payout read path has no _integration_ test.** `listPayoutsOwed` is
+  exercised end to end by `payouts.spec.ts`, which reads a real debt row as the
+  person who owes it, so the read path does run against a database. What is
+  still missing is a test that attacks the permission rule directly — that a
+  recipient is reachable only by appearing in a debt the balances computed —
+  rather than confirming it from the outside.
 
 ## Next priorities
 
 1. **Run `docker compose up -d --build` on a Docker host** and confirm a healthy
    stack, then add that to CI as an integration smoke test.
-2. **Guest account claiming**: let a guest create an account and inherit their
-   participant history. The schema already supports it.
-3. **Expense list pagination and filtering.** The list currently loads up to 200
-   entries; groups with years of history need cursor pagination, plus filters by
-   participant, category and date.
-4. **Receipts in the export.** The data leaves as JSON, CSV or XLSX; the
-   attachments still have to be downloaded one expense at a time. A single
-   archive would finish the job.
+2. **Receipts in the export.** The data leaves as JSON, CSV or XLSX and the
+   workbook names a receipt count per expense, but the attachments themselves
+   still have to be downloaded one expense at a time. A single archive would
+   finish the job — and it is the last gap in the promise that a group can
+   leave with everything.
+3. **A default split preference.** Every other split control is here; what is
+   missing is remembering the one a group uses most, so the common case stops
+   being retyped.
