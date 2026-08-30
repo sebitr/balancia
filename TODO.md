@@ -30,6 +30,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-08-30 Record an expense with no signal, and send it on reconnect — #259
 - [x] 2026-08-26 Write down what the join routes actually answer — #245
 - [x] 2026-08-26 Build the background translator without dragging React in — #244
 - [x] 2026-08-26 Hold on to how somebody arrived once they stop being a guest — #243

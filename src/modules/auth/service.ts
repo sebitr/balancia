@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { isUniqueViolation } from "@/lib/db/errors";
 import {
   groupMembers,
   groups,
@@ -115,27 +116,6 @@ const EMAIL_CHANGE_TTL_MS = 2 * 60 * 60 * 1000;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
-}
-
-/**
- * Detects PostgreSQL's unique_violation (SQLSTATE 23505).
- *
- * Drizzle wraps driver errors, so the code lives on `cause` rather than on the
- * error itself; matching on the message text would break the moment the
- * wrapper's wording changes.
- */
-export function isUniqueViolation(error: unknown): boolean {
-  const codeOf = (value: unknown): string | undefined =>
-    typeof value === "object" && value !== null && "code" in value
-      ? String((value as { code: unknown }).code)
-      : undefined;
-
-  let current: unknown = error;
-  for (let depth = 0; depth < 5 && current; depth += 1) {
-    if (codeOf(current) === "23505") return true;
-    current = (current as { cause?: unknown }).cause;
-  }
-  return false;
 }
 
 export interface RegisterInput {

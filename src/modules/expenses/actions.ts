@@ -35,9 +35,21 @@ function revalidateGroup(groupId: string): void {
   revalidatePath(`/groups/${groupId}/settle`);
 }
 
+/**
+ * `clientKey` is the same idempotency key the offline outbox would replay
+ * under, minted by the form before it decides which way to send.
+ *
+ * It matters most on the path that looks like it needs it least. A save that
+ * goes out over a live connection can still lose its answer — the tunnel, the
+ * lift, the tab closed a second too early — and the form cannot tell that from
+ * a request that never arrived. Carrying the key on both paths means it does
+ * not have to: it queues the entry under the key it already used, and if the
+ * write did land, the replay finds it and adds nothing.
+ */
 export async function createExpenseAction(
   groupId: string,
   payload: unknown,
+  clientKey?: string,
 ): Promise<ActionResult<{ expenseId: string }>> {
   const parsed = expenseInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -46,7 +58,7 @@ export async function createExpenseAction(
 
   const result = await runAction("expenses.create", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    const expenseId = await createExpense(access, parsed.data);
+    const expenseId = await createExpense(access, parsed.data, { clientKey });
     return { expenseId };
   });
 

@@ -14,28 +14,27 @@ current service.
 - **Choose Balancia** when self-hosting, inspectable source code, control of the
   database and receipts, the ability to leave with complete reusable exports,
   guest access without an account, or precise currency handling matter most.
-- **Choose tricount** when native mobile apps, offline expense entry, a managed
-  service with no server administration, or supported payment integrations
-  matter most.
+- **Choose tricount** when native mobile apps, a managed service with no server
+  administration, or supported payment integrations matter most.
 
 ## Feature and operating model
 
-| Question                             | Balancia                                                                                         | tricount                                                                                                               |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Who runs it?                         | Use the free hosted instance or run it on your own server.                                       | bunq B.V. owns and operates the application and service.                                                               |
-| Is the application open source?      | Yes. The complete application is AGPL-3.0-or-later.                                              | No self-hosted source distribution is offered; its terms restrict reproducing and exploiting the service.              |
-| Is it free?                          | Yes. The hosted instance and repository have no paid feature tier.                               | tricount's current feature page presents the app as 100% free, and its help center says Premium was deprecated.        |
-| Where is group data stored?          | On the selected Balancia instance. Self-hosters control PostgreSQL and receipt storage.          | In the bunq-operated service and its providers, under tricount's privacy policy.                                       |
-| Can a group be shared by link?       | Yes. A revocable link is scoped to one participant in one group and does not require an account. | Yes. Current help describes opening a shared tricount link on a phone and joining through the app.                     |
-| Which splits are supported?          | Equal, exact, percentage and weighted shares, with several payers on one transaction.            | Equal splits and uneven splits entered as individual amounts or shares are documented.                                 |
-| How is currency handled?             | Keep currencies separate, or freeze a chosen conversion rate with each expense.                  | A tricount has one default currency; foreign expenses are converted at a daily market rate into that currency.         |
-| Are expense and income supported?    | Yes, including recurring expenses and recurring income.                                          | Yes. Current product documentation describes expenses, transfers and income; it does not describe recurring entries.   |
-| Can data move out in common formats? | Every group exports to JSON, CSV and Excel.                                                      | Current help says the former CSV and PDF export was deprecated; the privacy policy still describes export/portability. |
-| Are receipt images supported?        | Yes. Images and PDFs remain on the selected instance behind per-request authorization.           | Yes. Photos, including receipts, are stored and processed through the managed service.                                 |
-| Does it have native apps?            | No. Balancia is an installable web app (PWA).                                                    | Yes. tricount is distributed as a mobile app.                                                                          |
-| Can expenses be entered offline?     | No. Balancia waits for a connection before accepting financial writes.                           | Yes. tricount advertises offline entry followed by automatic synchronization.                                          |
-| Does it move money?                  | No. It records settlements but is not a bank or payment processor.                               | Payment requests, bank connections and card features are available under country- and service-specific conditions.     |
-| Who handles operations?              | The hosted service operator, or the self-hoster for their own instance.                          | bunq handles hosting, updates and service operations.                                                                  |
+| Question                             | Balancia                                                                                                               | tricount                                                                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Who runs it?                         | Use the free hosted instance or run it on your own server.                                                             | bunq B.V. owns and operates the application and service.                                                               |
+| Is the application open source?      | Yes. The complete application is AGPL-3.0-or-later.                                                                    | No self-hosted source distribution is offered; its terms restrict reproducing and exploiting the service.              |
+| Is it free?                          | Yes. The hosted instance and repository have no paid feature tier.                                                     | tricount's current feature page presents the app as 100% free, and its help center says Premium was deprecated.        |
+| Where is group data stored?          | On the selected Balancia instance. Self-hosters control PostgreSQL and receipt storage.                                | In the bunq-operated service and its providers, under tricount's privacy policy.                                       |
+| Can a group be shared by link?       | Yes. A revocable link is scoped to one participant in one group and does not require an account.                       | Yes. Current help describes opening a shared tricount link on a phone and joining through the app.                     |
+| Which splits are supported?          | Equal, exact, percentage and weighted shares, with several payers on one transaction.                                  | Equal splits and uneven splits entered as individual amounts or shares are documented.                                 |
+| How is currency handled?             | Keep currencies separate, or freeze a chosen conversion rate with each expense.                                        | A tricount has one default currency; foreign expenses are converted at a daily market rate into that currency.         |
+| Are expense and income supported?    | Yes, including recurring expenses and recurring income.                                                                | Yes. Current product documentation describes expenses, transfers and income; it does not describe recurring entries.   |
+| Can data move out in common formats? | Every group exports to JSON, CSV and Excel.                                                                            | Current help says the former CSV and PDF export was deprecated; the privacy policy still describes export/portability. |
+| Are receipt images supported?        | Yes. Images and PDFs remain on the selected instance behind per-request authorization.                                 | Yes. Photos, including receipts, are stored and processed through the managed service.                                 |
+| Does it have native apps?            | No. Balancia is an installable web app (PWA).                                                                          | Yes. tricount is distributed as a mobile app.                                                                          |
+| Can expenses be entered offline?     | Yes. Expenses and income are recorded on the device and sent on reconnect; editing and repayments still need a server. | Yes. tricount advertises offline entry followed by automatic synchronization.                                          |
+| Does it move money?                  | No. It records settlements but is not a bank or payment processor.                                                     | Payment requests, bank connections and card features are available under country- and service-specific conditions.     |
+| Who handles operations?              | The hosted service operator, or the self-hoster for their own instance.                                                | bunq handles hosting, updates and service operations.                                                                  |
 
 ## What both products do well
 
@@ -44,9 +43,11 @@ record spending, divide costs unevenly, calculate balances, record repayments,
 work with foreign currencies and attach supporting images. Both can be a good
 choice for a trip, shared home, couple or event.
 
-tricount has the stronger phone-native and offline experience. Balancia is the
-stronger fit when the group or operator wants a deployable open-source system,
-an auditable financial model and a complete export in reusable data formats.
+tricount has the stronger phone-native experience, and its offline support
+covers more of the app than Balancia's, which is scoped to adding expenses —
+see [offline entry](offline.md). Balancia is the stronger fit when the group or
+operator wants a deployable open-source system, an auditable financial model
+and a complete export in reusable data formats.
 
 ## Leave anytime with your data
 

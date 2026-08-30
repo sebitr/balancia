@@ -204,6 +204,13 @@
       "when": 1787908936339,
       "tag": "0028_index_unindexed_foreign_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1787990901661,
+      "tag": "0029_entry_client_keys",
+      "breakpoints": true
     }
   ]
 }

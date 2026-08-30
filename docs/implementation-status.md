@@ -134,10 +134,16 @@ it matters — inside the Next.js build.
 
 These are deliberate omissions for this version, not oversights:
 
-- **No offline data entry.** The service worker caches an app shell and does
-  network-first for authenticated views, but queuing financial writes offline
-  would require conflict resolution the product was not asked for. The offline
-  screen says so plainly.
+- **Offline entry covers adding, not editing or settling.** Expenses and income
+  can be recorded with no network and are sent on reconnect; see
+  `docs/offline.md`. Editing an existing entry and recording a repayment both
+  still need a server — the first because a stale copy replayed over a row
+  somebody else has changed is the one real conflict here, the second because a
+  repayment is priced from balances no device can compute on its own.
+- **A group is only available offline once its add screen has been opened on
+  that device.** That is when the snapshot the offline form renders from is
+  written. Loading the roster on every group navigation, so that a group never
+  visited could be added to, was not worth the query.
 - **Guest history claiming is designed, not built.** `participants.user_id` is
   nullable specifically so a guest participant can later be linked to an
   account; the UI flow for doing so is not implemented.

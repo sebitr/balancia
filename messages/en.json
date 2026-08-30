@@ -1313,9 +1313,25 @@
   "offline": {
     "metaTitle": "Offline",
     "title": "You are offline",
-    "body": "Balancia needs a connection to your server to show balances and record expenses. Nothing is lost — reconnect and everything will be where you left it.",
-    "note": "This version does not store expenses on your device while offline, so nothing entered here would be saved.",
-    "retry": "Try again"
+    "body": "Balancia cannot reach your server, so balances and history are unavailable until it can.",
+    "note": "Expenses you add now are kept on this device and sent as soon as you are back online.",
+    "retry": "Try again",
+    "groupsTitle": "Add an expense to",
+    "noGroups": "No group is available offline on this device yet. Open a group's add screen once while connected, and it will be here next time."
+  },
+  "outbox": {
+    "stripOffline": "You are offline. This group is showing what it looked like when you last had a connection.",
+    "stripWaiting": "{count, plural, one {# entry waiting to sync} other {# entries waiting to sync}}",
+    "stripSyncing": "{count, plural, one {Syncing # entry…} other {Syncing # entries…}}",
+    "stripBlocked": "{count, plural, one {# entry could not be saved} other {# entries could not be saved}}",
+    "sheetTitle": "Waiting to sync",
+    "sheetBody": "These are kept on this device until your server can be reached. They are not in the group's balances yet.",
+    "synced": "{count, plural, one {# entry synced} other {# entries synced}}",
+    "blockedNoAccess": "This group is no longer available to you, so this entry cannot be saved.",
+    "blockedRefused": "Your server refused this entry. Somebody on it may have been removed from the group.",
+    "discard": "Discard",
+    "notSavedTitle": "Nothing saved for this group yet",
+    "notSavedBody": "Open this group's add screen once while you have a connection, and it will work offline from then on."
   },
   "joinError": {
     "metaTitle": "Invitation link",
@@ -2925,7 +2941,9 @@
       "paymentRecorded": "Payment recorded",
       "changesSaved": "Changes saved",
       "deleted": "Entry deleted",
-      "restored": "Entry restored"
+      "restored": "Entry restored",
+      "queued": "Saved on this device",
+      "queuedNote": "It will sync as soon as you are back online."
     },
     "errors": {
       "amountRequired": "Enter an amount first.",
