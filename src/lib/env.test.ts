@@ -666,3 +666,55 @@ describe("configuration reaches the code", () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * Every `tsx` process package.json starts.
+ *
+ * One script can start more than one — `pnpm dev` copies the PDF assets before
+ * it hands over to Next — so each `tsx` in a command line counts on its own.
+ */
+function tsxInvocations(): { script: string; invocation: string }[] {
+  const source = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
+  const { scripts } = JSON.parse(source) as {
+    scripts: Record<string, string>;
+  };
+
+  return Object.entries(scripts).flatMap(([script, command]) =>
+    command
+      .split("&&")
+      .map((part) => part.trim())
+      .filter((part) => part.startsWith("tsx "))
+      .map((invocation) => ({ script, invocation })),
+  );
+}
+
+describe("configuration reaches the standalone scripts", () => {
+  /**
+   * Next reads `.env.local` and `.env` for `next dev` and `next build`. A tsx
+   * script is a plain Node process and reads neither, which made the setup in
+   * docs/development.md wrong as written: copy `.env.example` to `.env.local`,
+   * fill in DATABASE_URL, and `pnpm db:migrate` still failed with "DATABASE_URL
+   * is required to run migrations" — while `pnpm dev`, two lines further down
+   * the same page, was perfectly happy. `scripts/load-env.ts` is the fix, and
+   * the next script added here forgetting it is how the bug comes back.
+   */
+  it("preloads the env files into every tsx entry", () => {
+    const preload = "--import ./scripts/load-env.ts";
+
+    // First on the line, not merely somewhere on it: an `--import` that lands
+    // after the entry file is an argument to the script rather than a flag to
+    // Node, and quietly loads nothing.
+    const missing = tsxInvocations().filter(
+      ({ invocation }) =>
+        !invocation.startsWith(`tsx ${preload}`) &&
+        !invocation.startsWith(`tsx watch ${preload}`),
+    );
+
+    expect(
+      missing,
+      "these run with none of the .env files loaded, so a setting made in " +
+        `.env.local is invisible to them. Put \`${preload}\` first:\n` +
+        missing.map(({ script }) => `  ${script}`).join("\n"),
+    ).toEqual([]);
+  });
+});

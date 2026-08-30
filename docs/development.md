@@ -36,9 +36,13 @@ docker compose -f compose.dev.yaml run --rm shell     # pnpm, drizzle-kit, vites
 docker compose -f compose.dev.yaml down               # add -v to drop the database
 ```
 
-Because PostgreSQL is published on 55432, host-side `pnpm db:generate`,
-`pnpm test:integration` and `psql` all work against the containerised database
-with the `DATABASE_URL` already in `.env.local`.
+Because PostgreSQL is published on 55432, host-side tooling works against the
+containerised database too. Point `DATABASE_URL` in `.env.local` at
+`postgres://balancia:balancia@127.0.0.1:55432/balancia`, and `pnpm db:generate`,
+`pnpm db:migrate` and `pnpm db:seed` all follow it there; `psql` takes the same
+string on its command line. The integration suite is the exception — it reads
+`TEST_DATABASE_URL` from the environment and no file at all, see
+[Integration tests](#integration-tests).
 
 Overridable ports: `DEV_APP_PORT`, `DEV_DB_PORT`, `DEV_MAILPIT_UI_PORT`,
 `DEV_MAILPIT_SMTP_PORT`. Log level: `DEV_LOG_LEVEL`.
@@ -326,6 +330,25 @@ the behaviour you want when the alternative is silent divergence.
 **Money.** Never `number`. Amounts are `bigint` minor units end to end; they
 cross JSON as strings. `src/modules/currencies/money.ts` is the only place that
 formats them.
+
+**The scripts read the same `.env` files the app does.** Next loads
+`.env.local` and `.env` for `next dev` and `next build`; a `tsx` script is a
+plain Node process and loads neither, which is how `pnpm db:migrate` came to
+fail with "DATABASE_URL is required to run migrations" against an `.env.local`
+that plainly had one. Every `tsx` entry in `package.json` now preloads
+`scripts/load-env.ts`, which reads the same files in the same order Next does.
+`drizzle.config.ts` imports it too — drizzle-kit brings its own dotenv, and
+that one stops at `.env`.
+
+It is `--import ./scripts/load-env.ts`, first on the line, for two reasons. An
+`--import` written after the entry file is an argument to the script rather
+than a flag to Node, and loads nothing; and the environment has to be in place
+before the first module that reads it while being evaluated, which
+`src/lib/logger.ts` does. Nothing it reads overwrites anything already in the
+environment, which is what keeps the dev containers out of it: they bind-mount
+the working tree, so the host's `.env.local` is sitting right there inside
+them, and what Compose sets has to win. `src/lib/env.test.ts` fails the build
+on a `tsx` entry that forgets the preload.
 
 **Server Actions** validate with zod, resolve the actor, then call a service.
 No business logic lives in an action or a component.
