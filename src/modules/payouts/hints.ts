@@ -21,15 +21,31 @@ import { buildPaymentQr, explainMissingQr } from "./qr/payment-qr";
  * answers "show me their IBAN", and adding one would be the mistake.
  */
 
+/** One way of being paid, with whatever code that particular scheme has. */
+export interface PayoutHintMethod {
+  readonly method: string;
+  readonly detail: string;
+  /** This scheme's own payment code, when one can be built for this debt. */
+  readonly qr: PaymentQr | null;
+  /** Why there is none, when the reader can act on the reason. */
+  readonly qrMissing: PaymentQrRefusal | null;
+}
+
 export interface PayoutHint {
   /** Whom the debt is owed to; the row is matched on this and the currency. */
   readonly participantId: string;
   readonly currency: string;
   /** Every method, in the owner's order. */
-  readonly methods: readonly {
-    readonly method: string;
-    readonly detail: string;
-  }[];
+  readonly methods: readonly PayoutHintMethod[];
+  /**
+   * The leading code, which is the one a screen shows before anybody chooses.
+   *
+   * Kept beside the per-method codes rather than removed: it is part of the
+   * settle-up response the native client already reads, and a field that
+   * disappears from a JSON contract breaks a shipped app rather than a build.
+   * It is derived, never computed separately — whichever method below is the
+   * first to carry a code, so the two can never disagree.
+   */
   readonly qr: PaymentQr | null;
   /** Why there is no code, when that is something the reader can act on. */
   readonly qrMissing: PaymentQrRefusal | null;
@@ -69,52 +85,66 @@ export async function buildPayoutHints(
     if (methods.length === 0) return [];
 
     /*
-     * A code is only built for a bank transfer, and only when everything the
-     * standard needs is present. A TWINT number is not something a banking app
-     * scans, and a Swiss account with no address on file is a code that would
-     * be refused — so both come back as no code at all rather than as one that
-     * fails at the till.
+     * A code is built for every method that has one, rather than for the bank
+     * entry alone.
      *
-     * The bank entry is found by name rather than read off the top of the
-     * list. The order is the owner's own preference, and somebody who would
-     * rather be paid by TWINT still has an account a bank app can pay into.
+     * It used to be the bank entry alone, on the reasoning that a payment code
+     * is a thing banking apps scan. That was true of the two standards this
+     * knew about and is not true of the catalogue: a Pix key and a Swedish
+     * mobile number each have a code of their own that a third party can
+     * build, and offering those methods while producing nothing but a string
+     * to retype was the gap. `buildPaymentQr` decides per method and answers
+     * null for the many that genuinely have nothing — a TWINT number is still
+     * not something anybody scans.
      *
-     * The amount comes from the transfer the row is showing, so the code can
-     * never name a figure that is not on screen beside it.
+     * The amount comes from the transfer the row is showing, so no code can
+     * ever name a figure that is not on screen beside it.
      */
-    const bank = methods.find((entry) => entry.method === "bank");
-    const request = bank
-      ? {
-          iban: bank.detail,
-          creditorName: transfer.toName,
-          address: addresses.get(transfer.toParticipantId) ?? null,
-          minorUnits: transfer.amount.toString(),
-          currency: transfer.currency,
-          message: groupName,
-        }
-      : null;
+    const address = addresses.get(transfer.toParticipantId) ?? null;
 
-    const qr = request ? buildPaymentQr(request) : null;
+    const built = methods.map((entry) => {
+      const request = {
+        method: entry.method,
+        detail: entry.detail,
+        creditorName: transfer.toName,
+        address,
+        minorUnits: transfer.amount.toString(),
+        currency: transfer.currency,
+        message: groupName,
+      };
 
-    /*
-     * And when there is none, why — but only for the reasons somebody can do
-     * something about. `explainMissingQr` answers "none" for the rest, and
-     * "none" stays silent: a sentence the reader can act on beats a blank
-     * where they expected a code, and a sentence they cannot act on is worse
-     * than the blank, because it costs them a read to find that out.
-     */
-    const missing = request && !qr ? explainMissingQr(request) : "none";
+      const qr = buildPaymentQr(request);
+
+      /*
+       * And when there is none, why — but only for the reasons somebody can do
+       * something about. `explainMissingQr` answers "none" for the rest, and
+       * "none" stays silent: a sentence the reader can act on beats a blank
+       * where they expected a code, and a sentence they cannot act on is worse
+       * than the blank, because it costs them a read to find that out.
+       */
+      const missing = qr ? "none" : explainMissingQr(request);
+
+      return {
+        method: entry.method,
+        detail: entry.detail,
+        qr,
+        qrMissing: missing === "none" ? null : missing,
+      };
+    });
+
+    // Derived, so the legacy pair can never contradict the list it came from.
+    // A reason is only worth leading with when no method produced a code at
+    // all; otherwise the screen has something better to show than an excuse.
+    const leading = built.find((entry) => entry.qr !== null);
+    const excuse = leading ? null : built.find((entry) => entry.qrMissing);
 
     return [
       {
         participantId: transfer.toParticipantId,
         currency: transfer.currency,
-        methods: methods.map((entry) => ({
-          method: entry.method,
-          detail: entry.detail,
-        })),
-        qr,
-        qrMissing: missing === "none" ? null : missing,
+        methods: built,
+        qr: leading?.qr ?? null,
+        qrMissing: excuse?.qrMissing ?? null,
       },
     ];
   });

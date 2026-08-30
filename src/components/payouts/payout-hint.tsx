@@ -24,7 +24,27 @@ import type {
 export interface PayoutMethodChoice {
   readonly method: string;
   readonly detail: string;
+  /** This scheme's own payment code, when it has one for this debt. */
+  readonly qr?: { standard: PaymentQrStandard; payload: string } | null;
+  /** Why it has none, when the reader can act on the reason. */
+  readonly qrMissing?: PaymentQrRefusal | null;
 }
+
+/**
+ * The standards whose payload is text a person can paste.
+ *
+ * Pix calls it *Copia e Cola* and it is how a great many Brazilians actually
+ * pay — the camera is the alternative, not the default. SPAYD and the Polish
+ * code are the same kind of artefact. The two SEPA codes are not: an EPC
+ * payload is eleven newline-separated lines and a Swiss one is thirty-odd,
+ * and neither goes anywhere useful in a paste field.
+ */
+const PASTEABLE: ReadonlySet<PaymentQrStandard> = new Set([
+  "pix",
+  "spayd",
+  "zbp",
+  "swish",
+]);
 
 /**
  * Every way the person you owe accepts money, shown where you are about to pay
@@ -122,8 +142,21 @@ export function PayoutHint({
    * Under the bank chip and nowhere else: it answers "where is the code", and
    * a code was never on offer under TWINT.
    */
+  /*
+   * The code for the method whose chip is lit, and the reason there is none.
+   *
+   * Per method now, rather than one code belonging to the bank entry: a Pix
+   * key and a Swish number each have a code of their own, and the chip the
+   * reader pressed is the one they expect the code to be for. The props are
+   * the fallback for a caller that has not been updated yet, and mean what
+   * they used to mean — the leading code, which was always the bank's.
+   */
+  const chosenQr = chosen.qr ?? (chosen.method === "bank" ? qr : null);
+  const chosenQrMissing =
+    chosen.qrMissing ?? (chosen.method === "bank" ? qrMissing : null);
+
   const whyNoQr = () => {
-    switch (qrMissing) {
+    switch (chosenQrMissing) {
       case "addressMissing":
         return t("qrNoneAddress", { name });
       case "qrIban":
@@ -134,7 +167,9 @@ export function PayoutHint({
         return null;
     }
   };
-  const why = qr || chosen.method !== "bank" ? null : whyNoQr();
+  // Under the lit chip and nowhere else: it answers "where is the code", and a
+  // code was never on offer under TWINT.
+  const why = chosenQr ? null : whyNoQr();
 
   const copy = async () => {
     try {
@@ -163,10 +198,25 @@ export function PayoutHint({
     minorUnits,
     currency,
     note: groupName,
+    payeeName: name,
   });
   const link = app && (app.kind === "universal" || appLinksWork) ? app : null;
 
-  const bankDetail = methods.find((entry) => entry.method === "bank")?.detail;
+  /*
+   * A link this browser cannot follow, offered to the phone instead.
+   *
+   * `upi://` resolves to nothing on a desktop, which is why the button above
+   * waits for a browser that could have the app. But the payer is very often
+   * at a laptop with their phone in their hand, and a QR code carrying the
+   * same string bridges exactly that: point the camera at the screen and the
+   * payment app opens on the device that has it.
+   *
+   * Only where there is no scheme code of its own. When there is, that code is
+   * the better artefact — it is what the payer's bank designed its scanner
+   * around — and two codes on one row is a choice nobody should have to make.
+   */
+  const scanInstead = !chosenQr && app && !link ? app : null;
+
   const hasDetail = needsDetail(chosen.method) && chosen.detail !== "";
 
   return (
@@ -279,7 +329,7 @@ export function PayoutHint({
           <p className="text-xs text-pretty text-muted-foreground">{why}</p>
         )}
 
-        {qr && chosen.method === "bank" && (
+        {(chosenQr || scanInstead) && (
           <Button
             type="button"
             variant="outline"
@@ -287,7 +337,7 @@ export function PayoutHint({
             className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
           >
             <QrCode aria-hidden="true" />
-            {t("qrShowSheet")}
+            {chosenQr ? t("qrShowSheet") : t("qrScanWithPhone")}
           </Button>
         )}
 
@@ -322,14 +372,16 @@ export function PayoutHint({
       {/* Kept outside the keyed block so switching chips does not unmount an
           open sheet. The account it names is the bank entry's, which is what
           the code was built from — never whichever chip happens to be lit. */}
-      {qr && bankDetail && (
+      {(chosenQr || scanInstead) && (
         <QrSheet
           open={showingQr}
           onOpenChange={setShowingQr}
           name={name}
           amount={amount}
-          iban={bankDetail}
-          qr={qr}
+          detail={chosen.detail}
+          method={label}
+          qr={chosenQr ?? null}
+          link={scanInstead?.href ?? null}
         />
       )}
     </div>
@@ -349,17 +401,49 @@ function QrSheet({
   onOpenChange,
   name,
   amount,
-  iban,
+  detail,
+  method,
   qr,
+  link,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   name: string;
   amount: string;
-  iban: string;
-  qr: { standard: PaymentQrStandard; payload: string };
+  /** The payee's own detail, shown under the code so the two can be checked. */
+  detail: string;
+  /** What the method is called, for the heading on a link code. */
+  method: string;
+  /** A scheme's own code, or null when this is a link offered to a phone. */
+  qr: { standard: PaymentQrStandard; payload: string } | null;
+  link: string | null;
 }) {
   const t = useTranslations("payouts");
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const payload = qr?.payload ?? link;
+  if (!payload) return null;
+
+  /*
+   * A code that is also text worth pasting gets a button for it.
+   *
+   * This is not a convenience. In Brazil the paste — *Pix Copia e Cola* — is
+   * the ordinary way to pay, and a screen that offers only a camera has hidden
+   * the path most of its readers would have taken.
+   */
+  const pasteable = qr !== null && PASTEABLE.has(qr.standard);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(payload);
+      setCopiedCode(true);
+      toast.success(t("qrCodeCopied"));
+      window.setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      // Same as the detail above: a refused clipboard leaves the code drawn on
+      // screen, which is the thing the sheet was opened for anyway.
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -369,12 +453,12 @@ function QrSheet({
         className="mx-auto max-h-[90svh] max-w-[390px] items-center gap-3 overflow-y-auto rounded-t-[24px] bg-card px-5 pt-2.5 pb-[22px] data-[side=bottom]:border-t-0"
       >
         <SheetTitle className="text-base font-semibold tracking-[-0.02em]">
-          {t("qrSheetTitle", { name })}
+          {qr ? t("qrSheetTitle", { name }) : t("qrScanTitle", { method })}
         </SheetTitle>
 
         <PaymentQr
-          payload={qr.payload}
-          standard={qr.standard}
+          payload={payload}
+          standard={qr?.standard ?? null}
           label={t("qrTitle")}
         />
 
@@ -383,12 +467,28 @@ function QrSheet({
             {t("qrAmountTo", { amount, name })}
           </p>
           <p className="font-mono text-2xs break-all text-muted-foreground">
-            {iban}
+            {detail}
           </p>
           <p className="text-xs text-muted-foreground">
-            {qr.standard === "swiss" ? t("qrSwiss") : t("qrEpc")}
+            {qr ? t(standardNoteKey(qr.standard)) : t("qrScanNote", { method })}
           </p>
         </div>
+
+        {pasteable && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void copyCode()}
+            className="h-11 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+          >
+            {copiedCode ? (
+              <Check aria-hidden="true" className="size-4 text-positive-ink" />
+            ) : (
+              <Copy aria-hidden="true" className="size-4" />
+            )}
+            {copiedCode ? t("qrCodeCopied") : t("qrCopyCode")}
+          </Button>
+        )}
 
         <Button
           type="button"
@@ -412,6 +512,34 @@ function QrSheet({
  * nobody asked. Everything else takes the method's own label, which is the most
  * this can honestly say.
  */
+/**
+ * Which sentence names the scheme a code belongs to.
+ *
+ * A key rather than a translated string, because the translator this is read
+ * beside is typed against its own namespace — handing it around as a plain
+ * function would trade that check for nothing.
+ *
+ * The line matters more than a caption usually does: somebody holding up a
+ * code wants to know their app will recognise it *before* they open the app,
+ * and "Pix" or "Swish" answers that where "payment code" does not.
+ */
+function standardNoteKey(standard: PaymentQrStandard) {
+  switch (standard) {
+    case "swiss":
+      return "qrSwiss" as const;
+    case "pix":
+      return "qrPix" as const;
+    case "swish":
+      return "qrSwish" as const;
+    case "spayd":
+      return "qrSpayd" as const;
+    case "zbp":
+      return "qrZbp" as const;
+    default:
+      return "qrEpc" as const;
+  }
+}
+
 function fieldNameOf(method: string, label: string, ibanLabel: string): string {
   if (payoutFieldFor(method) === "iban") return ibanLabel;
   if (method === "revolut") return "Revtag";
