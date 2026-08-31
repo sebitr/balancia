@@ -113,6 +113,8 @@ import {
   type DebtPair,
 } from "./settle-blocks";
 import { settleOutcome, type SettleOutcome } from "./settle-outcome";
+import { heardEntry } from "./heard-entry";
+import { VoiceButton } from "./voice-button";
 import { savedSummary } from "./saved-summary";
 import { worthDrafting, type EntryDraftFields } from "./draft-fields";
 import { discardDraft, saveDraft } from "@/lib/offline/drafts";
@@ -1755,6 +1757,36 @@ export function AddEntryForm({
             defaultCurrency={currency}
             onApply={applyScan}
             trigger={ScanCard}
+          />
+        )}
+
+        {/*
+         * Saying it instead of typing it. Beside the scan button because they
+         * are the same kind of thing — a way in that skips the form — and
+         * both only propose.
+         */}
+        {type === "expense" && !editing && (
+          <VoiceButton
+            className="self-start"
+            onHeard={(transcript) => {
+              const heard = heardEntry(transcript, currency);
+              /*
+               * Anything not heard stays at its default, and nothing is
+               * overwritten with nothing: a sentence with no amount in it
+               * leaves the amount alone rather than clearing what is there.
+               */
+              if (heard.amountText !== "") {
+                setAmountText(sanitiseAmount(heard.amountText, heard.currency));
+              }
+              if (heard.currency !== "") setCurrency(heard.currency);
+              /*
+               * When nothing parsed, the raw words go in the description and
+               * the amount is left empty — the reader is one field from done
+               * rather than back where they started. That is the same branch:
+               * `heardEntry` puts everything it could not read here.
+               */
+              if (heard.description !== "") setDescription(heard.description);
+            }}
           />
         )}
 

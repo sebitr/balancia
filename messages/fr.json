@@ -3111,6 +3111,11 @@
     "draft": {
       "label": "Brouillon",
       "discard": "Supprimer le brouillon"
+    },
+    "voice": {
+      "start": "Dicter",
+      "listening": "J’écoute…",
+      "stop": "Arrêter l’écoute"
     }
   },
   "paymentMethods": {

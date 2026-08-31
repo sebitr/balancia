@@ -3111,6 +3111,11 @@
     "draft": {
       "label": "Draft",
       "discard": "Discard draft"
+    },
+    "voice": {
+      "start": "Say it",
+      "listening": "Listening…",
+      "stop": "Stop listening"
     }
   },
   "paymentMethods": {
