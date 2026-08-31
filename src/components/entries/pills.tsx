@@ -23,6 +23,15 @@ import { initialOf } from "./initials";
 export interface EntryMember {
   readonly id: string;
   readonly displayName: string;
+  /**
+   * Somebody in the group's money but not on the instance.
+   *
+   * A guest is a full member of the balance maths — owed to, owing from,
+   * settleable — so nothing about the split treats them differently. The ring
+   * is only so you can see at a glance who has not joined, which is the fact
+   * somebody needs when they wonder why a person never gets reminders.
+   */
+  readonly guest?: boolean;
 }
 
 /** Which of the sheet's two questions a control is answering. */
@@ -48,15 +57,26 @@ export function MemberAvatar({
   className,
   selected = false,
   tone = "primary",
+  guest = false,
 }: {
   name: string;
   className?: string;
   /** Selected avatars take their tone's colour, so a face reads as chosen. */
   selected?: boolean;
   tone?: PillTone;
+  /** Draws the dashed ring that says this person has not joined. */
+  guest?: boolean;
 }) {
   return (
-    <Avatar className={cn("size-[30px] shrink-0", className)}>
+    <Avatar
+      className={cn(
+        "size-[30px] shrink-0",
+        // Dashed for the same reason the "Someone else" row's circle is:
+        // there is a person here, but no account behind them yet.
+        guest && "border border-dashed border-border",
+        className,
+      )}
+    >
       <AvatarFallback
         className={cn(
           "text-xs font-semibold",
@@ -84,6 +104,7 @@ export function MemberPill({
   disabled = false,
   tone = "primary",
   choice = false,
+  guest = false,
 }: {
   name: string;
   /** Accessible name, where the visible one would not be distinct enough. */
@@ -94,6 +115,8 @@ export function MemberPill({
   tone?: PillTone;
   /** One of many, rather than an independent toggle. */
   choice?: boolean;
+  /** Draws the dashed ring that says this person has not joined. */
+  guest?: boolean;
 }) {
   return (
     <button
@@ -111,7 +134,7 @@ export function MemberPill({
           : "border-border bg-white/4 font-normal text-muted-foreground",
       )}
     >
-      <MemberAvatar name={name} selected={selected} tone={tone} />
+      <MemberAvatar name={name} selected={selected} tone={tone} guest={guest} />
       <span className="truncate">{name}</span>
       {selected && (
         <Check

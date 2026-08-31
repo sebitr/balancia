@@ -5,7 +5,9 @@ import {
   nextOccurrence,
   occurrenceInstant,
   occurrencesUpTo,
+  remainingOf,
   todayIn,
+  upcomingOccurrences,
   type RecurrenceRule,
 } from "./schedule";
 
@@ -199,6 +201,202 @@ describe("validation", () => {
     );
     expect(() => firstOccurrence(monthly({ dayOfMonth: 32 }))).toThrow(
       RecurrenceError,
+    );
+  });
+});
+
+const daily = (overrides: Partial<RecurrenceRule> = {}): RecurrenceRule => ({
+  frequency: "daily",
+  interval: 1,
+  timezone: "Europe/Paris",
+  startDate: "2026-01-01",
+  ...overrides,
+});
+
+describe("daily recurrence", () => {
+  it("starts on the start date, which always matches", () => {
+    expect(firstOccurrence(daily())).toBe("2026-01-01");
+    expect(firstOccurrence(daily({ startDate: "2026-03-29" }))).toBe(
+      "2026-03-29",
+    );
+  });
+
+  it("steps by the interval", () => {
+    expect(nextOccurrence(daily(), "2026-01-01")).toBe("2026-01-02");
+    expect(nextOccurrence(daily({ interval: 3 }), "2026-01-01")).toBe(
+      "2026-01-04",
+    );
+  });
+
+  it("crosses a month and a year without special-casing them", () => {
+    expect(nextOccurrence(daily(), "2026-01-31")).toBe("2026-02-01");
+    expect(nextOccurrence(daily(), "2026-12-31")).toBe("2027-01-01");
+    // 2028 is a leap year.
+    expect(nextOccurrence(daily(), "2028-02-28")).toBe("2028-02-29");
+  });
+
+  it("needs no weekday or day of month", () => {
+    expect(() => firstOccurrence(daily())).not.toThrow();
+  });
+});
+
+describe("the nth weekday of the month", () => {
+  const secondTuesday = (
+    overrides: Partial<RecurrenceRule> = {},
+  ): RecurrenceRule => ({
+    frequency: "monthly",
+    interval: 1,
+    weekday: 2,
+    weekOfMonth: 2,
+    timezone: "Europe/Paris",
+    startDate: "2026-01-01",
+    ...overrides,
+  });
+
+  it("counts from the start of the month", () => {
+    // January 2026 starts on a Thursday: Tuesdays are 6, 13, 20, 27.
+    expect(firstOccurrence(secondTuesday())).toBe("2026-01-13");
+    expect(firstOccurrence(secondTuesday({ weekOfMonth: 1 }))).toBe(
+      "2026-01-06",
+    );
+    expect(firstOccurrence(secondTuesday({ weekOfMonth: 4 }))).toBe(
+      "2026-01-27",
+    );
+  });
+
+  it("counts back from the end for `last`", () => {
+    // The last Tuesday of January 2026 is the 27th; of February, the 24th.
+    expect(firstOccurrence(secondTuesday({ weekOfMonth: "last" }))).toBe(
+      "2026-01-27",
+    );
+    expect(
+      nextOccurrence(secondTuesday({ weekOfMonth: "last" }), "2026-01-27"),
+    ).toBe("2026-02-24");
+  });
+
+  it("moves to the next month when this month's has passed", () => {
+    expect(firstOccurrence(secondTuesday({ startDate: "2026-01-20" }))).toBe(
+      "2026-02-10",
+    );
+  });
+
+  it("recomputes within each month rather than adding four weeks", () => {
+    // The naive "+28 days" would give 2026-02-10 → 2026-03-10, which happens
+    // to be right, and 2026-03-10 → 2026-04-07, which is the *first* Tuesday
+    // of April. The second is the 14th.
+    expect(nextOccurrence(secondTuesday(), "2026-01-13")).toBe("2026-02-10");
+    expect(nextOccurrence(secondTuesday(), "2026-03-10")).toBe("2026-04-14");
+  });
+
+  it("honours the interval in months", () => {
+    expect(nextOccurrence(secondTuesday({ interval: 3 }), "2026-01-13")).toBe(
+      "2026-04-14",
+    );
+  });
+
+  it("keeps the fourth week inside the shortest month", () => {
+    // Every month has at least four of each weekday, February included, so
+    // the fourth never rolls into the next month. February 2026 begins on a
+    // Sunday: its Tuesdays are the 3rd, 10th, 17th and 24th.
+    expect(
+      firstOccurrence(
+        secondTuesday({ weekOfMonth: 4, startDate: "2026-02-01" }),
+      ),
+    ).toBe("2026-02-24");
+    // And in a 28-day February the fourth and the last are the same day.
+    expect(
+      firstOccurrence(
+        secondTuesday({ weekOfMonth: "last", startDate: "2026-02-01" }),
+      ),
+    ).toBe("2026-02-24");
+  });
+
+  it("refuses the combinations that would need a guess", () => {
+    // Both ways of naming the day at once.
+    expect(() => firstOccurrence(secondTuesday({ dayOfMonth: 3 }))).toThrow(
+      RecurrenceError,
+    );
+    // A week with no weekday to count.
+    expect(() => firstOccurrence(secondTuesday({ weekday: null }))).toThrow(
+      RecurrenceError,
+    );
+    // A week of the month on something that is not monthly.
+    expect(() =>
+      firstOccurrence(secondTuesday({ frequency: "weekly" })),
+    ).toThrow(RecurrenceError);
+  });
+});
+
+describe("a series that ends after a number of times", () => {
+  const twelve = monthly({ count: 12 });
+
+  it("stops the run at the count", () => {
+    const dates = occurrencesUpTo(twelve, "2027-12-31");
+    expect(dates).toHaveLength(12);
+    expect(dates.at(-1)).toBe("2026-12-01");
+  });
+
+  it("counts what already happened, so a resumed run still ends", () => {
+    const dates = occurrencesUpTo(twelve, "2027-12-31", {
+      from: "2026-09-01",
+      alreadyGenerated: 9,
+    });
+    expect(dates).toEqual(["2026-10-01", "2026-11-01", "2026-12-01"]);
+  });
+
+  it("produces nothing once the count is spent", () => {
+    expect(
+      occurrencesUpTo(twelve, "2027-12-31", {
+        from: "2026-12-01",
+        alreadyGenerated: 12,
+      }),
+    ).toEqual([]);
+  });
+
+  it("leaves an uncounted rule exactly as it was", () => {
+    expect(occurrencesUpTo(monthly(), "2026-06-30")).toHaveLength(6);
+  });
+
+  it("reports what is left", () => {
+    expect(remainingOf(twelve, 0)).toBe(12);
+    expect(remainingOf(twelve, 12)).toBe(0);
+    // Never negative: an extra occurrence from a concurrent worker must not
+    // wrap round into "one more is due".
+    expect(remainingOf(twelve, 13)).toBe(0);
+    expect(remainingOf(monthly(), 500)).toBe(Infinity);
+  });
+
+  it("rejects a count that is not a positive whole number", () => {
+    expect(() => firstOccurrence(monthly({ count: 0 }))).toThrow(
+      RecurrenceError,
+    );
+    expect(() => firstOccurrence(monthly({ count: 1.5 }))).toThrow(
+      RecurrenceError,
+    );
+  });
+});
+
+describe("previewing a rule", () => {
+  it("hands back the next few dates from the start", () => {
+    expect(upcomingOccurrences(monthly(), 3)).toEqual([
+      "2026-01-01",
+      "2026-02-01",
+      "2026-03-01",
+    ]);
+  });
+
+  it("never previews more than the rule will produce", () => {
+    expect(upcomingOccurrences(monthly({ count: 2 }), 5)).toHaveLength(2);
+    expect(upcomingOccurrences(monthly({ endDate: "2026-02-28" }), 5)).toEqual([
+      "2026-01-01",
+      "2026-02-01",
+    ]);
+  });
+
+  it("is empty for a rule that never happens", () => {
+    // An end date before the first occurrence.
+    expect(upcomingOccurrences(monthly({ endDate: "2025-12-31" }), 3)).toEqual(
+      [],
     );
   });
 });

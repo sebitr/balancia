@@ -5,6 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
+import { draftFields, type EntryDraftFields } from "./draft-fields";
+import { loadDraft } from "@/lib/offline/drafts";
+
+/**
+ * What the draft row adds to the URL to say "put it back".
+ *
+ * A parameter rather than a route: it is the same drawer either way, and a
+ * second route would be a second place for the form to be constructed.
+ */
+export const RESUME_PARAM = "draft";
 
 /**
  * The add-entry screen, as a drawer over the group it belongs to.
@@ -201,6 +211,38 @@ export function AddEntryDrawer({
     return () => clearTimeout(timer);
   }, [exit, dismissTo, form.groupId, router]);
 
+  /*
+   * The group's half-written entry, read before the form mounts.
+   *
+   * The form seeds its fields from it, so it has to be in hand by the first
+   * render rather than applied a frame later — a drawer that appears empty
+   * and then fills itself reads as two screens. `undefined` is "still
+   * looking", and the drawer holds its body back for that one IndexedDB get.
+   *
+   * Only when the reader asked to resume, which is what the draft row on the
+   * group screen links to. Every other way in renders immediately: waiting on
+   * storage before showing a form nobody asked to restore would make the
+   * ordinary case pay for the rare one.
+   */
+  const resuming = searchParams.get(RESUME_PARAM) === "1" && !form.editing;
+  const [draft, setDraft] = useState<EntryDraftFields | null | undefined>(
+    resuming ? undefined : null,
+  );
+  const memberKey = form.members.map((member) => member.id).join(",");
+  useEffect(() => {
+    if (!resuming) return;
+    let cancelled = false;
+    void loadDraft(form.groupId).then((stored) => {
+      if (cancelled) return;
+      setDraft(
+        stored ? draftFields(stored.fields, memberKey.split(",")) : null,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [resuming, form.groupId, memberKey]);
+
   return (
     <Sheet
       open={exit === null}
@@ -212,31 +254,34 @@ export function AddEntryDrawer({
         className={ENTRY_SHEET_CLASS}
         onOpenAutoFocus={openOnAmount}
       >
-        <AddEntryForm
-          {...form}
-          onClose={() => setExit({ kind: "dismiss" })}
-          // A saved entry leaves the same way a dismissed one does — the
-          // confirmation is a toast, which outlives the drawer.
-          onSaved={() => setExit({ kind: "saved" })}
-          // A conversion knows the screen the entry moved to and that is where
-          // the reader goes; a deletion has no such screen, and the group is
-          // the nearest thing to where the entry used to be.
-          //
-          // The filters go with it. Changing an expense into a repayment moves
-          // the entry to another table and so to another detail screen, and
-          // that screen is where the reader presses Back — onto a list which,
-          // without this, had forgotten what it was showing and where in it
-          // they were. A deletion goes to the group instead, which is not a
-          // list and has no filters to keep.
-          onRemoved={(to) =>
-            setExit({
-              kind: "gone",
-              to: to
-                ? withQuery(to, listQuery(searchParams))
-                : `/groups/${form.groupId}`,
-            })
-          }
-        />
+        {draft !== undefined && (
+          <AddEntryForm
+            {...form}
+            draft={draft}
+            onClose={() => setExit({ kind: "dismiss" })}
+            // A saved entry leaves the same way a dismissed one does — the
+            // confirmation is a toast, which outlives the drawer.
+            onSaved={() => setExit({ kind: "saved" })}
+            // A conversion knows the screen the entry moved to and that is where
+            // the reader goes; a deletion has no such screen, and the group is
+            // the nearest thing to where the entry used to be.
+            //
+            // The filters go with it. Changing an expense into a repayment moves
+            // the entry to another table and so to another detail screen, and
+            // that screen is where the reader presses Back — onto a list which,
+            // without this, had forgotten what it was showing and where in it
+            // they were. A deletion goes to the group instead, which is not a
+            // list and has no filters to keep.
+            onRemoved={(to) =>
+              setExit({
+                kind: "gone",
+                to: to
+                  ? withQuery(to, listQuery(searchParams))
+                  : `/groups/${form.groupId}`,
+              })
+            }
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

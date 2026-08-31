@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Rework the Add Entry drawer: income vocabulary, settlement pairs, recurrence, entry friction — `feat/add-entry-rework`
 - [ ] Show a payout example from the method's own country, and group the number as it is typed — `feat/payout-country-examples`
 - [ ] Skip the list of who to remind when only one person can be asked — `feat/remind-skip-single-recipient`
 - [ ] Hold back the Swiss QR-bill address until the IBAN says CH — `fix/payout-address-after-iban`
@@ -22,6 +23,8 @@ Started, on a branch, not yet merged.
 
 Agreed on, not started. Pick from the top.
 
+- [ ] Share target: register for images, PDFs and text, so a receipt shared from another app lands in the drawer — the other half of `briefs/entry-friction.md` idea 6, left out of the Add Entry rework because it is manifest and route work rather than drawer work
+- [ ] Merge somebody into an existing guest when they accept an invite — `briefs/entry-friction.md` idea 7's second half. Match on name, ask, never merge silently: merging two people's balances by mistake is unrecoverable in a way nothing else in this app is
 - [ ] Use the whole window on a desktop, instead of a phone column with a bottom bar — `src/components/layout/app-shell.tsx`
 
 ## Someday

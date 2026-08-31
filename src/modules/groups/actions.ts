@@ -13,6 +13,7 @@ import {
   addParticipantSchema,
   createGroupSchema,
   createInvitationSchema,
+  groupSplitDefaultSchema,
   updateGroupSchema,
 } from "./schemas";
 import {
@@ -24,6 +25,7 @@ import {
   restoreParticipant,
   revokeInvitation,
   setGroupArchived,
+  setGroupSplitDefault,
   updateGroup,
   updateParticipant,
 } from "./service";
@@ -114,6 +116,35 @@ export async function updateGroupAction(
     revalidatePath(`/groups/${groupId}`);
     revalidatePath(`/groups/${groupId}/settings`);
   }
+  return result;
+}
+
+/**
+ * Remember — or forget — how this group splits things.
+ *
+ * Written from the split sheet rather than from settings, because that is
+ * where the split it describes has just been built and where "always split
+ * like this" makes sense as a question. Null clears it.
+ *
+ * It is a suggestion the next entry seeds from, so any member may set it: the
+ * permission that matters is being in the group, which `requireGroupAccess`
+ * already establishes.
+ */
+export async function setGroupSplitDefaultAction(
+  groupId: string,
+  split: unknown,
+): Promise<ActionResult> {
+  const parsed = groupSplitDefaultSchema.safeParse(split);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues[0]?.message ?? "Check the split.");
+  }
+
+  const result = await runAction("groups.setSplitDefault", async () => {
+    const access = await requireGroupAccess(groupId);
+    await setGroupSplitDefault(access, parsed.data);
+  });
+
+  if (result.ok) revalidatePath(`/groups/${groupId}`);
   return result;
 }
 

@@ -1,9 +1,6 @@
 import { currencyExponent } from "@/modules/currencies/iso-4217";
 import { THRESHOLDS } from "@/modules/categorization";
-import type {
-  ClassificationResult,
-  ExpenseCategory,
-} from "@/modules/categorization";
+import type { CategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import type { EntryDirection } from "@/modules/expenses/direction";
 import type { SplitMethod } from "@/modules/expenses/split";
 
@@ -203,14 +200,34 @@ export interface TypeSwitchReset {
   readonly clearRecurrence: boolean;
   readonly clearAttachments: boolean;
   readonly resetCurrency: boolean;
+  /** The two vocabularies share no codes. See `resetsForType`. */
+  readonly clearCategory: boolean;
 }
 
-export function resetsForType(next: EntryType): TypeSwitchReset {
+export function resetsForType(
+  next: EntryType,
+  from?: EntryType,
+): TypeSwitchReset {
   return {
     clearScan: next !== "expense",
     clearRecurrence: next === "settle",
     clearAttachments: next === "settle",
     resetCurrency: next === "settle",
+    /*
+     * Expense and income keep separate category lists, so a code does not
+     * survive the crossing between them — not because it would fail to
+     * resolve (`rent` reads in both) but because it would silently change
+     * meaning, from money paid to a landlord to money a tenant paid you.
+     *
+     * Only the crossing clears it. Going to Settle and back is a detour, not
+     * a change of vocabulary, and dropping the category on the way out would
+     * punish a reader for looking.
+     */
+    clearCategory:
+      from !== undefined &&
+      from !== next &&
+      from !== "settle" &&
+      next !== "settle",
   };
 }
 
@@ -251,7 +268,7 @@ export function noteAfterTypeSwitch(input: {
 export const SUGGESTED_CATEGORIES = 3;
 
 export interface CategoryShortlist {
-  readonly categories: readonly ExpenseCategory[];
+  readonly categories: readonly string[];
   /**
    * Whether the description produced any of them — which is the difference
    * between "because it says…" and "most used", and therefore between a
@@ -278,13 +295,13 @@ export interface CategoryShortlist {
  * when the classifier is that sure, the runners-up are what it rejected.
  */
 export function categoryShortlist(input: {
-  suggestion: ClassificationResult | null;
-  frequent: readonly ExpenseCategory[];
+  suggestion: CategorySuggestion | null;
+  frequent: readonly string[];
   limit?: number;
 }): CategoryShortlist {
   const { suggestion, frequent, limit = SUGGESTED_CATEGORIES } = input;
 
-  const described: ExpenseCategory[] = [];
+  const described: string[] = [];
   if (suggestion && suggestion.category) {
     described.push(suggestion.category);
     if (suggestion.decision === "suggested") {
@@ -296,7 +313,7 @@ export function categoryShortlist(input: {
     }
   }
 
-  const ordered: ExpenseCategory[] = [];
+  const ordered: string[] = [];
   for (const category of [...described, ...frequent]) {
     if (ordered.length >= limit) break;
     if (!ordered.includes(category)) ordered.push(category);

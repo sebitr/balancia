@@ -178,6 +178,17 @@
       "finance_admin": "Finance & administratif",
       "other": "Autre"
     },
+    "incomeCategories": {
+      "rent": "Loyer",
+      "refunds": "Remboursements",
+      "deposits": "Cautions rendues",
+      "contributions": "Contributions",
+      "sales": "Ventes",
+      "earnings": "Revenus",
+      "benefits": "Aides & allocations",
+      "financial": "Financier",
+      "other": "Autre"
+    },
     "subcategories": {
       "groceries": {
         "supermarket": "Supermarché",
@@ -387,6 +398,65 @@
         "legal": "Frais juridiques",
         "accounting": "Comptabilité",
         "fines": "Amendes",
+        "other": "Autre"
+      }
+    },
+    "incomeSubcategories": {
+      "rent": {
+        "monthly_rent": "Loyer mensuel",
+        "parking": "Place de parc",
+        "storage": "Dépôt",
+        "utilities_share": "Part des charges",
+        "short_stay": "Location courte durée",
+        "sublet": "Sous-location",
+        "other": "Autre"
+      },
+      "refunds": {
+        "purchase_return": "Retour d'achat",
+        "cancelled_booking": "Réservation annulée",
+        "insurance_claim": "Sinistre",
+        "overpayment": "Trop-payé",
+        "tax_refund": "Remboursement d'impôts",
+        "other": "Autre"
+      },
+      "deposits": {
+        "rental_deposit": "Caution de location",
+        "utility_deposit": "Dépôt de garantie",
+        "key_deposit": "Caution de clés",
+        "other": "Autre"
+      },
+      "contributions": {
+        "group_fund": "Caisse commune",
+        "trip_fund": "Caisse voyage",
+        "membership_dues": "Cotisations",
+        "gift_received": "Cadeau reçu",
+        "other": "Autre"
+      },
+      "sales": {
+        "secondhand": "Occasion",
+        "tickets": "Billets",
+        "food_drinks": "Boissons & repas",
+        "merchandise": "Articles",
+        "other": "Autre"
+      },
+      "earnings": {
+        "salary": "Salaire",
+        "freelance": "Indépendant",
+        "bonus": "Prime",
+        "tips": "Pourboires",
+        "other": "Autre"
+      },
+      "benefits": {
+        "housing_allowance": "Aide au logement",
+        "family_allowance": "Allocations familiales",
+        "grant": "Bourse",
+        "insurance_payout": "Indemnité d'assurance",
+        "other": "Autre"
+      },
+      "financial": {
+        "interest": "Intérêts",
+        "dividends": "Dividendes",
+        "cashback": "Cashback",
         "other": "Autre"
       }
     },
@@ -2171,7 +2241,16 @@
     "generatedSoFar": "{count, plural, one {# générée à ce jour} other {# générées à ce jour}}",
     "weekly": "{count, plural, one {Chaque semaine le {day}} other {Toutes les # semaines le {day}}}",
     "monthly": "{count, plural, one {Chaque mois le {day}} other {Tous les # mois le {day}}}",
-    "yearly": "{count, plural, one {Chaque année le {day}/{month}} other {Tous les # ans le {day}/{month}}}"
+    "yearly": "{count, plural, one {Chaque année le {day}/{month}} other {Tous les # ans le {day}/{month}}}",
+    "daily": "{count, plural, one {Tous les jours} other {Tous les # jours}}",
+    "monthlyWeekday": "{count, plural, one {Chaque mois le {week} {day}} other {Tous les # mois le {week} {day}}}",
+    "week": {
+      "1": "premier",
+      "2": "deuxième",
+      "3": "troisième",
+      "4": "quatrième",
+      "last": "dernier"
+    }
   },
   "settingsPage": {
     "title": "Paramètres du groupe",
@@ -2210,6 +2289,7 @@
     "date": "Date",
     "repeats": "Récurrence",
     "oneOff": "Ponctuel",
+    "repeatDaily": "{count, plural, one {Chaque jour} other {Tous les # jours}}",
     "repeatWeekly": "{count, plural, one {Chaque semaine} other {Toutes les # semaines}}",
     "repeatMonthly": "{count, plural, one {Chaque mois} other {Tous les # mois}}",
     "repeatYearly": "{count, plural, one {Chaque année} other {Tous les # ans}}",
@@ -2814,7 +2894,7 @@
         "percentages": "Par pourcentage · {count} personnes",
         "shares": "Par parts · {count} personnes",
         "byItem": "Par article · {count} personnes",
-        "justOne": "Le solde de personne d'autre ne bouge",
+        "justOne": "Tout pour une seule personne",
         "nobody": "Personne n'est sélectionné"
       },
       "payerOption": "Payé par {name}",
@@ -2826,7 +2906,18 @@
         "stillToAssign": "Il reste {amount} à attribuer.",
         "overTheTotal": "{amount} de trop par rapport au total.",
         "percentagesOff": "Les pourcentages font {sum} %, pas 100 %."
-      }
+      },
+      "alwaysTitle": "Toujours partager ainsi",
+      "alwaysHint": "Enregistré comme réglage par défaut du groupe",
+      "addSomeone": "Ajouter quelqu’un",
+      "several": "Plusieurs",
+      "payerAmount": "Montant payé par {name}",
+      "justOnePaid": "Une seule personne a payé",
+      "splitPayment": "Partager le paiement également",
+      "giveRest": "Donner le reste à {name}",
+      "payerShort": "Il reste {amount} à attribuer à un payeur.",
+      "payerOver": "{amount} de plus que le total ont été payés.",
+      "payerNobody": "Indique combien au moins une personne a payé."
     },
     "currency": {
       "title": "Devise"
@@ -2854,13 +2945,15 @@
       "frequency": {
         "weekly": "Chaque semaine",
         "monthly": "Chaque mois",
-        "yearly": "Chaque année"
+        "yearly": "Chaque année",
+        "daily": "Quotidien"
       },
       "every": "Tous les",
       "interval": {
         "weekly": "{count, plural, one {# semaine} other {# semaines}}",
         "monthly": "{count, plural, one {# mois} other {# mois}}",
-        "yearly": "{count, plural, one {# an} other {# ans}}"
+        "yearly": "{count, plural, one {# an} other {# ans}}",
+        "daily": "{count, plural, one {# jour} other {# jours}}"
       },
       "onDay": "Le jour",
       "dayOfMonth": "Jour {day}",
@@ -2875,7 +2968,42 @@
       "done": "Terminé",
       "label": "Récurrence",
       "schedule": "Recréer cette écriture selon un calendrier",
-      "next": "Prochaines : {dates}"
+      "next": "Prochaines : {dates}",
+      "onTheNth": "Le {week} {day}",
+      "byDayOfMonth": "Le {day}",
+      "byWeekday": "Le {week} {day}",
+      "lastDayOfMonth": "Dernier jour du mois",
+      "shortMonthNote": "Les mois sans ce jour prennent leur dernier.",
+      "afterTimes": "Après un nombre de fois",
+      "timesCount": "{count, plural, one {# fois} other {# fois}}",
+      "endsNever": "Continue jusqu’à ce que tu l’arrêtes",
+      "endsOn": "Continue jusqu’au {date}",
+      "endsAfter": "{count, plural, one {S’arrête après # fois} other {S’arrête après # fois}}",
+      "dontRepeat": "Ne pas répéter cette entrée",
+      "nextLabel": "Ensuite",
+      "andAfter": "puis {rule}",
+      "noOccurrences": "Cette règle ne se produit jamais.",
+      "weeks": {
+        "1": "premier",
+        "2": "deuxième",
+        "3": "troisième",
+        "4": "quatrième",
+        "last": "dernier"
+      },
+      "everyN": "Tous les {interval}",
+      "presetDaily": "Tous les jours",
+      "presetWeekly": "Toutes les semaines le {day}",
+      "presetFortnightly": "Toutes les 2 semaines le {day}",
+      "presetMonthly": "Tous les mois le {day}",
+      "presetYearly": "Tous les ans le {date}",
+      "presetCustom": "Personnalisé…",
+      "timezoneNote": "Créé à l’heure de {timezone}.",
+      "everyOne": {
+        "daily": "Tous les jours",
+        "weekly": "Toutes les semaines",
+        "monthly": "Chaque mois",
+        "yearly": "Chaque année"
+      }
     },
     "scan": {
       "title": "Scanner un reçu",
@@ -2901,13 +3029,6 @@
       "unassigned": "{assigned} attribué sur {total} — le reste ne l'est pas.",
       "use": "Utiliser ces montants"
     },
-    "income": {
-      "belongsTo": "À qui appartient-il",
-      "shared": "Partagé — créditer tout le monde",
-      "sharedHint": "Chacun des {count} gagne {amount}",
-      "mine": "À moi seul — créditer {name}",
-      "mineHint": "Enregistré, mais le solde de personne d'autre ne bouge"
-    },
     "settle": {
       "from": "De",
       "to": "À",
@@ -2923,8 +3044,26 @@
       "namedByYou": "Nommé par toi",
       "notListed": "Absent de la liste",
       "useMethodName": "Utiliser « {name} »",
-      "outcome": "{from} et {to} sont quittes de {amount} par {method}.",
-      "outcomeNoMethod": "{from} et {to} sont quittes de {amount}."
+      "outcomeNoMethod": "Choisis comment l’argent a changé de mains.",
+      "outcomeNoPair": "Choisis qui paie qui.",
+      "outcomeZero": "Saisis le montant qui a changé de mains.",
+      "outcomeCustom": "Aucune dette n’existait — {from} devra {amount} à {to}.",
+      "outcomeUnder": "Paiement partiel — {from} devra encore {amount} à {to}.",
+      "outcomeOver": "Plus que dû — {from} devra {amount} à {to}.",
+      "outcomeExact": "{from} et {to} seront à jour.",
+      "someoneElse": "Quelqu’un d’autre",
+      "changeWhoPays": "Changer qui paie",
+      "pairTitle": "Payer quelqu’un d’autre",
+      "pairSubtitle": "Aucune dette n’est due — ceci enregistre quand même le paiement.",
+      "whoPays": "Qui paie",
+      "whoReceives": "Qui reçoit",
+      "pairPickBoth": "Choisis qui paie, puis qui reçoit",
+      "pairPickReceiver": "{name} paie … choisis qui reçoit",
+      "pairSummary": "{from} paie {to}",
+      "usePair": "Utiliser cette paire",
+      "noBalance": "aucune dette",
+      "full": "Tout : {amount}",
+      "partOfIt": "Une partie"
     },
     "actions": {
       "addExpense": "Ajouter la dépense",
@@ -2943,7 +3082,14 @@
       "deleted": "Écriture supprimée",
       "restored": "Écriture rétablie",
       "queued": "Enregistré sur cet appareil",
-      "queuedNote": "La synchronisation se fera dès le retour du réseau."
+      "queuedNote": "La synchronisation se fera dès le retour du réseau.",
+      "paidBy": "{name} a payé",
+      "receivedBy": "{name} a reçu",
+      "splitWays": "{count, plural, one {partagé avec # personne} other {partagé entre #}}",
+      "creditedWays": "{count, plural, one {crédité à # personne} other {crédité à # personnes}}",
+      "settledPair": "{from} → {to}",
+      "checkPayer": "Changer qui a payé",
+      "checkSplit": "Changer le partage"
     },
     "errors": {
       "amountRequired": "Saisis d'abord un montant.",
@@ -2965,6 +3111,19 @@
       "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Cette action est irréversible depuis l'application.",
       "keep": "La conserver",
       "confirm": "Supprimer"
+    },
+    "duplicate": {
+      "note": "{hours, plural, =0 {Entrée similaire à l’instant} one {Entrée similaire il y a # heure} other {Entrée similaire il y a # heures}} — {description}, {amount}, par {name}.",
+      "view": "Voir"
+    },
+    "draft": {
+      "label": "Brouillon",
+      "discard": "Supprimer le brouillon"
+    },
+    "voice": {
+      "start": "Dicter",
+      "listening": "J’écoute…",
+      "stop": "Arrêter l’écoute"
     }
   },
   "paymentMethods": {

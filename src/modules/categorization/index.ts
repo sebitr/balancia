@@ -51,7 +51,35 @@ export {
 export { detectTransactionType, isIncomeLike } from "./transaction-type";
 
 export { CATEGORY_SEEDS, type CategorySeed } from "./seeds";
+export { INCOME_CATEGORY_SEEDS, type IncomeCategorySeed } from "./income-seeds";
+export {
+  classifyIncomeSync,
+  type IncomeClassificationResult,
+} from "./income-classifier";
 export { CATEGORY_PROTOTYPES } from "./prototypes";
+
+export {
+  FALLBACK_INCOME_CATEGORY,
+  INCOME_CATEGORIES,
+  INCOME_CATEGORY_IDS,
+  getIncomeSubcategories,
+  hasIncomeSubcategories,
+  isIncomeCategory,
+  isValidIncomeSubcategory,
+  type IncomeCategory,
+  type IncomeSubcategory,
+  type IncomeSubcategoryOf,
+} from "./income-taxonomy";
+
+export {
+  categoryIdsFor,
+  categorySurvivesDirectionChange,
+  isCategoryFor,
+  isCategoryOfOppositeDirection,
+  isValidSubcategoryFor,
+  subcategoriesFor,
+  type EntryCategory,
+} from "./vocabulary";
 
 export {
   EXPENSE_CATEGORIES,

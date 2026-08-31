@@ -178,6 +178,17 @@
       "finance_admin": "Finance & Admin",
       "other": "Other"
     },
+    "incomeCategories": {
+      "rent": "Rent",
+      "refunds": "Refunds",
+      "deposits": "Deposits returned",
+      "contributions": "Contributions",
+      "sales": "Sales",
+      "earnings": "Earnings",
+      "benefits": "Benefits & subsidies",
+      "financial": "Financial",
+      "other": "Other"
+    },
     "subcategories": {
       "groceries": {
         "supermarket": "Supermarket",
@@ -387,6 +398,65 @@
         "legal": "Legal",
         "accounting": "Accounting",
         "fines": "Fines",
+        "other": "Other"
+      }
+    },
+    "incomeSubcategories": {
+      "rent": {
+        "monthly_rent": "Monthly rent",
+        "parking": "Parking space",
+        "storage": "Storage",
+        "utilities_share": "Utilities share",
+        "short_stay": "Short stay",
+        "sublet": "Sublet",
+        "other": "Other"
+      },
+      "refunds": {
+        "purchase_return": "Purchase return",
+        "cancelled_booking": "Cancelled booking",
+        "insurance_claim": "Insurance claim",
+        "overpayment": "Overpayment",
+        "tax_refund": "Tax refund",
+        "other": "Other"
+      },
+      "deposits": {
+        "rental_deposit": "Rental deposit",
+        "utility_deposit": "Utility deposit",
+        "key_deposit": "Key deposit",
+        "other": "Other"
+      },
+      "contributions": {
+        "group_fund": "Group fund",
+        "trip_fund": "Trip fund",
+        "membership_dues": "Membership dues",
+        "gift_received": "Gift received",
+        "other": "Other"
+      },
+      "sales": {
+        "secondhand": "Secondhand",
+        "tickets": "Tickets",
+        "food_drinks": "Food & drinks",
+        "merchandise": "Merchandise",
+        "other": "Other"
+      },
+      "earnings": {
+        "salary": "Salary",
+        "freelance": "Freelance",
+        "bonus": "Bonus",
+        "tips": "Tips",
+        "other": "Other"
+      },
+      "benefits": {
+        "housing_allowance": "Housing allowance",
+        "family_allowance": "Family allowance",
+        "grant": "Grant",
+        "insurance_payout": "Insurance payout",
+        "other": "Other"
+      },
+      "financial": {
+        "interest": "Interest",
+        "dividends": "Dividends",
+        "cashback": "Cashback",
         "other": "Other"
       }
     },
@@ -2171,7 +2241,16 @@
     "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}",
     "weekly": "{count, plural, one {Every week on {day}} other {Every # weeks on {day}}}",
     "monthly": "{count, plural, one {Every month on day {day}} other {Every # months on day {day}}}",
-    "yearly": "{count, plural, one {Every year on {day}/{month}} other {Every # years on {day}/{month}}}"
+    "yearly": "{count, plural, one {Every year on {day}/{month}} other {Every # years on {day}/{month}}}",
+    "daily": "{count, plural, one {Every day} other {Every # days}}",
+    "monthlyWeekday": "{count, plural, one {Every month on the {week} {day}} other {Every # months on the {week} {day}}}",
+    "week": {
+      "1": "first",
+      "2": "second",
+      "3": "third",
+      "4": "fourth",
+      "last": "last"
+    }
   },
   "settingsPage": {
     "title": "Group settings",
@@ -2210,6 +2289,7 @@
     "date": "Date",
     "repeats": "Repeats",
     "oneOff": "One-off",
+    "repeatDaily": "{count, plural, one {Daily} other {Every # days}}",
     "repeatWeekly": "{count, plural, one {Weekly} other {Every # weeks}}",
     "repeatMonthly": "{count, plural, one {Monthly} other {Every # months}}",
     "repeatYearly": "{count, plural, one {Yearly} other {Every # years}}",
@@ -2814,7 +2894,7 @@
         "percentages": "Split by percentage · {count} people",
         "shares": "Split by shares · {count} people",
         "byItem": "Split by item · {count} people",
-        "justOne": "Nobody else's balance moves",
+        "justOne": "All of it to one person",
         "nobody": "Nobody selected yet"
       },
       "payerOption": "Paid by {name}",
@@ -2826,7 +2906,18 @@
         "stillToAssign": "{amount} still to assign.",
         "overTheTotal": "{amount} over the total.",
         "percentagesOff": "Percentages add up to {sum}%, not 100%."
-      }
+      },
+      "alwaysTitle": "Always split like this",
+      "alwaysHint": "Saves it as this group's default",
+      "addSomeone": "Add someone",
+      "several": "Several",
+      "payerAmount": "Amount paid by {name}",
+      "justOnePaid": "Just one person paid",
+      "splitPayment": "Split the payment equally",
+      "giveRest": "Give the rest to {name}",
+      "payerShort": "{amount} still to assign to a payer.",
+      "payerOver": "{amount} more than the total was paid.",
+      "payerNobody": "Say how much at least one person paid."
     },
     "currency": {
       "title": "Currency"
@@ -2854,13 +2945,15 @@
       "frequency": {
         "weekly": "Weekly",
         "monthly": "Monthly",
-        "yearly": "Yearly"
+        "yearly": "Yearly",
+        "daily": "Daily"
       },
       "every": "Every",
       "interval": {
         "weekly": "{count, plural, one {# week} other {# weeks}}",
         "monthly": "{count, plural, one {# month} other {# months}}",
-        "yearly": "{count, plural, one {# year} other {# years}}"
+        "yearly": "{count, plural, one {# year} other {# years}}",
+        "daily": "{count, plural, one {# day} other {# days}}"
       },
       "onDay": "On day",
       "dayOfMonth": "Day {day}",
@@ -2875,7 +2968,42 @@
       "done": "Done",
       "label": "Repeats",
       "schedule": "Create this entry again on a schedule",
-      "next": "Next: {dates}"
+      "next": "Next: {dates}",
+      "onTheNth": "On the {week} {day}",
+      "byDayOfMonth": "On the {day}",
+      "byWeekday": "On the {week} {day}",
+      "lastDayOfMonth": "Last day of the month",
+      "shortMonthNote": "Months without that day use their last one.",
+      "afterTimes": "After a number of times",
+      "timesCount": "{count, plural, one {# time} other {# times}}",
+      "endsNever": "Continues until you turn it off",
+      "endsOn": "Continues until {date}",
+      "endsAfter": "{count, plural, one {Stops after # time} other {Stops after # times}}",
+      "dontRepeat": "Don’t repeat this entry",
+      "nextLabel": "Next",
+      "andAfter": "and {rule} after that",
+      "noOccurrences": "That rule never happens.",
+      "weeks": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      },
+      "everyN": "Every {interval}",
+      "presetDaily": "Every day",
+      "presetWeekly": "Every week on {day}",
+      "presetFortnightly": "Every 2 weeks on {day}",
+      "presetMonthly": "Every month on the {day}",
+      "presetYearly": "Every year on {date}",
+      "presetCustom": "Custom…",
+      "timezoneNote": "Created in {timezone} time.",
+      "everyOne": {
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month",
+        "yearly": "Every year"
+      }
     },
     "scan": {
       "title": "Scan a receipt",
@@ -2901,13 +3029,6 @@
       "unassigned": "Assigned {assigned} of {total} — the rest is unassigned.",
       "use": "Use these amounts"
     },
-    "income": {
-      "belongsTo": "Who does it belong to",
-      "shared": "Shared — credit everyone",
-      "sharedHint": "Each of the {count} gains {amount}",
-      "mine": "Mine only — credit {name}",
-      "mineHint": "Recorded, but nobody else's balance moves"
-    },
     "settle": {
       "from": "From",
       "to": "To",
@@ -2923,8 +3044,26 @@
       "namedByYou": "Named by you",
       "notListed": "Not listed",
       "useMethodName": "Use “{name}”",
-      "outcome": "{from} and {to} settle {amount} by {method}.",
-      "outcomeNoMethod": "{from} and {to} settle {amount}."
+      "outcomeNoMethod": "Pick how the money changed hands.",
+      "outcomeNoPair": "Pick who is paying whom.",
+      "outcomeZero": "Enter how much changed hands.",
+      "outcomeCustom": "No balance was owed — {from} will owe {to} {amount}.",
+      "outcomeUnder": "Part payment — {from} will still owe {to} {amount}.",
+      "outcomeOver": "More than owed — {from} will owe {to} {amount}.",
+      "outcomeExact": "{from} and {to} will be settled.",
+      "someoneElse": "Someone else",
+      "changeWhoPays": "Change who pays",
+      "pairTitle": "Pay someone else",
+      "pairSubtitle": "No balance is owed — this records the payment anyway.",
+      "whoPays": "Who pays",
+      "whoReceives": "Who receives it",
+      "pairPickBoth": "Pick who pays, then who receives it",
+      "pairPickReceiver": "{name} pays … pick who receives it",
+      "pairSummary": "{from} pays {to}",
+      "usePair": "Use this pair",
+      "noBalance": "no balance",
+      "full": "Full {amount}",
+      "partOfIt": "Part of it"
     },
     "actions": {
       "addExpense": "Add expense",
@@ -2943,7 +3082,14 @@
       "deleted": "Entry deleted",
       "restored": "Entry restored",
       "queued": "Saved on this device",
-      "queuedNote": "It will sync as soon as you are back online."
+      "queuedNote": "It will sync as soon as you are back online.",
+      "paidBy": "{name} paid",
+      "receivedBy": "{name} received",
+      "splitWays": "{count, plural, one {split with # person} other {split # ways}}",
+      "creditedWays": "{count, plural, one {credited to # person} other {credited to # people}}",
+      "settledPair": "{from} → {to}",
+      "checkPayer": "Change who paid",
+      "checkSplit": "Change the split"
     },
     "errors": {
       "amountRequired": "Enter an amount first.",
@@ -2965,6 +3111,19 @@
       "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
       "keep": "Keep it",
       "confirm": "Delete"
+    },
+    "duplicate": {
+      "note": "{hours, plural, =0 {Similar entry just now} one {Similar entry # hour ago} other {Similar entry # hours ago}} — {description}, {amount}, by {name}.",
+      "view": "View"
+    },
+    "draft": {
+      "label": "Draft",
+      "discard": "Discard draft"
+    },
+    "voice": {
+      "start": "Say it",
+      "listening": "Listening…",
+      "stop": "Stop listening"
     }
   },
   "paymentMethods": {

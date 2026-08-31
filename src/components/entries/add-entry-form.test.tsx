@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { AddEntryDrawer } from "./add-entry-drawer";
@@ -664,16 +665,47 @@ describe("income", () => {
     expect(success).toHaveBeenCalledWith("Income added", expect.anything());
   });
 
-  /** "Mine only" is an entry that moves nobody — so there is nothing to split. */
-  it("hides the split row when the income is credited to one person", async () => {
+  /**
+   * There used to be a "Mine only" mode here whose own hint read "nobody
+   * else's balance moves" — a no-op on the ledger, offered as a choice. Income
+   * that is not everyone's is said through the roster instead, so the split
+   * row is where it is answered and it is always on screen.
+   */
+  it("keeps the split row on screen, because that is where credit is chosen", async () => {
     const user = userEvent.setup();
     renderForm();
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
-    expect(screen.getByText(/Seb received/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("radio", { name: /Mine only/ }));
-    expect(screen.queryByText(/Seb received/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Seb received/)).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Mine only/ })).toBeNull();
+  });
+
+  /**
+   * The two vocabularies share the `category` column and nothing else. A code
+   * carried across would read correctly and mean the opposite.
+   */
+  it("clears the category when the type changes vocabulary", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const row = () => screen.getByRole("button", { name: /Category/ });
+
+    await user.click(row());
+    await user.click(screen.getByRole("button", { name: /^Transport/ }));
+    await user.click(screen.getByRole("button", { name: "Fuel" }));
+    expect(row()).toHaveTextContent("Transport");
+
+    // `transport` is not a code the income vocabulary has, so it goes.
+    await user.click(screen.getByRole("tab", { name: "Income" }));
+    expect(row()).toHaveTextContent("Add a category");
+
+    // And the income list is what the picker now offers.
+    await user.click(row());
+    expect(
+      screen.getByRole("button", { name: /^Deposits returned/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Transport/ })).toBeNull();
   });
 });
 
@@ -1068,6 +1100,11 @@ describe("after saving", () => {
   /**
    * The drawer gets out of the way and says so from outside it, rather than
    * holding the group behind a confirmation screen.
+   *
+   * The line names the two facts people reopen entries to check — who paid
+   * and how it was split — rather than repeating the description they have
+   * just typed. It is rendered rather than formatted, because each fact is a
+   * link back into the entry.
    */
   it("says what was saved, and leaves", async () => {
     const user = userEvent.setup();
@@ -1078,8 +1115,13 @@ describe("after saving", () => {
     await user.click(screen.getByRole("button", { name: "Add expense" }));
 
     expect(success).toHaveBeenCalledWith("Expense added", {
-      description: expect.stringMatching(/^Dinner · CHF.84\.60$/),
+      description: expect.anything(),
     });
+    const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
+      .container.textContent;
+    expect(line).toMatch(/84\.60/);
+    expect(line).toContain("Seb paid");
+    expect(line).toContain("split 3 ways");
     expect(
       screen.queryByRole("button", { name: "Add expense" }),
     ).not.toBeInTheDocument();

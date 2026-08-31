@@ -74,3 +74,53 @@ describe("the category and subcategory pair", () => {
     expect(parse({ category: "" }).success).toBe(true);
   });
 });
+
+/**
+ * Two vocabularies share the `category` column, told apart by `direction`.
+ * The form clears the category when the type changes, but a form is a
+ * convenience — this is the boundary the API and the importers cross.
+ */
+describe("the category and the direction", () => {
+  it("accepts an income category on an income", () => {
+    expect(
+      parse({ direction: "in", category: "rent", subcategory: "monthly_rent" })
+        .success,
+    ).toBe(true);
+    expect(parse({ direction: "in", category: "deposits" }).success).toBe(true);
+  });
+
+  it("refuses an expense category on an income", () => {
+    const result = parse({ direction: "in", category: "groceries" });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].path).toEqual(["category"]);
+  });
+
+  it("refuses an income category on spending", () => {
+    expect(parse({ direction: "out", category: "deposits" }).success).toBe(
+      false,
+    );
+    // Absent means spending, the way it does on the entry itself.
+    expect(parse({ category: "deposits" }).success).toBe(false);
+  });
+
+  it("reads a shared word as the vocabulary of its direction", () => {
+    // `rent` is an income category and a `home` subcategory on expenses.
+    expect(parse({ direction: "in", category: "rent" }).success).toBe(true);
+    expect(parse({ direction: "out", category: "rent" }).success).toBe(false);
+    expect(
+      parse({ direction: "out", category: "home", subcategory: "rent" })
+        .success,
+    ).toBe(true);
+    expect(
+      parse({ direction: "in", category: "home", subcategory: "rent" }).success,
+    ).toBe(false);
+  });
+
+  it("still accepts an imported label whichever way the money went", () => {
+    // Free text is not a code of the other vocabulary; it is nobody's code.
+    expect(
+      parse({ direction: "in", category: "Fournitures ménagères" }).success,
+    ).toBe(true);
+  });
+});

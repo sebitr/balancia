@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import {
   CalendarDays,
   Loader2,
   Repeat,
+  RotateCcw,
   Sparkles,
   Trash2,
   X,
@@ -37,11 +39,6 @@ import { Switch } from "@/components/ui/switch";
 import { toastUndoable } from "@/components/ui/sonner";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
 import type { ScannedExpense } from "@/components/receipts/scan-receipt-dialog";
-import {
-  CATEGORY_GLYPHS,
-  FALLBACK_GLYPH,
-  hasGlyph,
-} from "@/components/expenses/category-icon";
 import { useCategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import {
   formatMinorUnits,
@@ -54,8 +51,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
 import {
-  isValidSubcategory,
-  type ExpenseCategory,
+  isValidSubcategoryFor,
   type LearnedMerchantMapping,
 } from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
@@ -81,7 +77,8 @@ import {
 } from "@/modules/settlements/payment-methods";
 import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
-import { CategorySheet, useSubcategoryLabel } from "./category-sheet";
+import { CategorySheet } from "./category-sheet";
+import { useVocabulary } from "./vocabulary";
 import { CurrencyPicker } from "@/components/money/currency-picker";
 import {
   confirmationKey,
@@ -110,10 +107,33 @@ import { SplitSummaryRow } from "./split-summary-row";
 import {
   OutstandingList,
   PairPicker,
+  PairSheet,
   PaymentMethodRow,
   PaymentMethodSheet,
   type DebtPair,
 } from "./settle-blocks";
+import { settleOutcome, type SettleOutcome } from "./settle-outcome";
+import {
+  giveRestTo,
+  multiPayerContributions,
+  splitPaymentEqually,
+  summariseMultiPayer,
+} from "./multi-payer";
+import { heardEntry } from "./heard-entry";
+import { VoiceButton } from "./voice-button";
+import { savedSummary } from "./saved-summary";
+import { worthDrafting, type EntryDraftFields } from "./draft-fields";
+import { discardDraft, saveDraft } from "@/lib/offline/drafts";
+import {
+  worthSaving,
+  type GroupSplitDefault,
+} from "@/modules/groups/split-default";
+import {
+  addParticipantAction,
+  setGroupSplitDefaultAction,
+} from "@/modules/groups/actions";
+import { findDuplicate, type RecentEntry } from "./duplicate-note";
+import { useDebounced } from "./use-debounced";
 import type { EntryMember } from "./pills";
 
 /**
@@ -149,7 +169,8 @@ import type { EntryMember } from "./pills";
  * both.
  */
 
-type OpenSheet = null | "split" | "category" | "currency" | "method" | "recur";
+type OpenSheet =
+  null | "split" | "category" | "currency" | "method" | "recur" | "pair";
 
 /**
  * An entry that already exists, as the fields that put it back on screen.
@@ -184,6 +205,22 @@ export interface EditingEntry {
   readonly notes: string;
   readonly payerId: string | null;
   /**
+   * Everyone who put money in, with what each of them put.
+   *
+   * The ledger has always held several — the schema takes an array, the
+   * service writes a row each, and the balance engine sums them — but this
+   * screen only ever read `payers[0]`, so reopening a two-payer expense and
+   * saving rewrote it as a one-payer one holding the whole amount. Nothing
+   * said so.
+   *
+   * Absent on a repayment, which has a pair rather than payers.
+   */
+  readonly payers?: readonly {
+    readonly participantId: string;
+    /** Major units, as the reader would type them. */
+    readonly amountText: string;
+  }[];
+  /**
    * The other side of a repayment. `payerId` is the one paying.
    *
    * Null on an expense, which has no second side until somebody says it was
@@ -207,13 +244,95 @@ export interface EditingEntry {
  * `ActionResult`, which would drag a server module into this bundle.
  */
 interface Outcome {
-  readonly result: { readonly ok: boolean; readonly error?: string };
+  readonly result: {
+    readonly ok: boolean;
+    readonly error?: string;
+    /**
+     * What the action created, when it created something.
+     *
+     * Only the two `create` actions carry an id, and only that id gives the
+     * confirmation somewhere to link back to. An update already knows where
+     * it lives; a queued entry has no id until it syncs.
+     */
+    readonly data?: unknown;
+  };
   readonly movedTo?: string;
 }
 
+/**
+ * The expense an action just created, if it created one.
+ *
+ * `ActionResult` is generic over its payload and the four submit paths return
+ * four different ones, so the shape is checked here rather than widened at
+ * every return. Anything else — an update, a settlement, a queued entry —
+ * simply has no id to offer, and the confirmation states its facts without
+ * linking them.
+ */
+function createdExpenseId(result: {
+  readonly data?: unknown;
+}): string | undefined {
+  const data = result.data;
+  if (typeof data !== "object" || data === null) return undefined;
+  const id = (data as { expenseId?: unknown }).expenseId;
+  return typeof id === "string" ? id : undefined;
+}
+
+/** The same, for the person the split sheet just created. */
+function createdParticipantId(result: {
+  readonly data?: unknown;
+}): string | undefined {
+  const data = result.data;
+  if (typeof data !== "object" || data === null) return undefined;
+  const id = (data as { participantId?: unknown }).participantId;
+  return typeof id === "string" ? id : undefined;
+}
+
+/**
+ * Which of the rule's fields this frequency actually means.
+ *
+ * A daily rule has no weekday and no day of the month; a monthly one has one
+ * or the other and never both. The server refuses the combinations that would
+ * need a guess, so the form sends only what it means rather than everything it
+ * happens to be holding.
+ */
+function sendsWeekday(state: RecurrenceState): boolean {
+  return (
+    state.frequency === "weekly" ||
+    (state.frequency === "monthly" && state.weekOfMonth !== null)
+  );
+}
+
+function sendsWeekOfMonth(state: RecurrenceState): boolean {
+  return state.frequency === "monthly" && state.weekOfMonth !== null;
+}
+
+function sendsDayOfMonth(state: RecurrenceState): boolean {
+  if (state.frequency === "daily" || state.frequency === "weekly") return false;
+  return !(state.frequency === "monthly" && state.weekOfMonth !== null);
+}
+
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
+/** A group with nothing in it yet: the duplicate note has nothing to match. */
+const NO_RECENT: readonly RecentEntry[] = [];
+
+/**
+ * How long the fields have to hold still before the duplicate note appears.
+ *
+ * Long enough that typing an amount digit by digit does not flash it on and
+ * off; short enough that it is there by the time somebody looks up.
+ */
+const DUPLICATE_DEBOUNCE_MS = 500;
+
+/**
+ * How long the form holds still before the draft is written.
+ *
+ * Longer than the duplicate note's: nobody sees this happen, so the only
+ * thing the delay buys is fewer writes, and a second of typing is not work
+ * worth losing.
+ */
+const DRAFT_DEBOUNCE_MS = 1000;
 /** A group with no history yet — the picker simply has nothing to lead with. */
-const NO_FREQUENT: readonly ExpenseCategory[] = [];
+const NO_FREQUENT: readonly string[] = [];
 
 export interface AddEntryFormProps {
   groupId: string;
@@ -240,7 +359,7 @@ export interface AddEntryFormProps {
   entryTypes?: readonly EntryType[];
   categoryMappings?: readonly LearnedMerchantMapping[];
   /** What this group files things under, most used first, for the picker. */
-  frequentCategories?: readonly ExpenseCategory[];
+  frequentCategories?: readonly string[];
   semanticCategorization?: boolean;
   receiptScanning?: boolean;
   /** Whether the on-device reader is switched on (`RECEIPT_OCR_LOCAL`). */
@@ -297,6 +416,42 @@ export interface AddEntryFormProps {
    * at and passes nothing.
    */
   onRemoved?: (to?: string) => void;
+  /**
+   * A sheet to open with the drawer, named by whoever linked here.
+   *
+   * Only the confirmation uses it today — see `describeSaved`. Absent for
+   * every other way in, which is all of them.
+   */
+  openSheet?: OpenSheet;
+  /**
+   * The group's last few entries, for the duplicate note.
+   *
+   * Empty is the ordinary state of a new group and simply means the note
+   * never appears.
+   */
+  recentEntries?: readonly RecentEntry[];
+  /**
+   * Whether this reader may add people to the group.
+   *
+   * The same permission the People screen asks for. Absent means no, which is
+   * what a guest looking at somebody else's group gets.
+   */
+  canAddGuests?: boolean;
+  /**
+   * How this group usually splits things, already checked against the roster.
+   *
+   * A suggestion a new entry starts from — never applied to one being edited.
+   * Null is the ordinary state.
+   */
+  defaultSplit?: GroupSplitDefault | null;
+  /**
+   * A half-written entry to reopen, already checked against the roster.
+   *
+   * Read by the drawer before this form mounts, so the fields are seeded
+   * rather than applied a frame later — a drawer that appears empty and then
+   * fills itself reads as two screens.
+   */
+  draft?: EntryDraftFields | null;
 }
 
 export function AddEntryForm({
@@ -321,32 +476,31 @@ export function AddEntryForm({
   onClose,
   onSaved,
   onRemoved,
+  openSheet,
+  recentEntries = NO_RECENT,
+  defaultSplit = null,
+  draft = null,
+  canAddGuests = false,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
   const dates = useDateFormatter();
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
-  const tCategories = useTranslations("expenses.categories");
   const tMethods = useTranslations("paymentMethods");
+  /*
+   * The ordinals — "second", "last" — as their own namespace, so the key is a
+   * literal the compiler can check rather than a string built from a value.
+   */
+  const tWeeksRaw = useTranslations("addEntry.repeat.weeks");
+  const tWeeks = (week: string) =>
+    tWeeksRaw(week as Parameters<typeof tWeeksRaw>[0]);
   const tCommon = useTranslations("common");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const repeatsId = useId();
 
   const splitText = (message: SplitMessage) =>
     tSplit(message.key, message.params);
-
-  /**
-   * Income the reader kept, reopened.
-   *
-   * Stored as a share of one, which is also what an expense split with a
-   * single person looks like — the difference is the direction, and it is what
-   * tells the two apart when the entry comes back.
-   */
-  const creditsOnePerson =
-    editing?.type === "income" &&
-    editing.includedIds.length === 1 &&
-    editing.includedIds[0] === editing.payerId;
 
   /*
    * A drawer opened from a stated debt starts where that debt left off: the
@@ -356,19 +510,25 @@ export function AddEntryForm({
    * itself a frame later reads as the screen changing its mind.
    */
   const [type, setType] = useState<EntryType>(
-    editing?.type ?? (prefill ? "settle" : "expense"),
+    editing?.type ?? draft?.type ?? (prefill ? "settle" : "expense"),
   );
   const [amountText, setAmountText] = useState(
     editing?.amountText ??
+      draft?.amountText ??
       (prefill?.amountMinor
         ? formatMinorUnits(prefill.amountMinor, prefill.currency)
         : ""),
   );
   const [currency, setCurrency] = useState(
-    editing?.currency ?? prefill?.currency ?? defaultCurrency,
+    editing?.currency ??
+      prefill?.currency ??
+      draft?.currency ??
+      defaultCurrency,
   );
   const [rate, setRate] = useState(editing?.exchangeRate ?? "");
-  const [description, setDescription] = useState(editing?.description ?? "");
+  const [description, setDescription] = useState(
+    editing?.description ?? draft?.description ?? "",
+  );
   /**
    * What a repayment was for — the column has always called it notes.
    *
@@ -379,51 +539,99 @@ export function AddEntryForm({
    * is move the title in when there is no note to displace, and take it back
    * out again on the way to an expense: `noteAfterTypeSwitch`.
    */
-  const [notes, setNotes] = useState(editing?.notes ?? "");
-  const [category, setCategory] = useState(editing?.category ?? "");
+  const [notes, setNotes] = useState(editing?.notes ?? draft?.notes ?? "");
+  const [category, setCategory] = useState(
+    editing?.category ?? draft?.category ?? "",
+  );
   // A category already on the entry is a decision somebody made, whoever made
   // it. Leaving it open to the classifier would let reopening an entry
   // silently refile it the moment the description was touched.
   const [categoryChosen, setCategoryChosen] = useState(
-    (editing?.category ?? "") !== "",
+    draft ? draft.categoryChosen : (editing?.category ?? "") !== "",
   );
-  const [subcategory, setSubcategory] = useState(editing?.subcategory ?? "");
-  const tSubcategories = useSubcategoryLabel();
+  const [subcategory, setSubcategory] = useState(
+    editing?.subcategory ?? draft?.subcategory ?? "",
+  );
   const [date, setDate] = useState(
-    () => editing?.date ?? new Date().toISOString().slice(0, 10),
+    () => editing?.date ?? draft?.date ?? new Date().toISOString().slice(0, 10),
   );
 
-  const [payerId, setPayerId] = useState(editing?.payerId ?? selfId);
-  // A settlement has no split of its own, and income credited to one person
-  // has one only in the sense that nobody else is in it. Both seed the full
-  // membership, so a reader who switches to something that does split starts
-  // where a new entry would rather than with a single name selected.
-  const [includedIds, setIncludedIds] = useState<readonly string[]>(() =>
-    editing && !creditsOnePerson && editing.includedIds.length > 0
-      ? [...editing.includedIds]
-      : members.map((member) => member.id),
+  const [payerId, setPayerId] = useState(
+    editing?.payerId ?? draft?.payerId ?? selfId,
   );
+  // A settlement has no split of its own, so it seeds the full membership: a
+  // reader who switches to something that does split starts where a new entry
+  // would rather than with a single name selected.
+  /*
+   * A new entry starts from the group's saved split when it has one.
+   *
+   * An entry being edited never does: what it says today is the thing being
+   * corrected, and reseeding it from a default would change the one fact
+   * nobody asked to change.
+   */
+  const [includedIds, setIncludedIds] = useState<readonly string[]>(() => {
+    if (editing && editing.includedIds.length > 0) {
+      return [...editing.includedIds];
+    }
+    // A draft outranks the group's default: it is what this reader was
+    // actually doing, and the default is only what they usually do.
+    if (draft) return [...draft.includedIds];
+    if (defaultSplit) return [...defaultSplit.includedIds];
+    return members.map((member) => member.id);
+  });
   const [method, setMethod] = useState<SplitMethod>(
-    editing?.splitMethod ?? "equal",
+    editing?.splitMethod ??
+      draft?.splitMethod ??
+      defaultSplit?.method ??
+      "equal",
   );
-  const [values, setValues] = useState<Record<string, string>>(() => ({
-    ...editing?.splitValues,
-  }));
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    if (editing) return { ...editing.splitValues };
+    if (draft) return { ...draft.splitValues };
+    return { ...defaultSplit?.values };
+  });
   /** Set once per-item assignment has written exact amounts. */
   const [byItem, setByItem] = useState(false);
 
-  const [credit, setCredit] = useState<"shared" | "mine">(
-    creditsOnePerson ? "mine" : "shared",
+  /**
+   * More than one person put the money in.
+   *
+   * Seeded from the entry being edited, which is what stops reopening a
+   * two-payer expense from quietly rewriting it as a one-payer one: the form
+   * used to take `payers[0]` and save the whole amount against them.
+   */
+  const [several, setSeveral] = useState((editing?.payers?.length ?? 0) > 1);
+  const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
+    () => ({
+      ...editing?.payers?.reduce<Record<string, string>>((all, payer) => {
+        all[payer.participantId] = payer.amountText;
+        return all;
+      }, {}),
+    }),
   );
 
-  const [recurrence, setRecurrence] = useState<RecurrenceState>({
-    enabled: false,
-    frequency: "monthly",
-    interval: 1,
-    weekday: 1,
-    dayOfMonth: Number(new Date().toISOString().slice(8, 10)),
-    endDate: null,
-  });
+  /**
+   * Whether to remember this split as the group's.
+   *
+   * Starts on when the split *is* the saved default, so a reader who opens
+   * the sheet to look at it does not have to re-affirm what the group already
+   * decided — and turning it off is how they stop using it.
+   */
+  const [alwaysSplit, setAlwaysSplit] = useState(defaultSplit !== null);
+
+  const [recurrence, setRecurrence] = useState<RecurrenceState>(
+    () =>
+      draft?.recurrence ?? {
+        enabled: false,
+        frequency: "monthly",
+        interval: 1,
+        weekday: 1,
+        dayOfMonth: Number(new Date().toISOString().slice(8, 10)),
+        weekOfMonth: null,
+        endDate: null,
+        count: null,
+      },
+  );
 
   const [scan, setScan] = useState<ScannedExpense | null>(null);
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -471,7 +679,14 @@ export function AddEntryForm({
     return isKnownPayoutMethod(picked) ? tMethods(picked) : "";
   });
 
-  const [sheet, setSheet] = useState<OpenSheet>(null);
+  /*
+   * The confirmation links back here with the sheet that fixes the fact
+   * already open, so a reader who spots a wrong payer is one tap from the
+   * roster rather than four. Seeded as initial state rather than opened in an
+   * effect: a drawer that appears and then opens a sheet a frame later reads
+   * as two screens.
+   */
+  const [sheet, setSheet] = useState<OpenSheet>(openSheet ?? null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -486,11 +701,22 @@ export function AddEntryForm({
    */
   const customMethod = methodId === null ? methodLabel : "";
 
+  /*
+   * Which vocabulary the category row is speaking.
+   *
+   * A settlement has no category at all, so it borrows spending's — nothing
+   * reads it, and leaving the picker with no list to draw would be a state
+   * with no right answer rather than no state.
+   */
+  const categoryDirection = directionOf(type) ?? "out";
+  const vocabulary = useVocabulary(categoryDirection);
+
   const suggestion = useCategorySuggestion({
     description,
     notes: "",
     mappings: categoryMappings,
     semanticEnabled: semanticCategorization,
+    direction: categoryDirection,
   });
   const detectedCategory =
     !categoryChosen && suggestion?.decision === "auto_assigned"
@@ -511,7 +737,8 @@ export function AddEntryForm({
     : detectedCategory !== ""
       ? (suggestion?.subcategory ?? "")
       : "";
-  const shownSubcategory = isValidSubcategory(
+  const shownSubcategory = isValidSubcategoryFor(
+    categoryDirection,
     effectiveCategory,
     effectiveSubcategory,
   )
@@ -552,8 +779,89 @@ export function AddEntryForm({
     };
   }, [settleFrom, settleTo, members]);
 
-  /** Which outstanding row, if any, the current pair happens to be. */
-  const outstandingIndex = outstanding.findIndex(
+  /**
+   * A pair the reader named, rather than one the balances produced.
+   *
+   * Per entry and never saved to the group: cleared on save, on cancel, on
+   * "Add another" and on switching the type away from Settle. In storage it is
+   * an ordinary settlement — see `DebtPair.isCustom`.
+   */
+  const [customPair, setCustomPair] = useState<DebtPair | null>(null);
+
+  /**
+   * What the pair sheet holds while it is open.
+   *
+   * Kept apart from the entry's own pair so that dismissing the sheet changes
+   * nothing: half an answer is a legitimate thing to be in the middle of, and
+   * writing it straight through would leave the form pointing at a person
+   * with nobody to pay.
+   */
+  const [draftPair, setDraftPair] = useState<{
+    fromId: string | null;
+    toId: string | null;
+  }>({ fromId: null, toId: null });
+
+  /**
+   * Somebody with a name and no account, created from the split sheet.
+   *
+   * A split should not require everyone to have the app: the flatmate who
+   * never signed up is still owed their share, and making somebody invite
+   * them first puts a whole flow between a person and the entry they were
+   * trying to write.
+   *
+   * The new person joins the split immediately — adding somebody to a group
+   * from *this* screen means adding them to *this* entry, and leaving them out
+   * would make the gesture do half of what it looks like.
+   *
+   * `router.refresh()` is what puts them in `members` for the next render.
+   */
+  const addGuest = async (name: string): Promise<void> => {
+    const payload = new FormData();
+    payload.set("displayName", name);
+    const result = await addParticipantAction(groupId, payload);
+    if (!result.ok) {
+      setError(result.error ?? t("errors.saveFailed"));
+      return;
+    }
+    const id = createdParticipantId(result);
+    if (id) setIncludedIds((current) => [...current, id]);
+    router.refresh();
+  };
+
+  /** The sheet's two names as a pair, or null while it is half-answered. */
+  const pairFrom = (draft: {
+    fromId: string | null;
+    toId: string | null;
+  }): DebtPair | null => {
+    const { fromId, toId } = draft;
+    if (fromId === null || toId === null || fromId === toId) return null;
+    const nameOf = (id: string) =>
+      members.find((member) => member.id === id)?.displayName ?? "";
+    return {
+      fromParticipantId: fromId,
+      fromName: nameOf(fromId),
+      toParticipantId: toId,
+      toName: nameOf(toId),
+      amountMinor: "0",
+      currency: baseCurrency ?? defaultCurrency,
+      amountFormatted: "",
+      isCustom: true,
+    };
+  };
+
+  /**
+   * The rows the outstanding card shows: the real debts, then the named pair.
+   *
+   * It joins the list rather than sitting beside it because it answers the
+   * same question, and it stays selectable alongside the real ones.
+   */
+  const settlePairs = useMemo(
+    () => (customPair ? [...outstanding, customPair] : outstanding),
+    [outstanding, customPair],
+  );
+
+  /** Which row, if any, the current pair happens to be. */
+  const outstandingIndex = settlePairs.findIndex(
     (pair) =>
       pair.fromParticipantId === settleFrom &&
       pair.toParticipantId === settleTo,
@@ -579,11 +887,17 @@ export function AddEntryForm({
 
   const totalMinor = parseAmountToMinor(amountText || "0", currency);
 
-  /** "Mine only" income covers one person, so nobody else's balance moves. */
-  const effectiveIncluded = useMemo(
-    () => (isIncome && credit === "mine" ? [payerId] : includedIds),
-    [isIncome, credit, payerId, includedIds],
-  );
+  /*
+   * Who the entry covers.
+   *
+   * There used to be a second answer here: an income mode called "mine only",
+   * whose own hint said "nobody else's balance moves" — which is to say it did
+   * nothing to the ledger. The need it looked like it served, income that is
+   * not everyone's, is already expressible and more precisely: set Credited to
+   * to the people who actually share it. So there is one answer, and it is the
+   * roster.
+   */
+  const effectiveIncluded = includedIds;
 
   const preview = useMemo(
     () =>
@@ -648,9 +962,45 @@ export function AddEntryForm({
    * is never quietly repopulated — it just cannot be saved, and both the
    * summary row and the sheet say why.
    */
+  /**
+   * What the payer amounts do not add up to, or null when they do.
+   *
+   * The balance engine refuses an expense whose contributions miss its total,
+   * so this is not advice — it is the difference between a warning the reader
+   * can act on and a save that fails.
+   */
+  const payerNote = useMemo(() => {
+    if (!several) return null;
+    const total = totalMinor.ok ? totalMinor.value : 0n;
+    const summary = summariseMultiPayer({
+      amounts: payerAmounts,
+      memberIds: members.map((member) => member.id),
+      currency,
+      totalMinor: total,
+    });
+    if (summary.payerIds.length === 0) return t("split.payerNobody");
+    if (summary.differenceMinor > 0n) {
+      return t("split.payerShort", {
+        amount: formatMinorUnits(summary.differenceMinor.toString(), currency),
+      });
+    }
+    if (summary.differenceMinor < 0n) {
+      return t("split.payerOver", {
+        amount: formatMinorUnits(
+          (-summary.differenceMinor).toString(),
+          currency,
+        ),
+      });
+    }
+    return null;
+  }, [several, payerAmounts, members, currency, totalMinor, t]);
+
   const canSave =
     hasAmount(amountText) &&
-    (isSettle ? selectedPair !== null : effectiveIncluded.length > 0);
+    (isSettle ? selectedPair !== null : effectiveIncluded.length > 0) &&
+    // Payer amounts that miss the total are refused by the balance engine, so
+    // the button is closed while the sheet is still naming the shortfall.
+    payerNote === null;
 
   const upcoming = useMemo(
     () => upcomingOccurrences(recurrence, date, timezone),
@@ -668,14 +1018,23 @@ export function AddEntryForm({
     .map((day) => dates.plain(day, "dayMonth"))
     .join(", ");
 
-  /** "Monthly, day 1" — the rule in one line, wherever it is named. */
-  const repeatLabel = t("repeat.active", {
-    frequency: t(`repeat.frequency.${recurrence.frequency}`),
-    day:
-      recurrence.frequency === "weekly"
-        ? String(recurrence.weekday)
-        : t("repeat.dayOfMonth", { day: recurrence.dayOfMonth }),
-  });
+  /**
+   * "Monthly, day 1" — the rule in one line, wherever it is named.
+   *
+   * A daily rule has no second half at all: "Daily, day 12" would name a
+   * number the rule does not use.
+   */
+  const repeatLabel =
+    recurrence.frequency === "daily"
+      ? t("repeat.frequency.daily")
+      : t("repeat.active", {
+          frequency: t(`repeat.frequency.${recurrence.frequency}`),
+          day: sendsWeekOfMonth(recurrence)
+            ? tWeeks(String(recurrence.weekOfMonth))
+            : recurrence.frequency === "weekly"
+              ? String(recurrence.weekday)
+              : t("repeat.dayOfMonth", { day: recurrence.dayOfMonth }),
+        });
 
   const amountLabel = scan
     ? t("labels.amountFromReceipt")
@@ -687,10 +1046,15 @@ export function AddEntryForm({
 
   /** Switching type throws away only what cannot survive the new one. */
   const changeType = (next: EntryType) => {
-    const resets = resetsForType(next);
+    const resets = resetsForType(next, type);
     setType(next);
     setNotes(noteAfterTypeSwitch({ from: type, to: next, description, notes }));
     setError(null);
+    if (resets.clearCategory) {
+      setCategory("");
+      setSubcategory("");
+      setCategoryChosen(false);
+    }
     if (resets.clearScan) {
       setScan(null);
       setBannerVisible(false);
@@ -715,6 +1079,12 @@ export function AddEntryForm({
       const pair = outstanding[0];
       if (pair) takePair(pair);
     }
+    // A named pair belongs to the settlement being written, not to the
+    // drawer. Leaving Settle ends it.
+    if (next !== "settle") {
+      setCustomPair(null);
+      setDraftPair({ fromId: null, toId: null });
+    }
   };
 
   /**
@@ -730,13 +1100,196 @@ export function AddEntryForm({
     setSettleFrom(pair.fromParticipantId);
     setSettleTo(pair.toParticipantId);
     setCurrency(pair.currency);
-    setAmountText(formatMinorUnits(pair.amountMinor, pair.currency));
+    /*
+     * Every other path into Settle prefills the exact figure; a named pair is
+     * the exception, and deliberately. There is no balance to propose, so the
+     * field has to ask rather than suggest — and "0.00" would be a suggestion.
+     */
+    setAmountText(
+      pair.isCustom ? "" : formatMinorUnits(pair.amountMinor, pair.currency),
+    );
   };
 
   const selectPair = (index: number) => {
-    const pair = outstanding[index];
+    const pair = settlePairs[index];
     if (pair) takePair(pair);
   };
+
+  /**
+   * What this payment does to the ledger, as one sentence.
+   *
+   * Computed from the same values as the entry rather than described in
+   * advance: a partial payment used to announce that the two of you were
+   * settled, and a payment to somebody owed nothing announced the settling of
+   * a debt that never existed.
+   */
+  /**
+   * Who the entry says put the money in.
+   *
+   * One person unless somebody said otherwise, which is the shape 95% of
+   * entries have. When several did and the amounts do not add up,
+   * `multiPayerContributions` returns null and this falls back to the single
+   * payer — but the primary is disabled in that state, so the fallback is
+   * only ever what a half-filled panel would have sent had it been reachable.
+   */
+  const payerContributions = (): {
+    participantId: string;
+    amount: string;
+  }[] => {
+    const total = totalMinor.ok ? totalMinor.value.toString() : "0";
+    if (!several) return [{ participantId: payerId, amount: total }];
+    return (
+      multiPayerContributions({
+        amounts: payerAmounts,
+        memberIds: members.map((member) => member.id),
+        currency,
+        totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+      })?.map((payer) => ({ ...payer })) ?? [
+        { participantId: payerId, amount: total },
+      ]
+    );
+  };
+
+  /**
+   * What the selected pair owes, or null when there is no figure to offer.
+   *
+   * Null covers both "nothing is selected" and "the pair is one the reader
+   * named", which have no balance by definition.
+   */
+  /**
+   * The recent entry this one might repeat, once the fields have settled.
+   *
+   * Debounced on the amount and the description together, so the line does
+   * not flash while a figure is half-typed. Never while editing: an entry
+   * being corrected necessarily matches itself.
+   */
+  /**
+   * Keeping the half-written entry, so closing the drawer does not destroy it.
+   *
+   * Written as the fields settle rather than hooked to the dismissal, which
+   * is the same outcome and survives more: a crash, a reload, a phone that
+   * killed the tab. There is no "you have unsaved changes" dialog either —
+   * the draft *is* the answer to that question, and asking as well is asking
+   * twice, at exactly the moment somebody is trying to leave.
+   *
+   * Never while editing. An entry that already exists is not a draft of
+   * itself, and offering it back later would offer to re-apply changes
+   * somebody chose to abandon.
+   */
+  const draftable = !editing && type !== "settle";
+  const attachmentIds = useMemo(
+    () => attachments.map((file) => file.id),
+    [attachments],
+  );
+  const draftSnapshot = useMemo(
+    (): EntryDraftFields => ({
+      type,
+      amountText,
+      currency,
+      description,
+      notes,
+      category,
+      subcategory,
+      categoryChosen,
+      date,
+      payerId,
+      includedIds,
+      splitMethod: method,
+      splitValues: values,
+      recurrence,
+      attachmentIds,
+    }),
+    [
+      type,
+      amountText,
+      currency,
+      description,
+      notes,
+      category,
+      subcategory,
+      categoryChosen,
+      date,
+      payerId,
+      includedIds,
+      method,
+      values,
+      recurrence,
+      attachmentIds,
+    ],
+  );
+  const settledDraft = useDebounced(draftSnapshot, DRAFT_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (!draftable) return;
+    if (
+      !worthDrafting({
+        amountText: settledDraft.amountText,
+        description: settledDraft.description,
+        attachmentIds: settledDraft.attachmentIds,
+      })
+    ) {
+      // Emptying the form is a way of abandoning the draft, so it goes too.
+      void discardDraft(groupId);
+      return;
+    }
+    void saveDraft({
+      groupId,
+      savedAt: Date.now(),
+      fields: settledDraft,
+      summary: {
+        amount: settledDraft.amountText,
+        description: settledDraft.description,
+      },
+    });
+  }, [draftable, groupId, settledDraft]);
+
+  const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
+  const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
+  const duplicate = useMemo(() => {
+    if (type !== "expense" || editing) return null;
+    const parsed = parseAmountToMinor(settledAmount || "0", currency);
+    if (!parsed.ok) return null;
+    return findDuplicate({
+      amountMinor: parsed.value,
+      currency,
+      description: settledDescription,
+      category: effectiveCategory,
+      recent: recentEntries,
+    });
+  }, [
+    type,
+    editing,
+    settledAmount,
+    settledDescription,
+    currency,
+    effectiveCategory,
+    recentEntries,
+  ]);
+
+  const settleBalance = useMemo(() => {
+    const row =
+      outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
+    if (!row || row.isCustom) return null;
+    return BigInt(row.amountMinor);
+  }, [settlePairs, outstandingIndex]);
+
+  const outcome = useMemo(() => {
+    const row =
+      outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
+    return settleOutcome({
+      pair:
+        selectedPair && row
+          ? {
+              fromName: selectedPair.fromName,
+              toName: selectedPair.toName,
+              owedMinor: row.isCustom ? 0n : BigInt(row.amountMinor),
+              isCustom: row.isCustom === true,
+            }
+          : null,
+      amountMinor: totalMinor.ok ? totalMinor.value : 0n,
+      hasMethod: methodLabel !== "",
+    });
+  }, [selectedPair, settlePairs, outstandingIndex, totalMinor, methodLabel]);
 
   /** Switching split method seeds sensible values instead of empty fields. */
   const changeMethod = (next: SplitMethod) => {
@@ -839,6 +1392,37 @@ export function AddEntryForm({
         setError(result.error ?? t("errors.saveFailed"));
         return;
       }
+
+      // The entry exists now, so the draft of it does not.
+      void discardDraft(groupId);
+
+      /*
+       * Remember the split, or forget the one the group had.
+       *
+       * After the entry is saved rather than before, and not awaited into the
+       * error path: a default that failed to save is a convenience that did
+       * not happen, and telling somebody their expense might not have been
+       * recorded because of it would be false.
+       */
+      if (!isSettle) {
+        const remember =
+          alwaysSplit &&
+          worthSaving({
+            method,
+            includedIds: effectiveIncluded,
+            memberCount: members.length,
+          });
+        if (remember) {
+          void setGroupSplitDefaultAction(groupId, {
+            method,
+            includedIds: [...effectiveIncluded],
+            values,
+          });
+        } else if (defaultSplit && !alwaysSplit) {
+          void setGroupSplitDefaultAction(groupId, null);
+        }
+      }
+
       // The confirmation follows the reader back to the group rather than
       // holding the drawer open in front of it: what they wanted to see is the
       // entry landing in the list, and the toast says the same thing without
@@ -847,7 +1431,7 @@ export function AddEntryForm({
         t(
           `saved.${confirmationKey(type, recurrence.enabled, editing !== undefined)}`,
         ),
-        { description: describeSaved() },
+        { description: describeSaved(createdExpenseId(result) ?? editing?.id) },
       );
       // A conversion removed the row this drawer was opened on, so it leaves
       // the way a deletion does rather than back onto a detail screen that no
@@ -894,6 +1478,9 @@ export function AddEntryForm({
       groupName,
       payload: expensePayload(),
     });
+    // Queued counts as saved for the draft's purposes: the entry is on the
+    // device either way, and keeping both would offer it back as unfinished.
+    void discardDraft(groupId);
     toast.success(t("saved.queued"), { description: t("saved.queuedNote") });
     if (onSaved) onSaved();
     else router.refresh();
@@ -943,12 +1530,7 @@ export function AddEntryForm({
     currency,
     exchangeRate: needsRate ? rate.trim() : "",
     expenseDate: date,
-    payers: [
-      {
-        participantId: payerId,
-        amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-      },
-    ],
+    payers: payerContributions(),
     splitMethod: method,
     splitEntries: splitEntries(),
     // The scan's own photograph, if it was kept, plus anything attached by
@@ -970,22 +1552,27 @@ export function AddEntryForm({
       amount: totalMinor.ok ? totalMinor.value.toString() : "0",
       currency,
       exchangeRate: needsRate ? rate.trim() : "",
-      payers: [
-        {
-          participantId: payerId,
-          amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-        },
-      ],
+      payers: payerContributions(),
       splitMethod: method,
       splitEntries: splitEntries(),
       frequency: recurrence.frequency,
       interval: recurrence.interval,
-      weekday:
-        recurrence.frequency === "weekly" ? recurrence.weekday : undefined,
-      dayOfMonth:
-        recurrence.frequency === "weekly" ? undefined : recurrence.dayOfMonth,
+      /*
+       * Which fields a rule carries depends on what kind of rule it is, and
+       * the server refuses the combinations that would need a guess — "the
+       * 3rd" beside "the second Tuesday", a weekday on a daily rule. Sending
+       * only what this frequency means is what keeps them apart.
+       */
+      weekday: sendsWeekday(recurrence) ? recurrence.weekday : undefined,
+      weekOfMonth: sendsWeekOfMonth(recurrence)
+        ? String(recurrence.weekOfMonth)
+        : undefined,
+      dayOfMonth: sendsDayOfMonth(recurrence)
+        ? recurrence.dayOfMonth
+        : undefined,
       startDate: date,
       endDate: recurrence.endDate ?? "",
+      count: recurrence.count ?? undefined,
     }),
   });
 
@@ -1078,20 +1665,113 @@ export function AddEntryForm({
     }
   };
 
-  /** One line for the confirmation screen: what was saved, and how much. */
-  const describeSaved = (): string => {
-    const amount = amountFormatted;
+  /**
+   * The entry in one plain line, for the sentence that asks about deleting it.
+   *
+   * Deliberately not the confirmation's line: this one has to name the entry
+   * being destroyed, and "84.60 · Seb paid · split 3 ways" identifies a
+   * payment rather than the thing the reader called it.
+   */
+  const describeEntry = (): string => {
+    const parts = [description.trim() || t("labels.description")];
     if (isSettle && selectedPair) {
-      return `${selectedPair.fromName} → ${selectedPair.toName} · ${amount}`;
+      parts[0] = `${selectedPair.fromName} → ${selectedPair.toName}`;
     }
-    const parts = [description.trim() || t("labels.description"), amount];
+    parts.push(amountFormatted);
     if (recurrence.enabled) parts.push(repeatLabel);
     return parts.join(" · ");
   };
 
-  const categoryGlyph = hasGlyph(effectiveCategory)
-    ? CATEGORY_GLYPHS[effectiveCategory]
-    : FALLBACK_GLYPH;
+  /**
+   * The confirmation line: the two facts most likely to be wrong.
+   *
+   * It used to repeat the description, which the reader had just typed. Who
+   * paid and how it was split are the two people actually reopen entries to
+   * check, and both are cheapest to fix now — so both are named, and each is
+   * a link back into the entry with the sheet that fixes it already open.
+   */
+  const describeSaved = (entryId: string | undefined): ReactNode => {
+    const summary = savedSummary({
+      type,
+      amount: amountFormatted,
+      payerName,
+      participantCount: effectiveIncluded.length,
+      settlement:
+        isSettle && selectedPair
+          ? {
+              fromName: selectedPair.fromName,
+              toName: selectedPair.toName,
+              method: methodLabel,
+            }
+          : null,
+    });
+
+    if (summary.kind === "settled" && summary.settlement) {
+      const parts = [
+        summary.amount,
+        t("saved.settledPair", {
+          from: summary.settlement.fromName,
+          to: summary.settlement.toName,
+        }),
+      ];
+      if (summary.settlement.method !== "") {
+        parts.push(summary.settlement.method);
+      }
+      return parts.join(" · ");
+    }
+
+    /*
+     * A link only when there is somewhere to go. A queued entry has no id
+     * yet, and a recurring template's first occurrence does not exist until
+     * the worker makes it — in both cases the facts are still worth stating,
+     * they just cannot be tapped.
+     */
+    const href =
+      entryId && !recurrence.enabled
+        ? `/groups/${groupId}/expenses/${entryId}/edit`
+        : null;
+
+    /*
+     * Both facts open the same sheet, because that is where both are fixed:
+     * "Paid by" and "Split between" are two sections of one roster. Two links
+     * to one destination is not a redundancy — each takes the reader to their
+     * own fact — but pretending they were different sheets would be.
+     */
+    const fact = (label: string, key: string) =>
+      href ? (
+        <Link
+          key={key}
+          href={`${href}?sheet=split`}
+          className="text-primary-ink underline-offset-2 hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <span key={key}>{label}</span>
+      );
+
+    return (
+      <>
+        {summary.amount}
+        {" · "}
+        {fact(
+          summary.payer?.received
+            ? t("saved.receivedBy", { name: summary.payer.name })
+            : t("saved.paidBy", { name: summary.payer?.name ?? "" }),
+          "payer",
+        )}
+        {" · "}
+        {fact(
+          summary.split?.credited
+            ? t("saved.creditedWays", { count: summary.split.count })
+            : t("saved.splitWays", { count: summary.split?.count ?? 0 }),
+          "split",
+        )}
+      </>
+    );
+  };
+
+  const categoryGlyph = vocabulary.glyph(effectiveCategory);
 
   /** Today, unless a schedule has moved the first one somewhere else. */
   const dateLabel = upcoming[0]
@@ -1145,9 +1825,11 @@ export function AddEntryForm({
             />
           ) : (
             <OutstandingList
-              pairs={outstanding}
+              pairs={settlePairs}
               selectedIndex={outstandingIndex >= 0 ? outstandingIndex : null}
               onSelect={selectPair}
+              onPickSomeoneElse={() => setSheet("pair")}
+              hasCustomPair={customPair !== null}
             />
           ))}
 
@@ -1167,6 +1849,36 @@ export function AddEntryForm({
             defaultCurrency={currency}
             onApply={applyScan}
             trigger={ScanCard}
+          />
+        )}
+
+        {/*
+         * Saying it instead of typing it. Beside the scan button because they
+         * are the same kind of thing — a way in that skips the form — and
+         * both only propose.
+         */}
+        {type === "expense" && !editing && (
+          <VoiceButton
+            className="self-start"
+            onHeard={(transcript) => {
+              const heard = heardEntry(transcript, currency);
+              /*
+               * Anything not heard stays at its default, and nothing is
+               * overwritten with nothing: a sentence with no amount in it
+               * leaves the amount alone rather than clearing what is there.
+               */
+              if (heard.amountText !== "") {
+                setAmountText(sanitiseAmount(heard.amountText, heard.currency));
+              }
+              if (heard.currency !== "") setCurrency(heard.currency);
+              /*
+               * When nothing parsed, the raw words go in the description and
+               * the amount is left empty — the reader is one field from done
+               * rather than back where they started. That is the same branch:
+               * `heardEntry` puts everything it could not read here.
+               */
+              if (heard.description !== "") setDescription(heard.description);
+            }}
           />
         )}
 
@@ -1194,6 +1906,75 @@ export function AddEntryForm({
           onOpenCurrency={() => setSheet("currency")}
           locale={locale}
         />
+
+        {/*
+         * "Did I already log this?" — answered where it is asked, instead of
+         * by scrolling the list later.
+         *
+         * Quiet on purpose: muted text, no coloured background, no icon
+         * bigger than the words. Duplicates are legal — two coffee runs
+         * happen — so this never blocks and never pre-empts saving. It is a
+         * reassurance with one tap out of it.
+         */}
+        {duplicate && (
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 text-xs text-muted-foreground">
+            <RotateCcw aria-hidden="true" className="size-3.5 shrink-0" />
+            <span>
+              {t("duplicate.note", {
+                // Rounds to nothing for an entry made minutes ago, which the
+                // message reads as "just now" rather than rounding it up to an
+                // hour that has not passed.
+                hours: Math.round(duplicate.hoursAgo),
+                description: duplicate.description,
+                amount: duplicate.amountFormatted,
+                name: duplicate.payerName,
+              })}
+            </span>
+            <Link
+              href={`/groups/${groupId}/expenses/${duplicate.id}`}
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              {t("duplicate.view")}
+            </Link>
+          </p>
+        )}
+
+        {/*
+         * The two things somebody does with a debt: clear it, or pay some of
+         * it. `Full` names the figure rather than saying "full", so you can
+         * see what you are restoring after typing over it. Hidden for a named
+         * pair and for a debt of nothing, both of which have no full amount
+         * to offer.
+         */}
+        {isSettle && settleBalance !== null && settleBalance > 0n && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setAmountText(
+                  formatMinorUnits(settleBalance.toString(), currency),
+                )
+              }
+              className="h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+            >
+              {t("settle.full", {
+                amount: formatMinorUnits(settleBalance.toString(), currency),
+              })}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAmountText("");
+                document
+                  .querySelector<HTMLInputElement>("input[data-entry-amount]")
+                  ?.focus();
+              }}
+              className="h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+            >
+              {t("settle.partOfIt")}
+            </button>
+          </div>
+        )}
 
         {!isSettle && (
           <RowCard>
@@ -1232,13 +2013,16 @@ export function AddEntryForm({
               iconFilled={effectiveCategory !== ""}
               label={t("category.title")}
               value={
-                hasGlyph(effectiveCategory) ? (
+                vocabulary.owns(effectiveCategory) ? (
                   <>
-                    {tCategories(effectiveCategory)}
+                    {vocabulary.label(effectiveCategory)}
                     {shownSubcategory !== "" && (
                       <>
                         <span aria-hidden="true">{"  \u203a  "}</span>
-                        {tSubcategories(effectiveCategory, shownSubcategory)}
+                        {vocabulary.leafLabel(
+                          effectiveCategory,
+                          shownSubcategory,
+                        )}
                       </>
                     )}
                   </>
@@ -1291,26 +2075,6 @@ export function AddEntryForm({
                 className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
             </Row>
-          </RowCard>
-        )}
-
-        {isIncome && (
-          <RowCard role="radiogroup" aria-label={t("income.belongsTo")}>
-            <CreditOption
-              selected={credit === "shared"}
-              onSelect={() => setCredit("shared")}
-              title={t("income.shared")}
-              hint={t("income.sharedHint", {
-                count: effectiveIncluded.length,
-                amount: eachFormatted ?? amountFormatted,
-              })}
-            />
-            <CreditOption
-              selected={credit === "mine"}
-              onSelect={() => setCredit("mine")}
-              title={t("income.mine", { name: payerName })}
-              hint={t("income.mineHint")}
-            />
           </RowCard>
         )}
 
@@ -1394,7 +2158,10 @@ export function AddEntryForm({
           )}
         </RowCard>
 
-        {!isSettle && !(isIncome && credit === "mine") && (
+        {/* The split row is always visible on an income now: it is where
+            "credited to" is answered, and it used to be hidden by the mode
+            that claimed to answer it instead. */}
+        {!isSettle && (
           <SplitSummaryRow
             payerName={payerName}
             amountFormatted={amountFormatted}
@@ -1422,20 +2189,9 @@ export function AddEntryForm({
           />
         )}
 
-        {isSettle && selectedPair && (
+        {isSettle && (
           <p className="text-xs text-muted-foreground">
-            {methodLabel !== ""
-              ? t("settle.outcome", {
-                  from: selectedPair.fromName,
-                  to: selectedPair.toName,
-                  amount: amountFormatted,
-                  method: methodLabel,
-                })
-              : t("settle.outcomeNoMethod", {
-                  from: selectedPair.fromName,
-                  to: selectedPair.toName,
-                  amount: amountFormatted,
-                })}
+            <SettleOutcomeLine outcome={outcome} currency={currency} />
           </p>
         )}
 
@@ -1474,7 +2230,7 @@ export function AddEntryForm({
               <AlertDialogHeader>
                 <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t("delete.body", { entry: describeSaved() })}
+                  {t("delete.body", { entry: describeEntry() })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1562,6 +2318,69 @@ export function AddEntryForm({
               note={splitNote}
               received={isIncome}
               splitText={splitText}
+              alwaysSplit={
+                worthSaving({
+                  method,
+                  includedIds: effectiveIncluded,
+                  memberCount: members.length,
+                })
+                  ? alwaysSplit
+                  : null
+              }
+              onAlwaysSplitChange={setAlwaysSplit}
+              onAddGuest={canAddGuests ? addGuest : undefined}
+              // An income has a receiver and a repayment has a pair; neither
+              // has anything to divide the paying between.
+              several={several}
+              onSeveralChange={
+                isIncome
+                  ? undefined
+                  : (next) => {
+                      setSeveral(next);
+                      // Turning it on seeds the one payer the form already
+                      // has, so the panel opens on a state that balances
+                      // rather than on a shortfall nobody caused.
+                      if (next && Object.keys(payerAmounts).length === 0) {
+                        setPayerAmounts({ [payerId]: amountText });
+                      }
+                    }
+              }
+              payerAmounts={payerAmounts}
+              onPayerAmountChange={(id, value) =>
+                setPayerAmounts((current) => ({
+                  ...current,
+                  [id]: sanitiseAmount(value, currency),
+                }))
+              }
+              payerNote={payerNote}
+              onJustOnePaid={() => {
+                setSeveral(false);
+                setPayerAmounts({});
+              }}
+              onSplitPaymentEqually={() =>
+                setPayerAmounts(
+                  splitPaymentEqually({
+                    payerIds: effectiveIncluded,
+                    currency,
+                    totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+                    format: (minor, code) =>
+                      formatMinorUnits(minor.toString(), code),
+                  }),
+                )
+              }
+              onGiveRest={(id) =>
+                setPayerAmounts((current) =>
+                  giveRestTo({
+                    amounts: current,
+                    participantId: id,
+                    memberIds: members.map((member) => member.id),
+                    currency,
+                    totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+                    format: (minor, code) =>
+                      formatMinorUnits(minor.toString(), code),
+                  }),
+                )
+              }
               onDone={() => setSheet(null)}
             />
           )}
@@ -1574,6 +2393,7 @@ export function AddEntryForm({
               description={description}
               suggestion={suggestion}
               frequent={frequentCategories}
+              direction={categoryDirection}
               // Every tap in the sheet writes a valid entry, including the one
               // that only opens a pane — which is what lets the second level
               // be optional rather than a step to escape from. The sheet says
@@ -1630,6 +2450,22 @@ export function AddEntryForm({
             />
           )}
 
+          {sheet === "pair" && (
+            <PairSheet
+              members={members}
+              fromId={draftPair.fromId}
+              toId={draftPair.toId}
+              onChange={setDraftPair}
+              onConfirm={() => {
+                const pair = pairFrom(draftPair);
+                if (!pair) return;
+                setCustomPair(pair);
+                takePair(pair);
+                setSheet(null);
+              }}
+            />
+          )}
+
           {sheet === "recur" && (
             <RecurrenceSheet
               state={recurrence}
@@ -1637,6 +2473,12 @@ export function AddEntryForm({
               startDate={date}
               timezone={timezone}
               onDone={() => setSheet(null)}
+              // The sheet's only way out downwards: it turns repeats off and
+              // closes, which is why there is no switch in its header.
+              onStop={() => {
+                setRecurrence((current) => ({ ...current, enabled: false }));
+                setSheet(null);
+              }}
             />
           )}
         </SheetContent>
@@ -1646,46 +2488,48 @@ export function AddEntryForm({
 }
 
 /**
- * One of the two ways income can land, as a row in the card.
+ * The settlement's resulting ledger, in words.
  *
- * A radio rather than a switch or a pair of chips: the two are exclusive, one
- * is always true, and each needs a line of explanation underneath — which is
- * what a radio row is for.
+ * The decision is `settleOutcome`'s; this only looks the sentence up and
+ * formats the figure in it. Splitting them is what lets the seven branches be
+ * tested without a renderer, and it keeps the one thing that has to stay true
+ * — which sentence — out of JSX.
  */
-function CreditOption({
-  selected,
-  onSelect,
-  title,
-  hint,
+function SettleOutcomeLine({
+  outcome,
+  currency,
 }: {
-  selected: boolean;
-  onSelect: () => void;
-  title: string;
-  hint: string;
+  outcome: SettleOutcome;
+  currency: string;
 }) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-accent"
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-[18px] shrink-0 rounded-full border",
-          selected ? "border-primary bg-primary" : "border-input",
-        )}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{title}</span>
-        <span className="block truncate text-xs text-muted-foreground">
-          {hint}
-        </span>
-      </span>
-    </button>
-  );
+  const t = useTranslations("addEntry.settle");
+
+  if (outcome.kind === "noPair") return t("outcomeNoPair");
+  if (outcome.kind === "noMethod") return t("outcomeNoMethod");
+  if (outcome.kind === "zeroAmount") return t("outcomeZero");
+  if (outcome.kind === "exact") {
+    // The only sentence with a remainder of nothing, so it names no figure.
+    return t("outcomeExact", {
+      from: outcome.pairNames?.fromName ?? "",
+      to: outcome.pairNames?.toName ?? "",
+    });
+  }
+
+  const remainder = outcome.remainder;
+  if (!remainder) return null;
+
+  const key =
+    outcome.kind === "custom"
+      ? "outcomeCustom"
+      : outcome.kind === "under"
+        ? "outcomeUnder"
+        : "outcomeOver";
+
+  return t(key, {
+    from: remainder.fromName,
+    to: remainder.toName,
+    amount: formatMinorUnits(remainder.amountMinor.toString(), currency),
+  });
 }
 
 /**

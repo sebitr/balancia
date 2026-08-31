@@ -1,4 +1,4 @@
-import { EntryScreen } from "../../../../entry-screen";
+import { EntryScreen, sheetFromQuery } from "../../../../entry-screen";
 
 /**
  * The edit drawer, opened over whatever the reader was looking at.
@@ -8,8 +8,10 @@ import { EntryScreen } from "../../../../entry-screen";
  */
 export default async function InterceptedEditExpensePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string; expenseId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { groupId, expenseId } = await params;
   return (
@@ -18,6 +20,7 @@ export default async function InterceptedEditExpensePage({
       dismissTo="back"
       edit={{ kind: "expense", id: expenseId }}
       whenGone="nothing"
+      openSheet={sheetFromQuery(await searchParams)}
     />
   );
 }

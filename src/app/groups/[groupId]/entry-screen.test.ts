@@ -23,12 +23,18 @@ const { notFound, getExpense, getSettlement } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ notFound }));
-vi.mock("@/modules/expenses/service", () => ({ getExpense }));
+vi.mock("@/modules/expenses/service", () => ({
+  getExpense,
+  // The duplicate note reads the group's last few entries; this suite is
+  // about what happens when the *edited* one is gone.
+  listExpenses: async () => [],
+}));
 vi.mock("@/modules/settlements/service", () => ({ getSettlement }));
 vi.mock("@/lib/actions", () => ({
   requireGroupAccess: async () => ({
     groupId: "g1",
     participantId: "seb",
+    permissions: { manageParticipants: true },
     group: {
       currencyMode: "converted",
       baseCurrency: "CHF",
@@ -123,7 +129,7 @@ describe("an entry that is no longer there", () => {
       description: "Migros",
       category: null,
       notes: null,
-      payers: [{ participantId: "seb" }],
+      payers: [{ participantId: "seb", amount: 8460n }],
       shares: [{ participantId: "seb", amount: 8460n }],
       splitMethod: "equal",
       splitInput: null,
