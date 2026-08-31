@@ -2978,6 +2978,20 @@
         "3": "third",
         "4": "fourth",
         "last": "last"
+      },
+      "everyN": "Every {interval}",
+      "presetDaily": "Every day",
+      "presetWeekly": "Every week on {day}",
+      "presetFortnightly": "Every 2 weeks on {day}",
+      "presetMonthly": "Every month on the {day}",
+      "presetYearly": "Every year on {date}",
+      "presetCustom": "Custom…",
+      "timezoneNote": "Created in {timezone} time.",
+      "everyOne": {
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month",
+        "yearly": "Every year"
       }
     },
     "scan": {

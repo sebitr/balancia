@@ -2978,6 +2978,20 @@
         "3": "troisième",
         "4": "quatrième",
         "last": "dernier"
+      },
+      "everyN": "Tous les {interval}",
+      "presetDaily": "Tous les jours",
+      "presetWeekly": "Toutes les semaines le {day}",
+      "presetFortnightly": "Toutes les 2 semaines le {day}",
+      "presetMonthly": "Tous les mois le {day}",
+      "presetYearly": "Tous les ans le {date}",
+      "presetCustom": "Personnalisé…",
+      "timezoneNote": "Créé à l’heure de {timezone}.",
+      "everyOne": {
+        "daily": "Tous les jours",
+        "weekly": "Toutes les semaines",
+        "monthly": "Chaque mois",
+        "yearly": "Chaque année"
       }
     },
     "scan": {

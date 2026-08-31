@@ -243,6 +243,30 @@ function createdExpenseId(result: {
   return typeof id === "string" ? id : undefined;
 }
 
+/**
+ * Which of the rule's fields this frequency actually means.
+ *
+ * A daily rule has no weekday and no day of the month; a monthly one has one
+ * or the other and never both. The server refuses the combinations that would
+ * need a guess, so the form sends only what it means rather than everything it
+ * happens to be holding.
+ */
+function sendsWeekday(state: RecurrenceState): boolean {
+  return (
+    state.frequency === "weekly" ||
+    (state.frequency === "monthly" && state.weekOfMonth !== null)
+  );
+}
+
+function sendsWeekOfMonth(state: RecurrenceState): boolean {
+  return state.frequency === "monthly" && state.weekOfMonth !== null;
+}
+
+function sendsDayOfMonth(state: RecurrenceState): boolean {
+  if (state.frequency === "daily" || state.frequency === "weekly") return false;
+  return !(state.frequency === "monthly" && state.weekOfMonth !== null);
+}
+
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
 /** A group with nothing in it yet: the duplicate note has nothing to match. */
 const NO_RECENT: readonly RecentEntry[] = [];
@@ -386,6 +410,13 @@ export function AddEntryForm({
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tMethods = useTranslations("paymentMethods");
+  /*
+   * The ordinals — "second", "last" — as their own namespace, so the key is a
+   * literal the compiler can check rather than a string built from a value.
+   */
+  const tWeeksRaw = useTranslations("addEntry.repeat.weeks");
+  const tWeeks = (week: string) =>
+    tWeeksRaw(week as Parameters<typeof tWeeksRaw>[0]);
   const tCommon = useTranslations("common");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const repeatsId = useId();
@@ -461,7 +492,9 @@ export function AddEntryForm({
     interval: 1,
     weekday: 1,
     dayOfMonth: Number(new Date().toISOString().slice(8, 10)),
+    weekOfMonth: null,
     endDate: null,
+    count: null,
   });
 
   const [scan, setScan] = useState<ScannedExpense | null>(null);
@@ -786,14 +819,23 @@ export function AddEntryForm({
     .map((day) => dates.plain(day, "dayMonth"))
     .join(", ");
 
-  /** "Monthly, day 1" — the rule in one line, wherever it is named. */
-  const repeatLabel = t("repeat.active", {
-    frequency: t(`repeat.frequency.${recurrence.frequency}`),
-    day:
-      recurrence.frequency === "weekly"
-        ? String(recurrence.weekday)
-        : t("repeat.dayOfMonth", { day: recurrence.dayOfMonth }),
-  });
+  /**
+   * "Monthly, day 1" — the rule in one line, wherever it is named.
+   *
+   * A daily rule has no second half at all: "Daily, day 12" would name a
+   * number the rule does not use.
+   */
+  const repeatLabel =
+    recurrence.frequency === "daily"
+      ? t("repeat.frequency.daily")
+      : t("repeat.active", {
+          frequency: t(`repeat.frequency.${recurrence.frequency}`),
+          day: sendsWeekOfMonth(recurrence)
+            ? tWeeks(String(recurrence.weekOfMonth))
+            : recurrence.frequency === "weekly"
+              ? String(recurrence.weekday)
+              : t("repeat.dayOfMonth", { day: recurrence.dayOfMonth }),
+        });
 
   const amountLabel = scan
     ? t("labels.amountFromReceipt")
@@ -1185,12 +1227,22 @@ export function AddEntryForm({
       splitEntries: splitEntries(),
       frequency: recurrence.frequency,
       interval: recurrence.interval,
-      weekday:
-        recurrence.frequency === "weekly" ? recurrence.weekday : undefined,
-      dayOfMonth:
-        recurrence.frequency === "weekly" ? undefined : recurrence.dayOfMonth,
+      /*
+       * Which fields a rule carries depends on what kind of rule it is, and
+       * the server refuses the combinations that would need a guess — "the
+       * 3rd" beside "the second Tuesday", a weekday on a daily rule. Sending
+       * only what this frequency means is what keeps them apart.
+       */
+      weekday: sendsWeekday(recurrence) ? recurrence.weekday : undefined,
+      weekOfMonth: sendsWeekOfMonth(recurrence)
+        ? String(recurrence.weekOfMonth)
+        : undefined,
+      dayOfMonth: sendsDayOfMonth(recurrence)
+        ? recurrence.dayOfMonth
+        : undefined,
       startDate: date,
       endDate: recurrence.endDate ?? "",
+      count: recurrence.count ?? undefined,
     }),
   });
 
@@ -1998,6 +2050,12 @@ export function AddEntryForm({
               startDate={date}
               timezone={timezone}
               onDone={() => setSheet(null)}
+              // The sheet's only way out downwards: it turns repeats off and
+              // closes, which is why there is no switch in its header.
+              onStop={() => {
+                setRecurrence((current) => ({ ...current, enabled: false }));
+                setSheet(null);
+              }}
             />
           )}
         </SheetContent>
