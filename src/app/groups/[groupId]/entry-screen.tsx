@@ -352,6 +352,12 @@ async function loadExpense(
     subcategory: expense.subcategory ?? "",
     notes: expense.notes ?? "",
     payerId: expense.payers[0]?.participantId ?? null,
+    // All of them, so reopening a two-payer expense does not rewrite it as a
+    // one-payer one. See `EditingEntry.payers`.
+    payers: expense.payers.map((payer) => ({
+      participantId: payer.participantId,
+      amountText: toMajorString(money(payer.amount, expense.currency)),
+    })),
     // An expense has no second side. Saying it was really a repayment means
     // naming who it was repaid to, and that is the one thing only a person
     // can answer.

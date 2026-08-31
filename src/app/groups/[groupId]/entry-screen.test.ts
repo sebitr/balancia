@@ -129,7 +129,7 @@ describe("an entry that is no longer there", () => {
       description: "Migros",
       category: null,
       notes: null,
-      payers: [{ participantId: "seb" }],
+      payers: [{ participantId: "seb", amount: 8460n }],
       shares: [{ participantId: "seb", amount: 8460n }],
       splitMethod: "equal",
       splitInput: null,

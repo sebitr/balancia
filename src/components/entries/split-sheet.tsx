@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
@@ -59,6 +59,14 @@ export function SplitSheet({
   alwaysSplit,
   onAlwaysSplitChange,
   onAddGuest,
+  several = false,
+  onSeveralChange,
+  payerAmounts,
+  onPayerAmountChange,
+  payerNote,
+  onJustOnePaid,
+  onSplitPaymentEqually,
+  onGiveRest,
   onDone,
 }: {
   members: readonly EntryMember[];
@@ -95,6 +103,29 @@ export function SplitSheet({
    * only reason the row would not be there.
    */
   onAddGuest?: (name: string) => Promise<void>;
+  /**
+   * Whether more than one person put the money in.
+   *
+   * Absent `onSeveralChange` hides the option entirely, which is what an
+   * income and a repayment get: one has a receiver, the other has a pair, and
+   * neither has anything to divide the *paying* between.
+   */
+  several?: boolean;
+  onSeveralChange?: (several: boolean) => void;
+  /** Per participant, as typed. Only read while `several`. */
+  payerAmounts?: Readonly<Record<string, string>>;
+  onPayerAmountChange?: (participantId: string, value: string) => void;
+  /**
+   * What the amounts do not add up to, already worded, or null when they do.
+   *
+   * The balance engine refuses an expense whose contributions miss its total,
+   * so this is the difference between a fixable warning and a failed save.
+   */
+  payerNote?: string | null;
+  /** The three ways people actually fix a shortfall. */
+  onJustOnePaid?: () => void;
+  onSplitPaymentEqually?: () => void;
+  onGiveRest?: (participantId: string) => void;
   onDone: () => void;
 }) {
   const t = useTranslations("addEntry.split");
@@ -152,13 +183,57 @@ export function SplitSheet({
               label={t(received ? "receiverOption" : "payerOption", {
                 name: member.displayName,
               })}
-              selected={member.id === payerId}
+              selected={!several && member.id === payerId}
               onToggle={() => onPayerChange(member.id)}
               tone="payer"
+              guest={member.guest}
               choice
             />
           ))}
+          {/*
+           * The last option, and dashed like every other "not one of these":
+           * two people splitting a deposit at the counter is real, and it was
+           * a permanent segmented control above these faces for a choice that
+           * goes the other way ninety-five times in a hundred.
+           */}
+          {onSeveralChange && (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={several}
+              onClick={() => onSeveralChange(!several)}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",
+                several
+                  ? "border-payer bg-payer/15 font-semibold text-foreground"
+                  : "border-dashed border-border bg-white/4 font-normal text-muted-foreground",
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "grid size-[30px] shrink-0 place-items-center rounded-full border border-dashed",
+                  several ? "border-payer/40" : "border-border",
+                )}
+              >
+                <Users className="size-4" />
+              </span>
+              <span className="truncate">{t("several")}</span>
+            </button>
+          )}
         </div>
+
+        {several && payerAmounts && onPayerAmountChange && (
+          <MultiPayerPanel
+            members={members}
+            amounts={payerAmounts}
+            onAmountChange={onPayerAmountChange}
+            note={payerNote}
+            onJustOne={onJustOnePaid}
+            onSplitEqually={onSplitPaymentEqually}
+            onGiveRest={onGiveRest}
+          />
+        )}
       </section>
 
       <section className="space-y-2">
@@ -333,6 +408,120 @@ export function SplitSheet({
         {t("done")}
       </Button>
     </div>
+  );
+}
+
+/**
+ * Who paid what, once more than one person did.
+ *
+ * An amount per person and the three shortcuts that fix the commonest
+ * shortfalls. It sits inside the "Paid by" section rather than below the
+ * split, because it answers that section's question — dividing the *paying*
+ * is not dividing the *owing*, and two amount lists side by side is exactly
+ * the confusion this sheet was built to remove.
+ */
+function MultiPayerPanel({
+  members,
+  amounts,
+  onAmountChange,
+  note,
+  onJustOne,
+  onSplitEqually,
+  onGiveRest,
+}: {
+  members: readonly EntryMember[];
+  amounts: Readonly<Record<string, string>>;
+  onAmountChange: (participantId: string, value: string) => void;
+  note?: string | null;
+  onJustOne?: () => void;
+  onSplitEqually?: () => void;
+  onGiveRest?: (participantId: string) => void;
+}) {
+  const t = useTranslations("addEntry.split");
+
+  /*
+   * Who "the rest" goes to: the first person with no amount against them, or
+   * the first person at all when everyone has one. It is the likeliest answer
+   * and it costs a tap to change — the same trade the payer row itself makes.
+   */
+  const restCandidate =
+    members.find((member) => (amounts[member.id] ?? "").trim() === "") ??
+    members[0];
+
+  return (
+    <div className="space-y-2 rounded-2xl bg-card p-3 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+      <ul>
+        {members.map((member) => (
+          <li
+            key={member.id}
+            className="flex h-13 items-center gap-3 border-b border-white/8 px-1 last:border-b-0"
+          >
+            <MemberAvatar
+              name={member.displayName}
+              selected={(amounts[member.id] ?? "").trim() !== ""}
+              tone="payer"
+              guest={member.guest}
+            />
+            <span className="flex-1 truncate text-sm">
+              {member.displayName}
+            </span>
+            <Input
+              value={amounts[member.id] ?? ""}
+              onChange={(event) =>
+                onAmountChange(member.id, event.target.value)
+              }
+              inputMode="decimal"
+              placeholder="0.00"
+              aria-label={t("payerAmount", { name: member.displayName })}
+              className="h-9 w-24 text-right tabular-nums"
+            />
+          </li>
+        ))}
+      </ul>
+
+      {/*
+       * Not decoration: the balance engine refuses an expense whose
+       * contributions miss its total, so this line is the difference between
+       * something fixable and a failed save.
+       */}
+      {note && <p className="text-destructive-ink px-1 text-xs">{note}</p>}
+
+      <div className="flex flex-wrap gap-1.5">
+        {onJustOne && (
+          <ShortcutButton onClick={onJustOne}>
+            {t("justOnePaid")}
+          </ShortcutButton>
+        )}
+        {onSplitEqually && (
+          <ShortcutButton onClick={onSplitEqually}>
+            {t("splitPayment")}
+          </ShortcutButton>
+        )}
+        {onGiveRest && restCandidate && (
+          <ShortcutButton onClick={() => onGiveRest(restCandidate.id)}>
+            {t("giveRest", { name: restCandidate.displayName })}
+          </ShortcutButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ShortcutButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-9 rounded-lg border border-border bg-white/4 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+    >
+      {children}
+    </button>
   );
 }
 

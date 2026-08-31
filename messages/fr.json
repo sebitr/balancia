@@ -2909,7 +2909,15 @@
       },
       "alwaysTitle": "Toujours partager ainsi",
       "alwaysHint": "Enregistré comme réglage par défaut du groupe",
-      "addSomeone": "Ajouter quelqu’un"
+      "addSomeone": "Ajouter quelqu’un",
+      "several": "Plusieurs",
+      "payerAmount": "Montant payé par {name}",
+      "justOnePaid": "Une seule personne a payé",
+      "splitPayment": "Partager le paiement également",
+      "giveRest": "Donner le reste à {name}",
+      "payerShort": "Il reste {amount} à attribuer à un payeur.",
+      "payerOver": "{amount} de plus que le total ont été payés.",
+      "payerNobody": "Indique combien au moins une personne a payé."
     },
     "currency": {
       "title": "Devise"

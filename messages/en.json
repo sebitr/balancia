@@ -2909,7 +2909,15 @@
       },
       "alwaysTitle": "Always split like this",
       "alwaysHint": "Saves it as this group's default",
-      "addSomeone": "Add someone"
+      "addSomeone": "Add someone",
+      "several": "Several",
+      "payerAmount": "Amount paid by {name}",
+      "justOnePaid": "Just one person paid",
+      "splitPayment": "Split the payment equally",
+      "giveRest": "Give the rest to {name}",
+      "payerShort": "{amount} still to assign to a payer.",
+      "payerOver": "{amount} more than the total was paid.",
+      "payerNobody": "Say how much at least one person paid."
     },
     "currency": {
       "title": "Currency"

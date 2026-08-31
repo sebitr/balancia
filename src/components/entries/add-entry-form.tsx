@@ -113,6 +113,12 @@ import {
   type DebtPair,
 } from "./settle-blocks";
 import { settleOutcome, type SettleOutcome } from "./settle-outcome";
+import {
+  giveRestTo,
+  multiPayerContributions,
+  splitPaymentEqually,
+  summariseMultiPayer,
+} from "./multi-payer";
 import { heardEntry } from "./heard-entry";
 import { VoiceButton } from "./voice-button";
 import { savedSummary } from "./saved-summary";
@@ -198,6 +204,22 @@ export interface EditingEntry {
    */
   readonly notes: string;
   readonly payerId: string | null;
+  /**
+   * Everyone who put money in, with what each of them put.
+   *
+   * The ledger has always held several — the schema takes an array, the
+   * service writes a row each, and the balance engine sums them — but this
+   * screen only ever read `payers[0]`, so reopening a two-payer expense and
+   * saving rewrote it as a one-payer one holding the whole amount. Nothing
+   * said so.
+   *
+   * Absent on a repayment, which has a pair rather than payers.
+   */
+  readonly payers?: readonly {
+    readonly participantId: string;
+    /** Major units, as the reader would type them. */
+    readonly amountText: string;
+  }[];
   /**
    * The other side of a repayment. `payerId` is the one paying.
    *
@@ -572,6 +594,23 @@ export function AddEntryForm({
   const [byItem, setByItem] = useState(false);
 
   /**
+   * More than one person put the money in.
+   *
+   * Seeded from the entry being edited, which is what stops reopening a
+   * two-payer expense from quietly rewriting it as a one-payer one: the form
+   * used to take `payers[0]` and save the whole amount against them.
+   */
+  const [several, setSeveral] = useState((editing?.payers?.length ?? 0) > 1);
+  const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
+    () => ({
+      ...editing?.payers?.reduce<Record<string, string>>((all, payer) => {
+        all[payer.participantId] = payer.amountText;
+        return all;
+      }, {}),
+    }),
+  );
+
+  /**
    * Whether to remember this split as the group's.
    *
    * Starts on when the split *is* the saved default, so a reader who opens
@@ -923,9 +962,45 @@ export function AddEntryForm({
    * is never quietly repopulated — it just cannot be saved, and both the
    * summary row and the sheet say why.
    */
+  /**
+   * What the payer amounts do not add up to, or null when they do.
+   *
+   * The balance engine refuses an expense whose contributions miss its total,
+   * so this is not advice — it is the difference between a warning the reader
+   * can act on and a save that fails.
+   */
+  const payerNote = useMemo(() => {
+    if (!several) return null;
+    const total = totalMinor.ok ? totalMinor.value : 0n;
+    const summary = summariseMultiPayer({
+      amounts: payerAmounts,
+      memberIds: members.map((member) => member.id),
+      currency,
+      totalMinor: total,
+    });
+    if (summary.payerIds.length === 0) return t("split.payerNobody");
+    if (summary.differenceMinor > 0n) {
+      return t("split.payerShort", {
+        amount: formatMinorUnits(summary.differenceMinor.toString(), currency),
+      });
+    }
+    if (summary.differenceMinor < 0n) {
+      return t("split.payerOver", {
+        amount: formatMinorUnits(
+          (-summary.differenceMinor).toString(),
+          currency,
+        ),
+      });
+    }
+    return null;
+  }, [several, payerAmounts, members, currency, totalMinor, t]);
+
   const canSave =
     hasAmount(amountText) &&
-    (isSettle ? selectedPair !== null : effectiveIncluded.length > 0);
+    (isSettle ? selectedPair !== null : effectiveIncluded.length > 0) &&
+    // Payer amounts that miss the total are refused by the balance engine, so
+    // the button is closed while the sheet is still naming the shortfall.
+    payerNote === null;
 
   const upcoming = useMemo(
     () => upcomingOccurrences(recurrence, date, timezone),
@@ -1048,6 +1123,33 @@ export function AddEntryForm({
    * settled, and a payment to somebody owed nothing announced the settling of
    * a debt that never existed.
    */
+  /**
+   * Who the entry says put the money in.
+   *
+   * One person unless somebody said otherwise, which is the shape 95% of
+   * entries have. When several did and the amounts do not add up,
+   * `multiPayerContributions` returns null and this falls back to the single
+   * payer — but the primary is disabled in that state, so the fallback is
+   * only ever what a half-filled panel would have sent had it been reachable.
+   */
+  const payerContributions = (): {
+    participantId: string;
+    amount: string;
+  }[] => {
+    const total = totalMinor.ok ? totalMinor.value.toString() : "0";
+    if (!several) return [{ participantId: payerId, amount: total }];
+    return (
+      multiPayerContributions({
+        amounts: payerAmounts,
+        memberIds: members.map((member) => member.id),
+        currency,
+        totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+      })?.map((payer) => ({ ...payer })) ?? [
+        { participantId: payerId, amount: total },
+      ]
+    );
+  };
+
   /**
    * What the selected pair owes, or null when there is no figure to offer.
    *
@@ -1428,12 +1530,7 @@ export function AddEntryForm({
     currency,
     exchangeRate: needsRate ? rate.trim() : "",
     expenseDate: date,
-    payers: [
-      {
-        participantId: payerId,
-        amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-      },
-    ],
+    payers: payerContributions(),
     splitMethod: method,
     splitEntries: splitEntries(),
     // The scan's own photograph, if it was kept, plus anything attached by
@@ -1455,12 +1552,7 @@ export function AddEntryForm({
       amount: totalMinor.ok ? totalMinor.value.toString() : "0",
       currency,
       exchangeRate: needsRate ? rate.trim() : "",
-      payers: [
-        {
-          participantId: payerId,
-          amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-        },
-      ],
+      payers: payerContributions(),
       splitMethod: method,
       splitEntries: splitEntries(),
       frequency: recurrence.frequency,
@@ -2237,6 +2329,58 @@ export function AddEntryForm({
               }
               onAlwaysSplitChange={setAlwaysSplit}
               onAddGuest={canAddGuests ? addGuest : undefined}
+              // An income has a receiver and a repayment has a pair; neither
+              // has anything to divide the paying between.
+              several={several}
+              onSeveralChange={
+                isIncome
+                  ? undefined
+                  : (next) => {
+                      setSeveral(next);
+                      // Turning it on seeds the one payer the form already
+                      // has, so the panel opens on a state that balances
+                      // rather than on a shortfall nobody caused.
+                      if (next && Object.keys(payerAmounts).length === 0) {
+                        setPayerAmounts({ [payerId]: amountText });
+                      }
+                    }
+              }
+              payerAmounts={payerAmounts}
+              onPayerAmountChange={(id, value) =>
+                setPayerAmounts((current) => ({
+                  ...current,
+                  [id]: sanitiseAmount(value, currency),
+                }))
+              }
+              payerNote={payerNote}
+              onJustOnePaid={() => {
+                setSeveral(false);
+                setPayerAmounts({});
+              }}
+              onSplitPaymentEqually={() =>
+                setPayerAmounts(
+                  splitPaymentEqually({
+                    payerIds: effectiveIncluded,
+                    currency,
+                    totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+                    format: (minor, code) =>
+                      formatMinorUnits(minor.toString(), code),
+                  }),
+                )
+              }
+              onGiveRest={(id) =>
+                setPayerAmounts((current) =>
+                  giveRestTo({
+                    amounts: current,
+                    participantId: id,
+                    memberIds: members.map((member) => member.id),
+                    currency,
+                    totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+                    format: (minor, code) =>
+                      formatMinorUnits(minor.toString(), code),
+                  }),
+                )
+              }
               onDone={() => setSheet(null)}
             />
           )}
