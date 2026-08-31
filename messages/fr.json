@@ -3016,12 +3016,10 @@
     "saveFailed": "Impossible d'enregistrer.",
     "fields": {
       "phone": {
-        "label": "Numéro de téléphone",
-        "placeholder": "+41 79 123 45 67"
+        "label": "Numéro de téléphone"
       },
       "iban": {
-        "label": "IBAN",
-        "placeholder": "CH93 0076 2011 6238 5295 7"
+        "label": "IBAN"
       },
       "email": {
         "label": "E-mail du compte",
@@ -3043,7 +3041,7 @@
     "errors": {
       "required": "Il faut un détail ici pour que quelqu'un puisse l'utiliser.",
       "tooLong": "C'est plus long que tout ce que quelqu'un aura à saisir.",
-      "phone": "Écris le numéro avec son indicatif, comme +41 79 123 45 67.",
+      "phone": "Écris le numéro avec son indicatif, comme {example}.",
       "iban": "Cet IBAN ne tombe pas juste — c'est presque toujours un caractère.",
       "email": "Cela ne ressemble pas à une adresse e-mail.",
       "link": "Écris le lien en entier, comme paypal.me/toi.",

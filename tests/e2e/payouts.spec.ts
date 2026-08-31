@@ -124,7 +124,11 @@ test.describe("payout methods", () => {
     await expectToast(page, "Saved");
 
     await page.reload();
-    await expect(page.getByLabel("Phone number")).toHaveValue("+41791234567");
+    // The account holds `+41791234567` — the server strips the spacing, and
+    // the field puts it back, because nobody reads a number in one run.
+    await expect(page.getByLabel("Phone number")).toHaveValue(
+      "+41 79 123 45 67",
+    );
   });
 
   test("puts the preferred method first, where whoever owes you reads it", async ({

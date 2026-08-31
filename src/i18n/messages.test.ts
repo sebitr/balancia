@@ -218,11 +218,11 @@ describe("message catalogues", () => {
       // too — only the two generic methods, `bank` and `cash`, translate.
       "paymentMethods.interac",
       "paymentMethods.payconiq",
-      // Sample values, not sentences: a Swiss phone number, a Swiss IBAN and
-      // a Swiss street, shown greyed in the field so somebody can see the
-      // shape expected of them. There is nothing in any of them to translate.
-      "payouts.fields.phone.placeholder",
-      "payouts.fields.iban.placeholder",
+      // A sample value, not a sentence: a Swiss street, shown greyed in the
+      // field so somebody can see the shape expected of them. There is
+      // nothing in it to translate. The phone number and the IBAN that used
+      // to sit beside it are a country's business rather than a language's
+      // and have moved to `payouts/examples.ts`.
       "payouts.addressStreetHint",
     ]);
 

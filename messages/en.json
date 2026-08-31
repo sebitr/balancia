@@ -3016,12 +3016,10 @@
     "saveFailed": "That could not be saved.",
     "fields": {
       "phone": {
-        "label": "Phone number",
-        "placeholder": "+41 79 123 45 67"
+        "label": "Phone number"
       },
       "iban": {
-        "label": "IBAN",
-        "placeholder": "CH93 0076 2011 6238 5295 7"
+        "label": "IBAN"
       },
       "email": {
         "label": "Email on the account",
@@ -3043,7 +3041,7 @@
     "errors": {
       "required": "This one needs a detail before anybody can use it.",
       "tooLong": "That is longer than anything anybody has to type.",
-      "phone": "Write the number with its country code, like +41 79 123 45 67.",
+      "phone": "Write the number with its country code, like {example}.",
       "iban": "That IBAN does not check out — one character is usually the culprit.",
       "email": "That does not look like an email address.",
       "link": "Write the whole link, like paypal.me/you.",

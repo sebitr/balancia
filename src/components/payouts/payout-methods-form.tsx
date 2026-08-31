@@ -15,13 +15,15 @@ import {
   needsDetail,
   payoutFieldFor,
   validatePayoutDetail,
-  PAYOUT_DETAIL_MAX_LENGTH,
 } from "@/modules/payouts/fields";
+import { phoneExampleFor } from "@/modules/payouts/examples";
+import { displayPayoutEntries } from "@/modules/payouts/format";
 import {
-  countryForTimezone,
   methodsForCountry,
   type PaymentMethodId,
 } from "@/modules/settlements/payment-methods";
+import { PayoutDetailInput } from "./payout-detail-input";
+import { useViewerCountry } from "./use-viewer-country";
 import type { SwissCreditorAddress } from "@/modules/payouts/qr/swiss";
 import {
   EMPTY_ADDRESS,
@@ -86,7 +88,14 @@ export function PayoutMethodsForm({
   const tMethods = useTranslations("paymentMethods");
   const tCommon = useTranslations("common");
 
-  const [entries, setEntries] = useState<readonly PayoutEntry[]>(initial);
+  /*
+   * The stored details, spaced for reading. What the server keeps is
+   * `+41791234567`; what a field shows is `+41 79 123 45 67`, and the spacing
+   * comes off again on the way in — see `payouts/format.ts`.
+   */
+  const [entries, setEntries] = useState<readonly PayoutEntry[]>(() =>
+    displayPayoutEntries(initial),
+  );
   const [address, setAddress] = useState<SwissCreditorAddress>(
     initialAddress ?? EMPTY_ADDRESS,
   );
@@ -113,15 +122,12 @@ export function PayoutMethodsForm({
    * question. Anything already saved is shown whether or not the region
    * suggests it.
    */
+  const viewer = useViewerCountry();
   const offered = useMemo(() => {
-    const timezone =
-      typeof Intl === "undefined"
-        ? null
-        : Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const regional = methodsForCountry(countryForTimezone(timezone));
+    const regional = methodsForCountry(viewer);
     const saved = initial.map((entry) => entry.method as PaymentMethodId);
     return [...new Set([...saved, ...regional])];
-  }, [initial]);
+  }, [initial, viewer]);
 
   const save = (
     next: readonly PayoutEntry[],
@@ -196,7 +202,12 @@ export function PayoutMethodsForm({
     if (problem) {
       setErrors((current) => ({
         ...current,
-        [method]: t(`errors.${problem}` as Parameters<typeof t>[0]),
+        // The phone complaint names the same example the field was showing,
+        // which is what makes it an instruction rather than a riddle.
+        [method]:
+          problem === "phone"
+            ? t("errors.phone", { example: phoneExampleFor(method, viewer) })
+            : t(`errors.${problem}` as Parameters<typeof t>[0]),
       }));
       return;
     }
@@ -295,18 +306,13 @@ export function PayoutMethodsForm({
                 >
                   {t(`fields.${kind}.label` as Parameters<typeof t>[0])}
                 </Label>
-                <Input
+                <PayoutDetailInput
                   id={`payout-${id}`}
                   className="h-11"
+                  method={id}
                   value={entry.detail}
-                  maxLength={PAYOUT_DETAIL_MAX_LENGTH}
-                  aria-invalid={Boolean(error)}
-                  inputMode={kind === "phone" ? "tel" : "text"}
-                  autoComplete={kind === "email" ? "email" : "off"}
-                  placeholder={t(
-                    `fields.${kind}.placeholder` as Parameters<typeof t>[0],
-                  )}
-                  onChange={(event) => edit(id, event.target.value)}
+                  invalid={Boolean(error)}
+                  onChange={(detail) => edit(id, detail)}
                   onBlur={() => commit(id)}
                 />
                 {error && <p className="text-xs text-destructive">{error}</p>}

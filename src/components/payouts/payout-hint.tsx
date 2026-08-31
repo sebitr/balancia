@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
 import { needsDetail, payoutFieldFor } from "@/modules/payouts/fields";
+import { displayPayoutDetail } from "@/modules/payouts/format";
 import { payoutDeepLink } from "@/modules/payouts/deep-links";
 import { useAppLinksWork } from "./use-app-links-work";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
@@ -219,6 +220,17 @@ export function PayoutHint({
 
   const hasDetail = needsDetail(chosen.method) && chosen.detail !== "";
 
+  /*
+   * The detail as the payer reads it, which is not the detail they copy.
+   *
+   * A phone number is stored as `+41791234567`, and this is the screen where
+   * somebody checks it against the one in their own contacts, character by
+   * character — so it is shown in the groups its country writes it in. The
+   * button beside it still copies what the account holds: spaces survive most
+   * payee fields and are refused by some, and the copy exists to be pasted.
+   */
+  const shownDetail = displayPayoutDetail(chosen.method, chosen.detail);
+
   return (
     <div className={cn("flex flex-col gap-2.5", className)}>
       <span id={labelId} className="text-2xs text-muted-foreground">
@@ -291,9 +303,7 @@ export function PayoutHint({
               </span>
               {/* Mono, because this is read a character at a time and typed
                   into another app: a 1 that could be an l costs a payment. */}
-              <span className="truncate font-mono text-xs">
-                {chosen.detail}
-              </span>
+              <span className="truncate font-mono text-xs">{shownDetail}</span>
             </div>
 
             <button
@@ -378,7 +388,7 @@ export function PayoutHint({
           onOpenChange={setShowingQr}
           name={name}
           amount={amount}
-          detail={chosen.detail}
+          detail={shownDetail}
           method={label}
           qr={chosenQr ?? null}
           link={scanInstead?.href ?? null}
@@ -410,7 +420,10 @@ function QrSheet({
   onOpenChange: (open: boolean) => void;
   name: string;
   amount: string;
-  /** The payee's own detail, shown under the code so the two can be checked. */
+  /**
+   * The payee's own detail, shown under the code so the two can be checked —
+   * spaced for reading, since checking is the only thing done with it here.
+   */
   detail: string;
   /** What the method is called, for the heading on a link code. */
   method: string;

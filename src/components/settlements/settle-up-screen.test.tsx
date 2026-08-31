@@ -460,7 +460,9 @@ describe("payout details", () => {
       "true",
     );
     expect(screen.getByText("Preferred")).toBeInTheDocument();
-    expect(screen.getByText("+41791234567")).toBeInTheDocument();
+    // Stored as `+41791234567`, and read here character by character against
+    // the number in somebody's own contacts — so it is shown in its groups.
+    expect(screen.getByText("+41 79 123 45 67")).toBeInTheDocument();
   });
 
   it("marks nothing preferred when there is only one", () => {
@@ -476,12 +478,24 @@ describe("payout details", () => {
     await user.click(screen.getByRole("button", { name: /Revolut/ }));
 
     expect(screen.getByText("@amelie")).toBeInTheDocument();
-    expect(screen.queryByText("+41791234567")).toBeNull();
+    expect(screen.queryByText("+41 79 123 45 67")).toBeNull();
   });
 
   it("offers to copy the detail rather than have it transcribed", () => {
     render({ payoutHints: [hint] });
     expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
+  it("copies the number the account holds, not the one on screen", async () => {
+    const user = userEvent.setup();
+    render({ payoutHints: [hint] });
+
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    // The two are the same number, and the spacing is only for the eye. What
+    // is pasted goes into somebody else's payee field, and those are readier
+    // to take `+41791234567` than they are to take it in groups.
+    expect(await navigator.clipboard.readText()).toBe("+41791234567");
   });
 
   it("says there is nothing to copy for cash, and names the sum", async () => {

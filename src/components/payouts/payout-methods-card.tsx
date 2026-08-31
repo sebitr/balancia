@@ -9,6 +9,7 @@ import { toastUndoable } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { MethodMark } from "@/components/settlements/method-mark";
 import { MethodPickerSheet } from "./method-picker-sheet";
+import { PayoutDetailInput } from "./payout-detail-input";
 import {
   setPayoutAddressAction,
   setPayoutMethodsAction,
@@ -17,8 +18,11 @@ import {
   needsDetail,
   payoutFieldFor,
   validatePayoutDetail,
-  PAYOUT_DETAIL_MAX_LENGTH,
+  type PayoutFieldError,
 } from "@/modules/payouts/fields";
+import { phoneExampleFor } from "@/modules/payouts/examples";
+import { displayPayoutEntries } from "@/modules/payouts/format";
+import { useViewerCountry } from "./use-viewer-country";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 import type { SwissCreditorAddress } from "@/modules/payouts/qr/swiss";
 import {
@@ -103,8 +107,20 @@ export function PayoutMethodsCard({
   const t = useTranslations("payouts");
   const tMethods = useTranslations("paymentMethods");
   const tCommon = useTranslations("common");
+  /** Only ever used to choose the example a country writes numbers in. */
+  const viewer = useViewerCountry();
 
-  const [entries, setEntries] = useState<readonly PayoutEntry[]>(initial);
+  /*
+   * The stored details, spaced for reading.
+   *
+   * What comes back from the server is `+41791234567`, which is the right
+   * thing to store and the wrong thing to show — see `payouts/format.ts`. The
+   * spacing goes back on before anything reaches a field, and comes off again
+   * on the way in, so this is a matter of presentation from here down.
+   */
+  const [entries, setEntries] = useState<readonly PayoutEntry[]>(() =>
+    displayPayoutEntries(initial),
+  );
   /**
    * The list the account actually holds, as far as this screen knows.
    *
@@ -112,7 +128,9 @@ export function PayoutMethodsCard({
    * somebody who adds TWINT, types their number, then mistypes an IBAN should
    * lose the IBAN, not the TWINT they already saved three taps ago.
    */
-  const [saved, setSaved] = useState<readonly PayoutEntry[]>(initial);
+  const [saved, setSaved] = useState<readonly PayoutEntry[]>(() =>
+    displayPayoutEntries(initial),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   /** Rows whose field has been left once, and so may complain as it is typed. */
   const [touched, setTouched] = useState<readonly string[]>([]);
@@ -198,14 +216,25 @@ export function PayoutMethodsCard({
     }));
   };
 
+  /**
+   * What is wrong with a detail, in words.
+   *
+   * The complaint about a phone number names the same example the field was
+   * showing a second ago, which is the whole reason it is worth naming one:
+   * "like +39 312 345 6789" under a Satispay field is an instruction, where a
+   * Swiss number under the same field is a riddle.
+   */
+  const messageFor = (method: string, problem: PayoutFieldError) =>
+    problem === "phone"
+      ? t("errors.phone", { example: phoneExampleFor(method, viewer) })
+      : t(`errors.${problem}` as Parameters<typeof t>[0]);
+
   /** The catalogue key for what is wrong with a detail, already translated. */
   const complaint = (method: string, detail: string) => {
     const problem = validatePayoutDetail(method, detail);
     // Nothing typed yet is not a mistake — it is a row somebody is part-way
     // through. The write is what refuses an empty detail.
-    return problem && problem !== "required"
-      ? t(`errors.${problem}` as Parameters<typeof t>[0])
-      : "";
+    return problem && problem !== "required" ? messageFor(method, problem) : "";
   };
 
   const commit = (method: string) => {
@@ -216,9 +245,7 @@ export function PayoutMethodsCard({
     const problem = validatePayoutDetail(method, entry.detail);
     setErrors((current) => ({
       ...current,
-      [method]: problem
-        ? t(`errors.${problem}` as Parameters<typeof t>[0])
-        : "",
+      [method]: problem ? messageFor(method, problem) : "",
     }));
     if (!problem && complete(entries)) save(entries);
   };
@@ -248,7 +275,8 @@ export function PayoutMethodsCard({
           const label = labelOf(entry.method);
           const kind = payoutFieldFor(entry.method);
           const error = errors[entry.method];
-          const field = hasNamedField(entry.method)
+          const named = hasNamedField(entry.method);
+          const field = named
             ? `methodFields.${entry.method}`
             : `fields.${kind}`;
 
@@ -305,21 +333,24 @@ export function PayoutMethodsCard({
                   >
                     {t(`${field}.label` as Parameters<typeof t>[0])}
                   </Label>
-                  <Input
+                  <PayoutDetailInput
                     id={`payout-${entry.method}`}
                     className="h-10 rounded-xl bg-foreground/5 px-3"
+                    method={entry.method}
                     value={entry.detail}
-                    maxLength={PAYOUT_DETAIL_MAX_LENGTH}
-                    aria-invalid={Boolean(error)}
-                    aria-describedby={
+                    invalid={Boolean(error)}
+                    describedBy={
                       error ? `payout-${entry.method}-error` : undefined
                     }
-                    inputMode={kind === "phone" ? "tel" : "text"}
-                    autoComplete={kind === "email" ? "email" : "off"}
-                    placeholder={t(
-                      `${field}.placeholder` as Parameters<typeof t>[0],
-                    )}
-                    onChange={(event) => edit(entry.method, event.target.value)}
+                    // Only the methods that name their own field say anything
+                    // here; the rest are the field's own business, and a
+                    // number's is its country's.
+                    placeholder={
+                      named
+                        ? t(`${field}.placeholder` as Parameters<typeof t>[0])
+                        : undefined
+                    }
+                    onChange={(detail) => edit(entry.method, detail)}
                     onBlur={() => commit(entry.method)}
                   />
                   {error && (
