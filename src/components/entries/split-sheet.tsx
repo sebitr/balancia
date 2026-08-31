@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { SplitMethod } from "@/modules/expenses/split";
 import type {
@@ -53,6 +54,8 @@ export function SplitSheet({
   note,
   received = false,
   splitText,
+  alwaysSplit,
+  onAlwaysSplitChange,
   onDone,
 }: {
   members: readonly EntryMember[];
@@ -73,6 +76,15 @@ export function SplitSheet({
   received?: boolean;
   /** Renders a message from the pure split logic. */
   splitText: (message: SplitMessage) => string;
+  /**
+   * Whether the group is remembering this split, or null when there is
+   * nothing worth remembering.
+   *
+   * Null for equal-between-everyone, which is what a new entry already does:
+   * offering to remember the default would be offering to remember nothing.
+   */
+  alwaysSplit: boolean | null;
+  onAlwaysSplitChange: (always: boolean) => void;
   onDone: () => void;
 }) {
   const t = useTranslations("addEntry.split");
@@ -260,6 +272,31 @@ export function SplitSheet({
             {splitText(preview.roundingNote)}
           </p>
         )
+      )}
+
+      {/*
+       * "We always split 30/30/40" is the most-asked-for thing in this
+       * category, and re-entering a fixed uneven split every time is the
+       * actual grind. Shown only once the split differs from
+       * equal-between-everyone, because that is already what a new entry
+       * does and remembering it would remember nothing.
+       */}
+      {alwaysSplit !== null && (
+        <label className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl bg-card px-4 py-2.5 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+          <span className="min-w-0">
+            <span className="block text-sm font-medium">
+              {t("alwaysTitle")}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {t("alwaysHint")}
+            </span>
+          </span>
+          <Switch
+            checked={alwaysSplit}
+            onCheckedChange={onAlwaysSplitChange}
+            aria-label={t("alwaysTitle")}
+          />
+        </label>
       )}
 
       <Button

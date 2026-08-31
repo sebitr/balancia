@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   check,
   index,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -41,6 +42,25 @@ export const groups = pgTable(
      */
     icon: text("icon"),
     iconColor: text("icon_color"),
+    /**
+     * How this group splits things when nobody says otherwise.
+     *
+     * "We always split 30/30/40" is the most-asked-for thing in this
+     * category, and re-entering a fixed uneven split on every entry is the
+     * actual grind. Saved from the split sheet, and only offered once the
+     * split differs from equal-between-everyone — which is already the
+     * default and needs no remembering.
+     *
+     * A *suggestion*, not a constraint: the form seeds from it and the reader
+     * overrides it entry by entry. Null is the ordinary state.
+     *
+     * Held as one blob rather than columns because it is one answer — the
+     * method and its numbers are meaningless apart, and a group whose method
+     * says `shares` with no weights is a state nothing can render. Members it
+     * names may since have been removed, so it is filtered against the real
+     * roster on read rather than trusted; see `groupSplitDefault`.
+     */
+    defaultSplit: jsonb("default_split"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),

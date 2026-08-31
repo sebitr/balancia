@@ -2906,7 +2906,9 @@
         "stillToAssign": "{amount} still to assign.",
         "overTheTotal": "{amount} over the total.",
         "percentagesOff": "Percentages add up to {sum}%, not 100%."
-      }
+      },
+      "alwaysTitle": "Always split like this",
+      "alwaysHint": "Saves it as this group's default"
     },
     "currency": {
       "title": "Currency"

@@ -10,6 +10,7 @@ import { SnapshotCapture } from "@/components/offline/snapshot-capture";
 import type { EditingEntry } from "@/components/entries/add-entry-form";
 import type { DebtPair } from "@/components/entries/settle-blocks";
 import type { RecentEntry } from "@/components/entries/duplicate-note";
+import { groupSplitDefault } from "@/modules/groups/split-default";
 import { splitValuesToText } from "@/components/expenses/expense-form-logic";
 import { requireGroupAccess } from "@/lib/actions";
 import {
@@ -254,6 +255,10 @@ export async function EntryScreen({
         editing={editing}
         openSheet={openSheet}
         recentEntries={recentEntries}
+        defaultSplit={groupSplitDefault(
+          access.group.defaultSplit,
+          participants.map((participant) => participant.id),
+        )}
       />
     </>
   );

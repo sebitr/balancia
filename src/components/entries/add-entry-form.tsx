@@ -114,6 +114,11 @@ import {
 } from "./settle-blocks";
 import { settleOutcome, type SettleOutcome } from "./settle-outcome";
 import { savedSummary } from "./saved-summary";
+import {
+  worthSaving,
+  type GroupSplitDefault,
+} from "@/modules/groups/split-default";
+import { setGroupSplitDefaultAction } from "@/modules/groups/actions";
 import { findDuplicate, type RecentEntry } from "./duplicate-note";
 import { useDebounced } from "./use-debounced";
 import type { EntryMember } from "./pills";
@@ -377,6 +382,13 @@ export interface AddEntryFormProps {
    * never appears.
    */
   recentEntries?: readonly RecentEntry[];
+  /**
+   * How this group usually splits things, already checked against the roster.
+   *
+   * A suggestion a new entry starts from — never applied to one being edited.
+   * Null is the ordinary state.
+   */
+  defaultSplit?: GroupSplitDefault | null;
 }
 
 export function AddEntryForm({
@@ -403,6 +415,7 @@ export function AddEntryForm({
   onRemoved,
   openSheet,
   recentEntries = NO_RECENT,
+  defaultSplit = null,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
@@ -472,19 +485,37 @@ export function AddEntryForm({
   // A settlement has no split of its own, so it seeds the full membership: a
   // reader who switches to something that does split starts where a new entry
   // would rather than with a single name selected.
-  const [includedIds, setIncludedIds] = useState<readonly string[]>(() =>
-    editing && editing.includedIds.length > 0
-      ? [...editing.includedIds]
-      : members.map((member) => member.id),
-  );
+  /*
+   * A new entry starts from the group's saved split when it has one.
+   *
+   * An entry being edited never does: what it says today is the thing being
+   * corrected, and reseeding it from a default would change the one fact
+   * nobody asked to change.
+   */
+  const [includedIds, setIncludedIds] = useState<readonly string[]>(() => {
+    if (editing && editing.includedIds.length > 0) {
+      return [...editing.includedIds];
+    }
+    if (defaultSplit) return [...defaultSplit.includedIds];
+    return members.map((member) => member.id);
+  });
   const [method, setMethod] = useState<SplitMethod>(
-    editing?.splitMethod ?? "equal",
+    editing?.splitMethod ?? defaultSplit?.method ?? "equal",
   );
-  const [values, setValues] = useState<Record<string, string>>(() => ({
-    ...editing?.splitValues,
-  }));
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    editing ? { ...editing.splitValues } : { ...defaultSplit?.values },
+  );
   /** Set once per-item assignment has written exact amounts. */
   const [byItem, setByItem] = useState(false);
+
+  /**
+   * Whether to remember this split as the group's.
+   *
+   * Starts on when the split *is* the saved default, so a reader who opens
+   * the sheet to look at it does not have to re-affirm what the group already
+   * decided — and turning it off is how they stop using it.
+   */
+  const [alwaysSplit, setAlwaysSplit] = useState(defaultSplit !== null);
 
   const [recurrence, setRecurrence] = useState<RecurrenceState>({
     enabled: false,
@@ -1086,6 +1117,33 @@ export function AddEntryForm({
         setError(result.error ?? t("errors.saveFailed"));
         return;
       }
+      /*
+       * Remember the split, or forget the one the group had.
+       *
+       * After the entry is saved rather than before, and not awaited into the
+       * error path: a default that failed to save is a convenience that did
+       * not happen, and telling somebody their expense might not have been
+       * recorded because of it would be false.
+       */
+      if (!isSettle) {
+        const remember =
+          alwaysSplit &&
+          worthSaving({
+            method,
+            includedIds: effectiveIncluded,
+            memberCount: members.length,
+          });
+        if (remember) {
+          void setGroupSplitDefaultAction(groupId, {
+            method,
+            includedIds: [...effectiveIncluded],
+            values,
+          });
+        } else if (defaultSplit && !alwaysSplit) {
+          void setGroupSplitDefaultAction(groupId, null);
+        }
+      }
+
       // The confirmation follows the reader back to the group rather than
       // holding the drawer open in front of it: what they wanted to see is the
       // entry landing in the list, and the toast says the same thing without
@@ -1958,6 +2016,16 @@ export function AddEntryForm({
               note={splitNote}
               received={isIncome}
               splitText={splitText}
+              alwaysSplit={
+                worthSaving({
+                  method,
+                  includedIds: effectiveIncluded,
+                  memberCount: members.length,
+                })
+                  ? alwaysSplit
+                  : null
+              }
+              onAlwaysSplitChange={setAlwaysSplit}
               onDone={() => setSheet(null)}
             />
           )}

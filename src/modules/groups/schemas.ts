@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
 import { CURRENCY_MODES } from "@/modules/currencies/conversion";
+import { SPLIT_METHODS } from "@/modules/expenses/split";
 import { GROUP_ICONS, GROUP_ICON_COLORS } from "./icons";
 
 /**
@@ -104,3 +105,23 @@ export const createInvitationSchema = z.object({
 });
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
+
+/**
+ * A split the group wants remembered, or null to forget the one it has.
+ *
+ * Nullable rather than optional: "stop using a default" is a thing somebody
+ * asks for, and an absent field would read as "leave it alone".
+ *
+ * The members it names are checked against the roster on the way *out* rather
+ * than here — see `groupSplitDefault`. A default written today is read months
+ * later, and who is still in the group is not a fact this boundary can settle.
+ */
+export const groupSplitDefaultSchema = z
+  .object({
+    method: z.enum(SPLIT_METHODS),
+    includedIds: z.array(z.uuid()).min(1).max(64),
+    values: z.record(z.uuid(), z.string().trim().max(24)),
+  })
+  .nullable();
+
+export type GroupSplitDefaultInput = z.infer<typeof groupSplitDefaultSchema>;

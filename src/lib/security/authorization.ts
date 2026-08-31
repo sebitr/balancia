@@ -77,6 +77,18 @@ export interface GroupAccess {
     readonly baseCurrency: string | null;
     readonly timezone: string;
     readonly archivedAt: Date | null;
+    /**
+     * The group's saved split, straight from the column.
+     *
+     * Unnarrowed on purpose: it crossed a JSON boundary and names people who
+     * may since have left, so it is `groupSplitDefault` that turns it into
+     * something usable — never a cast here.
+     *
+     * Optional because the several places that build an access synthetically —
+     * a join preview, the recurring worker — have no group row in front of
+     * them and no split to seed. Absent reads the same as none.
+     */
+    readonly defaultSplit?: unknown;
   };
 }
 
@@ -218,6 +230,7 @@ export async function authorizeGroup(
         baseCurrency: groups.baseCurrency,
         timezone: groups.timezone,
         archivedAt: groups.archivedAt,
+        defaultSplit: groups.defaultSplit,
       })
       .from(groups)
       .where(eq(groups.id, groupId))
@@ -248,6 +261,7 @@ export async function authorizeGroup(
       baseCurrency: groups.baseCurrency,
       timezone: groups.timezone,
       archivedAt: groups.archivedAt,
+      defaultSplit: groups.defaultSplit,
     })
     .from(groupMembers)
     .innerJoin(groups, eq(groups.id, groupMembers.groupId))
@@ -279,6 +293,7 @@ export async function authorizeGroup(
       baseCurrency: membership.baseCurrency,
       timezone: membership.timezone,
       archivedAt: membership.archivedAt,
+      defaultSplit: membership.defaultSplit,
     },
   };
 }

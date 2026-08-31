@@ -218,6 +218,13 @@
       "when": 1788125033518,
       "tag": "0030_typical_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788165467533,
+      "tag": "0031_wandering_shadowcat",
+      "breakpoints": true
     }
   ]
 }

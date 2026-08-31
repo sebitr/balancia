@@ -2906,7 +2906,9 @@
         "stillToAssign": "Il reste {amount} à attribuer.",
         "overTheTotal": "{amount} de trop par rapport au total.",
         "percentagesOff": "Les pourcentages font {sum} %, pas 100 %."
-      }
+      },
+      "alwaysTitle": "Toujours partager ainsi",
+      "alwaysHint": "Enregistré comme réglage par défaut du groupe"
     },
     "currency": {
       "title": "Devise"

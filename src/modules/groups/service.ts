@@ -26,6 +26,7 @@ import type {
   AddParticipantInput,
   CreateGroupInput,
   CreateInvitationInput,
+  GroupSplitDefaultInput,
   UpdateGroupInput,
 } from "./schemas";
 
@@ -348,6 +349,29 @@ export async function updateGroup(
       metadata: { name: input.name, timezone: input.timezone },
     });
   });
+}
+
+/**
+ * Save — or clear — the group's default split.
+ *
+ * No `requirePermission`: this is a suggestion the next entry seeds from, not
+ * a setting that governs anybody. Being in the group, which `GroupAccess`
+ * already establishes, is the whole of the right needed to say how the group
+ * usually splits things.
+ *
+ * Unlogged in the activity feed for the same reason. A feed is what happened
+ * to the money, and this did not happen to any.
+ */
+export async function setGroupSplitDefault(
+  access: GroupAccess,
+  split: GroupSplitDefaultInput,
+  options: { db?: Database } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  await db
+    .update(groups)
+    .set({ defaultSplit: split, updatedAt: new Date() })
+    .where(eq(groups.id, access.groupId));
 }
 
 export async function setGroupArchived(
