@@ -3106,6 +3106,10 @@
     "duplicate": {
       "note": "{hours, plural, =0 {Entrée similaire à l’instant} one {Entrée similaire il y a # heure} other {Entrée similaire il y a # heures}} — {description}, {amount}, par {name}.",
       "view": "Voir"
+    },
+    "draft": {
+      "label": "Brouillon",
+      "discard": "Supprimer le brouillon"
     }
   },
   "paymentMethods": {

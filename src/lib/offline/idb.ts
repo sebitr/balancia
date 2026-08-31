@@ -17,13 +17,22 @@
  */
 
 const DB_NAME = "balancia-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /** What the entry form needs to render with no network. See `snapshot.ts`. */
 export const SNAPSHOT_STORE = "group-snapshots";
 
 /** Entries typed offline, waiting to be sent. See `outbox.ts`. */
 export const OUTBOX_STORE = "outbox";
+
+/**
+ * One half-written entry per group, kept when the drawer is closed with
+ * something in it. See `drafts.ts`.
+ *
+ * Local to the device and never synced: a half-typed amount visible to
+ * flatmates is worse than losing it.
+ */
+export const DRAFT_STORE = "entry-drafts";
 
 function available(): boolean {
   try {
@@ -61,6 +70,9 @@ function open(): Promise<IDBDatabase | null> {
       }
       if (!db.objectStoreNames.contains(OUTBOX_STORE)) {
         db.createObjectStore(OUTBOX_STORE, { keyPath: "clientKey" });
+      }
+      if (!db.objectStoreNames.contains(DRAFT_STORE)) {
+        db.createObjectStore(DRAFT_STORE, { keyPath: "groupId" });
       }
     };
     request.onsuccess = () => resolve(request.result);

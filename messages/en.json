@@ -3106,6 +3106,10 @@
     "duplicate": {
       "note": "{hours, plural, =0 {Similar entry just now} one {Similar entry # hour ago} other {Similar entry # hours ago}} — {description}, {amount}, by {name}.",
       "view": "View"
+    },
+    "draft": {
+      "label": "Draft",
+      "discard": "Discard draft"
     }
   },
   "paymentMethods": {

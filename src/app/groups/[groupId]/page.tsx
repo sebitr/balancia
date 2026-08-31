@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { BalanceList } from "@/components/groups/balance-list";
 import { CurrencyBalances } from "@/components/groups/currency-balances";
 import { GroupEmptyState } from "@/components/groups/group-empty-state";
+import { DraftRow } from "@/components/entries/draft-row";
 import { PositionCard } from "@/components/groups/position-card";
 import { PositionHero } from "@/components/groups/position-hero";
 import { SettlementList } from "@/components/groups/settlement-list";
@@ -126,6 +127,12 @@ export default async function GroupOverviewPage({
           {isGuest && <Badge variant="outline">{t("guest")}</Badge>}
         </div>
       )}
+
+      {/*
+       * A half-written entry, if this device has one. Renders nothing when it
+       * does not, which is almost always — see `DraftRow`.
+       */}
+      <DraftRow groupId={groupId} />
 
       {empty ? (
         <GroupEmptyState

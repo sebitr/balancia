@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -114,6 +114,8 @@ import {
 } from "./settle-blocks";
 import { settleOutcome, type SettleOutcome } from "./settle-outcome";
 import { savedSummary } from "./saved-summary";
+import { worthDrafting, type EntryDraftFields } from "./draft-fields";
+import { discardDraft, saveDraft } from "@/lib/offline/drafts";
 import {
   worthSaving,
   type GroupSplitDefault,
@@ -283,6 +285,15 @@ const NO_RECENT: readonly RecentEntry[] = [];
  * off; short enough that it is there by the time somebody looks up.
  */
 const DUPLICATE_DEBOUNCE_MS = 500;
+
+/**
+ * How long the form holds still before the draft is written.
+ *
+ * Longer than the duplicate note's: nobody sees this happen, so the only
+ * thing the delay buys is fewer writes, and a second of typing is not work
+ * worth losing.
+ */
+const DRAFT_DEBOUNCE_MS = 1000;
 /** A group with no history yet — the picker simply has nothing to lead with. */
 const NO_FREQUENT: readonly string[] = [];
 
@@ -389,6 +400,14 @@ export interface AddEntryFormProps {
    * Null is the ordinary state.
    */
   defaultSplit?: GroupSplitDefault | null;
+  /**
+   * A half-written entry to reopen, already checked against the roster.
+   *
+   * Read by the drawer before this form mounts, so the fields are seeded
+   * rather than applied a frame later — a drawer that appears empty and then
+   * fills itself reads as two screens.
+   */
+  draft?: EntryDraftFields | null;
 }
 
 export function AddEntryForm({
@@ -416,6 +435,7 @@ export function AddEntryForm({
   openSheet,
   recentEntries = NO_RECENT,
   defaultSplit = null,
+  draft = null,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
@@ -445,19 +465,25 @@ export function AddEntryForm({
    * itself a frame later reads as the screen changing its mind.
    */
   const [type, setType] = useState<EntryType>(
-    editing?.type ?? (prefill ? "settle" : "expense"),
+    editing?.type ?? draft?.type ?? (prefill ? "settle" : "expense"),
   );
   const [amountText, setAmountText] = useState(
     editing?.amountText ??
+      draft?.amountText ??
       (prefill?.amountMinor
         ? formatMinorUnits(prefill.amountMinor, prefill.currency)
         : ""),
   );
   const [currency, setCurrency] = useState(
-    editing?.currency ?? prefill?.currency ?? defaultCurrency,
+    editing?.currency ??
+      prefill?.currency ??
+      draft?.currency ??
+      defaultCurrency,
   );
   const [rate, setRate] = useState(editing?.exchangeRate ?? "");
-  const [description, setDescription] = useState(editing?.description ?? "");
+  const [description, setDescription] = useState(
+    editing?.description ?? draft?.description ?? "",
+  );
   /**
    * What a repayment was for — the column has always called it notes.
    *
@@ -468,20 +494,26 @@ export function AddEntryForm({
    * is move the title in when there is no note to displace, and take it back
    * out again on the way to an expense: `noteAfterTypeSwitch`.
    */
-  const [notes, setNotes] = useState(editing?.notes ?? "");
-  const [category, setCategory] = useState(editing?.category ?? "");
+  const [notes, setNotes] = useState(editing?.notes ?? draft?.notes ?? "");
+  const [category, setCategory] = useState(
+    editing?.category ?? draft?.category ?? "",
+  );
   // A category already on the entry is a decision somebody made, whoever made
   // it. Leaving it open to the classifier would let reopening an entry
   // silently refile it the moment the description was touched.
   const [categoryChosen, setCategoryChosen] = useState(
-    (editing?.category ?? "") !== "",
+    draft ? draft.categoryChosen : (editing?.category ?? "") !== "",
   );
-  const [subcategory, setSubcategory] = useState(editing?.subcategory ?? "");
+  const [subcategory, setSubcategory] = useState(
+    editing?.subcategory ?? draft?.subcategory ?? "",
+  );
   const [date, setDate] = useState(
-    () => editing?.date ?? new Date().toISOString().slice(0, 10),
+    () => editing?.date ?? draft?.date ?? new Date().toISOString().slice(0, 10),
   );
 
-  const [payerId, setPayerId] = useState(editing?.payerId ?? selfId);
+  const [payerId, setPayerId] = useState(
+    editing?.payerId ?? draft?.payerId ?? selfId,
+  );
   // A settlement has no split of its own, so it seeds the full membership: a
   // reader who switches to something that does split starts where a new entry
   // would rather than with a single name selected.
@@ -496,15 +528,23 @@ export function AddEntryForm({
     if (editing && editing.includedIds.length > 0) {
       return [...editing.includedIds];
     }
+    // A draft outranks the group's default: it is what this reader was
+    // actually doing, and the default is only what they usually do.
+    if (draft) return [...draft.includedIds];
     if (defaultSplit) return [...defaultSplit.includedIds];
     return members.map((member) => member.id);
   });
   const [method, setMethod] = useState<SplitMethod>(
-    editing?.splitMethod ?? defaultSplit?.method ?? "equal",
+    editing?.splitMethod ??
+      draft?.splitMethod ??
+      defaultSplit?.method ??
+      "equal",
   );
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    editing ? { ...editing.splitValues } : { ...defaultSplit?.values },
-  );
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    if (editing) return { ...editing.splitValues };
+    if (draft) return { ...draft.splitValues };
+    return { ...defaultSplit?.values };
+  });
   /** Set once per-item assignment has written exact amounts. */
   const [byItem, setByItem] = useState(false);
 
@@ -517,16 +557,19 @@ export function AddEntryForm({
    */
   const [alwaysSplit, setAlwaysSplit] = useState(defaultSplit !== null);
 
-  const [recurrence, setRecurrence] = useState<RecurrenceState>({
-    enabled: false,
-    frequency: "monthly",
-    interval: 1,
-    weekday: 1,
-    dayOfMonth: Number(new Date().toISOString().slice(8, 10)),
-    weekOfMonth: null,
-    endDate: null,
-    count: null,
-  });
+  const [recurrence, setRecurrence] = useState<RecurrenceState>(
+    () =>
+      draft?.recurrence ?? {
+        enabled: false,
+        frequency: "monthly",
+        interval: 1,
+        weekday: 1,
+        dayOfMonth: Number(new Date().toISOString().slice(8, 10)),
+        weekOfMonth: null,
+        endDate: null,
+        count: null,
+      },
+  );
 
   const [scan, setScan] = useState<ScannedExpense | null>(null);
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -968,6 +1011,86 @@ export function AddEntryForm({
    * not flash while a figure is half-typed. Never while editing: an entry
    * being corrected necessarily matches itself.
    */
+  /**
+   * Keeping the half-written entry, so closing the drawer does not destroy it.
+   *
+   * Written as the fields settle rather than hooked to the dismissal, which
+   * is the same outcome and survives more: a crash, a reload, a phone that
+   * killed the tab. There is no "you have unsaved changes" dialog either —
+   * the draft *is* the answer to that question, and asking as well is asking
+   * twice, at exactly the moment somebody is trying to leave.
+   *
+   * Never while editing. An entry that already exists is not a draft of
+   * itself, and offering it back later would offer to re-apply changes
+   * somebody chose to abandon.
+   */
+  const draftable = !editing && type !== "settle";
+  const attachmentIds = useMemo(
+    () => attachments.map((file) => file.id),
+    [attachments],
+  );
+  const draftSnapshot = useMemo(
+    (): EntryDraftFields => ({
+      type,
+      amountText,
+      currency,
+      description,
+      notes,
+      category,
+      subcategory,
+      categoryChosen,
+      date,
+      payerId,
+      includedIds,
+      splitMethod: method,
+      splitValues: values,
+      recurrence,
+      attachmentIds,
+    }),
+    [
+      type,
+      amountText,
+      currency,
+      description,
+      notes,
+      category,
+      subcategory,
+      categoryChosen,
+      date,
+      payerId,
+      includedIds,
+      method,
+      values,
+      recurrence,
+      attachmentIds,
+    ],
+  );
+  const settledDraft = useDebounced(draftSnapshot, DRAFT_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (!draftable) return;
+    if (
+      !worthDrafting({
+        amountText: settledDraft.amountText,
+        description: settledDraft.description,
+        attachmentIds: settledDraft.attachmentIds,
+      })
+    ) {
+      // Emptying the form is a way of abandoning the draft, so it goes too.
+      void discardDraft(groupId);
+      return;
+    }
+    void saveDraft({
+      groupId,
+      savedAt: Date.now(),
+      fields: settledDraft,
+      summary: {
+        amount: settledDraft.amountText,
+        description: settledDraft.description,
+      },
+    });
+  }, [draftable, groupId, settledDraft]);
+
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
   const duplicate = useMemo(() => {
@@ -1117,6 +1240,10 @@ export function AddEntryForm({
         setError(result.error ?? t("errors.saveFailed"));
         return;
       }
+
+      // The entry exists now, so the draft of it does not.
+      void discardDraft(groupId);
+
       /*
        * Remember the split, or forget the one the group had.
        *
@@ -1199,6 +1326,9 @@ export function AddEntryForm({
       groupName,
       payload: expensePayload(),
     });
+    // Queued counts as saved for the draft's purposes: the entry is on the
+    // device either way, and keeping both would offer it back as unfinished.
+    void discardDraft(groupId);
     toast.success(t("saved.queued"), { description: t("saved.queuedNote") });
     if (onSaved) onSaved();
     else router.refresh();
