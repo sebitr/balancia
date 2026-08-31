@@ -2908,7 +2908,8 @@
         "percentagesOff": "Les pourcentages font {sum} %, pas 100 %."
       },
       "alwaysTitle": "Toujours partager ainsi",
-      "alwaysHint": "Enregistré comme réglage par défaut du groupe"
+      "alwaysHint": "Enregistré comme réglage par défaut du groupe",
+      "addSomeone": "Ajouter quelqu’un"
     },
     "currency": {
       "title": "Devise"

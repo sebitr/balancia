@@ -202,6 +202,9 @@ export async function EntryScreen({
   const members = participants.map((participant) => ({
     id: participant.id,
     displayName: participant.displayName,
+    // Somebody in the group's money but not on the instance. It changes
+    // nothing about the split maths — only what their avatar looks like.
+    guest: participant.userId === null,
   }));
   const selfId = access.participantId ?? participants[0].id;
   const defaultCurrency =
@@ -255,6 +258,7 @@ export async function EntryScreen({
         editing={editing}
         openSheet={openSheet}
         recentEntries={recentEntries}
+        canAddGuests={access.permissions.manageParticipants}
         defaultSplit={groupSplitDefault(
           access.group.defaultSplit,
           participants.map((participant) => participant.id),

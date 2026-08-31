@@ -34,6 +34,7 @@ vi.mock("@/lib/actions", () => ({
   requireGroupAccess: async () => ({
     groupId: "g1",
     participantId: "seb",
+    permissions: { manageParticipants: true },
     group: {
       currencyMode: "converted",
       baseCurrency: "CHF",

@@ -2908,7 +2908,8 @@
         "percentagesOff": "Percentages add up to {sum}%, not 100%."
       },
       "alwaysTitle": "Always split like this",
-      "alwaysHint": "Saves it as this group's default"
+      "alwaysHint": "Saves it as this group's default",
+      "addSomeone": "Add someone"
     },
     "currency": {
       "title": "Currency"

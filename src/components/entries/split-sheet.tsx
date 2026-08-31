@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
@@ -56,6 +58,7 @@ export function SplitSheet({
   splitText,
   alwaysSplit,
   onAlwaysSplitChange,
+  onAddGuest,
   onDone,
 }: {
   members: readonly EntryMember[];
@@ -85,6 +88,13 @@ export function SplitSheet({
    */
   alwaysSplit: boolean | null;
   onAlwaysSplitChange: (always: boolean) => void;
+  /**
+   * Creates somebody with a name and no account, and puts them in the split.
+   *
+   * Absent when the reader may not add people to this group, which is the
+   * only reason the row would not be there.
+   */
+  onAddGuest?: (name: string) => Promise<void>;
   onDone: () => void;
 }) {
   const t = useTranslations("addEntry.split");
@@ -167,8 +177,19 @@ export function SplitSheet({
               label={t("includeOption", { name: member.displayName })}
               selected={includedIds.includes(member.id)}
               onToggle={() => toggle(member.id)}
+              guest={member.guest}
             />
           ))}
+          {/*
+           * Somebody who is not on this instance and does not need to be.
+           * A split should not require everyone to have the app: the flatmate
+           * who never signed up is still owed their share, and inviting them
+           * first is a step between a person and the entry they are trying to
+           * write.
+           */}
+          {onAddGuest && (
+            <AddGuestPill onAdd={onAddGuest} label={t("addSomeone")} />
+          )}
         </div>
       </section>
 
@@ -211,6 +232,7 @@ export function SplitSheet({
                   name={member.displayName}
                   selected
                   tone={member.id === payerId ? "payer" : "primary"}
+                  guest={member.guest}
                 />
                 <span className="flex-1 truncate text-sm">
                   {member.displayName}
@@ -311,5 +333,91 @@ export function SplitSheet({
         {t("done")}
       </Button>
     </div>
+  );
+}
+
+/**
+ * The dashed pill that adds somebody who has not joined.
+ *
+ * Opens into a name field in place rather than a dialog over the sheet: this
+ * is one field on the way to finishing an entry, and a modal on top of a modal
+ * is a second thing to dismiss before getting back to what you were doing.
+ *
+ * Stays open while the request is in flight and closes when the person
+ * exists, so a slow network reads as "still working" rather than as a field
+ * that swallowed a name.
+ */
+function AddGuestPill({
+  onAdd,
+  label,
+}: {
+  onAdd: (name: string) => Promise<void>;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-border pr-3 pl-1 text-sm font-normal text-muted-foreground transition-colors hover:bg-muted"
+      >
+        <span
+          aria-hidden="true"
+          className="grid size-[30px] shrink-0 place-items-center rounded-full border border-dashed border-border"
+        >
+          <Plus className="size-4" />
+        </span>
+        <span className="truncate">{label}</span>
+      </button>
+    );
+  }
+
+  const submit = async () => {
+    const trimmed = name.trim();
+    // Guarded here and not only by the disabled attribute: a keyboard Enter
+    // reaches this whatever the button looks like.
+    if (trimmed === "" || saving) return;
+    setSaving(true);
+    try {
+      await onAdd(trimmed);
+      setName("");
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Input
+        autoFocus
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void submit();
+          }
+          if (event.key === "Escape") setOpen(false);
+        }}
+        placeholder={label}
+        aria-label={label}
+        maxLength={120}
+        className="h-10 w-40"
+      />
+      <button
+        type="button"
+        onClick={() => void submit()}
+        disabled={name.trim() === "" || saving}
+        aria-label={label}
+        className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground disabled:opacity-50"
+      >
+        <Check aria-hidden="true" className="size-4" />
+      </button>
+    </span>
   );
 }

@@ -120,7 +120,10 @@ import {
   worthSaving,
   type GroupSplitDefault,
 } from "@/modules/groups/split-default";
-import { setGroupSplitDefaultAction } from "@/modules/groups/actions";
+import {
+  addParticipantAction,
+  setGroupSplitDefaultAction,
+} from "@/modules/groups/actions";
 import { findDuplicate, type RecentEntry } from "./duplicate-note";
 import { useDebounced } from "./use-debounced";
 import type { EntryMember } from "./pills";
@@ -247,6 +250,16 @@ function createdExpenseId(result: {
   const data = result.data;
   if (typeof data !== "object" || data === null) return undefined;
   const id = (data as { expenseId?: unknown }).expenseId;
+  return typeof id === "string" ? id : undefined;
+}
+
+/** The same, for the person the split sheet just created. */
+function createdParticipantId(result: {
+  readonly data?: unknown;
+}): string | undefined {
+  const data = result.data;
+  if (typeof data !== "object" || data === null) return undefined;
+  const id = (data as { participantId?: unknown }).participantId;
   return typeof id === "string" ? id : undefined;
 }
 
@@ -394,6 +407,13 @@ export interface AddEntryFormProps {
    */
   recentEntries?: readonly RecentEntry[];
   /**
+   * Whether this reader may add people to the group.
+   *
+   * The same permission the People screen asks for. Absent means no, which is
+   * what a guest looking at somebody else's group gets.
+   */
+  canAddGuests?: boolean;
+  /**
    * How this group usually splits things, already checked against the roster.
    *
    * A suggestion a new entry starts from — never applied to one being edited.
@@ -436,6 +456,7 @@ export function AddEntryForm({
   recentEntries = NO_RECENT,
   defaultSplit = null,
   draft = null,
+  canAddGuests = false,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
@@ -738,6 +759,33 @@ export function AddEntryForm({
     fromId: string | null;
     toId: string | null;
   }>({ fromId: null, toId: null });
+
+  /**
+   * Somebody with a name and no account, created from the split sheet.
+   *
+   * A split should not require everyone to have the app: the flatmate who
+   * never signed up is still owed their share, and making somebody invite
+   * them first puts a whole flow between a person and the entry they were
+   * trying to write.
+   *
+   * The new person joins the split immediately — adding somebody to a group
+   * from *this* screen means adding them to *this* entry, and leaving them out
+   * would make the gesture do half of what it looks like.
+   *
+   * `router.refresh()` is what puts them in `members` for the next render.
+   */
+  const addGuest = async (name: string): Promise<void> => {
+    const payload = new FormData();
+    payload.set("displayName", name);
+    const result = await addParticipantAction(groupId, payload);
+    if (!result.ok) {
+      setError(result.error ?? t("errors.saveFailed"));
+      return;
+    }
+    const id = createdParticipantId(result);
+    if (id) setIncludedIds((current) => [...current, id]);
+    router.refresh();
+  };
 
   /** The sheet's two names as a pair, or null while it is half-answered. */
   const pairFrom = (draft: {
@@ -2156,6 +2204,7 @@ export function AddEntryForm({
                   : null
               }
               onAlwaysSplitChange={setAlwaysSplit}
+              onAddGuest={canAddGuests ? addGuest : undefined}
               onDone={() => setSheet(null)}
             />
           )}
