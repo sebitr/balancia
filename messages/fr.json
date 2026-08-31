@@ -2894,7 +2894,7 @@
         "percentages": "Par pourcentage · {count} personnes",
         "shares": "Par parts · {count} personnes",
         "byItem": "Par article · {count} personnes",
-        "justOne": "Le solde de personne d'autre ne bouge",
+        "justOne": "Tout pour une seule personne",
         "nobody": "Personne n'est sélectionné"
       },
       "payerOption": "Payé par {name}",
@@ -3003,13 +3003,6 @@
       "matches": "Correspond au total du reçu.",
       "unassigned": "{assigned} attribué sur {total} — le reste ne l'est pas.",
       "use": "Utiliser ces montants"
-    },
-    "income": {
-      "belongsTo": "À qui appartient-il",
-      "shared": "Partagé — créditer tout le monde",
-      "sharedHint": "Chacun des {count} gagne {amount}",
-      "mine": "À moi seul — créditer {name}",
-      "mineHint": "Enregistré, mais le solde de personne d'autre ne bouge"
     },
     "settle": {
       "from": "De",

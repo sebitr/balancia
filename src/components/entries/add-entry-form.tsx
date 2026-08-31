@@ -37,11 +37,6 @@ import { Switch } from "@/components/ui/switch";
 import { toastUndoable } from "@/components/ui/sonner";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
 import type { ScannedExpense } from "@/components/receipts/scan-receipt-dialog";
-import {
-  CATEGORY_GLYPHS,
-  FALLBACK_GLYPH,
-  hasGlyph,
-} from "@/components/expenses/category-icon";
 import { useCategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import {
   formatMinorUnits,
@@ -54,8 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
 import {
-  isValidSubcategory,
-  type ExpenseCategory,
+  isValidSubcategoryFor,
   type LearnedMerchantMapping,
 } from "@/modules/categorization";
 import type { SplitMethod } from "@/modules/expenses/split";
@@ -81,7 +75,8 @@ import {
 } from "@/modules/settlements/payment-methods";
 import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
-import { CategorySheet, useSubcategoryLabel } from "./category-sheet";
+import { CategorySheet } from "./category-sheet";
+import { useVocabulary } from "./vocabulary";
 import { CurrencyPicker } from "@/components/money/currency-picker";
 import {
   confirmationKey,
@@ -216,7 +211,7 @@ interface Outcome {
 
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
 /** A group with no history yet — the picker simply has nothing to lead with. */
-const NO_FREQUENT: readonly ExpenseCategory[] = [];
+const NO_FREQUENT: readonly string[] = [];
 
 export interface AddEntryFormProps {
   groupId: string;
@@ -243,7 +238,7 @@ export interface AddEntryFormProps {
   entryTypes?: readonly EntryType[];
   categoryMappings?: readonly LearnedMerchantMapping[];
   /** What this group files things under, most used first, for the picker. */
-  frequentCategories?: readonly ExpenseCategory[];
+  frequentCategories?: readonly string[];
   semanticCategorization?: boolean;
   receiptScanning?: boolean;
   /** Whether the on-device reader is switched on (`RECEIPT_OCR_LOCAL`). */
@@ -330,7 +325,6 @@ export function AddEntryForm({
   const dates = useDateFormatter();
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
-  const tCategories = useTranslations("expenses.categories");
   const tMethods = useTranslations("paymentMethods");
   const tCommon = useTranslations("common");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -338,18 +332,6 @@ export function AddEntryForm({
 
   const splitText = (message: SplitMessage) =>
     tSplit(message.key, message.params);
-
-  /**
-   * Income the reader kept, reopened.
-   *
-   * Stored as a share of one, which is also what an expense split with a
-   * single person looks like — the difference is the direction, and it is what
-   * tells the two apart when the entry comes back.
-   */
-  const creditsOnePerson =
-    editing?.type === "income" &&
-    editing.includedIds.length === 1 &&
-    editing.includedIds[0] === editing.payerId;
 
   /*
    * A drawer opened from a stated debt starts where that debt left off: the
@@ -391,18 +373,16 @@ export function AddEntryForm({
     (editing?.category ?? "") !== "",
   );
   const [subcategory, setSubcategory] = useState(editing?.subcategory ?? "");
-  const tSubcategories = useSubcategoryLabel();
   const [date, setDate] = useState(
     () => editing?.date ?? new Date().toISOString().slice(0, 10),
   );
 
   const [payerId, setPayerId] = useState(editing?.payerId ?? selfId);
-  // A settlement has no split of its own, and income credited to one person
-  // has one only in the sense that nobody else is in it. Both seed the full
-  // membership, so a reader who switches to something that does split starts
-  // where a new entry would rather than with a single name selected.
+  // A settlement has no split of its own, so it seeds the full membership: a
+  // reader who switches to something that does split starts where a new entry
+  // would rather than with a single name selected.
   const [includedIds, setIncludedIds] = useState<readonly string[]>(() =>
-    editing && !creditsOnePerson && editing.includedIds.length > 0
+    editing && editing.includedIds.length > 0
       ? [...editing.includedIds]
       : members.map((member) => member.id),
   );
@@ -414,10 +394,6 @@ export function AddEntryForm({
   }));
   /** Set once per-item assignment has written exact amounts. */
   const [byItem, setByItem] = useState(false);
-
-  const [credit, setCredit] = useState<"shared" | "mine">(
-    creditsOnePerson ? "mine" : "shared",
-  );
 
   const [recurrence, setRecurrence] = useState<RecurrenceState>({
     enabled: false,
@@ -489,11 +465,22 @@ export function AddEntryForm({
    */
   const customMethod = methodId === null ? methodLabel : "";
 
+  /*
+   * Which vocabulary the category row is speaking.
+   *
+   * A settlement has no category at all, so it borrows spending's — nothing
+   * reads it, and leaving the picker with no list to draw would be a state
+   * with no right answer rather than no state.
+   */
+  const categoryDirection = directionOf(type) ?? "out";
+  const vocabulary = useVocabulary(categoryDirection);
+
   const suggestion = useCategorySuggestion({
     description,
     notes: "",
     mappings: categoryMappings,
     semanticEnabled: semanticCategorization,
+    direction: categoryDirection,
   });
   const detectedCategory =
     !categoryChosen && suggestion?.decision === "auto_assigned"
@@ -514,7 +501,8 @@ export function AddEntryForm({
     : detectedCategory !== ""
       ? (suggestion?.subcategory ?? "")
       : "";
-  const shownSubcategory = isValidSubcategory(
+  const shownSubcategory = isValidSubcategoryFor(
+    categoryDirection,
     effectiveCategory,
     effectiveSubcategory,
   )
@@ -636,11 +624,17 @@ export function AddEntryForm({
 
   const totalMinor = parseAmountToMinor(amountText || "0", currency);
 
-  /** "Mine only" income covers one person, so nobody else's balance moves. */
-  const effectiveIncluded = useMemo(
-    () => (isIncome && credit === "mine" ? [payerId] : includedIds),
-    [isIncome, credit, payerId, includedIds],
-  );
+  /*
+   * Who the entry covers.
+   *
+   * There used to be a second answer here: an income mode called "mine only",
+   * whose own hint said "nobody else's balance moves" — which is to say it did
+   * nothing to the ledger. The need it looked like it served, income that is
+   * not everyone's, is already expressible and more precisely: set Credited to
+   * to the people who actually share it. So there is one answer, and it is the
+   * roster.
+   */
+  const effectiveIncluded = includedIds;
 
   const preview = useMemo(
     () =>
@@ -744,10 +738,15 @@ export function AddEntryForm({
 
   /** Switching type throws away only what cannot survive the new one. */
   const changeType = (next: EntryType) => {
-    const resets = resetsForType(next);
+    const resets = resetsForType(next, type);
     setType(next);
     setNotes(noteAfterTypeSwitch({ from: type, to: next, description, notes }));
     setError(null);
+    if (resets.clearCategory) {
+      setCategory("");
+      setSubcategory("");
+      setCategoryChosen(false);
+    }
     if (resets.clearScan) {
       setScan(null);
       setBannerVisible(false);
@@ -1198,9 +1197,7 @@ export function AddEntryForm({
     return parts.join(" · ");
   };
 
-  const categoryGlyph = hasGlyph(effectiveCategory)
-    ? CATEGORY_GLYPHS[effectiveCategory]
-    : FALLBACK_GLYPH;
+  const categoryGlyph = vocabulary.glyph(effectiveCategory);
 
   /** Today, unless a schedule has moved the first one somewhere else. */
   const dateLabel = upcoming[0]
@@ -1380,13 +1377,16 @@ export function AddEntryForm({
               iconFilled={effectiveCategory !== ""}
               label={t("category.title")}
               value={
-                hasGlyph(effectiveCategory) ? (
+                vocabulary.owns(effectiveCategory) ? (
                   <>
-                    {tCategories(effectiveCategory)}
+                    {vocabulary.label(effectiveCategory)}
                     {shownSubcategory !== "" && (
                       <>
                         <span aria-hidden="true">{"  \u203a  "}</span>
-                        {tSubcategories(effectiveCategory, shownSubcategory)}
+                        {vocabulary.leafLabel(
+                          effectiveCategory,
+                          shownSubcategory,
+                        )}
                       </>
                     )}
                   </>
@@ -1439,26 +1439,6 @@ export function AddEntryForm({
                 className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
             </Row>
-          </RowCard>
-        )}
-
-        {isIncome && (
-          <RowCard role="radiogroup" aria-label={t("income.belongsTo")}>
-            <CreditOption
-              selected={credit === "shared"}
-              onSelect={() => setCredit("shared")}
-              title={t("income.shared")}
-              hint={t("income.sharedHint", {
-                count: effectiveIncluded.length,
-                amount: eachFormatted ?? amountFormatted,
-              })}
-            />
-            <CreditOption
-              selected={credit === "mine"}
-              onSelect={() => setCredit("mine")}
-              title={t("income.mine", { name: payerName })}
-              hint={t("income.mineHint")}
-            />
           </RowCard>
         )}
 
@@ -1542,7 +1522,10 @@ export function AddEntryForm({
           )}
         </RowCard>
 
-        {!isSettle && !(isIncome && credit === "mine") && (
+        {/* The split row is always visible on an income now: it is where
+            "credited to" is answered, and it used to be hidden by the mode
+            that claimed to answer it instead. */}
+        {!isSettle && (
           <SplitSummaryRow
             payerName={payerName}
             amountFormatted={amountFormatted}
@@ -1711,6 +1694,7 @@ export function AddEntryForm({
               description={description}
               suggestion={suggestion}
               frequent={frequentCategories}
+              direction={categoryDirection}
               // Every tap in the sheet writes a valid entry, including the one
               // that only opens a pane — which is what lets the second level
               // be optional rather than a step to escape from. The sheet says
@@ -1841,49 +1825,6 @@ function SettleOutcomeLine({
     to: remainder.toName,
     amount: formatMinorUnits(remainder.amountMinor.toString(), currency),
   });
-}
-
-/**
- * One of the two ways income can land, as a row in the card.
- *
- * A radio rather than a switch or a pair of chips: the two are exclusive, one
- * is always true, and each needs a line of explanation underneath — which is
- * what a radio row is for.
- */
-function CreditOption({
-  selected,
-  onSelect,
-  title,
-  hint,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  title: string;
-  hint: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-accent"
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-[18px] shrink-0 rounded-full border",
-          selected ? "border-primary bg-primary" : "border-input",
-        )}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{title}</span>
-        <span className="block truncate text-xs text-muted-foreground">
-          {hint}
-        </span>
-      </span>
-    </button>
-  );
 }
 
 /**

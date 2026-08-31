@@ -199,10 +199,31 @@ describe("resetsForType", () => {
       clearRecurrence: true,
       clearAttachments: true,
       resetCurrency: true,
+      clearCategory: false,
     });
     expect(resetsForType("income").clearRecurrence).toBe(false);
     expect(resetsForType("income").clearAttachments).toBe(false);
     expect(resetsForType("income").resetCurrency).toBe(false);
+  });
+
+  /**
+   * Expense and income keep separate category lists, and the codes are not
+   * interchangeable even where they spell the same word.
+   */
+  it("clears the category when the vocabulary changes, and only then", () => {
+    expect(resetsForType("income", "expense").clearCategory).toBe(true);
+    expect(resetsForType("expense", "income").clearCategory).toBe(true);
+
+    // Settle has no category of its own, so passing through it is a detour
+    // rather than a change of vocabulary.
+    expect(resetsForType("settle", "expense").clearCategory).toBe(false);
+    expect(resetsForType("expense", "settle").clearCategory).toBe(false);
+
+    // Nor does re-picking the type you are already on.
+    expect(resetsForType("expense", "expense").clearCategory).toBe(false);
+
+    // And a caller that does not say where it came from cannot know.
+    expect(resetsForType("income").clearCategory).toBe(false);
   });
 });
 

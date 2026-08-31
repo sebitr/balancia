@@ -1,45 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createElement, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
-import {
-  CATEGORY_GLYPHS,
-  subcategoryGlyph,
-} from "@/components/expenses/category-icon";
-import {
-  EXPENSE_CATEGORY_IDS,
-  getSubcategories,
-  getSubcategoryGroups,
-  hasSubcategories,
-  type ClassificationResult,
-  type ExpenseCategory,
-} from "@/modules/categorization";
+import type { EntryDirection } from "@/modules/expenses/direction";
 import { categoryShortlist } from "./entry-logic";
+import type { CategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import { ChoicePill } from "./pills";
+import { useVocabulary, type Vocabulary } from "./vocabulary";
 
 /**
  * Picking a category, and optionally what kind of one.
  *
- * Two levels in one sheet, and a tap always commits. The root is the eighteen
- * categories; tapping one writes it immediately and slides its subcategories
- * in behind. Dismissing from there is not an abandoned journey — the expense
- * keeps the category with `subcategory: null`, which is a complete answer.
- * That is the whole reason the second level can be optional rather than a step
- * to escape from: there is nothing to escape, because the work is already
- * saved by the time the second question is asked.
+ * Two levels in one sheet, and a tap always commits. The root is the whole
+ * vocabulary; tapping a category writes it immediately and slides its
+ * subcategories in behind. Dismissing from there is not an abandoned journey —
+ * the entry keeps the category with `subcategory: null`, which is a complete
+ * answer. That is the whole reason the second level can be optional rather
+ * than a step to escape from: there is nothing to escape, because the work is
+ * already saved by the time the second question is asked.
  *
- * The root still leads with a few chips rather than the whole vocabulary.
- * Eighteen categories in the reader's alphabet is a wall, and the one they want
- * is rarely near the top of it: it is either what the description already says
- * or what this group files most things under. The heading over those chips
- * says which of the two it is, and it has to stay honest — "Because it says…"
- * over a list the description had no part in would be the interface claiming
- * to have read something it did not.
+ * *Which* vocabulary is the direction's business, not this file's — see
+ * `useVocabulary`. Expense and income keep separate lists, and everything
+ * below takes plain strings: a code is data, and which list it came from is
+ * settled before a chip is drawn.
  *
- * Search is what keeps a hundred and seventy-six subcategories usable, and it
+ * The root still leads with a few chips rather than the whole list. Eighteen
+ * categories in the reader's alphabet is a wall, and the one they want is
+ * rarely near the top of it: it is either what the description already says or
+ * what this group files most things under. The heading over those chips says
+ * which of the two it is, and it has to stay honest — "Because it says…" over
+ * a list the description had no part in would be the interface claiming to
+ * have read something it did not.
+ *
+ * Search is what keeps two hundred and seventeen subcategories usable, and it
  * is why two levels are not slower than one: typing `carburant` reaches the
  * leaf directly and one tap sets both halves, without ever opening a pane.
  */
@@ -51,6 +47,7 @@ export function CategorySheet({
   description,
   suggestion,
   frequent,
+  direction = "out",
   onSelect,
   onDone,
   onRevert,
@@ -63,9 +60,11 @@ export function CategorySheet({
   /** Quoted in the shortlist heading, so the guess shows its evidence. */
   description: string;
   /** The live classification, or null while there is nothing to classify. */
-  suggestion: ClassificationResult | null;
+  suggestion: CategorySuggestion | null;
   /** What this group files things under, most used first. */
-  frequent: readonly ExpenseCategory[];
+  frequent: readonly string[];
+  /** Which vocabulary to offer. Absent means spending. */
+  direction?: EntryDirection;
   /** Always both halves: picking a category alone clears the old child. */
   onSelect: (category: string, subcategory: string | null) => void;
   /**
@@ -82,31 +81,37 @@ export function CategorySheet({
   onRevert: () => void;
 }) {
   const t = useTranslations("addEntry.category");
-  const tCategories = useTranslations("expenses.categories");
-  const tSub = useSubcategoryLabel();
+  const vocabulary = useVocabulary(direction);
   const locale = useLocale();
   const [query, setQuery] = useState("");
   /** Which pane is open, or null for the root. Not a route, not a sheet. */
-  const [pane, setPane] = useState<ExpenseCategory | null>(null);
+  const [pane, setPane] = useState<string | null>(null);
 
   const collator = useMemo(() => new Intl.Collator(locale), [locale]);
 
   /** The reader's own alphabetical order, with `other` pinned last. */
   const ordered = useMemo(() => {
-    const named = EXPENSE_CATEGORY_IDS.filter(
-      (category) => category !== "other",
-    ).map((category) => ({ category, label: tCategories(category) }));
+    const named = vocabulary.ids
+      .filter((category) => category !== "other")
+      .map((category) => ({ category, label: vocabulary.label(category) }));
     named.sort((a, b) => collator.compare(a.label, b.label));
-    return [
-      ...named,
-      { category: "other" as ExpenseCategory, label: tCategories("other") },
-    ];
-  }, [collator, tCategories]);
+    return [...named, { category: "other", label: vocabulary.label("other") }];
+  }, [collator, vocabulary]);
 
-  const shortlist = useMemo(
-    () => categoryShortlist({ suggestion, frequent }),
-    [suggestion, frequent],
-  );
+  /*
+   * The shortlist, filtered to codes this vocabulary actually has.
+   *
+   * "Most used in this group" is counted over the group's expenses, and on an
+   * income those codes name nothing: the sheet rendered
+   * `expenses.incomeCategories.restaurants` as a chip, because a missing
+   * translation falls back to its own key. A code from the other vocabulary
+   * is not a chip with a bad label, it is not a chip.
+   */
+  const shortlist = useMemo(() => {
+    const all = categoryShortlist({ suggestion, frequent });
+    const categories = all.categories.filter(vocabulary.owns);
+    return { ...all, categories };
+  }, [suggestion, frequent, vocabulary]);
 
   const needle = fold(query.trim(), locale);
   const searching = needle !== "";
@@ -140,13 +145,13 @@ export function CategorySheet({
   const leafResults = useMemo(() => {
     if (!searching) return [];
     const hits: {
-      category: ExpenseCategory;
+      category: string;
       subcategory: string;
       label: string;
     }[] = [];
-    for (const category of EXPENSE_CATEGORY_IDS) {
-      for (const leaf of getSubcategories(category)) {
-        const label = tSub(category, leaf);
+    for (const category of vocabulary.ids) {
+      for (const leaf of vocabulary.leaves(category)) {
+        const label = vocabulary.leafLabel(category, leaf);
         if (fold(label, locale).includes(needle)) {
           hits.push({ category, subcategory: leaf, label });
         }
@@ -155,10 +160,13 @@ export function CategorySheet({
     hits.sort(
       (a, b) =>
         collator.compare(a.label, b.label) ||
-        collator.compare(tCategories(a.category), tCategories(b.category)),
+        collator.compare(
+          vocabulary.label(a.category),
+          vocabulary.label(b.category),
+        ),
     );
     return hits.slice(0, MAX_LEAF_RESULTS);
-  }, [searching, needle, locale, collator, tSub, tCategories]);
+  }, [searching, needle, locale, collator, vocabulary]);
 
   /** The alphabet minus whatever is already offered above it. */
   const rest = useMemo(
@@ -179,19 +187,13 @@ export function CategorySheet({
    * so its chip carries no chevron and its tap ends the journey — the shape of
    * the control says where it goes.
    */
-  const chip = ({
-    category,
-    label,
-  }: {
-    category: ExpenseCategory;
-    label: string;
-  }) => {
-    const branches = hasSubcategories(category);
+  const chip = ({ category, label }: { category: string; label: string }) => {
+    const branches = vocabulary.leaves(category).length > 0;
     return (
       <ChoicePill
         key={category}
         selected={category === value}
-        icon={CATEGORY_GLYPHS[category]}
+        icon={vocabulary.glyph(category)}
         trailing={
           branches ? (
             <ChevronRight aria-hidden="true" className="size-3 shrink-0" />
@@ -218,6 +220,7 @@ export function CategorySheet({
         category={pane}
         selected={value === pane ? subcategory : ""}
         collator={collator}
+        vocabulary={vocabulary}
         onBack={() => setPane(null)}
         // Everything in the pane ends the journey, the skip row included.
         onSelect={(leaf) => {
@@ -269,11 +272,12 @@ export function CategorySheet({
                     key={`${hit.category}.${hit.subcategory}`}
                     category={hit.category}
                     subcategory={hit.subcategory}
-                    parentLabel={tCategories(hit.category)}
+                    parentLabel={vocabulary.label(hit.category)}
                     label={hit.label}
                     selected={
                       value === hit.category && subcategory === hit.subcategory
                     }
+                    vocabulary={vocabulary}
                     onClick={() => {
                       onSelect(hit.category, hit.subcategory);
                       onDone();
@@ -302,7 +306,7 @@ export function CategorySheet({
                 }
               >
                 {shortlist.categories.map((category) =>
-                  chip({ category, label: tCategories(category) }),
+                  chip({ category, label: vocabulary.label(category) }),
                 )}
               </Group>
             )}
@@ -325,27 +329,58 @@ const MAX_LEAF_RESULTS = 12;
  * helper line under the chips says the same thing in words, for anyone who
  * read the pane as a question they have to answer.
  */
+/**
+ * A category's glyph, looked up through its vocabulary.
+ *
+ * A component rather than `const Glyph = vocabulary.glyph(category)` inside
+ * the render: the lookup is a *call*, and a component value produced by one
+ * during render is a new component identity every pass — React would remount
+ * it, and the lint rule that says so is right even though an icon has no state
+ * to lose.
+ */
+function VocabularyGlyph({
+  vocabulary,
+  category,
+  className,
+}: {
+  vocabulary: Vocabulary;
+  category: string;
+  className?: string;
+}) {
+  /*
+   * `createElement` rather than JSX, because the identity is stable and the
+   * lint rule cannot see that: every glyph comes out of a module-level map,
+   * so the same category yields the same component on every render. What the
+   * rule guards against — a component *defined* during render, remounted each
+   * pass — is not what a table lookup does. Calling it through a function is
+   * the only thing that hides it.
+   */
+  return createElement(vocabulary.glyph(category), {
+    "aria-hidden": true,
+    className,
+  });
+}
+
 function SubcategoryPane({
   category,
   selected,
   collator,
+  vocabulary,
   onBack,
   onSelect,
 }: {
-  category: ExpenseCategory;
+  category: string;
   selected: string;
   collator: Intl.Collator;
+  vocabulary: Vocabulary;
   onBack: () => void;
   onSelect: (subcategory: string | null) => void;
 }) {
   const t = useTranslations("addEntry.category");
-  const tCategories = useTranslations("expenses.categories");
-  const tSub = useSubcategoryLabel();
   const tGroups = useTranslations("expenses.categoryGroups");
-  const Glyph = CATEGORY_GLYPHS[category];
-  const groups = getSubcategoryGroups(category);
+  const groups = vocabulary.groups(category);
 
-  const label = (leaf: string) => tSub(category, leaf);
+  const label = (leaf: string) => vocabulary.leafLabel(category, leaf);
 
   /** Alphabetical, `other` last — the same rule the root uses. */
   const sorted = (leaves: readonly string[]) =>
@@ -353,7 +388,7 @@ function SubcategoryPane({
       .filter((leaf) => leaf !== "other")
       .sort((a, b) => collator.compare(label(a), label(b)));
 
-  const leaves = getSubcategories(category) as readonly string[];
+  const leaves = vocabulary.leaves(category);
   const ungrouped = groups
     ? []
     : sorted(leaves).concat(leaves.includes("other") ? ["other"] : []);
@@ -362,7 +397,7 @@ function SubcategoryPane({
     <ChoicePill
       key={leaf}
       selected={leaf === selected}
-      icon={subcategoryGlyph(category, leaf) ?? undefined}
+      icon={vocabulary.leafGlyph(category, leaf)}
       onClick={() => onSelect(leaf)}
     >
       {label(leaf)}
@@ -380,12 +415,13 @@ function SubcategoryPane({
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
         </button>
-        <Glyph
-          aria-hidden="true"
+        <VocabularyGlyph
+          vocabulary={vocabulary}
+          category={category}
           className="size-[18px] shrink-0 text-primary-ink"
         />
         <SheetTitle className="truncate text-lg font-semibold tracking-[-0.02em]">
-          {tCategories(category)}
+          {vocabulary.label(category)}
         </SheetTitle>
       </div>
 
@@ -396,7 +432,7 @@ function SubcategoryPane({
         className="flex h-12 shrink-0 items-center justify-between gap-3 rounded-xl border border-border bg-white/4 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
       >
         <span className="truncate">
-          {t("just", { category: tCategories(category) })}
+          {t("just", { category: vocabulary.label(category) })}
         </span>
         {selected === "" && (
           <Check
@@ -446,19 +482,21 @@ function LeafPill({
   parentLabel,
   label,
   selected,
+  vocabulary,
   onClick,
 }: {
-  category: ExpenseCategory;
+  category: string;
   subcategory: string;
   parentLabel: string;
   label: string;
   selected: boolean;
+  vocabulary: Vocabulary;
   onClick: () => void;
 }) {
   return (
     <ChoicePill
       selected={selected}
-      icon={subcategoryGlyph(category, subcategory) ?? undefined}
+      icon={vocabulary.leafGlyph(category, subcategory)}
       onClick={onClick}
     >
       <span className="font-normal text-muted-foreground">{parentLabel}</span>

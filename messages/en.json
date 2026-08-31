@@ -2894,7 +2894,7 @@
         "percentages": "Split by percentage · {count} people",
         "shares": "Split by shares · {count} people",
         "byItem": "Split by item · {count} people",
-        "justOne": "Nobody else's balance moves",
+        "justOne": "All of it to one person",
         "nobody": "Nobody selected yet"
       },
       "payerOption": "Paid by {name}",
@@ -3003,13 +3003,6 @@
       "matches": "Matches the receipt total.",
       "unassigned": "Assigned {assigned} of {total} — the rest is unassigned.",
       "use": "Use these amounts"
-    },
-    "income": {
-      "belongsTo": "Who does it belong to",
-      "shared": "Shared — credit everyone",
-      "sharedHint": "Each of the {count} gains {amount}",
-      "mine": "Mine only — credit {name}",
-      "mineHint": "Recorded, but nobody else's balance moves"
     },
     "settle": {
       "from": "From",

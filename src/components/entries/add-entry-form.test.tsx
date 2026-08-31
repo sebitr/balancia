@@ -664,16 +664,47 @@ describe("income", () => {
     expect(success).toHaveBeenCalledWith("Income added", expect.anything());
   });
 
-  /** "Mine only" is an entry that moves nobody — so there is nothing to split. */
-  it("hides the split row when the income is credited to one person", async () => {
+  /**
+   * There used to be a "Mine only" mode here whose own hint read "nobody
+   * else's balance moves" — a no-op on the ledger, offered as a choice. Income
+   * that is not everyone's is said through the roster instead, so the split
+   * row is where it is answered and it is always on screen.
+   */
+  it("keeps the split row on screen, because that is where credit is chosen", async () => {
     const user = userEvent.setup();
     renderForm();
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
-    expect(screen.getByText(/Seb received/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("radio", { name: /Mine only/ }));
-    expect(screen.queryByText(/Seb received/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Seb received/)).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Mine only/ })).toBeNull();
+  });
+
+  /**
+   * The two vocabularies share the `category` column and nothing else. A code
+   * carried across would read correctly and mean the opposite.
+   */
+  it("clears the category when the type changes vocabulary", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const row = () => screen.getByRole("button", { name: /Category/ });
+
+    await user.click(row());
+    await user.click(screen.getByRole("button", { name: /^Transport/ }));
+    await user.click(screen.getByRole("button", { name: "Fuel" }));
+    expect(row()).toHaveTextContent("Transport");
+
+    // `transport` is not a code the income vocabulary has, so it goes.
+    await user.click(screen.getByRole("tab", { name: "Income" }));
+    expect(row()).toHaveTextContent("Add a category");
+
+    // And the income list is what the picker now offers.
+    await user.click(row());
+    expect(
+      screen.getByRole("button", { name: /^Deposits returned/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Transport/ })).toBeNull();
   });
 });
 
