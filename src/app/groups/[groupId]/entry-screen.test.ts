@@ -23,7 +23,12 @@ const { notFound, getExpense, getSettlement } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ notFound }));
-vi.mock("@/modules/expenses/service", () => ({ getExpense }));
+vi.mock("@/modules/expenses/service", () => ({
+  getExpense,
+  // The duplicate note reads the group's last few entries; this suite is
+  // about what happens when the *edited* one is gone.
+  listExpenses: async () => [],
+}));
 vi.mock("@/modules/settlements/service", () => ({ getSettlement }));
 vi.mock("@/lib/actions", () => ({
   requireGroupAccess: async () => ({

@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import {
   CalendarDays,
   Loader2,
   Repeat,
+  RotateCcw,
   Sparkles,
   Trash2,
   X,
@@ -111,6 +113,9 @@ import {
   type DebtPair,
 } from "./settle-blocks";
 import { settleOutcome, type SettleOutcome } from "./settle-outcome";
+import { savedSummary } from "./saved-summary";
+import { findDuplicate, type RecentEntry } from "./duplicate-note";
+import { useDebounced } from "./use-debounced";
 import type { EntryMember } from "./pills";
 
 /**
@@ -205,11 +210,50 @@ export interface EditingEntry {
  * `ActionResult`, which would drag a server module into this bundle.
  */
 interface Outcome {
-  readonly result: { readonly ok: boolean; readonly error?: string };
+  readonly result: {
+    readonly ok: boolean;
+    readonly error?: string;
+    /**
+     * What the action created, when it created something.
+     *
+     * Only the two `create` actions carry an id, and only that id gives the
+     * confirmation somewhere to link back to. An update already knows where
+     * it lives; a queued entry has no id until it syncs.
+     */
+    readonly data?: unknown;
+  };
   readonly movedTo?: string;
 }
 
+/**
+ * The expense an action just created, if it created one.
+ *
+ * `ActionResult` is generic over its payload and the four submit paths return
+ * four different ones, so the shape is checked here rather than widened at
+ * every return. Anything else — an update, a settlement, a queued entry —
+ * simply has no id to offer, and the confirmation states its facts without
+ * linking them.
+ */
+function createdExpenseId(result: {
+  readonly data?: unknown;
+}): string | undefined {
+  const data = result.data;
+  if (typeof data !== "object" || data === null) return undefined;
+  const id = (data as { expenseId?: unknown }).expenseId;
+  return typeof id === "string" ? id : undefined;
+}
+
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
+/** A group with nothing in it yet: the duplicate note has nothing to match. */
+const NO_RECENT: readonly RecentEntry[] = [];
+
+/**
+ * How long the fields have to hold still before the duplicate note appears.
+ *
+ * Long enough that typing an amount digit by digit does not flash it on and
+ * off; short enough that it is there by the time somebody looks up.
+ */
+const DUPLICATE_DEBOUNCE_MS = 500;
 /** A group with no history yet — the picker simply has nothing to lead with. */
 const NO_FREQUENT: readonly string[] = [];
 
@@ -295,6 +339,20 @@ export interface AddEntryFormProps {
    * at and passes nothing.
    */
   onRemoved?: (to?: string) => void;
+  /**
+   * A sheet to open with the drawer, named by whoever linked here.
+   *
+   * Only the confirmation uses it today — see `describeSaved`. Absent for
+   * every other way in, which is all of them.
+   */
+  openSheet?: OpenSheet;
+  /**
+   * The group's last few entries, for the duplicate note.
+   *
+   * Empty is the ordinary state of a new group and simply means the note
+   * never appears.
+   */
+  recentEntries?: readonly RecentEntry[];
 }
 
 export function AddEntryForm({
@@ -319,6 +377,8 @@ export function AddEntryForm({
   onClose,
   onSaved,
   onRemoved,
+  openSheet,
+  recentEntries = NO_RECENT,
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
@@ -450,7 +510,14 @@ export function AddEntryForm({
     return isKnownPayoutMethod(picked) ? tMethods(picked) : "";
   });
 
-  const [sheet, setSheet] = useState<OpenSheet>(null);
+  /*
+   * The confirmation links back here with the sheet that fixes the fact
+   * already open, so a reader who spots a wrong payer is one tap from the
+   * roster rather than four. Seeded as initial state rather than opened in an
+   * effect: a drawer that appears and then opens a sheet a frame later reads
+   * as two screens.
+   */
+  const [sheet, setSheet] = useState<OpenSheet>(openSheet ?? null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -821,6 +888,36 @@ export function AddEntryForm({
    * Null covers both "nothing is selected" and "the pair is one the reader
    * named", which have no balance by definition.
    */
+  /**
+   * The recent entry this one might repeat, once the fields have settled.
+   *
+   * Debounced on the amount and the description together, so the line does
+   * not flash while a figure is half-typed. Never while editing: an entry
+   * being corrected necessarily matches itself.
+   */
+  const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
+  const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
+  const duplicate = useMemo(() => {
+    if (type !== "expense" || editing) return null;
+    const parsed = parseAmountToMinor(settledAmount || "0", currency);
+    if (!parsed.ok) return null;
+    return findDuplicate({
+      amountMinor: parsed.value,
+      currency,
+      description: settledDescription,
+      category: effectiveCategory,
+      recent: recentEntries,
+    });
+  }, [
+    type,
+    editing,
+    settledAmount,
+    settledDescription,
+    currency,
+    effectiveCategory,
+    recentEntries,
+  ]);
+
   const settleBalance = useMemo(() => {
     const row =
       outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
@@ -955,7 +1052,7 @@ export function AddEntryForm({
         t(
           `saved.${confirmationKey(type, recurrence.enabled, editing !== undefined)}`,
         ),
-        { description: describeSaved() },
+        { description: describeSaved(createdExpenseId(result) ?? editing?.id) },
       );
       // A conversion removed the row this drawer was opened on, so it leaves
       // the way a deletion does rather than back onto a detail screen that no
@@ -1186,15 +1283,110 @@ export function AddEntryForm({
     }
   };
 
-  /** One line for the confirmation screen: what was saved, and how much. */
-  const describeSaved = (): string => {
-    const amount = amountFormatted;
+  /**
+   * The entry in one plain line, for the sentence that asks about deleting it.
+   *
+   * Deliberately not the confirmation's line: this one has to name the entry
+   * being destroyed, and "84.60 · Seb paid · split 3 ways" identifies a
+   * payment rather than the thing the reader called it.
+   */
+  const describeEntry = (): string => {
+    const parts = [description.trim() || t("labels.description")];
     if (isSettle && selectedPair) {
-      return `${selectedPair.fromName} → ${selectedPair.toName} · ${amount}`;
+      parts[0] = `${selectedPair.fromName} → ${selectedPair.toName}`;
     }
-    const parts = [description.trim() || t("labels.description"), amount];
+    parts.push(amountFormatted);
     if (recurrence.enabled) parts.push(repeatLabel);
     return parts.join(" · ");
+  };
+
+  /**
+   * The confirmation line: the two facts most likely to be wrong.
+   *
+   * It used to repeat the description, which the reader had just typed. Who
+   * paid and how it was split are the two people actually reopen entries to
+   * check, and both are cheapest to fix now — so both are named, and each is
+   * a link back into the entry with the sheet that fixes it already open.
+   */
+  const describeSaved = (entryId: string | undefined): ReactNode => {
+    const summary = savedSummary({
+      type,
+      amount: amountFormatted,
+      payerName,
+      participantCount: effectiveIncluded.length,
+      settlement:
+        isSettle && selectedPair
+          ? {
+              fromName: selectedPair.fromName,
+              toName: selectedPair.toName,
+              method: methodLabel,
+            }
+          : null,
+    });
+
+    if (summary.kind === "settled" && summary.settlement) {
+      const parts = [
+        summary.amount,
+        t("saved.settledPair", {
+          from: summary.settlement.fromName,
+          to: summary.settlement.toName,
+        }),
+      ];
+      if (summary.settlement.method !== "") {
+        parts.push(summary.settlement.method);
+      }
+      return parts.join(" · ");
+    }
+
+    /*
+     * A link only when there is somewhere to go. A queued entry has no id
+     * yet, and a recurring template's first occurrence does not exist until
+     * the worker makes it — in both cases the facts are still worth stating,
+     * they just cannot be tapped.
+     */
+    const href =
+      entryId && !recurrence.enabled
+        ? `/groups/${groupId}/expenses/${entryId}/edit`
+        : null;
+
+    /*
+     * Both facts open the same sheet, because that is where both are fixed:
+     * "Paid by" and "Split between" are two sections of one roster. Two links
+     * to one destination is not a redundancy — each takes the reader to their
+     * own fact — but pretending they were different sheets would be.
+     */
+    const fact = (label: string, key: string) =>
+      href ? (
+        <Link
+          key={key}
+          href={`${href}?sheet=split`}
+          className="text-primary-ink underline-offset-2 hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <span key={key}>{label}</span>
+      );
+
+    return (
+      <>
+        {summary.amount}
+        {" · "}
+        {fact(
+          summary.payer?.received
+            ? t("saved.receivedBy", { name: summary.payer.name })
+            : t("saved.paidBy", { name: summary.payer?.name ?? "" }),
+          "payer",
+        )}
+        {" · "}
+        {fact(
+          summary.split?.credited
+            ? t("saved.creditedWays", { count: summary.split.count })
+            : t("saved.splitWays", { count: summary.split?.count ?? 0 }),
+          "split",
+        )}
+      </>
+    );
   };
 
   const categoryGlyph = vocabulary.glyph(effectiveCategory);
@@ -1302,6 +1494,38 @@ export function AddEntryForm({
           onOpenCurrency={() => setSheet("currency")}
           locale={locale}
         />
+
+        {/*
+         * "Did I already log this?" — answered where it is asked, instead of
+         * by scrolling the list later.
+         *
+         * Quiet on purpose: muted text, no coloured background, no icon
+         * bigger than the words. Duplicates are legal — two coffee runs
+         * happen — so this never blocks and never pre-empts saving. It is a
+         * reassurance with one tap out of it.
+         */}
+        {duplicate && (
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 text-xs text-muted-foreground">
+            <RotateCcw aria-hidden="true" className="size-3.5 shrink-0" />
+            <span>
+              {t("duplicate.note", {
+                // Rounds to nothing for an entry made minutes ago, which the
+                // message reads as "just now" rather than rounding it up to an
+                // hour that has not passed.
+                hours: Math.round(duplicate.hoursAgo),
+                description: duplicate.description,
+                amount: duplicate.amountFormatted,
+                name: duplicate.payerName,
+              })}
+            </span>
+            <Link
+              href={`/groups/${groupId}/expenses/${duplicate.id}`}
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              {t("duplicate.view")}
+            </Link>
+          </p>
+        )}
 
         {/*
          * The two things somebody does with a debt: clear it, or pay some of
@@ -1594,7 +1818,7 @@ export function AddEntryForm({
               <AlertDialogHeader>
                 <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t("delete.body", { entry: describeSaved() })}
+                  {t("delete.body", { entry: describeEntry() })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { AddEntryDrawer } from "./add-entry-drawer";
@@ -1099,6 +1100,11 @@ describe("after saving", () => {
   /**
    * The drawer gets out of the way and says so from outside it, rather than
    * holding the group behind a confirmation screen.
+   *
+   * The line names the two facts people reopen entries to check — who paid
+   * and how it was split — rather than repeating the description they have
+   * just typed. It is rendered rather than formatted, because each fact is a
+   * link back into the entry.
    */
   it("says what was saved, and leaves", async () => {
     const user = userEvent.setup();
@@ -1109,8 +1115,13 @@ describe("after saving", () => {
     await user.click(screen.getByRole("button", { name: "Add expense" }));
 
     expect(success).toHaveBeenCalledWith("Expense added", {
-      description: expect.stringMatching(/^Dinner · CHF.84\.60$/),
+      description: expect.anything(),
     });
+    const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
+      .container.textContent;
+    expect(line).toMatch(/84\.60/);
+    expect(line).toContain("Seb paid");
+    expect(line).toContain("split 3 ways");
     expect(
       screen.queryByRole("button", { name: "Add expense" }),
     ).not.toBeInTheDocument();

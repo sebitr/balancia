@@ -3057,7 +3057,14 @@
       "deleted": "Entry deleted",
       "restored": "Entry restored",
       "queued": "Saved on this device",
-      "queuedNote": "It will sync as soon as you are back online."
+      "queuedNote": "It will sync as soon as you are back online.",
+      "paidBy": "{name} paid",
+      "receivedBy": "{name} received",
+      "splitWays": "{count, plural, one {split with # person} other {split # ways}}",
+      "creditedWays": "{count, plural, one {credited to # person} other {credited to # people}}",
+      "settledPair": "{from} → {to}",
+      "checkPayer": "Change who paid",
+      "checkSplit": "Change the split"
     },
     "errors": {
       "amountRequired": "Enter an amount first.",
@@ -3079,6 +3086,10 @@
       "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
       "keep": "Keep it",
       "confirm": "Delete"
+    },
+    "duplicate": {
+      "note": "{hours, plural, =0 {Similar entry just now} one {Similar entry # hour ago} other {Similar entry # hours ago}} — {description}, {amount}, by {name}.",
+      "view": "View"
     }
   },
   "paymentMethods": {

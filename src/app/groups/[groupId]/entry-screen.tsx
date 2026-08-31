@@ -9,6 +9,7 @@ import { AddEntryDrawer } from "@/components/entries/add-entry-drawer";
 import { SnapshotCapture } from "@/components/offline/snapshot-capture";
 import type { EditingEntry } from "@/components/entries/add-entry-form";
 import type { DebtPair } from "@/components/entries/settle-blocks";
+import type { RecentEntry } from "@/components/entries/duplicate-note";
 import { splitValuesToText } from "@/components/expenses/expense-form-logic";
 import { requireGroupAccess } from "@/lib/actions";
 import {
@@ -24,7 +25,11 @@ import {
 } from "@/modules/categorization/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { formatMoney, money, toMajorString } from "@/modules/currencies/money";
-import { getExpense } from "@/modules/expenses/service";
+import {
+  getExpense,
+  listExpenses,
+  type ExpenseSummary,
+} from "@/modules/expenses/service";
 import { getSettlement } from "@/modules/settlements/service";
 import { PUSH } from "@/components/motion/transitions";
 import type { SettleIntent } from "@/components/entries/settle-intent";
@@ -45,6 +50,7 @@ export async function EntryScreen({
   edit,
   settle,
   whenGone = "notFound",
+  openSheet,
 }: {
   groupId: string;
   dismissTo: "back" | "group";
@@ -77,19 +83,41 @@ export async function EntryScreen({
    * holds on every other group route — see its `default.tsx`.
    */
   whenGone?: "notFound" | "nothing";
+  /**
+   * A sheet the link asked to have open. See `AddEntryForm.openSheet`.
+   *
+   * Narrowed from the query string by the route, not here: a page reads its
+   * own search params, and an unrecognised value is simply no sheet.
+   */
+  openSheet?: "split";
 }) {
   const access = await requireGroupAccess(groupId);
 
-  const [participants, categoryMappings, frequentCategories, balances, locale] =
-    await Promise.all([
-      listParticipants(access.groupId),
-      loadMappings(access),
-      loadFrequentCategories(access),
-      loadGroupBalances(access),
-      // The amounts below are pre-formatted for the form, so they follow the
-      // reader's notation rather than their language.
-      getNumberLocale(),
-    ]);
+  const [
+    participants,
+    categoryMappings,
+    frequentCategories,
+    balances,
+    locale,
+    recentExpenses,
+  ] = await Promise.all([
+    listParticipants(access.groupId),
+    loadMappings(access),
+    loadFrequentCategories(access),
+    loadGroupBalances(access),
+    // The amounts below are pre-formatted for the form, so they follow the
+    // reader's notation rather than their language.
+    getNumberLocale(),
+    /*
+     * The last handful of entries, for the "did I already log this?" line.
+     *
+     * Twenty is enough: the note only looks two days back, and a group
+     * adding more than twenty entries in two days is one where the reader
+     * is already watching the list. Loaded here rather than fetched from
+     * the drawer because the drawer is a route and this is one query.
+     */
+    listExpenses(access.groupId, { limit: 20 }),
+  ]);
 
   const t = await getTranslations("expensePages");
 
@@ -128,6 +156,8 @@ export async function EntryScreen({
    * settle tab is pinned to one currency at a time, so they are flattened here
    * and the amount carries its own.
    */
+  const recentEntries = toRecentEntries(recentExpenses, locale);
+
   const outstanding: DebtPair[] = [...balances.suggestionsByCurrency.values()]
     .flat()
     .map((suggestion) => ({
@@ -222,9 +252,57 @@ export async function EntryScreen({
         // is going. Its key stays on the server and is never sent here.
         receiptOcrProvider={configuredOcrProviderName()}
         editing={editing}
+        openSheet={openSheet}
+        recentEntries={recentEntries}
       />
     </>
   );
+}
+
+/**
+ * The sheet a link asked for, from the query it arrived in.
+ *
+ * One value is recognised and everything else is none. A query string is
+ * something anybody can type, so this is a whitelist rather than a cast —
+ * an unknown sheet name opens no sheet rather than a broken one.
+ */
+export function sheetFromQuery(
+  query: Record<string, string | string[] | undefined> | undefined,
+): "split" | undefined {
+  const value = query?.sheet;
+  return value === "split" ? "split" : undefined;
+}
+
+/**
+ * The last few expenses, as the duplicate note wants them.
+ *
+ * Spending only — matching rent received against a grocery expense is a false
+ * positive by construction, and the line is worth having only while it is
+ * rarely wrong.
+ *
+ * A plain function rather than part of the component, because it reads the
+ * clock: ages are stamped once per request here so the client compares
+ * numbers instead of re-deriving "now" on every keystroke.
+ */
+function toRecentEntries(
+  expenses: readonly ExpenseSummary[],
+  locale: string,
+): RecentEntry[] {
+  const now = Date.now();
+  return expenses
+    .filter((expense) => expense.direction === "out")
+    .map((expense) => ({
+      id: expense.id,
+      description: expense.description,
+      amountMinor: expense.amount.toString(),
+      currency: expense.currency,
+      amountFormatted: formatMoney(money(expense.amount, expense.currency), {
+        locale,
+      }),
+      payerName: expense.payers[0]?.displayName ?? "",
+      category: expense.category ?? "",
+      hoursAgo: (now - expense.createdAt.getTime()) / 3_600_000,
+    }));
 }
 
 async function loadEditing(
