@@ -90,6 +90,7 @@ x-app-environment: &app-environment
   APPLE_KEY_ID: ${APPLE_KEY_ID:-}
   APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+  SIGNUP_PROOF_OF_WORK: ${SIGNUP_PROOF_OF_WORK:-false}
   AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
   # Telemetry. Nothing is sent by default: "opt-in" means an administrator may
   # switch anonymous statistics on from Settings → Administration → Telemetry,

@@ -278,7 +278,7 @@ describe("unlinking", () => {
     const user = await createTestUser();
     await getDb()
       .update(users)
-      .set({ passwordHash: await hashPassword("correct-horse-battery-staple") })
+      .set({ passwordHash: await hashPassword("quiet-lantern-drifts-42") })
       .where(eq(users.id, user.userId));
     await linkAppleIdentity(user.userId, appleIdentity());
 
@@ -315,7 +315,7 @@ describe("unlinking", () => {
     const user = await createTestUser();
     await getDb()
       .update(users)
-      .set({ passwordHash: await hashPassword("correct-horse-battery-staple") })
+      .set({ passwordHash: await hashPassword("quiet-lantern-drifts-42") })
       .where(eq(users.id, user.userId));
 
     await expect(unlinkAppleIdentity(user.userId)).rejects.toThrow(

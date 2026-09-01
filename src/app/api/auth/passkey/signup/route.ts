@@ -4,7 +4,9 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 import { getClientIp, getCurrentUser } from "@/lib/security/actor";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { RateLimitedError } from "@/lib/security/rate-limit";
+import { ProofOfWorkError } from "@/lib/security/proof-of-work";
+import { guardSignUp } from "@/lib/security/signup-guard";
 import { describeError } from "@/lib/server-errors";
 import { logger } from "@/lib/logger";
 import { trackRoute } from "@/lib/metrics/http";
@@ -31,9 +33,22 @@ import { settleNewSession } from "@/modules/auth/session-handoff";
  * one path.
  */
 
+/**
+ * The answer to `/api/auth/challenge`, when this instance asked for one. A
+ * native client that has never heard of it simply sends nothing, and is
+ * refused only where the instance is configured to want it.
+ */
+const proofOfWorkSchema = z
+  .object({
+    nonce: z.string().min(1).max(64),
+    number: z.number().int().nonnegative(),
+  })
+  .nullish();
+
 const identitySchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.email(),
+  proofOfWork: proofOfWorkSchema,
 });
 
 const finishSchema = z.object({
@@ -65,19 +80,33 @@ async function handleStart(request: Request) {
     return NextResponse.json({ error: t("identityRequired") }, { status: 400 });
   }
 
-  const limit = await consumeRateLimit("signUp", await getClientIp());
-  if (!limit.allowed) {
+  const { proofOfWork, ...identity } = parsed.data;
+
+  try {
+    await guardSignUp({
+      ipAddress: await getClientIp(),
+      email: identity.email,
+      proofOfWork,
+    });
+  } catch (error) {
+    if (error instanceof ProofOfWorkError) {
+      return NextResponse.json(
+        { error: t("proofOfWorkRequired") },
+        { status: 400 },
+      );
+    }
+    if (!(error instanceof RateLimitedError)) throw error;
     return NextResponse.json(
       { error: t("rateLimited") },
       {
         status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSeconds) },
+        headers: { "Retry-After": String(error.retryAfterSeconds) },
       },
     );
   }
 
   try {
-    const options = await startPasskeySignup(parsed.data);
+    const options = await startPasskeySignup(identity);
     return NextResponse.json(options, {
       headers: { "Cache-Control": "no-store" },
     });

@@ -1,11 +1,18 @@
 import "server-only";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type {
   PublicKeyCredentialCreationOptionsJSON,
   RegistrationResponseJSON,
 } from "@simplewebauthn/server";
-import { getDb, type Database } from "@/lib/db/client";
-import { users } from "@/lib/db/schema";
+import { getDb, rowsAffected, type Database } from "@/lib/db/client";
+import {
+  groupMembers,
+  oauthIdentities,
+  participants,
+  passkeys,
+  sessions,
+  users,
+} from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import {
@@ -420,4 +427,76 @@ async function mailCode(
       "codeSendFailed",
     );
   }
+}
+
+/**
+ * How long an unproved address is held for the person who typed it. A
+ * confirmation mail that arrives in seconds and is read after supper still has
+ * the whole night.
+ */
+const UNCLAIMED_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * And how far back this is willing to look at all.
+ *
+ * Nothing older than a week is ever touched, which is the guard against the
+ * one configuration change that would otherwise be catastrophic: an instance
+ * that ran without SMTP for a year — where *every* account is unverified by
+ * construction — and then switches it on. Sessions last thirty days and are
+ * themselves pruned, so "has no session" cannot be trusted to mean "never
+ * arrived" on an old row. Recency can.
+ */
+const UNCLAIMED_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Deletes accounts that were begun and never proved.
+ *
+ * Registering writes the user row before the address is confirmed — with a
+ * password, and with a mailed code — which is what lets somebody type an
+ * address they do not own and keep it. The row is unreachable by whoever made
+ * it, because an unverified account cannot sign in where SMTP is configured,
+ * and it is unusable by the person the address belongs to, because
+ * `insertUser` will answer them `emailTaken` for as long as it exists. That is
+ * a denial of registration with no expiry, and one HTTP request to arrange.
+ *
+ * The passkey signup never had this problem — its identity waits on the
+ * challenge row and no user exists until an authenticator has answered — so
+ * this is the other two paths catching up, from the other end.
+ *
+ * Everything here is a guard against deleting somebody real:
+ *
+ *  - **No SMTP, no sweep.** Without a mail server nothing is ever verified and
+ *    every account on the instance looks exactly like an abandoned one. This
+ *    is the check that must never be removed.
+ *  - **Nothing attached.** No session ever created, no passkey, no linked
+ *    Apple identity, no group membership, no participant row claimed. An
+ *    account with any of those got in, and getting in is proof enough.
+ *  - **Not the administrator**, who on a self-hosted instance is whoever
+ *    registered first.
+ *  - **Recent, but not brand new** — see the two constants above.
+ */
+export async function pruneUnclaimedAccounts(
+  now: Date = new Date(),
+  options: { db?: Database } = {},
+): Promise<number> {
+  if (!getEnv().smtpEnabled) return 0;
+  const db = options.db ?? getDb();
+
+  const result = await db
+    .delete(users)
+    .where(
+      and(
+        isNull(users.emailVerifiedAt),
+        eq(users.isAdmin, false),
+        lt(users.createdAt, new Date(now.getTime() - UNCLAIMED_GRACE_MS)),
+        gt(users.createdAt, new Date(now.getTime() - UNCLAIMED_HORIZON_MS)),
+        sql`NOT EXISTS (SELECT 1 FROM ${sessions} WHERE ${sessions.userId} = ${users.id})`,
+        sql`NOT EXISTS (SELECT 1 FROM ${passkeys} WHERE ${passkeys.userId} = ${users.id})`,
+        sql`NOT EXISTS (SELECT 1 FROM ${oauthIdentities} WHERE ${oauthIdentities.userId} = ${users.id})`,
+        sql`NOT EXISTS (SELECT 1 FROM ${groupMembers} WHERE ${groupMembers.userId} = ${users.id})`,
+        sql`NOT EXISTS (SELECT 1 FROM ${participants} WHERE ${participants.userId} = ${users.id})`,
+      ),
+    );
+
+  return rowsAffected(result);
 }

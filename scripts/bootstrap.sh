@@ -1255,6 +1255,25 @@ TEXT
     if ask_yes_no 'Allow open registration?' y; then
       write_setting ALLOW_REGISTRATION true \
         'Open sign-ups. Set to false to close them on a private instance.'
+      if ! has_value SIGNUP_PROOF_OF_WORK; then
+        prose <<'TEXT'
+
+Sign-ups are open to anyone who can reach this instance, so they can be
+opened by a script too. Balancia can make each one cost the visitor's
+browser about a second of hashing first: nobody filling in the form
+notices, and creating accounts in bulk stops being free.
+
+No third party is involved and nothing is sent anywhere.
+
+TEXT
+        if ask_yes_no 'Make sign-ups cost a second of the visitor CPU?' n; then
+          write_setting SIGNUP_PROOF_OF_WORK true \
+            'Each sign-up must solve a hashing puzzle first. Set to false to drop the requirement.'
+        else
+          write_setting SIGNUP_PROOF_OF_WORK false \
+            'Sign-ups are free to attempt. Set to true if a script starts opening accounts.'
+        fi
+      fi
     else
       write_setting ALLOW_REGISTRATION false \
         'Sign-ups closed. Set to true to reopen them.'
@@ -1594,6 +1613,29 @@ TEXT
     fi
   fi
 
+  # Paying for a door that is bolted. Harmless, but it means somebody closed
+  # registration later and left the puzzle behind — and a setting that does
+  # nothing is a setting that misleads whoever reads the file next.
+  registration_setting=$(value_of ALLOW_REGISTRATION)
+  case $registration_setting in
+    false | 0 | no | off | FALSE | No | Off) registration_closed=1 ;;
+    *) registration_closed=0 ;;
+  esac
+  if is_enabled SIGNUP_PROOF_OF_WORK && [ "$registration_closed" -eq 1 ]; then
+    heading 'Sign-up proof-of-work is on, but sign-ups are closed'
+    prose <<'TEXT'
+SIGNUP_PROOF_OF_WORK makes creating an account cost a second of the
+visitor's CPU, and ALLOW_REGISTRATION=false means nobody may create one
+at all. The puzzle is never reached. Closed registration is the stronger
+of the two on its own.
+
+TEXT
+    if ask_yes_no 'Turn the proof-of-work off?' y; then
+      write_setting SIGNUP_PROOF_OF_WORK false \
+        'Off: registration is closed, so there is nothing to protect. Set to true if you reopen it.'
+    fi
+  fi
+
   # An instance set up before rates moved to Frankfurter v2 may still pin the
   # v1 root by hand. v1 is the ECB alone — thirty currencies — and the app now
   # refuses to start on it rather than answering every other currency with
@@ -1864,7 +1906,11 @@ summary() {
   esac
   row 'Application' "$(image_source_summary)"
   if is_enabled ALLOW_REGISTRATION; then
-    row 'Registration' 'open'
+    if is_enabled SIGNUP_PROOF_OF_WORK; then
+      row 'Registration' 'open, proof-of-work required'
+    else
+      row 'Registration' 'open'
+    fi
   else
     row 'Registration' 'closed'
   fi

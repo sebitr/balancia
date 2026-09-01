@@ -57,7 +57,7 @@ describe("deleting an account", () => {
       registerUser({
         name: "Second thoughts",
         email,
-        password: "correct-horse-battery-staple",
+        password: "quiet-lantern-drifts-42",
       }),
     ).resolves.toBeTruthy();
   });

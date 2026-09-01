@@ -31,6 +31,8 @@ import {
 } from "@/modules/currencies/rates";
 import { pruneGuestSessions } from "@/lib/security/guest-session";
 import { pruneSessions } from "@/modules/auth/sessions";
+import { pruneUnclaimedAccounts } from "@/modules/auth/signup";
+import { pruneProofOfWorkChallenges } from "@/lib/security/proof-of-work";
 import { pruneWebauthnChallenges } from "@/modules/auth/webauthn";
 import { pruneCounters, utcDayBefore } from "@/lib/telemetry/counters";
 import { providerFor } from "@/lib/telemetry/providers";
@@ -215,6 +217,8 @@ export async function startWorker(): Promise<void> {
       guestSessionRows,
       sessionRows,
       challengeRows,
+      proofOfWorkRows,
+      unclaimedAccounts,
       rateQuoteRows,
       notificationRows,
       telemetryCounterRows,
@@ -226,6 +230,10 @@ export async function startWorker(): Promise<void> {
       pruneGuestSessions(now),
       pruneSessions(now),
       pruneWebauthnChallenges(now),
+      pruneProofOfWorkChallenges(now),
+      // Addresses somebody claimed and never proved. A no-op on an instance
+      // with no mail server, which is the only place it would be dangerous.
+      pruneUnclaimedAccounts(now),
       pruneRateQuotes(new Date(now.getTime() - CACHED_RATE_RETENTION_MS)),
       pruneNotifications(new Date(now.getTime() - NOTIFICATION_RETENTION_MS)),
       // Two weeks of product counters: one week is what a report covers, and
@@ -240,6 +248,8 @@ export async function startWorker(): Promise<void> {
         guestSessionRows,
         sessionRows,
         challengeRows,
+        proofOfWorkRows,
+        unclaimedAccounts,
         rateQuoteRows,
         notificationRows,
         telemetryCounterRows,

@@ -16,8 +16,10 @@ import { RecurrenceError } from "@/modules/recurring/schedule";
 import { UploadRejectedError } from "@/modules/attachments/service";
 import { ImportError } from "@/modules/imports/service";
 import { JoinError } from "@/modules/join/service";
+import { PasswordError } from "@/modules/auth/passwords";
 import { ReminderError } from "@/modules/reminders/service";
 import { RateLimitedError } from "@/lib/security/rate-limit";
+import { ProofOfWorkError } from "@/lib/security/proof-of-work";
 import { reportCrash } from "@/lib/telemetry/crash-reporter";
 import { describeError } from "@/lib/server-errors";
 import {
@@ -76,6 +78,8 @@ const SAFE_ERRORS = [
   ImportError,
   InvalidAmountError,
   JoinError,
+  PasswordError,
+  ProofOfWorkError,
   RateLimitedError,
   RecurrenceError,
   ReminderError,

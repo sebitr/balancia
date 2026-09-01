@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerAction } from "@/modules/auth/actions";
+import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { AppleSignInButton } from "./apple-sign-in-button";
 
 /**
@@ -50,6 +51,10 @@ export function RegisterForm({
   const tValidation = useTranslations("register.validation");
   const [formError, setFormError] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
+  // Starts hashing as soon as this renders, so on an instance that asks for a
+  // proof of work the answer is ready long before anyone finishes typing. On
+  // one that does not, this is a single request that answers "no" and stops.
+  const { solution } = useProofOfWork();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -72,6 +77,7 @@ export function RegisterForm({
       name: values.name,
       email: values.email,
       password: values.password,
+      proofOfWork: await solution(),
     });
 
     if (!result.ok) {

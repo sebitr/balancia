@@ -225,6 +225,13 @@
       "when": 1788165467533,
       "tag": "0031_wandering_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788274107168,
+      "tag": "0032_little_metal_master",
+      "breakpoints": true
     }
   ]
 }

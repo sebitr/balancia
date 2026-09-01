@@ -216,7 +216,7 @@ export async function registerUser(
   if (name.length === 0) {
     throw new AuthError("Enter your name.", "nameRequired");
   }
-  assertPasswordPolicy(input.password);
+  assertPasswordPolicy(input.password, { email, name });
 
   const passwordHash = await hashPassword(input.password);
   const userId = await insertUser({ email, name, passwordHash }, { db });
@@ -1078,6 +1078,16 @@ export async function resetPassword(
   newPassword: string,
   options: { db?: Database } = {},
 ): Promise<boolean> {
+  /*
+   * Without the identity, deliberately.
+   *
+   * Who this token belongs to is not known until it has been spent, and
+   * spending it to find out would mean a password refused for containing
+   * somebody's own name also costs them their link. The length and
+   * common-password rules are the ones an attacker cares about and they both
+   * run here; the name check is a nudge at the point of choosing, and it is
+   * not worth a dead token.
+   */
   assertPasswordPolicy(newPassword);
   const db = options.db ?? getDb();
 
@@ -1105,14 +1115,22 @@ export async function changePassword(
   newPassword: string,
   options: { db?: Database } = {},
 ): Promise<void> {
-  assertPasswordPolicy(newPassword);
   const db = options.db ?? getDb();
 
   const [row] = await db
-    .select({ passwordHash: users.passwordHash })
+    .select({
+      passwordHash: users.passwordHash,
+      email: users.email,
+      name: users.name,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
+
+  // After the read rather than before it: this is the one password path that
+  // already knows whose account it is, so the full policy — the name check
+  // included — costs nothing extra here.
+  assertPasswordPolicy(newPassword, { email: row?.email, name: row?.name });
 
   if (!row?.passwordHash) {
     throw new AuthError(

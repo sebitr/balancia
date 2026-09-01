@@ -4,6 +4,7 @@ import {
   timingSafeEqual,
   type ScryptOptions,
 } from "node:crypto";
+import { containsIdentity, isCommonPassword } from "./common-passwords";
 
 /**
  * Password hashing.
@@ -55,8 +56,26 @@ const PARAMS = {
  */
 const MAX_MEMORY = 256 * 1024 * 1024;
 
+/**
+ * A refusal the person choosing the password is meant to read.
+ *
+ * Carries a `code` for the same reason `AuthError` does: `lib/server-errors.ts`
+ * translates it, and a policy that only speaks English is a policy half the
+ * readers of this app cannot act on. Listed in `SAFE_ERRORS` in
+ * `lib/actions.ts`, without which every one of these would reach the form as
+ * "something went wrong" and the log as an ERROR.
+ */
+export type PasswordErrorCode =
+  | "passwordTooShort"
+  | "passwordTooLong"
+  | "passwordCommon"
+  | "passwordPersonal";
+
 export class PasswordError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: PasswordErrorCode = "passwordTooShort",
+  ) {
     super(message);
     this.name = "PasswordError";
   }
@@ -66,19 +85,63 @@ export class PasswordError extends Error {
 export const MIN_PASSWORD_LENGTH = 10;
 export const MAX_PASSWORD_LENGTH = 512;
 
-export function assertPasswordPolicy(password: string): void {
+/**
+ * What the account is called, for the checks that need to know.
+ *
+ * Optional throughout: `hashPassword` is reached from places that hold a
+ * password and nothing else, and the length bounds — the part that protects
+ * the *server* rather than the account — must run there regardless.
+ */
+export interface PasswordIdentity {
+  readonly email?: string | null;
+  readonly name?: string | null;
+}
+
+/**
+ * The rules a chosen password has to clear.
+ *
+ * Length came first and is still the only one the server needs for its own
+ * sake. The other two are for the account: `MIN_PASSWORD_LENGTH` says nothing
+ * about `password123`, which is ten characters and is guessed within the first
+ * thousand tries of every credential-stuffing run there is, nor about the
+ * address the person is signing up with typed back as its own password.
+ *
+ * Run on every path that sets a password — registration, reset and change —
+ * because a rule that only applies to new accounts leaves the reset form as
+ * the way around it.
+ */
+export function assertPasswordPolicy(
+  password: string,
+  identity: PasswordIdentity = {},
+): void {
   if (password.length < MIN_PASSWORD_LENGTH) {
     throw new PasswordError(
       `Use a password of at least ${MIN_PASSWORD_LENGTH} characters.`,
+      "passwordTooShort",
     );
   }
   if (password.length > MAX_PASSWORD_LENGTH) {
-    throw new PasswordError("That password is too long.");
+    throw new PasswordError("That password is too long.", "passwordTooLong");
+  }
+  if (isCommonPassword(password)) {
+    throw new PasswordError(
+      "That password is one of the most commonly used ones. Please choose another.",
+      "passwordCommon",
+    );
+  }
+  if (containsIdentity(password, identity)) {
+    throw new PasswordError(
+      "Your password should not contain your name or email address.",
+      "passwordPersonal",
+    );
   }
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  assertPasswordPolicy(password);
+export async function hashPassword(
+  password: string,
+  identity: PasswordIdentity = {},
+): Promise<string> {
+  assertPasswordPolicy(password, identity);
   const salt = randomBytes(PARAMS.saltLength);
   const derived = await scryptAsync(
     password.normalize("NFKC"),

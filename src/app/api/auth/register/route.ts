@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getClientIp } from "@/lib/security/actor";
-import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
+import { guardSignUp } from "@/lib/security/signup-guard";
 import { AuthError, registerUser } from "@/modules/auth/service";
 import { setSessionCookie } from "@/modules/auth/cookies";
 import {
@@ -18,6 +18,18 @@ import { trackRoute } from "@/lib/metrics/http";
  * tells the client to say "check your email"); without SMTP the session
  * cookie is set right away, exactly like the web.
  */
+/**
+ * The answer to `/api/auth/challenge`, when this instance asked for one. A
+ * native client that has never heard of it simply sends nothing, and is
+ * refused only where the instance is configured to want it.
+ */
+const proofOfWorkSchema = z
+  .object({
+    nonce: z.string().min(1).max(64),
+    number: z.number().int().nonnegative(),
+  })
+  .nullish();
+
 const registerSchema = z.object({
   name: z.string().trim().min(1, "Enter your name.").max(120),
   email: z.email("Enter a valid email address."),
@@ -25,6 +37,7 @@ const registerSchema = z.object({
     .string()
     .min(10, "Use at least 10 characters.")
     .max(512, "That password is too long."),
+  proofOfWork: proofOfWorkSchema,
 });
 
 export async function POST(request: Request) {
@@ -43,12 +56,10 @@ async function handlePost(request: Request) {
 
   try {
     const ipAddress = await getClientIp();
-    const limit = await consumeRateLimit("signUp", ipAddress);
-    if (!limit.allowed) {
-      throw new RateLimitedError(limit.retryAfterSeconds);
-    }
+    const { proofOfWork, ...credentials } = parsed.data;
+    await guardSignUp({ ipAddress, email: credentials.email, proofOfWork });
 
-    const result = await registerUser(parsed.data, {
+    const result = await registerUser(credentials, {
       userAgent: request.headers.get("user-agent"),
       ipAddress,
     });
@@ -70,9 +81,10 @@ async function handlePost(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    // Registration refusals — email taken, registration closed, password
-    // policy — are written for people and safe to show; they are input
-    // problems here, not the 401 a failed sign-in maps to.
+    // Registration refusals — email taken, registration closed — are written
+    // for people and safe to show, and are input problems here rather than
+    // the 401 the shared funnel maps an AuthError to. The password policy
+    // and the proof of work are already 422 there, so they fall through.
     if (error instanceof AuthError) {
       return noStore({ error: error.message }, { status: 422 });
     }
