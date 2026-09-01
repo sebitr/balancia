@@ -243,6 +243,121 @@ describe("message catalogues", () => {
   });
 });
 
+/**
+ * Guards on the French copy itself.
+ *
+ * The catalogue was written in layers, and the layers disagreed: two
+ * apostrophe characters interleaved inside single namespaces, 130 strings
+ * missing the non-breaking space French wants before its double punctuation,
+ * fourteen strings that vouvoyaient a reader the other 2 700 tutoient, and
+ * six French words for "settled up". Every one of those is mechanical, which
+ * is why they belong here rather than in a reviewer's patience — the same
+ * reasoning as `type-scale.test.ts` and `text-entry-size.test.ts`.
+ *
+ * The marketing homepage is held to the same rules as the rest. It was
+ * written separately, in `vous`, which put a change of register at the door
+ * of the product — and the same sentence in two voices either side of it,
+ * `marketing.cta.registrationClosed` against `register.closedBody`.
+ */
+describe("French copy", () => {
+  it("types every apostrophe as U+2019", () => {
+    // A straight quote is also ICU's escape character, so this is not only a
+    // typographic preference: `d'{name}` would swallow the placeholder.
+    const straight = [...french]
+      .filter(([, message]) => /\p{L}'\p{L}/u.test(message))
+      .map(([key]) => key);
+
+    expect(straight).toEqual([]);
+  });
+
+  it("holds double punctuation to the word before it", () => {
+    // French sets a space before « ; ! ? % » and inside guillemets. It has to
+    // be non-breaking, or a narrow phone wraps the question mark onto a line
+    // of its own. `::` is an ICU number skeleton, not punctuation.
+    const loose = [...french]
+      .filter(
+        ([, message]) =>
+          / [;!?%»]/.test(message) ||
+          / :(?!:)/.test(message) ||
+          /« /.test(message),
+      )
+      .map(([key]) => key);
+
+    expect(loose).toEqual([]);
+  });
+
+  it("addresses the reader as tu, homepage included", () => {
+    // Balancia tutoies. `vous` is correct only where a string addresses more
+    // than one person at once, which is rare enough to name.
+    const ADDRESSES_SEVERAL = new Set([
+      // The invitation the reader sends to the rest of the group.
+      "inviteLink.shareText",
+      // "lequel d'entre vous vient de l'ouvrir" — the group, not the reader.
+      "onboarding.welcome.sharedSub",
+      // "Entre vous deux" — the reader and one other member.
+      "memberStats.eyebrowBetween",
+    ]);
+
+    // Two signals, because a string can vouvoyer without a pronoun in it:
+    // `Réessayez, ou saisissez la dépense` had neither `vous` nor `votre`.
+    // Four letters before `-ez` keeps `chez`, `assez` and `nez` out of it.
+    const vouvoie = [...french]
+      .filter(
+        ([key, message]) =>
+          !ADDRESSES_SEVERAL.has(key) &&
+          (/\b(vous|votre|vos)\b/i.test(message) ||
+            /\b\p{L}{4,}ez\b/u.test(message)),
+      )
+      .map(([key]) => key);
+
+    expect(vouvoie).toEqual([]);
+  });
+
+  it("keeps one French word per idea", () => {
+    // The left-hand side is a word that drifted in; the right-hand side is
+    // the word the app settled on. Add a pair here rather than letting a
+    // second synonym in — a reader moving between two screens should not
+    // meet two vocabularies.
+    const INSTEAD: [RegExp, string, Set<string>][] = [
+      [
+        /\bécritures?\b/i,
+        "transaction",
+        new Set([
+          // "L'écriture des dates" and "avant toute écriture" are the ordinary
+          // noun, not the bookkeeping sense this rule is about.
+          "userSettings.languageNote",
+          "importPage.intro",
+        ]),
+      ],
+      [/\bpasskeys?\b/i, "clé d'accès", new Set()],
+      [/\bmonnaies?\b/i, "devise", new Set()],
+      [/\bréglages?\b/i, "paramètre", new Set()],
+      [/\brèglements?\b/i, "remboursement", new Set()],
+      [/\bjustificatifs?\b/i, "reçu", new Set()],
+      [
+        /\brappels?\b/i,
+        "relance",
+        new Set([
+          // The reminder drafts are the message the reader sends, where
+          // "petit rappel" is what a French speaker actually writes.
+          ...Object.keys(
+            (fr as unknown as { remind: { drafts: Record<string, string> } })
+              .remind.drafts,
+          ).map((draft) => `remind.drafts.${draft}`),
+        ]),
+      ],
+    ];
+
+    const drifted = [...french].flatMap(([key, message]) =>
+      INSTEAD.filter(
+        ([pattern, , allowed]) => !allowed.has(key) && pattern.test(message),
+      ).map(([, preferred]) => `${key}: use "${preferred}"`),
+    );
+
+    expect(drifted).toEqual([]);
+  });
+});
+
 describe("locale negotiation", () => {
   it("honours the highest-quality supported language", () => {
     expect(negotiateLocale("fr-CA,fr;q=0.9,en;q=0.8")).toBe("fr");

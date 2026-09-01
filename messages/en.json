@@ -1014,47 +1014,6 @@
     "iWasPaid": "I got the payment",
     "recordForThem": "Record for them"
   },
-  "landing": {
-    "signIn": "Sign in",
-    "createAccount": "Create account",
-    "eyebrow": "Self-hosted shared expenses",
-    "title": "Shared expenses. Fairly balanced.",
-    "lead": "Balancia tracks what a group spends and works out who owes whom — on a server you control, with no third party in the middle of your money.",
-    "getStarted": "Get started",
-    "haveAccount": "I have an account",
-    "registrationClosed": "Registration is closed on this instance. Ask the administrator for an account, or use a guest invitation link if you have one.",
-    "whatItDoes": "What it does",
-    "features": {
-      "splits": {
-        "title": "Splits that always add up",
-        "body": "Equal, exact, percentage or share-based. Amounts are whole minor units, so allocations sum to the total exactly — every time."
-      },
-      "payers": {
-        "title": "Several payers, no workarounds",
-        "body": "When two people cover one bill, record it once. Balances follow who actually paid what."
-      },
-      "currency": {
-        "title": "Multi-currency, two ways",
-        "body": "Keep each currency balanced separately, or convert everything into one base currency at a rate frozen when you record it."
-      },
-      "passkeys": {
-        "title": "Passkeys and guest links",
-        "body": "Sign in with a passkey or a password. Invite people who do not want an account through a revocable link."
-      },
-      "receipts": {
-        "title": "Receipts kept private",
-        "body": "Attach photos or PDFs. They live in your own storage, behind authorization — never in a public folder."
-      },
-      "recurring": {
-        "title": "Recurring expenses",
-        "body": "Rent, subscriptions, the shared internet bill. Generated on schedule in your group's own timezone."
-      }
-    },
-    "selfHostTitle": "Your instance, your data",
-    "selfHostBody": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and the application sends nothing to third-party services and includes no telemetry.",
-    "footerTagline": "Balancia — shared expenses, fairly balanced.",
-    "footerLicence": "AGPL-3.0-or-later. Modified network versions must offer source."
-  },
   "marketing": {
     "meta": {
       "title": "Shared expenses, fairly balanced",
