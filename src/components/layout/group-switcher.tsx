@@ -143,18 +143,30 @@ export function GroupSwitcher({
    * the column's edge rather than the whitespace around it.
    */
   return (
-    <div className="flex min-w-0 items-center gap-1">
+    // `flex-1`, so the name is handed every pixel the icon cluster opposite is
+    // not using rather than only the ones it happens to be left with.
+    <div className="flex min-w-0 flex-1 items-center gap-0.5">
       <Link
         href="/dashboard"
         transitionTypes={POP}
         aria-label={t("home")}
-        className="-ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+        className="tap-target -ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
       >
         <BalanciaMark className="size-6" />
       </Link>
 
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="group/trigger inline-flex h-[34px] min-w-0 items-center gap-1.5 rounded-xl px-2 transition-colors duration-[140ms] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent motion-reduce:transition-none">
+        {/* The padding and gaps here are tight on purpose. On a 375px phone
+            this row has 343px to divide between a mark, a name, a chevron and
+            three icons, and "Colocation Genève" was losing its last two
+            letters to a seven-pixel shortfall — a name that fits, ellipsed for
+            want of the padding around it. Between this, the `gap-0.5` above
+            and the `flex-1`, a name has eight more pixels than it did.
+
+            A genuinely long name still truncates, which is correct: the header
+            is a secondary display of a name the page states in full in its
+            `h1`, and this trigger opens a panel that spells it out. */}
+        <PopoverTrigger className="tap-target group/trigger inline-flex h-[34px] min-w-0 items-center gap-1 rounded-xl px-1.5 transition-colors duration-[140ms] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent motion-reduce:transition-none">
           <span className="truncate text-base font-semibold tracking-[-0.01em]">
             {groupName}
           </span>

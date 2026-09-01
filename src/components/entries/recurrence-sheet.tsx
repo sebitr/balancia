@@ -332,7 +332,7 @@ export function RecurrenceSheet({
                     })
                   }
                   className={cn(
-                    "h-9 flex-1 rounded-[9px] text-xs transition-colors",
+                    "tap-target h-9 flex-1 rounded-[9px] text-xs transition-colors",
                     frequency === state.frequency
                       ? "bg-accent font-semibold text-foreground"
                       : "font-medium text-muted-foreground",
@@ -630,7 +630,7 @@ function ChipButton({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "h-9 rounded-lg border text-xs tabular-nums transition-colors",
+        "tap-target h-9 rounded-lg border text-xs tabular-nums transition-colors",
         square ? "w-full" : "px-3",
         selected
           ? "border-primary bg-primary/16 font-semibold text-foreground"

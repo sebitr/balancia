@@ -311,7 +311,7 @@ export function NotificationList({
             onClick={() => setFilter(one)}
             aria-pressed={filter === one}
             className={cn(
-              "h-7 flex-1 rounded-[9px] text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+              "tap-target h-7 flex-1 rounded-[9px] text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
               filter === one
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground hover:text-foreground",
@@ -537,7 +537,7 @@ export function NotificationList({
 }
 
 const ICON_BUTTON =
-  "inline-flex size-8 items-center justify-center rounded-[11px] text-foreground/85 transition-colors hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
+  "tap-target inline-flex size-8 items-center justify-center rounded-[11px] text-foreground/85 transition-colors hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
 
 /**
  * The copy each filter shows when it has nothing to show.

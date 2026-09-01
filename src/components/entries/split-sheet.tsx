@@ -203,7 +203,7 @@ export function SplitSheet({
               aria-checked={several}
               onClick={() => onSeveralChange(!several)}
               className={cn(
-                "inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",
+                "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",
                 several
                   ? "border-payer bg-payer/15 font-semibold text-foreground"
                   : "border-dashed border-border bg-white/4 font-normal text-muted-foreground",
@@ -276,7 +276,7 @@ export function SplitSheet({
             onClick={() => onMethodChange(candidate)}
             aria-pressed={candidate === method}
             className={cn(
-              "h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs transition-colors",
+              "tap-target h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs transition-colors",
               candidate === method
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground",
@@ -518,7 +518,7 @@ function ShortcutButton({
     <button
       type="button"
       onClick={onClick}
-      className="h-9 rounded-lg border border-border bg-white/4 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+      className="tap-target h-9 rounded-lg border border-border bg-white/4 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
     >
       {children}
     </button>
@@ -552,7 +552,7 @@ function AddGuestPill({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-border pr-3 pl-1 text-sm font-normal text-muted-foreground transition-colors hover:bg-muted"
+        className="tap-target inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-border pr-3 pl-1 text-sm font-normal text-muted-foreground transition-colors hover:bg-muted"
       >
         <span
           aria-hidden="true"
@@ -603,7 +603,7 @@ function AddGuestPill({
         onClick={() => void submit()}
         disabled={name.trim() === "" || saving}
         aria-label={label}
-        className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground disabled:opacity-50"
+        className="tap-target grid size-10 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground disabled:opacity-50"
       >
         <Check aria-hidden="true" className="size-4" />
       </button>

@@ -145,7 +145,7 @@ export function ReceiptItems({
         <button
           type="button"
           onClick={onSplitByItem}
-          className="inline-flex h-7 items-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"
+          className="tap-target inline-flex h-7 items-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"
         >
           {t("splitByItem")}
         </button>

@@ -54,7 +54,7 @@ export function GroupIconPicker({
         <button
           type="button"
           onClick={onBack}
-          className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-150 hover:bg-foreground/8"
+          className="tap-target -ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-150 hover:bg-foreground/8"
         >
           <ArrowLeft aria-hidden="true" className="size-[18px]" />
           <span className="sr-only">{tCommon("back")}</span>
@@ -124,7 +124,7 @@ export function GroupIconPicker({
                   aria-label={swatch}
                   onClick={() => onColor(swatch)}
                   className={cn(
-                    "size-9 rounded-full transition-transform duration-150",
+                    "tap-target size-9 rounded-full transition-transform duration-150",
                     selected ? "scale-100" : "scale-[0.86]",
                   )}
                   style={{

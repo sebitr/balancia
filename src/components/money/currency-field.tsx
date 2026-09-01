@@ -57,7 +57,7 @@ export function CurrencyField({
         aria-haspopup="dialog"
         aria-label={t("fieldValue", { code: value, name: entry?.name ?? "" })}
         className={cn(
-          "flex h-9 w-full items-center gap-2.5 rounded-md border border-input bg-background px-3 py-1 text-left text-sm shadow-xs ring-offset-background transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "tap-target flex h-9 w-full items-center gap-2.5 rounded-md border border-input bg-background px-3 py-1 text-left text-sm shadow-xs ring-offset-background transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
       >

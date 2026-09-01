@@ -43,7 +43,7 @@ export function AppleSignInButton({
     <a
       href={APPLE_START_PATH}
       className={cn(
-        "inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg",
+        "tap-target inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg",
         "bg-black text-sm font-medium whitespace-nowrap text-white transition-all",
         "hover:bg-black/85 active:translate-y-px",
         "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",

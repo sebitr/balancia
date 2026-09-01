@@ -187,7 +187,7 @@ export function PushCard({ devices }: { devices: PushDevice[] }) {
                   disabled={removing === device.id}
                   onClick={() => void forget(device.id)}
                   aria-label={`${t("deviceRemove")} — ${device.label}`}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                  className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
                 >
                   {removing === device.id ? (
                     <Loader2

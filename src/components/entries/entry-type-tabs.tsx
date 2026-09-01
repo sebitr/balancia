@@ -69,7 +69,7 @@ export function EntryTypeTabs({
             aria-selected={active}
             onClick={() => onChange(type)}
             className={cn(
-              "h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",
+              "tap-target h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",
               active
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground",

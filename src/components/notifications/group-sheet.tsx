@@ -86,7 +86,7 @@ export function GroupSheet({
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          className="mt-1.5 h-10 rounded-xl text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+          className="tap-target mt-1.5 h-10 rounded-xl text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
         >
           {tCommon("cancel")}
         </button>

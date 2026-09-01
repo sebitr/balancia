@@ -55,7 +55,7 @@ export default async function DataSettingsPage() {
         {writable.length > 0 ? (
           <Link
             href={`/groups/${writable[0].id}/import`}
-            className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold transition-colors hover:bg-foreground/6 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="tap-target flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold transition-colors hover:bg-foreground/6 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <Upload aria-hidden="true" className="size-4" />
             {t("importAction")}

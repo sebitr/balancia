@@ -72,7 +72,7 @@ export function CurrencyPicker({
         <button
           type="button"
           onClick={onBack}
-          className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground/85 transition-colors duration-150 hover:bg-foreground/8 hover:text-foreground"
+          className="tap-target -ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground/85 transition-colors duration-150 hover:bg-foreground/8 hover:text-foreground"
         >
           <ArrowLeft aria-hidden="true" className="size-[18px]" />
           <span className="sr-only">{t("back")}</span>
@@ -161,7 +161,7 @@ function SearchField({
         tabIndex={value === "" ? -1 : undefined}
         aria-hidden={value === ""}
         className={cn(
-          "flex size-[26px] shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/85 transition-[opacity,background-color] duration-150 hover:bg-foreground/14",
+          "tap-target flex size-[26px] shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/85 transition-[opacity,background-color] duration-150 hover:bg-foreground/14",
           value === "" ? "pointer-events-none opacity-0" : "opacity-100",
         )}
       >
@@ -244,7 +244,7 @@ function CurrencyRow({
         onClick={onToggleFavorite}
         aria-pressed={favorite}
         className={cn(
-          "flex size-[34px] shrink-0 items-center justify-center rounded-full transition-colors duration-150 hover:bg-foreground/8",
+          "tap-target flex size-[34px] shrink-0 items-center justify-center rounded-full transition-colors duration-150 hover:bg-foreground/8",
           favorite ? "text-primary-ink" : "text-muted-foreground/85",
         )}
       >

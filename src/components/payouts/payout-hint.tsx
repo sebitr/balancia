@@ -263,7 +263,7 @@ export function PayoutHint({
               aria-pressed={active}
               onClick={() => onPick(entry.method)}
               className={cn(
-                "flex h-9 items-center gap-2 rounded-lg border py-0 pr-2.5 pl-2 text-sm font-medium transition-colors",
+                "tap-target flex h-9 items-center gap-2 rounded-lg border py-0 pr-2.5 pl-2 text-sm font-medium transition-colors",
                 active
                   ? "border-accent bg-accent"
                   : "border-input bg-white/5 hover:bg-white/10",
@@ -310,7 +310,7 @@ export function PayoutHint({
               type="button"
               onClick={() => void copy()}
               aria-label={copied ? t("copied") : t("copy")}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
+              className="tap-target flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
             >
               {copied ? (
                 <Check

@@ -139,18 +139,24 @@ const BAND_GAP = 3;
  * One slot is reserved for a remainder whenever every category cannot fit.
  * Totals, rather than already-rounded shares, are added so the remainder's
  * printed percentage stays exact.
+ *
+ * `extent` is whichever axis the spine runs along: its height at the desk,
+ * where it stands beside the list, and its width on a phone, where it lies
+ * above it. A band's minimum is the same 72px either way — it is the size of
+ * the label and the percentage inside it, which do not care which direction
+ * the bands are laid out in — so the only thing that changes is what gets
+ * measured. The name stays `fitBandsToHeight` because that is what the desk
+ * case is and what its tests call.
  */
 export function fitBandsToHeight(
   bands: readonly BandView[],
-  height: number | null,
+  extent: number | null,
+  minimum: number = BAND_MIN_HEIGHT,
 ): BandView[] {
   const capacity =
-    height === null
+    extent === null
       ? RANKED_BANDS + 1
-      : Math.max(
-          2,
-          Math.floor((height + BAND_GAP) / (BAND_MIN_HEIGHT + BAND_GAP)),
-        );
+      : Math.max(2, Math.floor((extent + BAND_GAP) / (minimum + BAND_GAP)));
   if (bands.length <= capacity) return [...bands];
 
   const visible = bands.slice(0, capacity - 1);
@@ -232,16 +238,26 @@ export function Transactions({
   const searchParams = useSearchParams();
   const categoryLabel = useCategoryLabel();
   const spineRef = useRef<HTMLDivElement>(null);
-  const [spineHeight, setSpineHeight] = useState<number | null>(null);
-  const visibleBands = bands ? fitBandsToHeight(bands, spineHeight) : null;
+  /*
+   * However long the spine is along the axis it actually runs on.
+   *
+   * It runs down the side of the list at the desk and across the top of it on
+   * a phone, so the measurement follows the layout rather than assuming the
+   * height. Both come off the same `contentRect`, and the element's own shape
+   * says which one to read: a spine wider than it is tall is lying down.
+   */
+  const [spineExtent, setSpineExtent] = useState<number | null>(null);
+  const visibleBands = bands ? fitBandsToHeight(bands, spineExtent) : null;
 
   useEffect(() => {
     const spine = spineRef.current;
     if (!spine) return;
 
     const observer = new ResizeObserver(([entry]) => {
-      const height = entry?.contentRect.height ?? 0;
-      if (height > 0) setSpineHeight(height);
+      const box = entry?.contentRect;
+      if (!box) return;
+      const extent = box.width > box.height ? box.width : box.height;
+      if (extent > 0) setSpineExtent(extent);
     });
     observer.observe(spine);
     return () => observer.disconnect();
@@ -321,14 +337,30 @@ export function Transactions({
    * ("what has actually moved?") that one-at-a-time chips cannot ask. None on
    * therefore means all, which is also what the last chip turning off returns
    * the reader to.
+   *
+   * Every chip on means all as well, and that was the bug: the two states
+   * produced an identical list while looking like opposites. Arriving at the
+   * screen, both chips sat unpressed and the list showed everything; pressing
+   * both lit them coral and the list showed exactly the same thing, with
+   * `?kind=expense&kind=settlement` in the address bar to prove it was a
+   * different state. There was no way to tell from the screen which of the two
+   * you were in, and no reason for the reader to care.
+   *
+   * So the full set is written as the empty one, and the row has a single
+   * resting state again: nothing lit means nothing is being filtered out.
+   * Every genuinely narrowing combination is still reachable, which is why
+   * this is not the segmented All / Expenses / Repayments it looks like it
+   * wants to be — that would have cost the group holding all three kinds the
+   * ability to ask for two of them.
    */
   const toggleKind = (kind: EntryKind) => {
     const on = wantedKinds.has(kind);
+    const next = KINDS.filter((value) =>
+      value === kind ? !on : wantedKinds.has(value),
+    );
     write({
       ...applied,
-      kinds: KINDS.filter((value) =>
-        value === kind ? !on : wantedKinds.has(value),
-      ),
+      kinds: next.length === present.length ? [] : next,
     });
   };
 
@@ -483,10 +515,10 @@ export function Transactions({
           list underneath it is a control that can only be switched off. What
           is below simply moves up.
 
-          Full width, above the spine rather than beside it: three labels do
-          not fit the list's own column once the spine has taken its 80px, and
-          the truncation that would follow lands on exactly the word that
-          tells the chips apart. */}
+          Full width, and above the spine rather than beside it. Three labels
+          have never fitted the list's own column at the desk, where the spine
+          stands in 80px of it, and the truncation that would follow lands on
+          exactly the word that tells the chips apart. */}
       {present.length > 1 && (
         <div
           role="group"
@@ -504,7 +536,7 @@ export function Transactions({
                 // Equal shares of the row, so the set reads as one control
                 // rather than as a sentence of different lengths.
                 className={cn(
-                  "h-[34px] flex-1 rounded-full px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                  "tap-target h-[34px] flex-1 rounded-full px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   on
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:text-foreground",
@@ -517,21 +549,39 @@ export function Transactions({
         </div>
       )}
 
-      <div className="flex gap-3.5">
+      {/* Column on a phone, row at the desk — which is what puts the spine
+          above the list in the hand and beside it on a screen. */}
+      <div className="flex flex-col gap-3.5 md:flex-row">
         {visibleBands && (
           <div
             ref={spineRef}
             role="group"
             aria-label={t("spreadLabel")}
-            // It fills the viewport between the heading and bottom navigation,
-            // and it sticks: the spine is a proportion, and
-            // a proportion drawn down the side of a list is only readable if
-            // the whole of it is in view at once. Left to grow with the list it
-            // would put a 79% band a thousand pixels tall next to a 3% one
-            // nobody would ever scroll to.
-            // ResizeObserver groups enough lower categories into a remainder
-            // to preserve every band's minimum readable, tappable height.
-            className="sticky top-[4.5rem] flex h-[calc(100dvh-12rem)] w-20 shrink-0 flex-col gap-[3px] self-start overflow-hidden"
+            /*
+             * At the desk it fills the viewport between the heading and the
+             * bottom navigation, and it sticks: the spine is a proportion, and
+             * a proportion drawn down the side of a list is only readable if
+             * the whole of it is in view at once. Left to grow with the list it
+             * would put a 79% band a thousand pixels tall next to a 3% one
+             * nobody would ever scroll to.
+             *
+             * On a phone it lies down instead, and that is not a preference.
+             * Standing, it took `w-20` — 80px of a 375px screen, 21% of the
+             * width, sticky for the whole scroll — and the list paid for it out
+             * of the only column it had: with 261px left, three of five
+             * transactions truncated, "Courses de la semaine" losing 35% of its
+             * name to show a chart that said "Maison 96%". A 96/4 split is the
+             * case where a proportion tells the reader least, and it was
+             * costing the most contested space on the screen to tell them.
+             *
+             * Lying down it is 72px tall — one band's own minimum, so nothing
+             * inside it is redrawn — and the list gets the full width back.
+             *
+             * ResizeObserver groups enough lower categories into a remainder to
+             * preserve every band's minimum readable, tappable size along
+             * whichever axis it is running on.
+             */
+            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start"
           >
             {visibleBands.map((band) => {
               const dimmed = selected.size > 0 && !hasSelection(band);
@@ -559,12 +609,20 @@ export function Transactions({
                     // catalogue in full ("Restaurants & Drinks") and wrap to a
                     // second line. 46px clipped the percentage — the one number
                     // the design says to compare bands by — off the bottom.
-                    "flex min-h-[4.5rem] shrink-0 basis-0 flex-col items-start gap-px overflow-hidden rounded-md px-[7px] pt-[7px] pb-1 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                    //
+                    // The same 72px is the floor on the other axis when the
+                    // spine lies down on a phone: the box holding a two-line
+                    // label and a percentage is the same box whichever way the
+                    // bands are stacked.
+                    "flex min-w-[4.5rem] shrink-0 basis-0 flex-col items-start gap-px overflow-hidden rounded-md px-[7px] pt-[7px] pb-1 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none md:min-h-[4.5rem] md:min-w-0",
                     band.rank === null
                       ? REMAINDER_STYLE
                       : BAND_STYLES[band.rank - 1],
                     dimmed && "opacity-[0.28] saturate-50",
-                    isActive(band) && "translate-x-[2px]",
+                    // A picked band leans towards the list it is filtering,
+                    // which is downwards on a phone and sideways at the desk.
+                    isActive(band) &&
+                      "translate-y-[2px] md:translate-x-[2px] md:translate-y-0",
                   )}
                 >
                   <BandGlyph category={band.categories[0]} />
@@ -606,7 +664,7 @@ export function Transactions({
                   type="button"
                   onClick={() => setQuery("")}
                   aria-label={t("clearSearch")}
-                  className="absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                  className="tap-target absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
                 >
                   <X aria-hidden="true" className="size-[11px]" />
                 </button>
@@ -738,7 +796,7 @@ function FilterButton({
         // 34px square, sharing the search field's height and its border, so
         // the two read as one row rather than as a field and a decoration.
         className={cn(
-          "grid size-[34px] place-items-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+          "tap-target grid size-[34px] place-items-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
           // The coral the mock draws the icon in measures 2.6:1 against the
           // light background and 5.6:1 against the dark one, so the light
           // theme takes the ink it can read. The border and the tint are what

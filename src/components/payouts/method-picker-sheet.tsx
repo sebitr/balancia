@@ -127,7 +127,7 @@ export function MethodPickerSheet({
             type="button"
             onClick={() => onOpenChange(false)}
             aria-label={t("picker.close")}
-            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground transition-colors hover:bg-foreground/14 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground transition-colors hover:bg-foreground/14 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <X aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
           </button>

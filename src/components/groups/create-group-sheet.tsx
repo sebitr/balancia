@@ -168,7 +168,7 @@ export function CreateGroupSheet({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="flex size-8 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors duration-150 hover:bg-foreground/12 hover:text-foreground"
+                className="tap-target flex size-8 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors duration-150 hover:bg-foreground/12 hover:text-foreground"
               >
                 <X aria-hidden="true" className="size-4" />
                 <span className="sr-only">{t("close")}</span>
@@ -381,7 +381,7 @@ function IdentityRow({
         <button
           type="button"
           onClick={onOpenDescription}
-          className="h-7 self-start rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-foreground/6"
+          className="tap-target h-7 self-start rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-foreground/6"
         >
           + {t("addDescription")}
         </button>
@@ -449,7 +449,7 @@ function Participants({
               // The creator's own row keeps the space so the list stays
               // aligned, but there is nothing there to press.
               className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150",
+                "tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150",
                 member.you
                   ? "pointer-events-none opacity-0"
                   : "hover:bg-foreground/8 hover:text-foreground",
@@ -495,7 +495,7 @@ function Participants({
           onClick={onAdd}
           disabled={draft.trim() === ""}
           className={cn(
-            "flex h-8 shrink-0 items-center rounded-full bg-foreground/8 px-3 text-xs font-semibold transition-opacity duration-150",
+            "tap-target flex h-8 shrink-0 items-center rounded-full bg-foreground/8 px-3 text-xs font-semibold transition-opacity duration-150",
             draft.trim() === "" ? "opacity-35" : "opacity-100",
           )}
         >

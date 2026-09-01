@@ -65,7 +65,7 @@ export function DraftRow({ groupId }: { groupId: string }) {
           setDraft(null);
           void discardDraft(groupId);
         }}
-        className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
+        className="tap-target grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
       >
         <X aria-hidden="true" className="size-4" />
       </button>
