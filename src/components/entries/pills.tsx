@@ -128,7 +128,7 @@ export function MemberPill({
       aria-pressed={choice ? undefined : selected}
       aria-label={label}
       className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
+        "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
         selected
           ? cn(PILL_TONE[tone], "font-semibold text-foreground")
           : "border-border bg-white/4 font-normal text-muted-foreground",
@@ -183,7 +183,7 @@ export function ChoicePill({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-full border text-sm transition-colors",
+        "tap-target inline-flex h-10 items-center gap-2 rounded-full border text-sm transition-colors",
         Icon ? "pr-4 pl-1" : "px-4",
         selected
           ? "border-primary bg-primary/15 font-semibold text-foreground"

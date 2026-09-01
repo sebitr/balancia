@@ -95,7 +95,7 @@ export function ExportPanel({ groups }: { groups: ExportableGroup[] }) {
             }),
           )
         }
-        className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="tap-target flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <Download aria-hidden="true" className="size-4" />
         {t("exportAction")}
@@ -120,7 +120,7 @@ function Chip({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "h-8 min-w-16 rounded-full px-3.5 text-xs font-semibold transition-colors",
+        "tap-target h-8 min-w-16 rounded-full px-3.5 text-xs font-semibold transition-colors",
         "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         selected
           ? "bg-primary text-primary-foreground"

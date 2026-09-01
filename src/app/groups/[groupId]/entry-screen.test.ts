@@ -36,6 +36,9 @@ vi.mock("@/lib/actions", () => ({
   requireGroupAccess: async () => ({
     groupId: "g1",
     participantId: "seb",
+    // The screen asks whose account this is, to fall back to their preferred
+    // currency for a group with no habit of its own yet.
+    actor: { kind: "user", userId: "u1" },
     permissions: { manageParticipants: true },
     group: {
       currencyMode: "converted",
@@ -52,7 +55,17 @@ vi.mock("@/modules/categorization/service", () => ({
   loadFrequentCategories: async () => [],
 }));
 vi.mock("@/modules/balances/service", () => ({
-  loadGroupBalances: async () => ({ suggestionsByCurrency: new Map() }),
+  // `currencies` is what the drawer's opening currency is resolved from — the
+  // group's own habit, ahead of any constant. Empty here: this suite is about
+  // a missing entry, and an empty list simply falls through to the group's
+  // declared base.
+  loadGroupBalances: async () => ({
+    currencies: [],
+    suggestionsByCurrency: new Map(),
+  }),
+}));
+vi.mock("@/modules/auth/service", () => ({
+  getUserPreferredCurrency: async () => null,
 }));
 vi.mock("@/i18n/preferences", () => ({ getNumberLocale: async () => "fr-CH" }));
 vi.mock("next-intl/server", () => ({

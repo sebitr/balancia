@@ -14,6 +14,9 @@ import type {
   WeekOfMonth,
 } from "@/modules/recurring/schedule";
 import { listParticipants } from "@/modules/groups/service";
+import { loadGroupBalances } from "@/modules/balances/service";
+import { defaultCurrency } from "@/modules/currencies/default-currency";
+import { getUserPreferredCurrency } from "@/modules/auth/service";
 
 /**
  * The locale's own name for an ISO weekday (1 = Monday). Taken from `Intl`
@@ -33,10 +36,18 @@ export default async function RecurringPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [templates, participants] = await Promise.all([
-    listRecurringExpenses(access.groupId),
-    listParticipants(access.groupId),
-  ]);
+  const [templates, participants, balances, preferredCurrency] =
+    await Promise.all([
+      listRecurringExpenses(access.groupId),
+      listParticipants(access.groupId),
+      // For the currency the form opens on, and nothing else: a repeating
+      // expense should default to what the group already spends in, on the
+      // same reasoning as the entry drawer. See `default-currency`.
+      loadGroupBalances(access),
+      access.actor.kind === "user"
+        ? getUserPreferredCurrency(access.actor.userId)
+        : null,
+    ]);
 
   const t = await getTranslations("recurringPage");
   const tCommon = await getTranslations("common");
@@ -161,7 +172,14 @@ export default async function RecurringPage({
           }))}
           currencyMode={access.group.currencyMode}
           baseCurrency={access.group.baseCurrency}
-          defaultCurrency={access.group.baseCurrency ?? "EUR"}
+          defaultCurrency={defaultCurrency({
+            base: access.group.baseCurrency,
+            used: balances.currencies.map((entry) => ({
+              currency: entry.currency,
+              weight: entry.totalOutstanding,
+            })),
+            preferred: preferredCurrency,
+          })}
         />
       )}
     </div>

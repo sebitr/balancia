@@ -26,6 +26,8 @@ import {
 } from "@/modules/categorization/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { formatMoney, money, toMajorString } from "@/modules/currencies/money";
+import { defaultCurrency } from "@/modules/currencies/default-currency";
+import { getUserPreferredCurrency } from "@/modules/auth/service";
 import {
   getExpense,
   listExpenses,
@@ -101,6 +103,7 @@ export async function EntryScreen({
     balances,
     locale,
     recentExpenses,
+    preferredCurrency,
   ] = await Promise.all([
     listParticipants(access.groupId),
     loadMappings(access),
@@ -118,6 +121,15 @@ export async function EntryScreen({
      * the drawer because the drawer is a route and this is one query.
      */
     listExpenses(access.groupId, { limit: 20 }),
+    /*
+     * Only ever consulted for a group with no base currency and no entries
+     * yet, so it never decides anything in a group that is already running —
+     * but it is what stops the very first expense of a new group opening in
+     * the wrong currency. A guest has no account and so has no preference.
+     */
+    access.actor.kind === "user"
+      ? getUserPreferredCurrency(access.actor.userId)
+      : null,
   ]);
 
   const t = await getTranslations("expensePages");
@@ -207,8 +219,22 @@ export async function EntryScreen({
     guest: participant.userId === null,
   }));
   const selfId = access.participantId ?? participants[0].id;
-  const defaultCurrency =
-    editing?.currency ?? access.group.baseCurrency ?? "EUR";
+  /*
+   * The group's own habit outranks any constant: `currencyMode: "separate"`
+   * leaves `baseCurrency` null, and a hardcoded fallback then opened this
+   * drawer on EUR in groups whose every balance was in francs. Balances carry
+   * one row per currency the group has ever moved money in, which is exactly
+   * the signal, and they are already loaded above.
+   */
+  const defaultEntryCurrency = defaultCurrency({
+    editing: editing?.currency,
+    base: access.group.baseCurrency,
+    used: balances.currencies.map((entry) => ({
+      currency: entry.currency,
+      weight: entry.totalOutstanding,
+    })),
+    preferred: preferredCurrency,
+  });
 
   return (
     <>
@@ -221,7 +247,7 @@ export async function EntryScreen({
         selfId={selfId}
         currencyMode={access.group.currencyMode}
         baseCurrency={access.group.baseCurrency}
-        defaultCurrency={defaultCurrency}
+        defaultCurrency={defaultEntryCurrency}
         timezone={access.group.timezone}
         frequentCategories={frequentCategories}
       />
@@ -233,7 +259,7 @@ export async function EntryScreen({
         selfId={selfId}
         currencyMode={access.group.currencyMode}
         baseCurrency={access.group.baseCurrency}
-        defaultCurrency={defaultCurrency}
+        defaultCurrency={defaultEntryCurrency}
         timezone={access.group.timezone}
         outstanding={outstanding}
         prefill={

@@ -388,6 +388,47 @@
     font-weight: 400;
     letter-spacing: -0.02em;
   }
+
+  /* Every control owes a finger 44px, even the ones that must not look it.
+
+     `settings-row.tsx` already says this in its `min-h-11`, and the bottom bar
+     already spends 74px a tab. Nothing else in the app did: an audit of a
+     phone at 375px measured the search button at 30×30, the theme toggle at
+     32×32, the period picker at 105×30 and the home screen's primary action —
+     "Add expense" — at 112×34. Apple asks for 44×44, Material for 48×48; WCAG
+     2.2 puts the legal floor at 24×24, which the app cleared and nothing else.
+
+     Where a control has room to grow it simply grows, and `button.tsx` grows
+     its two text sizes below `md`. This is for the ones that do not. A phone
+     header at 375px divides 343 pixels between a mark, a group name, a
+     chevron and three icons; taking those icons from 32 to 44 costs the name
+     twenty pixels it is already short of, so the icons keep their box and the
+     *target* grows underneath them instead — the same thing UIKit and Material
+     both do for a toolbar.
+
+     The expansion is centred, so a row of icons ends up with contiguous
+     targets rather than 44px islands separated by dead gaps. Two neighbours
+     4px apart do overlap by a few pixels, and the later one in the DOM takes
+     that strip: a near-miss that used to hit nothing now hits the neighbour.
+     That is the trade, and it is the one every platform makes.
+
+     `:where()` carries no specificity, so a call site that positions the
+     control itself — a close button pinned to a sheet's corner — still wins.
+     An already-positioned element is its own containing block, so the target
+     lands correctly either way. */
+  :where(.tap-target) {
+    position: relative;
+  }
+
+  .tap-target::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    translate: -50% -50%;
+  }
 }
 
 /* The marketing page has a fixed art direction and does not inherit the

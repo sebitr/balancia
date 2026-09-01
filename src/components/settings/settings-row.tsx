@@ -74,20 +74,32 @@ function RowBody({
   return (
     <>
       {icon && <IconTile icon={icon} accent={accent} />}
-      {/* `flex-auto`, not `flex-1`: both halves are sized from their own text,
-          so a row too narrow for both shortens each a little instead of
-          spending the whole shortfall on the label. "Appearance & language"
-          beside "Auto · English" is the row that needs it. */}
-      <span className="flex min-w-0 flex-auto items-center gap-2">
-        <span className="truncate text-sm font-medium">{label}</span>
-        {badge}
+      {/* Label and summary share one line while they both fit, and the summary
+          drops to a second line when they do not.
+
+          Shortening each a little was the previous rule, and it produced rows
+          where neither half could be read: French "Connexion et sécurité"
+          wants 153px of the 134 it was given, and its "Aucune clé d'accès"
+          wants 113 of 99, so the row rendered as two ellipses in a trench
+          coat. Wrapping is what `flex-wrap` plus an unshrinkable summary buys:
+          a row that fits is untouched and stays 44px tall, and only a row that
+          genuinely cannot fit pays a second line — at which point the label
+          has the full width and stops truncating at all.
+
+          The label keeps `flex-auto` so that, on the one-line rows, its growth
+          is still what pushes the summary to the right edge. */}
+      <span className="flex min-w-0 flex-auto flex-wrap items-center gap-x-3 gap-y-0.5">
+        <span className="flex min-w-0 flex-auto items-center gap-2">
+          <span className="truncate text-sm font-medium">{label}</span>
+          {badge}
+        </span>
+        {!trailing && summary && (
+          <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
+            {summary}
+          </span>
+        )}
       </span>
       {trailing}
-      {!trailing && summary && (
-        <span className="min-w-0 shrink truncate text-xs text-muted-foreground">
-          {summary}
-        </span>
-      )}
       {chevron && (
         <ChevronRight
           aria-hidden="true"

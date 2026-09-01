@@ -346,7 +346,7 @@ export function OnboardingFlow({
             type="button"
             onClick={goBack}
             aria-label={t("back")}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
+            className="tap-target flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
           >
             <ChevronLeft aria-hidden="true" className="size-4" />
           </button>

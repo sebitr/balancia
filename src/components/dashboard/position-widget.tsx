@@ -328,10 +328,15 @@ export function PositionWidget({
           narrow phone in English and French, and a longer translation is one
           language away. */}
       <div className="flex flex-wrap items-center gap-2 border-t bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] px-[18px] py-[13px]">
+        {/* 44px in the hand, 34 at the desk. This is the app's primary action
+            and it was 34px tall on a phone — inside its target once
+            `tap-target` is on it, but still drawn smaller than the rows of
+            groups underneath it, which is the wrong way round for the one
+            button most people came to press. */}
         <Button
           type="button"
           onClick={() => setPicking(true)}
-          className="h-[34px] rounded-xl px-[13px] py-[5px] text-sm"
+          className="h-11 rounded-xl px-[13px] py-[5px] text-sm md:h-[34px]"
         >
           <Plus aria-hidden="true" className="size-[15px]" />
           {t("addExpense")}
@@ -342,7 +347,7 @@ export function PositionWidget({
         <Button
           asChild
           variant="outline"
-          className="h-[34px] rounded-xl border-foreground/25 bg-foreground/[0.06] px-[13px] py-[5px] text-sm dark:border-foreground/25 dark:bg-foreground/[0.06]"
+          className="h-11 rounded-xl border-foreground/25 bg-foreground/[0.06] px-[13px] py-[5px] text-sm md:h-[34px] dark:border-foreground/25 dark:bg-foreground/[0.06]"
         >
           {/* Opens the create sheet on this page rather than pushing a screen. */}
           <Link href="?new" replace scroll={false}>

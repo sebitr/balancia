@@ -80,7 +80,7 @@ export function SettledGroups({
                   requestAnimationFrame(() => inputRef.current?.focus());
                 }}
                 aria-label={t("searchLabel")}
-                className="-my-[7px] inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-foreground/[0.06] text-muted-foreground transition-colors hover:bg-foreground/[0.12] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="tap-target -my-[7px] inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-foreground/[0.06] text-muted-foreground transition-colors hover:bg-foreground/[0.12] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Search aria-hidden="true" className="size-[15px]" />
               </button>

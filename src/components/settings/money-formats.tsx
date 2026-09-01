@@ -357,7 +357,7 @@ function ChipRow<T extends string>({
             disabled={disabled}
             onClick={() => onChoose(choice.value)}
             className={cn(
-              "flex h-8.5 shrink-0 items-center rounded-full px-3.25 text-xs font-medium tabular-nums",
+              "tap-target flex h-8.5 shrink-0 items-center rounded-full px-3.25 text-xs font-medium tabular-nums",
               "transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
               "focus-visible:outline-none disabled:opacity-50",
               choice.value === value

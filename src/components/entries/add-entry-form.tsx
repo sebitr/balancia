@@ -1825,7 +1825,7 @@ export function AddEntryForm({
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors duration-150 hover:bg-foreground/12 hover:text-foreground"
+            className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors duration-150 hover:bg-foreground/12 hover:text-foreground"
           >
             <X aria-hidden="true" className="size-4" />
             <span className="sr-only">{t("close")}</span>
@@ -1988,7 +1988,7 @@ export function AddEntryForm({
                   formatMinorUnits(settleBalance.toString(), currency),
                 )
               }
-              className="h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+              className="tap-target h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
             >
               {t("settle.full", {
                 amount: formatMinorUnits(settleBalance.toString(), currency),
@@ -2002,7 +2002,7 @@ export function AddEntryForm({
                   .querySelector<HTMLInputElement>("input[data-entry-amount]")
                   ?.focus();
               }}
-              className="h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+              className="tap-target h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
             >
               {t("settle.partOfIt")}
             </button>

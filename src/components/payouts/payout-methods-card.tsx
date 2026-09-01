@@ -318,7 +318,7 @@ export function PayoutMethodsCard({
                   disabled={pending}
                   onClick={() => remove(entry.method)}
                   aria-label={t("removeMethod", { method: label })}
-                  className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                  className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
                 >
                   <Trash2 aria-hidden="true" className="size-3.5" />
                 </button>

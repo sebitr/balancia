@@ -477,7 +477,7 @@ export function RemindSheet({
             onClick={() => changeTone(option)}
             aria-pressed={tone === option}
             className={cn(
-              "h-[38px] flex-1 rounded-xl border text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              "tap-target h-[38px] flex-1 rounded-xl border text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
               tone === option ? PICKED_CHIP : UNPICKED,
             )}
           >
@@ -534,7 +534,7 @@ export function RemindSheet({
           onClick={() => setLogToActivity((on) => !on)}
           aria-pressed={logToActivity}
           className={cn(
-            "inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            "tap-target inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
             logToActivity ? PICKED_CHIP : UNPICKED,
           )}
         >

@@ -179,7 +179,7 @@ export function FilterSheet({
             type="button"
             onClick={() => onOpenChange(false)}
             aria-label={tf("close")}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+            className="tap-target grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
             <X aria-hidden="true" className="size-4" />
           </button>
@@ -435,9 +435,10 @@ function FilterChip({
       aria-checked={single ? selected : undefined}
       aria-pressed={single ? undefined : selected}
       className={cn(
-        "relative inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
-        // 32px of pill, 44px of finger.
-        "before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']",
+        // 32px of pill, 44px of finger. This chip reached that by hand first,
+        // with its own `before:-inset-y-1.5`; `tap-target` is that idea made
+        // general, so the local copy has gone rather than being run twice.
+        "tap-target relative inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
         leading && "pl-2",
         selected
           ? "bg-primary font-semibold text-primary-foreground"

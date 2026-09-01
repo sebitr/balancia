@@ -27,6 +27,32 @@ export interface SpendingPeriodView {
 }
 
 /**
+ * The narrowest window that still has something to say.
+ *
+ * `spendingPeriodsOf` hands the periods over widest-last — this month, last
+ * month, since the last settlement, all time — so the first one carrying a
+ * figure is also the tightest one that does.
+ *
+ * Opening on "this month" unconditionally is what this replaces, and it read
+ * badly in exactly the groups the app is best at. A trip that ended in August,
+ * opened on the first of September, showed a group total of 0.00, a share of
+ * 0.00, an "0% yours" and an empty bar — four zeros directly under balances
+ * saying the group still owed 3,261.70. Nothing was broken; the card was
+ * answering a question about a month nobody had spent anything in yet.
+ *
+ * A group with no entries at all has nothing to escalate to, and keeps this
+ * month: an empty card is the honest answer there.
+ */
+function widestSpokenPeriod(
+  periods: readonly SpendingPeriodView[],
+): SpendingPeriodKey {
+  const spoken = periods.find((period) =>
+    period.stats.some((stat) => BigInt(stat.groupSpent) !== 0n),
+  );
+  return spoken?.key ?? periods[0]?.key ?? "thisMonth";
+}
+
+/**
  * Quiet context at the bottom of the overview, never the page's headline.
  *
  * Two shapes, because one currency and four are not the same problem. With one
@@ -55,7 +81,9 @@ export function SpendingCard({
   compact: boolean;
 }) {
   const t = useTranslations("group");
-  const [periodKey, setPeriodKey] = useState<SpendingPeriodKey>("thisMonth");
+  const [periodKey, setPeriodKey] = useState<SpendingPeriodKey>(() =>
+    widestSpokenPeriod(periods),
+  );
   const period =
     periods.find((candidate) => candidate.key === periodKey) ?? periods[0];
 
@@ -74,7 +102,7 @@ export function SpendingCard({
         <DropdownMenu>
           <DropdownMenuTrigger
             className={cn(
-              "flex h-[30px] items-center gap-1 border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+              "tap-target flex h-[30px] items-center gap-1 border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
               compact ? "rounded-md" : "rounded-full",
             )}
           >

@@ -411,7 +411,7 @@ function SubcategoryPane({
           type="button"
           onClick={onBack}
           aria-label={t("backToCategories")}
-          className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground transition-colors hover:bg-muted"
+          className="tap-target grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground transition-colors hover:bg-muted"
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
         </button>

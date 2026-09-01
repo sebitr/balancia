@@ -28,7 +28,7 @@ export async function NotificationBell() {
       transitionTypes={PUSH}
       aria-label={unread > 0 ? t("bellUnread", { count: unread }) : t("bell")}
       className={cn(
-        "relative inline-flex size-9 items-center justify-center rounded-md",
+        "tap-target relative inline-flex size-9 items-center justify-center rounded-md",
         "text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
       )}
