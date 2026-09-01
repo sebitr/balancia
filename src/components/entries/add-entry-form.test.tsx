@@ -330,6 +330,75 @@ describe("the drawer", () => {
     expect(backstop).not.toContain("dvh");
     expect(backstop).not.toContain("min(");
   });
+
+  /**
+   * The date row is a `<span>` reading "Today" with an invisible
+   * `<input type="date">` laid over it. A phone opens its calendar for a tap
+   * anywhere on that field, so the row worked there and looked finished. A
+   * desktop browser opens the calendar only for the indicator at the field's
+   * right edge — invisible here along with the rest of the control — so the
+   * click landed on nothing and the date could not be changed without a
+   * keyboard.
+   *
+   * jsdom has no picker of any kind, so the method the fix calls has to be put
+   * on the prototype before there is anything to assert on. That is also why
+   * this is worth a test: nothing else in the suite would notice the handler
+   * going away.
+   */
+  it("opens the platform's calendar from a click on the date row", async () => {
+    const showPicker = vi.fn();
+    // `lib.dom` declares `showPicker` as required, so the prototype has to be
+    // seen through a shape that admits its absence before it can be removed.
+    const prototype = window.HTMLInputElement.prototype as unknown as {
+      showPicker?: () => void;
+    };
+    const original = Object.getOwnPropertyDescriptor(prototype, "showPicker");
+    Object.defineProperty(prototype, "showPicker", {
+      configurable: true,
+      writable: true,
+      value: showPicker,
+    });
+
+    try {
+      const user = userEvent.setup();
+      renderForm();
+
+      await user.click(screen.getByLabelText("Date"));
+
+      expect(showPicker).toHaveBeenCalledTimes(1);
+    } finally {
+      if (original) Object.defineProperty(prototype, "showPicker", original);
+      else delete prototype.showPicker;
+    }
+  });
+
+  /**
+   * Safari only learned `showPicker` in 16, and it throws rather than returns
+   * a failure — `NotAllowedError` without a user gesture. Either way the
+   * calendar stays shut, which is where the reader already was, and the field
+   * still takes a typed date. What must not happen is the click throwing.
+   */
+  it("says nothing when the platform has no picker to open", async () => {
+    // `lib.dom` declares `showPicker` as required, so the prototype has to be
+    // seen through a shape that admits its absence before it can be removed.
+    const prototype = window.HTMLInputElement.prototype as unknown as {
+      showPicker?: () => void;
+    };
+    const original = Object.getOwnPropertyDescriptor(prototype, "showPicker");
+    // jsdom ships without it, so this is the older-Safari case as it stands.
+    if (original) delete prototype.showPicker;
+
+    try {
+      const user = userEvent.setup();
+      renderForm();
+
+      await expect(
+        user.click(screen.getByLabelText("Date")),
+      ).resolves.toBeUndefined();
+    } finally {
+      if (original) Object.defineProperty(prototype, "showPicker", original);
+    }
+  });
 });
 
 describe("the default expense path", () => {

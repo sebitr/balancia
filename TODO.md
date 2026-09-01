@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Open the calendar when the entry's date row is clicked, not just tapped — `fix/entry-date-picker-opens`
 - [ ] Show a payout example from the method's own country, and group the number as it is typed — `feat/payout-country-examples`
 - [ ] Skip the list of who to remind when only one person can be asked — `feat/remind-skip-single-recipient`
 - [ ] Hold back the Swiss QR-bill address until the IBAN says CH — `fix/payout-address-after-iban`
