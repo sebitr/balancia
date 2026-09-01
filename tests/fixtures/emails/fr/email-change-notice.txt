@@ -1,10 +1,10 @@
-Subject: L'adresse e-mail de ton compte Balancia va changer
+Subject: L’adresse e-mail de ton compte Balancia va changer
 
-Quelqu'un a demandé à remplacer l'adresse e-mail de ton compte Balancia par sebastien@trosset.net.
+Quelqu’un a demandé à remplacer l’adresse e-mail de ton compte Balancia par sebastien@trosset.net.
 
-Rien n'a encore changé. La nouvelle adresse doit d'abord être confirmée, et celle-ci cessera de fonctionner dès que ce sera fait.
+Rien n’a encore changé. La nouvelle adresse doit d’abord être confirmée, et celle-ci cessera de fonctionner dès que ce sera fait.
 
-Si ce n'était pas toi, réinitialise ton mot de passe tout de suite — la personne à l'origine de cette demande a accès à ton compte :
+Si ce n’était pas toi, réinitialise ton mot de passe tout de suite — la personne à l’origine de cette demande a accès à ton compte :
 https://balancia.app/forgot-password
 
-Aucune action n'est nécessaire si tu es à l'origine de ce changement.
+Aucune action n’est nécessaire si tu es à l’origine de ce changement.

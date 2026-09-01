@@ -889,47 +889,6 @@
     "settledOnVia": "",
     "backToGroup": ""
   },
-  "landing": {
-    "signIn": "",
-    "createAccount": "",
-    "eyebrow": "",
-    "title": "",
-    "lead": "",
-    "getStarted": "",
-    "haveAccount": "",
-    "registrationClosed": "",
-    "whatItDoes": "",
-    "features": {
-      "splits": {
-        "title": "",
-        "body": ""
-      },
-      "payers": {
-        "title": "",
-        "body": ""
-      },
-      "currency": {
-        "title": "",
-        "body": ""
-      },
-      "passkeys": {
-        "title": "",
-        "body": ""
-      },
-      "receipts": {
-        "title": "",
-        "body": ""
-      },
-      "recurring": {
-        "title": "",
-        "body": ""
-      }
-    },
-    "selfHostTitle": "",
-    "selfHostBody": "",
-    "footerTagline": "",
-    "footerLicence": ""
-  },
   "marketing": {
     "meta": {
       "title": "",
