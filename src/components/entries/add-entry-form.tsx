@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -171,6 +178,32 @@ import type { EntryMember } from "./pills";
 
 type OpenSheet =
   null | "split" | "category" | "currency" | "method" | "recur" | "pair";
+
+/**
+ * Opens the platform's calendar for a click anywhere on the date row.
+ *
+ * A phone opens it for a tap on the field itself, which is the whole reason
+ * the invisible input over the row works there. A desktop browser does not: it
+ * opens the calendar only for the small indicator at the field's right edge,
+ * and here that indicator is invisible along with the rest of the control. So
+ * clicking the word the row shows put the caret in a field nobody could see,
+ * and the date could not be changed at all without a keyboard.
+ *
+ * `showPicker` reports failure by throwing — `NotAllowedError` without a user
+ * gesture, `InvalidStateError` for a field that is not rendered — and both mean
+ * the calendar stayed shut, which is where the reader already was. The field
+ * still takes a typed date either way, so there is nothing to tell them.
+ */
+function openDatePicker(event: MouseEvent<HTMLInputElement>): void {
+  const field = event.currentTarget;
+  // Safari only learned this in 16; an older one keeps the behaviour it had.
+  if (typeof field.showPicker !== "function") return;
+  try {
+    field.showPicker();
+  } catch {
+    /* empty */
+  }
+}
 
 /**
  * An entry that already exists, as the fields that put it back on screen.
@@ -2098,6 +2131,10 @@ export function AddEntryForm({
               aria-label={t("date.label")}
               value={date}
               onChange={(event) => setDate(event.target.value)}
+              // Without this the row is inert on a desktop: the picker the
+              // reader is aiming at only opens for an indicator they cannot
+              // see. See `openDatePicker`.
+              onClick={openDatePicker}
               // `text-base` on an invisible field costs nothing to look at and
               // is the difference between the date picker opening and the date
               // picker opening on a sheet Safari has zoomed into: the sheet
