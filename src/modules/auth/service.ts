@@ -811,6 +811,28 @@ export async function getUserFavoriteCurrencies(
   return sanitiseFavoriteCurrencies(row?.favoriteCurrencies ?? []);
 }
 
+/**
+ * The four preferences an account carries between devices.
+ *
+ * Sign-in already reads these to seed the cookies; this is the same read for
+ * callers who have a session rather than a sign-in — the mobile API, which
+ * has no cookies to seed and asks for them outright.
+ */
+export async function getUserPreferences(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<StoredPreferences> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select(PREFERENCE_COLUMNS)
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row
+    ? preferencesOf(row)
+    : { locale: null, dateFormat: null, numberFormat: null, accentColor: null };
+}
+
 /** Replaces the whole list — the client owns the order, so it sends all of it. */
 export async function saveUserFavoriteCurrencies(
   userId: string,
