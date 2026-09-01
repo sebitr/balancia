@@ -52,6 +52,13 @@ export function actionOutcomes() {
   );
 }
 
+export function rateLimitRefusals() {
+  return getRegistry().counter(
+    "balancia_rate_limit_refusals_total",
+    "Requests refused by a rate limit, by bucket. A signup attack is visible here and nowhere else.",
+  );
+}
+
 export function jobDuration() {
   return getRegistry().histogram(
     "balancia_job_duration_seconds",

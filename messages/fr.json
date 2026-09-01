@@ -2441,7 +2441,12 @@
     "joinLinkExpired": "Ce lien a expiré. Demande-en un nouveau à quelqu’un du groupe.",
     "joinNameTaken": "Quelqu’un d’autre a pris ce nom avant toi. Rouvre le lien pour en choisir un autre.",
     "joinSeatClaimed": "Cette invitation a déjà été utilisée par un autre compte. Demande ton propre lien à la personne qui te l’a envoyé.",
-    "unknownAccent": "Cette couleur d’accent n’est pas proposée par Balancia."
+    "unknownAccent": "Cette couleur d’accent n’est pas proposée par Balancia.",
+    "passwordTooShort": "Utilise un mot de passe d’au moins 10 caractères.",
+    "passwordTooLong": "Ce mot de passe est trop long.",
+    "passwordCommon": "Ce mot de passe est l’un des plus utilisés. Choisis-en un autre.",
+    "passwordPersonal": "Ton mot de passe ne doit pas contenir ton nom ni ton adresse e-mail.",
+    "proofOfWorkRequired": "Ton navigateur n’a pas terminé sa vérification. Recharge la page et réessaie."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",

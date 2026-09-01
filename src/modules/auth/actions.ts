@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getClientIp, getCurrentUser } from "@/lib/security/actor";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
+import { guardSignUp } from "@/lib/security/signup-guard";
 import {
   AuthError,
   changePassword,
@@ -56,10 +57,24 @@ import { signOutDestination } from "@/modules/demo/exit";
  * request bypasses the client-side form, but when they do they should be in
  * the reader's language like everything else.
  */
+/**
+ * The answer to the challenge in `/api/auth/challenge`, when the instance
+ * asked for one. Optional here and enforced in `guardSignUp`, so a client
+ * talking to an instance that wants no proof sends nothing and a client
+ * talking to one that does is refused by the server rather than by a schema.
+ */
+const proofOfWorkSchema = z
+  .object({
+    nonce: z.string().min(1).max(64),
+    number: z.number().int().nonnegative(),
+  })
+  .nullish();
+
 const registerSchema = z.object({
   name: z.string().trim().min(1, "name").max(120),
   email: z.email("email"),
   password: z.string().min(10, "passwordMin").max(512),
+  proofOfWork: proofOfWorkSchema,
 });
 
 const signInSchema = z.object({
@@ -104,13 +119,16 @@ export async function registerAction(
   }
 
   const context = await requestContext();
-  return runAction("auth.register", async () => {
-    const limit = await consumeRateLimit("signUp", context.ipAddress);
-    if (!limit.allowed) {
-      throw new RateLimitedError(limit.retryAfterSeconds);
-    }
+  const { proofOfWork, ...credentials } = parsed.data;
 
-    const result = await registerUser(parsed.data, context);
+  return runAction("auth.register", async () => {
+    await guardSignUp({
+      ipAddress: context.ipAddress,
+      email: credentials.email,
+      proofOfWork,
+    });
+
+    const result = await registerUser(credentials, context);
     let claimedGroupId: string | null = null;
     if (result.session) {
       await setSessionCookie(result.session.token, result.session.expiresAt);
@@ -350,6 +368,7 @@ export async function deleteAccountAction(
 const identitySchema = z.object({
   name: z.string().trim().min(1, "name").max(120),
   email: z.email("email"),
+  proofOfWork: proofOfWorkSchema,
 });
 
 /**
@@ -389,13 +408,16 @@ export async function startCodeSignupAction(
   }
 
   const context = await requestContext();
-  return runAction("auth.startCodeSignup", async () => {
-    const limit = await consumeRateLimit("signUp", context.ipAddress);
-    if (!limit.allowed) {
-      throw new RateLimitedError(limit.retryAfterSeconds);
-    }
+  const { proofOfWork, ...identity } = parsed.data;
 
-    await startCodeSignup(parsed.data, context);
+  return runAction("auth.startCodeSignup", async () => {
+    await guardSignUp({
+      ipAddress: context.ipAddress,
+      email: identity.email,
+      proofOfWork,
+    });
+
+    await startCodeSignup(identity, context);
   });
 }
 

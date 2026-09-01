@@ -358,6 +358,45 @@ export const webauthnChallenges = pgTable(
 );
 
 /**
+ * A proof-of-work challenge handed out before an account may be created.
+ *
+ * Stored rather than signed, and the row is the whole authority. A signed
+ * challenge would need no table and would be replayable for as long as the
+ * signature stayed valid — which defeats the point, because the cost a
+ * proof-of-work imposes is per *attempt*, and an attempt that can reuse
+ * yesterday's answer costs nothing. `consumedAt` is what makes it once.
+ *
+ * `answerHash` is the SHA-256 of the nonce followed by the number the client
+ * has to find, so the answer itself is never stored and the row cannot be read
+ * out of a database dump and turned into free signups.
+ *
+ * Only ever populated where `SIGNUP_PROOF_OF_WORK` is on, which is off by
+ * default: a self-hosted instance behind a closed registration has nothing to
+ * spend this on.
+ */
+export const proofOfWorkChallenges = pgTable(
+  "proof_of_work_challenges",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** Random, and the handle the client is given. */
+    nonce: text("nonce").notNull(),
+    /** SHA-256 of `nonce + answer`, hex encoded. */
+    answerHash: text("answer_hash").notNull(),
+    /** The ceiling the answer was drawn below, so the client knows when to stop. */
+    maxNumber: integer("max_number").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("proof_of_work_challenges_nonce_unique").on(table.nonce),
+    index("proof_of_work_challenges_expires_idx").on(table.expiresAt),
+  ],
+);
+
+/**
  * Single-use tokens for email verification, password reset and email change.
  * Hashed, like everything else that grants access.
  */

@@ -38,7 +38,7 @@ vi.mock("@/modules/auth/mailer", () => ({
   resetMailer: () => {},
 }));
 
-const PASSWORD = "correct-horse-battery-staple";
+const PASSWORD = "quiet-lantern-drifts-42";
 
 function uniqueEmail(prefix: string): string {
   return `${prefix}-${randomUUID()}@example.test`;

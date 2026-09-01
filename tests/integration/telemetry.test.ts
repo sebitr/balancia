@@ -352,12 +352,12 @@ describe("who may change any of this", () => {
     const first = await registerUser({
       name: "Ada",
       email: "ada@example.test",
-      password: "correct horse battery staple",
+      password: "quiet lantern drifts 42",
     });
     const second = await registerUser({
       name: "Grace",
       email: "grace@example.test",
-      password: "correct horse battery staple",
+      password: "quiet lantern drifts 42",
     });
 
     expect(await isInstanceAdmin(first.user.userId)).toBe(true);

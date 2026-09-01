@@ -184,6 +184,22 @@ const envSchema = z
     ALLOW_REGISTRATION: booleanish.default(true),
 
     /**
+     * Make creating an account cost a second of the visitor's CPU.
+     *
+     * The browser is handed a puzzle it can only solve by hashing its way
+     * through it, and the signup is refused without the answer. A person
+     * notices nothing; a script opening accounts in bulk needs hours of
+     * compute it did not have to spend before. See
+     * `src/lib/security/proof-of-work.ts` for what it does and does not buy.
+     *
+     * Off by default, and the right default. A private instance should close
+     * registration outright — `ALLOW_REGISTRATION=false` — which costs its
+     * handful of users nothing at all; this is for the instance that has to
+     * stay open to strangers.
+     */
+    SIGNUP_PROOF_OF_WORK: booleanish.default(false),
+
+    /**
      * Turns this whole process into a public demo.
      *
      * The instance stops using PostgreSQL entirely: `getDb()` returns an

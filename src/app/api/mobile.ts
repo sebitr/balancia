@@ -6,6 +6,8 @@ import {
   AuthorizationError,
 } from "@/lib/security/authorization";
 import { RateLimitedError } from "@/lib/security/rate-limit";
+import { ProofOfWorkError } from "@/lib/security/proof-of-work";
+import { PasswordError } from "@/modules/auth/passwords";
 import { logger } from "@/lib/logger";
 import { AllocationError } from "@/modules/expenses/allocation";
 import { AuthError } from "@/modules/auth/service";
@@ -99,7 +101,13 @@ export function mobileApiError(
   if (
     error instanceof AllocationError ||
     error instanceof InvalidAmountError ||
-    error instanceof CurrencyConfigurationError
+    error instanceof CurrencyConfigurationError ||
+    // The password policy, and the proof of work an instance may ask a signup
+    // for. Both are things the caller can fix and try again, and both carry a
+    // sentence saying which — so 422 with the reason rather than the 500 an
+    // unhandled error becomes.
+    error instanceof PasswordError ||
+    error instanceof ProofOfWorkError
   ) {
     return noStore({ error: error.message }, { status: 422 });
   }

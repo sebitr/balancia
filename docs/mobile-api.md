@@ -55,6 +55,56 @@ session; without it the session cookie is set right away, like the web form.
 Registration refusals (email taken, registration closed, password policy) are
 422, not the 401 a failed sign-in maps to.
 
+### Creating an account may cost a second of work
+
+An instance may set
+[`SIGNUP_PROOF_OF_WORK`](environment.md#signup_proof_of_work), and then every
+door to account creation — this route, `POST /api/auth/passkey/signup`, and the
+web's own forms — refuses a signup that does not carry a solved challenge.
+
+`GET /api/auth/challenge` is how a client finds out, and it answers on an
+instance that wants nothing as readily as on one that does:
+
+```json
+{ "enabled": false }
+```
+
+```json
+{
+  "enabled": true,
+  "algorithm": "SHA-256",
+  "nonce": "b9Vd…",
+  "challenge": "3f7c…",
+  "maxNumber": 150000
+}
+```
+
+`challenge` is the hex SHA-256 of `nonce` followed by a number the server drew
+below `maxNumber`. Count from zero until the hashes match — there is no
+shortcut, which is the point — and send the number back on the signup:
+
+```json
+{
+  "name": "…",
+  "email": "…",
+  "password": "…",
+  "proofOfWork": { "nonce": "b9Vd…", "number": 91422 }
+}
+```
+
+A challenge is good for fifteen minutes and for exactly one signup: the answer
+is spent whether or not the account was created, so a signup refused for some
+other reason needs a fresh challenge before the retry. A missing or spent
+answer on an instance that wants one is a 422 from `/register` and a 400 from
+the passkey route.
+
+Ask for the challenge when the signup screen opens rather than when the button
+is pressed. On a phone the search takes about a second, and it should happen
+while somebody is still typing.
+
+A client that never implements any of this keeps working everywhere the setting
+is off, which is the default.
+
 ## Reads
 
 | Method | Path                                                     | Body of the answer                                                                                                                                                                                                                   |

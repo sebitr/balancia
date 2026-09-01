@@ -16,6 +16,7 @@ import {
   startCodeSignupAction,
   verifySignupCodeAction,
 } from "@/modules/auth/actions";
+import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { CodeInput } from "./code-input";
 import { Headline, PRIMARY, SECONDARY, Spacer, Sub } from "./screens";
@@ -66,6 +67,10 @@ export function IdentityScreen({
 }) {
   const t = useTranslations("onboarding.identity");
   const passkeys = usePasskeySupport();
+  // Solved in the background from the moment this screen appears, so the
+  // second of hashing an instance may ask for happens while somebody is still
+  // typing their address rather than after they have committed to it.
+  const { solution } = useProofOfWork();
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +116,11 @@ export function IdentityScreen({
       const optionsResponse = await fetch("/api/auth/passkey/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: provisionalName, email: address }),
+        body: JSON.stringify({
+          name: provisionalName,
+          email: address,
+          proofOfWork: await solution(),
+        }),
       });
       if (!optionsResponse.ok) {
         fail(await readError(optionsResponse, t("passkeyFailed")));
@@ -156,8 +165,14 @@ export function IdentityScreen({
     setError(null);
     setBusy(true);
     const result = signingIn
-      ? await requestSignInCodeAction({ email: address })
-      : await startCodeSignupAction({ name: provisionalName, email: address });
+      ? // Signing in is not account creation and asks for no proof: the
+        // account already exists, and the address is its own rate limit.
+        await requestSignInCodeAction({ email: address })
+      : await startCodeSignupAction({
+          name: provisionalName,
+          email: address,
+          proofOfWork: await solution(),
+        });
     setBusy(false);
     if (!result.ok) {
       setError(result.error ?? t("codeFailed"));

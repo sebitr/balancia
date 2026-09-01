@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Make an account cost something to create: free a squatted address, cap sign-ups per inbox and per instance, refuse the passwords everyone guesses, and price out bulk sign-up — `feat/signup-abuse-defences`
 - [ ] Give every control a finger's worth of target, and fix five things a UX audit measured — `fix/ux-audit-findings`
 - [ ] Settle the French on one register, one glossary and one apostrophe, and hold it there with a test — `fix/french-copy-consistency`
 - [ ] Open the calendar when the entry's date row is clicked, not just tapped — `fix/entry-date-picker-opens`

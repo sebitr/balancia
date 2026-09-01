@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { getDb, rowsAffected } from "@/lib/db/client";
 import { rateLimits } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
+import { rateLimitRefusals } from "@/lib/metrics/metrics";
 
 /**
  * Fixed-window rate limiting backed by PostgreSQL.
@@ -23,6 +24,9 @@ export interface RateLimitPolicy {
 export type RateLimitBucket =
   | "signIn"
   | "signUp"
+  | "signUpEmail"
+  | "signUpTotal"
+  | "proofOfWork"
   | "verifyCode"
   | "signInCode"
   | "guestRedeem"
@@ -52,6 +56,37 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
   return {
     signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
     signUp: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    /*
+     * The same ceiling, keyed on the address being signed up rather than on
+     * whoever is asking.
+     *
+     * Every door here mails the address the *caller* typed — a confirmation
+     * link or a six-digit code — so an unauthenticated stranger decides who
+     * this instance writes to. Keyed by IP alone that is a mail cannon: a
+     * modest pool of addresses buys five sends an hour each, all of them at
+     * one inbox, and the reputation it costs is the operator's SMTP domain.
+     * Keyed by recipient it cannot be aimed, however many addresses the
+     * sender has.
+     *
+     * Wider than a day would strand somebody who genuinely mistyped twice;
+     * three is enough for a typo and a correction and no kind of campaign.
+     */
+    signUpEmail: { limit: Math.max(3, authMax), windowSeconds: 86_400 },
+    /*
+     * And a ceiling across the whole instance, keyed on nothing.
+     *
+     * The two buckets above both assume the attacker is scarce in something —
+     * addresses, or targets. A botnet is scarce in neither, and without a
+     * total there is no number of accounts an instance cannot be made to
+     * create overnight. Fifty an hour is far above what any self-hosted
+     * deployment sees and far below what makes the database somebody's
+     * plaything; `AUTH_RATE_LIMIT_MAX` lifts it for the test suite that
+     * legitimately needs more.
+     */
+    signUpTotal: { limit: Math.max(50, authMax), windowSeconds: 3600 },
+    // Handing out proof-of-work challenges is cheap but not free — each one is
+    // a row. Generous enough that a reloaded form never notices.
+    proofOfWork: { limit: Math.max(60, authMax), windowSeconds: 3600 },
     /*
      * The tightest bucket in the set, and the one doing the most work.
      *
@@ -149,6 +184,11 @@ export async function consumeRateLimit(
 
   const count = row?.count ?? 1;
   const allowed = count <= policy.limit;
+  // The bucket name is a literal from the union above, so this label is
+  // bounded like every other one. Counted here rather than at the call sites
+  // because a refusal nobody records is an attack nobody sees: this is the
+  // only place that knows a limit was hit.
+  if (!allowed) rateLimitRefusals().increment({ bucket: bucketName });
   const windowEnd = start.getTime() + policy.windowSeconds * 1000;
   const retryAfterSeconds = Math.max(
     1,
@@ -178,5 +218,34 @@ export class RateLimitedError extends Error {
   constructor(readonly retryAfterSeconds: number) {
     super("Too many attempts. Please try again later.");
     this.name = "RateLimitedError";
+  }
+}
+
+/**
+ * The three ceilings account creation stands behind, spent in one call.
+ *
+ * Reached through `security/signup-guard.ts` rather than directly, which is
+ * what keeps the four front doors — the web form, the mobile API, the passkey
+ * ceremony and the emailed code — behind the same policy. One of them growing
+ * a limit the others did not is the failure this shape exists to prevent.
+ *
+ * The instance ceiling goes first, so a flood cannot also burn through the two
+ * narrower allowances on its way to being refused.
+ */
+export async function enforceSignUpLimits(
+  ipAddress: string,
+  email: string,
+): Promise<void> {
+  const attempts: readonly [RateLimitBucket, string][] = [
+    ["signUpTotal", "instance"],
+    ["signUp", ipAddress],
+    // Lowercased, never normalised further: this is a rate-limit key, not an
+    // identity, and it must not need the auth module to compute.
+    ["signUpEmail", email.trim().toLowerCase()],
+  ];
+
+  for (const [bucket, key] of attempts) {
+    const limit = await consumeRateLimit(bucket, key);
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
   }
 }

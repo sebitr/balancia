@@ -401,6 +401,30 @@ guest invitation links keep working.
 To create accounts on a closed instance, set it `true` briefly, register, and
 set it back.
 
+### `SIGNUP_PROOF_OF_WORK`
+
+Default `false`. Set `true` to make creating an account cost the visitor's
+browser about a second of hashing before the server will look at it.
+
+The register page asks this instance for a puzzle, solves it while the form is
+being filled in, and sends the answer along with the signup; a signup without a
+valid, unspent answer is refused. Somebody typing their name and password
+notices nothing — the work finishes long before they press the button. A script
+opening ten thousand accounts needs hours of compute it did not need before.
+
+It is not a CAPTCHA and does not try to be one. It cannot tell a person from a
+script, only a cheap script from an expensive one, and an attacker with rented
+GPUs will still get through. What it removes is bulk signup from a laptop,
+which is what the traffic actually looks like.
+
+Leave it off on a private instance: [`ALLOW_REGISTRATION=false`](#allow_registration)
+closes the door completely and costs your handful of users nothing. Turn it on
+where registration has to stay open to strangers.
+
+Nothing else changes when it is on. There is no third party involved, no
+account to open anywhere, and an instance with no route to the internet works
+exactly as one with a route does.
+
 ### `AUTH_RATE_LIMIT_MAX`
 
 Default `0`, meaning the built-in protective limits apply:
@@ -409,6 +433,8 @@ Default `0`, meaning the built-in protective limits apply:
 | ------------------------ | ---------------------------- |
 | Sign in                  | 10 per IP per 5 minutes      |
 | Register                 | 5 per IP per hour            |
+| Register, one address    | 3 per email per day          |
+| Register, whole instance | 50 per hour                  |
 | Password reset request   | 5 per IP per hour            |
 | Guest link redemption    | 20 per IP per 10 minutes     |
 | Receipt upload           | 60 per IP per 10 minutes     |
@@ -416,7 +442,13 @@ Default `0`, meaning the built-in protective limits apply:
 | Push device registration | 30 per IP per 10 minutes     |
 | Test notification        | 5 per account per 10 minutes |
 
-A non-zero value raises the three credential limits. **Only do this where many
+The two signup rows below the per-IP one are what a per-IP limit alone cannot
+do. Registering mails whichever address the caller typed, so keyed on the
+sender it can be aimed at somebody else's inbox from a pool of addresses; keyed
+on the _recipient_ it cannot. The instance-wide row is the backstop against a
+botnet, which is scarce in neither addresses nor targets.
+
+A non-zero value raises the credential limits. **Only do this where many
 legitimate attempts genuinely share one address** — an automated test suite
 against a private instance. On a public deployment these limits are what make
 password guessing and account enumeration expensive.

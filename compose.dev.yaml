@@ -48,6 +48,9 @@ x-dev-environment: &dev-environment
   SMTP_SECURE: false
   SMTP_FROM: balancia@localhost
   ALLOW_REGISTRATION: true
+  # Off in development, where every signup is yours and the second of hashing
+  # is only in the way. Set DEV_SIGNUP_PROOF_OF_WORK=true to exercise it.
+  SIGNUP_PROOF_OF_WORK: ${DEV_SIGNUP_PROOF_OF_WORK:-false}
   # Off by default, as in production: switching it on makes real requests to a
   # third party. Set DEV_EXCHANGE_RATE_PROVIDER=frankfurter to exercise rate
   # suggestions, or point DEV_EXCHANGE_RATE_API_URL at a local stub.

@@ -42,6 +42,7 @@ const DOMAIN_TABLES = [
   "groups",
   "verification_tokens",
   "webauthn_challenges",
+  "proof_of_work_challenges",
   "passkeys",
   "sessions",
   "users",

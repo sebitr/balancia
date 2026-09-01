@@ -2441,7 +2441,12 @@
     "joinLinkExpired": "This link has expired. Ask somebody in the group for a fresh one.",
     "joinNameTaken": "Somebody else claimed that name first. Open the link again to pick another.",
     "joinSeatClaimed": "This invitation was already used by a different account. Ask whoever invited you for your own link.",
-    "unknownAccent": "That is not an accent colour Balancia offers."
+    "unknownAccent": "That is not an accent colour Balancia offers.",
+    "passwordTooShort": "Use a password of at least 10 characters.",
+    "passwordTooLong": "That password is too long.",
+    "passwordCommon": "That password is one of the most commonly used ones. Choose another.",
+    "passwordPersonal": "Your password should not contain your name or your email address.",
+    "proofOfWorkRequired": "Your browser did not finish its verification. Reload the page and try again."
   },
   "serverValidation": {
     "checkForm": "Check the form.",
