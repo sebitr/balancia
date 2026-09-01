@@ -17,6 +17,14 @@ import {
   noStore,
   readJsonBody,
 } from "@/app/api/mobile";
+import { resolveAccent } from "@/modules/profile/accent";
+import {
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_NUMBER_FORMAT,
+  isDateFormat,
+  isNumberFormat,
+} from "@/i18n/format";
+import { DEFAULT_LOCALE, isAppLocale } from "@/i18n/locales";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
@@ -122,6 +130,13 @@ async function handleDelete() {
  * The account as the app's start screen needs it. `preferredCurrency` and the
  * favourites seed the expense form's currency picker, which is why this is a
  * fresh read rather than an echo of the actor.
+ *
+ * The four display preferences ride along because a native client has no
+ * cookie to seed: the browser learns its accent and notation from cookies set
+ * at sign-in, and the app learns them here, at the same moment and from the
+ * same columns. They are resolved to the words the settings screens are
+ * labelled with rather than sent as the nulls the columns hold — see the note
+ * on `resolvedPreferences` in `/api/profile`.
  */
 async function currentUserPayload(userId: string) {
   const db = getDb();
@@ -132,6 +147,9 @@ async function currentUserPayload(userId: string) {
       name: users.name,
       emailVerifiedAt: users.emailVerifiedAt,
       locale: users.locale,
+      dateFormat: users.dateFormat,
+      numberFormat: users.numberFormat,
+      accentColor: users.accentColor,
       preferredCurrency: users.preferredCurrency,
       favoriteCurrencies: users.favoriteCurrencies,
     })
@@ -145,7 +163,14 @@ async function currentUserPayload(userId: string) {
     email: row.email,
     name: row.name,
     emailVerified: row.emailVerifiedAt !== null,
-    locale: row.locale,
+    locale: isAppLocale(row.locale) ? row.locale : DEFAULT_LOCALE,
+    dateFormat: isDateFormat(row.dateFormat)
+      ? row.dateFormat
+      : DEFAULT_DATE_FORMAT,
+    numberFormat: isNumberFormat(row.numberFormat)
+      ? row.numberFormat
+      : DEFAULT_NUMBER_FORMAT,
+    accentColor: resolveAccent(row.accentColor),
     preferredCurrency: row.preferredCurrency,
     favoriteCurrencies: row.favoriteCurrencies,
   };
