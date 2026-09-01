@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactElement } from "react";
+import type { EditingEntry } from "@/components/entries/add-entry-form";
 
 /**
  * What the entry screen does when the entry is not there any more.
@@ -69,6 +71,23 @@ vi.mock("@/components/entries/add-entry-drawer", () => ({
 }));
 
 const { EntryScreen } = await import("./entry-screen");
+
+/**
+ * The `editing` the screen hands the drawer.
+ *
+ * `EntryScreen` returns an element rather than rendered output — the drawer is
+ * a client component, mocked to nothing above and never invoked — so the props
+ * it was built with are read straight off the tree.
+ */
+function editingOf(screen: unknown): EditingEntry {
+  const root = screen as ReactElement<{ children?: unknown }>;
+  const children = root.props.children;
+  for (const child of Array.isArray(children) ? children : [children]) {
+    const candidate = child as ReactElement<{ editing?: EditingEntry }> | null;
+    if (candidate?.props?.editing) return candidate.props.editing;
+  }
+  throw new Error("the screen drew no drawer carrying an `editing`");
+}
 
 beforeEach(() => {
   notFound.mockClear();
@@ -144,5 +163,47 @@ describe("an entry that is no longer there", () => {
 
     expect(screen).not.toBeNull();
     expect(notFound).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The one this file is here to keep out. Editing read `payers[0]` and let
+   * the rest go, so reopening a two-payer expense — one made through the API,
+   * or brought in by an import — and saving it wrote back a one-payer expense
+   * holding the whole amount. Nothing said so, and the balances moved.
+   */
+  it("brings every payer back, not just the first", async () => {
+    getExpense.mockResolvedValue({
+      id: "e1",
+      direction: "out",
+      amount: 9000n,
+      currency: "CHF",
+      exchangeRate: null,
+      expenseDate: "2026-08-12",
+      description: "Boat",
+      category: null,
+      notes: null,
+      payers: [
+        { participantId: "seb", amount: 6000n },
+        { participantId: "grace", amount: 3000n },
+      ],
+      shares: [
+        { participantId: "seb", amount: 4500n },
+        { participantId: "grace", amount: 4500n },
+      ],
+      splitMethod: "equal",
+      splitInput: null,
+    });
+
+    const screen = await EntryScreen({
+      groupId: "g1",
+      dismissTo: "back",
+      edit: { kind: "expense", id: "e1" },
+      whenGone: "nothing",
+    });
+
+    expect(editingOf(screen).payers).toEqual([
+      { participantId: "seb", amountText: "60.00" },
+      { participantId: "grace", amountText: "30.00" },
+    ]);
   });
 });

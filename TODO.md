@@ -11,7 +11,6 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
-- [ ] Rework the Add Entry drawer: income vocabulary, settlement pairs, recurrence, entry friction — `feat/add-entry-rework`
 - [ ] Show a payout example from the method's own country, and group the number as it is typed — `feat/payout-country-examples`
 - [ ] Skip the list of who to remind when only one person can be asked — `feat/remind-skip-single-recipient`
 - [ ] Hold back the Swiss QR-bill address until the IBAN says CH — `fix/payout-address-after-iban`
@@ -38,6 +37,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-08-31 Rework the Add Entry drawer: income vocabulary, settlement pairs, recurrence, entry friction — #271
 - [x] 2026-08-30 Settle up with a code the payee's own bank reads, beyond the two SEPA ones — #260
 - [x] 2026-08-30 Format the nine files that were committed unformatted — #261
 - [x] 2026-08-30 Point the offline journey at the promise the shell now makes — #262
