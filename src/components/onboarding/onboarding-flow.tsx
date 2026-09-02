@@ -621,7 +621,19 @@ export function OnboardingFlow({
         )}
 
         {screen === "firstGroup" && (
-          <FirstGroupScreen name={firstNameOf(name)} onLeave={leave} />
+          <FirstGroupScreen
+            name={firstNameOf(name)}
+            /*
+              Straight into the sheet, not onto a dashboard that says "No
+              groups yet" a second time with the same button under it. The
+              dashboard opens its create sheet for `?new`, so the first thing
+              on screen is the one field that matters.
+            */
+            onLeave={() => {
+              router.push("/dashboard?new");
+              router.refresh();
+            }}
+          />
         )}
       </main>
     </div>

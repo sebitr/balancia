@@ -383,6 +383,31 @@ describe("the cold arrival", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens the create sheet from the first-group screen, not an empty list", async () => {
+    // "You're in. No groups yet. Create your first group" used to land on a
+    // dashboard saying "Nothing here yet. Create a group": two screens, two
+    // identical buttons, before the one field that matters.
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+    await user.type(screen.getByRole("textbox", { name: "Your name" }), "Ada");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(
+      screen.getByRole("button", { name: "Create your first group" }),
+    );
+
+    expect(router.push).toHaveBeenCalledWith("/dashboard?new");
+  });
+
   it("makes a second code wait, so the first cannot be retired in the post", async () => {
     // Issuing a code invalidates the one before it. A resend tapped while the
     // first mail is still arriving is how a correct code stops working, so
