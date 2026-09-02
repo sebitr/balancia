@@ -59,6 +59,23 @@ export function rateLimitRefusals() {
   );
 }
 
+/**
+ * Where people are in the onboarding flow, by arrival and by screen.
+ *
+ * The flow is one URL, so page views cannot see it, and only some of its
+ * screens end in a Server Action. This is the funnel: how many welcomes
+ * became an identity screen, how many identity screens became an arrival,
+ * and how many arrivals left for a group. Both labels are literals from the
+ * route table — three arrivals, nine screens and "left" — and nothing about
+ * who was standing on them.
+ */
+export function onboardingSteps() {
+  return getRegistry().counter(
+    "balancia_onboarding_steps_total",
+    "Onboarding screens reached, by arrival (cold, personal, shared) and step. The funnel between the welcome and the group.",
+  );
+}
+
 export function jobDuration() {
   return getRegistry().histogram(
     "balancia_job_duration_seconds",

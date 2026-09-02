@@ -37,6 +37,14 @@ vi.mock("@/modules/join/actions", () => ({
   joinAsGuestAction,
 }));
 
+// The funnel counter is a fire-and-forget Server Action; what is checked
+// here is that the flow names its screens, not that a registry counted them.
+const recordOnboardingStepAction = vi.hoisted(() => vi.fn(async () => {}));
+
+vi.mock("@/modules/onboarding/actions", () => ({
+  recordOnboardingStepAction,
+}));
+
 const auth = vi.hoisted(() => ({
   requestSignInCodeAction: vi.fn(),
   signInWithCodeAction: vi.fn(),
@@ -68,6 +76,7 @@ beforeEach(() => {
     ok: true,
     data: { groupId: "group-1" },
   });
+  recordOnboardingStepAction.mockClear();
   for (const action of Object.values(auth)) action.mockReset();
   auth.startCodeSignupAction.mockResolvedValue({ ok: true });
   auth.verifySignupCodeAction.mockResolvedValue({
@@ -381,6 +390,40 @@ describe("the cold arrival", () => {
     expect(
       screen.getByRole("button", { name: "Email me a code instead" }),
     ).toBeInTheDocument();
+  });
+
+  it("counts every screen it reaches, and the exit, for the operator's funnel", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    expect(recordOnboardingStepAction).toHaveBeenCalledWith({
+      arrival: "cold",
+      step: "welcome",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(recordOnboardingStepAction).toHaveBeenLastCalledWith({
+      arrival: "cold",
+      step: "identity",
+    });
+
+    auth.requestSignInCodeAction.mockResolvedValue({ ok: true });
+    auth.signInWithCodeAction.mockResolvedValue({
+      ok: true,
+      data: { joinedGroupId: null, claimedGroupId: null },
+    });
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+
+    expect(recordOnboardingStepAction).toHaveBeenLastCalledWith({
+      arrival: "cold",
+      step: "left",
+    });
   });
 
   it("opens the create sheet from the first-group screen, not an empty list", async () => {

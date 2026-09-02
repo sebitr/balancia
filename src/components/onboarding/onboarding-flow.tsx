@@ -10,6 +10,7 @@ import {
   joinAsGuestAction,
   joinWithAccountAction,
 } from "@/modules/join/actions";
+import { recordOnboardingStepAction } from "@/modules/onboarding/actions";
 import {
   nextScreen,
   previousScreen,
@@ -283,12 +284,29 @@ export function OnboardingFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const advance = useCallback((to: ScreenId) => {
-    setScreen(to);
-    // A new screen is a new first field, and the header may have gained a
-    // back button. Both are below the fold on a short phone otherwise.
-    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  /*
+   * The funnel, one count per screen reached.
+   *
+   * The welcome is counted once on mount, every later screen from `advance`,
+   * and the exit from `leave`. Nothing waits on it and nothing hears back:
+   * the operator's metrics endpoint is the only reader, and a screen that
+   * could not be counted is still a screen.
+   */
+  useEffect(() => {
+    void recordOnboardingStepAction({ arrival, step: "welcome" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const advance = useCallback(
+    (to: ScreenId) => {
+      setScreen(to);
+      void recordOnboardingStepAction({ arrival, step: to });
+      // A new screen is a new first field, and the header may have gained a
+      // back button. Both are below the fold on a short phone otherwise.
+      if (typeof window !== "undefined") window.scrollTo(0, 0);
+    },
+    [arrival],
+  );
 
   const goBack = () => {
     if (!previous) return;
@@ -354,6 +372,7 @@ export function OnboardingFlow({
 
   /** Where a route ends: the group it produced, or the dashboard. */
   const leave = () => {
+    void recordOnboardingStepAction({ arrival, step: "left" });
     router.push(groupId ? `/groups/${groupId}` : "/dashboard");
     router.refresh();
   };
@@ -630,6 +649,7 @@ export function OnboardingFlow({
               on screen is the one field that matters.
             */
             onLeave={() => {
+              void recordOnboardingStepAction({ arrival, step: "left" });
               router.push("/dashboard?new");
               router.refresh();
             }}
