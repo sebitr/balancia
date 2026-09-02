@@ -77,6 +77,7 @@ beforeEach(() => {
     data: { groupId: "group-1" },
   });
   recordOnboardingStepAction.mockClear();
+  passkeyDevice.platform = true;
   for (const action of Object.values(auth)) action.mockReset();
   auth.startCodeSignupAction.mockResolvedValue({ ok: true });
   auth.verifySignupCodeAction.mockResolvedValue({
@@ -87,10 +88,15 @@ beforeEach(() => {
   profileActions.setDisplayNameAction.mockResolvedValue({ ok: true });
 });
 
-// WebAuthn does not exist in jsdom, and the hook that asks is a fact about the
-// environment rather than state — so it is stubbed rather than waited for.
+// WebAuthn does not exist in jsdom, and the hooks that ask are facts about the
+// environment rather than state — so they are stubbed rather than waited for.
+// `platform` is the one a test may vary: whether this device can hold a
+// passkey of its own, which decides which button comes first.
+const passkeyDevice = vi.hoisted(() => ({ platform: true as boolean | null }));
+
 vi.mock("@/components/auth/use-passkey-support", () => ({
   usePasskeySupport: () => true,
+  usePlatformAuthenticator: () => passkeyDevice.platform,
 }));
 
 const group: OnboardingGroupView = {
@@ -508,6 +514,70 @@ describe("the cold arrival", () => {
     expect(screen.queryByText("No groups yet")).toBeNull();
     expect(router.push).toHaveBeenCalledWith("/dashboard");
     expect(profileActions.setDisplayNameAction).not.toHaveBeenCalled();
+  });
+
+  it("says what a passkey is, in the words people recognise", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    expect(
+      screen.getByText(
+        "Your face, fingerprint or screen lock. Nothing to remember.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("puts the code first on a device that cannot hold a passkey", async () => {
+    // A desktop with a WebAuthn API and nothing behind it: the passkey button
+    // there opens a sheet asking for a phone or a security key, so it waits
+    // underneath the code rather than leading with a dead end.
+    passkeyDevice.platform = false;
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    const buttons = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent?.trim())
+      .filter((label) => label && /passkey|code/i.test(label));
+    expect(buttons).toEqual(["Email me a code", "Continue with a passkey"]);
+  });
+
+  it("keeps the passkey first while the device is still answering", async () => {
+    passkeyDevice.platform = null;
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    const buttons = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent?.trim())
+      .filter((label) => label && /passkey|code/i.test(label));
+    expect(buttons).toEqual([
+      "Continue with a passkey",
+      "Email me a code instead",
+    ]);
+  });
+
+  it("keeps the password page a tap away where there is no mail server", async () => {
+    // Before, the password link appeared only when neither a passkey nor a
+    // code could be offered — so a mail-less instance read on a phone showed
+    // exactly one button, and somebody who did not want a passkey had no
+    // visible way to say so.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    expect(
+      screen.getByRole("link", { name: "Sign up with a password" }),
+    ).toHaveAttribute("href", "/register/password");
   });
 
   it("offers no code on an instance with no mail server", async () => {

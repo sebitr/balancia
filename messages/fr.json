@@ -1615,6 +1615,7 @@
       "resend": "Envoyer un autre code",
       "resendIn": "Envoyer un autre code dans {seconds} s",
       "withPasskey": "Continuer avec une clé d’accès",
+      "passkeyExplainer": "Ton visage, ton empreinte ou le code de ton appareil. Rien à retenir.",
       "signInWithPasskey": "Se connecter avec une clé d’accès",
       "orCode": "M’envoyer un code par e-mail",
       "emailMeACode": "M’envoyer un code par e-mail",

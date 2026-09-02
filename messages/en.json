@@ -1615,6 +1615,7 @@
       "resend": "Send another code",
       "resendIn": "Send another code in {seconds} s",
       "withPasskey": "Continue with a passkey",
+      "passkeyExplainer": "Your face, fingerprint or screen lock. Nothing to remember.",
       "signInWithPasskey": "Sign in with a passkey",
       "orCode": "Email me a code instead",
       "emailMeACode": "Email me a code",

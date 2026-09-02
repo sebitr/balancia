@@ -1,7 +1,10 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { supportsPasskeys } from "@/modules/auth/passkey-client";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  supportsPasskeys,
+  supportsPlatformPasskeys,
+} from "@/modules/auth/passkey-client";
 
 /**
  * Whether this browser can do WebAuthn.
@@ -22,4 +25,30 @@ const getServerSnapshot = (): boolean => false;
 
 export function usePasskeySupport(): boolean {
   return useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+}
+
+/**
+ * Whether this device can hold a passkey of its own: true, false, or null
+ * while the browser is still answering.
+ *
+ * Asked once per mount rather than read, because the answer is a promise —
+ * the browser resolves it against the platform authenticator, not a table.
+ * The null is deliberate: a screen that has to lay out its buttons before the
+ * answer arrives keeps the passkey first until told otherwise, so a phone
+ * never sees the order flip.
+ */
+export function usePlatformAuthenticator(): boolean | null {
+  const [available, setAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void supportsPlatformPasskeys().then((answer) => {
+      if (!cancelled) setAvailable(answer);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return available;
 }

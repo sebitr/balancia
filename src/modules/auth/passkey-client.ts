@@ -5,6 +5,7 @@ import {
   startRegistration,
   browserSupportsWebAuthn,
   browserSupportsWebAuthnAutofill,
+  platformAuthenticatorIsAvailable,
   WebAuthnAbortService,
 } from "@simplewebauthn/browser";
 
@@ -19,6 +20,25 @@ import {
 
 export function supportsPasskeys(): boolean {
   return browserSupportsWebAuthn();
+}
+
+/**
+ * Whether this device can hold a passkey of its own.
+ *
+ * `supportsPasskeys` is true on every desktop Chrome and Firefox, including a
+ * machine with no Touch ID, no Windows Hello and no security key — where a
+ * "Continue with a passkey" button opens a sheet asking for a phone or a key
+ * the reader may not have. This asks about the platform authenticator, which
+ * is what "your face, fingerprint or screen lock" means, and it is what
+ * decides whether the passkey is the first offer or the second.
+ */
+export async function supportsPlatformPasskeys(): Promise<boolean> {
+  if (!browserSupportsWebAuthn()) return false;
+  try {
+    return await platformAuthenticatorIsAvailable();
+  } catch {
+    return false;
+  }
 }
 
 /**
