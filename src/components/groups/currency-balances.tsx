@@ -13,7 +13,11 @@ import {
   Wallet,
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
-import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
+import {
+  TONE,
+  toneFor,
+  type BalanceTone,
+} from "@/components/money/balance-tone";
 import { RemindButton } from "@/components/reminders/remind-button";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -52,12 +56,6 @@ export interface CurrencyBalanceView {
   readonly members: readonly CurrencyMemberView[];
   readonly transfers: readonly CurrencyTransferView[];
 }
-
-const TONE: Record<BalanceTone, string> = {
-  positive: "text-positive-ink",
-  negative: "text-negative-ink",
-  neutral: "text-neutral-balance-ink",
-};
 
 /**
  * Every currency the group has money in, one collapsed row each.
@@ -249,7 +247,7 @@ function CurrencyRow({
               <span
                 className={cn(
                   "flex items-center gap-[5px] text-sm font-semibold",
-                  TONE[tone],
+                  TONE[tone].ink,
                 )}
               >
                 <DirectionArrow tone={tone} className="size-[14px]" />
@@ -397,7 +395,7 @@ function MemberLine({
         <span
           className={cn(
             "flex shrink-0 items-center gap-1.5 text-sm font-semibold",
-            TONE[tone],
+            TONE[tone].ink,
           )}
         >
           <DirectionArrow tone={tone} className="size-[15px]" />

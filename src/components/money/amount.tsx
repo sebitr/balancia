@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 import { cn } from "@/lib/utils";
 import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
@@ -49,25 +49,6 @@ export function Amount({
   );
 }
 
-const TONE_STYLES: Record<BalanceTone, string> = {
-  positive: "text-positive-ink",
-  negative: "text-negative-ink",
-  neutral: "text-neutral-balance-ink",
-};
-
-/** Message keys in the `money` namespace, resolved at render time. */
-const TONE_LABEL_KEYS = {
-  positive: "getsBack",
-  negative: "owes",
-  neutral: "settledUp",
-} as const;
-
-const TONE_SIGNS: Record<BalanceTone, string> = {
-  positive: "+",
-  negative: "−",
-  neutral: "−",
-};
-
 /**
  * A participant balance rendered with all three redundant cues: wording,
  * icon and colour.
@@ -91,8 +72,8 @@ export function BalanceAmount({
   const locale = useNumberLocale();
   const t = useTranslations("money");
   const tone = toneFor(minorUnits);
-  const sign = TONE_SIGNS[tone];
-  const label = t(TONE_LABEL_KEYS[tone]);
+  const sign = TONE[tone].sign;
+  const label = t(TONE[tone].labelKey);
   const magnitude =
     BigInt(minorUnits) < 0n ? -BigInt(minorUnits) : BigInt(minorUnits);
 
@@ -100,7 +81,7 @@ export function BalanceAmount({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 font-medium",
-        TONE_STYLES[tone],
+        TONE[tone].ink,
         size === "large" && "text-xl font-semibold",
         size === "small" && "text-sm",
         className,

@@ -8,6 +8,7 @@ import { CurrencyHeading } from "@/components/money/currency-heading";
 import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { cn } from "@/lib/utils";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 
 /**
  * One currency's position, and the ledger that produced it.
@@ -296,9 +297,7 @@ export function PositionBreakdown({
           signDisplay="exceptZero"
           className={cn(
             "shrink-0 text-base font-semibold",
-            result > 0n && "text-positive-ink",
-            result < 0n && "text-negative-ink",
-            result === 0n && "text-neutral-balance-ink",
+            TONE[toneFor(result)].ink,
           )}
         />
       </div>

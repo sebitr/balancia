@@ -3,6 +3,7 @@ import { Amount } from "@/components/money/amount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initialOf } from "./initials";
 import { cn } from "@/lib/utils";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 
 /**
  * The read-only half of the entry vocabulary.
@@ -34,14 +35,21 @@ import { cn } from "@/lib/utils";
 /** Which of the three a screen is. Decides the chip, and the amount's colour. */
 export type EntryTone = "expense" | "revenue" | "settlement";
 
+/**
+ * Colour marks the exception. An expense is what an entry is unless it says
+ * otherwise, so its chip is plum on plum and carries no tone of its own; the
+ * red is in the figure under it, which is where the meaning lives. It used to
+ * wear the accent, which put a coral chip above a coral-red figure and, with
+ * a mint accent, a green expense chip beside the green income one.
+ */
 const CHIP_TONE: Record<EntryTone, string> = {
-  expense: "bg-primary/15 text-primary-ink",
+  expense: "bg-secondary text-secondary-foreground",
   revenue: "bg-positive/15 text-positive-ink",
   settlement: "bg-payer/15 text-payer-ink",
 };
 
 const DISC_TONE: Record<EntryTone, string> = {
-  expense: "bg-primary/25",
+  expense: "bg-foreground/12",
   revenue: "bg-positive/25",
   settlement: "bg-payer/25",
 };
@@ -470,15 +478,7 @@ export function PartyTableRow({
         <Amount minorUnits={minorUnits} currency={currency} />
       </td>
       {balance !== null && (
-        <td
-          className={cn(
-            figure,
-            "pr-3.5",
-            impact > 0n && "text-positive-ink",
-            impact < 0n && "text-negative-ink",
-            impact === 0n && "text-neutral-balance-ink",
-          )}
-        >
+        <td className={cn(figure, "pr-3.5", TONE[toneFor(impact)].ink)}>
           <span aria-hidden="true">{impact < 0n ? "− " : "+ "}</span>
           <Amount minorUnits={magnitude.toString()} currency={currency} />
           <span className="sr-only"> {balance.label}</span>
@@ -543,7 +543,7 @@ export function ChangeRow({
           <span
             className={cn(
               "flex items-center gap-1 text-sm font-semibold",
-              balance > 0n ? "text-positive-ink" : "text-negative-ink",
+              TONE[toneFor(balance)].ink,
             )}
           >
             <span aria-hidden="true">{balance > 0n ? "+" : "−"}</span>

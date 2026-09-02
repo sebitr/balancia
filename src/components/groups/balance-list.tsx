@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { toneFor } from "@/components/money/balance-tone";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
@@ -152,13 +152,7 @@ export function BalanceList({
 function BalanceValue({ row }: { row: BalanceRowView }) {
   const t = useTranslations("group");
   return (
-    <span
-      className={cn(
-        toneFor(row.minorUnits) === "positive" && "text-positive-ink",
-        toneFor(row.minorUnits) === "negative" && "text-negative-ink",
-        toneFor(row.minorUnits) === "neutral" && "text-neutral-balance-ink",
-      )}
-    >
+    <span className={TONE[toneFor(row.minorUnits)].ink}>
       <Amount
         minorUnits={row.minorUnits}
         currency={row.currency}

@@ -23,6 +23,7 @@ import { useDateFormatter } from "@/i18n/format-context";
 import type { RemindRecipient } from "@/modules/reminders/types";
 import { POP } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
+import { TONE } from "@/components/money/balance-tone";
 
 /**
  * Settle up: the shortest set of transfers that clears the group.
@@ -523,8 +524,8 @@ function TransferAmount({ transfer }: { transfer: SettleUpTransferView }) {
     <span
       className={cn(
         "ml-auto flex shrink-0 items-center gap-1",
-        outgoing && "text-negative-ink",
-        incoming && "text-positive-ink",
+        outgoing && TONE.negative.ink,
+        incoming && TONE.positive.ink,
       )}
     >
       {outgoing && <ArrowUpRight aria-hidden="true" className="size-[15px]" />}

@@ -291,9 +291,12 @@ function CurrencySpendingBlock({
         </div>
         <div className="pl-3">
           <dt className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+            {/* A categorical colour, not the balance green: what you paid is
+                a share of the spending, not money owed to you, and beside an
+                accent dot the balance green could be the accent itself. */}
             <span
               aria-hidden="true"
-              className="size-[7px] rounded-full bg-positive/70"
+              className="size-[7px] rounded-full bg-chart-1/70"
             />
             {t("statYouPaid")}
           </dt>
