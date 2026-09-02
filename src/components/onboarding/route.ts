@@ -82,7 +82,8 @@ export interface OnboardingRouteState {
  *    "keep it" and the account screen, and claiming the name *is* the join.
  *
  *  - **Cold.** No group exists, so there is no arrival screen to land on and
- *    nothing to be a guest of. It ends at the empty state instead.
+ *    nothing to be a guest of. A new account ends at the empty state; a
+ *    sign-in ends on the credential itself, and the dashboard is its welcome.
  *
  * The checklist is the one screen any of them can lose. It is a receipt of
  * what is set up and what is not, so an account that has all of it already —
@@ -91,6 +92,15 @@ export interface OnboardingRouteState {
  */
 export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
   if (state.arrival === "cold") {
+    /*
+     * An account that already exists has nothing left to name and no first
+     * group to be shown: its groups are on the dashboard, so the route ends
+     * the moment the credential lands and the flow leaves for it. Running the
+     * profile screen here is how a returning member was met with an empty
+     * name field, renamed by whatever they typed into it, and then told they
+     * had no groups.
+     */
+    if (state.intent === "signin") return ["welcome", "identity"];
     return ["welcome", "identity", "profile", "firstGroup"];
   }
 

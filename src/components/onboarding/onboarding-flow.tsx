@@ -249,8 +249,12 @@ export function OnboardingFlow({
    * screen is the end of the road for somebody who has nothing left to set
    * up, and offering them a back button to un-claim a name they have already
    * claimed is not a place to return to.
+   *
+   * The one last screen that is not an ending is the identity screen, where a
+   * cold sign-in's route stops: nothing has been committed there until the
+   * credential lands, so the way back to the welcome stays open.
    */
-  const finished = nextScreen(route, screen) === null;
+  const finished = nextScreen(route, screen) === null && screen !== "identity";
   const groupId = joinedGroupId ?? initialGroup?.groupId ?? null;
   /** A shared link finished by an account that already existed. */
   const joinsWithAccount = signedIn && arrival === "shared";
@@ -502,7 +506,11 @@ export function OnboardingFlow({
                 setupComplete,
               });
               const index = next.indexOf("identity");
-              advance(next[index + 1] ?? "arrival");
+              const following = next[index + 1];
+              // A cold sign-in's route ends here: the account exists, its
+              // groups are on the dashboard, and that is the welcome.
+              if (following) advance(following);
+              else leave();
             }}
           />
         )}

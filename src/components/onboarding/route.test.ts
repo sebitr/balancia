@@ -132,6 +132,16 @@ describe("routeFor", () => {
     expect(route).not.toContain("checklist");
   });
 
+  it("ends a cold sign-in on the credential, never on a name or a first group", () => {
+    // The account exists and its groups are on the dashboard. Running the
+    // profile screen here renamed a returning member with whatever they typed
+    // into its empty field, and the first-group screen then told them they
+    // had no groups.
+    const route = routeFor(state("cold", "signin"));
+    expect(route).toEqual(["welcome", "identity"]);
+    expect(nextScreen(route, "identity")).toBeNull();
+  });
+
   it("drops the checklist when there is nothing left on it", () => {
     // Only somebody who arrived signed in can be in this state, and for them
     // the arrival screen is the end: its primary goes straight to the group.
@@ -146,6 +156,13 @@ describe("routeFor", () => {
       "identity",
       "arrival",
     ]);
+  });
+
+  it("keeps the way back open on the last screen of a cold sign-in", () => {
+    // Nothing is committed on the identity screen until the credential
+    // lands, so unlike every other route's last screen it is not an ending.
+    const route = routeFor(state("cold", "signin"));
+    expect(previousScreen(route, "identity")).toBe("welcome");
   });
 
   it("leaves a cold arrival alone, having no checklist to drop", () => {

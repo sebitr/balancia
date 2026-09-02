@@ -293,6 +293,43 @@ describe("the cold arrival", () => {
     ).toBeInTheDocument();
   });
 
+  it("sends a returning account to its groups without asking its name", async () => {
+    // This is the journey that renamed people. Signing in through the welcome
+    // screen ran the profile screen next, with an empty name field and a
+    // disabled Continue, and then a "No groups yet" for an account that had
+    // several. The route ends on the credential now, and the dashboard is the
+    // welcome.
+    auth.requestSignInCodeAction.mockResolvedValue({ ok: true });
+    auth.signInWithCodeAction.mockResolvedValue({
+      ok: true,
+      data: { joinedGroupId: null, claimedGroupId: null },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(
+      screen.getByRole("heading", { name: "Welcome back" }),
+    ).toBeInTheDocument();
+    // The welcome is still one tap away: nothing has been committed yet.
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+
+    expect(auth.signInWithCodeAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("heading", { name: /Last thing/ })).toBeNull();
+    expect(screen.queryByText("No groups yet")).toBeNull();
+    expect(router.push).toHaveBeenCalledWith("/dashboard");
+    expect(profileActions.setDisplayNameAction).not.toHaveBeenCalled();
+  });
+
   it("offers no code on an instance with no mail server", async () => {
     const user = userEvent.setup();
     renderWithIntl(
