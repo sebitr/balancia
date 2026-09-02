@@ -1679,6 +1679,11 @@
       "profileLabel": "Name and photo",
       "profileNotePhoto": "{name}, with a photo",
       "profileNoteInitials": "{name}, initials for now",
+      "passkeyLabel": "Sign in faster next time",
+      "passkeyNote": "Add a passkey to this device",
+      "passkeyNoteDone": "Passkey saved",
+      "passkeyAdded": "Passkey added",
+      "passkeyFailed": "That passkey could not be registered.",
       "payoutsLabel": "Payout method",
       "payoutsNoteSet": "{methods}",
       "payoutsNoteEmpty": "Asked when someone settles with you",
@@ -1714,6 +1719,12 @@
         "title": "{name} wants to settle up",
         "sub": "How should {name} send it? We'll remember for next time.",
         "save": "Save and tell {name}"
+      },
+      "profile": {
+        "title": "Name and photo",
+        "sub": "The name your groups see, and a photo if you feel like it. Tap the circle.",
+        "nameLabel": "Your name",
+        "done": "Done"
       },
       "claim": {
         "title": "Claim this account",

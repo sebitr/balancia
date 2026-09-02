@@ -99,6 +99,15 @@ vi.mock("@/components/auth/use-passkey-support", () => ({
   usePlatformAuthenticator: () => passkeyDevice.platform,
 }));
 
+// The browser's own ceremonies, which jsdom cannot run: what is checked is
+// that the checklist's passkey row runs one and then reads as done.
+const passkeyClient = vi.hoisted(() => ({
+  registerPasskey: vi.fn(async () => {}),
+  signInWithPasskey: vi.fn(async () => {}),
+}));
+
+vi.mock("@/modules/auth/passkey-client", () => passkeyClient);
+
 const group: OnboardingGroupView = {
   groupId: "group-1",
   summary: {
@@ -820,6 +829,7 @@ describe("what the checklist already knows", () => {
 
   const everything = {
     hasPhoto: true,
+    hasPasskey: true,
     currencies: ["CHF", "EUR"],
     payouts: [{ method: "bank", detail: "CH93 0076 2011 6238 5295 7" }],
     pushEnabled: true,
@@ -1017,6 +1027,35 @@ describe("a guest who came to /register to stop being one", () => {
     expect(screen.queryByText("Claim your account")).toBeNull();
     // Leaving is the checklist's own button's job, not this one's.
     expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("offers a passkey for next time, and ticks it once the ceremony ran", async () => {
+    // An account that came in by a code has nothing on the next device but
+    // an inbox. The moment after a successful sign-in is where most passkey
+    // enrolments come from, so the list offers one, right under the account.
+    const user = userEvent.setup();
+    const { rerender } = renderWithIntl(asAGuest);
+
+    await createTheAccount(user);
+    rerender(onceClaimed);
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    const offer = screen.getByRole("button", {
+      name: /Sign in faster next time/,
+    });
+    expect(offer).toBeInTheDocument();
+    // The name-and-photo row opens something now too.
+    expect(
+      screen.getByRole("button", { name: /Name and photo/ }),
+    ).toBeInTheDocument();
+
+    await user.click(offer);
+
+    expect(passkeyClient.registerPasskey).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Passkey saved")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Sign in faster next time/ }),
+    ).toBeNull();
   });
 
   it("keeps the group it was a guest of on screen after the claim", async () => {

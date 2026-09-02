@@ -11,6 +11,9 @@ const base: ChecklistState = {
   credential: "passkey",
   email: "seb@hey.ch",
   hasPhoto: false,
+  hasPasskey: true,
+  passkeyAdded: false,
+  passkeysSupported: true,
   name: "Seb",
   currencies: [],
   payouts: [],
@@ -69,9 +72,76 @@ describe("checklistRows", () => {
     );
   });
 
-  it("keeps five rows whether or not this is a guest", () => {
+  it("keeps to five rows for an account that came in with a passkey", () => {
     expect(checklistRows(base)).toHaveLength(5);
-    expect(checklistRows({ ...base, isGuest: true })).toHaveLength(5);
+  });
+
+  it("leaves a guest four rows: no account to hang a photo on", () => {
+    const rows = checklistRows({ ...base, isGuest: true });
+    expect(rows).toHaveLength(4);
+    expect(rows.map((row) => row.id)).not.toContain("profile");
+    expect(rows.map((row) => row.id)).not.toContain("passkey");
+  });
+
+  it("opens the name-and-photo sheet until there is a photo", () => {
+    // This was the one row nobody could tap: a photo could only be added
+    // from the profile page, which the list never mentioned.
+    expect(row(base, "profile").sheet).toBe("profile");
+    expect(row({ ...base, hasPhoto: true }, "profile").sheet).toBeNull();
+  });
+
+  it("offers a passkey to an account that came in with a code", () => {
+    const rows = checklistRows({
+      ...base,
+      credential: "code",
+      hasPasskey: false,
+    });
+    expect(rows).toHaveLength(6);
+    const passkey = rows.find((candidate) => candidate.id === "passkey");
+    expect(passkey).toMatchObject({
+      marker: "todo",
+      noteKey: "passkeyNote",
+      sheet: "passkey",
+    });
+    // Right after the account row: it is the next thing worth doing.
+    expect(rows[1]?.id).toBe("passkey");
+  });
+
+  it("never offers a passkey the account already has, or cannot hold", () => {
+    // Already has one, somewhere: the list is for what is left.
+    expect(
+      checklistRows({ ...base, credential: "code", hasPasskey: true }).map(
+        (candidate) => candidate.id,
+      ),
+    ).not.toContain("passkey");
+    // Unless it was this list that added it, in which case the row stays as
+    // the receipt.
+    expect(
+      checklistRows({
+        ...base,
+        credential: "code",
+        hasPasskey: true,
+        passkeyAdded: true,
+      }).find((candidate) => candidate.id === "passkey"),
+    ).toMatchObject({
+      marker: "done",
+      noteKey: "passkeyNoteDone",
+      sheet: null,
+    });
+    expect(
+      checklistRows({
+        ...base,
+        credential: "code",
+        hasPasskey: false,
+        passkeysSupported: false,
+      }).map((candidate) => candidate.id),
+    ).not.toContain("passkey");
+    // The account row already says "passkey saved to this phone".
+    expect(
+      checklistRows({ ...base, credential: "passkey" }).map(
+        (candidate) => candidate.id,
+      ),
+    ).not.toContain("passkey");
   });
 });
 
@@ -98,6 +168,24 @@ describe("checklistIsComplete", () => {
     expect(checklistIsComplete({ ...everything, pushEnabled: false })).toBe(
       false,
     );
+    expect(
+      checklistIsComplete({
+        ...everything,
+        credential: "code",
+        hasPasskey: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("does not hold a passkey against a browser that cannot make one", () => {
+    expect(
+      checklistIsComplete({
+        ...everything,
+        credential: "code",
+        hasPasskey: false,
+        passkeysSupported: false,
+      }),
+    ).toBe(true);
   });
 
   it("is never true for a guest, whose account row is urgent", () => {
@@ -110,7 +198,7 @@ describe("checklistIsComplete", () => {
 describe("checklistProgress", () => {
   it("counts only what is done, so an urgent row is not credit", () => {
     const guest = checklistRows({ ...base, isGuest: true });
-    expect(checklistProgress(guest)).toEqual({ done: 0, total: 5 });
+    expect(checklistProgress(guest)).toEqual({ done: 0, total: 4 });
   });
 
   it("counts up as rows are finished", () => {

@@ -1,8 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check } from "lucide-react";
+import { toast } from "sonner";
+import { Camera, Check, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ImageDecodeError,
+  squareToWebp,
+} from "@/components/settings/square-image";
+import { setDisplayNameAction } from "@/modules/profile/actions";
 import {
   Sheet,
   SheetContent,
@@ -414,6 +422,152 @@ export function SettleUpSheet({
         </Button>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * Name and photo, from the checklist.
+ *
+ * The row used to be the one on the list that opened nothing: a photo could
+ * only be added from the profile page, which the list never mentioned. This is
+ * the profile screen's circle and field again, in a sheet — the photo uploads
+ * on pick, the name saves on Done, and the row's receipt follows both.
+ */
+export function ProfileSheet({
+  open,
+  onOpenChange,
+  name,
+  onNameChange,
+  onPhotoChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  /** Called with the saved name, once the sheet has written it. */
+  onNameChange: (name: string) => void;
+  /** Called once a photo is on the account. */
+  onPhotoChange: () => void;
+}) {
+  const t = useTranslations("onboarding.sheets.profile");
+  const tSettings = useTranslations("userSettings");
+  const tProfile = useTranslations("onboarding.profile");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(name);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const trimmed = draft.trim();
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append("file", await squareToWebp(file), "avatar.webp");
+      const response = await fetch("/api/profile/avatar", {
+        method: "POST",
+        body,
+      });
+      if (!response.ok) {
+        toast.error(tSettings("photoFailed"));
+        return;
+      }
+      setPhoto(URL.createObjectURL(file));
+      onPhotoChange();
+    } catch (uploadError) {
+      toast.error(
+        uploadError instanceof ImageDecodeError
+          ? tSettings("photoUnreadable")
+          : tSettings("photoFailed"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const done = async () => {
+    if (trimmed.length > 0 && trimmed !== name) {
+      setBusy(true);
+      const result = await setDisplayNameAction(trimmed);
+      setBusy(false);
+      if (!result.ok) {
+        toast.error(result.error ?? tProfile("nameFailed"));
+        return;
+      }
+      onNameChange(trimmed);
+    }
+    onOpenChange(false);
+  };
+
+  return (
+    <SheetShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("title")}
+      description={t("sub")}
+      footer={
+        <Button
+          size="lg"
+          className={DONE}
+          disabled={busy || trimmed.length === 0}
+          onClick={() => void done()}
+        >
+          {busy && (
+            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+          )}
+          {t("done")}
+        </Button>
+      }
+    >
+      <div className="flex items-center gap-3">
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            disabled={busy}
+            aria-label={tProfile("photoAdd")}
+            className="flex size-19 items-center justify-center overflow-hidden rounded-full bg-accent text-xl font-semibold text-accent-foreground disabled:opacity-60"
+          >
+            {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photo} alt="" className="size-full object-cover" />
+            ) : (
+              initialsOf(trimmed || "?")
+            )}
+          </button>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full bg-primary ring-[3px] ring-background"
+          >
+            <Camera className="size-3.5 text-primary-foreground" />
+          </span>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void upload(file);
+              event.target.value = "";
+            }}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <Label className="sr-only" htmlFor="checklist-name">
+            {t("nameLabel")}
+          </Label>
+          <Input
+            id="checklist-name"
+            className="h-14 rounded-xl"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            autoComplete="name"
+            maxLength={120}
+            disabled={busy}
+          />
+        </div>
+      </div>
+    </SheetShell>
   );
 }
 

@@ -26,7 +26,12 @@
 export type ChecklistMarker = "done" | "todo" | "urgent";
 
 export type ChecklistSheet =
-  "claimAccount" | "payouts" | "currencies" | "notifications";
+  | "claimAccount"
+  | "profile"
+  | "passkey"
+  | "payouts"
+  | "currencies"
+  | "notifications";
 
 export interface ChecklistRow {
   readonly id: string;
@@ -45,6 +50,12 @@ export interface ChecklistState {
   readonly credential: "passkey" | "code" | "password" | null;
   readonly email: string | null;
   readonly hasPhoto: boolean;
+  /** A passkey on the account already, on this device or another. */
+  readonly hasPasskey: boolean;
+  /** One was added from this very list, so its row stays as the receipt. */
+  readonly passkeyAdded: boolean;
+  /** Whether this browser could register one at all. */
+  readonly passkeysSupported: boolean;
   readonly name: string;
   /** Ordered, first is the default. Empty until they are asked. */
   readonly currencies: readonly string[];
@@ -81,14 +92,49 @@ export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
         sheet: null,
       };
 
-  const profile: ChecklistRow = {
-    id: "profile",
-    marker: state.hasPhoto ? "done" : "todo",
-    labelKey: "profileLabel",
-    noteKey: state.hasPhoto ? "profileNotePhoto" : "profileNoteInitials",
-    noteValues: { name: state.name },
-    sheet: null,
-  };
+  /*
+   * Name and photo, for an account. A guest has no account to hang a photo
+   * on, so for them the row is not merely unfinishable but meaningless, and
+   * it is left out rather than shown as a thing still to do.
+   */
+  const profile: ChecklistRow | null = state.isGuest
+    ? null
+    : {
+        id: "profile",
+        marker: state.hasPhoto ? "done" : "todo",
+        labelKey: "profileLabel",
+        noteKey: state.hasPhoto ? "profileNotePhoto" : "profileNoteInitials",
+        noteValues: { name: state.name },
+        // A finished row opens nothing; an unfinished one opens the sheet
+        // that finishes it. Before, this row could never be tapped at all.
+        sheet: state.hasPhoto ? null : "profile",
+      };
+
+  /*
+   * A passkey for the next sign-in.
+   *
+   * Offered to an account that came in by a code, on a browser that can
+   * register one: the moment after a successful sign-in is where most passkey
+   * enrolments come from, and it is the one thing on this list that makes the
+   * next device a tap rather than an inbox. Not shown where the account
+   * already came in with a passkey — the account row says so — nor to a guest,
+   * who has no account to attach one to, nor to an account that already has
+   * one somewhere: a list is for what is left, and a done row is only kept
+   * when it was this list that did it.
+   */
+  const passkey: ChecklistRow | null =
+    state.isGuest ||
+    state.credential === "passkey" ||
+    !state.passkeysSupported ||
+    (state.hasPasskey && !state.passkeyAdded)
+      ? null
+      : {
+          id: "passkey",
+          marker: state.hasPasskey ? "done" : "todo",
+          labelKey: "passkeyLabel",
+          noteKey: state.hasPasskey ? "passkeyNoteDone" : "passkeyNote",
+          sheet: state.hasPasskey ? null : "passkey",
+        };
 
   const payouts: ChecklistRow = {
     id: "payouts",
@@ -132,7 +178,9 @@ export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
     sheet: "notifications",
   };
 
-  return [account, profile, payouts, currencies, notifications];
+  return [account, passkey, profile, payouts, currencies, notifications].filter(
+    (row): row is ChecklistRow => row !== null,
+  );
 }
 
 /**

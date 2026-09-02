@@ -1,5 +1,6 @@
 import "server-only";
 import { getUserFavoriteCurrencies } from "@/modules/auth/service";
+import { listPasskeys } from "@/modules/auth/webauthn";
 import { listPayoutMethods } from "@/modules/payouts/service";
 import { listSubscriptions } from "@/modules/notifications/subscriptions";
 import { getAvatarVersion } from "./avatar";
@@ -21,6 +22,14 @@ import { getAvatarVersion } from "./avatar";
  */
 export interface ProfileSetup {
   readonly hasPhoto: boolean;
+  /**
+   * At least one passkey, on any device.
+   *
+   * The checklist offers one to an account that signed up with a code, so
+   * the next sign-in is a tap; an account that already has one, wherever it
+   * lives, is not asked again.
+   */
+  readonly hasPasskey: boolean;
   /** Starred currencies, in the account's own order. */
   readonly currencies: readonly string[];
   readonly payouts: readonly {
@@ -38,8 +47,9 @@ export interface ProfileSetup {
 }
 
 export async function loadProfileSetup(userId: string): Promise<ProfileSetup> {
-  const [avatar, currencies, payouts, devices] = await Promise.all([
+  const [avatar, passkeys, currencies, payouts, devices] = await Promise.all([
     getAvatarVersion(userId),
+    listPasskeys(userId),
     getUserFavoriteCurrencies(userId),
     listPayoutMethods(userId),
     listSubscriptions(userId),
@@ -47,6 +57,7 @@ export async function loadProfileSetup(userId: string): Promise<ProfileSetup> {
 
   return {
     hasPhoto: avatar !== null,
+    hasPasskey: passkeys.length > 0,
     currencies,
     payouts: payouts.map((payout) => ({
       method: payout.method,

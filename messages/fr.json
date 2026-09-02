@@ -1679,6 +1679,11 @@
       "profileLabel": "Nom et photo",
       "profileNotePhoto": "{name}, avec une photo",
       "profileNoteInitials": "{name}, initiales pour l’instant",
+      "passkeyLabel": "Te connecter plus vite la prochaine fois",
+      "passkeyNote": "Ajouter une clé d’accès à cet appareil",
+      "passkeyNoteDone": "Clé d’accès enregistrée",
+      "passkeyAdded": "Clé d’accès ajoutée",
+      "passkeyFailed": "Cette clé d’accès n’a pas pu être enregistrée.",
       "payoutsLabel": "Moyen de remboursement",
       "payoutsNoteSet": "{methods}",
       "payoutsNoteEmpty": "Demandé quand quelqu’un te rembourse",
@@ -1714,6 +1719,12 @@
         "title": "{name} veut te rembourser",
         "sub": "Par quel moyen {name} doit te rembourser ? On s’en souviendra la prochaine fois.",
         "save": "Enregistrer et prévenir {name}"
+      },
+      "profile": {
+        "title": "Nom et photo",
+        "sub": "Le nom que tes groupes voient, et une photo si tu en as envie. Touche le cercle.",
+        "nameLabel": "Ton nom",
+        "done": "Terminé"
       },
       "claim": {
         "title": "Crée ton compte",

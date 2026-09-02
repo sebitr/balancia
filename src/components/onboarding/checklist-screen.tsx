@@ -17,6 +17,9 @@ import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { initialsOf } from "@/components/join/types";
 import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { usePasskeySupport } from "@/components/auth/use-passkey-support";
+import { registerPasskey } from "@/modules/auth/passkey-client";
 import { CodeInput } from "./code-input";
 import {
   checklistProgress,
@@ -28,6 +31,7 @@ import {
   CurrenciesSheet,
   NotificationsSheet,
   PayoutsSheet,
+  ProfileSheet,
   SettleUpSheet,
   SheetShell,
   DONE,
@@ -100,16 +104,47 @@ export function ChecklistScreen({
   const [pushEnabled, setPushEnabled] = useState(profile?.pushEnabled ?? false);
   const [claimed, setClaimed] = useState(false);
   const [claimedEmail, setClaimedEmail] = useState(email);
+  const [hasPhoto, setHasPhoto] = useState(profile?.hasPhoto ?? false);
+  const [shownName, setShownName] = useState(name);
+  const [hasPasskey, setHasPasskey] = useState(profile?.hasPasskey ?? false);
+  const [passkeyAdded, setPasskeyAdded] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const passkeysSupported = usePasskeySupport();
 
   const guest = isGuest && !claimed;
   const tMethods = useTranslations("paymentMethods");
+
+  /**
+   * The passkey row is an action, not a sheet: tapping it runs the browser's
+   * own ceremony, and there is nothing of ours to draw around that.
+   */
+  const addPasskey = async () => {
+    setRegistering(true);
+    try {
+      await registerPasskey();
+      setHasPasskey(true);
+      setPasskeyAdded(true);
+      toast.success(t("passkeyAdded"));
+    } catch (error) {
+      // Dismissing the system sheet is a decision, not a failure.
+      if (error instanceof Error && error.name === "NotAllowedError") return;
+      toast.error(
+        (error instanceof Error ? error.message : "") || t("passkeyFailed"),
+      );
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const rows = checklistRows({
     isGuest: guest,
     credential: claimed ? "code" : credential,
     email: claimedEmail || email || null,
-    hasPhoto: profile?.hasPhoto ?? false,
-    name,
+    hasPhoto,
+    hasPasskey,
+    passkeyAdded,
+    passkeysSupported,
+    name: shownName,
     currencies,
     // Guarded rather than cast, now that this list can come from the database
     // as well as from the sheet: a method stored by an older version, or by
@@ -233,9 +268,14 @@ export function ChecklistScreen({
                 {row.sheet ? (
                   <button
                     type="button"
-                    onClick={() => setOpen(row.sheet)}
+                    disabled={registering}
+                    onClick={() =>
+                      row.sheet === "passkey"
+                        ? void addPasskey()
+                        : setOpen(row.sheet)
+                    }
                     aria-label={`${label} — ${note}`}
-                    className="flex min-h-14 w-full items-center gap-3 px-1 py-2.5 text-left"
+                    className="flex min-h-14 w-full items-center gap-3 px-1 py-2.5 text-left disabled:opacity-60"
                   >
                     {content}
                   </button>
@@ -291,6 +331,14 @@ export function ChecklistScreen({
           persist={!guest}
         />
       )}
+
+      <ProfileSheet
+        open={open === "profile"}
+        onOpenChange={(next) => setOpen(next ? "profile" : null)}
+        name={shownName}
+        onNameChange={setShownName}
+        onPhotoChange={() => setHasPhoto(true)}
+      />
 
       <ClaimAccountSheet
         open={open === "claimAccount"}

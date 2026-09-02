@@ -11,6 +11,7 @@ import {
   joinWithAccountAction,
 } from "@/modules/join/actions";
 import { recordOnboardingStepAction } from "@/modules/onboarding/actions";
+import { usePasskeySupport } from "@/components/auth/use-passkey-support";
 import {
   nextScreen,
   previousScreen,
@@ -211,6 +212,7 @@ export function OnboardingFlow({
    * the answer cannot drift apart. A guest is never complete — their account
    * row is urgent, not done — which is why `intent` is part of it.
    */
+  const passkeysSupported = usePasskeySupport();
   const profileIsComplete = useMemo(
     () =>
       initialProfile !== null &&
@@ -219,6 +221,9 @@ export function OnboardingFlow({
         credential,
         email: email || null,
         hasPhoto: initialProfile.hasPhoto,
+        hasPasskey: initialProfile.hasPasskey,
+        passkeyAdded: false,
+        passkeysSupported,
         name,
         currencies: initialProfile.currencies,
         payouts: initialProfile.payouts.map((payout) => payout.method),
@@ -226,7 +231,7 @@ export function OnboardingFlow({
         notificationCount: 5,
         pushEnabled: initialProfile.pushEnabled,
       }),
-    [initialProfile, intent, credential, email, name],
+    [initialProfile, intent, credential, email, name, passkeysSupported],
   );
 
   /*
