@@ -10,7 +10,7 @@ import {
   joinAsGuestAction,
   joinWithAccountAction,
 } from "@/modules/join/actions";
-import { recordOnboardingStepAction } from "@/modules/onboarding/actions";
+import { recordOnboardingStep } from "./funnel";
 import { startGroupAsGuestAction } from "@/modules/groups/actions";
 import { usePasskeySupport } from "@/components/auth/use-passkey-support";
 import { GroupReady } from "@/components/groups/group-ready";
@@ -303,14 +303,14 @@ export function OnboardingFlow({
    * could not be counted is still a screen.
    */
   useEffect(() => {
-    void recordOnboardingStepAction({ arrival, step: "welcome" });
+    recordOnboardingStep(arrival, "welcome");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const advance = useCallback(
     (to: ScreenId) => {
       setScreen(to);
-      void recordOnboardingStepAction({ arrival, step: to });
+      recordOnboardingStep(arrival, to);
       // A new screen is a new first field, and the header may have gained a
       // back button. Both are below the fold on a short phone otherwise.
       if (typeof window !== "undefined") window.scrollTo(0, 0);
@@ -419,7 +419,7 @@ export function OnboardingFlow({
 
   /** Where a route ends: the group it produced, or the dashboard. */
   const leave = () => {
-    void recordOnboardingStepAction({ arrival, step: "left" });
+    recordOnboardingStep(arrival, "left");
     router.push(groupId ? `/groups/${groupId}` : "/dashboard");
     router.refresh();
   };
@@ -725,7 +725,7 @@ export function OnboardingFlow({
               on screen is the one field that matters.
             */
             onLeave={() => {
-              void recordOnboardingStepAction({ arrival, step: "left" });
+              recordOnboardingStep(arrival, "left");
               router.push("/dashboard?new");
               router.refresh();
             }}
