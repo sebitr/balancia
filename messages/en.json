@@ -526,6 +526,9 @@
     "archivedGroups": "{count, plural, one {# archived group} other {# archived groups}}",
     "nothingOutstanding": "Nothing outstanding in {groups, plural, one {# group} other {# groups}}",
     "nothingOutstandingSince": "Nothing outstanding in {groups, plural, one {# group} other {# groups}} · last cleared {when} in {group}",
+    "nameNudgeTitle": "What should people call you?",
+    "nameNudgeBody": "Your groups see you as “{name}”, which is your email address. Give them a name instead.",
+    "nameNudgeAction": "Set my name",
     "splitwiseTitle": "Coming from Splitwise?",
     "splitwiseSubtitle": "Import a CSV or JSON export",
     "splitwiseAction": "Import",
@@ -1379,6 +1382,10 @@
         "title": "This invitation link no longer works",
         "body": "It may have been revoked, replaced with a new link, or it may have expired. Ask whoever invited you to send a fresh one."
       },
+      "claimed": {
+        "title": "This link was turned into an account",
+        "body": "Whoever it was sent to has an account now, and the group is on it. Sign in to open the group — the link itself is retired."
+      },
       "rateLimited": {
         "title": "Too many attempts",
         "body": "This instance limits how often invitation links can be opened from the same address. Wait a few minutes and try again."
@@ -1558,6 +1565,7 @@
     "joinFailed": "You could not be added to the group. Try again in a moment.",
     "since": "since {date}",
     "stepWelcome": "Invitation",
+    "stepStart": "Welcome",
     "stepWhoYouAre": "Who you are",
     "stepConfirm": "Confirm",
     "stepKeepIt": "Keep it",
@@ -1616,6 +1624,7 @@
       "verify": "Verify",
       "resend": "Send another code",
       "resendIn": "Send another code in {seconds} s",
+      "openMail": "Open my email app",
       "withPasskey": "Continue with a passkey",
       "passkeyExplainer": "Your face, fingerprint or screen lock. Nothing to remember.",
       "signInWithPasskey": "Sign in with a passkey",

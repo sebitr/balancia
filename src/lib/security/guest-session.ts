@@ -34,8 +34,21 @@ export interface GuestSessionContext {
   readonly displayName: string;
 }
 
+/**
+ * Why a link is not a way in.
+ *
+ * `claimed` is the one worth telling apart: the person it was sent to made
+ * an account, which retired the link on purpose. Whoever opens it now is
+ * most likely that person, on another device, and "sign in" is the answer —
+ * where "ask for a fresh one" is wrong and sends them back to the organiser.
+ */
+export type InvitationRefusal = "invalid" | "claimed";
+
 export class InvalidInvitationError extends Error {
-  constructor(message = "This invitation link is not valid.") {
+  constructor(
+    readonly reason: InvitationRefusal = "invalid",
+    message = "This invitation link is not valid.",
+  ) {
     super(message);
     this.name = "InvalidInvitationError";
   }
@@ -67,6 +80,7 @@ export async function redeemInvitation(
       revokedAt: guestInvitations.revokedAt,
       displayName: participants.displayName,
       participantRemovedAt: participants.removedAt,
+      participantUserId: participants.userId,
     })
     .from(guestInvitations)
     .innerJoin(
@@ -82,7 +96,14 @@ export async function redeemInvitation(
     invitation.participantRemovedAt !== null ||
     (invitation.expiresAt !== null && invitation.expiresAt <= now)
   ) {
-    throw new InvalidInvitationError();
+    // A retired link whose participant has an account was retired by the
+    // claim itself. Saying so costs nothing: the account is already known to
+    // whoever holds the link, and the link no longer opens anything.
+    throw new InvalidInvitationError(
+      invitation?.revokedAt !== null && invitation?.participantUserId
+        ? "claimed"
+        : "invalid",
+    );
   }
 
   const sessionToken = generateToken();

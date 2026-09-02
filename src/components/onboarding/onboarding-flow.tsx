@@ -382,7 +382,12 @@ export function OnboardingFlow({
     router.refresh();
   };
 
-  const stepLabel = t(STEP_LABEL_KEYS[screen] as Parameters<typeof t>[0]);
+  // "Invitation" is the welcome's word on the two linked arrivals. Nobody
+  // invited a cold arrival, so its welcome is called what it is.
+  const stepLabel =
+    screen === "welcome" && arrival === "cold"
+      ? t("stepStart")
+      : t(STEP_LABEL_KEYS[screen] as Parameters<typeof t>[0]);
 
   /*
    * Nothing was ever loaded, so there is no flow to run.

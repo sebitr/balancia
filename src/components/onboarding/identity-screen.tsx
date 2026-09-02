@@ -22,6 +22,7 @@ import {
 import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { CodeInput } from "./code-input";
+import { OpenMailButton } from "./open-mail-button";
 import { useResendCooldown } from "./use-resend-cooldown";
 import { Headline, PRIMARY, SECONDARY, Spacer, Sub } from "./screens";
 import type { Intent } from "./route";
@@ -286,6 +287,7 @@ export function IdentityScreen({
               )}
               {t("verify")}
             </Button>
+            <OpenMailButton />
             <Button
               size="lg"
               variant="ghost"

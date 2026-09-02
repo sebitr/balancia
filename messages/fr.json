@@ -526,6 +526,9 @@
     "archivedGroups": "{count, plural, one {# groupe archivé} other {# groupes archivés}}",
     "nothingOutstanding": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}}",
     "nothingOutstandingSince": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}} · dernier remboursement {when} dans {group}",
+    "nameNudgeTitle": "Dis-nous comment t’appeler",
+    "nameNudgeBody": "Tes groupes te voient sous le nom {name}, qui est ton adresse e-mail. Donne-leur un vrai nom à la place.",
+    "nameNudgeAction": "Choisir mon nom",
     "splitwiseTitle": "Tu viens de Splitwise ?",
     "splitwiseSubtitle": "Importe un export CSV ou JSON",
     "splitwiseAction": "Importer",
@@ -1379,6 +1382,10 @@
         "title": "Ce lien d’invitation ne fonctionne plus",
         "body": "Il a peut-être été révoqué, remplacé par un nouveau lien, ou il a expiré. Demande un nouveau lien à la personne qui te l’a envoyé."
       },
+      "claimed": {
+        "title": "Ce lien est devenu un compte",
+        "body": "La personne à qui il a été envoyé a maintenant un compte, et le groupe est dessus. Connecte-toi pour ouvrir le groupe. Le lien lui-même est retiré."
+      },
       "rateLimited": {
         "title": "Trop de tentatives",
         "body": "Cette instance limite la fréquence d’ouverture des liens d’invitation depuis une même adresse. Patiente quelques minutes puis réessaie."
@@ -1558,6 +1565,7 @@
     "joinFailed": "Impossible de t’ajouter au groupe. Réessaie dans un instant.",
     "since": "depuis le {date}",
     "stepWelcome": "Invitation",
+    "stepStart": "Bienvenue",
     "stepWhoYouAre": "Qui tu es",
     "stepConfirm": "Confirmation",
     "stepKeepIt": "Garder",
@@ -1616,6 +1624,7 @@
       "verify": "Vérifier",
       "resend": "Envoyer un autre code",
       "resendIn": "Envoyer un autre code dans {seconds} s",
+      "openMail": "Ouvrir mon application e-mail",
       "withPasskey": "Continuer avec une clé d’accès",
       "passkeyExplainer": "Ton visage, ton empreinte ou le code de ton appareil. Rien à retenir.",
       "signInWithPasskey": "Se connecter avec une clé d’accès",
