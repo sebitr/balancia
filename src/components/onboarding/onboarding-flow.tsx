@@ -11,7 +11,11 @@ import {
   joinWithAccountAction,
 } from "@/modules/join/actions";
 import { recordOnboardingStepAction } from "@/modules/onboarding/actions";
+import { startGroupAsGuestAction } from "@/modules/groups/actions";
 import { usePasskeySupport } from "@/components/auth/use-passkey-support";
+import { GroupReady } from "@/components/groups/group-ready";
+import { useDetectedTimezone } from "@/components/groups/use-detected-timezone";
+import { defaultCurrency } from "@/modules/currencies/default-currency";
 import {
   nextScreen,
   previousScreen,
@@ -32,6 +36,7 @@ import {
   FirstGroupScreen,
   KeepItScreen,
   ProfileScreen,
+  StartGroupScreen,
   WelcomeScreen,
   WhichOneScreen,
 } from "./screens";
@@ -375,6 +380,43 @@ export function OnboardingFlow({
     return true;
   };
 
+  /**
+   * A group started with no account, from the cold welcome.
+   *
+   * The action writes the group, the creator's seat and the link, and leaves
+   * this browser holding a guest session for it — the same session an
+   * invitation mints. What comes back is the link, for the screen that hands
+   * it over.
+   */
+  const [startedGroup, setStartedGroup] = useState<{
+    groupId: string;
+    groupName: string;
+    invite: { url: string; expiresAt: string | null };
+  } | null>(null);
+  const detectedTimezone = useDetectedTimezone();
+  const startGroup = async (groupName: string) => {
+    setJoinError(null);
+    setJoining(true);
+    const result = await startGroupAsGuestAction({
+      groupName,
+      displayName: name.trim(),
+      timezone: detectedTimezone ?? "UTC",
+      baseCurrency: defaultCurrency({}),
+    });
+    setJoining(false);
+    if (!result.ok || !result.data) {
+      setJoinError(result.error ?? t("startGroup.failed"));
+      return;
+    }
+    setStartedGroup({
+      groupId: result.data.groupId,
+      groupName,
+      invite: result.data.invite,
+    });
+    setJoinedGroupId(result.data.groupId);
+    advance("groupLink");
+  };
+
   /** Where a route ends: the group it produced, or the dashboard. */
   const leave = () => {
     void recordOnboardingStepAction({ arrival, step: "left" });
@@ -646,6 +688,30 @@ export function OnboardingFlow({
             email={email}
             name={name}
             onLeave={leave}
+          />
+        )}
+
+        {screen === "startGroup" && (
+          <StartGroupScreen
+            name={name}
+            onNameChange={setName}
+            busy={joining}
+            error={joinError}
+            onSubmit={(groupName) => void startGroup(groupName)}
+          />
+        )}
+
+        {screen === "groupLink" && startedGroup && (
+          <GroupReady
+            groupId={startedGroup.groupId}
+            groupName={startedGroup.groupName}
+            people={[name.trim()]}
+            invite={startedGroup.invite}
+            onSkip={leave}
+            heading="h1"
+            // A guest may share the link, not move its expiry: that becomes
+            // theirs with the group, once they claim it.
+            canManage={false}
           />
         )}
 

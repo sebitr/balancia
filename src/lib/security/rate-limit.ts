@@ -30,6 +30,7 @@ export type RateLimitBucket =
   | "verifyCode"
   | "signInCode"
   | "guestRedeem"
+  | "guestGroup"
   | "joinRedeem"
   | "passwordReset"
   | "emailChange"
@@ -115,6 +116,10 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // is asking. Room for a typo and a correction, not for a mail campaign.
     emailChange: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     guestRedeem: { limit: 20, windowSeconds: 600 },
+    // Starting a group with no account writes a group, a participant, a
+    // link and an invitation on nobody's say-so. Ten an hour from one place
+    // is a household trying it out; a bot writing rows is what this refuses.
+    guestGroup: { limit: 10, windowSeconds: 3600 },
     // One group link is opened by everyone it was sent to, so the ceiling has
     // to clear a whole household on one address. Still far under what walking
     // the token space would need.

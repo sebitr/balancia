@@ -124,25 +124,32 @@ function GroupCard({ group }: { group: OnboardingGroupView }) {
  */
 function GuestChoice({
   busy = false,
+  label,
+  note,
   onSelect,
 }: {
   busy?: boolean;
+  /** The proposition. Defaults to joining as a guest. */
+  label?: string;
+  note?: string;
   onSelect: () => void;
 }) {
   const t = useTranslations("onboarding.welcome");
+  const title = label ?? t("guest");
+  const detail = note ?? t("guestNote");
 
   return (
     <button
       type="button"
       onClick={onSelect}
       disabled={busy}
-      aria-label={`${t("guest")} — ${t("guestNote")}`}
+      aria-label={`${title} — ${detail}`}
       className="flex min-h-[3.375rem] w-full items-center gap-3 rounded-xl border border-dashed border-input bg-card px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-60"
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">{t("guest")}</span>
+        <span className="block text-sm font-medium">{title}</span>
         <span className="block text-xs text-pretty text-muted-foreground">
-          {t("guestNote")}
+          {detail}
         </span>
       </span>
       <ChevronRight
@@ -253,12 +260,13 @@ export function WelcomeScreen({
           </Button>
 
           {/*
-            No guest option on a cold arrival, and this is not a styling
-            choice: a guest session is created by spending an invitation token
-            and belongs to the group that token came from. With no group there
-            is nothing to be a guest of.
+            The third door. On a linked arrival it is the guest session the
+            invitation minted; on a cold arrival there is no group to be a
+            guest of yet, so the offer is a group of their own — the same
+            guest, arriving through a group they start, on the same terms
+            as registration.
           */}
-          {!cold && guestOffered && (
+          {((!cold && guestOffered) || (cold && registrationAllowed)) && (
             <>
               <div className="flex items-center gap-3 py-1">
                 <span className="h-px flex-1 bg-border" />
@@ -267,7 +275,11 @@ export function WelcomeScreen({
                 </span>
                 <span className="h-px flex-1 bg-border" />
               </div>
-              <GuestChoice onSelect={() => onChoose("guest")} />
+              <GuestChoice
+                label={cold ? t("startGroup") : undefined}
+                note={cold ? t("startGroupNote") : undefined}
+                onSelect={() => onChoose("guest")}
+              />
             </>
           )}
         </div>
@@ -886,6 +898,85 @@ export function FirstGroupScreen({
           <ArrowRight aria-hidden="true" className="size-4" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A group and a name, from somebody with no account.
+ *
+ * Two fields, because two things have to exist before there is anything to
+ * share: the group, and the person it is being started by. The currency and
+ * the time zone come from the browser, the way the create sheet guesses them,
+ * and are the group's to change once it exists.
+ */
+export function StartGroupScreen({
+  name,
+  onNameChange,
+  busy = false,
+  error = null,
+  onSubmit,
+}: {
+  name: string;
+  onNameChange: (name: string) => void;
+  busy?: boolean;
+  error?: string | null;
+  onSubmit: (groupName: string) => void;
+}) {
+  const t = useTranslations("onboarding.startGroup");
+  const [groupName, setGroupName] = useState("");
+  const ready = groupName.trim().length > 0 && name.trim().length > 0;
+
+  return (
+    <div className="flex flex-1 flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <Headline>{t("title")}</Headline>
+        <Sub>{t("sub")}</Sub>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="start-group-name">{t("groupNameLabel")}</Label>
+          <Input
+            id="start-group-name"
+            className="h-14 rounded-xl"
+            value={groupName}
+            onChange={(event) => setGroupName(event.target.value)}
+            placeholder={t("groupNamePlaceholder")}
+            autoComplete="off"
+            autoFocus
+            maxLength={120}
+            disabled={busy}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="start-group-your-name">{t("nameLabel")}</Label>
+          <Input
+            id="start-group-your-name"
+            className="h-14 rounded-xl"
+            value={name}
+            onChange={(event) => onNameChange(event.target.value)}
+            placeholder={t("namePlaceholder")}
+            autoComplete="name"
+            maxLength={120}
+            disabled={busy}
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <Spacer />
+
+      <Button
+        size="lg"
+        className={PRIMARY}
+        disabled={!ready || busy}
+        onClick={() => onSubmit(groupName.trim())}
+      >
+        {busy && <Loader2 aria-hidden="true" className="size-4 animate-spin" />}
+        {t("create")}
+      </Button>
     </div>
   );
 }

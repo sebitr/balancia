@@ -1574,6 +1574,8 @@
     "stepDone": "Terminé",
     "stepGroup": "Groupe",
     "stepFirstGroup": "Premier groupe",
+    "stepStartGroup": "Ton groupe",
+    "stepShare": "Partager",
     "welcome": {
       "personalTitle": "{inviter} t’ajoute à {group}",
       "personalTitleNoInviter": "Te voilà dans {group}",
@@ -1589,7 +1591,9 @@
       "haveAccount": "Se connecter",
       "or": "ou",
       "guest": "Continuer sans compte",
-      "guestNote": "Juste un prénom. Rien de ce que tu fais ici n’est perdu si tu crées un compte plus tard."
+      "guestNote": "Juste un prénom. Rien de ce que tu fais ici n’est perdu si tu crées un compte plus tard.",
+      "startGroup": "Créer un groupe sans compte",
+      "startGroupNote": "Un prénom et un groupe, dans ce navigateur. Crée un compte plus tard pour le garder sur tous tes appareils."
     },
     "whichOne": {
       "title": "Lequel de ces noms est le tien ?",
@@ -1652,6 +1656,16 @@
       "createAccount": "Créer mon compte",
       "joinAsGuest": "Rejoindre sans compte",
       "nameFailed": "Ce nom n’a pas pu être enregistré."
+    },
+    "startGroup": {
+      "title": "Ton premier groupe, sans compte",
+      "sub": "Un voyage, une coloc, un dîner. Donne-lui un nom, dis qui tu es, et partage le lien avec tout le monde.",
+      "groupNameLabel": "Nom du groupe",
+      "groupNamePlaceholder": "Voyage à Lisbonne",
+      "nameLabel": "Ton nom",
+      "namePlaceholder": "Ton nom",
+      "create": "Créer le groupe",
+      "failed": "Le groupe n’a pas pu être créé. Réessaie dans un instant."
     },
     "arrival": {
       "title": "Tu y es, {name}",

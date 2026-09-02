@@ -4,6 +4,7 @@ import { getDb, type Database } from "@/lib/db/client";
 import {
   expenses,
   groupMembers,
+  groups,
   guestInvitations,
   guestSessions,
   participants,
@@ -90,9 +91,34 @@ export async function claimGuestSession(
       return { status: "conflict", groupId } as const;
     }
 
+    /*
+     * A group started with no account has no owner until now.
+     *
+     * Its creator's seat is a guest like any other, and claiming it is what
+     * makes the account the owner: the door — who is let in, whose link is
+     * live — is theirs from this moment, and the group gets a creator on
+     * record. Any other seat in any other group joins as a member, as it
+     * always did; the owner row is the tie-breaker, not the creator column.
+     */
+    const [owner] = await tx
+      .select({ id: groupMembers.id })
+      .from(groupMembers)
+      .where(
+        and(eq(groupMembers.groupId, groupId), eq(groupMembers.role, "owner")),
+      )
+      .limit(1);
+    const role = owner ? "member" : "owner";
+
     await tx
       .insert(groupMembers)
-      .values({ groupId, userId, participantId, role: "member" });
+      .values({ groupId, userId, participantId, role });
+
+    if (role === "owner") {
+      await tx
+        .update(groups)
+        .set({ createdByUserId: userId, updatedAt: now })
+        .where(and(eq(groups.id, groupId), isNull(groups.createdByUserId)));
+    }
 
     // The link stood in for an account. Now that the account exists, it is
     // retired — with every session derived from it, which is what makes the

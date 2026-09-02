@@ -45,6 +45,13 @@ vi.mock("@/modules/onboarding/actions", () => ({
   recordOnboardingStepAction,
 }));
 
+const startGroupAsGuestAction = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/groups/actions", () => ({ startGroupAsGuestAction }));
+vi.mock("@/components/groups/use-detected-timezone", () => ({
+  useDetectedTimezone: () => "Europe/Zurich",
+}));
+
 const auth = vi.hoisted(() => ({
   requestSignInCodeAction: vi.fn(),
   signInWithCodeAction: vi.fn(),
@@ -78,6 +85,14 @@ beforeEach(() => {
   });
   recordOnboardingStepAction.mockClear();
   passkeyDevice.platform = true;
+  startGroupAsGuestAction.mockReset();
+  startGroupAsGuestAction.mockResolvedValue({
+    ok: true,
+    data: {
+      groupId: "group-new",
+      invite: { url: "https://balancia.test/join/g/abc", expiresAt: null },
+    },
+  });
   for (const action of Object.values(auth)) action.mockReset();
   auth.startCodeSignupAction.mockResolvedValue({ ok: true });
   auth.verifySignupCodeAction.mockResolvedValue({
@@ -382,13 +397,89 @@ describe("the cold arrival", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers no guest option, having no group to be a guest of", () => {
+  it("offers a group of their own instead of a guest seat, having no group to be a guest of", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
     expect(
       screen.getByRole("button", { name: "Create an account" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Continue as a guest/ }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("withholds the no-account group where registration is closed", () => {
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        registrationAllowed={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: /Start a group without an account/,
+      }),
+    ).toBeNull();
+  });
+
+  it("starts a group with no account, hands over its link, and lands in it", async () => {
+    // Kittysplit, Splid and Tricount all let a person in with a name and a
+    // group; this is Balancia's version, built on the guest session an
+    // invitation would have minted.
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    );
+    expect(screen.getByText("Your group")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Group name"), "Lisbon trip");
+    await user.type(screen.getByLabelText("Your name"), "Dana");
+    await user.click(screen.getByRole("button", { name: "Create the group" }));
+
+    expect(startGroupAsGuestAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupName: "Lisbon trip",
+        displayName: "Dana",
+        timezone: "Europe/Zurich",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Your group is ready!" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/balancia\.test\/join\/g\/abc/),
+    ).toBeInTheDocument();
+    // A guest shares the link; moving its expiry is the owner's, later.
+    expect(screen.queryByText("Link expiration")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(router.push).toHaveBeenCalledWith("/groups/group-new");
+  });
+
+  it("keeps a refused group start on its own screen, with the reason", async () => {
+    startGroupAsGuestAction.mockResolvedValue({
+      ok: false,
+      error: "Registration is closed on this instance.",
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    );
+    await user.type(screen.getByLabelText("Group name"), "Lisbon trip");
+    await user.type(screen.getByLabelText("Your name"), "Dana");
+    await user.click(screen.getByRole("button", { name: "Create the group" }));
+
+    expect(
+      screen.getByText("Registration is closed on this instance."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Your group is ready!" }),
     ).toBeNull();
   });
 

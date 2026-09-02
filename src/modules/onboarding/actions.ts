@@ -30,6 +30,8 @@ const STEPS = [
   "arrival",
   "checklist",
   "firstGroup",
+  "startGroup",
+  "groupLink",
   /** The flow was left for a group or the dashboard: the funnel's floor. */
   "left",
 ] as const;

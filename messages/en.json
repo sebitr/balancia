@@ -1574,6 +1574,8 @@
     "stepDone": "Done",
     "stepGroup": "Group",
     "stepFirstGroup": "First group",
+    "stepStartGroup": "Your group",
+    "stepShare": "Share",
     "welcome": {
       "personalTitle": "{inviter} added you to {group}",
       "personalTitleNoInviter": "You have been added to {group}",
@@ -1589,7 +1591,19 @@
       "haveAccount": "Sign in",
       "or": "or",
       "guest": "Continue as a guest",
-      "guestNote": "Just a name. Nothing you do here is stranded if you claim it later."
+      "guestNote": "Just a name. Nothing you do here is stranded if you claim it later.",
+      "startGroup": "Start a group without an account",
+      "startGroupNote": "A name and a group, in this browser. Claim it later to keep it on every device."
+    },
+    "startGroup": {
+      "title": "Your first group, no account needed",
+      "sub": "One trip, one flat, one dinner. Name it, say who you are, and share the link with everyone in it.",
+      "groupNameLabel": "Group name",
+      "groupNamePlaceholder": "Lisbon trip",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Your name",
+      "create": "Create the group",
+      "failed": "The group could not be created. Try again in a moment."
     },
     "whichOne": {
       "title": "Which one of these is you?",

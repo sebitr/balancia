@@ -158,6 +158,16 @@ describe("routeFor", () => {
     ]);
   });
 
+  it("lets a cold arrival start a group with no account, and leave with its link", () => {
+    // The third door on the cold welcome: the same guest an invitation
+    // mints, arriving through a group of their own. No credential screen,
+    // no profile screen — a name is asked with the group's.
+    const route = routeFor(state("cold", "guest"));
+    expect(route).toEqual(["welcome", "startGroup", "groupLink"]);
+    expect(route).not.toContain("identity");
+    expect(route).not.toContain("firstGroup");
+  });
+
   it("keeps the way back open on the last screen of a cold sign-in", () => {
     // Nothing is committed on the identity screen until the credential
     // lands, so unlike every other route's last screen it is not an ending.
