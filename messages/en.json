@@ -88,6 +88,14 @@
       "forgotPassword": "Forgot password?",
       "submit": "Sign in",
       "withPasskey": "Use a passkey",
+      "emailMeACode": "Email me a sign-in code",
+      "codeSent": "We sent six digits to {email}. Type them here to sign in.",
+      "codeLabel": "The six-digit code",
+      "codeWrong": "That code is wrong or has expired. Ask for a new one.",
+      "resend": "Send another code",
+      "resendIn": "Send another code in {seconds} s",
+      "usePassword": "Use my password instead",
+      "noPasswordHint": "Signed up with a code or a passkey? Ask for a sign-in code instead.",
       "noAccount": "No account yet?",
       "createOne": "Create one",
       "metaTitle": "Sign in"
@@ -2369,6 +2377,7 @@
   "serverErrors": {
     "generic": "Something went wrong on the server. Nothing was changed.",
     "rateLimited": "Too many attempts. Please try again later.",
+    "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "registrationClosed": "Registration is closed on this instance.",
     "nameRequired": "Enter your name.",
     "emailTaken": "That email address is already registered. Try signing in instead.",

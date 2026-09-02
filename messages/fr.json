@@ -88,6 +88,14 @@
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
       "withPasskey": "Utiliser une clé d’accès",
+      "emailMeACode": "M’envoyer un code de connexion",
+      "codeSent": "On a envoyé six chiffres à {email}. Saisis-les ici pour te connecter.",
+      "codeLabel": "Le code à six chiffres",
+      "codeWrong": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
+      "resend": "Envoyer un autre code",
+      "resendIn": "Envoyer un autre code dans {seconds} s",
+      "usePassword": "Utiliser mon mot de passe",
+      "noPasswordHint": "Compte créé avec un code ou une clé d’accès ? Demande plutôt un code de connexion.",
       "noAccount": "Pas encore de compte ?",
       "createOne": "Créer un compte",
       "metaTitle": "Connexion"
@@ -2369,6 +2377,7 @@
   "serverErrors": {
     "generic": "Une erreur est survenue sur le serveur. Rien n’a été modifié.",
     "rateLimited": "Trop de tentatives. Réessaie plus tard.",
+    "rateLimitedFor": "Trop de tentatives. Réessaie dans {minutes, plural, one {# minute} other {# minutes}}.",
     "registrationClosed": "Les inscriptions sont fermées sur cette instance.",
     "nameRequired": "Saisis ton nom.",
     "emailTaken": "Cette adresse e-mail est déjà enregistrée. Essaie plutôt de te connecter.",

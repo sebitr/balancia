@@ -7,12 +7,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
-import { KeyRound, Loader2, PlayCircle } from "lucide-react";
+import { KeyRound, Loader2, Mail, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { signInAction } from "@/modules/auth/actions";
+import { CodeInput } from "@/components/onboarding/code-input";
+import { useResendCooldown } from "@/components/onboarding/use-resend-cooldown";
+import {
+  requestSignInCodeAction,
+  signInAction,
+  signInWithCodeAction,
+} from "@/modules/auth/actions";
+import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { startDemoAction } from "@/modules/demo/actions";
 import {
   armPasskeyAutofill,
@@ -36,6 +43,13 @@ import { AppleSignInButton } from "./apple-sign-in-button";
  * on mount, where a returning reader meets it without having read the page —
  * see the effect below. The button stays, because most browsers still do not
  * offer conditional mediation and none of them announce it in the field.
+ *
+ * Where the instance can send mail, a six-digit code is the fourth way in,
+ * and for an account created with a code or a passkey on another device it is
+ * the only one this page can offer: such an account has no password, and
+ * "Incorrect email or password" is the sentence it used to get. The code uses
+ * the address already typed above, and takes the password field's place until
+ * it lands.
  */
 
 /**
@@ -94,6 +108,11 @@ export function SignInForm({
   const [formError, setFormError] = useState<string | null>(initialError);
   const [passkeyPending, setPasskeyPending] = useState(false);
   const [demoPending, setDemoPending] = useState(false);
+  /** The address a sign-in code went to, which is what swaps the form over. */
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [codePending, setCodePending] = useState(false);
+  const resend = useResendCooldown();
   const passkeysAvailable = usePasskeySupport();
 
   const form = useForm<FormValues>({
@@ -116,6 +135,52 @@ export function SignInForm({
     router.push("/dashboard");
     router.refresh();
   });
+
+  /**
+   * Mails a code to the address in the field, once the field says it is one.
+   *
+   * The action always reports success, so the screen swaps over whether or not
+   * the address is registered: which addresses are is not this page's to say.
+   */
+  const requestCode = async () => {
+    setFormError(null);
+    if (!(await form.trigger("email"))) return;
+    const email = form.getValues("email").trim();
+    setCodePending(true);
+    try {
+      const result = await requestSignInCodeAction({ email });
+      if (!result.ok) {
+        setFormError(result.error ?? tErrors("generic"));
+        return;
+      }
+      setCode("");
+      setCodeSentTo(email);
+      resend.start();
+    } finally {
+      setCodePending(false);
+    }
+  };
+
+  const submitCode = async (value: string) => {
+    if (!codeSentTo) return;
+    setFormError(null);
+    setCodePending(true);
+    try {
+      const result = await signInWithCodeAction({
+        email: codeSentTo,
+        code: value,
+      });
+      if (!result.ok) {
+        setFormError(result.error ?? t("codeWrong"));
+        setCode("");
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } finally {
+      setCodePending(false);
+    }
+  };
 
   const onDemo = async () => {
     setFormError(null);
@@ -280,72 +345,135 @@ export function SignInForm({
 
       {formError && (
         <Alert variant="destructive">
-          <AlertDescription>{formError}</AlertDescription>
+          <AlertDescription>
+            {formError}
+            {/* The refusal a code-only account meets is "incorrect password",
+                which is true and no help. The way out is on this screen, so
+                the alert points at it. */}
+            {mailEnabled && !codeSentTo && !demoMode && (
+              <span className="mt-1 block text-muted-foreground">
+                {t("noPasswordHint")}
+              </span>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <div className="space-y-2">
-          <Label htmlFor="email">{t("email")}</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="username webauthn"
-            aria-invalid={Boolean(form.formState.errors.email)}
-            aria-describedby={
-              form.formState.errors.email ? "email-error" : undefined
-            }
-            {...form.register("email")}
+      {codeSentTo ? (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {t("codeSent", { email: codeSentTo })}
+          </p>
+          <CodeInput
+            value={code}
+            onChange={setCode}
+            onComplete={(value) => void submitCode(value)}
+            label={t("codeLabel")}
+            disabled={codePending}
+            autoFocus
           />
-          {fieldError("email") && (
-            <p id="email-error" className="text-sm text-destructive">
-              {fieldError("email")}
-            </p>
-          )}
+          <Button
+            type="button"
+            className="w-full"
+            disabled={codePending || code.length < CODE_LENGTH}
+            onClick={() => void submitCode(code)}
+          >
+            {codePending && (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            )}
+            {t("submit")}
+          </Button>
+          <div className="flex flex-col gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              disabled={codePending || resend.remaining > 0}
+              onClick={() => void requestCode()}
+            >
+              {resend.remaining > 0
+                ? t("resendIn", { seconds: resend.remaining })
+                : t("resend")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              disabled={codePending}
+              onClick={() => {
+                setCodeSentTo(null);
+                setCode("");
+                setFormError(null);
+              }}
+            >
+              {t("usePassword")}
+            </Button>
+          </div>
         </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">{t("password")}</Label>
-            {mailEnabled && (
-              <Link
-                href="/forgot-password"
-                className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-              >
-                {t("forgotPassword")}
-              </Link>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="email">{t("email")}</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="username webauthn"
+              aria-invalid={Boolean(form.formState.errors.email)}
+              aria-describedby={
+                form.formState.errors.email ? "email-error" : undefined
+              }
+              {...form.register("email")}
+            />
+            {fieldError("email") && (
+              <p id="email-error" className="text-sm text-destructive">
+                {fieldError("email")}
+              </p>
             )}
           </div>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            aria-invalid={Boolean(form.formState.errors.password)}
-            aria-describedby={
-              form.formState.errors.password ? "password-error" : undefined
-            }
-            {...form.register("password")}
-          />
-          {fieldError("password") && (
-            <p id="password-error" className="text-sm text-destructive">
-              {fieldError("password")}
-            </p>
-          )}
-        </div>
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={form.formState.isSubmitting}
-        >
-          {form.formState.isSubmitting && (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          )}
-          {t("submit")}
-        </Button>
-      </form>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">{t("password")}</Label>
+              {mailEnabled && (
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                >
+                  {t("forgotPassword")}
+                </Link>
+              )}
+            </div>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              aria-invalid={Boolean(form.formState.errors.password)}
+              aria-describedby={
+                form.formState.errors.password ? "password-error" : undefined
+              }
+              {...form.register("password")}
+            />
+            {fieldError("password") && (
+              <p id="password-error" className="text-sm text-destructive">
+                {fieldError("password")}
+              </p>
+            )}
+          </div>
 
-      {(passkeysAvailable || appleEnabled) && (
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting && (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            )}
+            {t("submit")}
+          </Button>
+        </form>
+      )}
+
+      {!codeSentTo && (passkeysAvailable || appleEnabled || mailEnabled) && (
         <>
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
@@ -370,6 +498,23 @@ export function SignInForm({
                   <KeyRound aria-hidden="true" />
                 )}
                 {t("withPasskey")}
+              </Button>
+            )}
+
+            {mailEnabled && !demoMode && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => void requestCode()}
+                disabled={codePending}
+              >
+                {codePending ? (
+                  <Loader2 aria-hidden="true" className="animate-spin" />
+                ) : (
+                  <Mail aria-hidden="true" />
+                )}
+                {t("emailMeACode")}
               </Button>
             )}
 
