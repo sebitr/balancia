@@ -5,20 +5,15 @@ import type {
   RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 import { getDb, rowsAffected, type Database } from "@/lib/db/client";
-import {
-  groupMembers,
-  oauthIdentities,
-  participants,
-  passkeys,
-  sessions,
-  users,
-} from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import {
   AuthError,
   insertUser,
+  neverGotIn,
   normalizeEmail,
+  reclaimUnclaimedAccount,
   type AuthenticatedUser,
   type StoredPreferences,
 } from "./service";
@@ -223,10 +218,12 @@ export async function startCodeSignup(
   const identity = readIdentity(input);
   const db = options.db ?? getDb();
 
-  const userId = await insertUser(
-    { email: identity.email, name: identity.name, passwordHash: null },
-    { db },
-  );
+  const userId =
+    (await reclaimUnclaimedAccount(identity, { db })) ??
+    (await insertUser(
+      { email: identity.email, name: identity.name, passwordHash: null },
+      { db },
+    ));
 
   await mailCode(userId, identity.email, "email_verification_code", context, {
     db,
@@ -490,11 +487,7 @@ export async function pruneUnclaimedAccounts(
         eq(users.isAdmin, false),
         lt(users.createdAt, new Date(now.getTime() - UNCLAIMED_GRACE_MS)),
         gt(users.createdAt, new Date(now.getTime() - UNCLAIMED_HORIZON_MS)),
-        sql`NOT EXISTS (SELECT 1 FROM ${sessions} WHERE ${sessions.userId} = ${users.id})`,
-        sql`NOT EXISTS (SELECT 1 FROM ${passkeys} WHERE ${passkeys.userId} = ${users.id})`,
-        sql`NOT EXISTS (SELECT 1 FROM ${oauthIdentities} WHERE ${oauthIdentities.userId} = ${users.id})`,
-        sql`NOT EXISTS (SELECT 1 FROM ${groupMembers} WHERE ${groupMembers.userId} = ${users.id})`,
-        sql`NOT EXISTS (SELECT 1 FROM ${participants} WHERE ${participants.userId} = ${users.id})`,
+        ...neverGotIn(),
       ),
     );
 

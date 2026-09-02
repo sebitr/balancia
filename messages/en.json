@@ -1605,6 +1605,7 @@
       "codeHint": "Codes autofill from the keyboard on iOS and Android.",
       "verify": "Verify",
       "resend": "Send another code",
+      "resendIn": "Send another code in {seconds} s",
       "withPasskey": "Continue with a passkey",
       "signInWithPasskey": "Sign in with a passkey",
       "orCode": "Email me a code instead",

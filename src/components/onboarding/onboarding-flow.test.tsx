@@ -293,6 +293,28 @@ describe("the cold arrival", () => {
     ).toBeInTheDocument();
   });
 
+  it("makes a second code wait, so the first cannot be retired in the post", async () => {
+    // Issuing a code invalidates the one before it. A resend tapped while the
+    // first mail is still arriving is how a correct code stops working, so
+    // the button counts down and says so.
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+
+    const resend = screen.getByRole("button", { name: /Send another code/ });
+    expect(resend).toBeDisabled();
+    expect(resend).toHaveTextContent(/in \d+ s$/);
+    expect(auth.startCodeSignupAction).toHaveBeenCalledTimes(1);
+  });
+
   it("sends a returning account to its groups without asking its name", async () => {
     // This is the journey that renamed people. Signing in through the welcome
     // screen ran the profile screen next, with an empty name field and a

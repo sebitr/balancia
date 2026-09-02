@@ -19,6 +19,7 @@ import {
 import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { CodeInput } from "./code-input";
+import { useResendCooldown } from "./use-resend-cooldown";
 import { Headline, PRIMARY, SECONDARY, Spacer, Sub } from "./screens";
 import type { Intent } from "./route";
 
@@ -77,6 +78,9 @@ export function IdentityScreen({
   /** Set once a code has been asked for, which is what reveals the boxes. */
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
+  // Counts down from the moment a code goes out; the resend button waits on
+  // it, so a second tap cannot retire a code that is still in the post.
+  const resend = useResendCooldown();
 
   const signingIn = intent === "signin";
   const address = email.trim();
@@ -179,6 +183,7 @@ export function IdentityScreen({
       return;
     }
     setSent(true);
+    resend.start();
   };
 
   const submitCode = async (value: string) => {
@@ -270,10 +275,12 @@ export function IdentityScreen({
               size="lg"
               variant="ghost"
               className={SECONDARY}
-              disabled={busy}
+              disabled={busy || resend.remaining > 0}
               onClick={() => void askForCode()}
             >
-              {t("resend")}
+              {resend.remaining > 0
+                ? t("resendIn", { seconds: resend.remaining })
+                : t("resend")}
             </Button>
           </>
         ) : (

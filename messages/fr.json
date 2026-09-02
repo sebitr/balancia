@@ -1605,6 +1605,7 @@
       "codeHint": "Les codes se remplissent depuis le clavier sur iOS et Android.",
       "verify": "Vérifier",
       "resend": "Envoyer un autre code",
+      "resendIn": "Envoyer un autre code dans {seconds} s",
       "withPasskey": "Continuer avec une clé d’accès",
       "signInWithPasskey": "Se connecter avec une clé d’accès",
       "orCode": "M’envoyer un code par e-mail",
