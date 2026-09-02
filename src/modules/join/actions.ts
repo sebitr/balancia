@@ -9,17 +9,24 @@ import {
   type ActionResult,
 } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/security/actor";
+import { redeemInvitation } from "@/lib/security/guest-session";
 import {
   createJoinLink,
   joinLinkUrl,
+  resolveJoinLink,
   revokeJoinLink,
   setJoinLinkExpiry,
 } from "@/lib/security/join-link";
 import {
+  clearJoinCookie,
+  readJoinCookie,
+  setGuestCookie,
+} from "@/modules/auth/cookies";
+import {
   AuthenticationRequiredError,
   requirePermission,
 } from "@/lib/security/authorization";
-import { JoinError } from "./service";
+import { JoinError, joinAsGuest } from "./service";
 import { joinFromLink } from "./signup-join";
 import {
   DEFAULT_JOIN_LINK_EXPIRY,
@@ -91,6 +98,66 @@ export async function joinWithAccountAction(member: {
     revalidatePath(`/groups/${result.data.groupId}`);
     revalidatePath(`/groups/${result.data.groupId}/members`);
     revalidatePath("/dashboard");
+  }
+  return result;
+}
+
+/**
+ * Puts a guest into the group its join cookie names.
+ *
+ * The fifth way in, and until now the one that went nowhere: the "keep it"
+ * screen offered "Continue as a guest" on a shared link, and choosing it
+ * created neither a participant nor a session, so "Go to the group" opened the
+ * sign-in page. A guest session has always been minted by spending a personal
+ * invitation, so that is what this does — it mints one for the participant
+ * the joiner claimed or typed, on the group's behalf, and spends it at once.
+ *
+ * The group comes from the cookie for the same reason as above; the caller
+ * may only say which listed name is theirs, or which name to file under.
+ */
+export async function joinAsGuestAction(member: {
+  participantId: string | null;
+  displayName: string;
+}): Promise<ActionResult<{ groupId: string }>> {
+  const result = await runAction("join.asGuest", async () => {
+    const cookie = await readJoinCookie();
+    const link = cookie
+      ? await resolveJoinLink(cookie).catch(() => null)
+      : null;
+    if (!link) {
+      await clearJoinCookie();
+      throw new JoinError(
+        "This link is no longer active. Ask the group for a new one.",
+        "joinLinkGone",
+      );
+    }
+
+    const outcome = await joinAsGuest({
+      groupId: link.groupId,
+      participantId: member.participantId,
+      displayName: member.displayName.trim(),
+    });
+    await clearJoinCookie();
+
+    if (outcome.status === "taken") {
+      throw new JoinError(
+        "Somebody else claimed that name first. Open the link again to pick another.",
+        "joinNameTaken",
+      );
+    }
+
+    // Spend the invitation this join minted, exactly as opening a personal
+    // link would: the session token goes in the cookie, the invitation token
+    // goes nowhere.
+    const redeemed = await redeemInvitation(outcome.invitationToken);
+    await setGuestCookie(redeemed.token, redeemed.expiresAt);
+
+    return { groupId: link.groupId };
+  });
+
+  if (result.ok && result.data) {
+    revalidatePath(`/groups/${result.data.groupId}`);
+    revalidatePath(`/groups/${result.data.groupId}/members`);
   }
   return result;
 }

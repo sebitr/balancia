@@ -122,15 +122,22 @@ function GroupCard({ group }: { group: OnboardingGroupView }) {
  * into one word for a screen reader — and in jsdom — so the accessible name is
  * stated rather than inferred.
  */
-function GuestChoice({ onSelect }: { onSelect: () => void }) {
+function GuestChoice({
+  busy = false,
+  onSelect,
+}: {
+  busy?: boolean;
+  onSelect: () => void;
+}) {
   const t = useTranslations("onboarding.welcome");
 
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={busy}
       aria-label={`${t("guest")} — ${t("guestNote")}`}
-      className="flex min-h-[3.375rem] w-full items-center gap-3 rounded-xl border border-dashed border-input bg-card px-4 py-3 text-left transition-colors hover:bg-muted"
+      className="flex min-h-[3.375rem] w-full items-center gap-3 rounded-xl border border-dashed border-input bg-card px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-60"
     >
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium">{t("guest")}</span>
@@ -469,11 +476,20 @@ export function KeepItScreen({
   name,
   expenseCount,
   registrationAllowed,
+  busy = false,
+  error = null,
   onChoose,
 }: {
   name: string;
   expenseCount: number;
   registrationAllowed: boolean;
+  /**
+   * The guest option is a commitment on a shared link: it is the join itself,
+   * with no credential screen after it to carry the work. So the choices can
+   * be in flight, and a refusal has to land somewhere.
+   */
+  busy?: boolean;
+  error?: string | null;
   onChoose: (intent: Intent) => void;
 }) {
   const t = useTranslations("onboarding.keepIt");
@@ -485,6 +501,8 @@ export function KeepItScreen({
         <Sub>{t("sub", { count: expenseCount })}</Sub>
       </div>
 
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       <Spacer />
 
       <div className="flex flex-col gap-2.5">
@@ -492,6 +510,7 @@ export function KeepItScreen({
           <Button
             size="lg"
             className={PRIMARY}
+            disabled={busy}
             onClick={() => onChoose("account")}
           >
             {t("createAccount")}
@@ -501,11 +520,12 @@ export function KeepItScreen({
           size="lg"
           variant="outline"
           className={SECONDARY}
+          disabled={busy}
           onClick={() => onChoose("signin")}
         >
           {t("haveAccount")}
         </Button>
-        <GuestChoice onSelect={() => onChoose("guest")} />
+        <GuestChoice busy={busy} onSelect={() => onChoose("guest")} />
       </div>
     </div>
   );

@@ -6,7 +6,10 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firstNameOf } from "@/components/join/types";
-import { joinWithAccountAction } from "@/modules/join/actions";
+import {
+  joinAsGuestAction,
+  joinWithAccountAction,
+} from "@/modules/join/actions";
 import {
   nextScreen,
   previousScreen,
@@ -323,6 +326,32 @@ export function OnboardingFlow({
     return null;
   };
 
+  /**
+   * Joining as a guest, which on a shared link is the whole of the join.
+   *
+   * A personal invitation has already spent its token into a guest session
+   * by the time its flow starts, so its guest has nothing to commit here. A
+   * shared link carries no identity at all: choosing "guest" on it is the
+   * moment the participant, the invitation and the session come to exist —
+   * and until this ran, they never did, which is how "Go to the group" used
+   * to open the sign-in page.
+   */
+  const joinAsGuest = async (): Promise<boolean> => {
+    setJoinError(null);
+    setJoining(true);
+    const result = await joinAsGuestAction({
+      participantId: claimed?.id ?? null,
+      displayName: name,
+    });
+    setJoining(false);
+    if (!result.ok || !result.data) {
+      setJoinError(result.error ?? t("joinFailed"));
+      return false;
+    }
+    setJoinedGroupId(result.data.groupId);
+    return true;
+  };
+
   /** Where a route ends: the group it produced, or the dashboard. */
   const leave = () => {
     router.push(groupId ? `/groups/${groupId}` : "/dashboard");
@@ -472,9 +501,19 @@ export function OnboardingFlow({
             name={name}
             expenseCount={claimed?.expenseCount ?? 0}
             registrationAllowed={registrationAllowed}
+            busy={joining}
+            error={joinError}
             onChoose={(chosen) => {
               setIntent(chosen);
-              advance(chosen === "guest" ? "arrival" : "identity");
+              if (chosen !== "guest") {
+                advance("identity");
+                return;
+              }
+              // The guest option commits here: there is no credential screen
+              // after it to carry the join, so the join is this tap.
+              void joinAsGuest().then((joined) => {
+                if (joined) advance("arrival");
+              });
             }}
           />
         )}

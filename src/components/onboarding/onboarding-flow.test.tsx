@@ -30,8 +30,12 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
  * flow does with the answer.
  */
 const joinWithAccountAction = vi.hoisted(() => vi.fn());
+const joinAsGuestAction = vi.hoisted(() => vi.fn());
 
-vi.mock("@/modules/join/actions", () => ({ joinWithAccountAction }));
+vi.mock("@/modules/join/actions", () => ({
+  joinWithAccountAction,
+  joinAsGuestAction,
+}));
 
 const auth = vi.hoisted(() => ({
   requestSignInCodeAction: vi.fn(),
@@ -56,6 +60,11 @@ beforeEach(() => {
   router.refresh.mockClear();
   joinWithAccountAction.mockReset();
   joinWithAccountAction.mockResolvedValue({
+    ok: true,
+    data: { groupId: "group-1" },
+  });
+  joinAsGuestAction.mockReset();
+  joinAsGuestAction.mockResolvedValue({
     ok: true,
     data: { groupId: "group-1" },
   });
@@ -249,6 +258,87 @@ describe("the shared link", () => {
     expect(
       screen.getByRole("button", { name: /Marc T\. — 6 expenses filed/ }),
     ).toBeInTheDocument();
+  });
+
+  it("joins as a guest on the tap that chooses it, and lands in the group", async () => {
+    // This was the dead end: the guest option on a shared link committed
+    // nothing, and "Go to the group" opened the sign-in page.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /None of these/ }));
+    await user.type(screen.getByRole("textbox", { name: "Your name" }), "Dana");
+    await user.click(
+      screen.getByRole("button", { name: /^(Continue|Create my account)$/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+
+    expect(joinAsGuestAction).toHaveBeenCalledWith({
+      participantId: null,
+      displayName: "Dana",
+    });
+    expect(
+      screen.getByRole("heading", { name: "You're in as a guest" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Go to the group" }));
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+  });
+
+  it("claims a listed name as a guest with that participant, not a new one", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /Marc T\./ }));
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+
+    expect(joinAsGuestAction).toHaveBeenCalledWith({
+      participantId: "member-1",
+      displayName: "Marc T.",
+    });
+  });
+
+  it("keeps a refused guest join on the screen it was chosen from", async () => {
+    joinAsGuestAction.mockResolvedValue({
+      ok: false,
+      error: "Somebody else claimed that name first.",
+    });
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /Marc T\./ }));
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+
+    expect(
+      screen.getByText("Somebody else claimed that name first."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "You're in as a guest" }),
+    ).toBeNull();
   });
 
   it("says so when the link no longer resolves", () => {
