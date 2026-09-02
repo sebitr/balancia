@@ -1,5 +1,19 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  blend,
+  contrastRatio,
+  deltaE,
+  oklchToHex,
+  parseOklch,
+  type Oklch,
+} from "@/lib/color/oklch";
+import {
+  ACCENT_COLORS,
+  ACCENT_SEEDS,
+  accentPalette,
+} from "@/modules/profile/accent";
+import { MONEY_ROLES, type Theme } from "@/modules/profile/money-tones";
 
 /**
  * The balance colours have to be readable as text, in both themes.
@@ -19,12 +33,30 @@ import { describe, expect, it } from "vitest";
  *
  * The ratios are computed from the tokens in `globals.css` rather than from a
  * table copied beside them, because a table is a second place to forget.
+ *
+ * What this file sees is the palette as drawn — coral, with the fallbacks
+ * the accent-aware tokens carry. The other six accents, and the money
+ * colours rotated clear of them, are `src/modules/profile/accent.test.ts`'s
+ * job; what is checked here about the accent is that the chart colours keep
+ * out of its way, whichever one it is.
  */
 
 const CSS = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
 
 /** WCAG 2.2 1.4.3 — normal-size text. */
 const AA_TEXT = 4.5;
+
+/**
+ * How far apart a chart colour keeps from anything that means money or
+ * marks the accent, in OKLab — the floor `accent.test.ts` uses, for the
+ * reason it gives there.
+ */
+const MIN_DELTA_E = 0.075;
+
+const THEMES: readonly [Theme, string][] = [
+  ["light", ":root"],
+  ["dark", ".dark"],
+];
 
 /** The `-ink` tokens, and the surfaces each one is rendered on. */
 const INK_SURFACES: Record<string, readonly string[]> = {
@@ -48,7 +80,30 @@ const TINT_BASE: Record<string, string> = {
   "primary-ink": "primary",
 };
 
-type Rgb = readonly [number, number, number];
+/**
+ * The ink each chart band carries in `BAND_STYLES`
+ * (`src/components/expenses/transactions.tsx`): plum wherever the band is
+ * light enough, cream where it is not.
+ */
+const BAND_INKS: Record<Theme, Record<string, string>> = {
+  light: {
+    "chart-1": "background",
+    "chart-2": "foreground",
+    "chart-3": "foreground",
+    "chart-4": "foreground",
+    "chart-5": "foreground",
+  },
+  dark: {
+    "chart-1": "background",
+    "chart-2": "background",
+    "chart-3": "background",
+    "chart-4": "background",
+    "chart-5": "foreground",
+  },
+};
+
+/** The chart colours that are categorical — everything but the accent. */
+const CATEGORICAL_CHARTS = ["chart-1", "chart-3", "chart-4", "chart-5"];
 
 /** The declarations inside one selector's block, as a token → value map. */
 function block(selector: string): Map<string, string> {
@@ -62,82 +117,33 @@ function block(selector: string): Map<string, string> {
   )) {
     // First wins: a token is declared once per block, and the marketing
     // values further down never shadow a product one.
-    if (!found.has(name)) found.set(name, value.trim());
+    if (!found.has(name)) found.set(name, value!.trim());
   }
   return found;
 }
 
-function oklchToRgb(value: string): Rgb {
-  const match = value.match(
-    /oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*[\d.%]+)?\s*\)/i,
-  );
-  if (!match) throw new Error(`not a plain oklch() colour: ${value}`);
-  const [L, C, hue] = [
-    Number(match[1]),
-    Number(match[2]),
-    Number(match[3]),
-  ] as const;
-
-  const a = C * Math.cos((hue * Math.PI) / 180);
-  const b = C * Math.sin((hue * Math.PI) / 180);
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-
-  const linear = [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  ].map((channel) => Math.min(1, Math.max(0, channel)));
-
-  // Back to gamma sRGB, which is the space a browser composites alpha in.
-  return linear.map((channel) =>
-    channel > 0.0031308
-      ? 1.055 * channel ** (1 / 2.4) - 0.055
-      : 12.92 * channel,
-  ) as unknown as Rgb;
-}
-
-function luminance(rgb: Rgb): number {
-  const [r, g, b] = rgb.map((channel) =>
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-  );
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(a: Rgb, b: Rgb): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
-
 /**
- * The washes the app puts these inks on: `bg-primary/15` in detail-blocks,
- * `/16` in money-formats, `/18` on the self pill and the accented settings row.
+ * A token's value as a colour, following `var()` where the block uses it.
  *
- * Both ends are checked because neither is the strict one in both themes. On
- * cream a heavier wash darkens the ground, which helps dark ink; on the dark
- * card the same wash lightens it, which hurts light ink. So the pair is tested
- * and the worse of the two has to clear AA.
+ * `var(--x)` is an alias of another token in the same block; `var(--x, …)`
+ * is one the accent may override inline, and what this file wants is the
+ * fallback — the palette as drawn.
  */
-const TINT_ALPHAS = [0.15, 0.18] as const;
-
-/** A wash of `fill` over `over`, the way `bg-positive/15` renders. */
-function wash(fill: Rgb, over: Rgb, alpha: number): Rgb {
-  return fill.map(
-    (channel, index) => channel * alpha + over[index] * (1 - alpha),
-  ) as unknown as Rgb;
+function resolve(tokens: Map<string, string>, name: string): Oklch {
+  const value = tokens.get(name);
+  if (!value) throw new Error(`no --${name} declared`);
+  const alias = value.match(/^var\(--([a-z0-9-]+)\)$/i);
+  if (alias) return resolve(tokens, alias[1]!);
+  const withFallback = value.match(/^var\(--[a-z0-9-]+,\s*(.+)\)$/i);
+  const literal = withFallback ? withFallback[1]! : value;
+  const parsed = parseOklch(literal.replace(/\s*\/\s*[\d.%]+\s*\)$/, ")"));
+  if (!parsed) throw new Error(`not a plain oklch() colour: ${value}`);
+  return parsed;
 }
 
-describe.each([
-  ["light", ":root"],
-  ["dark", ".dark"],
-])("%s theme balance text", (theme, selector) => {
+describe.each(THEMES)("%s theme balance text", (theme, selector) => {
   const tokens = block(selector);
-  const colour = (name: string): Rgb => {
-    const value = tokens.get(name);
-    if (!value) throw new Error(`${selector} declares no --${name}`);
-    return oklchToRgb(value);
-  };
+  const colour = (name: string): string => oklchToHex(resolve(tokens, name));
 
   it("declares an -ink twin for every two-job colour", () => {
     const missing = Object.keys(INK_SURFACES).filter((ink) => !tokens.has(ink));
@@ -147,14 +153,20 @@ describe.each([
   for (const [ink, surfaces] of Object.entries(INK_SURFACES)) {
     for (const surface of surfaces) {
       it(`--${ink} clears AA as text on ${surface}`, () => {
+        // The washes the app puts these inks on: `bg-primary/15` in
+        // detail-blocks, `/16` in money-formats, `/18` on the self pill and
+        // the accented settings row. Both ends are checked because neither
+        // is the strict one in both themes: on cream a heavier wash darkens
+        // the ground, which helps dark ink; on the dark card the same wash
+        // lightens it, which hurts light ink.
         const grounds =
           surface === "tint"
-            ? TINT_ALPHAS.map((alpha) =>
-                wash(colour(TINT_BASE[ink]!), colour("card"), alpha),
+            ? [0.15, 0.18].map((alpha) =>
+                blend(colour(TINT_BASE[ink]!), alpha, colour("card")),
               )
             : [colour(surface)];
         const worst = Math.min(
-          ...grounds.map((ground) => contrast(colour(ink), ground)),
+          ...grounds.map((ground) => contrastRatio(colour(ink), ground)),
         );
         expect(
           Number(worst.toFixed(2)),
@@ -163,4 +175,47 @@ describe.each([
       });
     }
   }
+});
+
+describe.each(THEMES)("%s theme chart colours", (theme, selector) => {
+  const tokens = block(selector);
+
+  it('draw the "you" series in the accent, whichever it is', () => {
+    expect(tokens.get("chart-2")).toBe("var(--primary)");
+  });
+
+  it("carry the ink the band styles give them, under every accent", () => {
+    for (const [chart, ink] of Object.entries(BAND_INKS[theme])) {
+      const fills =
+        chart === "chart-2"
+          ? ACCENT_COLORS.map((accent) => ACCENT_SEEDS[accent])
+          : [resolve(tokens, chart)];
+      for (const fill of fills) {
+        expect(
+          contrastRatio(oklchToHex(fill), oklchToHex(resolve(tokens, ink))),
+          `--${ink} on --${chart} ${oklchToHex(fill)} in ${theme}`,
+        ).toBeGreaterThanOrEqual(AA_TEXT);
+      }
+    }
+  });
+
+  it.each(CATEGORICAL_CHARTS)(
+    "keep --%s clear of every accent and every money colour",
+    (chart) => {
+      const bar = resolve(tokens, chart);
+      for (const accent of ACCENT_COLORS) {
+        const palette = accentPalette(accent);
+        expect(
+          deltaE(bar, palette.fill),
+          `--${chart} vs the ${accent} accent in ${theme}`,
+        ).toBeGreaterThanOrEqual(MIN_DELTA_E);
+        for (const role of MONEY_ROLES) {
+          expect(
+            deltaE(bar, palette.money[theme][role].fill),
+            `--${chart} vs ${role} under ${accent} in ${theme}`,
+          ).toBeGreaterThanOrEqual(MIN_DELTA_E);
+        }
+      }
+    },
+  );
 });

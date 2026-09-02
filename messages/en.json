@@ -823,7 +823,7 @@
       "raspberry": "Raspberry",
       "plum": "Plum"
     },
-    "accentNote": "The accent colours whatever is chosen, active or still to do. Balances keep their own colours: green when you are owed, red when you owe.",
+    "accentNote": "The accent colours whatever is chosen, active or still to do. The balance colours keep their distance from it, so green still means you are owed and red still means you owe.",
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageSaved": "Language changed",

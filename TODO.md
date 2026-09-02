@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Keep the money colours clear of the accent, and add Paper, Midnight and an increased-contrast setting — `feat/accent-keeps-its-distance`
 - [ ] Pin browserslist and fast-uri past the advisories that have failed the dependency audit on every branch since 1 September — `fix/dependency-audit`
 - [ ] Make an account cost something to create: free a squatted address, cap sign-ups per inbox and per instance, refuse the passwords everyone guesses, and price out bulk sign-up — `feat/signup-abuse-defences`
 - [ ] Offer the passkey in the sign-in field's own autofill dropdown — `feat/passkey-autofill`

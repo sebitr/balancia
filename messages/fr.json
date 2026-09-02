@@ -823,7 +823,7 @@
       "raspberry": "Framboise",
       "plum": "Prune"
     },
-    "accentNote": "L’accent colore ce qui est choisi, actif ou à faire. Les soldes gardent leurs couleurs : vert quand on te doit, rouge quand tu dois.",
+    "accentNote": "L’accent colore ce qui est choisi, actif ou à faire. Les couleurs des soldes gardent leurs distances : le vert veut toujours dire qu’on te doit, le rouge que tu dois.",
     "accentFailed": "Cette couleur n’a pas pu être enregistrée.",
     "language": "Langue",
     "languageSaved": "Langue changée",

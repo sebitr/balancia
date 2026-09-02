@@ -7,7 +7,7 @@ import { Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   ACCENT_COLORS,
-  ACCENT_VALUES,
+  accentCss,
   accentTokens,
   type AccentColor,
 } from "@/modules/profile/accent";
@@ -26,7 +26,9 @@ import { setAccentColorAction } from "@/modules/profile/actions";
  * the tap has to recolour the tick that just moved, along with every other
  * accent on screen. So the tokens are set on `documentElement` first and the
  * action follows; a refused write puts both back rather than leaving the app a
- * colour the account did not keep.
+ * colour the account did not keep. The same paint carries the money colours
+ * that step aside for this accent, so the preview above the swatches shows
+ * "you owe" turning ruby in the same frame the button turns coral.
  *
  * No toast either. Everything accent-coloured on screen has already changed,
  * which says more than a line of text can, and the way back is the swatch
@@ -86,12 +88,12 @@ export function AccentChoices({ current }: { current: AccentColor }) {
             aria-label={t(`accents.${accent}` as Parameters<typeof t>[0])}
             className="group flex size-8.5 shrink-0 items-center justify-center rounded-full transition-shadow focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             style={{
-              background: ACCENT_VALUES[accent],
+              background: accentCss(accent),
               // The inner gap is the card's own colour, so the ring reads as a
               // halo around the swatch rather than a second colour on it.
               boxShadow:
                 chosen === accent
-                  ? `0 0 0 2px var(--card), 0 0 0 4px ${ACCENT_VALUES[accent]}`
+                  ? `0 0 0 2px var(--card), 0 0 0 4px ${accentCss(accent)}`
                   : undefined,
             }}
           >

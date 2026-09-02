@@ -130,6 +130,32 @@
  *
  * src/app/token-contrast.test.ts holds every one of these pairings to its
  * ratio, so the ramp cannot drift back.
+ *
+ * The accent, and the money colours that keep their distance from it.
+ *
+ * The reader picks an accent (src/modules/profile/accent.ts), and the server
+ * paints it inline on <html>, where it outranks both blocks below. What it
+ * paints is more than --primary: the accent as text needs a different
+ * lightness per theme, and three of the seven accents land on a money colour
+ * — coral is two degrees from the "you owe" red, mint *is* the "gets back"
+ * green — so the money colour rotates forty degrees clear of the accent
+ * (src/modules/profile/money-tones.ts). An inline declaration cannot know
+ * which theme it is in, so each of those tokens is written twice, once per
+ * theme, and the two blocks pick: `:root` reads the `-light` variable, `.dark`
+ * the `-dark` one, each falling back to the palette as drawn for a document
+ * nobody painted (the design-system kit, a test). --primary, the ring and the
+ * sidebar stay literal inline values: three parsers read a bare oklch() from
+ * this file and none of them needs to learn var().
+ *
+ * --chart-2 is the accent, because it is the "you" series; the other chart
+ * colours are categorical and are kept a visible distance from every accent
+ * and every money colour, so a bar is never mistaken for a balance. Accepted
+ * near-misses, on purpose: dark --notice-warning equals the amber seed (a
+ * toast glyph beside a triangle, never on a money surface); the plum accent
+ * sits close to --neutral-balance (settled is grey by design, and plum is the
+ * "no accent" choice); dark --group-accent-emerald equals the positive fill
+ * (a group's icon is content, not chrome). src/modules/profile/accent.test.ts
+ * holds the seven accents to the same ratios and to the distances.
  */
 :root {
   --background: oklch(0.977 0.007 85);
@@ -140,7 +166,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.543 0.168 30);
+  --primary-ink: var(--accent-ink-light, oklch(0.543 0.168 30));
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -148,25 +174,25 @@
   --accent: oklch(0.9 0.018 319);
   --accent-foreground: oklch(0.33 0.088 319);
   --destructive: oklch(0.53 0.2 22);
-  --positive: oklch(0.654 0.13 167);
+  --positive: var(--accent-positive-light, oklch(0.654 0.13 167));
   --positive-foreground: oklch(0.977 0.007 85);
-  --positive-ink: oklch(0.496 0.13 167);
-  --negative: oklch(0.639 0.18 32);
+  --positive-ink: var(--accent-positive-ink-light, oklch(0.496 0.13 167));
+  --negative: var(--accent-negative-light, oklch(0.639 0.18 32));
   --negative-foreground: oklch(0.977 0.007 85);
-  --negative-ink: oklch(0.534 0.18 32);
+  --negative-ink: var(--accent-negative-ink-light, oklch(0.534 0.18 32));
   --neutral-balance: oklch(0.62 0.035 319);
   --neutral-balance-ink: oklch(0.525 0.035 319);
-  --payer: oklch(0.72 0.145 70);
+  --payer: var(--accent-payer-light, oklch(0.72 0.145 70));
   --payer-foreground: oklch(0.226 0.072 319);
-  --payer-ink: oklch(0.534 0.145 70);
+  --payer-ink: var(--accent-payer-ink-light, oklch(0.534 0.145 70));
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
   --chart-1: oklch(0.47 0.085 319);
-  --chart-2: oklch(0.712 0.168 30);
-  --chart-3: oklch(0.654 0.13 167);
-  --chart-4: oklch(0.72 0.145 70);
-  --chart-5: oklch(0.71 0.048 319);
+  --chart-2: var(--primary);
+  --chart-3: oklch(0.6 0.1 205);
+  --chart-4: oklch(0.62 0.05 250);
+  --chart-5: oklch(0.82 0.04 319);
   --radius: 0.75rem;
   --sidebar: oklch(0.96 0.01 85);
   --sidebar-foreground: oklch(0.226 0.072 319);
@@ -240,7 +266,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.737 0.168 30);
+  --primary-ink: var(--accent-ink-dark, oklch(0.737 0.168 30));
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -248,24 +274,24 @@
   --accent: oklch(0.33 0.06 319);
   --accent-foreground: oklch(0.977 0.007 85);
   --destructive: oklch(0.65 0.18 22);
-  --positive: oklch(0.75 0.13 167);
+  --positive: var(--accent-positive-dark, oklch(0.75 0.13 167));
   --positive-foreground: oklch(0.226 0.072 319);
-  --positive-ink: oklch(0.75 0.13 167);
-  --negative: oklch(0.72 0.16 32);
+  --positive-ink: var(--accent-positive-ink-dark, oklch(0.75 0.13 167));
+  --negative: var(--accent-negative-dark, oklch(0.72 0.16 32));
   --negative-foreground: oklch(0.226 0.072 319);
-  --negative-ink: oklch(0.734 0.16 32);
+  --negative-ink: var(--accent-negative-ink-dark, oklch(0.734 0.16 32));
   --neutral-balance: oklch(0.7 0.03 319);
   --neutral-balance-ink: oklch(0.7 0.03 319);
-  --payer: oklch(0.82 0.14 78);
+  --payer: var(--accent-payer-dark, oklch(0.82 0.14 78));
   --payer-foreground: oklch(0.226 0.072 319);
-  --payer-ink: oklch(0.82 0.14 78);
+  --payer-ink: var(--accent-payer-ink-dark, oklch(0.82 0.14 78));
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.712 0.168 30);
-  --chart-1: oklch(0.71 0.048 319);
-  --chart-2: oklch(0.712 0.168 30);
-  --chart-3: oklch(0.75 0.13 167);
-  --chart-4: oklch(0.78 0.13 70);
+  --chart-1: oklch(0.84 0.035 319);
+  --chart-2: var(--primary);
+  --chart-3: oklch(0.84 0.08 205);
+  --chart-4: oklch(0.86 0.06 267);
   --chart-5: oklch(0.55 0.09 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
@@ -448,8 +474,8 @@
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
-  --positive: oklch(0.654 0.13 167);
-  --negative: oklch(0.639 0.18 32);
+  --positive: var(--accent-positive-light, oklch(0.654 0.13 167));
+  --negative: var(--accent-negative-light, oklch(0.639 0.18 32));
   --neutral-balance: oklch(0.62 0.035 319);
 }
 
