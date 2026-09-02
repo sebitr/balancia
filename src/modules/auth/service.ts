@@ -1061,20 +1061,23 @@ export async function sendVerificationEmail(
 export async function verifyEmail(
   rawToken: string,
   options: { db?: Database } = {},
-): Promise<boolean> {
+): Promise<{ userId: string } | null> {
   const db = options.db ?? getDb();
   const consumed = await consumeVerificationToken(
     rawToken,
     "email_verification",
     { db },
   );
-  if (!consumed) return false;
+  if (!consumed) return null;
 
   await db
     .update(users)
     .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
     .where(eq(users.id, consumed.userId));
-  return true;
+  // Whose address was just proved, so the link can sign them in: the token
+  // was the whole of the proof, and asking for a password after it is
+  // asking twice.
+  return { userId: consumed.userId };
 }
 
 /**

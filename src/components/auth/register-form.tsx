@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerAction } from "@/modules/auth/actions";
+import {
+  containsIdentity,
+  isCommonPassword,
+} from "@/modules/auth/common-passwords";
 import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { AppleSignInButton } from "./apple-sign-in-button";
 
@@ -30,12 +34,47 @@ const schema = z
   .refine((value) => value.password === value.confirmPassword, {
     path: ["confirmPassword"],
     message: "mismatch",
+  })
+  /*
+   * The server's two other rules, run here first.
+   *
+   * `assertPasswordPolicy` refuses a password everybody guesses and one made
+   * of the name or the address, and the form only said "at least 10
+   * characters" — so those two refusals arrived as a red banner after submit,
+   * from a rule nobody had been told about. Same list, same check, under the
+   * field, before the round trip.
+   */
+  .superRefine((value, context) => {
+    if (isCommonPassword(value.password)) {
+      context.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: "passwordCommon",
+      });
+    } else if (
+      containsIdentity(value.password, {
+        email: value.email,
+        name: value.name,
+      })
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: "passwordPersonal",
+      });
+    }
   });
 
 type FormValues = z.infer<typeof schema>;
 
 type ValidationKey =
-  "name" | "email" | "passwordMin" | "passwordMax" | "mismatch";
+  | "name"
+  | "email"
+  | "passwordMin"
+  | "passwordMax"
+  | "passwordCommon"
+  | "passwordPersonal"
+  | "mismatch";
 
 export function RegisterForm({
   appleEnabled = false,

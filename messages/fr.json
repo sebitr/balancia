@@ -1408,7 +1408,7 @@
     "guestNameHint": "Le nom sous lequel le groupe te connaît déjà.",
     "email": "E-mail",
     "password": "Mot de passe",
-    "passwordHint": "Au moins 10 caractères.",
+    "passwordHint": "Au moins 10 caractères, et ni ton nom, ni ton adresse, ni un mot de passe que tout le monde utilise.",
     "confirmPassword": "Confirme le mot de passe",
     "submit": "Créer un compte",
     "haveAccount": "Tu as déjà un compte ?",
@@ -1421,6 +1421,8 @@
       "email": "Saisis une adresse e-mail valide",
       "passwordMin": "Utilise au moins 10 caractères",
       "passwordMax": "Ce mot de passe est trop long",
+      "passwordCommon": "Ce mot de passe est l’un des plus utilisés. Choisis-en un autre",
+      "passwordPersonal": "Laisse ton nom et ton adresse e-mail en dehors",
       "mismatch": "Les mots de passe ne correspondent pas"
     },
     "createFailed": "Ce compte n’a pas pu être créé."

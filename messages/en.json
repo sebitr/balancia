@@ -1408,7 +1408,7 @@
     "guestNameHint": "The name the group already uses for you.",
     "email": "Email",
     "password": "Password",
-    "passwordHint": "At least 10 characters.",
+    "passwordHint": "At least 10 characters, and not your name, your address or one everybody uses.",
     "confirmPassword": "Confirm password",
     "submit": "Create account",
     "haveAccount": "Already have an account?",
@@ -1421,6 +1421,8 @@
       "email": "Enter a valid email address",
       "passwordMin": "Use at least 10 characters",
       "passwordMax": "That password is too long",
+      "passwordCommon": "That password is one of the most commonly used ones. Choose another",
+      "passwordPersonal": "Leave your name and your email address out of it",
       "mismatch": "The passwords do not match"
     },
     "createFailed": "That account could not be created."
