@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
+import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { FormatPreferencesProvider } from "@/i18n/format-context";
@@ -81,6 +82,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // inline declaration outranks both `:root` and `.dark`, so the three tokens
   // it sets are the ones every accent in the app reads.
   const accent = await resolveAccentColor();
+  // The policy nonce `proxy.ts` minted for this response. The theme provider
+  // paints the stored theme with an inline script before React runs, and only
+  // a script carrying this nonce is allowed to; see `Providers`.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html
@@ -111,7 +116,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               initial={favorites.favorites}
               persist={favorites.persist}
             >
-              <Providers>{children}</Providers>
+              <Providers nonce={nonce}>{children}</Providers>
             </CurrencyFavoritesProvider>
             {/* Above every shell, not inside one: the gesture counts how many
                 of our own screens are behind this one, and moving between a
