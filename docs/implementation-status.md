@@ -16,41 +16,41 @@ a limitation here stops being true.
 
 ## Phases
 
-| #   | Phase                                                   | Status |
-| --- | ------------------------------------------------------- | ------ |
-| 1   | Repository and tooling foundation                       | ✅     |
-| 2   | Environment validation                                  | ✅     |
-| 3   | PostgreSQL schema and committed migrations              | ✅     |
-| 4   | Money and allocation domain                             | ✅     |
-| 5   | Balance engine                                          | ✅     |
-| 6   | Authentication (email/password + passkeys, first-party) | ✅     |
-| 6b  | Sign in with Apple (optional, off by default)           | ✅     |
-| 7   | Groups, participants and central authorization          | ✅     |
-| 8   | Secure guest access                                     | ✅     |
-| 9   | Expenses and settlements                                | ✅     |
-| 10  | Activity history                                        | ✅     |
-| 11  | Responsive application interface                        | ✅     |
-| 12  | Multi-currency modes (separate and converted)           | ✅     |
-| 13  | Receipt storage (local + S3)                            | ✅     |
-| 14  | Recurring expenses and worker                           | ✅     |
-| 15  | Splitwise staged import                                 | ✅     |
-| 16  | PWA configuration                                       | ✅     |
-| 17  | Docker Compose                                          | ✅     |
-| 18  | Documentation                                           | ✅     |
-| 19  | CI and final verification                               | ✅     |
-| 20  | Exchange-rate provider (opt-in)                         | ✅     |
-| 21  | Group export (JSON, CSV, XLSX)                          | ✅     |
-| 22  | Automatic expense categorization (EN/FR)                | ✅     |
-| 23  | Notifications: in-app inbox and Web Push (opt-in)       | ✅     |
-| 24  | On-device receipt scanning (opt-in)                     | ✅     |
-| 25  | Privacy-preserving telemetry (off by default, opt-in)   | ✅     |
-| 26  | Local operational metrics (Prometheus, off by default)  | ✅     |
-| 27  | Guest access claimed into an account                    | ✅     |
-| 28  | Onboarding: passkey signup, email codes, joining a link | ✅     |
-| 29  | Payout methods and payment codes                        | ✅     |
-| 30  | Group and member statistics                             | ✅     |
-| 31  | Transaction search, filtering and keyset pagination     | ✅     |
-| 32  | Offline expense entry with a send queue                 | ✅     |
+| #   | Phase                                                                            | Status |
+| --- | -------------------------------------------------------------------------------- | ------ |
+| 1   | Repository and tooling foundation                                                | ✅     |
+| 2   | Environment validation                                                           | ✅     |
+| 3   | PostgreSQL schema and committed migrations                                       | ✅     |
+| 4   | Money and allocation domain                                                      | ✅     |
+| 5   | Balance engine                                                                   | ✅     |
+| 6   | Authentication (email/password + passkeys, first-party)                          | ✅     |
+| 6b  | Sign in with Apple (optional, off by default)                                    | ✅     |
+| 7   | Groups, participants and central authorization                                   | ✅     |
+| 8   | Secure guest access                                                              | ✅     |
+| 9   | Expenses and settlements                                                         | ✅     |
+| 10  | Activity history                                                                 | ✅     |
+| 11  | Responsive application interface                                                 | ✅     |
+| 12  | Multi-currency modes (separate and converted)                                    | ✅     |
+| 13  | Receipt storage (local + S3)                                                     | ✅     |
+| 14  | Recurring expenses and worker                                                    | ✅     |
+| 15  | Splitwise staged import                                                          | ✅     |
+| 16  | PWA configuration                                                                | ✅     |
+| 17  | Docker Compose                                                                   | ✅     |
+| 18  | Documentation                                                                    | ✅     |
+| 19  | CI and final verification                                                        | ✅     |
+| 20  | Exchange-rate provider (opt-in)                                                  | ✅     |
+| 21  | Group export (JSON, CSV, XLSX)                                                   | ✅     |
+| 22  | Automatic expense categorization (EN/FR)                                         | ✅     |
+| 23  | Notifications: in-app inbox and Web Push (opt-in)                                | ✅     |
+| 24  | On-device receipt scanning (opt-in)                                              | ✅     |
+| 25  | Privacy-preserving telemetry (off by default, opt-in)                            | ✅     |
+| 26  | Local operational metrics (Prometheus, off by default)                           | ✅     |
+| 27  | Guest access claimed into an account                                             | ✅     |
+| 28  | Onboarding: passkey signup, email codes, joining a link, a group with no account | ✅     |
+| 29  | Payout methods and payment codes                                                 | ✅     |
+| 30  | Group and member statistics                                                      | ✅     |
+| 31  | Transaction search, filtering and keyset pagination                              | ✅     |
+| 32  | Offline expense entry with a send queue                                          | ✅     |
 
 ## Verification
 

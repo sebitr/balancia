@@ -86,7 +86,9 @@ See the [full project status](./docs/implementation-status.md),
 - **Recurring expenses and income.** Schedule rent, subscriptions, utilities,
   refunds, returned deposits or shared payouts in the group's timezone.
 - **Guest access without an account.** A revocable invitation lets a guest view
-  the group, add expenses, settle up and upload receipts.
+  the group, add expenses, settle up and upload receipts. A group's shared link
+  lets a newcomer in as a guest too, and a first group can be started with just
+  a name — the account comes later, when there is something to keep.
 - **Private receipt storage.** Attach images and PDFs to expenses. Files remain
   in the instance's local or S3-compatible storage behind authorization checks.
 - **Splitwise migration.** Preview and import a Splitwise CSV export or JSON
