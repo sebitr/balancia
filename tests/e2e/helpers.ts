@@ -179,3 +179,23 @@ export async function attachVirtualAuthenticator(
   );
   return { client, authenticatorId };
 }
+
+/**
+ * Whether the virtual authenticator answers a request nobody has approved.
+ *
+ * On from the moment it is attached, which is what lets a test click "Use a
+ * passkey" and be signed in without a fingerprint to give. It has to be turned
+ * off for the sign-in page's conditional request, which a real authenticator
+ * leaves pending until the reader picks the passkey out of the browser's
+ * autofill dropdown — this one, left to itself, signs them straight in.
+ */
+export async function setPasskeyPresence(
+  client: CDPSession,
+  authenticatorId: string,
+  enabled: boolean,
+): Promise<void> {
+  await client.send("WebAuthn.setAutomaticPresenceSimulation", {
+    authenticatorId,
+    enabled,
+  });
+}

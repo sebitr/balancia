@@ -259,6 +259,15 @@ browser produces a genuine attestation and assertion, and the server verifies
 signature, origin, relying-party ID and challenge. Nothing is stubbed
 server-side.
 
+That authenticator answers without being asked, which the sign-in page's
+conditional request turns into a trap: arrive at `/sign-in` with a credential
+on it and the page signs itself in before a test can click anything. So a test
+that means to reach that page some other way turns presence simulation off
+first — `setPasskeyPresence(client, authenticatorId, false)` in
+`tests/e2e/helpers.ts` — and hands it back once the ceremony it does want is
+under way. A real authenticator waits for a fingerprint; this is how it is told
+to do the same.
+
 ## Installing Balancia (PWA)
 
 The service worker and the install experience are separate concerns. Serwist
