@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -14,7 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signInAction } from "@/modules/auth/actions";
 import { startDemoAction } from "@/modules/demo/actions";
-import { signInWithPasskey } from "@/modules/auth/passkey-client";
+import {
+  armPasskeyAutofill,
+  cancelPasskeyCeremony,
+  signInWithPasskey,
+  supportsPasskeyAutofill,
+} from "@/modules/auth/passkey-client";
 import { usePasskeySupport } from "./use-passkey-support";
 import { AppleSignInButton } from "./apple-sign-in-button";
 
@@ -26,6 +31,11 @@ import { AppleSignInButton } from "./apple-sign-in-button";
  * on browsers without WebAuthn rather than offering a button that cannot work.
  * The Apple button is hidden on the same principle, on any instance whose
  * operator has not configured it.
+ *
+ * The same credential is also armed into the email field's autofill dropdown
+ * on mount, where a returning reader meets it without having read the page —
+ * see the effect below. The button stays, because most browsers still do not
+ * offer conditional mediation and none of them announce it in the field.
  */
 
 /**
@@ -75,6 +85,10 @@ export function SignInForm({
   const t = useTranslations("auth.signIn");
   const tValidation = useTranslations("auth.validation");
   const tErrors = useTranslations("auth.errors");
+  // The server answers in the reader's language and sends the sentence, not
+  // the code, so recognising the one refusal worth retrying means comparing
+  // against the same catalogue entry the route rendered.
+  const tServerErrors = useTranslations("serverErrors");
   const tCommon = useTranslations("common");
   const tDemo = useTranslations("demo");
   const [formError, setFormError] = useState<string | null>(initialError);
@@ -119,6 +133,14 @@ export function SignInForm({
     }
   };
 
+  /** One reading of a refused ceremony, for the button and for autofill. */
+  const passkeyErrorMessage = (error: unknown): string =>
+    // A cancelled prompt is not an error worth shouting about.
+    error instanceof Error && error.name === "NotAllowedError"
+      ? tErrors("passkeyCancelled")
+      : (error instanceof Error ? error.message : "") ||
+        tErrors("passkeyFailed");
+
   const onPasskey = async () => {
     setFormError(null);
     setPasskeyPending(true);
@@ -127,17 +149,100 @@ export function SignInForm({
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
-      // A cancelled prompt is not an error worth shouting about.
-      const message =
-        error instanceof Error && error.name === "NotAllowedError"
-          ? tErrors("passkeyCancelled")
-          : (error instanceof Error ? error.message : "") ||
-            tErrors("passkeyFailed");
-      setFormError(message);
+      setFormError(passkeyErrorMessage(error));
     } finally {
       setPasskeyPending(false);
     }
   };
+
+  /*
+   * What the armed request does when it settles.
+   *
+   * Effect events rather than dependencies: the request below is armed once
+   * per mount and outlives every render after it, but the router and the
+   * catalogue it answers to are the current ones.
+   */
+  const onAutofillSignedIn = useEffectEvent(() => {
+    router.push("/dashboard");
+    router.refresh();
+  });
+
+  const onAutofillRefused = useEffectEvent((error: unknown) => {
+    setFormError(passkeyErrorMessage(error));
+  });
+
+  const isExpiredChallenge = useEffectEvent(
+    (error: unknown): boolean =>
+      error instanceof Error &&
+      error.message === tServerErrors("passkeySignInExpired"),
+  );
+
+  /*
+   * Put the passkey in the email field's autofill dropdown.
+   *
+   * Conditional mediation only works if something asks for it, and nothing
+   * else on this page does: `autocomplete="username webauthn"` marks the field
+   * but does not start a ceremony. So one is armed here, on a browser that
+   * says it can, and then waits — indefinitely, invisibly, and without a
+   * spinner, because the reader has not asked for anything yet.
+   *
+   * Which is also the rule for how it fails. Nobody is told about a request
+   * they did not make: an abort is silent, and an expired challenge is
+   * replaced rather than reported. Only what happens after they pick the
+   * passkey out of the dropdown is theirs to hear about.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    // One at a time. A second conditional ceremony would abort the first, and
+    // "the previous request has settled" is what the visibility listener waits
+    // for — a pending one is already offering the passkey.
+    let pending = false;
+
+    const arm = async (retryOnExpiry: boolean): Promise<void> => {
+      if (cancelled || pending) return;
+      pending = true;
+      try {
+        await armPasskeyAutofill();
+        if (!cancelled) onAutofillSignedIn();
+      } catch (error) {
+        if (cancelled) return;
+        // Raised when the button starts its own modal ceremony, when this
+        // screen unmounts, and once on React's development double-mount.
+        if (error instanceof Error && error.name === "AbortError") return;
+        // The challenge lives five minutes and a sign-in page left open
+        // outlives it. Fetch a fresh one — once, so that a server refusing
+        // every challenge cannot turn this into a loop.
+        if (retryOnExpiry && isExpiredChallenge(error)) {
+          pending = false;
+          await arm(false);
+          return;
+        }
+        onAutofillRefused(error);
+      } finally {
+        pending = false;
+      }
+    };
+
+    // Coming back to the tab, after the button cancelled the request or it
+    // failed on its own: the field has nothing to offer until it is re-armed.
+    const onVisibilityChange = (): void => {
+      if (document.visibilityState === "visible") void arm(true);
+    };
+
+    void supportsPasskeyAutofill().then((supported) => {
+      if (!supported || cancelled) return;
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      void arm(true);
+    });
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      cancelPasskeyCeremony();
+    };
+    // No dependencies: one arming per mount, and the effect events above are
+    // how the current router and catalogue reach it.
+  }, []);
 
   return (
     <div className="space-y-6">

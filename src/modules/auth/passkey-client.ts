@@ -4,6 +4,8 @@ import {
   startAuthentication,
   startRegistration,
   browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
+  WebAuthnAbortService,
 } from "@simplewebauthn/browser";
 
 /**
@@ -17,6 +19,18 @@ import {
 
 export function supportsPasskeys(): boolean {
   return browserSupportsWebAuthn();
+}
+
+/**
+ * Whether this browser can offer a passkey from a field's autofill dropdown.
+ *
+ * A different question from `supportsPasskeys`, and worth asking separately:
+ * conditional mediation arrived years after WebAuthn itself, so a browser can
+ * do the modal ceremony and not this one. The answer is a promise because the
+ * browser resolves it against the platform authenticator rather than a table.
+ */
+export async function supportsPasskeyAutofill(): Promise<boolean> {
+  return browserSupportsWebAuthnAutofill();
 }
 
 /**
@@ -56,15 +70,28 @@ export async function registerPasskey(name?: string): Promise<void> {
   }
 }
 
-/** Signs in with a discoverable passkey — no email needed. */
-export async function signInWithPasskey(): Promise<void> {
+/**
+ * The sign-in ceremony, in the two mediations it is offered under.
+ *
+ * `useBrowserAutofill` is the only difference, and it is a client-side flag:
+ * both ask the server for the same discoverable-credential options, and the
+ * server is never told which one asked. What changes is when the browser
+ * settles. Modal mediation puts a sheet on the screen straight away.
+ * Conditional mediation puts the passkey in the autofill dropdown of the
+ * field marked `autocomplete="… webauthn"` and resolves nothing until the
+ * reader picks it out.
+ */
+async function authenticate(useBrowserAutofill: boolean): Promise<void> {
   const optionsResponse = await fetch("/api/auth/passkey/authenticate");
   if (!optionsResponse.ok) {
     throw new Error(await readError(optionsResponse));
   }
   const options = await optionsResponse.json();
 
-  const assertion = await startAuthentication({ optionsJSON: options });
+  const assertion = await startAuthentication({
+    optionsJSON: options,
+    useBrowserAutofill,
+  });
 
   const verifyResponse = await fetch("/api/auth/passkey/authenticate", {
     method: "POST",
@@ -74,6 +101,37 @@ export async function signInWithPasskey(): Promise<void> {
   if (!verifyResponse.ok) {
     throw new Error(await readError(verifyResponse));
   }
+}
+
+/** Signs in with a discoverable passkey — no email needed. */
+export async function signInWithPasskey(): Promise<void> {
+  await authenticate(false);
+}
+
+/**
+ * Offers the account's passkey in the email field's own autofill dropdown.
+ *
+ * Resolves once the session cookie is set, which can only happen if the reader
+ * chose the passkey and the server accepted the assertion — so a caller may
+ * read resolution as "signed in". Until then it simply stays pending, for as
+ * long as the page is open: this is not a request anybody is waiting on, and
+ * how it fails is usually not news anybody asked for.
+ */
+export async function armPasskeyAutofill(): Promise<void> {
+  await authenticate(true);
+}
+
+/**
+ * Cancels whichever ceremony is open, conditional or modal.
+ *
+ * There is one, because `startAuthentication` arms a singleton — which is also
+ * why pressing the passkey button cancels a pending autofill request rather
+ * than colliding with it. A screen that armed one calls this as it unmounts,
+ * so the pending promise rejects with an `AbortError` instead of resolving
+ * into a navigation on a page that is gone.
+ */
+export function cancelPasskeyCeremony(): void {
+  WebAuthnAbortService.cancelCeremony();
 }
 
 export interface PasskeyRecord {

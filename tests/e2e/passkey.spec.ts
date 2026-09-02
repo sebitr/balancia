@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   attachVirtualAuthenticator,
   registerAndSignIn,
+  setPasskeyPresence,
   TEST_PASSWORD,
   uniqueEmail,
 } from "./helpers";
@@ -57,16 +58,80 @@ test.describe("passkeys", () => {
     });
     expect(stored.credentials.length).toBe(1);
 
-    // Now sign out and back in using only the passkey.
+    // Now sign out and back in using only the passkey — the button, and not
+    // the conditional request the page also arms, which this authenticator
+    // would otherwise answer before anything could be clicked.
     await signOut(page);
+    await setPasskeyPresence(client, authenticatorId, false);
 
     await page.goto("/sign-in");
     await page.getByRole("button", { name: "Use a passkey" }).click();
+    await setPasskeyPresence(client, authenticatorId, true);
 
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(
       page.getByRole("heading", { name: "Your groups" }),
     ).toBeVisible();
+  });
+
+  test("offers the passkey from the email field, without closing the button", async ({
+    page,
+  }) => {
+    const { client, authenticatorId } = await attachVirtualAuthenticator(page);
+
+    const email = uniqueEmail("passkey-autofill");
+    await registerAndSignIn(page, { email, name: "Autofill User" });
+
+    await page.goto("/settings/security");
+    await page.getByRole("button", { name: "Add this device" }).click();
+    await expect(page.getByText("Unnamed passkey")).toBeVisible();
+
+    await signOut(page);
+
+    // Nobody has picked the passkey out of the dropdown yet, so the request
+    // has to be left waiting for one — see `setPasskeyPresence`.
+    await setPasskeyPresence(client, authenticatorId, false);
+
+    /*
+     * The dropdown itself is out of reach: it is browser chrome, and there is
+     * no suggestion to click in a headless run. So what is asserted is the
+     * request behind it — the page asked for a credential under conditional
+     * mediation, which is the whole of what was missing.
+     */
+    await page.addInitScript(() => {
+      const mediations: string[] = [];
+      (
+        window as unknown as { __passkeyMediations: string[] }
+      ).__passkeyMediations = mediations;
+
+      const container = navigator.credentials;
+      const get = container.get.bind(container);
+      container.get = (options?: CredentialRequestOptions) => {
+        mediations.push(options?.mediation ?? "");
+        return get(options);
+      };
+    });
+
+    await page.goto("/sign-in");
+
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as unknown as { __passkeyMediations?: string[] })
+              .__passkeyMediations ?? [],
+        ),
+      )
+      .toContain("conditional");
+
+    // And the button still opens its own modal ceremony with that conditional
+    // request pending: starting one cancels the other rather than colliding.
+    // The authenticator is handed back its finger only once the click has
+    // cancelled the conditional request, so it is the modal one it answers.
+    await page.getByRole("button", { name: "Use a passkey" }).click();
+    await setPasskeyPresence(client, authenticatorId, true);
+
+    await expect(page).toHaveURL(/\/dashboard/);
   });
 
   test("removing a passkey stops it working", async ({ page }) => {
@@ -102,7 +167,7 @@ test.describe("passkeys", () => {
   });
 
   test("password sign-in still works alongside passkeys", async ({ page }) => {
-    await attachVirtualAuthenticator(page);
+    const { client, authenticatorId } = await attachVirtualAuthenticator(page);
     const email = uniqueEmail("both");
     await registerAndSignIn(page, { email });
 
@@ -111,6 +176,10 @@ test.describe("passkeys", () => {
     await expect(page.getByText("Unnamed passkey")).toBeVisible();
 
     await signOut(page);
+
+    // Somebody who has a passkey and means to type their password instead:
+    // the sign-in page arms the passkey into the field, and they ignore it.
+    await setPasskeyPresence(client, authenticatorId, false);
 
     // The password is unaffected by having registered a passkey.
     await page.goto("/sign-in");
