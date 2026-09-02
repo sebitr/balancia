@@ -97,7 +97,7 @@ async function handleStart(request: Request) {
     }
     if (!(error instanceof RateLimitedError)) throw error;
     return NextResponse.json(
-      { error: t("rateLimited") },
+      { error: t("rateLimitedFor", error.params) },
       {
         status: 429,
         headers: { "Retry-After": String(error.retryAfterSeconds) },

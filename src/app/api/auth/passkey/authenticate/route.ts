@@ -60,7 +60,11 @@ async function handlePost(request: Request) {
   const limit = await consumeRateLimit("signIn", ip);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: t("rateLimited") },
+      {
+        error: t("rateLimitedFor", {
+          minutes: Math.max(1, Math.ceil(limit.retryAfterSeconds / 60)),
+        }),
+      },
       {
         status: 429,
         headers: { "Retry-After": String(limit.retryAfterSeconds) },
