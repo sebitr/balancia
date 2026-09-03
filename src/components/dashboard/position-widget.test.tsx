@@ -141,9 +141,10 @@ describe("PositionWidget", () => {
       ],
     });
 
-    // The header is the position, signed, not a sentence about the rates.
-    expect(screen.getByText("+CHF 210")).toBeVisible();
-    expect(screen.getByText("+€148")).toBeVisible();
+    // The header is the position, signed the way every other balance is
+    // signed: a real plus, a space, then the figure.
+    expect(screen.getByText("+ CHF 210")).toBeVisible();
+    expect(screen.getByText("+ €148")).toBeVisible();
     // Why there is more than one figure, as a footnote under them.
     expect(
       screen.getByText("One total per currency — no rate to combine them"),
@@ -166,8 +167,8 @@ describe("PositionWidget", () => {
       ],
     });
 
-    expect(screen.getByText("+CHF 210")).toBeVisible();
-    expect(screen.queryByText("+€0")).not.toBeInTheDocument();
+    expect(screen.getByText("+ CHF 210")).toBeVisible();
+    expect(screen.queryByText("+ €0")).not.toBeInTheDocument();
     expect(screen.queryByText("€0")).not.toBeInTheDocument();
   });
 

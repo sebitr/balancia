@@ -65,11 +65,19 @@ function amount(
   currency = "CHF",
   signDisplay?: "exceptZero",
 ): string {
-  return formatMoney(money(minorUnits, currency), {
-    locale: "en",
-    display: "code",
-    signDisplay,
-  }).replace(/\u00a0/g, " ");
+  // The sign is the app's own, not Intl's: `Amount` writes a real minus for
+  // any loss, a plus for a gain only when asked, then a space, then the
+  // magnitude, and leaves zero bare.
+  const sign =
+    minorUnits < 0n ? "− " : minorUnits > 0n && signDisplay ? "+ " : "";
+  const magnitude = minorUnits < 0n ? -minorUnits : minorUnits;
+  return (
+    sign +
+    formatMoney(money(magnitude, currency), {
+      locale: "en",
+      display: "code",
+    }).replace(/\u00a0/g, " ")
+  );
 }
 
 /** The signed figure a section header states: its effect on the balance. */

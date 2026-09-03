@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bell, Check, ChevronRight, Minus, Plus } from "lucide-react";
+import {
+  Bell,
+  Check,
+  ChevronRight,
+  HandCoins,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { TONE, toneFor } from "@/components/money/balance-tone";
 import { RemindButton } from "@/components/reminders/remind-button";
@@ -92,6 +99,8 @@ export function PositionCard({
             size="lg"
             className="h-10 flex-1 rounded-lg text-sm font-semibold"
           >
+            {/* Settled keeps the tick — it is the one state that is done.
+                The live button shows money changing hands instead. */}
             {settled ? (
               <>
                 <Check aria-hidden="true" className="size-4" />
@@ -99,7 +108,7 @@ export function PositionCard({
               </>
             ) : (
               <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
-                <Check aria-hidden="true" className="size-4" />
+                <HandCoins aria-hidden="true" className="size-4" />
                 {t("settleUp")}
               </Link>
             )}

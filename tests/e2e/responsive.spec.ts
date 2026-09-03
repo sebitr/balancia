@@ -15,7 +15,13 @@ test("shows bottom navigation and no horizontal overflow on a phone", async ({
   // The group's bottom navigation is the primary way around on a phone.
   const nav = page.getByRole("navigation", { name: "Group sections" });
   await expect(nav).toBeVisible();
-  for (const label of ["Overview", "Expenses", "Add", "People", "Settings"]) {
+  for (const label of [
+    "Overview",
+    "Transactions",
+    "Add",
+    "People",
+    "Settings",
+  ]) {
     await expect(nav.getByRole("link", { name: label })).toBeVisible();
   }
 
