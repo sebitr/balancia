@@ -1,4 +1,4 @@
-<!-- @dsCard group="Foundations" name="Colour" subtitle="Plum and coral tokens, and the three balance tones" -->
+<!-- @dsCard group="Foundations" name="Colour" subtitle="Plum and coral tokens, the three balance tones, seven accents and four surfaces" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -28,6 +28,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
+  --primary-ink: oklch(0.543 0.168 30);
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -37,17 +38,23 @@
   --destructive: oklch(0.53 0.2 22);
   --positive: oklch(0.654 0.13 167);
   --positive-foreground: oklch(0.977 0.007 85);
+  --positive-ink: oklch(0.496 0.13 167);
   --negative: oklch(0.639 0.18 32);
   --negative-foreground: oklch(0.977 0.007 85);
+  --negative-ink: oklch(0.534 0.18 32);
   --neutral-balance: oklch(0.62 0.035 319);
+  --neutral-balance-ink: oklch(0.525 0.035 319);
+  --payer: oklch(0.72 0.145 70);
+  --payer-foreground: oklch(0.226 0.072 319);
+  --payer-ink: oklch(0.534 0.145 70);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
   --chart-1: oklch(0.47 0.085 319);
-  --chart-2: oklch(0.712 0.168 30);
-  --chart-3: oklch(0.654 0.13 167);
-  --chart-4: oklch(0.72 0.145 70);
-  --chart-5: oklch(0.71 0.048 319);
+  --chart-2: var(--primary);
+  --chart-3: oklch(0.6 0.1 205);
+  --chart-4: oklch(0.62 0.05 250);
+  --chart-5: oklch(0.82 0.04 319);
   --radius: 0.75rem;
   --sidebar: oklch(0.96 0.01 85);
   --sidebar-foreground: oklch(0.226 0.072 319);
@@ -92,6 +99,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
+  --primary-ink: oklch(0.737 0.168 30);
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -101,16 +109,22 @@
   --destructive: oklch(0.65 0.18 22);
   --positive: oklch(0.75 0.13 167);
   --positive-foreground: oklch(0.226 0.072 319);
+  --positive-ink: oklch(0.75 0.13 167);
   --negative: oklch(0.72 0.16 32);
   --negative-foreground: oklch(0.226 0.072 319);
+  --negative-ink: oklch(0.734 0.16 32);
   --neutral-balance: oklch(0.7 0.03 319);
+  --neutral-balance-ink: oklch(0.7 0.03 319);
+  --payer: oklch(0.82 0.14 78);
+  --payer-foreground: oklch(0.226 0.072 319);
+  --payer-ink: oklch(0.82 0.14 78);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.712 0.168 30);
-  --chart-1: oklch(0.71 0.048 319);
-  --chart-2: oklch(0.712 0.168 30);
-  --chart-3: oklch(0.75 0.13 167);
-  --chart-4: oklch(0.78 0.13 70);
+  --chart-1: oklch(0.84 0.035 319);
+  --chart-2: var(--primary);
+  --chart-3: oklch(0.84 0.08 205);
+  --chart-4: oklch(0.86 0.06 267);
   --chart-5: oklch(0.55 0.09 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
@@ -123,6 +137,59 @@
 
   --notice-warning: oklch(0.78 0.13 70);
   --notice-info: oklch(0.68 0.12 250);
+}
+
+/* ── surfaces and contrast: overrides, as in globals.css ── */
+:root:not(.dark)[data-light="paper"] {
+  --background: oklch(0.99 0 0);
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
+  --secondary: oklch(0.935 0.006 300);
+  --muted: oklch(0.955 0.003 260);
+  --accent: oklch(0.935 0.006 300);
+  --border: oklch(0.89 0.004 260);
+  --input: oklch(0.87 0.005 260);
+  --sidebar: oklch(0.975 0.002 260);
+  --sidebar-accent: oklch(0.935 0.006 300);
+  --sidebar-border: oklch(0.89 0.004 260);
+}
+
+.dark[data-dark="midnight"] {
+  --background: oklch(0.15 0.03 319);
+  --card: oklch(0.2 0.035 319);
+  --popover: oklch(0.2 0.035 319);
+  --secondary: oklch(0.26 0.04 319);
+  --muted: oklch(0.23 0.035 319);
+  --accent: oklch(0.26 0.04 319);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --sidebar: oklch(0.2 0.035 319);
+  --sidebar-accent: oklch(0.26 0.04 319);
+  --sidebar-border: oklch(1 0 0 / 10%);
+}
+
+:root:not(.dark)[data-contrast="more"] {
+  --muted-foreground: oklch(0.4 0.035 319);
+  --border: oklch(0.62 0.02 82);
+  --input: oklch(0.58 0.02 82);
+  --sidebar-border: oklch(0.62 0.02 82);
+  --primary-ink: oklch(0.442 0.168 30);
+  --positive-ink: oklch(0.409 0.084 167);
+  --negative-ink: oklch(0.429 0.164 32);
+  --payer-ink: oklch(0.43 0.093 70);
+  --neutral-balance-ink: oklch(0.42 0.035 319);
+}
+
+.dark[data-contrast="more"] {
+  --muted-foreground: oklch(0.84 0.03 319);
+  --border: oklch(1 0 0 / 38%);
+  --input: oklch(1 0 0 / 42%);
+  --sidebar-border: oklch(1 0 0 / 38%);
+  --primary-ink: oklch(0.847 0.084 30);
+  --positive-ink: oklch(0.83 0.13 167);
+  --negative-ink: oklch(0.85 0.082 32);
+  --payer-ink: oklch(0.87 0.118 78);
+  --neutral-balance-ink: oklch(0.84 0.03 319);
 }
 
 /* ── base ── */
@@ -1550,10 +1617,120 @@ a[aria-current="page"] .nav-icon--primary {
       >
     </div>
     <p class="note" style="margin-top: 0.75rem">
-      Plum, coral, mint, amber, then plum 300 — categorical only, ordered by
-      first use. Chart colours are not balance colours: never reuse
+      Plum, the accent, teal, slate, then plum 300 — categorical only, ordered
+      by first use. <code>--chart-2</code> is <code>var(--primary)</code>,
+      because it is the "you" series; the other four are kept a visible distance
+      from every accent and every money colour, so a bar is never mistaken for a
+      balance. Chart colours are not balance colours: never reuse
       <code>--chart-3</code> to mean "positive" or <code>--chart-2</code> to
       mean "owes".
+    </p>
+  </section>
+
+  <section>
+    <h2>Accent</h2>
+    <p>
+      The reader picks one of seven accents on the appearance screen. Each is a
+      seed — lightness, chroma, hue — in
+      <code>src/modules/profile/accent.ts</code>, and the app derives the rest:
+      <code>--primary</code> and the ring, a <code>--primary-ink</code> per
+      theme walked to 4.5:1, and the three money colours rotated forty degrees
+      clear of it.
+    </p>
+    <div class="row">
+      <span
+        class="badge"
+        style="background: oklch(0.712 0.168 30); color: oklch(0.226 0.072 319)"
+        >coral</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.78 0.13 70); color: oklch(0.226 0.072 319)"
+        >amber</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.75 0.13 167); color: oklch(0.226 0.072 319)"
+        >mint</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.71 0.12 235); color: oklch(0.226 0.072 319)"
+        >ocean</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.72 0.13 300); color: oklch(0.226 0.072 319)"
+        >lavender</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.7 0.17 350); color: oklch(0.226 0.072 319)"
+        >raspberry</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.71 0.048 319); color: oklch(0.226 0.072 319)"
+        >plum</span
+      >
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Coral is two degrees from the "you owe" red and mint <em>is</em> the "gets
+      back" green — so under those accents the money colour moves, not the
+      accent: ruby for "you owe" under coral, grass for "gets back" under mint,
+      olive for the payer under amber. The other four leave all three where they
+      are. This kit shows the palette as drawn, with the accent unpainted; the
+      app paints the seed inline on <code>&lt;html&gt;</code>, and the tokens
+      above read it through <code>var(--accent-…, fallback)</code>.
+    </p>
+    <p class="note">
+      Do: <code>bg-primary</code> on the button, the ring, the link, the "you"
+      pill and the "you" series in a chart. Don't: <code>--primary</code> on an
+      amount, a balance bar or the chip above a figure — those take their tone
+      from <code>TONE</code> in
+      <code>src/components/money/balance-tone.ts</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Surfaces and contrast</h2>
+    <p>
+      The theme decides light or dark; a surface refines it. Cream and Paper by
+      day, Plum and Midnight by night — each an override block at the end of
+      <code>globals.css</code>, applied when <code>&lt;html&gt;</code> carries
+      <code>data-light="paper"</code> or <code>data-dark="midnight"</code>.
+      Increased contrast (<code>data-contrast="more"</code>, set by the reader
+      or by <code>prefers-contrast</code>) darkens captions, strengthens lines
+      and takes every ink from 4.5:1 to 7:1.
+    </p>
+    <div class="row">
+      <span
+        class="badge"
+        style="background: oklch(0.977 0.007 85); color: oklch(0.226 0.072 319)"
+        >cream</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.99 0 0); color: oklch(0.226 0.072 319)"
+        >paper</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.226 0.072 319); color: oklch(0.977 0.007 85)"
+        >plum</span
+      >
+      <span
+        class="badge"
+        style="background: oklch(0.15 0.03 319); color: oklch(0.977 0.007 85)"
+        >midnight</span
+      >
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Order and specificity in those blocks are load-bearing: the light ones say
+      <code>:not(.dark)</code> so an attribute on the root cannot outrank the
+      dark theme, and the contrast blocks come last so they win a tie.
+      <code>src/app/token-contrast.test.ts</code> checks every ink in all eight
+      combinations.
     </p>
   </section>
 </div>
