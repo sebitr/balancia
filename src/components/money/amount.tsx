@@ -24,6 +24,38 @@ import { formatMoney, money } from "@/modules/currencies/money";
  * a client tree itself.
  */
 
+/**
+ * The sign a figure carries, in the app's own hand rather than Intl's.
+ *
+ * Intl writes "-CHF 961": an ASCII hyphen, flush against the code. Every
+ * balance the app draws itself — the dashboard rows, the entry detail, the
+ * settle screen — writes "− CHF 961": a real minus, then a space, then the
+ * figure, with a matching "+" on the other side. Both stood on one screen,
+ * the hero in one hand and the list under it in the other, so the sign is
+ * decided here for every figure that asks for one, and Intl only ever sees
+ * the magnitude.
+ *
+ * The vocabulary is Intl's own `signDisplay`, so a call site reads as it
+ * did: `exceptZero` signs both directions and leaves zero bare, `always`
+ * signs zero too, `never` shows nothing, and the default signs a loss only.
+ * The space is non-breaking, so a line never ends on a bare sign.
+ */
+const SPACE = "\u00A0";
+
+function signFor(
+  minorUnits: bigint,
+  signDisplay: Intl.NumberFormatOptions["signDisplay"],
+): "+" | "−" | null {
+  if (signDisplay === "never") return null;
+  if (minorUnits < 0n) return TONE.negative.sign;
+  if (minorUnits > 0n) {
+    return signDisplay === "always" || signDisplay === "exceptZero"
+      ? TONE.positive.sign
+      : null;
+  }
+  return signDisplay === "always" ? TONE.positive.sign : null;
+}
+
 export function Amount({
   minorUnits,
   currency,
@@ -41,10 +73,17 @@ export function Amount({
   fractionDigits?: number;
 }) {
   const locale = useNumberLocale();
-  const value = money(BigInt(minorUnits), currency);
+  const signed = BigInt(minorUnits);
+  const sign = signFor(signed, signDisplay);
+  const magnitude = signed < 0n ? -signed : signed;
+  const figure = formatMoney(money(magnitude, currency), {
+    locale,
+    display,
+    fractionDigits,
+  });
   return (
     <span className={cn("tabular-nums", className)}>
-      {formatMoney(value, { locale, display, signDisplay, fractionDigits })}
+      {sign ? `${sign}${SPACE}${figure}` : figure}
     </span>
   );
 }

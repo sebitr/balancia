@@ -48,13 +48,20 @@ const CHALET: PositionCardView = {
  * The same string the component renders, with Intl's non-breaking space
  * relaxed — Testing Library normalizes whitespace on what it finds in the DOM
  * but not on what it is handed to look for.
+ *
+ * The sign is the app's own, not Intl's: `Amount` writes a real minus or a
+ * plus, then a space, then the magnitude, and leaves zero bare.
  */
 function chf(minorUnits: bigint): string {
-  return formatMoney(money(minorUnits, "CHF"), {
-    locale: "en",
-    display: "code",
-    signDisplay: "exceptZero",
-  }).replace(/\u00a0/g, " ");
+  const sign = minorUnits < 0n ? "− " : minorUnits > 0n ? "+ " : "";
+  const magnitude = minorUnits < 0n ? -minorUnits : minorUnits;
+  return (
+    sign +
+    formatMoney(money(magnitude, "CHF"), {
+      locale: "en",
+      display: "code",
+    }).replace(/\u00a0/g, " ")
+  );
 }
 
 /** A row's own total, which carries no sign: it is an amount, not an effect. */

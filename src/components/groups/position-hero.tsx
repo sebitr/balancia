@@ -7,8 +7,8 @@ import {
   Archive,
   ArrowDown,
   ArrowUp,
-  Check,
   ChevronRight,
+  HandCoins,
   Plus,
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
@@ -90,6 +90,9 @@ export function PositionHero({
    * own balances already answer. It now goes to the settle-up screen, which
    * states the transfers that clear the group and puts the same dialog behind
    * each one, prefilled.
+   *
+   * The glyph is money changing hands, not a tick. A tick on a button says
+   * the thing is done, and this is the button for the reader who still owes.
    */
   const settlement = (primary: boolean) => (
     <Button
@@ -99,7 +102,7 @@ export function PositionHero({
       className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
     >
       <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
-        <Check aria-hidden="true" className="size-4" />
+        <HandCoins aria-hidden="true" className="size-4" />
         {t("settleUp")}
       </Link>
     </Button>

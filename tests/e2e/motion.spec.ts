@@ -160,7 +160,7 @@ test("moving along the bottom bar still animates the screen", async ({
   await page.goto(`/groups/${groupId}`);
 
   await watchScreen(page);
-  await page.getByRole("link", { name: "Expenses", exact: true }).click();
+  await page.getByRole("link", { name: "Transactions", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/groups/${groupId}/expenses$`));
   await page.waitForTimeout(600);
 

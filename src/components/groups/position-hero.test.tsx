@@ -50,11 +50,17 @@ const CHALET: PositionHeroView = {
  * but not on what it is handed to look for.
  */
 function chf(minorUnits: bigint): string {
-  return formatMoney(money(minorUnits, "CHF"), {
-    locale: "en",
-    display: "code",
-    signDisplay: "exceptZero",
-  }).replace(/\u00a0/g, " ");
+  // The sign is the app's own, not Intl's: a real minus or a plus, a space,
+  // then the magnitude, and zero left bare — what `Amount` writes.
+  const sign = minorUnits < 0n ? "− " : minorUnits > 0n ? "+ " : "";
+  const magnitude = minorUnits < 0n ? -minorUnits : minorUnits;
+  return (
+    sign +
+    formatMoney(money(magnitude, "CHF"), {
+      locale: "en",
+      display: "code",
+    }).replace(/\u00a0/g, " ")
+  );
 }
 
 /** A row's own total, which carries no sign: it is an amount, not an effect. */

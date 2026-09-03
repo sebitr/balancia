@@ -51,7 +51,7 @@ function directionFrom(pathname: string, tab: string): string | null {
 
 describe("GroupNav", () => {
   it("slides forward towards a tab further along the bar", () => {
-    expect(directionFrom("/groups/g1", "Expenses")).toBe("switch-forward");
+    expect(directionFrom("/groups/g1", "Transactions")).toBe("switch-forward");
     expect(directionFrom("/groups/g1", "Settings")).toBe("switch-forward");
   });
 
@@ -59,7 +59,9 @@ describe("GroupNav", () => {
     expect(directionFrom("/groups/g1/settings", "Overview")).toBe(
       "switch-back",
     );
-    expect(directionFrom("/groups/g1/members", "Expenses")).toBe("switch-back");
+    expect(directionFrom("/groups/g1/members", "Transactions")).toBe(
+      "switch-back",
+    );
   });
 
   it("reads direction from the tab being left, not from the one tapped", () => {
@@ -83,9 +85,9 @@ describe("GroupNav", () => {
   });
 
   it("resolves the current tab by the most specific match", () => {
-    // /expenses/new sits under both "Expenses" and "Add"; the longer href
+    // /expenses/new sits under both "Transactions" and "Add"; the longer href
     // wins, so leaving it moves back down the bar rather than forward.
-    expect(directionFrom("/groups/g1/expenses/new", "Expenses")).toBe(
+    expect(directionFrom("/groups/g1/expenses/new", "Transactions")).toBe(
       "switch-back",
     );
     expect(directionFrom("/groups/g1/expenses/new", "Settings")).toBe(
@@ -103,7 +105,7 @@ describe("GroupNav", () => {
     cleanup();
     nav.pathname = "/groups/g1/settlements/s1";
     renderWithIntl(<GroupNav groupId="g1" />);
-    expect(screen.getByRole("link", { name: "Expenses" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Transactions" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -121,7 +123,7 @@ describe("GroupNav", () => {
   });
 
   it("treats a tab as the way out of a screen that is on no tab at all", () => {
-    for (const tab of ["Overview", "Expenses", "People", "Settings"]) {
+    for (const tab of ["Overview", "Transactions", "People", "Settings"]) {
       expect(directionFrom("/groups/g1/settle", tab)).toBe("pop");
     }
     expect(directionFrom("/groups/g1/activity", "Overview")).toBe("pop");
