@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Pin browserslist and fast-uri past the advisories that have failed the dependency audit on every branch since 1 September — `fix/dependency-audit`
 - [ ] Make an account cost something to create: free a squatted address, cap sign-ups per inbox and per instance, refuse the passwords everyone guesses, and price out bulk sign-up — `feat/signup-abuse-defences`
 - [ ] Offer the passkey in the sign-in field's own autofill dropdown — `feat/passkey-autofill`
 - [ ] Give every control a finger's worth of target, and fix five things a UX audit measured — `fix/ux-audit-findings`
