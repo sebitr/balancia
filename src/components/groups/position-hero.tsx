@@ -26,6 +26,7 @@ import type { RemindRecipient } from "@/modules/reminders/types";
 import { PUSH } from "@/components/motion/transitions";
 import { PositionBreakdown, type PositionView } from "./position-breakdown";
 import { cn } from "@/lib/utils";
+import { TONE } from "@/components/money/balance-tone";
 
 export type { PositionView as PositionHeroView } from "./position-breakdown";
 
@@ -146,8 +147,8 @@ export function PositionHero({
                 className={cn(
                   "flex size-[18px] shrink-0 items-center justify-center rounded-full",
                   single && BigInt(single.minorUnits) < 0n
-                    ? "bg-negative/15 text-negative-ink"
-                    : "bg-positive/15 text-positive-ink",
+                    ? cn(TONE.negative.tint, TONE.negative.ink)
+                    : cn(TONE.positive.tint, TONE.positive.ink),
                 )}
               >
                 {single && BigInt(single.minorUnits) < 0n ? (
@@ -305,7 +306,7 @@ function HeroAmount({
     <p
       className={cn(
         "flex flex-wrap items-baseline gap-x-2 gap-y-1",
-        incoming ? "text-positive-ink" : "text-negative-ink",
+        TONE[incoming ? "positive" : "negative"].ink,
       )}
     >
       {codeFirst ? code : amount}

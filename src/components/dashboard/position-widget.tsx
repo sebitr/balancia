@@ -13,6 +13,7 @@ import {
 import { Amount } from "@/components/money/amount";
 import { AddExpenseSheet, type PickableGroup } from "./add-expense-sheet";
 import { cn } from "@/lib/utils";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 
 /**
  * "Where do I stand?", answered once for every group, at the top of the screen.
@@ -113,11 +114,7 @@ function CurrencyFigures({
           className={cn(
             size,
             "leading-none font-semibold tracking-[-0.035em]",
-            net > 0n
-              ? "text-positive"
-              : net < 0n
-                ? "text-negative"
-                : "text-neutral-balance",
+            TONE[toneFor(net)].ink,
           )}
         />
       ))}
@@ -191,7 +188,7 @@ export function PositionWidget({
         fractionDigits={0}
         className={cn(
           "text-[2.875rem] leading-none font-semibold tracking-[-0.035em]",
-          positive ? "text-positive-ink" : "text-negative-ink",
+          TONE[positive ? "positive" : "negative"].ink,
         )}
       />
     ) : null;
@@ -399,12 +396,7 @@ function TintedTotal({
   tone: "positive" | "negative";
 }) {
   return (
-    <span
-      className={cn(
-        "text-sm font-medium",
-        tone === "positive" ? "text-positive-ink" : "text-negative-ink",
-      )}
-    >
+    <span className={cn("text-sm font-medium", TONE[tone].ink)}>
       <Amount minorUnits={minorUnits} currency={currency} fractionDigits={0} />
     </span>
   );

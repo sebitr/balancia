@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
-import { ACCENT_VALUES } from "@/modules/profile/accent";
+import { accentTokens } from "@/modules/profile/accent";
 import { AccentChoices } from "./accent-choices";
+
+const fillOf = (accent: Parameters<typeof accentTokens>[0]) =>
+  accentTokens(accent)["--primary"];
 
 /**
  * The accent, and the one thing about it that is not obvious.
@@ -44,7 +47,7 @@ describe("AccentChoices", () => {
 
     await user.click(screen.getByRole("radio", { name: "Mint" }));
 
-    expect(painted()).toBe(ACCENT_VALUES.mint);
+    expect(painted()).toBe(fillOf("mint"));
     // The chosen colour names itself once, beside the section label.
     expect(screen.getByText("Mint")).toBeInTheDocument();
   });
@@ -55,9 +58,26 @@ describe("AccentChoices", () => {
     await user.click(screen.getByRole("radio", { name: "Ocean" }));
 
     const style = document.documentElement.style;
-    expect(style.getPropertyValue("--ring")).toBe(ACCENT_VALUES.ocean);
-    expect(style.getPropertyValue("--sidebar-primary")).toBe(
-      ACCENT_VALUES.ocean,
+    expect(style.getPropertyValue("--ring")).toBe(fillOf("ocean"));
+    expect(style.getPropertyValue("--sidebar-primary")).toBe(fillOf("ocean"));
+  });
+
+  it("paints the money colours that step aside for the accent", async () => {
+    // Mint sits on the "gets back" green, so that green moves; coral did not
+    // ask it to. The link ink follows the accent too, per theme.
+    const { user } = renderChoices();
+
+    await user.click(screen.getByRole("radio", { name: "Mint" }));
+
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue("--accent-positive-dark")).toBe(
+      accentTokens("mint")["--accent-positive-dark"],
+    );
+    expect(style.getPropertyValue("--accent-positive-dark")).not.toBe(
+      accentTokens("coral")["--accent-positive-dark"],
+    );
+    expect(style.getPropertyValue("--accent-ink-light")).toBe(
+      accentTokens("mint")["--accent-ink-light"],
     );
   });
 
@@ -67,7 +87,11 @@ describe("AccentChoices", () => {
 
     await user.click(screen.getByRole("radio", { name: "Raspberry" }));
 
-    await waitFor(() => expect(painted()).toBe(ACCENT_VALUES.coral));
+    await waitFor(() => expect(painted()).toBe(fillOf("coral")));
+    // Everything that moved comes back, the money colours included.
+    expect(
+      document.documentElement.style.getPropertyValue("--accent-negative-dark"),
+    ).toBe(accentTokens("coral")["--accent-negative-dark"]);
     expect(screen.getByText("Coral")).toBeInTheDocument();
     expect(toastError).toHaveBeenCalled();
   });

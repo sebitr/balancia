@@ -329,9 +329,9 @@ export function SplitDemo() {
                   <p
                     className={cn(
                       "inline-flex items-center gap-1 text-[15px] font-semibold tabular-nums",
-                      positive && "text-positive",
-                      negative && "text-negative",
-                      !positive && !negative && "text-neutral-balance",
+                      positive && "text-positive-ink",
+                      negative && "text-negative-ink",
+                      !positive && !negative && "text-neutral-balance-ink",
                     )}
                   >
                     {positive && (
@@ -345,8 +345,8 @@ export function SplitDemo() {
                   <p
                     className={cn(
                       "mt-0.5 text-[11.5px]",
-                      positive && "text-positive",
-                      negative && "text-negative",
+                      positive && "text-positive-ink",
+                      negative && "text-negative-ink",
                       !positive && !negative && "text-muted-foreground",
                     )}
                   >

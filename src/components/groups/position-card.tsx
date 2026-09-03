@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bell, Check, ChevronRight, Minus, Plus } from "lucide-react";
 import { Amount } from "@/components/money/amount";
-import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 import { RemindButton } from "@/components/reminders/remind-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,16 +21,6 @@ import { PositionBreakdown, type PositionView } from "./position-breakdown";
 import { cn } from "@/lib/utils";
 
 export type { PositionView as PositionCardView } from "./position-breakdown";
-
-/** Tint, label colour and arithmetic sign, one row per direction. */
-const TILE: Record<
-  BalanceTone,
-  { readonly fill: string; readonly ink: string }
-> = {
-  positive: { fill: "bg-positive/10", ink: "text-positive-ink" },
-  negative: { fill: "bg-negative/10", ink: "text-negative-ink" },
-  neutral: { fill: "bg-muted", ink: "text-neutral-balance-ink" },
-};
 
 /**
  * The first answer on the screen: one tile per currency, then the two things
@@ -212,13 +202,13 @@ function PositionTile({ position }: { position: PositionView }) {
     <li
       className={cn(
         "flex flex-col gap-0.5 rounded-lg px-[11px] py-[9px]",
-        TILE[tone].fill,
+        TONE[tone].tint,
       )}
     >
       <span
         className={cn(
           "text-2xs font-semibold tracking-[0.07em] uppercase",
-          TILE[tone].ink,
+          TONE[tone].ink,
         )}
       >
         {label}
@@ -226,7 +216,7 @@ function PositionTile({ position }: { position: PositionView }) {
       <span
         className={cn(
           "flex items-center gap-[5px] text-base leading-none font-semibold tracking-[-0.01em]",
-          TILE[tone].ink,
+          TONE[tone].ink,
         )}
       >
         {tone !== "neutral" &&

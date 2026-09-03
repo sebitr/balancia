@@ -12,7 +12,18 @@ import { ThemeProvider } from "next-themes";
  * changes in response to a browser-only WebAuthn ceremony. Page data is loaded
  * by Server Components, not fetched here.
  */
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  nonce,
+}: {
+  children: ReactNode;
+  /**
+   * The request's CSP nonce. The theme provider writes an inline script
+   * that applies the stored theme before paint, and under a strict-dynamic
+   * policy that script runs only if it carries the nonce.
+   */
+  nonce?: string;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -35,6 +46,7 @@ export function Providers({ children }: { children: ReactNode }) {
       // `localStorage.theme` itself on every switch, which would overwrite the
       // provider's record — losing a "system" preference in particular.
       storageKey="balancia-theme"
+      nonce={nonce}
     >
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ThemeProvider>

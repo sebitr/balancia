@@ -810,9 +810,34 @@
     "themeSystem": "Auto",
     "themeSystemHelp": "Follows your system",
     "themeLight": "Light",
-    "themeLightHelp": "Cream and plum",
     "themeDark": "Dark",
-    "themeDarkHelp": "Deep plum",
+    "surfaceLight": "Light surface",
+    "surfaceDark": "Dark surface",
+    "surfaces": {
+      "cream": "Cream",
+      "paper": "Paper",
+      "plum": "Plum",
+      "midnight": "Midnight"
+    },
+    "surfaceHelp": {
+      "cream": "Warm paper, white cards",
+      "paper": "Pure white, cooler",
+      "plum": "Deep plum",
+      "midnight": "Near black, for OLED"
+    },
+    "contrast": "Contrast",
+    "contrasts": {
+      "auto": "Auto",
+      "standard": "Standard",
+      "more": "Increased"
+    },
+    "contrastAutoHelp": "Follows your system",
+    "contrastMoreHelp": "Stronger lines, darker captions",
+    "contrastNote": "Increased contrast strengthens lines and pushes captions, balances and links further from the page. Surfaces and contrast stay on this device; the accent follows your account.",
+    "surfaceFailed": "That choice could not be saved.",
+    "accentPreview": "How the accent sits beside the balance colours",
+    "accentPreviewSelf": "You",
+    "accentPreviewAction": "Add expense",
     "accent": "Accent colour",
     "accents": {
       "coral": "Coral",
@@ -823,7 +848,7 @@
       "raspberry": "Raspberry",
       "plum": "Plum"
     },
-    "accentNote": "The accent colours whatever is chosen, active or still to do. Balances keep their own colours: green when you are owed, red when you owe.",
+    "accentNote": "The accent colours whatever is chosen, active or still to do. The balance colours keep their distance from it, so green still means you are owed and red still means you owe.",
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageSaved": "Language changed",
@@ -2442,6 +2467,7 @@
     "joinNameTaken": "Somebody else claimed that name first. Open the link again to pick another.",
     "joinSeatClaimed": "This invitation was already used by a different account. Ask whoever invited you for your own link.",
     "unknownAccent": "That is not an accent colour Balancia offers.",
+    "unknownSurface": "That is not a surface Balancia offers.",
     "passwordTooShort": "Use a password of at least 10 characters.",
     "passwordTooLong": "That password is too long.",
     "passwordCommon": "That password is one of the most commonly used ones. Choose another.",
