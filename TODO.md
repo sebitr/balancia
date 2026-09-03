@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Take the theme toggle out of the signed-in header; Settings › Appearance already owns it, and only a guest still needs it there — `fix/header-theme-toggle`
 - [ ] Close the five dead ends an onboarding audit walked into, and the friction around them: guest on a shared link, sign-in through /register, code resend, code-only accounts on the sign-in page, the dark-mode flash — `fix/onboarding-audit-findings`
 - [ ] Make an account cost something to create: free a squatted address, cap sign-ups per inbox and per instance, refuse the passwords everyone guesses, and price out bulk sign-up — `feat/signup-abuse-defences`
 - [ ] Offer the passkey in the sign-in field's own autofill dropdown — `feat/passkey-autofill`

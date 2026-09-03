@@ -72,7 +72,11 @@ export function AppShell({
           <div className="flex shrink-0 items-center gap-1">
             {/* Guests have no account, so nothing to notify and no bell. */}
             {!actor.isGuest && <NotificationBell />}
-            <ThemeToggle />
+            {/* The theme lives in Settings › Appearance, one tap behind the
+                avatar, so a signed-in reader does not need it in the header
+                of every screen as well. A guest has no settings hub, and this
+                is the only place they can change it. */}
+            {actor.isGuest && <ThemeToggle />}
             <UserMenu label={actor.label} isGuest={actor.isGuest} />
           </div>
         </div>
