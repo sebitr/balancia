@@ -6,8 +6,10 @@ import {
   expenses,
   groupMembers,
   groups,
+  guestInvitations,
   participants,
 } from "@/lib/db/schema";
+import { generateToken } from "@/lib/security/tokens";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { recordActivity } from "@/modules/activity/service";
 import { logger } from "@/lib/logger";
@@ -427,6 +429,127 @@ export async function createMember(
 
     logger.info({ groupId }, "Join link added a member");
     return { status: "joined", participantId: created.id } as const;
+  });
+}
+
+export type GuestJoinOutcome =
+  | {
+      readonly status: "joined";
+      readonly participantId: string;
+      /** The invitation this join minted, to be spent into a session at once. */
+      readonly invitationToken: string;
+    }
+  /** The listed name was linked to an account, or removed, in the meantime. */
+  | { readonly status: "taken" };
+
+/**
+ * Joins through the link without an account: as a guest.
+ *
+ * A guest session has only ever come from spending a personal invitation, and
+ * that is the shape kept here rather than invented around: the join mints an
+ * invitation for the participant — the listed name being claimed, or a new
+ * one filed under the typed name — and hands its token back for the caller
+ * to spend, so that everything a guest is (a cookie, a revocable link, a
+ * claim that keeps the history) is the same guest the group's owner could
+ * have invited by hand.
+ *
+ * The invitation is created on the group's behalf with nobody as its author
+ * and no expiry; the group's own link controls who could reach this, and the
+ * owner's people list shows and revokes it like any other.
+ */
+export async function joinAsGuest(
+  input: {
+    readonly groupId: string;
+    /** The listed name being claimed, or null for somebody new. */
+    readonly participantId: string | null;
+    readonly displayName: string;
+  },
+  options: { db?: Database; now?: Date } = {},
+): Promise<GuestJoinOutcome> {
+  const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+  const { groupId } = input;
+  const displayName = input.displayName.trim();
+
+  return db.transaction(async (tx) => {
+    let participantId: string;
+    let label: string;
+
+    if (input.participantId) {
+      const [listed] = await tx
+        .select({
+          id: participants.id,
+          displayName: participants.displayName,
+          userId: participants.userId,
+          removedAt: participants.removedAt,
+        })
+        .from(participants)
+        .where(
+          and(
+            eq(participants.id, input.participantId),
+            eq(participants.groupId, groupId),
+          ),
+        )
+        .limit(1);
+      if (!listed || listed.userId !== null || listed.removedAt !== null) {
+        return { status: "taken" } as const;
+      }
+      participantId = listed.id;
+      label = listed.displayName;
+    } else {
+      const [created] = await tx
+        .insert(participants)
+        .values({
+          groupId,
+          displayName,
+          userId: null,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: participants.id });
+      participantId = created.id;
+      label = displayName;
+    }
+
+    const token = generateToken();
+    const [invitation] = await tx
+      .insert(guestInvitations)
+      .values({
+        groupId,
+        participantId,
+        tokenHash: token.hash,
+        tokenPrefix: token.prefix,
+        createdByUserId: null,
+        expiresAt: null,
+        createdAt: now,
+      })
+      .returning({ id: guestInvitations.id });
+
+    await recordActivity(tx, {
+      groupId,
+      action: "guest_link.created",
+      entityType: "guest_invitation",
+      entityId: invitation.id,
+      actorType: "guest",
+      actorParticipantId: participantId,
+      actorLabel: label,
+      // The token itself is never recorded — only who it is for, and that it
+      // was the group's shared link rather than the owner that made it.
+      metadata: {
+        participantName: label,
+        expiresAt: null,
+        replacedPrevious: false,
+        via: "join_link",
+        claimed: input.participantId !== null,
+      },
+    });
+
+    logger.info({ groupId }, "Join link added a guest");
+    return {
+      status: "joined",
+      participantId,
+      invitationToken: token.raw,
+    } as const;
   });
 }
 

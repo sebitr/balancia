@@ -314,6 +314,118 @@ export async function createGroup(
   return created;
 }
 
+export interface GuestCreatedGroup {
+  readonly id: string;
+  readonly participantId: string;
+  /** The creator's own way in, to be spent into a guest session at once. */
+  readonly invitationToken: string;
+  /** The group's shared link, for the screen that hands it over. */
+  readonly invite: {
+    readonly url: string;
+    readonly expiresAt: Date | null;
+  };
+}
+
+/**
+ * A group started by somebody with no account.
+ *
+ * The cold welcome used to have two doors, an account or a sign-in, and the
+ * apps people like best have a third: start with a name and a group, and
+ * make the account later, when there is something to keep. Everything this
+ * needs already existed for the invited guest — a participant with no user, a
+ * personal invitation, a session minted from it, and a claim that turns the
+ * lot into an account. This is the same guest, arriving through a group of
+ * their own.
+ *
+ * What is different is that nobody owns the group yet. `createdByUserId` is
+ * null and there is no owner row; the first account to claim the creator's
+ * seat becomes the owner (see `claimGuestSession`). Until then the guest
+ * runs the money side of the group as any guest does, and the shared link
+ * minted here — on the group's behalf, with the default expiry — is how the
+ * others arrive.
+ */
+export async function createGroupAsGuest(
+  input: {
+    readonly name: string;
+    readonly displayName: string;
+    readonly timezone: string;
+    readonly baseCurrency: string;
+  },
+  options: { db?: Database } = {},
+): Promise<GuestCreatedGroup> {
+  const db = options.db ?? getDb();
+  const now = new Date();
+
+  const created = await db.transaction(async (tx) => {
+    const [group] = await tx
+      .insert(groups)
+      .values({
+        name: input.name,
+        currencyMode: "converted",
+        baseCurrency: input.baseCurrency,
+        timezone: input.timezone,
+        createdByUserId: null,
+      })
+      .returning({ id: groups.id });
+
+    const [participant] = await tx
+      .insert(participants)
+      .values({
+        groupId: group.id,
+        displayName: input.displayName,
+        userId: null,
+      })
+      .returning({ id: participants.id });
+
+    const inviteExpiresAt = expiryDate(DEFAULT_JOIN_LINK_EXPIRY, now);
+    const invite = await createJoinLink(group.id, {
+      createdByUserId: null,
+      expiresAt: inviteExpiresAt,
+      now,
+      db: tx,
+    });
+
+    // The creator's own invitation: no author, no expiry, retired by the
+    // claim like any other. Its token is spent by the caller, never shown.
+    const token = generateToken();
+    await tx.insert(guestInvitations).values({
+      groupId: group.id,
+      participantId: participant.id,
+      tokenHash: token.hash,
+      tokenPrefix: token.prefix,
+      createdByUserId: null,
+      expiresAt: null,
+      createdAt: now,
+    });
+
+    await recordActivity(tx, {
+      groupId: group.id,
+      action: "group.created",
+      entityType: "group",
+      entityId: group.id,
+      actorType: "guest",
+      actorParticipantId: participant.id,
+      actorLabel: input.displayName,
+      metadata: {
+        name: input.name,
+        currencyMode: "converted",
+        baseCurrency: input.baseCurrency,
+      },
+    });
+
+    return {
+      id: group.id,
+      participantId: participant.id,
+      invitationToken: token.raw,
+      invite: { url: joinLinkUrl(invite.token), expiresAt: inviteExpiresAt },
+    };
+  });
+
+  await telemetry.groupCreated({ currencyMode: "converted" });
+
+  return created;
+}
+
 export async function updateGroup(
   access: GroupAccess,
   input: UpdateGroupInput,

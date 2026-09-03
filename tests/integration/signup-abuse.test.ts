@@ -221,10 +221,10 @@ describe("enforceSignUpLimits", () => {
   });
 
   it("still refuses a single address hammering from one place", async () => {
-    // The limit that was already there, unchanged: five an hour per IP. Each
-    // attempt names a different inbox so the per-address bucket stays clear.
+    // Thirty an hour per IP — a household on one wifi, not five. Each attempt
+    // names a different inbox so the per-address bucket stays clear.
     let refused = 0;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    for (let attempt = 0; attempt < 33; attempt += 1) {
       try {
         await enforceSignUpLimits("10.2.0.1", `nobody-${attempt}@x.test`);
       } catch (error) {
@@ -234,6 +234,28 @@ describe("enforceSignUpLimits", () => {
     }
 
     expect(refused).toBe(3);
+  });
+
+  it("says how long to wait, in whole minutes", async () => {
+    // "Try again later" is not an instruction anybody can follow; the bucket
+    // knows when its window ends, and the refusal carries it.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await enforceSignUpLimits(`10.3.0.${attempt}`, "waiting@corp.test");
+    }
+
+    const refusal = await enforceSignUpLimits(
+      "10.3.0.9",
+      "waiting@corp.test",
+    ).catch((error: unknown) => error);
+
+    expect(refusal).toBeInstanceOf(RateLimitedError);
+    const limited = refusal as RateLimitedError;
+    expect(limited.retryAfterSeconds).toBeGreaterThan(0);
+    expect(limited.params.minutes).toBeGreaterThanOrEqual(1);
+    expect(limited.params.minutes).toBe(
+      Math.ceil(limited.retryAfterSeconds / 60),
+    );
+    expect(limited.message).toContain(`${limited.params.minutes} minute`);
   });
 });
 

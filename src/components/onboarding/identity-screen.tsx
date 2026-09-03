@@ -8,7 +8,10 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePasskeySupport } from "@/components/auth/use-passkey-support";
+import {
+  usePasskeySupport,
+  usePlatformAuthenticator,
+} from "@/components/auth/use-passkey-support";
 import { signInWithPasskey } from "@/modules/auth/passkey-client";
 import {
   requestSignInCodeAction,
@@ -19,6 +22,8 @@ import {
 import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { CodeInput } from "./code-input";
+import { OpenMailButton } from "./open-mail-button";
+import { useResendCooldown } from "./use-resend-cooldown";
 import { Headline, PRIMARY, SECONDARY, Spacer, Sub } from "./screens";
 import type { Intent } from "./route";
 
@@ -67,6 +72,18 @@ export function IdentityScreen({
 }) {
   const t = useTranslations("onboarding.identity");
   const passkeys = usePasskeySupport();
+  /*
+   * Which of the two is the first offer.
+   *
+   * A passkey is first where this device can hold one — a phone, a laptop with
+   * Touch ID or Windows Hello. On a desktop with a WebAuthn API and nothing
+   * behind it, the button opens a sheet asking for a phone or a security key,
+   * so there the code goes first and the passkey waits underneath. Until the
+   * browser has answered, the passkey keeps its place: a phone must never see
+   * the order flip.
+   */
+  const platform = usePlatformAuthenticator();
+  const passkeyFirst = passkeys && platform !== false;
   // Solved in the background from the moment this screen appears, so the
   // second of hashing an instance may ask for happens while somebody is still
   // typing their address rather than after they have committed to it.
@@ -77,6 +94,9 @@ export function IdentityScreen({
   /** Set once a code has been asked for, which is what reveals the boxes. */
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
+  // Counts down from the moment a code goes out; the resend button waits on
+  // it, so a second tap cannot retire a code that is still in the post.
+  const resend = useResendCooldown();
 
   const signingIn = intent === "signin";
   const address = email.trim();
@@ -179,6 +199,7 @@ export function IdentityScreen({
       return;
     }
     setSent(true);
+    resend.start();
   };
 
   const submitCode = async (value: string) => {
@@ -266,63 +287,92 @@ export function IdentityScreen({
               )}
               {t("verify")}
             </Button>
+            <OpenMailButton />
             <Button
               size="lg"
               variant="ghost"
               className={SECONDARY}
-              disabled={busy}
+              disabled={busy || resend.remaining > 0}
               onClick={() => void askForCode()}
             >
-              {t("resend")}
+              {resend.remaining > 0
+                ? t("resendIn", { seconds: resend.remaining })
+                : t("resend")}
             </Button>
           </>
         ) : (
           <>
-            {passkeys && (
-              <Button
-                size="lg"
-                className={PRIMARY}
-                disabled={busy || (!signingIn && !valid)}
-                onClick={() => void withPasskey()}
-              >
-                {busy ? (
-                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-                ) : (
-                  <Fingerprint aria-hidden="true" className="size-4" />
-                )}
-                {signingIn ? t("signInWithPasskey") : t("withPasskey")}
-              </Button>
-            )}
-
-            {codeSignupAvailable && (
-              <Button
-                size="lg"
-                variant={passkeys ? "outline" : "default"}
-                className={passkeys ? SECONDARY : PRIMARY}
-                disabled={busy || !valid}
-                onClick={() => void askForCode()}
-              >
-                {busy && !passkeys && (
-                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-                )}
-                {passkeys ? t("orCode") : t("emailMeACode")}
-              </Button>
-            )}
+            {(() => {
+              // The passkey button and the code button, in whichever order
+              // this device earns. A code stands alone where there is no
+              // WebAuthn; a passkey stands alone where there is no mail.
+              const codeFirst = codeSignupAvailable && !passkeyFirst;
+              const passkeyButton = passkeys && (
+                <div key="passkey" className="flex flex-col gap-1.5">
+                  <Button
+                    size="lg"
+                    variant={codeFirst ? "outline" : "default"}
+                    className={codeFirst ? SECONDARY : PRIMARY}
+                    disabled={busy || (!signingIn && !valid)}
+                    onClick={() => void withPasskey()}
+                  >
+                    {busy && !codeFirst ? (
+                      <Loader2
+                        aria-hidden="true"
+                        className="size-4 animate-spin"
+                      />
+                    ) : (
+                      <Fingerprint aria-hidden="true" className="size-4" />
+                    )}
+                    {signingIn ? t("signInWithPasskey") : t("withPasskey")}
+                  </Button>
+                  {/* The word "passkey" explains nothing on its own; the
+                      benefit is what people recognise. */}
+                  <p className="text-center text-xs text-pretty text-muted-foreground">
+                    {t("passkeyExplainer")}
+                  </p>
+                </div>
+              );
+              const codeButton = codeSignupAvailable && (
+                <Button
+                  key="code"
+                  size="lg"
+                  variant={codeFirst || !passkeys ? "default" : "outline"}
+                  className={codeFirst || !passkeys ? PRIMARY : SECONDARY}
+                  disabled={busy || !valid}
+                  onClick={() => void askForCode()}
+                >
+                  {busy && (codeFirst || !passkeys) && (
+                    <Loader2
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                  )}
+                  {passkeyFirst ? t("orCode") : t("emailMeACode")}
+                </Button>
+              );
+              return codeFirst
+                ? [codeButton, passkeyButton]
+                : [passkeyButton, codeButton];
+            })()}
 
             {/*
-              Neither a passkey nor a code: an instance with no mail server,
-              read in a browser with no WebAuthn. The password pages still
-              work, and saying so is better than a screen with one dead button.
+              No mail server, so no code. The password pages still work: on a
+              browser with no WebAuthn they are the only way, and even with a
+              passkey on offer they stay a quiet tap away rather than a page
+              nobody can find.
             */}
-            {!passkeys && !codeSignupAvailable && (
+            {!codeSignupAvailable && (
               <>
-                <p className="text-sm text-pretty text-muted-foreground">
-                  {t("noCredentialRoute")}
-                </p>
+                {!passkeys && (
+                  <p className="text-sm text-pretty text-muted-foreground">
+                    {t("noCredentialRoute")}
+                  </p>
+                )}
                 <Button
                   asChild
                   size="lg"
-                  variant="outline"
+                  variant={passkeys ? "ghost" : "outline"}
                   className={SECONDARY}
                 >
                   <Link href={signingIn ? "/sign-in" : "/register/password"}>

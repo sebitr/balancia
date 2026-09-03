@@ -36,7 +36,11 @@ export type ScreenId =
   | "profile"
   | "arrival"
   | "checklist"
-  | "firstGroup";
+  | "firstGroup"
+  /** A cold arrival naming a group and themselves, with no account. */
+  | "startGroup"
+  /** That group's link, handed over while the intent is warm. */
+  | "groupLink";
 
 export interface OnboardingRouteState {
   readonly arrival: Arrival;
@@ -81,8 +85,10 @@ export interface OnboardingRouteState {
  *    who is already signed in has answered it before arriving: they skip both
  *    "keep it" and the account screen, and claiming the name *is* the join.
  *
- *  - **Cold.** No group exists, so there is no arrival screen to land on and
- *    nothing to be a guest of. It ends at the empty state instead.
+ *  - **Cold.** No group exists, so there is no arrival screen to land on. A
+ *    new account ends at the empty state; a sign-in ends on the credential
+ *    itself, and the dashboard is its welcome; and somebody who wants no
+ *    account yet names a group and themselves, and leaves with its link.
  *
  * The checklist is the one screen any of them can lose. It is a receipt of
  * what is set up and what is not, so an account that has all of it already —
@@ -91,6 +97,19 @@ export interface OnboardingRouteState {
  */
 export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
   if (state.arrival === "cold") {
+    /*
+     * An account that already exists has nothing left to name and no first
+     * group to be shown: its groups are on the dashboard, so the route ends
+     * the moment the credential lands and the flow leaves for it. Running the
+     * profile screen here is how a returning member was met with an empty
+     * name field, renamed by whatever they typed into it, and then told they
+     * had no groups.
+     */
+    if (state.intent === "signin") return ["welcome", "identity"];
+    // No account at all: a group of their own, and its link to share. The
+    // guest session that results is the same one an invitation mints, and
+    // the group page's claim is how it becomes an account later.
+    if (state.intent === "guest") return ["welcome", "startGroup", "groupLink"];
     return ["welcome", "identity", "profile", "firstGroup"];
   }
 
@@ -179,4 +198,6 @@ export const STEP_LABEL_KEYS: Record<ScreenId, string> = {
   arrival: "stepDone",
   checklist: "stepGroup",
   firstGroup: "stepFirstGroup",
+  startGroup: "stepStartGroup",
+  groupLink: "stepShare",
 };

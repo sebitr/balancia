@@ -30,6 +30,7 @@ export type RateLimitBucket =
   | "verifyCode"
   | "signInCode"
   | "guestRedeem"
+  | "guestGroup"
   | "joinRedeem"
   | "passwordReset"
   | "emailChange"
@@ -55,7 +56,15 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
   const authMax = getEnv().AUTH_RATE_LIMIT_MAX;
   return {
     signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
-    signUp: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    /*
+     * Per address, and an address is a household: the people a group's link
+     * is sent to are at one table, on one wifi, and they all sign up in the
+     * same ten minutes. Five an hour refused the sixth of them with "Too many
+     * attempts". Thirty clears any dinner and is still a rounding error next
+     * to walking anything; the per-inbox and instance-wide ceilings below are
+     * what actually stand in front of abuse.
+     */
+    signUp: { limit: Math.max(30, authMax), windowSeconds: 3600 },
     /*
      * The same ceiling, keyed on the address being signed up rather than on
      * whoever is asking.
@@ -107,6 +116,10 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // is asking. Room for a typo and a correction, not for a mail campaign.
     emailChange: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     guestRedeem: { limit: 20, windowSeconds: 600 },
+    // Starting a group with no account writes a group, a participant, a
+    // link and an invitation on nobody's say-so. Ten an hour from one place
+    // is a household trying it out; a bot writing rows is what this refuses.
+    guestGroup: { limit: 10, windowSeconds: 3600 },
     // One group link is opened by everyone it was sent to, so the ceiling has
     // to clear a whole household on one address. Still far under what walking
     // the token space would need.
@@ -212,12 +225,22 @@ export async function pruneRateLimits(olderThan: Date): Promise<number> {
 }
 
 export class RateLimitedError extends Error {
-  /** Translated by the Server Action funnel; see `lib/actions.ts`. */
-  readonly code = "rateLimited";
+  /**
+   * Translated by the Server Action funnel; see `lib/actions.ts` and
+   * `lib/server-errors.ts`, which reads `params` for the sentence's number.
+   */
+  readonly code = "rateLimitedFor";
+  /** How long to wait, rounded up to whole minutes: "try again later" is
+   * not an instruction anybody can follow, and the bucket knows the answer. */
+  readonly params: { readonly minutes: number };
 
   constructor(readonly retryAfterSeconds: number) {
-    super("Too many attempts. Please try again later.");
+    const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+    super(
+      `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+    );
     this.name = "RateLimitedError";
+    this.params = { minutes };
   }
 }
 

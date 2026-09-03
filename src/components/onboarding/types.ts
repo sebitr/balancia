@@ -29,6 +29,8 @@ export interface SettleRequestView {
  */
 export interface OnboardingProfileView {
   readonly hasPhoto: boolean;
+  /** At least one passkey on the account, on any device. */
+  readonly hasPasskey: boolean;
   readonly currencies: readonly string[];
   readonly payouts: readonly {
     readonly method: string;

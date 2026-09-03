@@ -88,6 +88,14 @@
       "forgotPassword": "Forgot password?",
       "submit": "Sign in",
       "withPasskey": "Use a passkey",
+      "emailMeACode": "Email me a sign-in code",
+      "codeSent": "We sent six digits to {email}. Type them here to sign in.",
+      "codeLabel": "The six-digit code",
+      "codeWrong": "That code is wrong or has expired. Ask for a new one.",
+      "resend": "Send another code",
+      "resendIn": "Send another code in {seconds} s",
+      "usePassword": "Use my password instead",
+      "noPasswordHint": "Signed up with a code or a passkey? Ask for a sign-in code instead.",
       "noAccount": "No account yet?",
       "createOne": "Create one",
       "metaTitle": "Sign in"
@@ -518,6 +526,9 @@
     "archivedGroups": "{count, plural, one {# archived group} other {# archived groups}}",
     "nothingOutstanding": "Nothing outstanding in {groups, plural, one {# group} other {# groups}}",
     "nothingOutstandingSince": "Nothing outstanding in {groups, plural, one {# group} other {# groups}} · last cleared {when} in {group}",
+    "nameNudgeTitle": "What should people call you?",
+    "nameNudgeBody": "Your groups see you as “{name}”, which is your email address. Give them a name instead.",
+    "nameNudgeAction": "Set my name",
     "splitwiseTitle": "Coming from Splitwise?",
     "splitwiseSubtitle": "Import a CSV or JSON export",
     "splitwiseAction": "Import",
@@ -1396,6 +1407,10 @@
         "title": "This invitation link no longer works",
         "body": "It may have been revoked, replaced with a new link, or it may have expired. Ask whoever invited you to send a fresh one."
       },
+      "claimed": {
+        "title": "This link was turned into an account",
+        "body": "Whoever it was sent to has an account now, and the group is on it. Sign in to open the group — the link itself is retired."
+      },
       "rateLimited": {
         "title": "Too many attempts",
         "body": "This instance limits how often invitation links can be opened from the same address. Wait a few minutes and try again."
@@ -1425,7 +1440,7 @@
     "guestNameHint": "The name the group already uses for you.",
     "email": "Email",
     "password": "Password",
-    "passwordHint": "At least 10 characters.",
+    "passwordHint": "At least 10 characters, and not your name, your address or one everybody uses.",
     "confirmPassword": "Confirm password",
     "submit": "Create account",
     "haveAccount": "Already have an account?",
@@ -1438,6 +1453,8 @@
       "email": "Enter a valid email address",
       "passwordMin": "Use at least 10 characters",
       "passwordMax": "That password is too long",
+      "passwordCommon": "That password is one of the most commonly used ones. Choose another",
+      "passwordPersonal": "Leave your name and your email address out of it",
       "mismatch": "The passwords do not match"
     },
     "createFailed": "That account could not be created."
@@ -1573,6 +1590,7 @@
     "joinFailed": "You could not be added to the group. Try again in a moment.",
     "since": "since {date}",
     "stepWelcome": "Invitation",
+    "stepStart": "Welcome",
     "stepWhoYouAre": "Who you are",
     "stepConfirm": "Confirm",
     "stepKeepIt": "Keep it",
@@ -1581,6 +1599,8 @@
     "stepDone": "Done",
     "stepGroup": "Group",
     "stepFirstGroup": "First group",
+    "stepStartGroup": "Your group",
+    "stepShare": "Share",
     "welcome": {
       "personalTitle": "{inviter} added you to {group}",
       "personalTitleNoInviter": "You have been added to {group}",
@@ -1596,7 +1616,19 @@
       "haveAccount": "Sign in",
       "or": "or",
       "guest": "Continue as a guest",
-      "guestNote": "Just a name. Nothing you do here is stranded if you claim it later."
+      "guestNote": "Just a name. Nothing you do here is stranded if you claim it later.",
+      "startGroup": "Start a group without an account",
+      "startGroupNote": "A name and a group, in this browser. Claim it later to keep it on every device."
+    },
+    "startGroup": {
+      "title": "Your first group, no account needed",
+      "sub": "One trip, one flat, one dinner. Name it, say who you are, and share the link with everyone in it.",
+      "groupNameLabel": "Group name",
+      "groupNamePlaceholder": "Lisbon trip",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Your name",
+      "create": "Create the group",
+      "failed": "The group could not be created. Try again in a moment."
     },
     "whichOne": {
       "title": "Which one of these is you?",
@@ -1630,7 +1662,10 @@
       "codeHint": "Codes autofill from the keyboard on iOS and Android.",
       "verify": "Verify",
       "resend": "Send another code",
+      "resendIn": "Send another code in {seconds} s",
+      "openMail": "Open my email app",
       "withPasskey": "Continue with a passkey",
+      "passkeyExplainer": "Your face, fingerprint or screen lock. Nothing to remember.",
       "signInWithPasskey": "Sign in with a passkey",
       "orCode": "Email me a code instead",
       "emailMeACode": "Email me a code",
@@ -1692,6 +1727,11 @@
       "profileLabel": "Name and photo",
       "profileNotePhoto": "{name}, with a photo",
       "profileNoteInitials": "{name}, initials for now",
+      "passkeyLabel": "Sign in faster next time",
+      "passkeyNote": "Add a passkey to this device",
+      "passkeyNoteDone": "Passkey saved",
+      "passkeyAdded": "Passkey added",
+      "passkeyFailed": "That passkey could not be registered.",
       "payoutsLabel": "Payout method",
       "payoutsNoteSet": "{methods}",
       "payoutsNoteEmpty": "Asked when someone settles with you",
@@ -1727,6 +1767,12 @@
         "title": "{name} wants to settle up",
         "sub": "How should {name} send it? We'll remember for next time.",
         "save": "Save and tell {name}"
+      },
+      "profile": {
+        "title": "Name and photo",
+        "sub": "The name your groups see, and a photo if you feel like it. Tap the circle.",
+        "nameLabel": "Your name",
+        "done": "Done"
       },
       "claim": {
         "title": "Claim this account",
@@ -2393,6 +2439,7 @@
   "serverErrors": {
     "generic": "Something went wrong on the server. Nothing was changed.",
     "rateLimited": "Too many attempts. Please try again later.",
+    "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "registrationClosed": "Registration is closed on this instance.",
     "nameRequired": "Enter your name.",
     "emailTaken": "That email address is already registered. Try signing in instead.",

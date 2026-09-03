@@ -19,6 +19,8 @@ import en from "../../../messages/en.json";
  */
 
 const signInAction = vi.fn();
+const requestSignInCodeAction = vi.fn();
+const signInWithCodeAction = vi.fn();
 const startDemoAction = vi.fn();
 const push = vi.fn();
 const supportsPasskeyAutofill = vi.fn();
@@ -28,6 +30,9 @@ const signInWithPasskey = vi.fn();
 
 vi.mock("@/modules/auth/actions", () => ({
   signInAction: (...args: unknown[]) => signInAction(...args),
+  requestSignInCodeAction: (...args: unknown[]) =>
+    requestSignInCodeAction(...args),
+  signInWithCodeAction: (...args: unknown[]) => signInWithCodeAction(...args),
 }));
 vi.mock("@/modules/demo/actions", () => ({
   startDemoAction: (...args: unknown[]) => startDemoAction(...args),
@@ -57,6 +62,11 @@ const named = (name: string, message: string): Error => {
 beforeEach(() => {
   vi.clearAllMocks();
   signInAction.mockResolvedValue({ ok: true });
+  requestSignInCodeAction.mockResolvedValue({ ok: true });
+  signInWithCodeAction.mockResolvedValue({
+    ok: true,
+    data: { joinedGroupId: null, claimedGroupId: null, taken: false },
+  });
   startDemoAction.mockResolvedValue({ ok: true });
   // `clearAllMocks` forgets the calls, not the implementations, so every
   // default is restated here rather than leaking into the next test.
@@ -83,6 +93,99 @@ describe("on a real instance", () => {
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
     expect(signInAction).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The way in for an account that has no password.
+ *
+ * A code or a passkey signup leaves no password behind, and on a new device
+ * this page used to answer such an account with "Incorrect email or
+ * password" and nothing else. Where the instance can mail, a code is offered
+ * on the same screen and uses the address already typed.
+ */
+describe("signing in with a code", () => {
+  it("is offered only where the instance can send mail", () => {
+    const { unmount } = renderWithIntl(<SignInForm mailEnabled={false} />);
+    expect(
+      screen.queryByRole("button", { name: /sign-in code/i }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    renderWithIntl(<SignInForm mailEnabled />);
+    expect(
+      screen.getByRole("button", { name: /sign-in code/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("asks for an address before it mails anything", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.click(screen.getByRole("button", { name: /sign-in code/i }));
+
+    expect(requestSignInCodeAction).not.toHaveBeenCalled();
+    expect(screen.getByText(en.auth.validation.email)).toBeInTheDocument();
+  });
+
+  it("mails the typed address, takes the six digits, and goes to the dashboard", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.type(screen.getByLabelText("Email address"), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: /sign-in code/i }));
+
+    expect(requestSignInCodeAction).toHaveBeenCalledWith({
+      email: "ada@example.com",
+    });
+    // The password field steps aside for the code.
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    const resend = screen.getByRole("button", { name: /Send another code/ });
+    expect(resend).toBeDisabled();
+
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+
+    await waitFor(() =>
+      expect(signInWithCodeAction).toHaveBeenCalledWith({
+        email: "ada@example.com",
+        code: "123456",
+      }),
+    );
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("points a refused password at the code", async () => {
+    signInAction.mockResolvedValue({
+      ok: false,
+      error: en.serverErrors.invalidCredentials,
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.type(screen.getByLabelText("Email address"), "ada@example.com");
+    await user.type(screen.getByLabelText("Password"), "not-the-password");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(
+      await screen.findByText(en.serverErrors.invalidCredentials),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en.auth.signIn.noPasswordHint)).toBeInTheDocument();
+  });
+
+  it("lets the reader go back to the password", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.type(screen.getByLabelText("Email address"), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: /sign-in code/i }));
+    await user.click(
+      screen.getByRole("button", { name: en.auth.signIn.usePassword }),
+    );
+
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email address")).toHaveValue(
+      "ada@example.com",
+    );
   });
 });
 

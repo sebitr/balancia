@@ -88,6 +88,14 @@
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
       "withPasskey": "Utiliser une clé d’accès",
+      "emailMeACode": "M’envoyer un code de connexion",
+      "codeSent": "On a envoyé six chiffres à {email}. Saisis-les ici pour te connecter.",
+      "codeLabel": "Le code à six chiffres",
+      "codeWrong": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
+      "resend": "Envoyer un autre code",
+      "resendIn": "Envoyer un autre code dans {seconds} s",
+      "usePassword": "Utiliser mon mot de passe",
+      "noPasswordHint": "Compte créé avec un code ou une clé d’accès ? Demande plutôt un code de connexion.",
       "noAccount": "Pas encore de compte ?",
       "createOne": "Créer un compte",
       "metaTitle": "Connexion"
@@ -518,6 +526,9 @@
     "archivedGroups": "{count, plural, one {# groupe archivé} other {# groupes archivés}}",
     "nothingOutstanding": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}}",
     "nothingOutstandingSince": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}} · dernier remboursement {when} dans {group}",
+    "nameNudgeTitle": "Dis-nous comment t’appeler",
+    "nameNudgeBody": "Tes groupes te voient sous le nom {name}, qui est ton adresse e-mail. Donne-leur un vrai nom à la place.",
+    "nameNudgeAction": "Choisir mon nom",
     "splitwiseTitle": "Tu viens de Splitwise ?",
     "splitwiseSubtitle": "Importe un export CSV ou JSON",
     "splitwiseAction": "Importer",
@@ -1396,6 +1407,10 @@
         "title": "Ce lien d’invitation ne fonctionne plus",
         "body": "Il a peut-être été révoqué, remplacé par un nouveau lien, ou il a expiré. Demande un nouveau lien à la personne qui te l’a envoyé."
       },
+      "claimed": {
+        "title": "Ce lien est devenu un compte",
+        "body": "La personne à qui il a été envoyé a maintenant un compte, et le groupe est dessus. Connecte-toi pour ouvrir le groupe. Le lien lui-même est retiré."
+      },
       "rateLimited": {
         "title": "Trop de tentatives",
         "body": "Cette instance limite la fréquence d’ouverture des liens d’invitation depuis une même adresse. Patiente quelques minutes puis réessaie."
@@ -1425,7 +1440,7 @@
     "guestNameHint": "Le nom sous lequel le groupe te connaît déjà.",
     "email": "E-mail",
     "password": "Mot de passe",
-    "passwordHint": "Au moins 10 caractères.",
+    "passwordHint": "Au moins 10 caractères, et ni ton nom, ni ton adresse, ni un mot de passe que tout le monde utilise.",
     "confirmPassword": "Confirme le mot de passe",
     "submit": "Créer un compte",
     "haveAccount": "Tu as déjà un compte ?",
@@ -1438,6 +1453,8 @@
       "email": "Saisis une adresse e-mail valide",
       "passwordMin": "Utilise au moins 10 caractères",
       "passwordMax": "Ce mot de passe est trop long",
+      "passwordCommon": "Ce mot de passe est l’un des plus utilisés. Choisis-en un autre",
+      "passwordPersonal": "Laisse ton nom et ton adresse e-mail en dehors",
       "mismatch": "Les mots de passe ne correspondent pas"
     },
     "createFailed": "Ce compte n’a pas pu être créé."
@@ -1573,6 +1590,7 @@
     "joinFailed": "Impossible de t’ajouter au groupe. Réessaie dans un instant.",
     "since": "depuis le {date}",
     "stepWelcome": "Invitation",
+    "stepStart": "Bienvenue",
     "stepWhoYouAre": "Qui tu es",
     "stepConfirm": "Confirmation",
     "stepKeepIt": "Garder",
@@ -1581,6 +1599,8 @@
     "stepDone": "Terminé",
     "stepGroup": "Groupe",
     "stepFirstGroup": "Premier groupe",
+    "stepStartGroup": "Ton groupe",
+    "stepShare": "Partager",
     "welcome": {
       "personalTitle": "{inviter} t’ajoute à {group}",
       "personalTitleNoInviter": "Te voilà dans {group}",
@@ -1596,7 +1616,9 @@
       "haveAccount": "Se connecter",
       "or": "ou",
       "guest": "Continuer sans compte",
-      "guestNote": "Juste un prénom. Rien de ce que tu fais ici n’est perdu si tu crées un compte plus tard."
+      "guestNote": "Juste un prénom. Rien de ce que tu fais ici n’est perdu si tu crées un compte plus tard.",
+      "startGroup": "Créer un groupe sans compte",
+      "startGroupNote": "Un prénom et un groupe, dans ce navigateur. Crée un compte plus tard pour le garder sur tous tes appareils."
     },
     "whichOne": {
       "title": "Lequel de ces noms est le tien ?",
@@ -1630,7 +1652,10 @@
       "codeHint": "Les codes se remplissent depuis le clavier sur iOS et Android.",
       "verify": "Vérifier",
       "resend": "Envoyer un autre code",
+      "resendIn": "Envoyer un autre code dans {seconds} s",
+      "openMail": "Ouvrir mon application e-mail",
       "withPasskey": "Continuer avec une clé d’accès",
+      "passkeyExplainer": "Ton visage, ton empreinte ou le code de ton appareil. Rien à retenir.",
       "signInWithPasskey": "Se connecter avec une clé d’accès",
       "orCode": "M’envoyer un code par e-mail",
       "emailMeACode": "M’envoyer un code par e-mail",
@@ -1656,6 +1681,16 @@
       "createAccount": "Créer mon compte",
       "joinAsGuest": "Rejoindre sans compte",
       "nameFailed": "Ce nom n’a pas pu être enregistré."
+    },
+    "startGroup": {
+      "title": "Ton premier groupe, sans compte",
+      "sub": "Un voyage, une coloc, un dîner. Donne-lui un nom, dis qui tu es, et partage le lien avec tout le monde.",
+      "groupNameLabel": "Nom du groupe",
+      "groupNamePlaceholder": "Voyage à Lisbonne",
+      "nameLabel": "Ton nom",
+      "namePlaceholder": "Ton nom",
+      "create": "Créer le groupe",
+      "failed": "Le groupe n’a pas pu être créé. Réessaie dans un instant."
     },
     "arrival": {
       "title": "Tu y es, {name}",
@@ -1692,6 +1727,11 @@
       "profileLabel": "Nom et photo",
       "profileNotePhoto": "{name}, avec une photo",
       "profileNoteInitials": "{name}, initiales pour l’instant",
+      "passkeyLabel": "Te connecter plus vite la prochaine fois",
+      "passkeyNote": "Ajouter une clé d’accès à cet appareil",
+      "passkeyNoteDone": "Clé d’accès enregistrée",
+      "passkeyAdded": "Clé d’accès ajoutée",
+      "passkeyFailed": "Cette clé d’accès n’a pas pu être enregistrée.",
       "payoutsLabel": "Moyen de remboursement",
       "payoutsNoteSet": "{methods}",
       "payoutsNoteEmpty": "Demandé quand quelqu’un te rembourse",
@@ -1727,6 +1767,12 @@
         "title": "{name} veut te rembourser",
         "sub": "Par quel moyen {name} doit te rembourser ? On s’en souviendra la prochaine fois.",
         "save": "Enregistrer et prévenir {name}"
+      },
+      "profile": {
+        "title": "Nom et photo",
+        "sub": "Le nom que tes groupes voient, et une photo si tu en as envie. Touche le cercle.",
+        "nameLabel": "Ton nom",
+        "done": "Terminé"
       },
       "claim": {
         "title": "Crée ton compte",
@@ -2393,6 +2439,7 @@
   "serverErrors": {
     "generic": "Une erreur est survenue sur le serveur. Rien n’a été modifié.",
     "rateLimited": "Trop de tentatives. Réessaie plus tard.",
+    "rateLimitedFor": "Trop de tentatives. Réessaie dans {minutes, plural, one {# minute} other {# minutes}}.",
     "registrationClosed": "Les inscriptions sont fermées sur cette instance.",
     "nameRequired": "Saisis ton nom.",
     "emailTaken": "Cette adresse e-mail est déjà enregistrée. Essaie plutôt de te connecter.",

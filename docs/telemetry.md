@@ -393,23 +393,36 @@ for the person who runs the server, looking at their own server.
 
 `METRICS_ENABLED=true` exposes Prometheus text at `/api/metrics`:
 
-| Metric                                                                                                           | Type      | Labels                                                     |
-| ---------------------------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------- |
-| `balancia_http_requests_total`                                                                                   | counter   | `route` (template), `method`, `status` (`2xx`/`4xx`/`5xx`) |
-| `balancia_http_request_duration_seconds`                                                                         | histogram | `route`, `method`                                          |
-| `balancia_server_action_total`                                                                                   | counter   | `action`, `outcome` (`ok`/`rejected`/`failed`)             |
-| `balancia_server_action_duration_seconds`                                                                        | histogram | `action`                                                   |
-| `balancia_job_total`                                                                                             | counter   | `queue`, `outcome`                                         |
-| `balancia_job_duration_seconds`                                                                                  | histogram | `queue`                                                    |
-| `balancia_database_query_duration_seconds`                                                                       | histogram | —                                                          |
-| `balancia_database_pool_connections`                                                                             | gauge     | `state` (`total`/`idle`/`waiting`)                         |
-| `balancia_build_info`                                                                                            | gauge     | `version`                                                  |
-| `process_resident_memory_bytes`, `nodejs_heap_used_bytes`, `process_cpu_seconds_total`, `process_uptime_seconds` | gauge     | —                                                          |
+| Metric                                                                                                           | Type      | Labels                                                               |
+| ---------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------- |
+| `balancia_http_requests_total`                                                                                   | counter   | `route` (template), `method`, `status` (`2xx`/`4xx`/`5xx`)           |
+| `balancia_http_request_duration_seconds`                                                                         | histogram | `route`, `method`                                                    |
+| `balancia_server_action_total`                                                                                   | counter   | `action`, `outcome` (`ok`/`rejected`/`failed`)                       |
+| `balancia_server_action_duration_seconds`                                                                        | histogram | `action`                                                             |
+| `balancia_job_total`                                                                                             | counter   | `queue`, `outcome`                                                   |
+| `balancia_onboarding_steps_total`                                                                                | counter   | `arrival` (`cold`/`personal`/`shared`), `step` (a screen, or `left`) |
+| `balancia_rate_limit_refusals_total`                                                                             | counter   | `bucket`                                                             |
+| `balancia_job_duration_seconds`                                                                                  | histogram | `queue`                                                              |
+| `balancia_database_query_duration_seconds`                                                                       | histogram | —                                                                    |
+| `balancia_database_pool_connections`                                                                             | gauge     | `state` (`total`/`idle`/`waiting`)                                   |
+| `balancia_build_info`                                                                                            | gauge     | `version`                                                            |
+| `process_resident_memory_bytes`, `nodejs_heap_used_bytes`, `process_cpu_seconds_total`, `process_uptime_seconds` | gauge     | —                                                                    |
 
 Recurring-expense failures, Splitwise import duration and failures, and
 notification delivery are covered by the job metrics: the queue label
 distinguishes `recurring.generate`, `import.commit`, `notifications.deliver`
 and the rest.
+
+The onboarding funnel is `balancia_onboarding_steps_total`. The flow between
+arriving and standing on a group is one URL, so page views cannot see it; this
+counts each screen as it is reached — `welcome`, `identity`, `profile`,
+`arrival`, `checklist` and the rest of `src/components/onboarding/route.ts` —
+and `left` when the flow hands over to a group or the dashboard, split by how
+the person arrived. Read it alongside `balancia_server_action_total`, where
+`auth.startCodeSignup`, `auth.verifySignupCode`, `join.withAccount` and
+`join.asGuest` say which of those screens ended in a commit and which in a
+refusal. Both labels are literals from the route table; nothing about who was
+standing on the screen is recorded.
 
 **Receipt OCR has no server-side duration metric, and cannot have one.**
 Recognition runs in the browser against models this instance serves; the server

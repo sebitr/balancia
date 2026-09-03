@@ -13,6 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Query values map onto catalogue keys; anything else falls back to invalid. */
 const REASON_KEYS = {
   invalid: "invalid",
+  claimed: "claimed",
   expired: "expired",
   revoked: "revoked",
   "rate-limited": "rateLimited",

@@ -30,8 +30,25 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
  * flow does with the answer.
  */
 const joinWithAccountAction = vi.hoisted(() => vi.fn());
+const joinAsGuestAction = vi.hoisted(() => vi.fn());
 
-vi.mock("@/modules/join/actions", () => ({ joinWithAccountAction }));
+vi.mock("@/modules/join/actions", () => ({
+  joinWithAccountAction,
+  joinAsGuestAction,
+}));
+
+// The funnel counter is a beacon, sent and forgotten; what is checked here is
+// that the flow names its screens, not that a registry counted them.
+const recordOnboardingStep = vi.hoisted(() => vi.fn());
+
+vi.mock("./funnel", () => ({ recordOnboardingStep }));
+
+const startGroupAsGuestAction = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/groups/actions", () => ({ startGroupAsGuestAction }));
+vi.mock("@/components/groups/use-detected-timezone", () => ({
+  useDetectedTimezone: () => "Europe/Zurich",
+}));
 
 const auth = vi.hoisted(() => ({
   requestSignInCodeAction: vi.fn(),
@@ -59,6 +76,21 @@ beforeEach(() => {
     ok: true,
     data: { groupId: "group-1" },
   });
+  joinAsGuestAction.mockReset();
+  joinAsGuestAction.mockResolvedValue({
+    ok: true,
+    data: { groupId: "group-1" },
+  });
+  recordOnboardingStep.mockClear();
+  passkeyDevice.platform = true;
+  startGroupAsGuestAction.mockReset();
+  startGroupAsGuestAction.mockResolvedValue({
+    ok: true,
+    data: {
+      groupId: "group-new",
+      invite: { url: "https://balancia.test/join/g/abc", expiresAt: null },
+    },
+  });
   for (const action of Object.values(auth)) action.mockReset();
   auth.startCodeSignupAction.mockResolvedValue({ ok: true });
   auth.verifySignupCodeAction.mockResolvedValue({
@@ -69,11 +101,25 @@ beforeEach(() => {
   profileActions.setDisplayNameAction.mockResolvedValue({ ok: true });
 });
 
-// WebAuthn does not exist in jsdom, and the hook that asks is a fact about the
-// environment rather than state — so it is stubbed rather than waited for.
+// WebAuthn does not exist in jsdom, and the hooks that ask are facts about the
+// environment rather than state — so they are stubbed rather than waited for.
+// `platform` is the one a test may vary: whether this device can hold a
+// passkey of its own, which decides which button comes first.
+const passkeyDevice = vi.hoisted(() => ({ platform: true as boolean | null }));
+
 vi.mock("@/components/auth/use-passkey-support", () => ({
   usePasskeySupport: () => true,
+  usePlatformAuthenticator: () => passkeyDevice.platform,
 }));
+
+// The browser's own ceremonies, which jsdom cannot run: what is checked is
+// that the checklist's passkey row runs one and then reads as done.
+const passkeyClient = vi.hoisted(() => ({
+  registerPasskey: vi.fn(async () => {}),
+  signInWithPasskey: vi.fn(async () => {}),
+}));
+
+vi.mock("@/modules/auth/passkey-client", () => passkeyClient);
 
 const group: OnboardingGroupView = {
   groupId: "group-1",
@@ -251,6 +297,87 @@ describe("the shared link", () => {
     ).toBeInTheDocument();
   });
 
+  it("joins as a guest on the tap that chooses it, and lands in the group", async () => {
+    // This was the dead end: the guest option on a shared link committed
+    // nothing, and "Go to the group" opened the sign-in page.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /None of these/ }));
+    await user.type(screen.getByRole("textbox", { name: "Your name" }), "Dana");
+    await user.click(
+      screen.getByRole("button", { name: /^(Continue|Create my account)$/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+
+    expect(joinAsGuestAction).toHaveBeenCalledWith({
+      participantId: null,
+      displayName: "Dana",
+    });
+    expect(
+      screen.getByRole("heading", { name: "You're in as a guest" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Go to the group" }));
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+  });
+
+  it("claims a listed name as a guest with that participant, not a new one", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /Marc T\./ }));
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+
+    expect(joinAsGuestAction).toHaveBeenCalledWith({
+      participantId: "member-1",
+      displayName: "Marc T.",
+    });
+  });
+
+  it("keeps a refused guest join on the screen it was chosen from", async () => {
+    joinAsGuestAction.mockResolvedValue({
+      ok: false,
+      error: "Somebody else claimed that name first.",
+    });
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Find myself in the list" }),
+    );
+    await user.click(screen.getByRole("button", { name: /Marc T\./ }));
+    await user.click(screen.getByRole("button", { name: "Yes, that's me" }));
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+
+    expect(
+      screen.getByText("Somebody else claimed that name first."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "You're in as a guest" }),
+    ).toBeNull();
+  });
+
   it("says so when the link no longer resolves", () => {
     renderWithIntl(<OnboardingFlow arrival="shared" group={null} linkGone />);
     expect(screen.getByRole("heading")).toBeInTheDocument();
@@ -268,13 +395,89 @@ describe("the cold arrival", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers no guest option, having no group to be a guest of", () => {
+  it("offers a group of their own instead of a guest seat, having no group to be a guest of", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
     expect(
       screen.getByRole("button", { name: "Create an account" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Continue as a guest/ }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("withholds the no-account group where registration is closed", () => {
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        registrationAllowed={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: /Start a group without an account/,
+      }),
+    ).toBeNull();
+  });
+
+  it("starts a group with no account, hands over its link, and lands in it", async () => {
+    // Kittysplit, Splid and Tricount all let a person in with a name and a
+    // group; this is Balancia's version, built on the guest session an
+    // invitation would have minted.
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    );
+    expect(screen.getByText("Your group")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Group name"), "Lisbon trip");
+    await user.type(screen.getByLabelText("Your name"), "Dana");
+    await user.click(screen.getByRole("button", { name: "Create the group" }));
+
+    expect(startGroupAsGuestAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupName: "Lisbon trip",
+        displayName: "Dana",
+        timezone: "Europe/Zurich",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Your group is ready!" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/balancia\.test\/join\/g\/abc/),
+    ).toBeInTheDocument();
+    // A guest shares the link; moving its expiry is the owner's, later.
+    expect(screen.queryByText("Link expiration")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(router.push).toHaveBeenCalledWith("/groups/group-new");
+  });
+
+  it("keeps a refused group start on its own screen, with the reason", async () => {
+    startGroupAsGuestAction.mockResolvedValue({
+      ok: false,
+      error: "Registration is closed on this instance.",
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    );
+    await user.type(screen.getByLabelText("Group name"), "Lisbon trip");
+    await user.type(screen.getByLabelText("Your name"), "Dana");
+    await user.click(screen.getByRole("button", { name: "Create the group" }));
+
+    expect(
+      screen.getByText("Registration is closed on this instance."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Your group is ready!" }),
     ).toBeNull();
   });
 
@@ -291,6 +494,179 @@ describe("the cold arrival", () => {
     expect(
       screen.getByRole("button", { name: "Email me a code instead" }),
     ).toBeInTheDocument();
+  });
+
+  it("counts every screen it reaches, and the exit, for the operator's funnel", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    expect(recordOnboardingStep).toHaveBeenCalledWith("cold", "welcome");
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(recordOnboardingStep).toHaveBeenLastCalledWith("cold", "identity");
+
+    auth.requestSignInCodeAction.mockResolvedValue({ ok: true });
+    auth.signInWithCodeAction.mockResolvedValue({
+      ok: true,
+      data: { joinedGroupId: null, claimedGroupId: null },
+    });
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+
+    expect(recordOnboardingStep).toHaveBeenLastCalledWith("cold", "left");
+  });
+
+  it("opens the create sheet from the first-group screen, not an empty list", async () => {
+    // "You're in. No groups yet. Create your first group" used to land on a
+    // dashboard saying "Nothing here yet. Create a group": two screens, two
+    // identical buttons, before the one field that matters.
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+    await user.type(screen.getByRole("textbox", { name: "Your name" }), "Ada");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(
+      screen.getByRole("button", { name: "Create your first group" }),
+    );
+
+    expect(router.push).toHaveBeenCalledWith("/dashboard?new");
+  });
+
+  it("makes a second code wait, so the first cannot be retired in the post", async () => {
+    // Issuing a code invalidates the one before it. A resend tapped while the
+    // first mail is still arriving is how a correct code stops working, so
+    // the button counts down and says so.
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+
+    const resend = screen.getByRole("button", { name: /Send another code/ });
+    expect(resend).toBeDisabled();
+    expect(resend).toHaveTextContent(/in \d+ s$/);
+    expect(auth.startCodeSignupAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a returning account to its groups without asking its name", async () => {
+    // This is the journey that renamed people. Signing in through the welcome
+    // screen ran the profile screen next, with an empty name field and a
+    // disabled Continue, and then a "No groups yet" for an account that had
+    // several. The route ends on the credential now, and the dashboard is the
+    // welcome.
+    auth.requestSignInCodeAction.mockResolvedValue({ ok: true });
+    auth.signInWithCodeAction.mockResolvedValue({
+      ok: true,
+      data: { joinedGroupId: null, claimedGroupId: null },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(
+      screen.getByRole("heading", { name: "Welcome back" }),
+    ).toBeInTheDocument();
+    // The welcome is still one tap away: nothing has been committed yet.
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "ada@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+
+    expect(auth.signInWithCodeAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("heading", { name: /Last thing/ })).toBeNull();
+    expect(screen.queryByText("No groups yet")).toBeNull();
+    expect(router.push).toHaveBeenCalledWith("/dashboard");
+    expect(profileActions.setDisplayNameAction).not.toHaveBeenCalled();
+  });
+
+  it("says what a passkey is, in the words people recognise", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    expect(
+      screen.getByText(
+        "Your face, fingerprint or screen lock. Nothing to remember.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("puts the code first on a device that cannot hold a passkey", async () => {
+    // A desktop with a WebAuthn API and nothing behind it: the passkey button
+    // there opens a sheet asking for a phone or a security key, so it waits
+    // underneath the code rather than leading with a dead end.
+    passkeyDevice.platform = false;
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    const buttons = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent?.trim())
+      .filter((label) => label && /passkey|code/i.test(label));
+    expect(buttons).toEqual(["Email me a code", "Continue with a passkey"]);
+  });
+
+  it("keeps the passkey first while the device is still answering", async () => {
+    passkeyDevice.platform = null;
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    const buttons = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent?.trim())
+      .filter((label) => label && /passkey|code/i.test(label));
+    expect(buttons).toEqual([
+      "Continue with a passkey",
+      "Email me a code instead",
+    ]);
+  });
+
+  it("keeps the password page a tap away where there is no mail server", async () => {
+    // Before, the password link appeared only when neither a passkey nor a
+    // code could be offered — so a mail-less instance read on a phone showed
+    // exactly one button, and somebody who did not want a passkey had no
+    // visible way to say so.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+
+    expect(
+      screen.getByRole("link", { name: "Sign up with a password" }),
+    ).toHaveAttribute("href", "/register/password");
   });
 
   it("offers no code on an instance with no mail server", async () => {
@@ -533,6 +909,7 @@ describe("what the checklist already knows", () => {
 
   const everything = {
     hasPhoto: true,
+    hasPasskey: true,
     currencies: ["CHF", "EUR"],
     payouts: [{ method: "bank", detail: "CH93 0076 2011 6238 5295 7" }],
     pushEnabled: true,
@@ -730,6 +1107,35 @@ describe("a guest who came to /register to stop being one", () => {
     expect(screen.queryByText("Claim your account")).toBeNull();
     // Leaving is the checklist's own button's job, not this one's.
     expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("offers a passkey for next time, and ticks it once the ceremony ran", async () => {
+    // An account that came in by a code has nothing on the next device but
+    // an inbox. The moment after a successful sign-in is where most passkey
+    // enrolments come from, so the list offers one, right under the account.
+    const user = userEvent.setup();
+    const { rerender } = renderWithIntl(asAGuest);
+
+    await createTheAccount(user);
+    rerender(onceClaimed);
+    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    const offer = screen.getByRole("button", {
+      name: /Sign in faster next time/,
+    });
+    expect(offer).toBeInTheDocument();
+    // The name-and-photo row opens something now too.
+    expect(
+      screen.getByRole("button", { name: /Name and photo/ }),
+    ).toBeInTheDocument();
+
+    await user.click(offer);
+
+    expect(passkeyClient.registerPasskey).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Passkey saved")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Sign in faster next time/ }),
+    ).toBeNull();
   });
 
   it("keeps the group it was a guest of on screen after the claim", async () => {

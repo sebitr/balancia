@@ -6,7 +6,16 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firstNameOf } from "@/components/join/types";
-import { joinWithAccountAction } from "@/modules/join/actions";
+import {
+  joinAsGuestAction,
+  joinWithAccountAction,
+} from "@/modules/join/actions";
+import { recordOnboardingStep } from "./funnel";
+import { startGroupAsGuestAction } from "@/modules/groups/actions";
+import { usePasskeySupport } from "@/components/auth/use-passkey-support";
+import { GroupReady } from "@/components/groups/group-ready";
+import { useDetectedTimezone } from "@/components/groups/use-detected-timezone";
+import { defaultCurrency } from "@/modules/currencies/default-currency";
 import {
   nextScreen,
   previousScreen,
@@ -27,6 +36,7 @@ import {
   FirstGroupScreen,
   KeepItScreen,
   ProfileScreen,
+  StartGroupScreen,
   WelcomeScreen,
   WhichOneScreen,
 } from "./screens";
@@ -207,6 +217,7 @@ export function OnboardingFlow({
    * the answer cannot drift apart. A guest is never complete — their account
    * row is urgent, not done — which is why `intent` is part of it.
    */
+  const passkeysSupported = usePasskeySupport();
   const profileIsComplete = useMemo(
     () =>
       initialProfile !== null &&
@@ -215,6 +226,9 @@ export function OnboardingFlow({
         credential,
         email: email || null,
         hasPhoto: initialProfile.hasPhoto,
+        hasPasskey: initialProfile.hasPasskey,
+        passkeyAdded: false,
+        passkeysSupported,
         name,
         currencies: initialProfile.currencies,
         payouts: initialProfile.payouts.map((payout) => payout.method),
@@ -222,7 +236,7 @@ export function OnboardingFlow({
         notificationCount: 5,
         pushEnabled: initialProfile.pushEnabled,
       }),
-    [initialProfile, intent, credential, email, name],
+    [initialProfile, intent, credential, email, name, passkeysSupported],
   );
 
   /*
@@ -249,8 +263,12 @@ export function OnboardingFlow({
    * screen is the end of the road for somebody who has nothing left to set
    * up, and offering them a back button to un-claim a name they have already
    * claimed is not a place to return to.
+   *
+   * The one last screen that is not an ending is the identity screen, where a
+   * cold sign-in's route stops: nothing has been committed there until the
+   * credential lands, so the way back to the welcome stays open.
    */
-  const finished = nextScreen(route, screen) === null;
+  const finished = nextScreen(route, screen) === null && screen !== "identity";
   const groupId = joinedGroupId ?? initialGroup?.groupId ?? null;
   /** A shared link finished by an account that already existed. */
   const joinsWithAccount = signedIn && arrival === "shared";
@@ -276,12 +294,29 @@ export function OnboardingFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const advance = useCallback((to: ScreenId) => {
-    setScreen(to);
-    // A new screen is a new first field, and the header may have gained a
-    // back button. Both are below the fold on a short phone otherwise.
-    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  /*
+   * The funnel, one count per screen reached.
+   *
+   * The welcome is counted once on mount, every later screen from `advance`,
+   * and the exit from `leave`. Nothing waits on it and nothing hears back:
+   * the operator's metrics endpoint is the only reader, and a screen that
+   * could not be counted is still a screen.
+   */
+  useEffect(() => {
+    recordOnboardingStep(arrival, "welcome");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const advance = useCallback(
+    (to: ScreenId) => {
+      setScreen(to);
+      recordOnboardingStep(arrival, to);
+      // A new screen is a new first field, and the header may have gained a
+      // back button. Both are below the fold on a short phone otherwise.
+      if (typeof window !== "undefined") window.scrollTo(0, 0);
+    },
+    [arrival],
+  );
 
   const goBack = () => {
     if (!previous) return;
@@ -319,13 +354,82 @@ export function OnboardingFlow({
     return null;
   };
 
+  /**
+   * Joining as a guest, which on a shared link is the whole of the join.
+   *
+   * A personal invitation has already spent its token into a guest session
+   * by the time its flow starts, so its guest has nothing to commit here. A
+   * shared link carries no identity at all: choosing "guest" on it is the
+   * moment the participant, the invitation and the session come to exist —
+   * and until this ran, they never did, which is how "Go to the group" used
+   * to open the sign-in page.
+   */
+  const joinAsGuest = async (): Promise<boolean> => {
+    setJoinError(null);
+    setJoining(true);
+    const result = await joinAsGuestAction({
+      participantId: claimed?.id ?? null,
+      displayName: name,
+    });
+    setJoining(false);
+    if (!result.ok || !result.data) {
+      setJoinError(result.error ?? t("joinFailed"));
+      return false;
+    }
+    setJoinedGroupId(result.data.groupId);
+    return true;
+  };
+
+  /**
+   * A group started with no account, from the cold welcome.
+   *
+   * The action writes the group, the creator's seat and the link, and leaves
+   * this browser holding a guest session for it — the same session an
+   * invitation mints. What comes back is the link, for the screen that hands
+   * it over.
+   */
+  const [startedGroup, setStartedGroup] = useState<{
+    groupId: string;
+    groupName: string;
+    invite: { url: string; expiresAt: string | null };
+  } | null>(null);
+  const detectedTimezone = useDetectedTimezone();
+  const startGroup = async (groupName: string) => {
+    setJoinError(null);
+    setJoining(true);
+    const result = await startGroupAsGuestAction({
+      groupName,
+      displayName: name.trim(),
+      timezone: detectedTimezone ?? "UTC",
+      baseCurrency: defaultCurrency({}),
+    });
+    setJoining(false);
+    if (!result.ok || !result.data) {
+      setJoinError(result.error ?? t("startGroup.failed"));
+      return;
+    }
+    setStartedGroup({
+      groupId: result.data.groupId,
+      groupName,
+      invite: result.data.invite,
+    });
+    setJoinedGroupId(result.data.groupId);
+    advance("groupLink");
+  };
+
   /** Where a route ends: the group it produced, or the dashboard. */
   const leave = () => {
+    recordOnboardingStep(arrival, "left");
     router.push(groupId ? `/groups/${groupId}` : "/dashboard");
     router.refresh();
   };
 
-  const stepLabel = t(STEP_LABEL_KEYS[screen] as Parameters<typeof t>[0]);
+  // "Invitation" is the welcome's word on the two linked arrivals. Nobody
+  // invited a cold arrival, so its welcome is called what it is.
+  const stepLabel =
+    screen === "welcome" && arrival === "cold"
+      ? t("stepStart")
+      : t(STEP_LABEL_KEYS[screen] as Parameters<typeof t>[0]);
 
   /*
    * Nothing was ever loaded, so there is no flow to run.
@@ -468,9 +572,19 @@ export function OnboardingFlow({
             name={name}
             expenseCount={claimed?.expenseCount ?? 0}
             registrationAllowed={registrationAllowed}
+            busy={joining}
+            error={joinError}
             onChoose={(chosen) => {
               setIntent(chosen);
-              advance(chosen === "guest" ? "arrival" : "identity");
+              if (chosen !== "guest") {
+                advance("identity");
+                return;
+              }
+              // The guest option commits here: there is no credential screen
+              // after it to carry the join, so the join is this tap.
+              void joinAsGuest().then((joined) => {
+                if (joined) advance("arrival");
+              });
             }}
           />
         )}
@@ -502,7 +616,11 @@ export function OnboardingFlow({
                 setupComplete,
               });
               const index = next.indexOf("identity");
-              advance(next[index + 1] ?? "arrival");
+              const following = next[index + 1];
+              // A cold sign-in's route ends here: the account exists, its
+              // groups are on the dashboard, and that is the welcome.
+              if (following) advance(following);
+              else leave();
             }}
           />
         )}
@@ -573,8 +691,45 @@ export function OnboardingFlow({
           />
         )}
 
+        {screen === "startGroup" && (
+          <StartGroupScreen
+            name={name}
+            onNameChange={setName}
+            busy={joining}
+            error={joinError}
+            onSubmit={(groupName) => void startGroup(groupName)}
+          />
+        )}
+
+        {screen === "groupLink" && startedGroup && (
+          <GroupReady
+            groupId={startedGroup.groupId}
+            groupName={startedGroup.groupName}
+            people={[name.trim()]}
+            invite={startedGroup.invite}
+            onSkip={leave}
+            heading="h1"
+            // A guest may share the link, not move its expiry: that becomes
+            // theirs with the group, once they claim it.
+            canManage={false}
+          />
+        )}
+
         {screen === "firstGroup" && (
-          <FirstGroupScreen name={firstNameOf(name)} onLeave={leave} />
+          <FirstGroupScreen
+            name={firstNameOf(name)}
+            /*
+              Straight into the sheet, not onto a dashboard that says "No
+              groups yet" a second time with the same button under it. The
+              dashboard opens its create sheet for `?new`, so the first thing
+              on screen is the one field that matters.
+            */
+            onLeave={() => {
+              recordOnboardingStep(arrival, "left");
+              router.push("/dashboard?new");
+              router.refresh();
+            }}
+          />
         )}
       </main>
     </div>

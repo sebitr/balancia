@@ -17,6 +17,7 @@ import {
   type SettledGroupView,
 } from "@/components/dashboard/settled-groups";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { NameNudge } from "@/components/dashboard/name-nudge";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
   displayAmountsOf,
@@ -142,7 +143,10 @@ export default async function DashboardPage() {
   if (overview.groupCount === 0) {
     return (
       <>
-        <FirstRun title={t("title")} subtitle={t("empty")} t={t} />
+        <div className="flex flex-col gap-4">
+          <NameNudge name={user.name} email={user.email} />
+          <FirstRun title={t("title")} subtitle={t("empty")} t={t} />
+        </div>
         {createGroup}
       </>
     );
@@ -165,6 +169,8 @@ export default async function DashboardPage() {
     <>
       <div className="flex flex-col gap-[26px]">
         <h1 className="sr-only">{t("title")}</h1>
+
+        <NameNudge name={user.name} email={user.email} />
 
         <PositionWidget
           net={

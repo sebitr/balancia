@@ -35,12 +35,19 @@ export function GroupReady({
   invite,
   onSkip,
   heading: Heading = "h2",
+  canManage = true,
 }: {
   groupId: string;
   groupName: string;
   people: readonly string[];
   invite: { url: string; expiresAt: string | null } | null;
   onSkip: () => void;
+  /**
+   * Whether the reader may move the link's expiry. False for a guest who
+   * started the group without an account: the link is theirs to share, and
+   * its settings become theirs the moment they claim the group.
+   */
+  canManage?: boolean;
   /**
    * What draws the title. The surface this is shown on decides: inside the
    * create sheet it has to be the sheet's own `SheetTitle`, because a dialog
@@ -93,13 +100,15 @@ export function GroupReady({
             <LinkChip url={invite.url} className="flex-1" />
             <CopyButton url={invite.url} className="shrink-0" />
           </div>
-          <ExpiryRow
-            groupId={groupId}
-            label={t("linkExpires")}
-            expiresAt={invite.expiresAt}
-            now={openedAt}
-            onChange={(expiresAt, at) => setExpiry({ expiresAt, at })}
-          />
+          {canManage && (
+            <ExpiryRow
+              groupId={groupId}
+              label={t("linkExpires")}
+              expiresAt={invite.expiresAt}
+              now={openedAt}
+              onChange={(expiresAt, at) => setExpiry({ expiresAt, at })}
+            />
+          )}
           <p className="text-xs text-pretty text-muted-foreground">
             {expiryNote(t, expiry.expiresAt, expiry.at)}
           </p>

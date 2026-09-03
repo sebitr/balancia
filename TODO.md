@@ -11,8 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
-- [ ] Keep the money colours clear of the accent, and add Paper, Midnight and an increased-contrast setting — `feat/accent-keeps-its-distance`
-- [ ] Pin browserslist and fast-uri past the advisories that have failed the dependency audit on every branch since 1 September — `fix/dependency-audit`
+- [ ] Close the five dead ends an onboarding audit walked into, and the friction around them: guest on a shared link, sign-in through /register, code resend, code-only accounts on the sign-in page, the dark-mode flash — `fix/onboarding-audit-findings`
 - [ ] Make an account cost something to create: free a squatted address, cap sign-ups per inbox and per instance, refuse the passwords everyone guesses, and price out bulk sign-up — `feat/signup-abuse-defences`
 - [ ] Offer the passkey in the sign-in field's own autofill dropdown — `feat/passkey-autofill`
 - [ ] Give every control a finger's worth of target, and fix five things a UX audit measured — `fix/ux-audit-findings`
@@ -44,6 +43,8 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-03 Keep the money colours clear of the accent, and add Paper, Midnight and an increased-contrast setting — #281
+- [x] 2026-09-03 Pin browserslist and fast-uri past the advisories that had failed the dependency audit on every branch since 1 September — #282
 - [x] 2026-08-31 Rework the Add Entry drawer: income vocabulary, settlement pairs, recurrence, entry friction — #271
 - [x] 2026-08-30 Settle up with a code the payee's own bank reads, beyond the two SEPA ones — #260
 - [x] 2026-08-30 Format the nine files that were committed unformatted — #261

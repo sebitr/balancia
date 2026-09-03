@@ -8,7 +8,11 @@ import {
   runAction,
   type ActionResult,
 } from "@/lib/actions";
-import { getCurrentUser } from "@/lib/security/actor";
+import { z } from "zod";
+import { getClientIp, getCurrentUser } from "@/lib/security/actor";
+import { redeemInvitation } from "@/lib/security/guest-session";
+import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
+import { setGuestCookie } from "@/modules/auth/cookies";
 import {
   addParticipantSchema,
   createGroupSchema,
@@ -19,6 +23,7 @@ import {
 import {
   addParticipant,
   createGroup,
+  createGroupAsGuest,
   createInvitation,
   deleteGroup,
   removeParticipant,
@@ -42,6 +47,59 @@ export interface CreatedGroupResult {
   readonly groupId: string;
   /** Shown by the screen that replaces the create sheet. */
   readonly invite: { readonly url: string; readonly expiresAt: string | null };
+}
+
+const startGroupAsGuestSchema = z.object({
+  groupName: createGroupSchema.shape.name,
+  displayName: createGroupSchema.shape.ownerDisplayName,
+  timezone: createGroupSchema.shape.timezone,
+  baseCurrency: createGroupSchema.shape.baseCurrency,
+});
+
+/**
+ * Starts a group with no account behind it, from the cold welcome.
+ *
+ * Open on the same terms as registration: an instance that has closed its
+ * door to new accounts has closed it to new groups from strangers too. The
+ * creator leaves with a guest session for the group, exactly as somebody
+ * opening a personal invitation would, and the checklist's "claim your
+ * account" row is how it becomes theirs to keep.
+ */
+export async function startGroupAsGuestAction(
+  input: unknown,
+): Promise<ActionResult<CreatedGroupResult>> {
+  const parsed = startGroupAsGuestSchema.safeParse(input);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+  }
+  if (!getEnv().ALLOW_REGISTRATION) {
+    return actionError("Registration is closed on this instance.");
+  }
+
+  const result = await runAction("groups.startAsGuest", async () => {
+    const limit = await consumeRateLimit("guestGroup", await getClientIp());
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
+
+    const created = await createGroupAsGuest({
+      name: parsed.data.groupName,
+      displayName: parsed.data.displayName,
+      timezone: parsed.data.timezone,
+      baseCurrency: parsed.data.baseCurrency ?? "EUR",
+    });
+
+    const redeemed = await redeemInvitation(created.invitationToken);
+    await setGuestCookie(redeemed.token, redeemed.expiresAt);
+
+    return {
+      groupId: created.id,
+      invite: {
+        url: created.invite.url,
+        expiresAt: created.invite.expiresAt?.toISOString() ?? null,
+      },
+    };
+  });
+
+  return result;
 }
 
 export async function createGroupAction(

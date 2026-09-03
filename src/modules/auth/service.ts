@@ -6,7 +6,9 @@ import {
   groupMembers,
   groups,
   oauthIdentities,
+  participants,
   passkeys,
+  sessions,
   users,
   verificationTokens,
 } from "@/lib/db/schema";
@@ -191,6 +193,65 @@ export async function insertUser(
   }
 }
 
+/**
+ * The clauses that say nothing ever got into an account.
+ *
+ * No session ever created, no passkey, no linked Apple identity, no group
+ * membership, no participant row claimed. An account with any of those got
+ * in, and getting in is proof enough. Shared by the sweep that deletes such
+ * rows and by the signup that reclaims them, so the two cannot disagree about
+ * what "unclaimed" means.
+ */
+export function neverGotIn() {
+  return [
+    sql`NOT EXISTS (SELECT 1 FROM ${sessions} WHERE ${sessions.userId} = ${users.id})`,
+    sql`NOT EXISTS (SELECT 1 FROM ${passkeys} WHERE ${passkeys.userId} = ${users.id})`,
+    sql`NOT EXISTS (SELECT 1 FROM ${oauthIdentities} WHERE ${oauthIdentities.userId} = ${users.id})`,
+    sql`NOT EXISTS (SELECT 1 FROM ${groupMembers} WHERE ${groupMembers.userId} = ${users.id})`,
+    sql`NOT EXISTS (SELECT 1 FROM ${participants} WHERE ${participants.userId} = ${users.id})`,
+  ];
+}
+
+/**
+ * Takes over an account begun at this address and never proved, if there is
+ * one. Returns its id, or null when there is nothing to reclaim — in which
+ * case the caller inserts, and the unique index decides.
+ *
+ * Both paths that mail an address write the user row before the mail goes
+ * out, so "Send another code", "try again tomorrow" and a second attempt at
+ * the password form all used to be answered with `emailTaken`: the wrong
+ * sentence for the person who typed the address twice, and a door with no way
+ * through for the one who closed the tab. The row is theirs to reclaim as long
+ * as nothing has ever got into it, decided in the UPDATE's own predicate so
+ * that two attempts cannot both win it.
+ *
+ * The name and the credential are replaced. Whoever made the first attempt may
+ * not be the person about to prove the inbox, and a password they chose must
+ * not outlive the proof that they never owned the address.
+ */
+export async function reclaimUnclaimedAccount(
+  identity: { readonly email: string; readonly name: string },
+  options: { db?: Database; passwordHash?: string | null } = {},
+): Promise<string | null> {
+  const db = options.db ?? getDb();
+  const [reclaimed] = await db
+    .update(users)
+    .set({
+      name: identity.name,
+      passwordHash: options.passwordHash ?? null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(sql`lower(${users.email})`, normalizeEmail(identity.email)),
+        isNull(users.emailVerifiedAt),
+        ...neverGotIn(),
+      ),
+    )
+    .returning({ id: users.id });
+  return reclaimed?.id ?? null;
+}
+
 export async function registerUser(
   input: RegisterInput,
   context: {
@@ -219,7 +280,9 @@ export async function registerUser(
   assertPasswordPolicy(input.password, { email, name });
 
   const passwordHash = await hashPassword(input.password);
-  const userId = await insertUser({ email, name, passwordHash }, { db });
+  const userId =
+    (await reclaimUnclaimedAccount({ email, name }, { db, passwordHash })) ??
+    (await insertUser({ email, name, passwordHash }, { db }));
 
   const user: AuthenticatedUser = {
     userId,
@@ -998,20 +1061,23 @@ export async function sendVerificationEmail(
 export async function verifyEmail(
   rawToken: string,
   options: { db?: Database } = {},
-): Promise<boolean> {
+): Promise<{ userId: string } | null> {
   const db = options.db ?? getDb();
   const consumed = await consumeVerificationToken(
     rawToken,
     "email_verification",
     { db },
   );
-  if (!consumed) return false;
+  if (!consumed) return null;
 
   await db
     .update(users)
     .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
     .where(eq(users.id, consumed.userId));
-  return true;
+  // Whose address was just proved, so the link can sign them in: the token
+  // was the whole of the proof, and asking for a password after it is
+  // asking twice.
+  return { userId: consumed.userId };
 }
 
 /**

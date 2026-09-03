@@ -73,7 +73,7 @@ export async function GET(
   } catch (error) {
     if (error instanceof InvalidInvitationError) {
       return NextResponse.redirect(
-        new URL("/join/error?reason=invalid", env.appOrigin),
+        new URL(`/join/error?reason=${error.reason}`, env.appOrigin),
         { status: 303 },
       );
     }
