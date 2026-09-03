@@ -810,9 +810,34 @@
     "themeSystem": "Auto",
     "themeSystemHelp": "Suit le système",
     "themeLight": "Clair",
-    "themeLightHelp": "Crème et prune",
     "themeDark": "Sombre",
-    "themeDarkHelp": "Prune foncé",
+    "surfaceLight": "Surface claire",
+    "surfaceDark": "Surface sombre",
+    "surfaces": {
+      "cream": "Crème",
+      "paper": "Papier",
+      "plum": "Prune",
+      "midnight": "Minuit"
+    },
+    "surfaceHelp": {
+      "cream": "Papier chaud, cartes blanches",
+      "paper": "Blanc pur, plus froid",
+      "plum": "Prune foncé",
+      "midnight": "Presque noir, pour l’OLED"
+    },
+    "contrast": "Contraste",
+    "contrasts": {
+      "auto": "Auto",
+      "standard": "Standard",
+      "more": "Renforcé"
+    },
+    "contrastAutoHelp": "Suit le système",
+    "contrastMoreHelp": "Traits plus marqués, légendes plus foncées",
+    "contrastNote": "Le contraste renforcé marque les traits et éloigne davantage légendes, soldes et liens de la page. Surfaces et contraste restent sur cet appareil ; l’accent suit ton compte.",
+    "surfaceFailed": "Ce choix n’a pas pu être enregistré.",
+    "accentPreview": "L’accent à côté des couleurs des soldes",
+    "accentPreviewSelf": "Toi",
+    "accentPreviewAction": "Ajouter une dépense",
     "accent": "Couleur d’accent",
     "accents": {
       "coral": "Corail",
@@ -2442,6 +2467,7 @@
     "joinNameTaken": "Quelqu’un d’autre a pris ce nom avant toi. Rouvre le lien pour en choisir un autre.",
     "joinSeatClaimed": "Cette invitation a déjà été utilisée par un autre compte. Demande ton propre lien à la personne qui te l’a envoyé.",
     "unknownAccent": "Cette couleur d’accent n’est pas proposée par Balancia.",
+    "unknownSurface": "Cette surface n’est pas proposée par Balancia.",
     "passwordTooShort": "Utilise un mot de passe d’au moins 10 caractères.",
     "passwordTooLong": "Ce mot de passe est trop long.",
     "passwordCommon": "Ce mot de passe est l’un des plus utilisés. Choisis-en un autre.",

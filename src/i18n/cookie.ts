@@ -4,6 +4,14 @@ import { getEnv } from "@/lib/env";
 import type { StoredPreferences } from "@/modules/auth/service";
 import { ACCENT_COOKIE_NAME, isAccentColor } from "@/modules/profile/accent";
 import {
+  DEFAULT_SURFACES,
+  isContrastChoice,
+  isDarkSurface,
+  isLightSurface,
+  SURFACE_COOKIE_NAMES,
+  type SurfacePreferences,
+} from "@/modules/profile/surface";
+import {
   DATE_FORMAT_COOKIE_NAME,
   isDateFormat,
   isNumberFormat,
@@ -62,6 +70,51 @@ export async function writeAccentCookie(accent: string | null): Promise<void> {
   }
   if (!isAccentColor(accent)) return;
   cookieStore.set(ACCENT_COOKIE_NAME, accent, displayCookieOptions());
+}
+
+/**
+ * Writes the surface and contrast cookies — the ones given, only.
+ *
+ * Per device rather than per account, so there is no column behind these;
+ * see `modules/profile/surface.ts`. A default clears its cookie rather than
+ * recording one, the same way coral clears the accent: cream, plum and
+ * "follow my system" are the absence of a choice.
+ */
+export async function writeSurfaceCookies(
+  preferences: Partial<SurfacePreferences>,
+): Promise<void> {
+  const cookieStore = await cookies();
+  const cookieOptions = displayCookieOptions();
+
+  const write = (
+    name: string,
+    value: string | undefined,
+    known: boolean,
+    fallback: string,
+  ) => {
+    if (value === undefined || !known) return;
+    if (value === fallback) cookieStore.delete(name);
+    else cookieStore.set(name, value, cookieOptions);
+  };
+
+  write(
+    SURFACE_COOKIE_NAMES.light,
+    preferences.light,
+    isLightSurface(preferences.light),
+    DEFAULT_SURFACES.light,
+  );
+  write(
+    SURFACE_COOKIE_NAMES.dark,
+    preferences.dark,
+    isDarkSurface(preferences.dark),
+    DEFAULT_SURFACES.dark,
+  );
+  write(
+    SURFACE_COOKIE_NAMES.contrast,
+    preferences.contrast,
+    isContrastChoice(preferences.contrast),
+    DEFAULT_SURFACES.contrast,
+  );
 }
 
 /**
