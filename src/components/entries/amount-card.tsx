@@ -148,7 +148,7 @@ export function AmountCard({
       </div>
 
       {needsRate && baseCurrency && (
-        <div className="space-y-2 rounded-[14px] border border-primary/35 bg-primary/10 p-3.5">
+        <div className="space-y-2 rounded-[14px] border border-border bg-muted p-3.5">
           <ExchangeRateField
             id="entry-rate"
             from={currency}

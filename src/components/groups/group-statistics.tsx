@@ -16,6 +16,7 @@ import { hasGlyph } from "@/components/expenses/category-icon";
 import { useDateFormatter, useFormatPreferences } from "@/i18n/format-context";
 import { parsePlainDate } from "@/i18n/format";
 import { cn } from "@/lib/utils";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 import { getSubcategoryGroups } from "@/modules/categorization/taxonomy";
 import type { Granularity, StatsRange } from "@/modules/groups/member-stats";
 
@@ -782,8 +783,7 @@ function WhoCarries({
               <span
                 className={cn(
                   "text-right text-sm font-semibold tabular-nums",
-                  signed && value > 0n && "text-positive-ink",
-                  signed && value < 0n && "text-negative-ink",
+                  signed && value !== 0n && TONE[toneFor(value)].ink,
                 )}
               >
                 <Amount

@@ -21,6 +21,11 @@ import {
   resolveAccent,
   type AccentColor,
 } from "@/modules/profile/accent";
+import {
+  resolveSurfaces,
+  SURFACE_COOKIE_NAMES,
+  type SurfacePreferences,
+} from "@/modules/profile/surface";
 
 /**
  * Per-request resolution of how this reader writes dates and numbers.
@@ -104,4 +109,18 @@ export async function getNumberLocale(): Promise<string> {
 export async function resolveAccentColor(): Promise<AccentColor> {
   const cookieStore = await cookies();
   return resolveAccent(cookieStore.get(ACCENT_COOKIE_NAME)?.value);
+}
+
+/**
+ * Which surfaces this request is lit with, and whether it asked for more
+ * contrast. Cookies only, like the accent, and for the same reasons — with
+ * the difference that there is no account column behind these at all.
+ */
+export async function resolveSurfacePreferences(): Promise<SurfacePreferences> {
+  const cookieStore = await cookies();
+  return resolveSurfaces({
+    light: cookieStore.get(SURFACE_COOKIE_NAMES.light)?.value,
+    dark: cookieStore.get(SURFACE_COOKIE_NAMES.dark)?.value,
+    contrast: cookieStore.get(SURFACE_COOKIE_NAMES.contrast)?.value,
+  });
 }

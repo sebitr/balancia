@@ -21,7 +21,11 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { toneFor, type BalanceTone } from "@/components/money/balance-tone";
+import {
+  TONE,
+  toneFor,
+  type BalanceTone,
+} from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
 import { RANKED_BANDS, UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
@@ -108,9 +112,12 @@ export type { EntryKind, RowView };
  *
  * The handoff specifies `--background` on every coloured band, which is right
  * in the dark theme it was drawn in and wrong in the light one: the light
- * palette's chart colours are far darker, and cream on `--chart-4` measures
- * 2.4:1. Each band therefore takes whichever of the two inks its own colour
- * can carry, and every pairing below clears 4.5:1 in both themes.
+ * palette's chart colours are darker, and cream on the teal `--chart-3` or
+ * the slate `--chart-4` falls well short. Each band therefore takes whichever
+ * of the two inks its own colour can carry. `--chart-2` is the accent — the
+ * "you" series — so its band has to read under plum in all seven accents,
+ * which it does; `src/app/token-contrast.test.ts` holds every pairing below
+ * to 4.5:1 in both themes.
  */
 const BAND_STYLES: readonly string[] = [
   "bg-chart-1 text-background",
@@ -180,18 +187,11 @@ export function fitBandsToHeight(
   ];
 }
 
-const TONE_STYLES: Record<BalanceTone, string> = {
-  positive: "text-positive-ink",
-  negative: "text-negative-ink",
-  neutral: "text-neutral-balance-ink",
-};
-
-const TONE_SIGNS: Record<BalanceTone, string> = {
-  positive: "+",
-  negative: "−",
-  neutral: "−",
-};
-
+/**
+ * This list's own words for the three tones — "gets back" is a balance's
+ * word, and a running position reads better as "back" / "owed" / "settled".
+ * The classes and signs come from the shared `TONE` record.
+ */
 const TONE_LABEL_KEYS = {
   positive: "positionBack",
   negative: "positionOwed",
@@ -1118,7 +1118,7 @@ function Position({
 }) {
   const t = useTranslations("expensesList");
   const resolved = tone ?? toneFor(minorUnits);
-  const sign = TONE_SIGNS[resolved];
+  const sign = TONE[resolved].sign;
   const magnitude =
     BigInt(minorUnits) < 0n ? -BigInt(minorUnits) : BigInt(minorUnits);
 
@@ -1126,7 +1126,7 @@ function Position({
     <span
       className={cn(
         "flex items-center gap-[3px] text-2xs font-medium",
-        TONE_STYLES[resolved],
+        TONE[resolved].ink,
       )}
     >
       <span

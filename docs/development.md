@@ -165,7 +165,7 @@ src/
     reminders/            debt reminders and their wording
     notifications/        push and email delivery
     activity/             append-only history
-    profile/              display name, avatar, accent colour
+    profile/              display name, avatar, accent, surfaces and contrast
     demo/                 demo-mode sessions and their dataset
     telemetry/            opt-in usage reporting
   lib/

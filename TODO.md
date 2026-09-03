@@ -43,6 +43,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-03 Keep the money colours clear of the accent, and add Paper, Midnight and an increased-contrast setting — #281
 - [x] 2026-09-03 Pin browserslist and fast-uri past the advisories that had failed the dependency audit on every branch since 1 September — #282
 - [x] 2026-08-31 Rework the Add Entry drawer: income vocabulary, settlement pairs, recurrence, entry friction — #271
 - [x] 2026-08-30 Settle up with a code the payee's own bank reads, beyond the two SEPA ones — #260

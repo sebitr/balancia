@@ -114,3 +114,39 @@ substitutes the value and the whole lever stops working.
 The marketing homepage (`src/app/page.tsx`, `src/components/marketing/`) is not
 covered by any of this. It is an editorial surface with its own scale; leave it
 alone.
+
+# The accent keeps forty degrees from the money colours
+
+Green means somebody owes you, red means you owe, amber marks who paid. Those
+three are the only colours in the app that carry meaning, and the accent is the
+one colour a reader gets to choose — and for a long time the two could be the
+same colour. Coral, the default accent, sat two degrees from the "you owe" red,
+so every primary button in the dark theme was the debt colour; mint _was_ the
+"gets back" green to the last digit, so a mint app drew its buttons, its links
+and its "owed to you" figures in one green.
+
+So the accent is a seed — `ACCENT_SEEDS` in `src/modules/profile/accent.ts` —
+and everything it owns is derived from it: the fill, an ink per theme, and the
+three money colours _rotated away from it_ until they are forty degrees apart,
+inside the band where each still reads as itself
+(`src/modules/profile/money-tones.ts`). Material You does the opposite and
+rotates reserved colours toward the accent; here the meaning matters more than
+the harmony. A new accent goes in `ACCENT_SEEDS` and nowhere else; the inks and
+the money colours follow, and the appearance screen's preview shows them doing
+it.
+
+The rule for a component is simpler: **the accent never colours a money
+surface.** `--primary` is the button, the ring, the link, the "you" pill and
+the "you" series in a chart. An amount, a balance bar or the chip above a
+figure takes its tone from `TONE` in `src/components/money/balance-tone.ts`,
+never from `--primary` — and a token that ends in `-ink` is text, the one
+without the suffix is a fill, and putting a fill on text is how a 2.6:1 figure
+gets back in.
+
+`src/modules/profile/accent.test.ts` holds all seven accents to the distances
+and to 4.5:1 (7:1 under increased contrast) on every surface, and spells the
+result out as a table. `src/app/token-contrast.test.ts` reads `globals.css`
+and checks the inks and the chart colours across every surface and contrast
+combination. Surfaces and contrast are override blocks at the bottom of
+`globals.css` whose selector order is load-bearing; the comment above them
+says why.

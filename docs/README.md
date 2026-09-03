@@ -39,6 +39,7 @@ useful guide.
 | [Automatic categorization](categorization.md)     | Local rules, confidence and learned overrides                                      |
 | [Offline expense entry](offline.md)               | Recording with no network, the send queue and writing an expense exactly once      |
 | [Settling up](settling-up.md)                     | Payment codes and links, which schemes are supported, and why the rest are not     |
+| [Appearance](appearance.md)                       | Theme, surfaces, contrast and the accent, and why the money colours never move     |
 
 ## Developing Balancia
 

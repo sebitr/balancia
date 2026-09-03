@@ -130,3 +130,112 @@ export function darkenUntilReadable(
   }
   return candidate;
 }
+
+/**
+ * Whether a colour can be shown on an sRGB screen as written.
+ *
+ * `toLinearRgb` clips, which is what a browser does to a colour it cannot
+ * show — and browsers disagree on how: Chrome clips per channel, Safari
+ * reduces chroma. A token is only the same colour everywhere if it never
+ * needs either, so the palette generator asks this before it emits anything.
+ * A hair of tolerance absorbs the rounding of the matrices themselves.
+ */
+export function isInGamut(color: Oklch, tolerance = 0.0005): boolean {
+  const radians = (color.h * Math.PI) / 180;
+  const a = color.c * Math.cos(radians);
+  const b = color.c * Math.sin(radians);
+  const long = (color.l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const medium = (color.l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const short = (color.l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short,
+    -1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short,
+    -0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short,
+  ].every((channel) => channel >= -tolerance && channel <= 1 + tolerance);
+}
+
+/**
+ * The same hue and lightness with just enough chroma taken off to fit sRGB.
+ *
+ * Chroma rather than lightness, because lightness is the thing the caller
+ * chose — a text colour walked to 4.5:1 stops being 4.5:1 if it is then made
+ * lighter to fit — and because a slightly duller coral is still coral where a
+ * slightly lighter one is a different step of the ramp.
+ */
+export function fitChroma(color: Oklch): Oklch {
+  const STEP = 0.002;
+  let candidate = color;
+  while (candidate.c > 0 && !isInGamut(candidate)) {
+    candidate = {
+      ...candidate,
+      c: Number(Math.max(0, candidate.c - STEP).toFixed(3)),
+    };
+  }
+  return candidate;
+}
+
+/** `oklch(0.712 0.168 30)` — the form `globals.css` and a `style` prop take. */
+export function formatOklch({ l, c, h }: Oklch): string {
+  const short = (value: number, digits: number) =>
+    String(Number(value.toFixed(digits)));
+  return `oklch(${short(l, 3)} ${short(c, 3)} ${short(h, 1)})`;
+}
+
+/**
+ * Perceptual distance between two colours: Euclidean distance in OKLab, which
+ * is the space OKLCH is the polar form of. Around 0.02 is the smallest step a
+ * careful eye separates; two tokens meant to mean different things need a
+ * good deal more than that.
+ */
+export function deltaE(a: Oklch, b: Oklch): number {
+  const lab = ({ l, c, h }: Oklch) => {
+    const radians = (h * Math.PI) / 180;
+    return [l, c * Math.cos(radians), c * Math.sin(radians)];
+  };
+  const [la, aa, ba] = lab(a);
+  const [lb, ab, bb] = lab(b);
+  return Math.hypot(la! - lb!, aa! - ab!, ba! - bb!);
+}
+
+/** The shorter way round the hue circle, 0–180 degrees. */
+export function hueDistance(a: number, b: number): number {
+  const difference = Math.abs(((a - b) % 360) + 360) % 360;
+  return difference > 180 ? 360 - difference : difference;
+}
+
+/**
+ * The same colour walked in lightness until it reads on every one of the
+ * `backdrops` at `minimumRatio` — down for a light theme, up for a dark one.
+ *
+ * `darkenUntilReadable` above is the one-backdrop, one-direction version the
+ * email tokens are derived with; it is left alone so those hexes do not move.
+ * This one checks several grounds at once, because an ink lands on the card,
+ * on the page and on a wash of its own fill, and it is the worst of those
+ * that decides; and it keeps every step inside sRGB, so the value it returns
+ * is the value every browser shows.
+ */
+export function walkUntilReadable(
+  color: Oklch,
+  backdrops: readonly string[],
+  minimumRatio: number,
+  direction: "darker" | "lighter",
+): Oklch {
+  const STEP = 0.005;
+  const readable = (candidate: Oklch) =>
+    backdrops.every(
+      (backdrop) =>
+        contrastRatio(oklchToHex(candidate), backdrop) >= minimumRatio,
+    );
+  let candidate = fitChroma(color);
+  while (
+    !readable(candidate) &&
+    (direction === "darker" ? candidate.l > 0 : candidate.l < 1)
+  ) {
+    const l = direction === "darker" ? candidate.l - STEP : candidate.l + STEP;
+    candidate = fitChroma({
+      ...candidate,
+      l: Number(Math.min(1, Math.max(0, l)).toFixed(3)),
+    });
+  }
+  return candidate;
+}

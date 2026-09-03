@@ -1,13 +1,13 @@
 "use client";
 
-import { useSyncExternalStore, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 import { toastUndoable } from "@/components/ui/sonner";
 import { AccentChoices } from "./accent-choices";
+import { AppearancePreview } from "./appearance-preview";
 import { ChoiceCard } from "./choice-card";
-import { ThemeCards, type ThemeChoice } from "./theme-cards";
+import { SurfaceChoices } from "./surface-choices";
 import { setLocaleAction } from "@/i18n/actions";
 import {
   DEFAULT_LOCALE,
@@ -17,20 +17,17 @@ import {
   type AppLocale,
 } from "@/i18n/locales";
 import type { AccentColor } from "@/modules/profile/accent";
+import type { SurfacePreferences } from "@/modules/profile/surface";
 
 /**
- * Theme, accent and language — how the app looks and reads to you.
+ * How the app looks and reads to you: a preview, then the choices that
+ * change it.
  *
- * Three decisions on one screen and three different places to keep them, which
- * is why this is one client component rather than three.
- *
- * The theme lives in the browser: `next-themes` owns it, writes it to local
- * storage and applies it before paint. Nothing is sent anywhere, so nothing can
- * fail and there is no toast — the ring moving, and the page changing colour
- * under it, is the confirmation.
- *
- * The accent is a cookie and an account column, and paints itself before it is
- * written; `AccentChoices` explains why.
+ * Four kinds of decision on one screen and three different places to keep
+ * them. The theme lives in the browser and the surfaces and contrast in
+ * cookies — `SurfaceChoices` explains both. The accent is a cookie and an
+ * account column, and paints itself before it is written; `AccentChoices`
+ * explains why.
  *
  * The language is on the account, so it is written, and the whole page is
  * re-rendered afterwards because every visible string came from the server.
@@ -38,21 +35,21 @@ import type { AccentColor } from "@/modules/profile/accent";
  * language you just left, and finding your way home from a language you cannot
  * read is exactly the trap Undo exists for.
  */
-const subscribeToNothing = () => () => {};
-
-export function AppearanceChoices({ accent }: { accent: AccentColor }) {
+export function AppearanceChoices({
+  accent,
+  surfaces,
+  currency,
+}: {
+  accent: AccentColor;
+  surfaces: SurfacePreferences;
+  /** What the preview's figures are written in. */
+  currency: string;
+}) {
   const router = useRouter();
   const t = useTranslations("userSettings");
   const tCommon = useTranslations("common");
-  const { theme, setTheme } = useTheme();
   const requested = useLocale();
   const [isPending, startTransition] = useTransition();
-
-  const mounted = useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  );
 
   const locale = isAppLocale(requested) ? requested : DEFAULT_LOCALE;
 
@@ -77,23 +74,9 @@ export function AppearanceChoices({ accent }: { accent: AccentColor }) {
 
   return (
     <>
-      <ThemeCards
-        label={t("theme")}
-        // Before the provider has read storage the choice is unknown. Ringing
-        // "Auto" would be a guess that marks the wrong card for anybody who
-        // chose otherwise, so nothing is ringed until it is known.
-        value={mounted ? ((theme ?? "system") as ThemeChoice) : null}
-        choices={{
-          system: {
-            label: t("themeSystem"),
-            description: t("themeSystemHelp"),
-          },
-          light: { label: t("themeLight"), description: t("themeLightHelp") },
-          dark: { label: t("themeDark"), description: t("themeDarkHelp") },
-        }}
-        onChoose={(next) => setTheme(next)}
-        disabled={!mounted}
-      />
+      <AppearancePreview currency={currency} />
+
+      <SurfaceChoices current={surfaces} />
 
       <AccentChoices current={accent} />
 

@@ -12,9 +12,19 @@ import {
   saveUserPreferredCurrency,
 } from "@/modules/auth/service";
 import { isSupportedCurrency } from "@/modules/currencies/iso-4217";
-import { writeAccentCookie, writeFormatCookies } from "@/i18n/cookie";
+import {
+  writeAccentCookie,
+  writeFormatCookies,
+  writeSurfaceCookies,
+} from "@/i18n/cookie";
 import { isDateFormat, isNumberFormat } from "@/i18n/format";
 import { DEFAULT_ACCENT, isAccentColor } from "@/modules/profile/accent";
+import {
+  isContrastChoice,
+  isDarkSurface,
+  isLightSurface,
+  type SurfacePreferences,
+} from "@/modules/profile/surface";
 
 /**
  * Account preferences that are not authentication.
@@ -166,5 +176,28 @@ export async function setAccentColorAction(
 
     const user = await getCurrentUser();
     if (user) await saveUserAccentColor(user.userId, stored);
+  });
+}
+
+/**
+ * Which surfaces to light the page with, and how much contrast.
+ *
+ * Cookies only, signed in or not: these belong to the device, not the
+ * account (see `modules/profile/surface.ts`). Only the fields given are
+ * written, so the light surface can change without restating the dark one.
+ */
+export async function setSurfaceAction(
+  choice: Partial<Record<keyof SurfacePreferences, string>>,
+): Promise<ActionResult> {
+  const t = await getTranslations("serverErrors");
+
+  const known =
+    (choice.light === undefined || isLightSurface(choice.light)) &&
+    (choice.dark === undefined || isDarkSurface(choice.dark)) &&
+    (choice.contrast === undefined || isContrastChoice(choice.contrast));
+  if (!known) return actionError(t("unknownSurface"));
+
+  return runAction("setSurface", async () => {
+    await writeSurfaceCookies(choice as Partial<SurfacePreferences>);
   });
 }

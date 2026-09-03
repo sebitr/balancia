@@ -18,14 +18,9 @@ export function Providers({
 }: {
   children: ReactNode;
   /**
-   * The request's Content Security Policy nonce.
-   *
-   * next-themes paints the stored theme before hydration with an inline
-   * script, and `proxy.ts` only lets an inline script run when it carries the
-   * nonce of the response it arrived in. Without this the browser refuses the
-   * script, logs a policy violation on every page, and a reader who chose dark
-   * sees the light ground until React has loaded — a frame on a fast machine,
-   * most of a second on a phone fetching the bundle over a slow connection.
+   * The request's CSP nonce. The theme provider writes an inline script
+   * that applies the stored theme before paint, and under a strict-dynamic
+   * policy that script runs only if it carries the nonce.
    */
   nonce?: string;
 }) {

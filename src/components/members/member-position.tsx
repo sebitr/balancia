@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import { Amount } from "@/components/money/amount";
-import { toneFor } from "@/components/money/balance-tone";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -84,9 +84,7 @@ export function MemberPosition({
       <p
         className={cn(
           "flex items-center gap-1.5 text-2xl font-semibold tracking-[-0.02em]",
-          tone === "positive" && "text-positive-ink",
-          tone === "negative" && "text-negative-ink",
-          tone === "neutral" && "text-neutral-balance-ink",
+          TONE[tone].ink,
         )}
       >
         <Arrow aria-hidden="true" className="size-5 shrink-0" />
@@ -177,9 +175,7 @@ function SubCell({
       <dd
         className={cn(
           "truncate text-sm font-semibold",
-          resolved === "positive" && "text-positive-ink",
-          resolved === "negative" && "text-negative-ink",
-          resolved === "neutral" && "text-neutral-balance-ink",
+          resolved && TONE[resolved].ink,
         )}
       >
         <Amount
