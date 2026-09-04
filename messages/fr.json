@@ -504,7 +504,7 @@
   "dashboard": {
     "metaTitle": "Tes groupes",
     "title": "Tes groupes",
-    "newGroup": "Groupe",
+    "newGroup": "Nouveau groupe",
     "emptyTitle": "Crée ton premier groupe",
     "emptyDescription": "Un voyage, une colocation, un projet — partout où des frais sont partagés. Balancia calcule qui doit quoi à qui.",
     "createGroup": "Créer un groupe",
@@ -520,7 +520,7 @@
     "sectionYouAreOwed": "On te doit",
     "sectionSettled": "Soldés · {count}",
     "sectionArchived": "Archivés · {count}",
-    "addExpense": "Dépense",
+    "addExpense": "Ajouter une dépense",
     "empty": "Rien pour l’instant",
     "sectionNeedsYou": "À toi d’agir",
     "archivedGroups": "{count, plural, one {# groupe archivé} other {# groupes archivés}}",

@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { Plus } from "lucide-react";
+import { ReceiptText, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -321,9 +321,15 @@ export function PositionWidget({
 
       {/* Its own strip on a lighter fill, so the actions read as part of the
           widget rather than as buttons floating inside it. */}
-      {/* Wraps rather than overflowing: the two labels fit side by side on a
-          narrow phone in English and French, and a longer translation is one
-          language away. */}
+      {/* Each button carries the glyph the app already uses for the thing it
+          makes — the receipt of the group's empty state, the people of a
+          group — rather than the plus both wore, which said "add" twice and
+          told the eye nothing about which one. The verb moved into the label.
+          That makes the labels longer, so the row wraps rather than
+          overflowing and each button takes the whole of whatever line it
+          lands on: "Ajouter une dépense" and "Nouveau groupe" do not fit side
+          by side on any phone, so French reads as two full-width rows where
+          English stays one. Natural widths come back at the desk. */}
       <div className="flex flex-wrap items-center gap-2 border-t bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] px-[18px] py-[13px]">
         {/* 44px in the hand, 34 at the desk. This is the app's primary action
             and it was 34px tall on a phone — inside its target once
@@ -333,9 +339,9 @@ export function PositionWidget({
         <Button
           type="button"
           onClick={() => setPicking(true)}
-          className="h-11 rounded-xl px-[13px] py-[5px] text-sm md:h-[34px]"
+          className="h-11 grow rounded-xl px-[13px] py-[5px] text-sm md:h-[34px] md:grow-0"
         >
-          <Plus aria-hidden="true" className="size-[15px]" />
+          <ReceiptText aria-hidden="true" className="size-[15px]" />
           {t("addExpense")}
         </Button>
         {/* Creating a group is a key action, so it reads as the second of two
@@ -344,11 +350,11 @@ export function PositionWidget({
         <Button
           asChild
           variant="outline"
-          className="h-11 rounded-xl border-foreground/25 bg-foreground/[0.06] px-[13px] py-[5px] text-sm md:h-[34px] dark:border-foreground/25 dark:bg-foreground/[0.06]"
+          className="h-11 grow rounded-xl border-foreground/25 bg-foreground/[0.06] px-[13px] py-[5px] text-sm md:h-[34px] md:grow-0 dark:border-foreground/25 dark:bg-foreground/[0.06]"
         >
           {/* Opens the create sheet on this page rather than pushing a screen. */}
           <Link href="?new" replace scroll={false}>
-            <Plus aria-hidden="true" className="size-[15px]" />
+            <Users aria-hidden="true" className="size-[15px]" />
             {t("newGroup")}
           </Link>
         </Button>
