@@ -1,4 +1,19 @@
 import { ImageResponse } from "next/og";
+import { palette } from "@/modules/auth/emails/tokens";
+import { themeColorFor } from "@/modules/profile/surface";
+
+/**
+ * The share card cannot use a CSS variable — satori resolves none — so its
+ * colours are hexes. They are taken from the tokens rather than typed out:
+ * the two that had been typed out had already drifted, the cream by four
+ * units and the coral by three.
+ *
+ * The two tints below have no token of their own; they are this card's, and
+ * they are only ever seen beside the three above.
+ */
+const GROUND = palette.ink;
+const CREAM = themeColorFor("cream");
+const CORAL = palette.primary;
 
 export const alt =
   "Balancia — shared expenses, fairly balanced on a server you control";
@@ -10,8 +25,8 @@ export default function OpenGraphImage() {
     <div
       style={{
         alignItems: "center",
-        background: "#2a0e31",
-        color: "#fff8ef",
+        background: GROUND,
+        color: CREAM,
         display: "flex",
         height: "100%",
         justifyContent: "center",
@@ -48,7 +63,7 @@ export default function OpenGraphImage() {
           >
             <div
               style={{
-                background: "#ff7868",
+                background: CORAL,
                 borderRadius: "999px",
                 display: "flex",
                 height: "8px",
@@ -57,7 +72,7 @@ export default function OpenGraphImage() {
             />
             <div
               style={{
-                background: "#fff8ef",
+                background: CREAM,
                 borderRadius: "999px",
                 display: "flex",
                 height: "7px",
@@ -66,7 +81,7 @@ export default function OpenGraphImage() {
             />
             <div
               style={{
-                background: "#fff8ef",
+                background: CREAM,
                 borderRadius: "999px",
                 display: "flex",
                 height: "7px",
@@ -88,9 +103,7 @@ export default function OpenGraphImage() {
           }}
         >
           <div style={{ display: "flex" }}>Shared expenses,</div>
-          <div style={{ color: "#ff7868", display: "flex" }}>
-            fairly balanced.
-          </div>
+          <div style={{ color: CORAL, display: "flex" }}>fairly balanced.</div>
         </div>
 
         <div

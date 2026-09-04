@@ -287,10 +287,13 @@
     <p>
       The reader picks one of seven accents on the appearance screen. Each is a
       seed — lightness, chroma, hue — in
-      <code>src/modules/profile/accent.ts</code>, and the app derives the rest:
-      <code>--primary</code> and the ring, a <code>--primary-ink</code> per
-      theme walked to 4.5:1, and the three money colours rotated forty degrees
-      clear of it.
+      <code>src/modules/profile/accent.ts</code>, from which the app derives a
+      <code>--primary-ink</code> per theme, walked to 4.5:1. Six variables in
+      all, and the money colours are not among them: green means the same thing
+      on every account. Three of the seven do sit near a money colour — coral by
+      the &ldquo;you owe&rdquo; red, mint on the green, amber on the payer — and
+      that is accepted, because a balance is told apart by its sign and its word
+      rather than by its hue.
     </p>
     <div class="row">
       <span
@@ -350,24 +353,19 @@
   <section>
     <h2>Surfaces and contrast</h2>
     <p>
-      The theme decides light or dark; a surface refines it. Cream and Paper by
-      day, Plum and Midnight by night — each an override block at the end of
-      <code>globals.css</code>, applied when <code>&lt;html&gt;</code> carries
-      <code>data-light="paper"</code> or <code>data-dark="midnight"</code>.
-      Increased contrast (<code>data-contrast="more"</code>, set by the reader
-      or by <code>prefers-contrast</code>) darkens captions, strengthens lines
-      and takes every ink from 4.5:1 to 7:1.
+      The theme decides light or dark. Cream is the light palette and is not a
+      choice; at night the reader picks Plum or Midnight, an override block at
+      the end of <code>globals.css</code> applied when
+      <code>&lt;html&gt;</code> carries <code>data-dark="midnight"</code>.
+      Increased contrast is not a choice either — it follows
+      <code>prefers-contrast: more</code> from a media query, and darkens
+      captions, strengthens lines and takes every ink from 4.5:1 to 7:1.
     </p>
     <div class="row">
       <span
         class="badge"
         style="background: oklch(0.977 0.007 85); color: oklch(0.226 0.072 319)"
         >cream</span
-      >
-      <span
-        class="badge"
-        style="background: oklch(0.99 0 0); color: oklch(0.226 0.072 319)"
-        >paper</span
       >
       <span
         class="badge"
@@ -381,11 +379,11 @@
       >
     </div>
     <p class="note" style="margin-top: 0.75rem">
-      Order and specificity in those blocks are load-bearing: the light ones say
-      <code>:not(.dark)</code> so an attribute on the root cannot outrank the
-      dark theme, and the contrast blocks come last so they win a tie.
-      <code>src/app/token-contrast.test.ts</code> checks every ink in all eight
-      combinations.
+      One ordering rule is left: the dark contrast block is written
+      <code>:root.dark</code> rather than <code>.dark</code>, so it does not
+      lose the specificity tie against Midnight, and the media query it sits in
+      comes last. <code>src/app/token-contrast.test.ts</code> checks every ink
+      in all six combinations.
     </p>
   </section>
 </div>

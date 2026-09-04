@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { themeColorFor } from "@/modules/profile/surface";
 
 /**
  * Web app manifest.
@@ -18,8 +19,10 @@ export function GET() {
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#fbf7f1",
-    theme_color: "#2a0e31",
+    // The same two values the root layout tints the browser chrome with,
+    // rather than a second copy that can disagree with it.
+    background_color: themeColorFor("cream"),
+    theme_color: themeColorFor("plum"),
     categories: ["finance", "productivity", "utilities"],
     icons: [
       {
