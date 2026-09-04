@@ -1,19 +1,16 @@
 "use client";
 
-import {
-  swatchCss,
-  type DarkSurface,
-  type LightSurface,
-} from "@/modules/profile/surface";
+import { swatchCss, type DarkSurface } from "@/modules/profile/surface";
 import { SwatchCards } from "./swatch-cards";
 
 /**
- * The three themes, drawn with the surfaces the reader chose for them.
+ * The three themes, drawn with the surfaces they are actually lit by.
  *
- * "Light" is drawn in cream until Paper is picked one section down, and then
- * in paper; "Auto" is the two of them split down the middle. The values come
- * from the same table the override blocks in `globals.css` are checked
- * against, so the card and the page cannot drift apart.
+ * "Light" is always cream — there is only one light palette — and "Dark" is
+ * whichever of the two is picked one section down; "Auto" is the pair of them
+ * split down the middle. The values come from the same table the override
+ * block in `globals.css` is checked against, so the card and the page cannot
+ * drift apart.
  */
 
 const THEMES = ["system", "light", "dark"] as const;
@@ -32,12 +29,12 @@ export function ThemeCards({
   /** Null until the browser has said which theme it is in. */
   value: ThemeChoice | null;
   choices: Record<ThemeChoice, { label: string; description: string }>;
-  /** Which light and dark surface the previews are drawn in. */
-  surfaces: { light: LightSurface; dark: DarkSurface };
+  /** Which dark surface the previews are drawn in. */
+  surfaces: { dark: DarkSurface };
   onChoose: (value: ThemeChoice) => void;
   disabled?: boolean;
 }) {
-  const light = swatchCss(surfaces.light);
+  const light = swatchCss("cream");
   const dark = swatchCss(surfaces.dark);
   const previews: Record<ThemeChoice, { ground: string; bar: string }> = {
     system: {

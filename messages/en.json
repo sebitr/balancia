@@ -822,29 +822,18 @@
     "themeSystemHelp": "Follows your system",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "surfaceLight": "Light surface",
     "surfaceDark": "Dark surface",
     "surfaces": {
       "cream": "Cream",
-      "paper": "Paper",
       "plum": "Plum",
       "midnight": "Midnight"
     },
     "surfaceHelp": {
       "cream": "Warm paper, white cards",
-      "paper": "Pure white, cooler",
       "plum": "Deep plum",
       "midnight": "Near black, for OLED"
     },
-    "contrast": "Contrast",
-    "contrasts": {
-      "auto": "Auto",
-      "standard": "Standard",
-      "more": "Increased"
-    },
-    "contrastAutoHelp": "Follows your system",
-    "contrastMoreHelp": "Stronger lines, darker captions",
-    "contrastNote": "Increased contrast strengthens lines and pushes captions, balances and links further from the page. Surfaces and contrast stay on this device; the accent follows your account.",
+    "surfaceNote": "The dark surface stays on this device; the accent follows your account. Increased contrast follows your system setting.",
     "surfaceFailed": "That choice could not be saved.",
     "accentPreview": "How the accent sits beside the balance colours",
     "accentPreviewSelf": "You",

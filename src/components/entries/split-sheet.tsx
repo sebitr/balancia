@@ -484,7 +484,7 @@ function MultiPayerPanel({
        * contributions miss its total, so this line is the difference between
        * something fixable and a failed save.
        */}
-      {note && <p className="text-destructive-ink px-1 text-xs">{note}</p>}
+      {note && <p className="px-1 text-xs text-destructive-ink">{note}</p>}
 
       <div className="flex flex-wrap gap-1.5">
         {onJustOne && (

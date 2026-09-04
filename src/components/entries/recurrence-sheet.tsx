@@ -282,7 +282,7 @@ export function RecurrenceSheet({
             /* A rule with no occurrences is a rule nobody can save, and the
                hero is where that has to be said — the Done button below only
                refuses. */
-            <p className="text-destructive-ink mt-3 text-xs">
+            <p className="mt-3 text-xs text-destructive-ink">
               {t("noOccurrences")}
             </p>
           )}

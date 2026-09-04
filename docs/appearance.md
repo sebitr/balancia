@@ -1,50 +1,61 @@
 # Appearance
 
-How Balancia looks is four decisions, kept in three places. This page says
+How Balancia looks is three decisions, kept in three places. This page says
 which is which, and why the colours that mean money never move with any of
 them.
 
-## The four decisions
+## The three decisions
 
-| Decision     | Choices                                              | Kept                                   |
-| ------------ | ---------------------------------------------------- | -------------------------------------- |
-| **Theme**    | Auto (follow the system), Light, Dark                | In the browser (`localStorage`)        |
-| **Surfaces** | Light: Cream or Paper · Dark: Plum or Midnight       | Cookies on this device                 |
-| **Contrast** | Auto (follow the system), Standard, Increased        | Cookie on this device                  |
-| **Accent**   | Coral, Amber, Mint, Ocean, Lavender, Raspberry, Plum | Cookie, and the account when signed in |
+| Decision         | Choices                                              | Kept                                   |
+| ---------------- | ---------------------------------------------------- | -------------------------------------- |
+| **Theme**        | Auto (follow the system), Light, Dark                | In the browser (`localStorage`)        |
+| **Dark surface** | Plum or Midnight                                     | Cookie on this device                  |
+| **Accent**       | Coral, Amber, Mint, Ocean, Lavender, Raspberry, Plum | Cookie, and the account when signed in |
 
 The theme is applied by a script that runs before the first paint, so a dark
-page never flashes light. The surfaces, the contrast and the accent are read
-by the server and written onto `<html>` in its own HTML — attributes for the
-first three, inline variables for the accent — for the same reason: a page
-that changes colour under the reader once per visit is worse than one that
-takes a moment to follow them to a new device.
+page never flashes light. The dark surface and the accent are read by the
+server and written onto `<html>` in its own HTML — an attribute for the first,
+inline variables for the second — for the same reason: a page that changes
+colour under the reader once per visit is worse than one that takes a moment
+to follow them to a new device.
 
-Surfaces and contrast belong to the device rather than the account, the way
-the theme does: the phone that wants Midnight for its OLED panel is not the
-laptop that wants Paper by a window, and "increase contrast" is a system
-setting on both. The accent is a taste, so it follows the account — sign in on
-a new device and it is there.
+The dark surface belongs to the device rather than the account, the way the
+theme does: the phone that wants Midnight for its OLED panel is not the laptop
+it syncs with. The accent is a taste, so it follows the account — sign in on a
+new device and it is there.
 
-## Surfaces
+There were two more. A **light surface**, Cream or Paper, went because a
+warmer or a cooler white is a preference with nothing behind it, where an OLED
+panel is a battery. A **contrast** choice went because it was a worse copy of
+a setting the reader already has; see below.
 
-**Cream** is the palette as drawn: warm paper, white cards, deep plum ink.
-**Paper** is the same with the warmth taken out — pure white, cooler greys.
+## The dark surface
+
 **Plum** is the dark theme as drawn. **Midnight** takes it down to where an
-OLED panel goes black.
-
-Each is a short block of overrides at the bottom of `src/app/globals.css`,
-applied when `<html>` carries `data-light="paper"` or
-`data-dark="midnight"`. The defaults carry no attribute, so a document nobody
+OLED panel goes black. Midnight is a short block of overrides near the bottom
+of `src/app/globals.css`, applied when `<html>` carries
+`data-dark="midnight"`; Plum carries no attribute, so a document nobody
 painted is the cream-and-plum one.
+
+The light palette is cream, and is not a choice.
 
 ## Contrast
 
-**Increased** darkens captions, strengthens borders and takes every balance
-figure and link from 4.5:1 to 7:1 against the page. **Auto** applies it
-whenever the system asks for more contrast (`prefers-contrast: more`), and
-follows a change to that setting while the page is open. A reader who chooses
-Standard or Increased is left alone.
+Increased contrast darkens captions, strengthens borders and takes every
+balance figure and link from 4.5:1 to 7:1 against the page. It applies
+whenever the system asks for more contrast (`prefers-contrast: more`) and at
+no other time — a media query in `globals.css`, with no cookie, no pre-paint
+script and no way for the page to disagree with the platform.
+
+This used to be a three-way control (Auto, Standard, Increased). Removing it
+does take something away: a reader who wanted 7:1 without turning it on for
+their whole system no longer can. `prefers-contrast: more` maps to
+"Increase contrast" on macOS and iOS and to High Contrast on Windows, so the
+gap is small, and a setting that can silently disagree with the platform's own
+is worse than not having one.
+
+A device that still carries the retired `balancia_light` or
+`balancia_contrast` cookie is not read from it and not troubled by it.
 
 ## The accent, and the money colours
 
@@ -87,5 +98,12 @@ the "you owe" red, at its own lightness.
 
 `GET /api/auth/session` returns `user.accentColor` as a name, and
 `PATCH /api/profile` accepts `accentColor` — one of the seven names above, or
-`"coral"` to clear it. Surfaces and contrast are not on the API: they are
-device settings, and the phone keeps its own.
+`"coral"` to clear it. The dark surface is not on the API: it is a device
+setting, and the phone keeps its own.
+
+The phone runs its own copy of the accent arithmetic, because it is given a
+name rather than a colour. Two things changed for it here. The money colours
+are constants now, so whatever it had for rotating them can go. And the six
+variables the web paints are the accent's fill and its ink per theme; those
+twenty-eight ink values are spelled out in
+`src/modules/profile/accent.test.ts`, which is the table to copy.

@@ -20,9 +20,7 @@ import {
 import { isDateFormat, isNumberFormat } from "@/i18n/format";
 import { DEFAULT_ACCENT, isAccentColor } from "@/modules/profile/accent";
 import {
-  isContrastChoice,
   isDarkSurface,
-  isLightSurface,
   type SurfacePreferences,
 } from "@/modules/profile/surface";
 
@@ -180,21 +178,18 @@ export async function setAccentColorAction(
 }
 
 /**
- * Which surfaces to light the page with, and how much contrast.
+ * Which of the two dark palettes to light the page with.
  *
- * Cookies only, signed in or not: these belong to the device, not the
- * account (see `modules/profile/surface.ts`). Only the fields given are
- * written, so the light surface can change without restating the dark one.
+ * A cookie only, signed in or not: this belongs to the device, not the
+ * account (see `modules/profile/surface.ts`). Only the field given is
+ * written, which is what the shape of the argument leaves room for.
  */
 export async function setSurfaceAction(
   choice: Partial<Record<keyof SurfacePreferences, string>>,
 ): Promise<ActionResult> {
   const t = await getTranslations("serverErrors");
 
-  const known =
-    (choice.light === undefined || isLightSurface(choice.light)) &&
-    (choice.dark === undefined || isDarkSurface(choice.dark)) &&
-    (choice.contrast === undefined || isContrastChoice(choice.contrast));
+  const known = choice.dark === undefined || isDarkSurface(choice.dark);
   if (!known) return actionError(t("unknownSurface"));
 
   return runAction("setSurface", async () => {

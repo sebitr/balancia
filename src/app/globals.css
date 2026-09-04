@@ -333,38 +333,28 @@
 /*
  * Surfaces and contrast — overrides on top of the two blocks above.
  *
- * The reader chooses a light surface and a dark one, and how much contrast;
- * the server writes the choices onto <html> as data attributes
- * (src/modules/profile/surface.ts), and these blocks restate only the tokens
- * that differ. Paper is the cream palette with the warmth taken out; Midnight
- * is the plum palette taken down to where an OLED panel goes black.
+ * The reader chooses one thing here: a dark palette. `data-dark="midnight"`
+ * is written onto <html> by the server (src/modules/profile/surface.ts), and
+ * the block below restates only the tokens that differ — the plum palette
+ * taken down to where an OLED panel goes black. There is no light equivalent
+ * any more: a warmer or a cooler white was a setting with nothing behind it,
+ * where an OLED panel is a battery.
  *
- * Order and specificity are load-bearing. The light blocks say `:not(.dark)`
- * because an attribute selector on :root would otherwise outrank `.dark` and
- * paint a paper ground under a dark theme; the contrast blocks come last so
- * that on a tie they win over the surface blocks. Increased contrast is the
- * one place the -ink tokens move: the accent paints a 7:1 ink beside the
- * 4.5:1 one, and these blocks switch to it. The pre-paint script in the root
- * layout sets `data-contrast="more"` when the system asks for it and nothing
- * was chosen.
+ * Increased contrast is not a choice at all, it is the system's. It follows
+ * `prefers-contrast: more` and nothing else, which is why it is a media query
+ * rather than a third data attribute — no cookie, no pre-paint script, and no
+ * way for the page to disagree with the platform.
  *
- * src/app/token-contrast.test.ts checks every combination — two lights, two
+ * Order and specificity are still load-bearing, in exactly one place. A media
+ * query adds no specificity, so the dark contrast block is written
+ * `:root.dark` (0,2,0) rather than `.dark` (0,1,0): against Midnight, which
+ * is also (0,2,0), the tie is broken by source order, and a bare `.dark`
+ * would lose it and silently take the borders back down. For the same reason
+ * this query is last in the token section, and must stay there.
+ *
+ * src/app/token-contrast.test.ts checks every combination — one light, two
  * darks, with and without contrast — against the same ratios as the base.
  */
-:root:not(.dark)[data-light="paper"] {
-  --background: oklch(0.99 0 0);
-  --card: oklch(1 0 0);
-  --popover: oklch(1 0 0);
-  --secondary: oklch(0.935 0.006 300);
-  --muted: oklch(0.955 0.003 260);
-  --accent: oklch(0.935 0.006 300);
-  --border: oklch(0.89 0.004 260);
-  --input: oklch(0.87 0.005 260);
-  --sidebar: oklch(0.975 0.002 260);
-  --sidebar-accent: oklch(0.935 0.006 300);
-  --sidebar-border: oklch(0.89 0.004 260);
-}
-
 .dark[data-dark="midnight"] {
   --background: oklch(0.15 0.03 319);
   --card: oklch(0.2 0.035 319);
@@ -379,30 +369,33 @@
   --sidebar-border: oklch(1 0 0 / 10%);
 }
 
-:root:not(.dark)[data-contrast="more"] {
-  --muted-foreground: oklch(0.4 0.035 319);
-  --border: oklch(0.62 0.02 82);
-  --input: oklch(0.58 0.02 82);
-  --sidebar-border: oklch(0.62 0.02 82);
-  --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
-  --positive-ink: oklch(0.409 0.084 167);
-  --negative-ink: oklch(0.425 0.172 25);
-  --destructive-ink: oklch(0.41 0.166 25);
-  --payer-ink: oklch(0.43 0.093 70);
-  --neutral-balance-ink: oklch(0.42 0.035 319);
-}
+@media (prefers-contrast: more) {
+  :root:not(.dark) {
+    --muted-foreground: oklch(0.4 0.035 319);
+    --border: oklch(0.62 0.02 82);
+    --input: oklch(0.58 0.02 82);
+    --sidebar-border: oklch(0.62 0.02 82);
+    --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
+    --positive-ink: oklch(0.409 0.084 167);
+    --negative-ink: oklch(0.425 0.172 25);
+    --destructive-ink: oklch(0.41 0.166 25);
+    --payer-ink: oklch(0.43 0.093 70);
+    --neutral-balance-ink: oklch(0.42 0.035 319);
+  }
 
-.dark[data-contrast="more"] {
-  --muted-foreground: oklch(0.84 0.03 319);
-  --border: oklch(1 0 0 / 38%);
-  --input: oklch(1 0 0 / 42%);
-  --sidebar-border: oklch(1 0 0 / 38%);
-  --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
-  --positive-ink: oklch(0.83 0.13 167);
-  --negative-ink: oklch(0.85 0.08 25);
-  --destructive-ink: oklch(0.83 0.094 25);
-  --payer-ink: oklch(0.87 0.118 78);
-  --neutral-balance-ink: oklch(0.84 0.03 319);
+  /* `:root.dark`, not `.dark` — see the note above on the Midnight tie. */
+  :root.dark {
+    --muted-foreground: oklch(0.84 0.03 319);
+    --border: oklch(1 0 0 / 38%);
+    --input: oklch(1 0 0 / 42%);
+    --sidebar-border: oklch(1 0 0 / 38%);
+    --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
+    --positive-ink: oklch(0.83 0.13 167);
+    --negative-ink: oklch(0.85 0.08 25);
+    --destructive-ink: oklch(0.83 0.094 25);
+    --payer-ink: oklch(0.87 0.118 78);
+    --neutral-balance-ink: oklch(0.84 0.03 319);
+  }
 }
 
 @layer base {

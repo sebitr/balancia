@@ -112,15 +112,13 @@ export async function resolveAccentColor(): Promise<AccentColor> {
 }
 
 /**
- * Which surfaces this request is lit with, and whether it asked for more
- * contrast. Cookies only, like the accent, and for the same reasons — with
- * the difference that there is no account column behind these at all.
+ * Which dark surface this request is lit with. A cookie only, like the
+ * accent, and for the same reasons — with the difference that there is no
+ * account column behind it at all.
  */
 export async function resolveSurfacePreferences(): Promise<SurfacePreferences> {
   const cookieStore = await cookies();
   return resolveSurfaces({
-    light: cookieStore.get(SURFACE_COOKIE_NAMES.light)?.value,
     dark: cookieStore.get(SURFACE_COOKIE_NAMES.dark)?.value,
-    contrast: cookieStore.get(SURFACE_COOKIE_NAMES.contrast)?.value,
   });
 }
