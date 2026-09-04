@@ -266,7 +266,7 @@ export function PayoutHint({
                 "tap-target flex h-9 items-center gap-2 rounded-lg border py-0 pr-2.5 pl-2 text-sm font-medium transition-colors",
                 active
                   ? "border-accent bg-accent"
-                  : "border-input bg-white/5 hover:bg-white/10",
+                  : "border-input bg-wash-1 hover:bg-wash-3",
               )}
             >
               <MethodMark
@@ -344,7 +344,7 @@ export function PayoutHint({
             type="button"
             variant="outline"
             onClick={() => setShowingQr(true)}
-            className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+            className="h-9 w-full rounded-lg border-input bg-wash-1 text-sm font-medium"
           >
             <QrCode aria-hidden="true" />
             {chosenQr ? t("qrShowSheet") : t("qrScanWithPhone")}
@@ -356,7 +356,7 @@ export function PayoutHint({
             <Button
               asChild
               variant="outline"
-              className="h-9 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+              className="h-9 w-full rounded-lg border-input bg-wash-1 text-sm font-medium"
             >
               {/* `noreferrer` because where somebody paid a debt from is not
                   the payee's business. */}
@@ -492,7 +492,7 @@ function QrSheet({
             type="button"
             variant="outline"
             onClick={() => void copyCode()}
-            className="h-11 w-full rounded-lg border-input bg-white/5 text-sm font-medium"
+            className="h-11 w-full rounded-lg border-input bg-wash-1 text-sm font-medium"
           >
             {copiedCode ? (
               <Check aria-hidden="true" className="size-4 text-positive-ink" />

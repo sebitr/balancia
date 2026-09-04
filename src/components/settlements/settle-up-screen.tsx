@@ -378,7 +378,7 @@ function TransferRow({
         // SebRecord for them" for a screen reader, so the row states its own
         // name rather than being read out of its parts.
         aria-label={recordLabel}
-        className="flex min-h-[60px] items-center gap-3 border-t py-3 pr-3.5 pl-4 transition-colors hover:bg-white/4"
+        className="flex min-h-[60px] items-center gap-3 border-t py-3 pr-3.5 pl-4 transition-colors hover:bg-wash-1"
       >
         <Avatar className="size-9 shrink-0">
           <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">

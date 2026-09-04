@@ -206,7 +206,7 @@ export function SplitSheet({
                 "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",
                 several
                   ? "border-payer bg-payer/15 font-semibold text-foreground"
-                  : "border-dashed border-border bg-white/4 font-normal text-muted-foreground",
+                  : "border-dashed border-border bg-wash-1 font-normal text-muted-foreground",
               )}
             >
               <span
@@ -293,7 +293,7 @@ export function SplitSheet({
       {/* The rows are a scroll container of their own past a few people, and
           they must overflow rather than compress: a squashed row is how a
           ten-person split loses its amounts. */}
-      <ul className="max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-white/4 [&>*]:shrink-0">
+      <ul className="max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-wash-1 [&>*]:shrink-0">
         {members
           .filter((member) => includedIds.includes(member.id))
           .map((member) => {
@@ -301,7 +301,7 @@ export function SplitSheet({
             return (
               <li
                 key={member.id}
-                className="flex h-15 items-center gap-3 border-b border-white/8 p-3 last:border-b-0"
+                className="flex h-15 items-center gap-3 border-b border-border p-3 last:border-b-0"
               >
                 <MemberAvatar
                   name={member.displayName}
@@ -379,7 +379,7 @@ export function SplitSheet({
        * does and remembering it would remember nothing.
        */}
       {alwaysSplit !== null && (
-        <label className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl bg-card px-4 py-2.5 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+        <label className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl bg-card px-4 py-2.5 shadow-hairline">
           <span className="min-w-0">
             <span className="block text-sm font-medium">
               {t("alwaysTitle")}
@@ -449,12 +449,12 @@ function MultiPayerPanel({
     members[0];
 
   return (
-    <div className="space-y-2 rounded-2xl bg-card p-3 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+    <div className="space-y-2 rounded-2xl bg-card p-3 shadow-hairline">
       <ul>
         {members.map((member) => (
           <li
             key={member.id}
-            className="flex h-13 items-center gap-3 border-b border-white/8 px-1 last:border-b-0"
+            className="flex h-13 items-center gap-3 border-b border-border px-1 last:border-b-0"
           >
             <MemberAvatar
               name={member.displayName}
@@ -518,7 +518,7 @@ function ShortcutButton({
     <button
       type="button"
       onClick={onClick}
-      className="tap-target h-9 rounded-lg border border-border bg-white/4 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+      className="tap-target h-9 rounded-lg border border-border bg-wash-1 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
     >
       {children}
     </button>
@@ -603,7 +603,7 @@ function AddGuestPill({
         onClick={() => void submit()}
         disabled={name.trim() === "" || saving}
         aria-label={label}
-        className="tap-target grid size-10 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground disabled:opacity-50"
+        className="tap-target grid size-10 shrink-0 place-items-center rounded-full border border-border bg-wash-1 text-muted-foreground disabled:opacity-50"
       >
         <Check aria-hidden="true" className="size-4" />
       </button>

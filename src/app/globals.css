@@ -89,6 +89,18 @@
   --color-notice-warning: var(--notice-warning);
   --color-notice-info: var(--notice-info);
   --color-scrim: var(--scrim);
+  --color-wash-1: var(--wash-1);
+  --color-wash-2: var(--wash-2);
+  --color-wash-3: var(--wash-3);
+  --color-wash-4: var(--wash-4);
+  /*
+   * A hairline drawn as a shadow rather than a border, for the places that
+   * cannot spend a pixel of layout on one — a tile inside a grid, a card
+   * whose height is already settled. `var(--border)` resolves where the
+   * shadow is used, so it is the theme's own line and not a white one.
+   */
+  --shadow-hairline: 0 0 0 1px var(--border);
+  --shadow-hairline-inset: inset 0 0 0 1px var(--border);
 }
 
 /*
@@ -204,6 +216,27 @@
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
+
+  /*
+   * The washes: a tile, a rail, a zebra row — a surface a shade off the one
+   * behind it, with no line and no shadow.
+   *
+   * Four steps, because the app had been writing this by hand at eight
+   * different alphas of `--foreground` and seven of white, and the white ones
+   * did nothing at all in the light theme. Declared once rather than per
+   * theme: `var(--foreground)` resolves against whichever block is in force,
+   * so these follow the theme and the surface without being restated.
+   *
+   *   1  the faintest — a zebra row, a rail behind a bar
+   *   2  a tile or a chip at rest
+   *   3  the same, raised or pressed
+   *   4  a tile that has to hold its own against a card
+   */
+  --wash-1: color-mix(in oklch, var(--foreground) 4%, transparent);
+  --wash-2: color-mix(in oklch, var(--foreground) 6%, transparent);
+  --wash-3: color-mix(in oklch, var(--foreground) 9%, transparent);
+  --wash-4: color-mix(in oklch, var(--foreground) 12%, transparent);
+
   --chart-1: oklch(0.47 0.085 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.6 0.1 205);

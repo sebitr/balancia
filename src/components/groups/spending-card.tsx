@@ -264,7 +264,7 @@ function CurrencySpendingBlock({
       <div
         role="img"
         aria-label={t("shareBarLabel", { percent })}
-        className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]"
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-wash-3"
       >
         <span
           className="block h-full rounded-full bg-primary/70 transition-[width] duration-200 motion-reduce:transition-none"

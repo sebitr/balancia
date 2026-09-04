@@ -264,7 +264,7 @@ export function RecurrenceSheet({
                         "inline-flex h-8 items-center rounded-full px-3 text-xs tabular-nums",
                         index === 0
                           ? "bg-primary/16 font-semibold text-foreground"
-                          : "bg-white/6 text-muted-foreground",
+                          : "bg-wash-2 text-muted-foreground",
                       )}
                     >
                       {dateFormatter.plain(date, "dayMonth")}
@@ -288,7 +288,7 @@ export function RecurrenceSheet({
           )}
         </div>
 
-        <ul className="overflow-hidden rounded-2xl bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+        <ul className="overflow-hidden rounded-2xl bg-card shadow-hairline">
           {presets.map((option) => (
             <li key={option.id}>
               <PresetRow
@@ -311,7 +311,7 @@ export function RecurrenceSheet({
         </ul>
 
         {showCustom && (
-          <div className="space-y-3 rounded-2xl bg-card p-4 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+          <div className="space-y-3 rounded-2xl bg-card p-4 shadow-hairline">
             <div
               role="radiogroup"
               aria-label={t("title")}
@@ -461,7 +461,7 @@ export function RecurrenceSheet({
          * nine times out of ten. It states its value and expands when the
          * tenth reader disagrees.
          */}
-        <div className="overflow-hidden rounded-2xl bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+        <div className="overflow-hidden rounded-2xl bg-card shadow-hairline">
           <button
             type="button"
             onClick={() => setShowEnds((open) => !open)}
@@ -479,7 +479,7 @@ export function RecurrenceSheet({
           </button>
 
           {showEnds && (
-            <div className="space-y-2 border-t border-white/8 px-4 py-3">
+            <div className="space-y-2 border-t border-border px-4 py-3">
               <div className="flex flex-wrap gap-1.5">
                 <ChipButton
                   selected={state.endDate === null && state.count === null}
@@ -600,7 +600,7 @@ function PresetRow({
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
-      className="flex min-h-[52px] w-full items-center justify-between gap-3 border-b border-white/8 px-4 py-2.5 text-left transition-colors last:border-b-0 active:bg-accent"
+      className="flex min-h-[52px] w-full items-center justify-between gap-3 border-b border-border px-4 py-2.5 text-left transition-colors last:border-b-0 active:bg-accent"
     >
       <span className="truncate text-sm">{label}</span>
       {selected && (
@@ -634,7 +634,7 @@ function ChipButton({
         square ? "w-full" : "px-3",
         selected
           ? "border-primary bg-primary/16 font-semibold text-foreground"
-          : "border-border bg-white/4 text-muted-foreground",
+          : "border-border bg-wash-1 text-muted-foreground",
       )}
     >
       {children}

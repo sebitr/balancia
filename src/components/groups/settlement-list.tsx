@@ -98,7 +98,7 @@ export function SettlementList({
           {suggestions.map((suggestion, index) => {
             const key = `${suggestion.fromParticipantId}-${suggestion.toParticipantId}-${suggestion.currency}-${index}`;
             const surface =
-              "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0";
+              "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0";
             const inside = (
               <>
                 <SettlementPeople suggestion={suggestion} />
@@ -160,7 +160,7 @@ export function SettlementList({
                 {t("settlementDetailDescription")}
               </SheetDescription>
 
-              <div className="mt-5 flex items-center gap-3 rounded-2xl bg-foreground/[0.05] p-4">
+              <div className="mt-5 flex items-center gap-3 rounded-2xl bg-wash-2 p-4">
                 <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-primary-ink">
                   <Banknote aria-hidden="true" className="size-[18px]" />
                 </span>

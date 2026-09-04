@@ -411,7 +411,7 @@ export function PartyTable({
   return (
     <table className="w-full border-collapse text-left">
       <thead>
-        <tr className="bg-foreground/[0.035]">
+        <tr className="bg-wash-1">
           <th scope="col" className="h-8 border-b border-border pl-3.5">
             <span className="sr-only">{personLabel}</span>
           </th>

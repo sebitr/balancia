@@ -223,7 +223,7 @@ export function GroupSwitcher({
                 onClick={() => {
                   setFailed(false);
                 }}
-                className="flex w-full items-center border-t px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                className="flex w-full items-center border-t px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-wash-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
               >
                 {t("switcherRetry")}
               </button>
@@ -235,7 +235,7 @@ export function GroupSwitcher({
           <Link
             href="/dashboard"
             transitionTypes={POP}
-            className="flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+            className="flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-wash-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
             <House
               aria-hidden="true"
@@ -377,8 +377,8 @@ function GroupRow({
       transitionTypes={SWITCH_FORWARD}
       aria-current={isCurrent ? "true" : undefined}
       className={cn(
-        "flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
-        isCurrent && "bg-foreground/[0.05]",
+        "flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-wash-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+        isCurrent && "bg-wash-2",
       )}
     >
       <GroupIconTile

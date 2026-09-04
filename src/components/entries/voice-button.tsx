@@ -138,7 +138,7 @@ export function VoiceButton({
         "inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-sm transition-colors",
         listening
           ? "border-primary bg-primary/15 font-semibold text-foreground"
-          : "border-border bg-white/4 text-muted-foreground",
+          : "border-border bg-wash-1 text-muted-foreground",
         className,
       )}
     >

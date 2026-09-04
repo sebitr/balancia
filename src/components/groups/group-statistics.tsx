@@ -216,7 +216,7 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
         <div
           role="tablist"
           aria-label={t("rangeLabel")}
-          className="flex gap-0.5 rounded-full bg-foreground/[0.06] p-[3px]"
+          className="flex gap-0.5 rounded-full bg-wash-2 p-[3px]"
         >
           {RANGES.map((candidate) => (
             <Pill
@@ -442,7 +442,7 @@ function Flows({
       // it, and a reader has to be able to see which way each row points.
       minorUnits: (-BigInt(flows.spent)).toString(),
       tone: "text-foreground",
-      chip: "bg-foreground/[0.07] text-foreground",
+      chip: "bg-wash-2 text-foreground",
       icon: ArrowUp,
     },
     {
@@ -458,7 +458,7 @@ function Flows({
       sub: t("flowSettlementsSub", { count: flows.settledCount }),
       minorUnits: flows.settled,
       tone: "text-neutral-balance-ink",
-      chip: "bg-foreground/[0.07] text-neutral-balance-ink",
+      chip: "bg-wash-2 text-neutral-balance-ink",
       icon: ArrowLeftRight,
     },
   ] as const;
@@ -709,7 +709,7 @@ function WhoCarries({
       <div
         role="tablist"
         aria-label={t("metricLabel")}
-        className="flex gap-0.5 rounded-full bg-foreground/[0.06] p-[3px]"
+        className="flex gap-0.5 rounded-full bg-wash-2 p-[3px]"
       >
         {METRICS.map((candidate) => (
           <Pill
@@ -764,7 +764,7 @@ function WhoCarries({
 
               <span
                 aria-hidden="true"
-                className="relative h-2 rounded-full bg-foreground/[0.07]"
+                className="relative h-2 rounded-full bg-wash-2"
               >
                 {signed && (
                   <span className="absolute -top-[3px] -bottom-[3px] left-1/2 w-px bg-foreground/30" />
@@ -889,7 +889,7 @@ function Categories({ entry }: { entry: GroupCurrencyStatsView }) {
 
               <span
                 aria-hidden="true"
-                className="mt-1.5 block h-1 overflow-hidden rounded-full bg-foreground/[0.07]"
+                className="mt-1.5 block h-1 overflow-hidden rounded-full bg-wash-2"
               >
                 <span
                   className="block h-full rounded-full"
@@ -937,7 +937,7 @@ function Subcategories({
               {tSub(slice.category ?? "", child.subcategory)}
             </span>
             {shelf && (
-              <span className="shrink-0 rounded-full bg-foreground/[0.06] px-1.5 py-px text-2xs text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-wash-2 px-1.5 py-px text-2xs text-muted-foreground">
                 {tGroups(
                   `${slice.category}.${shelf}` as Parameters<typeof tGroups>[0],
                 )}

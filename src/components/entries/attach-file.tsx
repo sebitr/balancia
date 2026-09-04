@@ -113,7 +113,7 @@ export function AttachFile({
                 type="button"
                 onClick={() => onRemove(file.id)}
                 aria-label={t("remove", { name: file.name })}
-                className="-m-1 ml-auto shrink-0 rounded-full p-1 transition-colors active:bg-white/10"
+                className="-m-1 ml-auto shrink-0 rounded-full p-1 transition-colors active:bg-wash-3"
               >
                 <X aria-hidden="true" className="size-4" />
               </button>

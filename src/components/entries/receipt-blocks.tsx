@@ -27,7 +27,7 @@ export function ScanCard({ camera, upload }: CaptureActions) {
   const t = useTranslations("addEntry.scan");
 
   return (
-    <div className="w-full space-y-3 rounded-[17px] bg-card p-4 text-left shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+    <div className="w-full space-y-3 rounded-[17px] bg-card p-4 text-left shadow-hairline">
       <div className="flex items-center gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
           <ScanLine aria-hidden="true" className="size-5 text-primary-ink" />
@@ -107,7 +107,7 @@ export function ScanBanner({
         type="button"
         onClick={onDismiss}
         aria-label={t("dismiss")}
-        className="-m-1 shrink-0 rounded-full p-1 text-muted-foreground transition-colors active:bg-white/10"
+        className="-m-1 shrink-0 rounded-full p-1 text-muted-foreground transition-colors active:bg-wash-3"
       >
         <X aria-hidden="true" className="size-4" />
       </button>
@@ -151,7 +151,7 @@ export function ReceiptItems({
         </button>
       </div>
 
-      <ul className="overflow-hidden rounded-[17px] bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+      <ul className="overflow-hidden rounded-[17px] bg-card shadow-hairline">
         {items.map((item) => {
           // A row that went somewhere other than the default is tinted, so the
           // exceptions are findable without reading every line.
@@ -161,7 +161,7 @@ export function ReceiptItems({
             <li
               key={item.id}
               className={cn(
-                "flex items-center gap-3 border-b border-white/8 px-3.5 py-2.5 last:border-b-0",
+                "flex items-center gap-3 border-b border-border px-3.5 py-2.5 last:border-b-0",
                 custom && "bg-primary/8",
               )}
             >
@@ -175,7 +175,7 @@ export function ReceiptItems({
                     ? "text-negative-ink"
                     : custom
                       ? "bg-primary/20 font-semibold text-foreground"
-                      : "bg-white/8 text-muted-foreground",
+                      : "bg-wash-2 text-muted-foreground",
                 )}
               >
                 {item.assignment.kind === "everyone" &&

@@ -1988,7 +1988,7 @@ export function AddEntryForm({
                   formatMinorUnits(settleBalance.toString(), currency),
                 )
               }
-              className="tap-target h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+              className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
             >
               {t("settle.full", {
                 amount: formatMinorUnits(settleBalance.toString(), currency),
@@ -2002,7 +2002,7 @@ export function AddEntryForm({
                   .querySelector<HTMLInputElement>("input[data-entry-amount]")
                   ?.focus();
               }}
-              className="tap-target h-10 rounded-full border border-border bg-white/4 px-3 text-sm text-muted-foreground"
+              className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
             >
               {t("settle.partOfIt")}
             </button>
@@ -2257,7 +2257,7 @@ export function AddEntryForm({
               <button
                 type="button"
                 disabled={pending}
-                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[17px] bg-card text-sm font-semibold text-destructive shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)] transition-colors active:bg-destructive/10 disabled:opacity-50"
+                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[17px] bg-card text-sm font-semibold text-destructive shadow-hairline transition-colors active:bg-destructive/10 disabled:opacity-50"
               >
                 <Trash2 aria-hidden="true" className="size-[18px] shrink-0" />
                 {t("delete.trigger")}

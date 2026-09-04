@@ -29,7 +29,7 @@ export function RowCard({
   return (
     <div
       className={cn(
-        "divide-y divide-border overflow-hidden rounded-[17px] bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]",
+        "divide-y divide-border overflow-hidden rounded-[17px] bg-card shadow-hairline",
         className,
       )}
       {...props}

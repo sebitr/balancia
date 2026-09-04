@@ -53,7 +53,7 @@ export function AppearancePreview({ currency }: { currency: string }) {
 
       <span
         aria-hidden="true"
-        className="flex h-1 overflow-hidden rounded-full bg-foreground/[0.08]"
+        className="flex h-1 overflow-hidden rounded-full bg-wash-3"
       >
         <span className="w-[70%] bg-positive" />
         <span className="w-[30%] bg-negative" />
