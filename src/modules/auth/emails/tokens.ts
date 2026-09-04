@@ -40,11 +40,11 @@ export const palette = {
   /** `--primary`, darkened for AA. See above. */
   link: "#C64435",
   /** `--destructive`. The warning panel's title and link. */
-  destructive: "#C51B32",
+  destructive: "#C51D28",
   /** `--destructive` at 8% over `--card`. */
-  destructiveTint: "#FAEDEF",
+  destructiveTint: "#FAEDEE",
   /** `--destructive`, darkened for AAA on that tint. */
-  destructiveInk: "#A50017",
+  destructiveInk: "#A50007",
 } as const;
 
 /**

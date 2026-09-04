@@ -859,7 +859,7 @@
       "raspberry": "Raspberry",
       "plum": "Plum"
     },
-    "accentNote": "The accent colours whatever is chosen, active or still to do. The balance colours keep their distance from it, so green still means you are owed and red still means you owe.",
+    "accentNote": "The accent colours whatever is chosen, active or still to do. It never colours an amount: green always means you are owed and red that you owe, on every account.",
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageSaved": "Language changed",

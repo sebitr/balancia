@@ -59,23 +59,23 @@ describe("AccentChoices", () => {
 
     const style = document.documentElement.style;
     expect(style.getPropertyValue("--ring")).toBe(fillOf("ocean"));
-    expect(style.getPropertyValue("--sidebar-primary")).toBe(fillOf("ocean"));
+    // `--sidebar-primary` and `--sidebar-ring` are not painted here: the
+    // stylesheet points them at these two, so they follow on their own.
   });
 
-  it("paints the money colours that step aside for the accent", async () => {
-    // Mint sits on the "gets back" green, so that green moves; coral did not
-    // ask it to. The link ink follows the accent too, per theme.
+  it("leaves the money colours alone, whichever accent is chosen", async () => {
+    // Mint sits on the "gets back" green and stays there: green means the
+    // same thing on every account. What follows the accent is the ink the
+    // links and ticks are set in, per theme.
     const { user } = renderChoices();
 
     await user.click(screen.getByRole("radio", { name: "Mint" }));
 
     const style = document.documentElement.style;
-    expect(style.getPropertyValue("--accent-positive-dark")).toBe(
-      accentTokens("mint")["--accent-positive-dark"],
-    );
-    expect(style.getPropertyValue("--accent-positive-dark")).not.toBe(
-      accentTokens("coral")["--accent-positive-dark"],
-    );
+    for (const role of ["positive", "negative", "payer"]) {
+      expect(style.getPropertyValue(`--${role}`)).toBe("");
+      expect(style.getPropertyValue(`--accent-${role}-dark`)).toBe("");
+    }
     expect(style.getPropertyValue("--accent-ink-light")).toBe(
       accentTokens("mint")["--accent-ink-light"],
     );
@@ -88,10 +88,10 @@ describe("AccentChoices", () => {
     await user.click(screen.getByRole("radio", { name: "Raspberry" }));
 
     await waitFor(() => expect(painted()).toBe(fillOf("coral")));
-    // Everything that moved comes back, the money colours included.
+    // Everything that moved comes back, the per-theme inks included.
     expect(
-      document.documentElement.style.getPropertyValue("--accent-negative-dark"),
-    ).toBe(accentTokens("coral")["--accent-negative-dark"]);
+      document.documentElement.style.getPropertyValue("--accent-ink-dark"),
+    ).toBe(accentTokens("coral")["--accent-ink-dark"]);
     expect(screen.getByText("Coral")).toBeInTheDocument();
     expect(toastError).toHaveBeenCalled();
   });

@@ -29,6 +29,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-ink: var(--destructive-ink);
   --color-positive: var(--positive);
   --color-positive-foreground: var(--positive-foreground);
   --color-positive-ink: var(--positive-ink);
@@ -131,31 +132,45 @@
  * src/app/token-contrast.test.ts holds every one of these pairings to its
  * ratio, so the ramp cannot drift back.
  *
- * The accent, and the money colours that keep their distance from it.
+ * The accent, and why the money colours no longer move with it.
  *
  * The reader picks an accent (src/modules/profile/accent.ts), and the server
- * paints it inline on <html>, where it outranks both blocks below. What it
- * paints is more than --primary: the accent as text needs a different
- * lightness per theme, and three of the seven accents land on a money colour
- * — coral is two degrees from the "you owe" red, mint *is* the "gets back"
- * green — so the money colour rotates forty degrees clear of the accent
- * (src/modules/profile/money-tones.ts). An inline declaration cannot know
- * which theme it is in, so each of those tokens is written twice, once per
- * theme, and the two blocks pick: `:root` reads the `-light` variable, `.dark`
- * the `-dark` one, each falling back to the palette as drawn for a document
- * nobody painted (the design-system kit, a test). --primary, the ring and the
- * sidebar stay literal inline values: three parsers read a bare oklch() from
- * this file and none of them needs to learn var().
+ * paints it inline on <html>, where it outranks both blocks below. It paints
+ * six variables and no more: --primary and --ring as literals, and the accent
+ * as *text* in each theme, because an inline declaration cannot know which
+ * theme it is in and the two need different lightness. So --primary-ink is
+ * written once per block as `var(--accent-ink-…, <coral>)`, falling back to
+ * the palette as drawn for a document nobody painted (the design-system kit,
+ * a test). It is the only var() indirection left in this file, and the ring
+ * and sidebar stay literal or aliased: several parsers read a bare oklch()
+ * out of here and none of them needs to learn var().
+ *
+ * The money colours are literals, the same on every account. They used to be
+ * derived — any money hue within forty degrees of the accent was rotated away
+ * from it — and that is what turned "you owe" ruby under the default accent,
+ * "gets back" olive under mint and the payer chartreuse under amber. The rule
+ * was unsatisfiable rather than merely wrong: in the dark theme the seeds sit
+ * at L 0.70–0.78 and these fills at L 0.72–0.82, and an ink is walked until it
+ * clears 4.5:1, so two inks converge on one lightness whatever hue they start
+ * from. Only hue is left to separate them, it needs about thirty degrees to
+ * register, and thirty degrees is enough to stop a red being red. The full
+ * argument is at the top of src/modules/profile/accent.test.ts.
+ *
+ * So the accent is allowed to be a money colour's neighbour, and three of the
+ * seven are: coral is two degrees from the "you owe" red, mint is the "gets
+ * back" green, amber is the payer. What keeps a balance legible is not its
+ * hue — it is the sign and the word beside it
+ * (src/components/money/balance-tone.ts), and the rule in AGENTS.md that the
+ * accent never paints a money surface.
  *
  * --chart-2 is the accent, because it is the "you" series; the other chart
  * colours are categorical and are kept a visible distance from every accent
- * and every money colour, so a bar is never mistaken for a balance. Accepted
- * near-misses, on purpose: dark --notice-warning equals the amber seed (a
- * toast glyph beside a triangle, never on a money surface); the plum accent
- * sits close to --neutral-balance (settled is grey by design, and plum is the
- * "no accent" choice); dark --group-accent-emerald equals the positive fill
- * (a group's icon is content, not chrome). src/modules/profile/accent.test.ts
- * holds the seven accents to the same ratios and to the distances.
+ * and every money colour, so a bar is never mistaken for a balance. Other
+ * accepted near-misses, on purpose: dark --notice-warning equals the amber
+ * seed (a toast glyph beside a triangle, never on a money surface); the plum
+ * accent sits close to --neutral-balance (settled is grey by design, and plum
+ * is the "no accent" choice); dark --group-accent-emerald equals the positive
+ * fill (a group's icon is content, not chrome).
  */
 :root {
   --background: oklch(0.977 0.007 85);
@@ -173,18 +188,19 @@
   --muted-foreground: oklch(0.5 0.03 319);
   --accent: oklch(0.9 0.018 319);
   --accent-foreground: oklch(0.33 0.088 319);
-  --destructive: oklch(0.53 0.2 22);
-  --positive: var(--accent-positive-light, oklch(0.654 0.13 167));
+  --destructive: oklch(0.53 0.2 25);
+  --destructive-ink: oklch(0.515 0.2 25);
+  --positive: oklch(0.654 0.13 167);
   --positive-foreground: oklch(0.977 0.007 85);
-  --positive-ink: var(--accent-positive-ink-light, oklch(0.496 0.13 167));
-  --negative: var(--accent-negative-light, oklch(0.639 0.18 32));
+  --positive-ink: oklch(0.496 0.13 167);
+  --negative: oklch(0.6 0.2 25);
   --negative-foreground: oklch(0.977 0.007 85);
-  --negative-ink: var(--accent-negative-ink-light, oklch(0.534 0.18 32));
+  --negative-ink: oklch(0.53 0.2 25);
   --neutral-balance: oklch(0.62 0.035 319);
   --neutral-balance-ink: oklch(0.525 0.035 319);
-  --payer: var(--accent-payer-light, oklch(0.72 0.145 70));
+  --payer: oklch(0.72 0.145 70);
   --payer-foreground: oklch(0.226 0.072 319);
-  --payer-ink: var(--accent-payer-ink-light, oklch(0.534 0.145 70));
+  --payer-ink: oklch(0.534 0.145 70);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
@@ -196,12 +212,12 @@
   --radius: 0.75rem;
   --sidebar: oklch(0.96 0.01 85);
   --sidebar-foreground: oklch(0.226 0.072 319);
-  --sidebar-primary: oklch(0.712 0.168 30);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: oklch(0.226 0.072 319);
   --sidebar-accent: oklch(0.9 0.018 319);
   --sidebar-accent-foreground: oklch(0.33 0.088 319);
   --sidebar-border: oklch(0.9 0.012 82);
-  --sidebar-ring: oklch(0.712 0.168 30);
+  --sidebar-ring: var(--ring);
 
   /*
    * Group accents.
@@ -273,18 +289,19 @@
   --muted-foreground: oklch(0.72 0.035 319);
   --accent: oklch(0.33 0.06 319);
   --accent-foreground: oklch(0.977 0.007 85);
-  --destructive: oklch(0.65 0.18 22);
-  --positive: var(--accent-positive-dark, oklch(0.75 0.13 167));
+  --destructive: oklch(0.65 0.18 25);
+  --destructive-ink: oklch(0.72 0.174 25);
+  --positive: oklch(0.75 0.13 167);
   --positive-foreground: oklch(0.226 0.072 319);
-  --positive-ink: var(--accent-positive-ink-dark, oklch(0.75 0.13 167));
-  --negative: var(--accent-negative-dark, oklch(0.72 0.16 32));
+  --positive-ink: oklch(0.75 0.13 167);
+  --negative: oklch(0.72 0.18 25);
   --negative-foreground: oklch(0.226 0.072 319);
-  --negative-ink: var(--accent-negative-ink-dark, oklch(0.734 0.16 32));
+  --negative-ink: oklch(0.735 0.162 25);
   --neutral-balance: oklch(0.7 0.03 319);
   --neutral-balance-ink: oklch(0.7 0.03 319);
-  --payer: var(--accent-payer-dark, oklch(0.82 0.14 78));
+  --payer: oklch(0.82 0.14 78);
   --payer-foreground: oklch(0.226 0.072 319);
-  --payer-ink: var(--accent-payer-ink-dark, oklch(0.82 0.14 78));
+  --payer-ink: oklch(0.82 0.14 78);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.712 0.168 30);
@@ -295,12 +312,12 @@
   --chart-5: oklch(0.55 0.09 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
-  --sidebar-primary: oklch(0.712 0.168 30);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: oklch(0.226 0.072 319);
   --sidebar-accent: oklch(0.33 0.06 319);
   --sidebar-accent-foreground: oklch(0.977 0.007 85);
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.712 0.168 30);
+  --sidebar-ring: var(--ring);
 
   /* The palette as drawn — see the light block above for why it differs. */
   --group-accent-coral: oklch(0.712 0.168 30);
@@ -368,9 +385,10 @@
   --input: oklch(0.58 0.02 82);
   --sidebar-border: oklch(0.62 0.02 82);
   --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
-  --positive-ink: var(--accent-positive-ink-more-light, oklch(0.409 0.084 167));
-  --negative-ink: var(--accent-negative-ink-more-light, oklch(0.429 0.164 32));
-  --payer-ink: var(--accent-payer-ink-more-light, oklch(0.43 0.093 70));
+  --positive-ink: oklch(0.409 0.084 167);
+  --negative-ink: oklch(0.425 0.172 25);
+  --destructive-ink: oklch(0.41 0.166 25);
+  --payer-ink: oklch(0.43 0.093 70);
   --neutral-balance-ink: oklch(0.42 0.035 319);
 }
 
@@ -380,9 +398,10 @@
   --input: oklch(1 0 0 / 42%);
   --sidebar-border: oklch(1 0 0 / 38%);
   --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
-  --positive-ink: var(--accent-positive-ink-more-dark, oklch(0.83 0.13 167));
-  --negative-ink: var(--accent-negative-ink-more-dark, oklch(0.85 0.082 32));
-  --payer-ink: var(--accent-payer-ink-more-dark, oklch(0.87 0.118 78));
+  --positive-ink: oklch(0.83 0.13 167);
+  --negative-ink: oklch(0.85 0.08 25);
+  --destructive-ink: oklch(0.83 0.094 25);
+  --payer-ink: oklch(0.87 0.118 78);
   --neutral-balance-ink: oklch(0.84 0.03 319);
 }
 
@@ -547,8 +566,8 @@
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
   --ring: oklch(0.712 0.168 30);
-  --positive: var(--accent-positive-light, oklch(0.654 0.13 167));
-  --negative: var(--accent-negative-light, oklch(0.639 0.18 32));
+  --positive: oklch(0.654 0.13 167);
+  --negative: oklch(0.6 0.2 25);
   --neutral-balance: oklch(0.62 0.035 319);
 }
 

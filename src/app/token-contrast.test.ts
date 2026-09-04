@@ -11,9 +11,9 @@ import {
 import {
   ACCENT_COLORS,
   ACCENT_SEEDS,
-  accentPalette,
+  MONEY_ROLES,
+  type Theme,
 } from "@/modules/profile/accent";
-import { MONEY_ROLES, type Theme } from "@/modules/profile/money-tones";
 
 /**
  * The balance colours have to be readable as text, in both themes.
@@ -127,6 +127,9 @@ const INK_SURFACES: Record<string, readonly string[]> = {
   // Links, active nav labels and check glyphs; also the /15 and /18 washes on
   // the self pill and the money-format badges.
   "primary-ink": ["card", "background", "tint"],
+  // Validation notes and the destructive rows in recurrence-sheet,
+  // settle-blocks and split-sheet; the /10 and /15 washes put it on its own.
+  "destructive-ink": ["card", "background", "tint"],
 };
 
 /** The fill each ink token's `tint` surface is a wash of. */
@@ -135,6 +138,7 @@ const TINT_BASE: Record<string, string> = {
   "negative-ink": "negative",
   "payer-ink": "payer",
   "primary-ink": "primary",
+  "destructive-ink": "destructive",
 };
 
 /**
@@ -312,17 +316,18 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
       (chart) => {
         const bar = resolve(tokens, chart).color;
         for (const accent of ACCENT_COLORS) {
-          const palette = accentPalette(accent);
           expect(
-            deltaE(bar, palette.fill),
+            deltaE(bar, ACCENT_SEEDS[accent]),
             `--${chart} vs the ${accent} accent`,
           ).toBeGreaterThanOrEqual(MIN_DELTA_E);
-          for (const role of MONEY_ROLES) {
-            expect(
-              deltaE(bar, palette.money[theme][role].fill),
-              `--${chart} vs ${role} under ${accent}`,
-            ).toBeGreaterThanOrEqual(MIN_DELTA_E);
-          }
+        }
+        // The money colours are literals now, so a bar is checked against the
+        // three of them once rather than once per accent.
+        for (const role of MONEY_ROLES) {
+          expect(
+            deltaE(bar, resolve(tokens, role).color),
+            `--${chart} vs --${role}`,
+          ).toBeGreaterThanOrEqual(MIN_DELTA_E);
         }
       },
     );

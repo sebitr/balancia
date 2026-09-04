@@ -49,27 +49,39 @@ Standard or Increased is left alone.
 ## The accent, and the money colours
 
 Green means somebody owes you, red means you owe, amber marks who paid. Those
-three are the only colours in the app that carry meaning, and for a long time
-the accent could land on one of them: coral sat two degrees from the "you owe"
-red, mint was the "gets back" green exactly.
+three are the only colours in the app that carry meaning, and **they are the
+same on every account, whichever accent is chosen.** A balance is the same red
+for everyone, which is the point of a colour that means something.
 
-Now the accent is a seed, and the money colours keep their distance from it:
-any of the three that sits within forty degrees of the accent's hue is rotated
-away until it is forty degrees clear, inside the band where it still reads as
-itself. So a coral user sees a ruby "you owe", a mint user a grass-green "gets
-back", an amber user an olive payer, and the other four accents leave all
-three where they are. (Material You does the reverse — it shifts reserved
-colours a few degrees _toward_ the accent so they feel like one palette. Here
-the meaning matters more than the harmony.)
+For a while they were not. Three of the seven accents sit on a money colour —
+coral, the default, is two degrees from the "you owe" red; mint is the "gets
+back" green exactly; amber is the payer — so each money hue was rotated away
+from the accent until it was forty degrees clear. That gave a coral reader a
+ruby "you owe", a mint reader an olive "gets back" and an amber reader a
+chartreuse payer.
 
-The accent also colours the links, the ticks and the "you" pill, in an ink
-computed per theme to read at 4.5:1, and the "you" series in a chart. It never
-colours an amount, a balance bar or the chip above a figure. The preview at
-the top of the appearance screen shows all of this happening as the swatches
-are tapped.
+It turned out the rule could not be satisfied and look like anything. In the
+dark theme the accents and the money fills sit in the same lightness band, and
+a colour used as text is darkened (or lightened) until it reads at 4.5:1 — so
+two of them end up at the same lightness whatever hue they started from. Hue
+is then the only thing left to tell them apart, and it takes about thirty
+degrees to register, which is also about enough to stop a red looking red.
+There is no true red that separates from coral: the nearest candidates are all
+pinks.
 
-The arithmetic is `src/modules/profile/money-tones.ts`; the seven results are
-spelled out in `src/modules/profile/accent.test.ts`.
+So the accent may now be a money colour's neighbour, and two other things keep
+a balance clear instead. Colour never carries the meaning by itself — every
+figure has a sign and a word next to it — and the accent never paints an
+amount, a balance bar or the chip above a figure. What it does colour is the
+buttons, the links, the ticks and the "you" pill, in an ink computed per theme
+to read at 4.5:1, plus the "you" series in a chart.
+
+The seeds and the derivation are `src/modules/profile/accent.ts`; the reasoning
+above, with the numbers behind it, is at the top of
+`src/modules/profile/accent.test.ts`.
+
+There is one red, not two: the colour a delete button uses shares a hue with
+the "you owe" red, at its own lightness.
 
 ## For the phone app and the API
 

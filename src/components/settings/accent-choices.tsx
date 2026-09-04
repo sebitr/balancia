@@ -26,9 +26,9 @@ import { setAccentColorAction } from "@/modules/profile/actions";
  * the tap has to recolour the tick that just moved, along with every other
  * accent on screen. So the tokens are set on `documentElement` first and the
  * action follows; a refused write puts both back rather than leaving the app a
- * colour the account did not keep. The same paint carries the money colours
- * that step aside for this accent, so the preview above the swatches shows
- * "you owe" turning ruby in the same frame the button turns coral.
+ * colour the account did not keep. Six variables move and no more — the fill,
+ * the ring and the accent's ink in each theme. The money colours are not
+ * among them: green means the same thing on every account.
  *
  * No toast either. Everything accent-coloured on screen has already changed,
  * which says more than a line of text can, and the way back is the swatch

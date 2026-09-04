@@ -2,104 +2,113 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   contrastRatio,
-  deltaE,
   formatOklch,
-  hueDistance,
   isInGamut,
   oklchToHex,
   parseOklch,
   type Oklch,
 } from "@/lib/color/oklch";
 import {
+  AA_TEXT,
+  AAA_TEXT,
   ACCENT_COLORS,
   ACCENT_SEEDS,
   accentPalette,
   accentTokens,
-  type AccentColor,
-} from "./accent";
-import {
-  AA_TEXT,
-  AAA_TEXT,
   inkSurfaces,
-  MIN_HUE_SEPARATION,
-  MONEY_BASE,
   MONEY_ROLES,
   SURFACES,
-  type MoneyRole,
+  type AccentColor,
   type Theme,
-} from "./money-tones";
+} from "./accent";
 
 /**
- * Seven accents, two themes, and the one promise the palette makes: the
- * money colours are never the accent.
+ * Seven accents, two themes, and the one promise the palette still makes.
  *
- * `src/app/token-contrast.test.ts` reads `globals.css` and checks the palette
- * as drawn — which is to say, coral. This file checks the other six, and the
- * arithmetic that makes them safe: every ink the accent emits is readable on
- * every surface it lands on, every value is inside sRGB, and every money
- * colour keeps forty degrees and a visible distance from the accent it sits
- * beside.
+ * It used to be "the money colours are never the accent", kept by rotating
+ * any money hue that came within forty degrees of the accent. That is gone,
+ * and this file is where the reason is written down, because it will look
+ * like an oversight to whoever reads it next.
  *
- * The expected table at the bottom is deliberately spelled out rather than
- * snapshotted. A change to the generator, or to a seed, shows up as a diff in
- * numbers somebody can read, and the table is what the iOS mirror copies.
+ * The rotation could not be made to look like anything. In the dark theme
+ * the accent seeds sit at L 0.70–0.78 and the money fills at L 0.72–0.82, and
+ * an ink is walked in lightness until it clears 4.5:1 — so two inks of
+ * similar chroma converge on the same lightness whatever hue they began at.
+ * Lightness and chroma are spoken for; hue is the only axis left; and hue
+ * needs roughly thirty degrees before the eye separates two fills at this
+ * chroma. Thirty degrees is also exactly far enough to stop a red being red.
+ * Searching the whole feasible red band turns up nothing better: the closest
+ * a "you owe" comes to being both distinct from coral and still red is a
+ * pink, which is what the rule actually shipped.
+ *
+ * So the money colours are literals in `globals.css` now, the same on every
+ * account, and the accent is allowed to be their neighbour. What keeps a
+ * balance legible is not its hue: it is the sign and the word beside it
+ * (`src/components/money/balance-tone.ts`) and the rule that the accent never
+ * paints a money surface (`AGENTS.md`). The first assertion below is the one
+ * that stops the rotation coming back.
  */
 
 const THEMES: readonly Theme[] = ["light", "dark"];
-
-/**
- * How far apart two tokens must be to mean different things, in OKLab.
- *
- * About 0.02 is the smallest step an eye separates. Forty degrees of hue at
- * the chroma the fills carry is a chord of 0.089; the inks, walked to the
- * same lightness as each other, come a little closer — the amber accent's ink
- * against its olive payer is 0.080. Today's collisions sit at 0.000 (mint on
- * the "gets back" green in dark) to 0.045 (amber on the payer), so a floor at
- * 0.075 rejects every one of them and accepts every rotation with margin.
- */
-const MIN_DELTA_E = 0.075;
 
 const CSS = readFileSync(
   new URL("../../app/globals.css", import.meta.url),
   "utf8",
 );
 
-function cssToken(selector: string, name: string): Oklch {
+/** One declaration's raw value, exactly as the stylesheet writes it. */
+function rawToken(selector: string, name: string): string {
   const start = CSS.indexOf(`${selector} {`);
+  if (start === -1) throw new Error(`no ${selector} block in globals.css`);
   const body = CSS.slice(start, CSS.indexOf("\n}", start));
   const match = body.match(new RegExp(`--${name}:\\s*([^;]+);`));
   if (!match) throw new Error(`${selector} declares no --${name}`);
-  // The accent-aware tokens are `var(--accent-…, <fallback>)`; the fallback
-  // is the palette as drawn, which is what this file compares against.
-  const value = match[1]!.trim();
-  const fallback = value.startsWith("var(")
-    ? value.slice(value.indexOf(",") + 1, -1).trim()
-    : value;
-  const parsed = parseOklch(fallback);
+  return match[1]!.trim();
+}
+
+function cssToken(selector: string, name: string): Oklch {
+  const value = rawToken(selector, name);
+  const parsed = parseOklch(value);
   if (!parsed) throw new Error(`--${name} is not a bare oklch(): ${value}`);
   return parsed;
 }
 
+const selectorFor = (theme: Theme) => (theme === "light" ? ":root" : ".dark");
 const short = (color: Oklch) => formatOklch(color).slice(6, -1);
+
+describe("the money colours", () => {
+  it.each(THEMES)(
+    "are literals in the %s theme, not derived from the accent",
+    (theme) => {
+      for (const role of MONEY_ROLES) {
+        for (const name of [role, `${role}-ink`]) {
+          expect(
+            rawToken(selectorFor(theme), name),
+            `--${name} must not be built from the accent`,
+          ).not.toContain("var(");
+        }
+      }
+    },
+  );
+
+  it("are never painted onto the document by an accent", () => {
+    const painted = ACCENT_COLORS.flatMap((accent) =>
+      Object.keys(accentTokens(accent)),
+    ).join(" ");
+    for (const role of MONEY_ROLES) {
+      expect(painted, `${role} is painted per account`).not.toContain(role);
+    }
+  });
+});
 
 describe("the surfaces the inks are checked on", () => {
   it.each(THEMES)("match globals.css in the %s theme", (theme) => {
-    const selector = theme === "light" ? ":root" : ".dark";
+    const selector = selectorFor(theme);
     expect(SURFACES[theme].card).toEqual(cssToken(selector, "card"));
     expect(SURFACES[theme].background).toEqual(
       cssToken(selector, "background"),
     );
   });
-
-  it.each(THEMES)(
-    "start from the money fills globals.css draws, %s",
-    (theme) => {
-      const selector = theme === "light" ? ":root" : ".dark";
-      for (const role of MONEY_ROLES) {
-        expect(MONEY_BASE[theme][role], role).toEqual(cssToken(selector, role));
-      }
-    },
-  );
 });
 
 describe.each(ACCENT_COLORS)("%s", (accent) => {
@@ -133,68 +142,47 @@ describe.each(ACCENT_COLORS)("%s", (accent) => {
       expect(palette.inkMore[theme].h).toBe(seed.h);
     });
 
-    it.each(MONEY_ROLES)("keeps its distance from the %s colour", (role) => {
-      const tone = palette.money[theme][role];
-      expect(hueDistance(seed.h, tone.fill.h)).toBeGreaterThanOrEqual(
-        MIN_HUE_SEPARATION,
-      );
-      expect(deltaE(seed, tone.fill)).toBeGreaterThanOrEqual(MIN_DELTA_E);
-      expect(deltaE(palette.ink[theme], tone.ink)).toBeGreaterThanOrEqual(
-        MIN_DELTA_E,
-      );
+    it("only walks the ink when the seed itself will not do", () => {
+      // The seed is where the walk starts, so an ink that moved is only
+      // honest if the seed failed. This is the minimality the old "moves the
+      // colour only as far as it must" test pinned, kept where it still
+      // applies — stated against the walk's own starting point rather than
+      // against a reconstructed step, because chroma is refitted at every
+      // step and a step cannot be rebuilt from the value that came out.
+      for (const [ink, ratio] of [
+        [palette.ink[theme], AA_TEXT],
+        [palette.inkMore[theme], AAA_TEXT],
+      ] as const) {
+        if (ink.l === seed.l) continue; // readable as drawn; nothing walked
+        expect(
+          surfaces.some(
+            (surface) => contrastRatio(oklchToHex(seed), surface) < ratio,
+          ),
+          `${short(ink)} walked away from a seed that already read at ${ratio}:1`,
+        ).toBe(true);
+      }
     });
 
-    it.each(MONEY_ROLES)(
-      "moves the %s colour only as far as it must",
-      (role) => {
-        const base = MONEY_BASE[theme][role];
-        const tone = palette.money[theme][role];
-        // Lightness and chroma are the token's; only the hue rotates, and
-        // only when the base sat too close.
-        expect(tone.fill.l).toBe(base.l);
-        if (hueDistance(base.h, seed.h) >= MIN_HUE_SEPARATION) {
-          expect(tone.fill).toEqual(base);
-        } else {
-          expect(hueDistance(seed.h, tone.fill.h)).toBe(MIN_HUE_SEPARATION);
-        }
-      },
-    );
-
-    it.each(MONEY_ROLES)("emits a readable, in-gamut %s ink", (role) => {
-      const tone = palette.money[theme][role];
-      for (const surface of inkSurfaces(tone.fill, theme)) {
-        expect(
-          contrastRatio(oklchToHex(tone.ink), surface),
-        ).toBeGreaterThanOrEqual(AA_TEXT);
-        expect(
-          contrastRatio(oklchToHex(tone.inkMore), surface),
-        ).toBeGreaterThanOrEqual(AAA_TEXT);
-      }
-      for (const color of [tone.fill, tone.ink, tone.inkMore]) {
+    it("emits an in-gamut ink", () => {
+      for (const color of [palette.ink[theme], palette.inkMore[theme]]) {
         expect(isInGamut(color), short(color)).toBe(true);
       }
     });
   });
 
-  it("emits every variable, in both themes, every time", () => {
+  it("emits six variables, and only six", () => {
     const tokens = accentTokens(accent);
     const expected = [
       "--primary",
       "--ring",
-      "--sidebar-primary",
-      "--sidebar-ring",
       ...THEMES.flatMap((theme) => [
         `--accent-ink-${theme}`,
         `--accent-ink-more-${theme}`,
-        ...MONEY_ROLES.flatMap((role) => [
-          `--accent-${role}-${theme}`,
-          `--accent-${role}-ink-${theme}`,
-          `--accent-${role}-ink-more-${theme}`,
-        ]),
       ]),
     ];
     expect(Object.keys(tokens).sort()).toEqual(expected.sort());
     expect(tokens["--primary"]).toBe(formatOklch(seed));
+    expect(tokens["--ring"]).toBe(formatOklch(seed));
     for (const value of Object.values(tokens)) {
       const parsed = parseOklch(value);
       expect(parsed, value).not.toBeNull();
@@ -204,154 +192,60 @@ describe.each(ACCENT_COLORS)("%s", (accent) => {
 });
 
 /**
- * What the arithmetic comes to, spelled out.
+ * The inks, spelled out.
  *
- * Fill and ink for the accent and each money role, per theme, as "L C H".
- * Three accents move a money colour: coral sends "you owe" to ruby, mint
- * sends "gets back" to grass, amber nudges "you owe" and sends the payer to
- * olive. The other four leave all three where `globals.css` drew them.
+ * The one table left, and the one place transcription earns its keep: these
+ * twenty-eight values are what the iOS app copies, and a change to a seed or
+ * to the walk shows up here as a diff somebody can read. Everything else in
+ * this file is derived. The fills are not listed — they are `ACCENT_SEEDS`,
+ * a few lines away in the module under test.
  */
-type Row = { readonly fill: string; readonly ink: string };
-type Expected = Record<
-  Theme,
-  { readonly accent: Row } & Record<MoneyRole, Row>
->;
+type Inks = Record<Theme, { readonly ink: string; readonly inkMore: string }>;
 
-const NEGATIVE = {
-  light: { fill: "0.639 0.18 32", ink: "0.534 0.18 32" },
-  dark: { fill: "0.72 0.16 32", ink: "0.73 0.16 32" },
-};
-const POSITIVE = {
-  light: { fill: "0.654 0.13 167", ink: "0.509 0.104 167" },
-  dark: { fill: "0.75 0.13 167", ink: "0.75 0.13 167" },
-};
-const PAYER = {
-  light: { fill: "0.72 0.145 70", ink: "0.535 0.115 70" },
-  dark: { fill: "0.82 0.14 78", ink: "0.82 0.14 78" },
-};
-
-const EXPECTED: Record<AccentColor, Expected> = {
+const EXPECTED: Record<AccentColor, Inks> = {
   coral: {
-    light: {
-      accent: { fill: "0.712 0.168 30", ink: "0.542 0.168 30" },
-      negative: { fill: "0.639 0.18 350", ink: "0.539 0.18 350" },
-      positive: POSITIVE.light,
-      payer: PAYER.light,
-    },
-    dark: {
-      accent: { fill: "0.712 0.168 30", ink: "0.732 0.164 30" },
-      negative: { fill: "0.72 0.16 350", ink: "0.74 0.16 350" },
-      positive: POSITIVE.dark,
-      payer: PAYER.dark,
-    },
+    light: { ink: "0.542 0.168 30", inkMore: "0.442 0.168 30" },
+    dark: { ink: "0.732 0.164 30", inkMore: "0.847 0.084 30" },
   },
   amber: {
-    light: {
-      accent: { fill: "0.78 0.13 70", ink: "0.54 0.116 70" },
-      negative: { fill: "0.639 0.18 30", ink: "0.534 0.18 30" },
-      positive: POSITIVE.light,
-      payer: { fill: "0.72 0.145 110", ink: "0.525 0.115 110" },
-    },
-    dark: {
-      accent: { fill: "0.78 0.13 70", ink: "0.78 0.13 70" },
-      negative: { fill: "0.72 0.16 30", ink: "0.735 0.16 30" },
-      positive: POSITIVE.dark,
-      payer: { fill: "0.82 0.14 110", ink: "0.82 0.14 110" },
-    },
+    light: { ink: "0.54 0.116 70", inkMore: "0.44 0.096 70" },
+    dark: { ink: "0.78 0.13 70", inkMore: "0.865 0.104 70" },
   },
   mint: {
-    light: {
-      accent: { fill: "0.75 0.13 167", ink: "0.52 0.106 167" },
-      negative: NEGATIVE.light,
-      positive: { fill: "0.654 0.13 127", ink: "0.514 0.13 127" },
-      payer: PAYER.light,
-    },
-    dark: {
-      accent: { fill: "0.75 0.13 167", ink: "0.75 0.13 167" },
-      negative: NEGATIVE.dark,
-      positive: { fill: "0.75 0.13 127", ink: "0.75 0.13 127" },
-      payer: PAYER.dark,
-    },
+    light: { ink: "0.52 0.106 167", inkMore: "0.42 0.086 167" },
+    dark: { ink: "0.75 0.13 167", inkMore: "0.83 0.13 167" },
   },
   ocean: {
-    light: {
-      accent: { fill: "0.71 0.12 235", ink: "0.525 0.11 235" },
-      negative: NEGATIVE.light,
-      positive: POSITIVE.light,
-      payer: PAYER.light,
-    },
-    dark: {
-      accent: { fill: "0.71 0.12 235", ink: "0.71 0.12 235" },
-      negative: NEGATIVE.dark,
-      positive: POSITIVE.dark,
-      payer: PAYER.dark,
-    },
+    light: { ink: "0.525 0.11 235", inkMore: "0.42 0.088 235" },
+    dark: { ink: "0.71 0.12 235", inkMore: "0.83 0.098 235" },
   },
   lavender: {
-    light: {
-      accent: { fill: "0.72 0.13 300", ink: "0.54 0.13 300" },
-      negative: NEGATIVE.light,
-      positive: POSITIVE.light,
-      payer: PAYER.light,
-    },
-    dark: {
-      accent: { fill: "0.72 0.13 300", ink: "0.73 0.13 300" },
-      negative: NEGATIVE.dark,
-      positive: POSITIVE.dark,
-      payer: PAYER.dark,
-    },
+    light: { ink: "0.54 0.13 300", inkMore: "0.44 0.13 300" },
+    dark: { ink: "0.73 0.13 300", inkMore: "0.85 0.086 300" },
   },
   raspberry: {
-    light: {
-      accent: { fill: "0.7 0.17 350", ink: "0.545 0.17 350" },
-      negative: NEGATIVE.light,
-      positive: POSITIVE.light,
-      payer: PAYER.light,
-    },
-    dark: {
-      accent: { fill: "0.7 0.17 350", ink: "0.735 0.17 350" },
-      negative: NEGATIVE.dark,
-      positive: POSITIVE.dark,
-      payer: PAYER.dark,
-    },
+    light: { ink: "0.545 0.17 350", inkMore: "0.445 0.17 350" },
+    dark: { ink: "0.735 0.17 350", inkMore: "0.855 0.092 350" },
   },
   plum: {
-    light: {
-      accent: { fill: "0.71 0.048 319", ink: "0.535 0.048 319" },
-      negative: NEGATIVE.light,
-      positive: POSITIVE.light,
-      payer: PAYER.light,
-    },
-    dark: {
-      accent: { fill: "0.71 0.048 319", ink: "0.725 0.048 319" },
-      negative: NEGATIVE.dark,
-      positive: POSITIVE.dark,
-      payer: PAYER.dark,
-    },
+    light: { ink: "0.535 0.048 319", inkMore: "0.43 0.048 319" },
+    dark: { ink: "0.725 0.048 319", inkMore: "0.85 0.048 319" },
   },
 };
 
-describe("the palette, spelled out", () => {
+describe("the inks, spelled out", () => {
   it.each(ACCENT_COLORS)("%s comes to the expected table", (accent) => {
     const palette = accentPalette(accent);
-    const actual: Expected = {
+    const actual: Inks = {
       light: {
-        accent: { fill: short(palette.fill), ink: short(palette.ink.light) },
-        negative: rowOf(palette.money.light.negative),
-        positive: rowOf(palette.money.light.positive),
-        payer: rowOf(palette.money.light.payer),
+        ink: short(palette.ink.light),
+        inkMore: short(palette.inkMore.light),
       },
       dark: {
-        accent: { fill: short(palette.fill), ink: short(palette.ink.dark) },
-        negative: rowOf(palette.money.dark.negative),
-        positive: rowOf(palette.money.dark.positive),
-        payer: rowOf(palette.money.dark.payer),
+        ink: short(palette.ink.dark),
+        inkMore: short(palette.inkMore.dark),
       },
     };
     expect(actual).toEqual(EXPECTED[accent]);
   });
 });
-
-function rowOf(tone: { fill: Oklch; ink: Oklch }): Row {
-  return { fill: short(tone.fill), ink: short(tone.ink) };
-}

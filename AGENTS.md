@@ -115,38 +115,53 @@ The marketing homepage (`src/app/page.tsx`, `src/components/marketing/`) is not
 covered by any of this. It is an editorial surface with its own scale; leave it
 alone.
 
-# The accent keeps forty degrees from the money colours
+# The money colours never move, and the accent never paints one
 
 Green means somebody owes you, red means you owe, amber marks who paid. Those
-three are the only colours in the app that carry meaning, and the accent is the
-one colour a reader gets to choose — and for a long time the two could be the
-same colour. Coral, the default accent, sat two degrees from the "you owe" red,
-so every primary button in the dark theme was the debt colour; mint _was_ the
-"gets back" green to the last digit, so a mint app drew its buttons, its links
-and its "owed to you" figures in one green.
+three are the only colours in the app that carry meaning, and they are
+literals in `globals.css` — the same on every account, in every accent. **Do
+not derive them from anything.**
 
-So the accent is a seed — `ACCENT_SEEDS` in `src/modules/profile/accent.ts` —
-and everything it owns is derived from it: the fill, an ink per theme, and the
-three money colours _rotated away from it_ until they are forty degrees apart,
-inside the band where each still reads as itself
-(`src/modules/profile/money-tones.ts`). Material You does the opposite and
-rotates reserved colours toward the accent; here the meaning matters more than
-the harmony. A new accent goes in `ACCENT_SEEDS` and nowhere else; the inks and
-the money colours follow, and the appearance screen's preview shows them doing
-it.
+This was tried the other way round and it is worth knowing why, because the
+idea is a natural one and it will occur to you too. The accent is the one
+colour a reader chooses, and three of the seven sit on a money colour: coral,
+the default, is two degrees from the "you owe" red; mint _is_ the "gets back"
+green; amber is the payer. So each money hue used to be rotated away from the
+accent until it was forty degrees clear. The result was a pink "you owe" for
+the default accent, an olive "gets back" under mint and a chartreuse payer
+under amber — and the rule was not merely badly tuned, it was unsatisfiable.
+In the dark theme the seeds sit at L 0.70–0.78 and the money fills at
+L 0.72–0.82, and an ink is walked in lightness until it clears 4.5:1, so two
+inks of similar chroma converge on one lightness whatever hue they began at.
+That leaves hue as the only axis, hue needs about thirty degrees before the
+eye separates two fills at this chroma, and thirty degrees is exactly enough
+to stop a red being red. Searching the whole feasible red band finds nothing
+better than a pink. The argument, with the numbers, is at the top of
+`src/modules/profile/accent.test.ts`.
 
-The rule for a component is simpler: **the accent never colours a money
-surface.** `--primary` is the button, the ring, the link, the "you" pill and
-the "you" series in a chart. An amount, a balance bar or the chip above a
-figure takes its tone from `TONE` in `src/components/money/balance-tone.ts`,
-never from `--primary` — and a token that ends in `-ink` is text, the one
-without the suffix is a fill, and putting a fill on text is how a 2.6:1 figure
-gets back in.
+So the accent is allowed to be a money colour's neighbour, and what keeps a
+balance legible is not its hue. It is these two rules:
 
-`src/modules/profile/accent.test.ts` holds all seven accents to the distances
-and to 4.5:1 (7:1 under increased contrast) on every surface, and spells the
-result out as a table. `src/app/token-contrast.test.ts` reads `globals.css`
-and checks the inks and the chart colours across every surface and contrast
-combination. Surfaces and contrast are override blocks at the bottom of
-`globals.css` whose selector order is load-bearing; the comment above them
-says why.
+**Colour never carries the meaning alone.** Every figure has a sign and a word
+beside it, from `TONE` in `src/components/money/balance-tone.ts`.
+
+**The accent never colours a money surface.** `--primary` is the button, the
+ring, the link, the "you" pill and the "you" series in a chart. An amount, a
+balance bar or the chip above a figure takes its tone from `TONE`, never from
+`--primary` — and a token that ends in `-ink` is text, the one without the
+suffix is a fill, and putting a fill on text is how a 2.6:1 figure gets back
+in.
+
+The accent is still a seed — `ACCENT_SEEDS` in `src/modules/profile/accent.ts`
+— but all it owns now is its own fill and an ink per theme, six variables
+painted inline on `<html>`. A new accent goes in `ACCENT_SEEDS` and nowhere
+else.
+
+`src/modules/profile/accent.test.ts` holds all seven to 4.5:1 (7:1 under
+increased contrast) on every surface, spells the inks out as a table, and
+asserts that no money token is built from a `var()` — that last one is what
+stops the rotation coming back. `src/app/token-contrast.test.ts` reads
+`globals.css` and checks the inks and the chart colours across every surface
+and contrast combination. Surfaces and contrast are override blocks at the
+bottom of `globals.css` whose selector order is load-bearing; the comment
+above them says why.

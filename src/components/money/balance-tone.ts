@@ -28,10 +28,15 @@ export interface ToneStyle {
  * Ten components used to carry their own copy of this record, and two of
  * them had drifted — one washed its tile at `/10` where the rest used `/15`,
  * another set a figure in the *fill* colour, which is a bar's colour and
- * reads 2.6:1 as text on cream. The tokens themselves move with the accent
- * (see `src/modules/profile/money-tones.ts`); the classes never do, so this
- * is the only mapping a balance needs, and `src/app/token-contrast.test.ts`
- * holds every ink here to its ratio on every surface the tint puts it on.
+ * reads 2.6:1 as text on cream. Neither the classes nor the tokens behind
+ * them move any more — the money colours are literals in `globals.css`, the
+ * same under every accent — so this is the only mapping a balance needs, and
+ * `src/app/token-contrast.test.ts` holds every ink here to its ratio on every
+ * surface the tint puts it on.
+ *
+ * The `sign` and the `labelKey` are not decoration. They are what carries the
+ * meaning when the colour cannot: an accent is allowed to sit next to a money
+ * colour now, and `AGENTS.md` explains why that had to be accepted.
  *
  * The neutral tone washes with `bg-muted` rather than a colour of its own:
  * settled is the absence of a direction, and a grey tint says so better than
