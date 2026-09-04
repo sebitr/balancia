@@ -62,7 +62,12 @@ export function AppShell({
               aria-disabled={actor.isGuest}
               tabIndex={actor.isGuest ? -1 : undefined}
               className={cn(
-                "tap-target rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+                // `inline-flex`, so the wordmark is the whole of this link's
+                // height. Left inline, the anchor carries a text line box the
+                // wordmark hangs from the top of, and the descender space
+                // below it stood the mark three pixels above the middle of a
+                // header a group screen centres its own mark in.
+                "tap-target inline-flex items-center rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
                 actor.isGuest && "pointer-events-none",
               )}
             >

@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Stand the mark and the name of a group screen's header on the same pixels the dashboard's wordmark uses, at the same size — `fix/header-logo-parity`
 - [ ] Name the two home-screen actions after what they do, and give each the glyph the app already uses for it — `fix/dashboard-cta-glyphs`
 - [ ] Settle three drifts a UX pass found: the tab now says Transactions like the screen it opens, Settle up hands over coins instead of ticking itself done, and every signed figure is written the one way — `fix/vocabulary-drift`
 - [ ] Take the theme toggle out of the signed-in header; Settings › Appearance already owns it, and only a guest still needs it there — `fix/header-theme-toggle`

@@ -125,8 +125,8 @@ export function GroupSwitcher({
   if (isGuest) {
     return (
       <span className="flex min-w-0 items-center gap-2">
-        <BalanciaMark className="size-6 shrink-0" />
-        <span className="truncate text-base font-semibold tracking-[-0.01em]">
+        <BalanciaMark className="size-7 shrink-0" />
+        <span className="truncate font-heading text-lg font-semibold tracking-tight">
           {groupName}
         </span>
       </span>
@@ -138,9 +138,12 @@ export function GroupSwitcher({
    * because the name beside it is the group's — two names in a row, one of
    * them the product's, would read as a title for the other.
    *
-   * The negative margin is alignment: the mark's box is wider than the mark,
-   * so pulling it back over the header's padding stands the glyph itself on
-   * the column's edge rather than the whitespace around it.
+   * The negative margin is alignment: the mark's box is wider and taller than
+   * the mark, so pulling it back by the difference on every side stands the
+   * glyph itself on the column's edge rather than the whitespace around it —
+   * on the pixel the dashboard's wordmark starts on, at the size it draws the
+   * mark at, and without the hover box making this header the taller of the
+   * two. The same trick sizes the name's hover box below.
    */
   return (
     // `flex-1`, so the name is handed every pixel the icon cluster opposite is
@@ -150,9 +153,9 @@ export function GroupSwitcher({
         href="/dashboard"
         transitionTypes={POP}
         aria-label={t("home")}
-        className="tap-target -ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+        className="tap-target -m-1 inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
       >
-        <BalanciaMark className="size-6" />
+        <BalanciaMark className="size-7" />
       </Link>
 
       <Popover open={open} onOpenChange={setOpen}>
@@ -163,11 +166,16 @@ export function GroupSwitcher({
             want of the padding around it. Between this, the `gap-0.5` above
             and the `flex-1`, a name has eight more pixels than it did.
 
+            They are also what puts the name where the dashboard puts
+            "Balancia": 2px of gap and 6px of padding come to the wordmark's
+            own `gap-2`, measured from the same edge, so both headers start
+            their text on the same pixel.
+
             A genuinely long name still truncates, which is correct: the header
             is a secondary display of a name the page states in full in its
             `h1`, and this trigger opens a panel that spells it out. */}
-        <PopoverTrigger className="tap-target group/trigger inline-flex h-[34px] min-w-0 items-center gap-1 rounded-xl px-1.5 transition-colors duration-[140ms] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent motion-reduce:transition-none">
-          <span className="truncate text-base font-semibold tracking-[-0.01em]">
+        <PopoverTrigger className="tap-target group/trigger -my-1 inline-flex min-w-0 items-center gap-1 rounded-xl px-1.5 py-1 transition-colors duration-[140ms] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent motion-reduce:transition-none">
+          <span className="truncate font-heading text-lg font-semibold tracking-tight">
             {groupName}
           </span>
           <ChevronDown
