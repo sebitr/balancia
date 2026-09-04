@@ -218,7 +218,7 @@ export function PositionBreakdown({
                     [section.key]: !state[section.key],
                   }))
                 }
-                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left transition-colors hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left transition-colors hover:bg-wash-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <span className="flex items-center gap-[7px] text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                   <ChevronDown

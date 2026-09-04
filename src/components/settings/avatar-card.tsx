@@ -142,7 +142,7 @@ function Pill({
   return (
     <button
       type="button"
-      className="tap-target inline-flex h-7 items-center gap-1.5 rounded-full border border-input px-2.5 text-xs font-medium transition-colors hover:bg-foreground/6 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+      className="tap-target inline-flex h-7 items-center gap-1.5 rounded-full border border-input px-2.5 text-xs font-medium transition-colors hover:bg-wash-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
       {...props}
     >
       {busy && <Loader2 aria-hidden="true" className="size-3 animate-spin" />}

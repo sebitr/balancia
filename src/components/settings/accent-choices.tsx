@@ -101,7 +101,7 @@ export function AccentChoices({ current }: { current: AccentColor }) {
                 lightness, which is exactly why the palette stops there. */}
             <Check
               aria-hidden="true"
-              className="size-3.5 text-[oklch(0.226_0.072_319)] opacity-0 group-data-[state=checked]:opacity-100"
+              className="size-3.5 text-primary-foreground opacity-0 group-data-[state=checked]:opacity-100"
               strokeWidth={3}
             />
           </RadioGroupPrimitive.Item>

@@ -202,7 +202,7 @@ export function ReceiptReview({
                 value={item.amount}
                 placeholder="0.00"
                 className={`w-24 tabular-nums ${
-                  item.uncertain ? "border-amber-500 dark:border-amber-400" : ""
+                  item.uncertain ? "border-notice-warning" : ""
                 }`}
                 onValueChange={(amount) => updateItem(item.id, { amount })}
               />

@@ -56,7 +56,7 @@ export function PageHeader({
           href={back.href}
           transitionTypes={POP}
           aria-label={back.label}
-          className="tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-foreground/7 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-wash-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           <ArrowLeft aria-hidden="true" className="size-4.5" />
         </Link>
@@ -100,7 +100,7 @@ export function PageHeaderClose({
     <Link
       href={href}
       aria-label={label}
-      className="tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full bg-foreground/7 text-foreground transition-colors hover:bg-foreground/12 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full bg-wash-2 text-foreground transition-colors hover:bg-wash-4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       <X aria-hidden="true" className="size-4" strokeWidth={2.2} />
     </Link>

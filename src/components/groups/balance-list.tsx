@@ -191,7 +191,9 @@ function ComparisonBar({
         <span
           className={cn(
             "absolute inset-y-0",
-            value < 0n ? "right-1/2 bg-negative" : "left-1/2 bg-positive",
+            value < 0n
+              ? `right-1/2 ${TONE.negative.fill}`
+              : `left-1/2 ${TONE.positive.fill}`,
           )}
           style={{ width: `${width}%` }}
         />

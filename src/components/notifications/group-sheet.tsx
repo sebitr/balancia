@@ -113,7 +113,7 @@ function Option({
       // The wake time is part of what the option means, so it is part of the
       // name a screen reader reads rather than a detail beside it.
       aria-label={meta ? `${label}, ${meta}` : undefined}
-      className="flex h-11 items-center gap-3 rounded-xl bg-foreground/5 px-3.5 text-left text-sm transition-colors hover:bg-foreground/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+      className="flex h-11 items-center gap-3 rounded-xl bg-wash-2 px-3.5 text-left text-sm transition-colors hover:bg-wash-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
     >
       <Icon aria-hidden="true" className="size-4 shrink-0" />
       <span className="min-w-0 flex-1 truncate">{label}</span>

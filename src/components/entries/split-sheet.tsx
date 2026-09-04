@@ -356,7 +356,7 @@ export function SplitSheet({
           className={cn(
             "text-xs",
             note.tone === "error"
-              ? "text-negative-ink"
+              ? "text-destructive-ink"
               : "text-muted-foreground",
           )}
         >

@@ -307,7 +307,7 @@ export function PayoutMethodsCard({
                     type="button"
                     disabled={pending}
                     onClick={() => prefer(entry.method)}
-                    className="shrink-0 rounded-full bg-foreground/7 px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-foreground/12 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                    className="shrink-0 rounded-full bg-wash-2 px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-wash-4 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
                   >
                     {t("makePreferred")}
                   </button>
@@ -318,7 +318,7 @@ export function PayoutMethodsCard({
                   disabled={pending}
                   onClick={() => remove(entry.method)}
                   aria-label={t("removeMethod", { method: label })}
-                  className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                  className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
                 >
                   <Trash2 aria-hidden="true" className="size-3.5" />
                 </button>
@@ -335,7 +335,7 @@ export function PayoutMethodsCard({
                   </Label>
                   <PayoutDetailInput
                     id={`payout-${entry.method}`}
-                    className="h-10 rounded-xl bg-foreground/5 px-3"
+                    className="h-10 rounded-xl bg-wash-2 px-3"
                     method={entry.method}
                     value={entry.detail}
                     invalid={Boolean(error)}
@@ -373,7 +373,7 @@ export function PayoutMethodsCard({
           aria-haspopup="dialog"
           className={cn(
             "flex min-h-13 w-full items-center gap-2.5 px-4 py-3 text-left transition-colors",
-            "hover:bg-foreground/4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            "hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
             entries.length > 0 && "border-t border-border",
           )}
         >
@@ -514,7 +514,7 @@ function SwissAddress({ initial }: { initial: SwissCreditorAddress | null }) {
       </Label>
       <Input
         id={`address-${key}`}
-        className="h-9.5 rounded-[11px] bg-foreground/5 px-3"
+        className="h-9.5 rounded-[11px] bg-wash-2 px-3"
         value={address[key] ?? ""}
         placeholder={props.placeholder}
         autoComplete={props.autoComplete}
@@ -541,8 +541,8 @@ function SwissAddress({ initial }: { initial: SwissCreditorAddress | null }) {
             className={cn(
               "shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-semibold",
               complete
-                ? "bg-positive/16 text-positive-ink"
-                : "bg-foreground/8 text-muted-foreground",
+                ? "bg-positive/15 text-positive-ink"
+                : "bg-wash-3 text-muted-foreground",
             )}
           >
             {complete ? t("addressReady") : t("addressIncomplete")}

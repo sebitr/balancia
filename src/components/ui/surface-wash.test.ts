@@ -50,6 +50,22 @@ const EXEMPT: { file: string; why: string }[] = [
     file: "src/components/ui/sheet.tsx",
     why: "as dialog.tsx",
   },
+  {
+    file: "src/components/layout/group-switcher.tsx",
+    why: "a backdrop behind the switcher — a scrim, not a surface",
+  },
+  {
+    file: "src/components/groups/balance-list.tsx",
+    why: "the zero line drawn across a balance bar: a rule, and it has to carry against the bar's own wash",
+  },
+  {
+    file: "src/components/groups/group-statistics.tsx",
+    why: "as balance-list.tsx",
+  },
+  {
+    file: "src/components/members/member-statistics.tsx",
+    why: "as balance-list.tsx",
+  },
 ];
 
 const BANNED: { pattern: RegExp; instead: string }[] = [
@@ -66,7 +82,10 @@ const BANNED: { pattern: RegExp; instead: string }[] = [
     instead: "border-border, or border-input where the line has to carry",
   },
   {
-    pattern: /\bbg-foreground\/\[[\d.]+\]/g,
+    // Both spellings: the arbitrary `/[0.035]` and the plain `/5`. Neither is
+    // wrong on its own; nine of them side by side is what the scale is for.
+    pattern:
+      /\b(?:hover:|active:|focus:|group-hover:|dark:)?bg-foreground\/(?:\[[\d.]+\]|\d+)/g,
     instead: "one of the four wash steps",
   },
   {

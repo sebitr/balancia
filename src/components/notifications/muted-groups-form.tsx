@@ -103,7 +103,7 @@ export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
-          className="-mx-4 mt-3.5 -mb-4 flex w-[calc(100%+2rem)] items-center border-t border-border px-4 py-3 text-xs font-semibold text-primary-ink transition-colors hover:bg-foreground/4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="-mx-4 mt-3.5 -mb-4 flex w-[calc(100%+2rem)] items-center border-t border-border px-4 py-3 text-xs font-semibold text-primary-ink transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           {expanded
             ? tSettings("showFewer")

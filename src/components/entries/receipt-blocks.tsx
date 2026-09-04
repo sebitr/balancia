@@ -78,7 +78,7 @@ export function ScanBanner({
   const t = useTranslations("addEntry.scan");
 
   return (
-    <div className="flex items-start gap-3 rounded-[17px] border border-positive/35 bg-positive/12 p-3.5">
+    <div className="flex items-start gap-3 rounded-[17px] border border-positive/35 bg-positive/15 p-3.5">
       {/* A drawn stand-in for the receipt; the real image is optional and is
           only kept when the scanner was told to keep it. */}
       <span
@@ -172,7 +172,7 @@ export function ReceiptItems({
                 className={cn(
                   "shrink-0 rounded-full px-2 py-0.5 text-2xs",
                   missing
-                    ? "text-negative-ink"
+                    ? "text-destructive-ink"
                     : custom
                       ? "bg-primary/20 font-semibold text-foreground"
                       : "bg-wash-2 text-muted-foreground",

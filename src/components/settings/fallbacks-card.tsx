@@ -186,7 +186,7 @@ function AppleRow({ linked }: { linked: boolean }) {
 
 const PILL = cn(
   "tap-target inline-flex h-7 shrink-0 items-center rounded-full border border-input px-2.5",
-  "text-xs font-medium transition-colors hover:bg-foreground/6",
+  "text-xs font-medium transition-colors hover:bg-wash-2",
   "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
 );
 

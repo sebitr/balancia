@@ -204,7 +204,12 @@ export function PositionWidget({
             {t("positionEyebrow")}
           </p>
           {allSquare ? (
-            <p className="text-[1.875rem] font-semibold tracking-[-0.025em] text-neutral-balance-ink">
+            <p
+              className={cn(
+                "text-[1.875rem] font-semibold tracking-[-0.025em]",
+                TONE.neutral.ink,
+              )}
+            >
               {tMoney("settledUpBadge")}
             </p>
           ) : ratesUnavailable ? (
@@ -247,13 +252,13 @@ export function PositionWidget({
                       {owed > 0 && (
                         <span
                           style={{ flexGrow: owed }}
-                          className="rounded-full bg-positive"
+                          className={cn("rounded-full", TONE.positive.fill)}
                         />
                       )}
                       {owing > 0 && (
                         <span
                           style={{ flexGrow: owing }}
-                          className="rounded-full bg-negative"
+                          className={cn("rounded-full", TONE.negative.fill)}
                         />
                       )}
                     </>

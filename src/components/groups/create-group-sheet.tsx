@@ -168,7 +168,7 @@ export function CreateGroupSheet({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="tap-target flex size-8 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors duration-150 hover:bg-foreground/12 hover:text-foreground"
+                className="tap-target flex size-8 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors duration-150 hover:bg-wash-4 hover:text-foreground"
               >
                 <X aria-hidden="true" className="size-4" />
                 <span className="sr-only">{t("close")}</span>
@@ -338,7 +338,7 @@ function IdentityRow({
               className="size-13 rounded-2xl"
             />
           ) : (
-            <span className="flex size-13 items-center justify-center rounded-2xl bg-foreground/5 text-muted-foreground inset-ring inset-ring-foreground/14">
+            <span className="flex size-13 items-center justify-center rounded-2xl bg-wash-2 text-muted-foreground inset-ring inset-ring-foreground/14">
               <Plus aria-hidden="true" className="size-6" />
             </span>
           )}
@@ -363,7 +363,7 @@ function IdentityRow({
           maxLength={120}
           autoComplete="off"
           placeholder={t("name")}
-          className="h-13 flex-1 rounded-[14px] border-0 bg-foreground/5 px-4 text-base font-medium tracking-[-0.01em] inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary"
+          className="h-13 flex-1 rounded-[14px] border-0 bg-wash-2 px-4 text-base font-medium tracking-[-0.01em] inset-ring inset-ring-foreground/12 focus-visible:bg-wash-2 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary"
         />
       </div>
 
@@ -375,13 +375,13 @@ function IdentityRow({
           maxLength={2000}
           autoFocus
           placeholder={t("descriptionOptional")}
-          className="min-h-17 resize-none rounded-[14px] border-0 bg-foreground/5 px-4 py-3 text-base inset-ring inset-ring-foreground/12 focus-visible:bg-foreground/7 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary md:text-sm"
+          className="min-h-17 resize-none rounded-[14px] border-0 bg-wash-2 px-4 py-3 text-base inset-ring inset-ring-foreground/12 focus-visible:bg-wash-2 focus-visible:ring-[3px] focus-visible:ring-primary/28 focus-visible:inset-ring-primary md:text-sm"
         />
       ) : (
         <button
           type="button"
           onClick={onOpenDescription}
-          className="tap-target h-7 self-start rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-foreground/6"
+          className="tap-target h-7 self-start rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-wash-2"
         >
           + {t("addDescription")}
         </button>
@@ -430,7 +430,7 @@ function Participants({
           // Names repeat, so position is the only identity a row has.
           <li
             key={`${member.name}-${index}`}
-            className="flex h-12 items-center gap-2.5 rounded-[14px] bg-foreground/4 pr-2 pl-2.5 inset-ring inset-ring-foreground/7"
+            className="flex h-12 items-center gap-2.5 rounded-[14px] bg-wash-1 pr-2 pl-2.5 inset-ring inset-ring-foreground/7"
           >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-2xs font-semibold text-accent-foreground">
               {member.name.trim().slice(0, 1).toUpperCase()}
@@ -452,7 +452,7 @@ function Participants({
                 "tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150",
                 member.you
                   ? "pointer-events-none opacity-0"
-                  : "hover:bg-foreground/8 hover:text-foreground",
+                  : "hover:bg-wash-3 hover:text-foreground",
               )}
               tabIndex={member.you ? -1 : undefined}
               aria-hidden={member.you}
@@ -495,7 +495,7 @@ function Participants({
           onClick={onAdd}
           disabled={draft.trim() === ""}
           className={cn(
-            "tap-target flex h-8 shrink-0 items-center rounded-full bg-foreground/8 px-3 text-xs font-semibold transition-opacity duration-150",
+            "tap-target flex h-8 shrink-0 items-center rounded-full bg-wash-3 px-3 text-xs font-semibold transition-opacity duration-150",
             draft.trim() === "" ? "opacity-35" : "opacity-100",
           )}
         >
@@ -559,7 +559,7 @@ function Currencies({
                 "flex gap-2.5 rounded-[14px] p-3 text-left transition-colors duration-150",
                 selected
                   ? "bg-primary/10 inset-ring inset-ring-primary/50"
-                  : "bg-foreground/3 inset-ring inset-ring-foreground/8",
+                  : "bg-wash-1 inset-ring inset-ring-foreground/8",
               )}
             >
               <span
@@ -629,7 +629,7 @@ function CurrencyRow({
     <button
       type="button"
       onClick={onOpen}
-      className="flex h-12 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-foreground/4"
+      className="flex h-12 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-wash-1"
     >
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="flex flex-1 items-center justify-end gap-1.5 text-sm font-medium">
@@ -660,7 +660,7 @@ function TimezoneRow({
   const t = useTranslations("groupForm");
 
   return (
-    <div className="relative flex h-12 items-center justify-between rounded-[14px] px-3.5 inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-foreground/4">
+    <div className="relative flex h-12 items-center justify-between rounded-[14px] px-3.5 inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-wash-1">
       <span aria-hidden="true" className="text-xs text-muted-foreground">
         {t("timezoneShort")}
       </span>

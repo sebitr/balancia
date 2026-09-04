@@ -35,7 +35,7 @@ function IconTile({
         // One row in the hub is tinted, and only one: the way you are paid is
         // the only destination there that is about money leaving somebody
         // else's account rather than about how this one is set up.
-        accent ? "bg-primary/18 text-primary-ink" : "bg-foreground/8",
+        accent ? "bg-primary/18 text-primary-ink" : "bg-wash-3",
       )}
     >
       <Icon className="size-4" strokeWidth={1.9} />
@@ -119,7 +119,7 @@ function RowBody({
  */
 const ROW = cn(
   "flex min-h-11 w-full items-center gap-3 px-4 py-3.5 text-left",
-  "transition-colors hover:bg-foreground/4 focus-visible:ring-3",
+  "transition-colors hover:bg-wash-1 focus-visible:ring-3",
   "focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:-outline-offset-2",
 );
 

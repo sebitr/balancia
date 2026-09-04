@@ -27,7 +27,7 @@ export function IdentityCard({
     <Link
       href="/settings/account"
       transitionTypes={PUSH}
-      className="flex shrink-0 items-center gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-foreground/4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="flex shrink-0 items-center gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       <AccountAvatar
         initial={initialOf(name)}

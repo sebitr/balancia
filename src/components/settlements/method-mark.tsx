@@ -96,7 +96,10 @@ export function MethodMark({
         // mark brings its own background, and the brand hue behind it would
         // only fight with it.
         background: logoLoaded ? "transparent" : method.brandColor,
-        color: method.onBrand === "dark" ? "oklch(0.226 0.072 319)" : "#fff",
+        color:
+          method.onBrand === "dark"
+            ? "var(--primary-foreground)"
+            : "var(--negative-foreground)",
       }}
     >
       {!logoLoaded && label.charAt(0).toUpperCase()}

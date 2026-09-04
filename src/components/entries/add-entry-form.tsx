@@ -1825,7 +1825,7 @@ export function AddEntryForm({
           <button
             type="button"
             onClick={onClose}
-            className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/6 text-muted-foreground transition-colors duration-150 hover:bg-foreground/12 hover:text-foreground"
+            className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors duration-150 hover:bg-wash-4 hover:text-foreground"
           >
             <X aria-hidden="true" className="size-4" />
             <span className="sr-only">{t("close")}</span>

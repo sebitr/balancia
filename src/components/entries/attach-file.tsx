@@ -98,7 +98,7 @@ export function AttachFile({
         {pending ? t("uploading") : t("add")}
       </button>
 
-      {error && <p className="text-xs text-negative-ink">{error}</p>}
+      {error && <p className="text-xs text-destructive-ink">{error}</p>}
 
       {files.length > 0 && (
         <ul className="space-y-1">

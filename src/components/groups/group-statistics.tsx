@@ -450,7 +450,7 @@ function Flows({
       sub: t("flowRevenueSub", { count: flows.revenueCount }),
       minorUnits: flows.revenue,
       tone: "text-positive-ink",
-      chip: "bg-[color-mix(in_oklch,var(--positive)_14%,transparent)] text-positive-ink",
+      chip: "bg-positive/15 text-positive-ink",
       icon: ArrowDown,
     },
     {
@@ -773,8 +773,8 @@ function WhoCarries({
                   className={cn(
                     "absolute inset-y-0 rounded-full",
                     !signed && "left-0 bg-[var(--chart-1)]",
-                    signed && value >= 0n && "left-1/2 bg-positive",
-                    signed && value < 0n && "right-1/2 bg-negative",
+                    signed && value >= 0n && `left-1/2 ${TONE.positive.fill}`,
+                    signed && value < 0n && `right-1/2 ${TONE.negative.fill}`,
                   )}
                   style={{ width: `${width}%` }}
                 />

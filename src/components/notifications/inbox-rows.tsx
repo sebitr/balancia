@@ -205,9 +205,7 @@ const ROW_FOCUS =
 
 /** The hairline under a row, starting where the sentence does. */
 export function RowDivider() {
-  return (
-    <span aria-hidden="true" className="ml-[52px] block h-px bg-foreground/8" />
-  );
+  return <span aria-hidden="true" className="ml-[52px] block h-px bg-wash-3" />;
 }
 
 export function GroupChip({
@@ -394,7 +392,7 @@ export function ImportDigest({
         className={cn(ROW_GRID, ROW_FOCUS)}
       >
         <span aria-hidden="true" />
-        <span className="flex size-[30px] items-center justify-center rounded-full bg-foreground/6">
+        <span className="flex size-[30px] items-center justify-center rounded-full bg-wash-2">
           <Download
             aria-hidden="true"
             className="size-3.5 text-muted-foreground"
@@ -524,7 +522,7 @@ export function Dismissible({
         aria-hidden="true"
         className="absolute inset-0 flex items-center justify-end bg-destructive/15 pr-4"
       >
-        <span className="text-2xs font-semibold text-negative-ink">
+        <span className="text-2xs font-semibold text-destructive-ink">
           {t("dismiss")}
         </span>
       </span>
@@ -537,7 +535,7 @@ export function Dismissible({
           className={cn(
             "sr-only focus:not-sr-only focus:absolute focus:top-1 focus:right-0 focus:z-10",
             "focus:rounded-md focus:bg-destructive/15 focus:px-2 focus:py-1",
-            "focus:text-2xs focus:font-semibold focus:text-negative-ink",
+            "focus:text-2xs focus:font-semibold focus:text-destructive-ink",
             "focus:ring-2 focus:ring-ring focus:outline-none",
           )}
         >

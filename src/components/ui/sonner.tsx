@@ -186,7 +186,7 @@ const Toaster = ({
             closeButton: cn(
               "absolute top-1/2 right-2.5 flex size-7 -translate-y-1/2 cursor-pointer",
               "items-center justify-center rounded-full text-muted-foreground",
-              "transition-colors hover:bg-foreground/8 hover:text-foreground",
+              "transition-colors hover:bg-wash-3 hover:text-foreground",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             ),
           },

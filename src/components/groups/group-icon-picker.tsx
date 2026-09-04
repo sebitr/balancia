@@ -54,7 +54,7 @@ export function GroupIconPicker({
         <button
           type="button"
           onClick={onBack}
-          className="tap-target -ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-150 hover:bg-foreground/8"
+          className="tap-target -ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-150 hover:bg-wash-3"
         >
           <ArrowLeft aria-hidden="true" className="size-[18px]" />
           <span className="sr-only">{tCommon("back")}</span>
@@ -68,7 +68,7 @@ export function GroupIconPicker({
         <div className="flex items-center gap-3.5">
           <span
             aria-hidden="true"
-            className="flex size-16 shrink-0 items-center justify-center rounded-[20px] bg-foreground/5"
+            className="flex size-16 shrink-0 items-center justify-center rounded-[20px] bg-wash-2"
             style={
               Chosen
                 ? {
@@ -163,7 +163,7 @@ export function GroupIconPicker({
                     "flex aspect-square items-center justify-center rounded-[14px] transition-colors duration-150",
                     selected
                       ? ""
-                      : "bg-foreground/5 text-foreground/85 inset-ring inset-ring-foreground/8",
+                      : "bg-wash-2 text-foreground/85 inset-ring inset-ring-foreground/8",
                   )}
                   style={
                     selected
