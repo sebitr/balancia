@@ -183,7 +183,9 @@ export const users = pgTable(
     // Two accounts sharing a handle would share one entry in a password
     // manager's list. Thirty-two random bytes will not collide; the index is
     // what makes that a guarantee rather than an expectation.
-    uniqueIndex("users_webauthn_user_handle_unique").on(table.webauthnUserHandle),
+    uniqueIndex("users_webauthn_user_handle_unique").on(
+      table.webauthnUserHandle,
+    ),
     check(
       "users_preferred_currency_format",
       sql`${table.preferredCurrency} IS NULL OR ${table.preferredCurrency} ~ '^[A-Z]{3}$'`,

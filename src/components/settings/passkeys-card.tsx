@@ -16,6 +16,7 @@ import {
   type PasskeyRecord,
 } from "@/modules/auth/passkey-client";
 import { usePasskeySupport } from "@/components/auth/use-passkey-support";
+import { passkeyProviderName } from "@/modules/auth/passkey-providers";
 
 /**
  * The devices that can sign this account in.
@@ -33,15 +34,21 @@ import { usePasskeySupport } from "@/components/auth/use-passkey-support";
  *
  * Removing asks first. A passkey is not recoverable, and on an account whose
  * only other credential is a password on a different device, removing the
- * wrong one is how somebody locks themselves out.
+ * wrong one is how somebody locks themselves out. Where it is the *last* way
+ * in, the sheet says so outright rather than repeating the general warning:
+ * there is a real difference between "make sure you have another way in" and
+ * "this is the only one".
  */
 export function PasskeysCard({
   relyingPartyId,
   secureContext,
+  hasOtherWayIn,
 }: {
   relyingPartyId: string;
   /** False on an http origin that is not localhost: WebAuthn will not run. */
   secureContext: boolean;
+  /** Whether a password or a linked Apple account could still get them in. */
+  hasOtherWayIn: boolean;
 }) {
   const queryClient = useQueryClient();
   const t = useTranslations("userSettings");
@@ -103,6 +110,19 @@ export function PasskeysCard({
   };
 
   const count = data?.length ?? 0;
+  // The removal that strands somebody: their last passkey, on an account that
+  // has no password and no Apple link behind it.
+  const removingLastWayIn = !hasOtherWayIn && count === 1;
+
+  /**
+   * What to call a passkey, best answer first.
+   *
+   * A typed label wins because somebody chose it. Otherwise the authenticator
+   * names itself through its AAGUID, which is what makes four rows tellable
+   * apart. The generic fallback is for authenticators that decline to say.
+   */
+  const labelFor = (passkey: PasskeyRecord): string =>
+    passkey.name || passkeyProviderName(passkey.aaguid) || tPasskeys("unnamed");
 
   return (
     <section className="shrink-0 overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10">
@@ -156,7 +176,7 @@ export function PasskeysCard({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
-                  {passkey.name || tPasskeys("unnamed")}
+                  {labelFor(passkey)}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
                   {tPasskeys("added", { date: dates.at(passkey.createdAt) })}
@@ -164,13 +184,25 @@ export function PasskeysCard({
                     ` · ${tPasskeys("lastUsed", {
                       date: dates.at(passkey.lastUsedAt),
                     })}`}
+                  {/*
+                   * Whether this one survives a lost phone, which is the
+                   * question somebody is actually asking when they look at
+                   * this list. Re-read from every assertion rather than frozen
+                   * at registration: a credential made before its owner
+                   * switched on iCloud Keychain is synced a week later.
+                   */}
+                  {` · ${
+                    passkey.backedUp
+                      ? tPasskeys("synced")
+                      : tPasskeys("deviceOnly")
+                  }`}
                 </span>
               </span>
               <button
                 type="button"
                 onClick={() => setRemoving(passkey)}
                 aria-label={tPasskeys("removeLabel", {
-                  name: passkey.name || tPasskeys("thisPasskey"),
+                  name: labelFor(passkey),
                 })}
                 className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-wash-3 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
               >
@@ -205,7 +237,11 @@ export function PasskeysCard({
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}
         title={tPasskeys("removeTitle")}
-        body={tPasskeys("removeBody")}
+        body={
+          removingLastWayIn
+            ? tPasskeys("removeLastBody")
+            : tPasskeys("removeBody")
+        }
         confirmLabel={tCommon("remove")}
         destructive
         onConfirm={() => removing && onDelete(removing)}

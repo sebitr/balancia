@@ -1961,7 +1961,10 @@
     "addedToast": "Clé d’accès ajoutée",
     "removedToast": "Clé d’accès supprimée",
     "registerFailed": "Cette clé d’accès n’a pas pu être enregistrée.",
-    "removeFailed": "Cette clé d’accès n’a pas pu être supprimée."
+    "removeFailed": "Cette clé d’accès n’a pas pu être supprimée.",
+    "synced": "synchronisée",
+    "deviceOnly": "sur cet appareil uniquement",
+    "removeLastBody": "C’est le seul moyen d’accéder à ton compte. Si tu la supprimes, tu devras passer par ton adresse e-mail pour y revenir."
   },
   "importWizard": {
     "fileLabel": "Sauvegarde ou export",

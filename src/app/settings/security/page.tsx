@@ -90,6 +90,7 @@ export default async function SecuritySettingsPage({
       <PasskeysCard
         relyingPartyId={env.webAuthnRpId}
         secureContext={secureContext}
+        hasOtherWayIn={password || apple !== null}
       />
 
       <FallbacksCard

@@ -27,6 +27,7 @@ const supportsPasskeyAutofill = vi.fn();
 const armPasskeyAutofill = vi.fn();
 const cancelPasskeyCeremony = vi.fn();
 const signInWithPasskey = vi.fn();
+const upgradeToPasskey = vi.fn();
 
 vi.mock("@/modules/auth/actions", () => ({
   signInAction: (...args: unknown[]) => signInAction(...args),
@@ -46,6 +47,7 @@ vi.mock("@/modules/auth/passkey-client", () => ({
   armPasskeyAutofill: () => armPasskeyAutofill(),
   cancelPasskeyCeremony: () => cancelPasskeyCeremony(),
   signInWithPasskey: () => signInWithPasskey(),
+  upgradeToPasskey: () => upgradeToPasskey(),
 }));
 
 const { SignInForm } = await import("./sign-in-form");
@@ -244,11 +246,25 @@ describe("passkey autofill", () => {
 
   it("goes to the dashboard when the passkey is picked from the dropdown", async () => {
     supportsPasskeyAutofill.mockResolvedValue(true);
-    armPasskeyAutofill.mockResolvedValue(undefined);
+    armPasskeyAutofill.mockResolvedValue(true);
 
     renderWithIntl(<SignInForm mailEnabled={false} />);
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("stays put when the request never armed", async () => {
+    supportsPasskeyAutofill.mockResolvedValue(true);
+    // False is the options handout refusing — the rate limiter, most likely,
+    // which somebody flicking between tabs can reach without doing anything
+    // wrong. Nothing was offered, so nothing was picked.
+    armPasskeyAutofill.mockResolvedValue(false);
+
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    await waitFor(() => expect(armPasskeyAutofill).toHaveBeenCalledOnce());
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("says nothing when the request is aborted", async () => {

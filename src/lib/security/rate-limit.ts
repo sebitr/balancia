@@ -37,6 +37,7 @@ export type RateLimitBucket =
   | "upload"
   | "receiptScan"
   | "rateLookup"
+  | "passkeyChallenge"
   | "pushSubscribe"
   | "pushTest"
   | "telemetryCrash"
@@ -56,6 +57,15 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
   const authMax = getEnv().AUTH_RATE_LIMIT_MAX;
   return {
     signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
+    /*
+     * The sign-in options handout, which writes a challenge row every time it
+     * answers. Autofill arms one on every visit to the sign-in page and again
+     * whenever the tab comes back to the front, so this is reached by ordinary
+     * readers doing nothing wrong — which is why it is sixty rather than the
+     * ten `signIn` allows, and why exceeding it costs an unarmed dropdown
+     * rather than an error anybody is shown.
+     */
+    passkeyChallenge: { limit: Math.max(60, authMax), windowSeconds: 600 },
     /*
      * Per address, and an address is a household: the people a group's link
      * is sent to are at one table, on one wifi, and they all sign up in the
