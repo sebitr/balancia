@@ -22,6 +22,12 @@ import {
  * says what is collected in the same size type as the label. A switch that is
  * disabled says why — the deployment forbade it — rather than silently
  * refusing to move.
+ *
+ * No "Saved" either. The switch is written the moment it moves and moving it
+ * back is one tap on the same switch, so the only thing a toast could add is
+ * a second voice saying what the control already says. A refused write is the
+ * one thing the switch cannot report itself: it goes back, and the error is
+ * spoken.
  */
 export function TelemetrySettingsForm({
   usageEnabled,
@@ -55,9 +61,7 @@ export function TelemetrySettingsForm({
       if (!result.ok) {
         revert();
         toast.error(result.error ?? t("saveFailed"));
-        return;
       }
-      toast.success(value ? t("savedOn") : t("savedOff"));
     });
   };
 
