@@ -74,12 +74,14 @@ export async function createGroup(
   await page.getByRole("textbox", { name: "Group name" }).fill(options.name);
 
   if (options.mode === "separate") {
-    await page.getByRole("radio", { name: /Keep currencies separate/ }).click();
+    await page.getByRole("radio", { name: /A balance per currency/ }).click();
   }
 
   if (options.baseCurrency) {
-    // The currency is one row that opens the full list in the same sheet.
-    await page.getByRole("button", { name: /currency/i }).click();
+    // The currency is one row that opens the full list in the same sheet, and
+    // it is only there under the converted answer — the mode that has a
+    // balance for it to be in.
+    await page.getByRole("button", { name: /That balance is in/ }).click();
     await page
       .getByRole("textbox", { name: "Search a currency" })
       .fill(options.baseCurrency);

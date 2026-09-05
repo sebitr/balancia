@@ -13,6 +13,7 @@ words must not change when it moves. See _Keeping the list_.
 
 Started, on a branch, not yet merged.
 
+- [ ] Ask one question about currencies when a group is created instead of two paragraphs, a currency the group never keeps and a time zone the device already knows — `feat/group-creation-one-question`
 - [ ] Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — `chore/reap-merged-branches`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-install`
 
