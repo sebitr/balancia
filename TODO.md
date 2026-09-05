@@ -12,6 +12,7 @@ appending at once conflict on different lines.
 Started, on a branch, not yet merged.
 
 - [ ] Say nothing when a setting saves itself and the control is its own way back — the language list, the format chips, the notification, mute, telemetry and push switches — `claude/remove-toaster-single-click-zm329r`
+- [ ] Stop asking for a name the account already has: stamp when somebody chose one instead of guessing from the address — `claude/name-field-validation-msg-k3jz1u`
 - [ ] Stop deriving the money colours from the accent: one green, one red, one amber on every account, one red for owing and deleting, and the appearance screen down to what earns its place — `fix/money-colours-hold-still`
 - [ ] Stand the mark and the name of a group screen's header on the same pixels the dashboard's wordmark uses, at the same size — `fix/header-logo-parity`
 - [ ] Name the two home-screen actions after what they do, and give each the glyph the app already uses for it — `fix/dashboard-cta-glyphs`
@@ -49,6 +50,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-05 Read the favicon journey's colours from the palette the icons are generated from, so `pnpm test:e2e` stops failing on main — #290
 - [x] 2026-09-03 Keep the money colours clear of the accent, and add Paper, Midnight and an increased-contrast setting — #281
 - [x] 2026-09-03 Pin browserslist and fast-uri past the advisories that had failed the dependency audit on every branch since 1 September — #282
 - [x] 2026-08-31 Rework the Add Entry drawer: income vocabulary, settlement pairs, recurrence, entry friction — #271

@@ -53,6 +53,24 @@ export const users = pgTable(
     /** Stored lowercased; `email_lookup` is what uniqueness is enforced on. */
     email: text("email").notNull(),
     name: text("name").notNull(),
+    /**
+     * When a person chose the name above. Null means nobody has.
+     *
+     * Two signups write the account before anything has asked what to call
+     * it — the code and passkey routes, whose name screen comes *after* the
+     * address, and an Apple sign-in that arrived without a full name — and
+     * both stand the address's local part in until the screen that follows
+     * overwrites it. Anyone who closed the tab in between is "cold-mtke" to
+     * every group they join, and nothing asked again.
+     *
+     * This column is what the dashboard's nudge reads, and it is a stamp
+     * rather than a guess. The guess it replaces compared the name with the
+     * local part on every render, which cannot tell a placeholder from
+     * somebody called Seb whose address is seb@ — and nagged the second
+     * reader forever. Every path that takes a name from a person stamps it;
+     * the two that derive one leave it null.
+     */
+    nameChosenAt: timestamp("name_chosen_at", { withTimezone: true }),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     /** scrypt hash. Null for an account that only has passkeys. */
     passwordHash: text("password_hash"),
@@ -324,6 +342,16 @@ export const webauthnChallenges = pgTable(
      * authenticator has answered.
      */
     signupEmail: text("signup_email"),
+    /**
+     * The name that ceremony was given, when it was given one.
+     *
+     * Null on a signup that never asked — the passkey button sits *before*
+     * the name screen on the routes that have one — and the account it
+     * creates is stamped as unnamed for the dashboard to ask about later.
+     * A placeholder is derived where a ceremony needs a string to show, and
+     * is never written here: this column holds what a person typed or
+     * nothing at all.
+     */
     signupName: text("signup_name"),
     /**
      * base64url handle minted for the signup ceremony and echoed back by the
@@ -341,12 +369,20 @@ export const webauthnChallenges = pgTable(
     uniqueIndex("webauthn_challenges_challenge_unique").on(table.challenge),
     index("webauthn_challenges_expires_idx").on(table.expiresAt),
     index("webauthn_challenges_user_idx").on(table.userId),
-    // The three signup columns are one fact and travel together, and no other
-    // kind of ceremony carries them. A row that half-remembers who it was
-    // going to create cannot exist.
+    // The address and the handle are one fact and travel together, and no
+    // other kind of ceremony carries them. A row that half-remembers who it
+    // was going to create cannot exist. `signupName` is deliberately outside
+    // this: a signup that was never told a name is an ordinary state, and the
+    // account it makes is the one the dashboard asks.
     check(
       "webauthn_challenges_signup_complete",
-      sql`(${table.kind} = 'signup') = (${table.signupEmail} IS NOT NULL AND ${table.signupName} IS NOT NULL AND ${table.userHandle} IS NOT NULL)`,
+      sql`(${table.kind} = 'signup') = (${table.signupEmail} IS NOT NULL AND ${table.userHandle} IS NOT NULL)`,
+    ),
+    // ...but a name on a ceremony that is not a signup is nobody's, and
+    // nothing would ever read it.
+    check(
+      "webauthn_challenges_signup_name_scope",
+      sql`${table.kind} = 'signup' OR ${table.signupName} IS NULL`,
     ),
     // Nobody is signed in during a signup, so a signup challenge that names a
     // user is a bug rather than a state.

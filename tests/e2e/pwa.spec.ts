@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { palette } from "@/modules/auth/emails/tokens";
 
 /**
  * PWA installability: the manifest, its icons, and the offline shell.
@@ -96,10 +97,14 @@ test("links a real Balancia favicon, not the framework default", async ({
   expect(ico.readUInt16LE(2)).toBe(1); // type: icon
   expect(ico.readUInt16LE(4)).toBe(3); // 16, 32 and 48px entries
 
-  const svg = await (await request.get("/icon.svg")).text();
+  const svg = (await (await request.get("/icon.svg")).text()).toLowerCase();
   // The plum ground and coral dot are the mark; the Next.js logo has neither.
-  expect(svg).toContain("#2a0e31");
-  expect(svg).toContain("#f97361");
+  // Read from the palette `scripts/generate-icons.ts` draws them from, and
+  // folded to one case: the file is generated, so neither the spelling of a
+  // hex nor a retuned token is a promise this test should be holding anyone
+  // to. Transcribed, it went stale the day the icons were regenerated.
+  expect(svg).toContain(palette.ink.toLowerCase());
+  expect(svg).toContain(palette.primary.toLowerCase());
 });
 
 test("registers a service worker and serves it from the root scope", async ({
