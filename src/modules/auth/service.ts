@@ -15,6 +15,7 @@ import {
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage";
+import { provisionalNameFor } from "@/modules/profile/provisional-name";
 import {
   generateToken,
   hashToken,
@@ -152,7 +153,15 @@ export interface RegisterResult {
 export async function insertUser(
   input: {
     readonly email: string;
-    readonly name: string;
+    /**
+     * What a person typed, or null when none of them has been asked yet.
+     *
+     * Null is not an error and not an empty name: the address's local part
+     * stands in, and the row is left unstamped so the dashboard knows to ask.
+     * Saying it here rather than passing a placeholder up from the caller is
+     * what stops a derived name being mistaken for a chosen one later.
+     */
+    readonly name: string | null;
     /** Null for an account whose only credential is a passkey or a code. */
     readonly passwordHash: string | null;
   },
@@ -164,7 +173,8 @@ export async function insertUser(
       .insert(users)
       .values({
         email: input.email,
-        name: input.name,
+        name: input.name ?? provisionalNameFor(input.email),
+        nameChosenAt: input.name === null ? null : new Date(),
         passwordHash: input.passwordHash,
         /*
          * The first account on an instance is its administrator: on a
@@ -227,17 +237,21 @@ export function neverGotIn() {
  *
  * The name and the credential are replaced. Whoever made the first attempt may
  * not be the person about to prove the inbox, and a password they chose must
- * not outlive the proof that they never owned the address.
+ * not outlive the proof that they never owned the address. That goes for
+ * whether the name was chosen at all: an attempt that types one takes over a
+ * row left with a placeholder, and an attempt that does not hands the row
+ * back its placeholder rather than inheriting the last person's name.
  */
 export async function reclaimUnclaimedAccount(
-  identity: { readonly email: string; readonly name: string },
+  identity: { readonly email: string; readonly name: string | null },
   options: { db?: Database; passwordHash?: string | null } = {},
 ): Promise<string | null> {
   const db = options.db ?? getDb();
   const [reclaimed] = await db
     .update(users)
     .set({
-      name: identity.name,
+      name: identity.name ?? provisionalNameFor(identity.email),
+      nameChosenAt: identity.name === null ? null : new Date(),
       passwordHash: options.passwordHash ?? null,
       updatedAt: new Date(),
     })
@@ -556,17 +570,19 @@ export async function signInWithApple(
     );
   }
 
-  // Apple offers a name once, on the first authorization, and never again. If
-  // it was not there, the local part of the address is a better placeholder
-  // than an empty heading — and the person can change it in their profile.
-  const name = context.fullName?.trim() || email.split("@")[0] || email;
+  // Apple offers a name once, on the first authorization, and never again.
+  // Null when it was not there: the address's local part stands in, and the
+  // row is left unstamped, which is what puts the question on the dashboard
+  // instead of leaving a placeholder nobody was ever asked about.
+  const name = context.fullName?.trim() || null;
 
   const created = await db.transaction(async (tx) => {
     const [user] = await tx
       .insert(users)
       .values({
         email,
-        name,
+        name: name ?? provisionalNameFor(email),
+        nameChosenAt: name === null ? null : now,
         // Apple verified the address; requiring this instance to verify it
         // again by mail would be asking a question that is already answered.
         // An unverified one (which Apple should not send) stays unverified.
@@ -810,6 +826,27 @@ export async function hasPassword(
 }
 
 /**
+ * Whether nobody has ever said what this account should be called.
+ *
+ * True only for a row created by a signup that had no name to write — the
+ * code and passkey routes whose name screen comes after the address, and an
+ * Apple sign-in that arrived without one — and never claimed again once
+ * `saveUserName` has run. Read on the dashboard, which asks.
+ */
+export async function hasProvisionalName(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({ nameChosenAt: users.nameChosenAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row !== undefined && row.nameChosenAt === null;
+}
+
+/**
  * The name on the account.
  *
  * Not the name anybody sees inside a group: that is `participants.display_name`,
@@ -820,6 +857,11 @@ export async function hasPassword(
  *
  * Trimmed and bounded by the caller; empty is refused there rather than
  * written as a blank name nothing can render.
+ *
+ * Every call is somebody typing, from the onboarding name screen or from
+ * settings, so this is where the account stops being unnamed — including for
+ * an account created before the column existed, whose stamp the migration
+ * could only guess at.
  */
 export async function saveUserName(
   userId: string,
@@ -829,7 +871,7 @@ export async function saveUserName(
   const db = options.db ?? getDb();
   await db
     .update(users)
-    .set({ name, updatedAt: new Date() })
+    .set({ name, nameChosenAt: new Date(), updatedAt: new Date() })
     .where(eq(users.id, userId));
 }
 
