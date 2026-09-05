@@ -113,9 +113,10 @@ enabled, naming a service Compose is not running is an error.
 ### Onto a clean host
 
 ```bash
-# 1. Get the code and pick the version the backup came from.
-git clone https://github.com/sebitr/balancia.git && cd balancia
-git checkout v1.2.3
+# 1. Get the code at the version the backup came from. --branch takes a tag,
+#    so the shallow copy lands on it directly; a plain --depth 1 clone carries
+#    no tags to check out afterwards.
+git clone --depth 1 --branch v1.2.3 https://github.com/sebitr/balancia.git && cd balancia
 
 # 2. Restore secrets and configuration FIRST — the database container
 #    initialises with POSTGRES_PASSWORD from this file, and only ever does so
@@ -218,7 +219,8 @@ throwaway stack and check it:
 
 ```bash
 mkdir /tmp/balancia-drill && cd /tmp/balancia-drill
-git clone https://github.com/sebitr/balancia.git .
+git clone --depth 1 https://github.com/sebitr/balancia.git .
+# Drilling a specific release? Add --branch v1.2.3, as in step 1 above.
 # follow the restore steps above, but with a distinct project name:
 docker compose -p balancia-drill up -d --build
 curl -fsS http://localhost:3001/api/health/ready
