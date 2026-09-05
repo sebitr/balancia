@@ -14,9 +14,13 @@
 </p>
 
 <p align="center">
-  <a href="https://balancia.app"><strong>Try Balancia</strong></a>
+  <a href="https://demo.balancia.app"><strong>Live demo</strong></a>
   ·
-  <a href="#quick-start">Self-host</a>
+  <a href="https://balancia.app"><strong>Hosted app</strong></a>
+  ·
+  <a href="#self-host-with-docker">Self-host</a>
+  ·
+  <a href="#screenshots">Screenshots</a>
   ·
   <a href="./docs/compare-splitwise.md">vs Splitwise</a>
   ·
@@ -31,13 +35,21 @@
 
 <p align="center">
   <a href="https://github.com/sebitr/balancia/actions/workflows/ci.yml"><img src="https://github.com/sebitr/balancia/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/sebitr/balancia" alt="AGPL-3.0-or-later licence"></a>
-  <a href="https://github.com/sebitr/balancia/pulls"><img src="https://img.shields.io/badge/contributions-welcome-5b255f" alt="Contributions welcome"></a>
+  <a href="https://hub.docker.com/r/sebitro/balancia"><img src="https://img.shields.io/docker/pulls/sebitro/balancia?logo=docker&logoColor=white&label=docker%20pulls&color=5b255f" alt="Docker Hub pulls"></a>
+  <a href="https://hub.docker.com/r/sebitro/balancia/tags"><img src="https://img.shields.io/docker/v/sebitro/balancia?sort=semver&logo=docker&logoColor=white&label=image&color=5b255f" alt="Latest published image"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/sebitr/balancia?label=licence&color=5b255f" alt="AGPL-3.0-or-later licence"></a>
   <a href="https://hosted.weblate.org/engage/balancia/"><img src="https://hosted.weblate.org/widget/balancia/messages/svg-badge.svg" alt="Translation status"></a>
+  <a href="https://github.com/sebitr/balancia/commits/main"><img src="https://img.shields.io/github/last-commit/sebitr/balancia?label=last%20commit&color=5b255f" alt="Last commit"></a>
+  <a href="https://github.com/sponsors/sebitr"><img src="https://img.shields.io/badge/sponsor-%E2%99%A5-db61a2?logo=githubsponsors&logoColor=white" alt="Sponsor Balancia on GitHub"></a>
+  <a href="https://opencollective.com/balancia"><img src="https://img.shields.io/badge/donate-Open%20Collective-1f87ff?logo=opencollective&logoColor=white" alt="Donate to Balancia on Open Collective"></a>
 </p>
 
 <p align="center">
-  <img src="./docs/assets/balancia-mobile-overview.jpg" alt="Balancia mobile group overview showing exactly who owes whom and the payment needed to settle up" width="390">
+  <a href="https://demo.balancia.app">
+    <img src="./docs/assets/balancia-group-overview.png" alt="A group's balances on a phone: EUR 281.90 owed to you, two people who owe it, and a bar for each person" width="252">
+    <img src="./docs/assets/balancia-split.png" alt="Splitting a bill on a phone: who paid, who it is split between, and the choice of equally, shares, exact amounts or percent" width="252">
+    <img src="./docs/assets/balancia-settle-up.png" alt="Settling up on a phone: the two payments that clear the whole group, each with a reminder button" width="252">
+  </a>
 </p>
 
 Balancia is an open-source, self-hosted alternative to Splitwise and Tricount.
@@ -45,6 +57,50 @@ Add what each person paid, choose how to divide it, and Balancia calculates who
 owes whom. Every feature is available without a paid tier, guests can
 participate without creating an account, and a self-hosted instance keeps its
 database and receipts on infrastructure you control.
+
+## Try it before you install anything
+
+Three ways in, in order of how much they ask of you:
+
+**[Open the live demo →](https://demo.balancia.app)** — one click, no sign-up,
+no email address. You get an account of your own, already holding a Lisbon trip
+that converts several currencies into euros, a flat share that keeps them apart,
+one expense per split method, a multi-payer bill, a settlement and a recurring
+rent template. Add expenses, settle up, break it. Two visitors never see each
+other's data, and yours is swept a couple of hours later. (`demo` / `demo` if
+anything asks.)
+
+**[Use the hosted app →](https://balancia.app)** — free, asks for no payment
+card, and reserves no feature for a paid plan.
+
+**Self-host it** — Docker and its Compose plugin, and nothing else on the host:
+
+```bash
+curl -fsSLO https://github.com/sebitr/balancia/releases/latest/download/bootstrap.sh
+sh bootstrap.sh
+```
+
+Full instructions, and what you take on by running it, are in
+[Self-host with Docker](#self-host-with-docker) below.
+
+## Screenshots
+
+Every screen below is one you can reach in a click at
+**[demo.balancia.app](https://demo.balancia.app)** — they were captured from
+it, banner and all, rather than drawn for the occasion.
+
+The three above are the whole loop: see where you stand, split a bill, clear
+it. These are the rest.
+
+|                                                                                        Everything, in one figure                                                                                        |                                                                                          Adding a bill                                                                                          |                                                                         What the group spent                                                                          |
+| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/balancia-dashboard.png" alt="The Balancia home screen: your position in each currency, then groups bucketed into the ones that need you and the ones that owe you" width="252"> | <img src="./docs/assets/balancia-add-expense.png" alt="The add-expense drawer: amount, description, a category suggested on the instance, a repeat switch and the resulting split" width="252"> | <img src="./docs/assets/balancia-expenses.png" alt="A group's transactions: a treemap of categories above a searchable list of expenses and settlements" width="252"> |
+|                                    Groups sorted into the ones that need you and the ones that owe you — with one total per currency, never a made-up combined one.                                     |                                                 The category is suggested by a model on your own instance. Nothing about the expense leaves it.                                                 |                                  Where the money actually went, with settlements listed beside expenses and every entry searchable.                                   |
+
+|                                                                           Two currencies, kept apart                                                                            |                                                                                  Coming from Splitwise                                                                                   |                                                                     What it adds up to                                                                     |
+| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/balancia-multi-currency.png" alt="A group balanced in two currencies at once: EUR 42.00 to get back and JPY 4,500 owed, listed separately" width="252"> | <img src="./docs/assets/balancia-import.png" alt="The import screen: choose a Balancia backup or a Splitwise CSV or JSON export, with a preview before anything is written" width="252"> | <img src="./docs/assets/balancia-stats.png" alt="Group statistics: total spent, per person per month, number of entries and the median entry" width="252"> |
+|                                A group can balance each currency on its own, or convert into one at a rate frozen when the expense was recorded.                                |                                A Splitwise CSV or JSON export, previewed before anything is written, and re-running the same file creates no duplicates.                                 |                             Totals per person and per month, without a spreadsheet and without anything leaving the instance.                              |
 
 ## Why people choose Balancia
 
@@ -104,14 +160,7 @@ See the [full project status](./docs/implementation-status.md),
   preferences are independent. A language Balancia does not have yet is
   [a browser away](https://hosted.weblate.org/engage/balancia/).
 
-## Quick start
-
-### Try the hosted app
-
-Open **[balancia.app](https://balancia.app)**. The hosted instance is free, asks
-for no payment card and does not reserve features for a paid plan.
-
-### Self-host with Docker
+## Self-host with Docker
 
 You need Docker with the Compose plugin. That is the whole list — no Git, no
 Node, no checkout:
@@ -145,6 +194,10 @@ read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
 database and receipt storage together; the
 [backup guide](./docs/backup-and-restore.md) provides exact commands.
 
+Want to offer the same try-before-you-sign-up demo from your own instance?
+`compose.demo.yaml` runs one, with no database and nothing persisted — see
+[running a demo](./docs/demo.md).
+
 ## Privacy and trust
 
 Balancia has no advertising and requires no third-party runtime service.
@@ -174,6 +227,7 @@ Start with the **[documentation index](./docs/README.md)**, or go directly to:
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Decide whether Balancia is right for me | [FAQ](./docs/faq.md) · [vs Splitwise](./docs/compare-splitwise.md) · [vs tricount](./docs/compare-tricount.md)                     |
 | Install or operate an instance          | [Self-hosting](./docs/self-hosting.md) · [Environment](./docs/environment.md) · [Backup and restore](./docs/backup-and-restore.md) |
+| Offer a public demo of my instance      | [Running a demo](./docs/demo.md)                                                                                                   |
 | Move existing data                      | [Splitwise migration](./docs/data-migration.md)                                                                                    |
 | Understand privacy and correctness      | [Security](./SECURITY.md) · [Telemetry](./docs/telemetry.md) · [Financial correctness](./docs/financial-correctness.md)            |
 | Work on the code                        | [Development](./docs/development.md) · [Architecture](./docs/architecture.md) · [Contributing](./CONTRIBUTING.md)                  |
@@ -197,6 +251,24 @@ can move them into a worker container of their own with two lines in `.env`.
 - Speak another language? [Translate Balancia on Weblate](https://hosted.weblate.org/engage/balancia/) — no pull request, no setup.
 - Found a vulnerability? Follow [SECURITY.md](./SECURITY.md); do not open a
   public issue.
+
+### Support the project
+
+Balancia is free, has no paid tier and sells nothing. The hosted instance at
+[balancia.app](https://balancia.app), the demo, the translation platform and
+the domains are paid for out of pocket.
+
+<p align="left">
+  <a href="https://github.com/sponsors/sebitr"><img src="https://img.shields.io/badge/Sponsor%20on%20GitHub-%E2%99%A5-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor Balancia on GitHub"></a>
+  <a href="https://opencollective.com/balancia"><img src="https://img.shields.io/badge/Donate%20on-Open%20Collective-1f87ff?style=for-the-badge&logo=opencollective&logoColor=white" alt="Donate to Balancia on Open Collective"></a>
+</p>
+
+A recurring donation pays the hosting; a one-off pays a year of a domain. Both
+are welcome, and neither buys a feature — the roadmap stays in
+[TODO.md](./TODO.md), in the open. If money is not what you have to give, a
+[star](https://github.com/sebitr/balancia), a bug report or
+[a translation](https://hosted.weblate.org/engage/balancia/) all help more than
+they look like they do.
 
 ## Licence
 
