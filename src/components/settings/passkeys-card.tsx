@@ -175,8 +175,27 @@ export function PasskeysCard({
                 <Shield className="size-4" strokeWidth={1.9} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {labelFor(passkey)}
+                <span className="flex min-w-0 items-baseline gap-1.5">
+                  <span className="truncate text-sm font-medium">
+                    {labelFor(passkey)}
+                  </span>
+                  {/*
+                   * Whether this one survives a lost phone, which is the
+                   * question somebody is actually asking when they look at
+                   * this list. Re-read from every assertion rather than frozen
+                   * at registration: a credential made before its owner
+                   * switched on iCloud Keychain is synced a week later.
+                   *
+                   * Beside the name rather than at the end of the line below,
+                   * which already truncates on a phone — appended there it was
+                   * the clause that always got cut, which is no use on the one
+                   * screen size that matters most.
+                   */}
+                  <span className="shrink-0 text-2xs text-muted-foreground">
+                    {passkey.backedUp
+                      ? tPasskeys("synced")
+                      : tPasskeys("deviceOnly")}
+                  </span>
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
                   {tPasskeys("added", { date: dates.at(passkey.createdAt) })}
@@ -184,18 +203,6 @@ export function PasskeysCard({
                     ` · ${tPasskeys("lastUsed", {
                       date: dates.at(passkey.lastUsedAt),
                     })}`}
-                  {/*
-                   * Whether this one survives a lost phone, which is the
-                   * question somebody is actually asking when they look at
-                   * this list. Re-read from every assertion rather than frozen
-                   * at registration: a credential made before its owner
-                   * switched on iCloud Keychain is synced a week later.
-                   */}
-                  {` · ${
-                    passkey.backedUp
-                      ? tPasskeys("synced")
-                      : tPasskeys("deviceOnly")
-                  }`}
                 </span>
               </span>
               <button
