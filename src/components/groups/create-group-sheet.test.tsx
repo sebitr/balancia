@@ -103,6 +103,24 @@ describe("CreateGroupSheet", () => {
     expect(form.get("baseCurrency")).toBe("CHF");
     expect(form.get("ownerDisplayName")).toBe("Seb");
     expect(form.all("participantNames")).toEqual([]);
+    // Nobody was asked for this one: the device knows it.
+    expect(form.get("timezone")).toBe("Europe/Zurich");
+  });
+
+  /**
+   * The zone decides which day an expense lands on and nothing else, so it is
+   * detected and stated rather than asked — named by its city, which is the
+   * half of `Europe/Zurich` a reader recognises.
+   */
+  it("says which zone it detected instead of asking for one", () => {
+    renderSheet();
+
+    expect(
+      screen.getByText(/Days end at Zurich time, from this device\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: /time zone/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("will not submit until the group has a name", async () => {
@@ -156,22 +174,44 @@ describe("CreateGroupSheet", () => {
     expect(form.get("iconColor")).toBe("blue");
   });
 
-  it("relabels the currency row without losing the chosen currency", async () => {
+  /**
+   * A separate group has no base currency — `createGroup` stores null for it
+   * — so the row is not shown and the value is not sent. The code is still
+   * remembered, because the two modes are one tap apart and a reader who
+   * looks at the other one should not come back to a reset currency.
+   */
+  it("asks for a balance currency only where there is a balance", async () => {
     const { user } = renderSheet();
 
     await user.type(screen.getByPlaceholderText("Group name"), "Roadtrip");
-    expect(screen.getByText("Base currency")).toBeInTheDocument();
+    expect(screen.getByText("That balance is in")).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("radio", { name: /Keep currencies separate/ }),
+      screen.getByRole("radio", { name: /A balance per currency/ }),
     );
+    expect(screen.queryByText("That balance is in")).not.toBeInTheDocument();
 
-    expect(screen.getByText("Default currency")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create group" }));
 
     const form = submitted();
     expect(form.get("currencyMode")).toBe("separate");
-    expect(form.get("baseCurrency")).toBe("CHF");
+    expect(form.get("baseCurrency")).toBeNull();
+  });
+
+  it("keeps the chosen currency across a look at the other mode", async () => {
+    const { user } = renderSheet();
+
+    await user.type(screen.getByPlaceholderText("Group name"), "Roadtrip");
+    await user.click(
+      screen.getByRole("radio", { name: /A balance per currency/ }),
+    );
+    await user.click(
+      screen.getByRole("radio", { name: /One shared balance/ }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Create group" }));
+
+    expect(submitted().get("baseCurrency")).toBe("CHF");
   });
 
   /**
@@ -183,7 +223,9 @@ describe("CreateGroupSheet", () => {
     const { user } = renderSheet();
 
     await user.type(screen.getByPlaceholderText("Group name"), "Roadtrip");
-    await user.click(screen.getByRole("button", { name: /Base currency/ }));
+    await user.click(
+      screen.getByRole("button", { name: /That balance is in/ }),
+    );
 
     // One sheet, showing the list where the form was.
     expect(screen.getAllByRole("dialog")).toHaveLength(1);

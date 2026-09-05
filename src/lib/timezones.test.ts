@@ -5,6 +5,7 @@ import {
   filterTimezones,
   isSupportedTimezone,
   normaliseSearchText,
+  timezoneCity,
   timezoneOptions,
 } from "./timezones";
 
@@ -72,6 +73,19 @@ describe("describeTimezone", () => {
     // Aliases are not in `Intl.supportedValuesOf`, but a browser may report
     // one as its own zone and the picker still has to show it.
     expect(describeTimezone("Asia/Calcutta").label).toBe("Asia / Calcutta");
+  });
+});
+
+describe("timezoneCity", () => {
+  it("keeps the place and drops the filing", () => {
+    expect(timezoneCity("Europe/Zurich")).toBe("Zurich");
+    expect(timezoneCity("America/New_York")).toBe("New York");
+    // Three segments deep, and it is still the last one that names a place.
+    expect(timezoneCity("America/Argentina/Ushuaia")).toBe("Ushuaia");
+  });
+
+  it("leaves a zone with no place in it alone", () => {
+    expect(timezoneCity("UTC")).toBe("UTC");
   });
 });
 
