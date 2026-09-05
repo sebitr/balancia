@@ -8,6 +8,7 @@ import { getDb, rowsAffected, type Database } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { provisionalNameFor } from "@/modules/profile/provisional-name";
 import {
   AuthError,
   insertUser,
@@ -59,7 +60,17 @@ import {
 
 export interface SignupIdentity {
   readonly email: string;
-  readonly name: string;
+  /**
+   * What the reader typed, or null when they have not been asked yet.
+   *
+   * The passkey and code buttons sit *before* the name screen on the routes
+   * that have one, so on those routes there is genuinely no name to send.
+   * Null says so, and the account is created with a placeholder and an
+   * unstamped `name_chosen_at`; the name screen a few seconds later stamps
+   * it. Sending a placeholder from the browser instead is what used to make
+   * a derived name indistinguishable from a chosen one.
+   */
+  readonly name: string | null;
 }
 
 export interface SignupResult {
@@ -90,12 +101,22 @@ function assertRegistrationOpen(): void {
   }
 }
 
+/**
+ * The identity a signup will use, normalised.
+ *
+ * A name that is present has to be a real one — a form that posts spaces is
+ * refused rather than stored — while no name at all is an ordinary state on
+ * the routes that ask for the address first.
+ */
 function readIdentity(input: SignupIdentity): SignupIdentity {
+  const email = normalizeEmail(input.email);
+  if (input.name === null) return { email, name: null };
+
   const name = input.name.trim();
   if (name.length === 0) {
     throw new AuthError("Enter your name.", "nameRequired");
   }
-  return { email: normalizeEmail(input.email), name: name.slice(0, 120) };
+  return { email, name: name.slice(0, 120) };
 }
 
 /**
@@ -182,7 +203,9 @@ export async function finishPasskeySignup(
     user: {
       userId,
       email: identity.email,
-      name: identity.name,
+      // What the row now carries: the typed name, or the placeholder the
+      // insert stood in for it.
+      name: identity.name ?? provisionalNameFor(identity.email),
       /*
        * The address has not been confirmed and does not gate anything here.
        *
