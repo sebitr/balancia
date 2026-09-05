@@ -13,6 +13,7 @@ words must not change when it moves. See _Keeping the list_.
 
 Started, on a branch, not yet merged.
 
+- [ ] Keep PGlite out of the bundler, so a demo instance starts instead of answering Internal Server Error on every page — `fix/demo-pglite-external`
 - [ ] Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — `chore/reap-merged-branches`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-install`
 
