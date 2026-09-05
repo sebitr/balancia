@@ -29,6 +29,27 @@ merged. Splitting them apart afterwards cost far more than branching would have.
 Keep a branch to one topic. If a second, unrelated thing needs doing, it gets
 its own branch.
 
+You do not have to clear up after yourself, and you should not have to be
+asked to. `.claude/hooks/reap-merged.sh` runs at session start and takes away
+the worktrees, local branches and remote branches whose pull request has
+merged. It was written when sixteen worktrees, seventeen local branches and
+twenty remote branches had piled up, every one of them merged, plus a
+stranded checkout of a worktree somebody had deleted by hand that was still
+holding 1.1 GB.
+
+It removes something only when the pull request reads MERGED, the worktree is
+clean, and no session that is still running holds its lock. **A branch that
+never had a pull request is never touched**, however abandoned it looks —
+that is the rule protecting work in flight, and it is why the reaper walked
+straight past `docs/shallow-clone-install` on its first run. It throttles
+itself to once a half hour, and `--dry-run` says what it would take without
+taking it.
+
+The remote half is settled at the source: the repository now has
+`delete_branch_on_merge` on, so GitHub deletes each head branch as its pull
+request merges. The reaper's remote pass is for the backlog and for anything
+merged while that setting was off.
+
 # The list of work lives in TODO.md
 
 `TODO.md` at the repository root is the list of what is planned, in flight and
