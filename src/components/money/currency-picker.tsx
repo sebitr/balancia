@@ -37,7 +37,7 @@ export function CurrencyPicker({
 }: {
   /** The currently chosen code. Marked in the list, never moved to the top. */
   value: string;
-  /** Mirrors the row that opened it: "Devise de référence", "Devise". */
+  /** Mirrors the row that opened it: "Devise du solde", "Devise". */
   title: string;
   onSelect: (code: string) => void;
   onBack: () => void;

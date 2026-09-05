@@ -74,6 +74,21 @@ export function detectTimezone(): string | null {
 }
 
 /**
+ * The place a zone is named after: `Europe/Zurich` → Zurich,
+ * `America/New_York` → New York, `America/Argentina/Ushuaia` → Ushuaia.
+ *
+ * For saying a detected zone back to somebody rather than for choosing one.
+ * The city is the half a reader recognises, and the continent in front of it
+ * is the half that makes the sentence read like a database row. Zones with no
+ * place in them — `UTC`, `GMT+2` — are already as short as they get and come
+ * back unchanged.
+ */
+export function timezoneCity(zone: string): string {
+  const last = zone.slice(zone.lastIndexOf("/") + 1);
+  return last.replace(/_/g, " ");
+}
+
+/**
  * Accents, underscores and slashes folded away, so `sao paulo` finds
  * `America/Sao_Paulo` and `são` finds it too.
  */
