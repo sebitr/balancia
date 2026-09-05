@@ -2,24 +2,31 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { UserRound } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { isProvisionalName } from "@/modules/profile/provisional-name";
+import { hasProvisionalName } from "@/modules/auth/service";
 
 /**
  * Asks for the name the signup never got.
  *
- * The code signup writes the account before its name screen, with the
- * address's local part standing in, and anyone who closed the tab there is
- * "cold-mtke" to every group they join. Shown on the dashboard until the
- * name is one somebody typed; the profile page is where that happens.
+ * The code and passkey signups write the account before their name screen,
+ * with the address's local part standing in, and anyone who closed the tab
+ * there is "cold-mtke" to every group they join. Shown until somebody has
+ * chosen a name; the profile page is where that happens.
+ *
+ * Which accounts those are is a stamp on the row rather than a look at the
+ * name — `users.name_chosen_at`. Comparing the name with the address's local
+ * part, as this used to, cannot tell a placeholder from a reader called Seb
+ * whose address is seb@, and it showed that reader this card on every load
+ * with nothing they could do to stop it.
  */
 export async function NameNudge({
+  userId,
   name,
-  email,
 }: {
+  userId: string;
+  /** Shown back to them: the placeholder is the whole of the complaint. */
   name: string;
-  email: string;
 }) {
-  if (!isProvisionalName(name, email)) return null;
+  if (!(await hasProvisionalName(userId))) return null;
   const t = await getTranslations("dashboard");
 
   return (

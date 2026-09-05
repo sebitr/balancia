@@ -232,6 +232,13 @@
       "when": 1788274107168,
       "tag": "0032_little_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788635769950,
+      "tag": "0033_name_chosen_at",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@ import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { telemetry } from "@/lib/telemetry";
 import { isUniqueViolation } from "@/lib/db/errors";
+import { provisionalNameFor } from "@/modules/profile/provisional-name";
 import { AuthError } from "./service";
 
 /**
@@ -61,7 +62,8 @@ type ChallengeKind = "registration" | "authentication" | "signup";
 /** The identity a signup ceremony is holding on behalf of a future account. */
 interface PendingSignup {
   readonly email: string;
-  readonly name: string;
+  /** Null when the ceremony was started before anything asked for a name. */
+  readonly name: string | null;
   readonly userHandle: string;
 }
 
@@ -119,10 +121,12 @@ async function consumeChallenge(
   if (!row) return null;
   return {
     userId: row.userId,
-    // The column check keeps these three either all present or all absent, so
-    // one test stands for the set.
+    // The column check keeps the address and the handle either both present
+    // or both absent, so one test stands for the pair. The name is not part
+    // of it: a signup that was never told one carries null here and creates
+    // an account the dashboard asks about.
     signup:
-      row.signupEmail && row.signupName && row.userHandle
+      row.signupEmail && row.userHandle
         ? {
             email: row.signupEmail,
             name: row.signupName,
@@ -332,7 +336,7 @@ export async function insertPasskey(
  * database's unique index, after it has proved it holds it.
  */
 export async function startSignupPasskeyRegistration(
-  identity: { email: string; name: string },
+  identity: { email: string; name: string | null },
   options: { db?: Database } = {},
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
   const db = options.db ?? getDb();
@@ -343,7 +347,10 @@ export async function startSignupPasskeyRegistration(
     rpName,
     rpID,
     userName: identity.email,
-    userDisplayName: identity.name,
+    // The authenticator's prompt needs a string, and this ceremony may have
+    // been started before anything asked for one. The placeholder is shown
+    // there and stored nowhere: `signupName` keeps what a person typed.
+    userDisplayName: identity.name ?? provisionalNameFor(identity.email),
     userID: new TextEncoder().encode(userHandle),
     attestationType: "none",
     authenticatorSelection: {
@@ -376,7 +383,7 @@ export async function verifySignupPasskeyRegistration(
   response: RegistrationResponseJSON,
   options: { db?: Database } = {},
 ): Promise<{
-  identity: { email: string; name: string };
+  identity: { email: string; name: string | null };
   credential: VerifiedRegistration;
 }> {
   const db = options.db ?? getDb();

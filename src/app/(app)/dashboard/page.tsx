@@ -144,7 +144,7 @@ export default async function DashboardPage() {
     return (
       <>
         <div className="flex flex-col gap-4">
-          <NameNudge name={user.name} email={user.email} />
+          <NameNudge userId={user.userId} name={user.name} />
           <FirstRun title={t("title")} subtitle={t("empty")} t={t} />
         </div>
         {createGroup}
@@ -170,7 +170,7 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-[26px]">
         <h1 className="sr-only">{t("title")}</h1>
 
-        <NameNudge name={user.name} email={user.email} />
+        <NameNudge userId={user.userId} name={user.name} />
 
         <PositionWidget
           net={
