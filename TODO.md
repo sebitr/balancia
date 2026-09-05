@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Let the overview's two actions wrap instead of running off the phone, and shorten the French that made them — `claude/overflow-french-wording-kck76d`
 - [ ] Stop asking for a name the account already has: stamp when somebody chose one instead of guessing from the address — `claude/name-field-validation-msg-k3jz1u`
 - [ ] Stop deriving the money colours from the accent: one green, one red, one amber on every account, one red for owing and deleting, and the appearance screen down to what earns its place — `fix/money-colours-hold-still`
 - [ ] Stand the mark and the name of a group screen's header on the same pixels the dashboard's wordmark uses, at the same size — `fix/header-logo-parity`
