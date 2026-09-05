@@ -289,6 +289,18 @@ export function SignInForm({
         // Raised when the button starts its own modal ceremony, when this
         // screen unmounts, and once on React's development double-mount.
         if (error instanceof Error && error.name === "AbortError") return;
+        /*
+         * And `NotAllowedError`, which is the same silence for the same
+         * reason. It is what a browser raises when there is no authenticator
+         * to offer, and when somebody dismisses a prompt they never summoned —
+         * so on the armed request it reports a refusal of something nobody
+         * asked for. It was landing on the sign-in page as "That passkey
+         * request was cancelled" above a form the reader had only just opened.
+         *
+         * The button keeps saying it, because there somebody pressed
+         * something and is waiting to hear what happened.
+         */
+        if (error instanceof Error && error.name === "NotAllowedError") return;
         // The challenge lives five minutes and a sign-in page left open
         // outlives it. Fetch a fresh one — once, so that a server refusing
         // every challenge cannot turn this into a loop.

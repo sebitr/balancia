@@ -280,6 +280,22 @@ describe("passkey autofill", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("says nothing when there was no authenticator to offer", async () => {
+    supportsPasskeyAutofill.mockResolvedValue(true);
+    // `NotAllowedError` on the armed request means a browser with nothing to
+    // put in the dropdown, or somebody dismissing a prompt they never
+    // summoned. Either way it is a refusal of something nobody asked for, and
+    // it was showing up as "That passkey request was cancelled" over a form
+    // the reader had only just opened.
+    armPasskeyAutofill.mockRejectedValue(named("NotAllowedError", "no"));
+
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    await waitFor(() => expect(armPasskeyAutofill).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("fetches a fresh challenge once when the first has expired", async () => {
     supportsPasskeyAutofill.mockResolvedValue(true);
     armPasskeyAutofill.mockRejectedValue(
