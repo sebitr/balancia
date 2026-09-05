@@ -615,19 +615,27 @@ export async function finishPasskeyAuthentication(
  *
  * The authenticator returns the bytes it was given at registration, which were
  * the UTF-8 of a handle string, so decoding is symmetric with the
- * `TextEncoder` on the way out. Anything that does not survive the round trip
- * is treated as absent: a handle is only useful if it matches exactly, and a
- * mangled one addressed to the Signal API would name a credential that is not
- * there.
+ * `TextEncoder` on the way out.
+ *
+ * Anything that does not survive the round trip exactly is treated as absent,
+ * and the shape check is the load-bearing half rather than belt-and-braces.
+ * Base64url decoding never throws and UTF-8 decoding substitutes rather than
+ * failing, so a mangled handle would arrive here looking like a real one — and
+ * a *wrong* handle is far worse than a missing one. Missing keeps the account
+ * in the state where `passkeySignalState` says nothing at all; wrong makes the
+ * account look completely known while filing one credential under a name
+ * nothing holds, and the reconcile that follows would tell a password manager
+ * to delete the sibling credential it thinks has gone.
+ *
+ * Every handle Balancia has ever issued is base64url text or a UUID, and both
+ * fit the character class below.
  */
-function decodeUserHandle(handle: string | undefined): string | null {
+const ISSUABLE_HANDLE = /^[A-Za-z0-9_-]{1,256}$/;
+
+export function decodeUserHandle(handle: string | undefined): string | null {
   if (!handle) return null;
-  try {
-    const decoded = Buffer.from(handle, "base64url").toString("utf8");
-    return decoded.length > 0 && decoded.length <= 512 ? decoded : null;
-  } catch {
-    return null;
-  }
+  const decoded = Buffer.from(handle, "base64url").toString("utf8");
+  return ISSUABLE_HANDLE.test(decoded) ? decoded : null;
 }
 
 export interface PasskeySummary {
