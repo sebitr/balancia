@@ -1,0 +1,17 @@
+# What GitHub puts behind the ♥ Sponsor button at the top of the repository
+# page, and what the two donation badges in README.md point at.
+#
+# Both of these have to exist before they lead anywhere:
+#
+#   github     — enable Sponsors on the account at
+#                https://github.com/sponsors/sebitr/dashboard. Until then
+#                the link resolves to an empty profile.
+#   opencollective — create the collective at
+#                https://opencollective.com/create (slug `balancia`, apply to
+#                the Open Source Collective host). Until then the link 404s.
+#
+# Remove the line rather than leave a dead link: a donation link that goes
+# nowhere costs more trust than not asking at all.
+
+github: sebitr
+open_collective: balancia
