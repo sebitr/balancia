@@ -43,7 +43,16 @@ request merges, and delete it outright if the work is abandoned. Do this as
 part of the change, in the same commit — a list updated afterwards is a list
 nobody updates.
 
-Nothing enforces this, which is exactly why it is written down here.
+Every branch edits this one file at the head of the same two sections, so a
+three-way merge conflicted on it in 23 of 30 consecutive pull requests before
+somebody counted. `.gitattributes` marks `TODO.md` `merge=union`: git keeps
+both sides' lines instead of asking. The price is silence — union merge can
+bring a line you moved to **Done** back into **Now**, and leave no marker. So
+**an item keeps its words when it moves**; only the tick, the date and the
+pointer change. `src/lib/todo-list.test.ts` then fails the build on the
+duplicate instead of letting the list quietly lie.
+
+Nothing else enforces this, which is exactly why it is written down here.
 
 # Adding a setting touches six files
 

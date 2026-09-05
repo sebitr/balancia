@@ -1,0 +1,13 @@
+# Every branch edits TODO.md, and every branch edits it in the same two places:
+# a line appended at the head of Now when the work starts, and the same line
+# moved to the head of Done when the pull request merges. A three-way merge
+# calls two branches inserting at one anchor a conflict, which is why nearly
+# every pull request had to resolve this file by hand.
+#
+# The union driver keeps both sides' lines instead of asking. The price is that
+# it is silent: move a line to Done while another branch appends beside it and
+# union can leave the Now copy in place, so the item sits in both sections at
+# once with no marker to show for it. src/lib/todo-list.test.ts fails the build
+# on an item whose words appear twice — the only thing standing between this
+# line and a list that quietly lies.
+TODO.md merge=union
