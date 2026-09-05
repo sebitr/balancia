@@ -15,26 +15,6 @@ Started, on a branch, not yet merged.
 
 - [ ] Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — `chore/todo-union-merge`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-install`
-- [ ] Say nothing when a setting saves itself and the control is its own way back — the language list, the format chips, the notification, mute, telemetry and push switches — `claude/remove-toaster-single-click-zm329r`
-- [ ] Let the overview's two actions wrap instead of running off the phone, and shorten the French that made them — `claude/overflow-french-wording-kck76d`
-- [ ] Stop asking for a name the account already has: stamp when somebody chose one instead of guessing from the address — `claude/name-field-validation-msg-k3jz1u`
-- [ ] Stop deriving the money colours from the accent: one green, one red, one amber on every account, one red for owing and deleting, and the appearance screen down to what earns its place — `fix/money-colours-hold-still`
-- [ ] Stand the mark and the name of a group screen's header on the same pixels the dashboard's wordmark uses, at the same size — `fix/header-logo-parity`
-- [ ] Name the two home-screen actions after what they do, and give each the glyph the app already uses for it — `fix/dashboard-cta-glyphs`
-- [ ] Settle three drifts a UX pass found: the tab now says Transactions like the screen it opens, Settle up hands over coins instead of ticking itself done, and every signed figure is written the one way — `fix/vocabulary-drift`
-- [ ] Take the theme toggle out of the signed-in header; Settings › Appearance already owns it, and only a guest still needs it there — `fix/header-theme-toggle`
-- [ ] Close the five dead ends an onboarding audit walked into, and the friction around them: guest on a shared link, sign-in through /register, code resend, code-only accounts on the sign-in page, the dark-mode flash — `fix/onboarding-audit-findings`
-- [ ] Make an account cost something to create: free a squatted address, cap sign-ups per inbox and per instance, refuse the passwords everyone guesses, and price out bulk sign-up — `feat/signup-abuse-defences`
-- [ ] Offer the passkey in the sign-in field's own autofill dropdown — `feat/passkey-autofill`
-- [ ] Give every control a finger's worth of target, and fix five things a UX audit measured — `fix/ux-audit-findings`
-- [ ] Settle the French on one register, one glossary and one apostrophe, and hold it there with a test — `fix/french-copy-consistency`
-- [ ] Open the calendar when the entry's date row is clicked, not just tapped — `fix/entry-date-picker-opens`
-- [ ] Show a payout example from the method's own country, and group the number as it is typed — `feat/payout-country-examples`
-- [ ] Skip the list of who to remind when only one person can be asked — `feat/remind-skip-single-recipient`
-- [ ] Hold back the Swiss QR-bill address until the IBAN says CH — `fix/payout-address-after-iban`
-- [ ] Let the scripts read `.env.local`, so the documented setup works as written — `fix/tsx-script-env`
-- [ ] Say what actually ships: audit the status doc against the source — `docs/status-audit`
-- [ ] Join preview: agree with the join about a removed member — `feat/join-redeem-api`
 
 ## Next
 
@@ -57,7 +37,7 @@ record.
 
 - [x] 2026-09-05 Read the favicon journey's colours from the palette the icons are generated from, so `pnpm test:e2e` stops failing on main — #291
 - [x] 2026-09-05 Stop asking for a name the account already has: stamp when somebody chose one instead of guessing from the address — #290
-- [x] 2026-09-05 Say nothing when a setting saves itself and flicks back — #289
+- [x] 2026-09-05 Say nothing when a setting saves itself and the control is its own way back — the language list, the format chips, the notification, mute, telemetry and push switches — #289
 - [x] 2026-09-05 Let the overview's two actions wrap instead of running off the phone, and shorten the French that made them — #288
 - [x] 2026-09-05 Stop deriving the money colours from the accent: one green, one red, one amber on every account, one red for owing and deleting, and the appearance screen down to what earns its place — #287
 - [x] 2026-09-04 Stand the mark and the name of a group screen's header on the same pixels the dashboard's wordmark uses, at the same size — #286
@@ -117,10 +97,12 @@ empty one.
 
 Keeping the words is not tidiness. `.gitattributes` marks this file
 `merge=union`, so where two branches edit the same lines git keeps both sides
-rather than raising a conflict — which is what a file every branch appends to
-needs, and it is silent about it. Move a line to **Done** while another branch
-appends beside it and union merge can leave the **Now** copy standing, so the
-item sits in both sections at once with nothing to show for it.
+rather than raising a conflict. Appending is what that is for, and appending is
+most of what this file gets. Deleting is the opposite: union merge has no way to
+express a removal, so a line you took out of **Now** comes back if the other
+side still holds it. The branch that added the rule merged `main` once and got
+all nineteen of the lines it had cleared back in one go, with no conflict and no
+mention.
 `src/lib/todo-list.test.ts` fails the build when one item's words appear twice,
 or when a line carries the pointer of the section it came from rather than the
 one it is in. Both only work while the words hold still.
