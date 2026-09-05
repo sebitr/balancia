@@ -556,7 +556,7 @@
     "youIn": "Toi, en {currency}",
     "totalSpending": "Dépenses totales",
     "balances": "Soldes",
-    "settleUp": "Régler les comptes",
+    "settleUp": "Régler",
     "owesMoney": "Doit de l’argent",
     "shouldReceive": "Doit recevoir",
     "recentExpenses": "Dépenses récentes",
@@ -664,7 +664,7 @@
     "recordPayment": "Enregistrer le paiement",
     "sendReminder": "Envoyer une relance",
     "archiveGroup": "Archiver le groupe",
-    "remind": "Envoyer une relance"
+    "remind": "Relancer"
   },
   "expensesList": {
     "eyebrow": "Transactions",
