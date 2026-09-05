@@ -165,7 +165,14 @@ export function PositionHero({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        {/* Wraps, for the same reason the settle-up screen's row does: these
+            are two `flex-1` buttons whose labels do not wrap, and
+            `min-width: auto` holds each one at its label's min-content width,
+            so neither ever gives width back and the second runs off the side
+            of the phone. Below the width where both labels fit, the second
+            takes its own line and `flex-1` gives it the full width. Nothing is
+            measured or truncated, so the next language lands the same way. */}
+        <div className="flex flex-wrap items-center gap-2">
           {settled ? (
             <>
               <Button

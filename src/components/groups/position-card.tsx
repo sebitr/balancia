@@ -91,7 +91,10 @@ export function PositionCard({
           {t("keptApart")}
         </p>
 
-        <div className="flex items-center gap-2.5">
+        {/* Wraps for the reason the hero's row does: `flex-1` cannot shrink a
+            button below its own label, so a pair that does not fit overflows
+            the card rather than sharing it. */}
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             asChild={!settled}
             disabled={settled}
