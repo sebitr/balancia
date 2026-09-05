@@ -15,6 +15,8 @@ Started, on a branch, not yet merged.
 
 - [ ] Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — `chore/todo-union-merge`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-restore`
+- [ ] Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — `chore/reap-merged-branches`
+- [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-install`
 
 ## Next
 
@@ -35,6 +37,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-05 Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — #292
 - [x] 2026-09-05 Read the favicon journey's colours from the palette the icons are generated from, so `pnpm test:e2e` stops failing on main — #291
 - [x] 2026-09-05 Stop asking for a name the account already has: stamp when somebody chose one instead of guessing from the address — #290
 - [x] 2026-09-05 Say nothing when a setting saves itself and the control is its own way back — the language list, the format chips, the notification, mute, telemetry and push switches — #289
