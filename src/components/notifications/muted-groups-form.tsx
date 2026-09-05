@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { toastUndoable } from "@/components/ui/sonner";
 import { setGroupMutedAction } from "@/modules/notifications/actions";
 
 export interface MutableGroup {
@@ -31,11 +30,15 @@ const PREVIEW = 3;
  * Only the first three are drawn. Somebody with eleven groups is looking for
  * one of them, and eleven rows of switches under two other cards is a screen
  * that has stopped being scannable; the rest are one tap away.
+ *
+ * Silencing a group says nothing back. The switch moved, it stayed moved, and
+ * flicking it again is the whole of the way back — which a toast would have
+ * covered up the row to offer. A refusal is the exception, as everywhere: the
+ * switch returns and the error is the one thing that has to be spoken.
  */
 export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
   const t = useTranslations("notificationSettings");
   const tSettings = useTranslations("userSettings");
-  const tCommon = useTranslations("common");
   const [state, setState] = useState(groups);
   const [expanded, setExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -44,7 +47,7 @@ export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
     return <p className="text-xs text-muted-foreground">{t("noGroups")}</p>;
   }
 
-  const toggle = (groupId: string, muted: boolean, announce = true) => {
+  const toggle = (groupId: string, muted: boolean) => {
     const previous = state;
     setState((current) =>
       current.map((group) =>
@@ -56,19 +59,6 @@ export function MutedGroupsForm({ groups }: { groups: MutableGroup[] }) {
       if (!result.ok) {
         setState(previous);
         toast.error(result.error ?? t("saveFailed"));
-        return;
-      }
-      if (announce) {
-        // One way back per group: silencing two of them is two decisions, and
-        // the second must not take away the chance to undo the first.
-        toastUndoable(
-          t("saved"),
-          {
-            label: tCommon("undo"),
-            onUndo: () => toggle(groupId, !muted, false),
-          },
-          { id: `muted-${groupId}` },
-        );
       }
     });
   };

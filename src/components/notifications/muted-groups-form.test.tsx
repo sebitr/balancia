@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { MutedGroupsForm } from "./muted-groups-form";
@@ -7,9 +7,10 @@ import { MutedGroupsForm } from "./muted-groups-form";
 /**
  * Per-group silence.
  *
- * Silencing one group is one decision, so each row confirms itself and keeps
- * its own way back: muting a second group must not take away the chance to
- * unmute the first from its own toast.
+ * Silencing a group says nothing back: the switch moved, it stayed moved, and
+ * the way back is the same switch. A toast would have covered the row it was
+ * describing to offer a button that does what the row already does, so its
+ * absence is asserted here rather than left to drift.
  *
  * The switch reads as the group's *voice* rather than as its mute — on means
  * it can still reach you — so every assertion here checks the two against each
@@ -18,13 +19,16 @@ import { MutedGroupsForm } from "./muted-groups-form";
  * to keep.
  */
 
-const { setGroupMutedAction, toastUndoable } = vi.hoisted(() => ({
+const { setGroupMutedAction, toastSuccess, toastError } = vi.hoisted(() => ({
   setGroupMutedAction: vi.fn(),
-  toastUndoable: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 vi.mock("@/modules/notifications/actions", () => ({ setGroupMutedAction }));
-vi.mock("@/components/ui/sonner", () => ({ toastUndoable, UNDO_WINDOW: 8000 }));
+vi.mock("sonner", () => ({
+  toast: { success: toastSuccess, error: toastError },
+}));
 
 function renderForm(
   groups = [
@@ -34,22 +38,16 @@ function renderForm(
 ) {
   setGroupMutedAction.mockReset();
   setGroupMutedAction.mockResolvedValue({ ok: true });
-  toastUndoable.mockReset();
+  toastSuccess.mockReset();
+  toastError.mockReset();
   const view = renderWithIntl(<MutedGroupsForm groups={groups} />);
   return { ...view, user: userEvent.setup() };
-}
-
-/** The way back the newest confirmation offered. */
-function offeredUndo(): () => void {
-  const newest = toastUndoable.mock.calls.at(-1);
-  if (!newest) throw new Error("nothing was confirmed");
-  return newest[1].onUndo;
 }
 
 const voiceOf = (name: string) => screen.getByRole("switch", { name });
 
 describe("MutedGroupsForm", () => {
-  it("silences a group, and offers to let it speak again", async () => {
+  it("silences a group without announcing it", async () => {
     const { user } = renderForm();
 
     expect(voiceOf("Lisbon trip")).toBeChecked();
@@ -61,39 +59,33 @@ describe("MutedGroupsForm", () => {
       expect(setGroupMutedAction).toHaveBeenCalledWith("g1", true),
     );
     expect(voiceOf("Lisbon trip")).not.toBeChecked();
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
 
-    await act(async () => offeredUndo()());
+  it("lets the group speak again from the same switch", async () => {
+    const { user } = renderForm();
+
+    await user.click(voiceOf("Lisbon trip"));
+    await waitFor(() => expect(voiceOf("Lisbon trip")).toBeEnabled());
+    await user.click(voiceOf("Lisbon trip"));
 
     await waitFor(() =>
       expect(setGroupMutedAction).toHaveBeenLastCalledWith("g1", false),
     );
     expect(voiceOf("Lisbon trip")).toBeChecked();
-    // Undoing is not itself something to undo, so it says nothing.
-    expect(toastUndoable).toHaveBeenCalledOnce();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
-  it("keeps a way back for each group", async () => {
-    const { user } = renderForm();
-
-    await user.click(voiceOf("Lisbon trip"));
-    await waitFor(() => expect(voiceOf("Lisbon trip")).toBeEnabled());
-    await user.click(voiceOf("Flat"));
-
-    await waitFor(() => expect(toastUndoable).toHaveBeenCalledTimes(2));
-    expect(toastUndoable.mock.calls.map((call) => call[2]?.id)).toEqual([
-      "muted-g1",
-      "muted-g2",
-    ]);
-  });
-
-  it("puts the switch back when the write is refused", async () => {
+  it("puts the switch back when the write is refused, and says so", async () => {
     const { user } = renderForm();
     setGroupMutedAction.mockResolvedValue({ ok: false });
 
     await user.click(voiceOf("Lisbon trip"));
 
     await waitFor(() => expect(voiceOf("Lisbon trip")).toBeChecked());
-    expect(toastUndoable).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(
+      "Those settings could not be saved.",
+    );
   });
 
   it("starts a muted group switched off", () => {

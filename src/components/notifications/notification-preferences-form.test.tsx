@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { NotificationPreferencesForm } from "./notification-preferences-form";
@@ -7,19 +7,26 @@ import { NotificationPreferencesForm } from "./notification-preferences-form";
 /**
  * The switches that decide what raises a notification at all.
  *
- * Each is written as it is flicked and confirms itself, and each keeps its own
- * way back — flicking a second switch must not take away the chance to undo
- * the first. A refused write puts the switch back rather than leaving it lying
- * about what was saved.
+ * Each is written as it is flicked, and none of them says so: the switch that
+ * moved and stayed moved is the confirmation, and flicking it again is the
+ * whole of the way back — so a toast would be a second, slower copy of the
+ * control under the finger. That is asserted rather than assumed, because the
+ * confirmation is exactly what creeps back in.
+ *
+ * A refused write is the one thing the switch cannot report itself: it goes
+ * back rather than lying about what was saved, and the error is spoken.
  */
 
-const { savePreferencesAction, toastUndoable } = vi.hoisted(() => ({
+const { savePreferencesAction, toastSuccess, toastError } = vi.hoisted(() => ({
   savePreferencesAction: vi.fn(),
-  toastUndoable: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 vi.mock("@/modules/notifications/actions", () => ({ savePreferencesAction }));
-vi.mock("@/components/ui/sonner", () => ({ toastUndoable, UNDO_WINDOW: 8000 }));
+vi.mock("sonner", () => ({
+  toast: { success: toastSuccess, error: toastError },
+}));
 
 const ALL_ON = {
   expenses: true,
@@ -32,24 +39,18 @@ const ALL_ON = {
 function renderForm() {
   savePreferencesAction.mockReset();
   savePreferencesAction.mockResolvedValue({ ok: true });
-  toastUndoable.mockReset();
+  toastSuccess.mockReset();
+  toastError.mockReset();
   const view = renderWithIntl(
     <NotificationPreferencesForm defaultValue={ALL_ON} />,
   );
   return { ...view, user: userEvent.setup() };
 }
 
-/** The way back the newest confirmation offered. */
-function offeredUndo(): () => void {
-  const newest = toastUndoable.mock.calls.at(-1);
-  if (!newest) throw new Error("nothing was confirmed");
-  return newest[1].onUndo;
-}
-
 const expenses = () => screen.getByRole("switch", { name: "Expenses I am in" });
 
 describe("NotificationPreferencesForm", () => {
-  it("writes a switch as it is flicked, and offers to flick it back", async () => {
+  it("writes a switch as it is flicked, and says nothing about it", async () => {
     const { user } = renderForm();
 
     await user.click(expenses());
@@ -61,38 +62,32 @@ describe("NotificationPreferencesForm", () => {
       }),
     );
     expect(expenses()).not.toBeChecked();
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
 
-    await act(async () => offeredUndo()());
+  it("flicks back to where it started, in one tap and in silence", async () => {
+    const { user } = renderForm();
+
+    await user.click(expenses());
+    await waitFor(() => expect(expenses()).toBeEnabled());
+    await user.click(expenses());
 
     await waitFor(() =>
       expect(savePreferencesAction).toHaveBeenLastCalledWith(ALL_ON),
     );
     expect(expenses()).toBeChecked();
-    // Undoing is not itself something to undo, so it says nothing.
-    expect(toastUndoable).toHaveBeenCalledOnce();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
-  it("keeps a way back for each switch", async () => {
-    const { user } = renderForm();
-
-    await user.click(expenses());
-    await waitFor(() => expect(expenses()).toBeEnabled());
-    await user.click(screen.getByRole("switch", { name: "Reminders" }));
-
-    await waitFor(() => expect(toastUndoable).toHaveBeenCalledTimes(2));
-    expect(toastUndoable.mock.calls.map((call) => call[2]?.id)).toEqual([
-      "notify-expenses",
-      "notify-reminders",
-    ]);
-  });
-
-  it("puts the switch back when the write is refused", async () => {
+  it("puts the switch back when the write is refused, and says so", async () => {
     const { user } = renderForm();
     savePreferencesAction.mockResolvedValue({ ok: false });
 
     await user.click(expenses());
 
     await waitFor(() => expect(expenses()).toBeChecked());
-    expect(toastUndoable).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(
+      "Those settings could not be saved.",
+    );
   });
 });

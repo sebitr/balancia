@@ -165,3 +165,35 @@ stops the rotation coming back. `src/app/token-contrast.test.ts` reads
 and contrast combination. Surfaces and contrast are override blocks at the
 bottom of `globals.css` whose selector order is load-bearing; the comment
 above them says why.
+
+# A control that flicks back says it for itself
+
+Settings have no Save button anywhere: a switch, a chip, a swatch or a row in a
+tick list is written the moment it is pressed. Where that is true and the same
+control puts the change back in one press, it needs no toast. The control moved
+and stayed moved, which is the confirmation; it is still under the finger,
+which is the way back. A toast there is a slower second copy of both, laid over
+the rows it is describing — on the appearance screen it covered the heading to
+announce a language the whole page had already changed into.
+
+So the language list, the date and number chips, the accent, the dark surface,
+the theme, the notification switches, the per-group mute switches, the two
+telemetry switches and the push switch all save in silence.
+
+What still gets a toast is what the control cannot carry:
+
+- **A refusal.** The control goes back to what is stored — never left showing a
+  value the account did not keep — and the error is spoken, because nothing on
+  screen can say it.
+- **Something that has left the screen.** A deleted entry, a removed person, a
+  dismissed row, another device unsubscribed. There is no control to press
+  again, so the toast carries the Undo.
+- **A change that took more than a tap.** A typed field, a picker, a sheet —
+  the display currency comes out of a search over 165 of them. Reversing that
+  is the journey again, which is the gap `toastUndoable` exists to close.
+
+The doctrine is written out at `toastUndoable` in
+`src/components/ui/sonner.tsx`, and the component tests for those screens
+assert the silence — `expect(toastSuccess).not.toHaveBeenCalled()` — because a
+confirmation is exactly the kind of thing that creeps back in one screen at a
+time.
