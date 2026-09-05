@@ -13,6 +13,7 @@ words must not change when it moves. See _Keeping the list_.
 
 Started, on a branch, not yet merged.
 
+- [ ] Make the repository page do the converting: put the live demo where somebody lands, keep only the badges that carry information, add a donation route, and show several screens instead of one — `docs/readme-conversion`
 - [ ] Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — `chore/reap-merged-branches`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-install`
 
