@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { PushCard } from "./push-card";
@@ -7,17 +7,18 @@ import { PushCard } from "./push-card";
 /**
  * Push for the browser you are looking at, and the list of the others.
  *
- * Turning it off is the one worth taking back: the permission is still granted
- * afterwards, so undoing it resubscribes rather than reopening the browser's
- * own dialog — which is what makes the offer honest. Removing a *different*
- * device is not undoable in the same way, because that browser has to ask for
- * itself, so that one says what happened and stops.
+ * The switch is its own way back: turning push off leaves the permission
+ * granted, so turning it on again is a resubscribe under the same finger
+ * rather than the browser's dialog a second time — which is precisely why it
+ * confirms nothing. Removing a *different* device is not that: the row leaves
+ * the screen, that browser has to ask for itself, and so that one does say
+ * what happened.
  */
 
-const { enable, disable, toastUndoable, subscription } = vi.hoisted(() => ({
+const { enable, disable, toastSuccess, subscription } = vi.hoisted(() => ({
   enable: vi.fn(),
   disable: vi.fn(),
-  toastUndoable: vi.fn(),
+  toastSuccess: vi.fn(),
   subscription: { status: "on", busy: false, error: null },
 }));
 
@@ -29,7 +30,9 @@ vi.mock("@/components/notifications/use-push-subscription", () => ({
     refresh: vi.fn(),
   }),
 }));
-vi.mock("@/components/ui/sonner", () => ({ toastUndoable, UNDO_WINDOW: 8000 }));
+vi.mock("sonner", () => ({
+  toast: { success: toastSuccess, error: vi.fn() },
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
@@ -42,7 +45,7 @@ const DEVICES = [
 function renderCard(devices = DEVICES) {
   enable.mockReset().mockResolvedValue(true);
   disable.mockReset().mockResolvedValue(true);
-  toastUndoable.mockReset();
+  toastSuccess.mockReset();
   const view = renderWithIntl(<PushCard devices={devices} />);
   return { ...view, user: userEvent.setup() };
 }
@@ -50,29 +53,28 @@ function renderCard(devices = DEVICES) {
 const here = () => screen.getByRole("switch", { name: /Push to this device/ });
 
 describe("PushCard", () => {
-  it("offers to put this device back after turning it off", async () => {
+  it("turns this device off from the switch, and says nothing about it", async () => {
     const { user } = renderCard();
 
     expect(here()).toBeChecked();
     await user.click(here());
 
     expect(disable).toHaveBeenCalledOnce();
-    const [message, undo, options] = toastUndoable.mock.calls[0];
-    expect(message).toBe("That device will no longer be notified.");
-    expect(options?.id).toBe("push-subscription");
-
-    await act(async () => undo.onUndo());
-
-    expect(enable).toHaveBeenCalledOnce();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
-  it("says nothing when the browser refused to unsubscribe", async () => {
+  it("puts it back from the same switch, in one tap and in silence", async () => {
+    // Where the card is left standing after the switch above was turned off.
+    subscription.status = "off";
     const { user } = renderCard();
-    disable.mockResolvedValue(false);
 
     await user.click(here());
 
-    expect(toastUndoable).not.toHaveBeenCalled();
+    // The permission survived the unsubscribe, so this is the resubscribe an
+    // Undo button in a toast would have run — one tap, in the same place.
+    expect(enable).toHaveBeenCalledOnce();
+    expect(toastSuccess).not.toHaveBeenCalled();
+    subscription.status = "on";
   });
 
   it("lists the devices already subscribed", () => {
@@ -99,6 +101,13 @@ describe("PushCard", () => {
       expect(fetchMock).toHaveBeenCalledWith("/api/push/subscriptions/d2", {
         method: "DELETE",
       }),
+    );
+    // The row is gone from the screen and no switch can bring it back, so
+    // this one does say what happened.
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "That device will no longer be notified.",
+      ),
     );
     vi.unstubAllGlobals();
   });

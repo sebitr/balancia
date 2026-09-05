@@ -108,28 +108,25 @@ export function MoneyFormats({
       { locale, display: "none" },
     );
 
-  /** `undo` names the row that changed, and is the toast it replaces. */
-  const saveFormats = (
-    next: typeof chosen,
-    undo?: "dateFormat" | "numberFormat",
-  ) => {
+  /**
+   * A chip press, written as it is made and never announced.
+   *
+   * The line above rewrote itself on the tap, in the notation that was just
+   * chosen, and the chip it replaced is still in the row waiting to be pressed
+   * again. There is nothing a toast could add and one thing it would take: the
+   * preview it would sit on top of.
+   */
+  const saveFormats = (next: typeof chosen) => {
     const previous = chosen;
     setChosen(next);
     startTransition(async () => {
       const result = await setFormatPreferencesAction(next);
       if (!result.ok) {
         // Back to what is actually stored: a chip left showing a choice the
-        // account did not keep is worse than no confirmation at all.
+        // account did not keep is the one thing this row must not do.
         setChosen(previous);
         toast.error(result.error ?? t("formatsFailed"));
         return;
-      }
-      if (undo) {
-        toastUndoable(
-          t("formatsSaved"),
-          { label: tCommon("undo"), onUndo: () => saveFormats(previous) },
-          { id: `format-${undo}` },
-        );
       }
       // Every date and amount on the screens behind this one was written by
       // the server, in the notation that just changed.
@@ -137,6 +134,14 @@ export function MoneyFormats({
     });
   };
 
+  /**
+   * The display currency, which does get a toast.
+   *
+   * Unlike the chips, this one was chosen through a sheet with a search field
+   * and 165 entries in it: putting it back is that whole journey again, not a
+   * second tap on a control still under the finger. That is exactly the gap
+   * Undo is for.
+   */
   const saveCurrency = (next: string, announce = true) => {
     const previous = code;
     setCode(next);
@@ -249,9 +254,7 @@ export function MoneyFormats({
               ? t("formatAutoShort")
               : dateFormatSample(format, formatLocale),
         }))}
-        onChoose={(next) =>
-          saveFormats({ ...chosen, dateFormat: next }, "dateFormat")
-        }
+        onChoose={(next) => saveFormats({ ...chosen, dateFormat: next })}
       />
 
       <ChipRow
@@ -267,9 +270,7 @@ export function MoneyFormats({
               ? t("formatAutoShort")
               : numberFormatSample(format, formatLocale),
         }))}
-        onChoose={(next) =>
-          saveFormats({ ...chosen, numberFormat: next }, "numberFormat")
-        }
+        onChoose={(next) => saveFormats({ ...chosen, numberFormat: next })}
       />
 
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>

@@ -18,8 +18,9 @@ import { cn } from "@/lib/utils";
  * which reads as the list twitching each time it is used.
  *
  * Selecting writes immediately — there is no Save button anywhere in settings —
- * so `onChoose` is called with the new value and the caller confirms it with a
- * toast that offers the way back.
+ * so `onChoose` is called with the new value and nothing is said back. The tick
+ * moving is the confirmation and the row above or below is the way back, one
+ * tap away; see `toastUndoable` for where a confirmation does earn its place.
  *
  * The caption sits outside the card, the way `SettingsGroup`'s does and the
  * way the theme and accent sections on the same screen do: it names a set of

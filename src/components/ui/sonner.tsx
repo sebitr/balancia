@@ -203,6 +203,22 @@ const Toaster = ({
  * Only for changes that have a genuine way back — the undo has to *do* the
  * reverse, not pretend to. Where none exists, a plain `toast.success` is the
  * honest answer.
+ *
+ * **And only where the screen cannot say it itself.** A control that writes on
+ * the tap, shows the state it wrote, and takes one tap on that same control to
+ * put back has already confirmed itself and already offers the way back: a
+ * switch, a row of chips, a swatch, a list with a tick down it. There a toast
+ * is a slower second copy of the control the reader is still touching, laid
+ * over the rows it is describing — so the language list, the format chips, the
+ * accent, the surfaces, the notification switches and the push switch all say
+ * nothing at all when they save.
+ *
+ * What still earns a confirmation is everything that control cannot carry: a
+ * refusal, in which case the error is the message; something that has left the
+ * screen, like a deleted entry or a dismissed row; and a change that took more
+ * than a tap to make and would take more than a tap to reverse — a typed
+ * field, a picker, a sheet. Those are the ones with a real gap for Undo to
+ * close.
  */
 export function toastUndoable(
   message: string,

@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { BellOff, Loader2, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { toastUndoable } from "@/components/ui/sonner";
 import { SettingsControlRow } from "./settings-row";
 import { usePushSubscription } from "@/components/notifications/use-push-subscription";
 
@@ -27,11 +26,15 @@ export interface PushDevice {
  * listed — the switch only ever speaks for the browser in front of you, and
  * without the list there is nowhere to see, or stop, the others.
  *
- * The switch has a real way back and offers it. Turning push off leaves the
- * *permission* granted, so turning it on again is a resubscribe rather than
- * another browser prompt — which is what makes Undo honest here. Removing
- * another device from the list is not undoable in the same way: that browser
- * has to ask for itself, so that toast says what happened and stops.
+ * The switch says nothing back, because it is already the answer: turning push
+ * off leaves the *permission* granted, so turning it on again is a resubscribe
+ * rather than another browser prompt, and that resubscribe is one tap on the
+ * switch still under the finger. An Undo button in a toast would have run
+ * exactly the same call, one step further away.
+ *
+ * Removing another device from the list is a different thing altogether. That
+ * row leaves the screen and no control on it can be flicked back — the browser
+ * it names has to ask for itself — so that one says what happened, and stops.
  */
 export function PushCard({ devices }: { devices: PushDevice[] }) {
   const t = useTranslations("notificationSettings");
@@ -65,14 +68,7 @@ export function PushCard({ devices }: { devices: PushDevice[] }) {
       await turnOn();
       return;
     }
-    if (await disable()) {
-      toastUndoable(
-        t("deviceRemoved"),
-        { label: tCommon("undo"), onUndo: turnOn },
-        { id: "push-subscription" },
-      );
-      router.refresh();
-    }
+    if (await disable()) router.refresh();
   };
 
   /**

@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { toastUndoable } from "@/components/ui/sonner";
 import { SettingsControlRow } from "@/components/settings/settings-row";
 import { savePreferencesAction } from "@/modules/notifications/actions";
 import type { NotificationPreferences } from "@/modules/notifications/types";
@@ -20,6 +19,13 @@ import type { NotificationPreferences } from "@/modules/notifications/types";
  * what a single glance can already take in, and the ones people actually want
  * to turn off — reminders, repeating expenses — are exactly the ones that
  * would end up behind it.
+ *
+ * Nothing is announced. A switch that moved under the finger and stayed moved
+ * has already said it was saved, and the way back is the same switch — so a
+ * toast offering Undo would be a second, slower copy of the control the reader
+ * is still touching, laid over the rows it is describing. What a failure
+ * cannot say for itself still gets said: the switch goes back and the error
+ * arrives as a toast.
  */
 
 /**
@@ -40,15 +46,10 @@ export function NotificationPreferencesForm({
   defaultValue: NotificationPreferences;
 }) {
   const t = useTranslations("notificationSettings");
-  const tCommon = useTranslations("common");
   const [preferences, setPreferences] = useState(defaultValue);
   const [isPending, startTransition] = useTransition();
 
-  const toggle = (
-    key: keyof NotificationPreferences,
-    value: boolean,
-    announce = true,
-  ) => {
+  const toggle = (key: keyof NotificationPreferences, value: boolean) => {
     const next = { ...preferences, [key]: value };
     // Optimistic: the switch should move under the finger, and a failure puts
     // it back rather than leaving it lying about the saved state.
@@ -58,18 +59,6 @@ export function NotificationPreferencesForm({
       if (!result.ok) {
         setPreferences(preferences);
         toast.error(result.error ?? t("saveFailed"));
-        return;
-      }
-      if (announce) {
-        // Named for the switch rather than the card: flicking two of them
-        // leaves two ways back, and flicking one twice replaces its own
-        // confirmation instead of adding to a pile. Undoing says nothing —
-        // the switch moving back is the answer.
-        toastUndoable(
-          t("saved"),
-          { label: tCommon("undo"), onUndo: () => toggle(key, !value, false) },
-          { id: `notify-${key}` },
-        );
       }
     });
   };

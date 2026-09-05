@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { numberFormatSample, numberLocale } from "@/i18n/format";
@@ -9,11 +9,16 @@ import { MoneyFormats, type PreviewEntry } from "./money-formats";
 /**
  * How dates and numbers are written, and the line that proves it.
  *
- * Two chip rows saved by one action, but they are two decisions: each confirms
- * itself, each keeps its own way back, and changing one must not take away the
- * chance to undo the other. A refused write puts its row back, because a chip
- * left showing a choice the account did not keep is worse than no confirmation
- * at all.
+ * Two chip rows saved by one action, but they are two decisions: changing one
+ * must not lose the other, and neither says a word when it lands. The preview
+ * rewrote itself on the tap and the chip that was replaced is still in the row,
+ * so a toast would only sit on top of the line it was confirming. A refused
+ * write puts its row back, because a chip left showing a choice the account did
+ * not keep is the one thing this screen must not do.
+ *
+ * The display currency is the exception the same file makes on purpose: it is
+ * chosen through a sheet of 165 entries, so putting it back is a journey rather
+ * than a second tap, and that one still confirms itself with an Undo.
  *
  * The chips are radios, each named by the notation it produces — which is also
  * the only thing the reader has to go on, and therefore worth asserting on
@@ -60,13 +65,6 @@ function renderFormats(entry: PreviewEntry | null = ENTRY) {
   return { ...view, user: userEvent.setup() };
 }
 
-/** The way back the newest confirmation offered. */
-function offeredUndo(): () => void {
-  const newest = toastUndoable.mock.calls.at(-1);
-  if (!newest) throw new Error("nothing was confirmed");
-  return newest[1].onUndo;
-}
-
 const row = (label: string) =>
   within(screen.getByRole("radiogroup", { name: label }));
 
@@ -94,7 +92,7 @@ const amountIn = (format: "auto" | "space-comma") =>
   ).replace(/\s/g, " ");
 
 describe("MoneyFormats", () => {
-  it("writes a choice as it is made, and offers back the one it replaced", async () => {
+  it("writes a choice as it is made, and says nothing about it", async () => {
     const { user } = renderFormats();
 
     await user.click(row("Dates").getByRole("radio", { name: DMY }));
@@ -106,8 +104,17 @@ describe("MoneyFormats", () => {
       }),
     );
     expect(row("Dates").getByRole("radio", { name: DMY })).toBeChecked();
+    expect(toastUndoable).not.toHaveBeenCalled();
+  });
 
-    await act(async () => offeredUndo()());
+  it("puts a chip row back from the chip it replaced", async () => {
+    const { user } = renderFormats();
+
+    await user.click(row("Dates").getByRole("radio", { name: DMY }));
+    await waitFor(() =>
+      expect(row("Dates").getByRole("radio", { name: "Auto" })).toBeEnabled(),
+    );
+    await user.click(row("Dates").getByRole("radio", { name: "Auto" }));
 
     await waitFor(() =>
       expect(setFormatPreferencesAction).toHaveBeenLastCalledWith({
@@ -116,33 +123,18 @@ describe("MoneyFormats", () => {
       }),
     );
     expect(row("Dates").getByRole("radio", { name: DMY })).not.toBeChecked();
-    // Undoing is not itself something to undo, so it says nothing.
-    expect(toastUndoable).toHaveBeenCalledOnce();
-  });
-
-  it("keeps a way back for each row", async () => {
-    const { user } = renderFormats();
-
-    await user.click(row("Dates").getByRole("radio", { name: DMY }));
-    await waitFor(() =>
-      expect(
-        row("Numbers").getByRole("radio", { name: DOT_COMMA }),
-      ).toBeEnabled(),
-    );
-    await user.click(row("Numbers").getByRole("radio", { name: DOT_COMMA }));
-
-    await waitFor(() => expect(toastUndoable).toHaveBeenCalledTimes(2));
-    expect(toastUndoable.mock.calls.map((call) => call[2]?.id)).toEqual([
-      "format-dateFormat",
-      "format-numberFormat",
-    ]);
+    expect(toastUndoable).not.toHaveBeenCalled();
   });
 
   it("does not lose the other row's choice when one is changed", async () => {
     const { user } = renderFormats();
 
     await user.click(row("Numbers").getByRole("radio", { name: DOT_COMMA }));
-    await waitFor(() => expect(toastUndoable).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(
+        row("Numbers").getByRole("radio", { name: DOT_COMMA }),
+      ).toBeChecked(),
+    );
 
     await user.click(row("Dates").getByRole("radio", { name: DMY }));
 
