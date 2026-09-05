@@ -13,8 +13,7 @@ words must not change when it moves. See _Keeping the list_.
 
 Started, on a branch, not yet merged.
 
-- [ ] Make the repository page do the converting: put the live demo where somebody lands, keep only the badges that carry information, add a donation route, and show several screens instead of one — `docs/readme-conversion`
-- [ ] Ask one question about currencies when a group is created instead of two paragraphs, a currency the group never keeps and a time zone the device already knows — `feat/group-creation-one-question`
+- [ ] Say in `.gitattributes` that GitHub ignores the union driver, so the next chat stops hunting for a conflict git does not have — `chore/todo-github-union`
 - [ ] Keep PGlite out of the bundler, so a demo instance starts instead of answering Internal Server Error on every page — `fix/demo-pglite-external`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-restore`
 
@@ -22,6 +21,7 @@ Started, on a branch, not yet merged.
 
 Agreed on, not started. Pick from the top.
 
+- [ ] Give every list item its own file under `todo/`, so two branches never edit the same lines and GitHub stops flagging a conflict git resolves on its own — the union driver in `.gitattributes` fixes the merge but cannot reach GitHub's mergeability check, so every pull request still shows the banner and somebody still merges main by hand to clear it. One file per item makes the anchor per-item: a branch adds `todo/<slug>.md`, moves it between `now/`, `next/` and `done/`, and two branches touching different items cannot collide. Costs a renderer for the list — a script or a README generator — and a rewrite of `src/lib/todo-list.test.ts`, which reads one file today
 - [ ] Share target: register for images, PDFs and text, so a receipt shared from another app lands in the drawer — the other half of `briefs/entry-friction.md` idea 6, left out of the Add Entry rework because it is manifest and route work rather than drawer work
 - [ ] Merge somebody into an existing guest when they accept an invite — `briefs/entry-friction.md` idea 7's second half. Match on name, ask, never merge silently: merging two people's balances by mistake is unrecoverable in a way nothing else in this app is
 - [ ] Use the whole window on a desktop, instead of a phone column with a bottom bar — `src/components/layout/app-shell.tsx`
