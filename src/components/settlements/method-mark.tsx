@@ -59,7 +59,7 @@ export function MethodMark({
   const neutral = (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center justify-center bg-white/10 font-semibold text-foreground shadow-[inset_0_0_0_1px_oklch(1_0_0_/_0.16)]"
+      className="flex shrink-0 items-center justify-center bg-wash-3 font-semibold text-foreground shadow-hairline-inset"
       style={{
         width: size,
         height: size,
@@ -86,7 +86,7 @@ export function MethodMark({
   return (
     <span
       aria-hidden="true"
-      className="relative flex shrink-0 items-center justify-center font-semibold shadow-[inset_0_0_0_1px_oklch(1_0_0_/_0.16)]"
+      className="relative flex shrink-0 items-center justify-center font-semibold shadow-hairline-inset"
       style={{
         width: size,
         height: size,
@@ -96,7 +96,10 @@ export function MethodMark({
         // mark brings its own background, and the brand hue behind it would
         // only fight with it.
         background: logoLoaded ? "transparent" : method.brandColor,
-        color: method.onBrand === "dark" ? "oklch(0.226 0.072 319)" : "#fff",
+        color:
+          method.onBrand === "dark"
+            ? "var(--primary-foreground)"
+            : "var(--negative-foreground)",
       }}
     >
       {!logoLoaded && label.charAt(0).toUpperCase()}

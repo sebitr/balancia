@@ -49,7 +49,7 @@ const CHIP_TONE: Record<EntryTone, string> = {
 };
 
 const DISC_TONE: Record<EntryTone, string> = {
-  expense: "bg-foreground/12",
+  expense: "bg-wash-4",
   revenue: "bg-positive/25",
   settlement: "bg-payer/25",
 };
@@ -411,7 +411,7 @@ export function PartyTable({
   return (
     <table className="w-full border-collapse text-left">
       <thead>
-        <tr className="bg-foreground/[0.035]">
+        <tr className="bg-wash-1">
           <th scope="col" className="h-8 border-b border-border pl-3.5">
             <span className="sr-only">{personLabel}</span>
           </th>
@@ -534,7 +534,12 @@ export function ChangeRow({
         </span>
       </span>
       {balance === 0n ? (
-        <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-neutral-balance-ink">
+        <span
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 text-sm font-semibold",
+            TONE.neutral.ink,
+          )}
+        >
           <Minus aria-hidden="true" className="size-[15px]" />
           {settledLabel}
         </span>
@@ -634,7 +639,7 @@ export const ACTION =
 
 /** Edit: outlined, and the only one of the two that takes the width. */
 export const ACTION_NEUTRAL =
-  "flex-1 border border-input bg-foreground/5 active:bg-foreground/10";
+  "flex-1 border border-input bg-wash-2 active:bg-wash-3";
 
 /** Remove: square, tinted, and carrying no border of its own. */
 export const ACTION_DESTRUCTIVE =

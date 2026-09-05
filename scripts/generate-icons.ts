@@ -18,11 +18,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { MARK, palette } from "@/modules/auth/emails/tokens";
+import { themeColorFor } from "@/modules/profile/surface";
 
-/** Plum ground, cream ink, coral dot — the "app icon" tile on the brand page. */
-const GROUND = "#2a0e31";
-const INK = "#fbf7f1";
-const DOT = "#f97361";
+/**
+ * Plum ground, cream ink, coral dot — the "app icon" tile on the brand page.
+ *
+ * Derived rather than transcribed. They used to be three hand-written hexes,
+ * and the dot had already drifted a unit off coral.
+ */
+const GROUND = palette.ink;
+const INK = themeColorFor("cream");
+const DOT = palette.primary;
 
 /**
  * How the mark is placed on its tile.
@@ -37,8 +43,8 @@ const DOT = "#f97361";
  *  - `email` is the mark alone on a transparent ground, for the header bar of
  *    the transactional emails — which cannot use the inline SVG the interface
  *    uses, because Gmail and Outlook drop inline SVG. It takes its colours
- *    from the email palette, which is derived from the theme tokens; the
- *    constants above are the same three tokens, hand-written, and predate it.
+ *    from the email palette, which is derived from the theme tokens — the
+ *    same place the three constants above now come from.
  */
 type Variant = "tile" | "maskable" | "compact" | "badge" | "email";
 

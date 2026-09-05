@@ -11,9 +11,9 @@ import {
 import {
   ACCENT_COLORS,
   ACCENT_SEEDS,
-  accentPalette,
+  MONEY_ROLES,
+  type Theme,
 } from "@/modules/profile/accent";
-import { MONEY_ROLES, type Theme } from "@/modules/profile/money-tones";
 
 /**
  * The balance colours have to be readable as text, in both themes.
@@ -34,16 +34,15 @@ import { MONEY_ROLES, type Theme } from "@/modules/profile/money-tones";
  * The ratios are computed from the tokens in `globals.css` rather than from a
  * table copied beside them, because a table is a second place to forget.
  *
- * Two themes, and now two surfaces each and a contrast setting on top of
- * either: eight cascades, and every ink is checked in all of them. Under
- * increased contrast the bar is 7:1, and the captions and the lines that
- * the setting exists for are checked too.
+ * Two themes, one light palette, two dark ones, and the system's contrast
+ * preference on top of either: six cascades, and every ink is checked in all
+ * of them. Under increased contrast the bar is 7:1, and the captions and the
+ * lines that it exists for are checked too.
  *
- * What this file sees is the palette as drawn — coral, with the fallbacks
- * the accent-aware tokens carry. The other six accents, and the money
- * colours rotated clear of them, are `src/modules/profile/accent.test.ts`'s
- * job; what is checked here about the accent is that the chart colours keep
- * out of its way, whichever one it is.
+ * What this file sees is the palette as drawn — coral, with the fallback the
+ * one accent-aware token carries. The other six accents are
+ * `src/modules/profile/accent.test.ts`'s job; what is checked here about the
+ * accent is that the chart colours keep out of its way, whichever one it is.
  */
 
 const CSS = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
@@ -61,10 +60,11 @@ const AA_GRAPHIC = 3;
  */
 const MIN_DELTA_E = 0.075;
 
-const PAPER = ':root:not(.dark)[data-light="paper"]';
 const MIDNIGHT = '.dark[data-dark="midnight"]';
-const LIGHT_MORE = ':root:not(.dark)[data-contrast="more"]';
-const DARK_MORE = '.dark[data-contrast="more"]';
+// Inside `@media (prefers-contrast: more)`, which is why `block()` below has
+// to count braces rather than stop at the first one in column zero.
+const LIGHT_MORE = ":root:not(.dark)";
+const DARK_MORE = ":root.dark";
 
 interface Cascade {
   readonly name: string;
@@ -77,21 +77,9 @@ interface Cascade {
 const CASCADES: readonly Cascade[] = [
   { name: "light, cream", theme: "light", selectors: [":root"], more: false },
   {
-    name: "light, paper",
-    theme: "light",
-    selectors: [":root", PAPER],
-    more: false,
-  },
-  {
     name: "light, cream, more contrast",
     theme: "light",
     selectors: [":root", LIGHT_MORE],
-    more: true,
-  },
-  {
-    name: "light, paper, more contrast",
-    theme: "light",
-    selectors: [":root", PAPER, LIGHT_MORE],
     more: true,
   },
   { name: "dark, plum", theme: "dark", selectors: [".dark"], more: false },
@@ -127,6 +115,9 @@ const INK_SURFACES: Record<string, readonly string[]> = {
   // Links, active nav labels and check glyphs; also the /15 and /18 washes on
   // the self pill and the money-format badges.
   "primary-ink": ["card", "background", "tint"],
+  // Validation notes and the destructive rows in recurrence-sheet,
+  // settle-blocks and split-sheet; the /10 and /15 washes put it on its own.
+  "destructive-ink": ["card", "background", "tint"],
 };
 
 /** The fill each ink token's `tint` surface is a wash of. */
@@ -135,6 +126,7 @@ const TINT_BASE: Record<string, string> = {
   "negative-ink": "negative",
   "payer-ink": "payer",
   "primary-ink": "primary",
+  "destructive-ink": "destructive",
 };
 
 /**
@@ -162,11 +154,34 @@ const BAND_INKS: Record<Theme, Record<string, string>> = {
 /** The chart colours that are categorical — everything but the accent. */
 const CATEGORICAL_CHARTS = ["chart-1", "chart-3", "chart-4", "chart-5"];
 
-/** The declarations inside one selector's block, as a token → value map. */
+/**
+ * The declarations inside one selector's block, as a token → value map.
+ *
+ * The end of the block is found by counting braces rather than by looking for
+ * the next `}` in column zero: the contrast blocks live inside
+ * `@media (prefers-contrast: more)`, so theirs is indented, and a scan that
+ * stopped at the first unindented one would swallow the media query's own
+ * closing brace and every declaration in between. The opening is matched at
+ * the start of a line for a related reason — `.dark {` is a substring of
+ * `:root.dark {`, and a plain indexOf would find the wrong one.
+ */
 function block(selector: string): Map<string, string> {
-  const start = CSS.indexOf(`${selector} {`);
-  if (start === -1) throw new Error(`no ${selector} block in globals.css`);
-  const end = CSS.indexOf("\n}", start);
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const opening = new RegExp(`^[ \\t]*${escaped} \\{`, "m").exec(CSS);
+  if (!opening) throw new Error(`no ${selector} block in globals.css`);
+  const start = opening.index;
+  let depth = 0;
+  let end = start;
+  for (let i = start; i < CSS.length; i += 1) {
+    if (CSS[i] === "{") depth += 1;
+    else if (CSS[i] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
   const body = CSS.slice(start, end);
   const found = new Map<string, string>();
   for (const [, name, value] of body.matchAll(
@@ -312,17 +327,18 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
       (chart) => {
         const bar = resolve(tokens, chart).color;
         for (const accent of ACCENT_COLORS) {
-          const palette = accentPalette(accent);
           expect(
-            deltaE(bar, palette.fill),
+            deltaE(bar, ACCENT_SEEDS[accent]),
             `--${chart} vs the ${accent} accent`,
           ).toBeGreaterThanOrEqual(MIN_DELTA_E);
-          for (const role of MONEY_ROLES) {
-            expect(
-              deltaE(bar, palette.money[theme][role].fill),
-              `--${chart} vs ${role} under ${accent}`,
-            ).toBeGreaterThanOrEqual(MIN_DELTA_E);
-          }
+        }
+        // The money colours are literals now, so a bar is checked against the
+        // three of them once rather than once per accent.
+        for (const role of MONEY_ROLES) {
+          expect(
+            deltaE(bar, resolve(tokens, role).color),
+            `--${chart} vs --${role}`,
+          ).toBeGreaterThanOrEqual(MIN_DELTA_E);
         }
       },
     );

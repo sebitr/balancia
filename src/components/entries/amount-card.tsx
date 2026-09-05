@@ -78,7 +78,7 @@ export function AmountCard({
       : null;
 
   return (
-    <div className="space-y-3 rounded-[17px] bg-card p-4 shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+    <div className="space-y-3 rounded-[17px] bg-card p-4 shadow-hairline">
       <span className="block text-xs font-medium text-muted-foreground">
         {label}
       </span>
@@ -135,7 +135,7 @@ export function AmountCard({
           // The code is read together with the figure beside it, so it is
           // sized to be read from the same distance — the top of the scale
           // rather than the bottom of it, and the chip grown to hold it.
-          className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3.5 text-2xl leading-none font-semibold tracking-[-0.02em] transition-colors active:bg-white/14"
+          className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full border border-border bg-wash-2 px-3.5 text-2xl leading-none font-semibold tracking-[-0.02em] transition-colors active:bg-wash-4"
         >
           {flag && (
             <span aria-hidden="true" className="text-xl leading-none">
@@ -159,7 +159,7 @@ export function AmountCard({
             hint={t("rateFrozen")}
           />
           {converted && (
-            <div className="flex items-center justify-between gap-3 border-t border-white/12 pt-2.5">
+            <div className="flex items-center justify-between gap-3 border-t border-border pt-2.5">
               <span className="text-xs text-muted-foreground">
                 {t("inBaseCurrency")}
               </span>

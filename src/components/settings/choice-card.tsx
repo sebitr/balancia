@@ -79,7 +79,7 @@ export function ChoiceCard<T extends string>({
             value={choice.value}
             className={cn(
               "flex min-h-13 w-full items-center gap-3 px-4 py-3 text-left",
-              "transition-colors hover:bg-foreground/4 focus-visible:ring-3",
+              "transition-colors hover:bg-wash-1 focus-visible:ring-3",
               "focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none",
               "disabled:pointer-events-none disabled:opacity-50",
               index > 0 && "border-t border-border",

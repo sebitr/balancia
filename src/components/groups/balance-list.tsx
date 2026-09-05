@@ -91,7 +91,7 @@ export function BalanceList({
               // screen answers a different question entirely.
               href={`/groups/${groupId}/members/${person.participantId}`}
               transitionTypes={PUSH}
-              className="col-span-3 grid min-h-[52px] grid-cols-subgrid items-center px-3 py-2.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+              className="col-span-3 grid min-h-[52px] grid-cols-subgrid items-center px-3 py-2.5 transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
             >
               <span className="flex min-w-0 items-center gap-2.5">
                 <Avatar className="size-7">
@@ -138,7 +138,7 @@ export function BalanceList({
             <Link
               href={`/groups/${groupId}/members`}
               transitionTypes={PUSH}
-              className="flex min-h-11 items-center justify-center px-3 text-xs font-medium text-primary-ink transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex min-h-11 items-center justify-center px-3 text-xs font-medium text-primary-ink transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               {t("viewAllPeople", { count: people })}
             </Link>
@@ -184,14 +184,16 @@ function ComparisonBar({
   return (
     <span
       aria-hidden="true"
-      className="relative h-[3px] w-full overflow-hidden rounded-full bg-foreground/[0.09]"
+      className="relative h-[3px] w-full overflow-hidden rounded-full bg-wash-3"
     >
       <span className="absolute inset-y-0 left-1/2 w-px bg-foreground/20" />
       {value !== 0n && (
         <span
           className={cn(
             "absolute inset-y-0",
-            value < 0n ? "right-1/2 bg-negative" : "left-1/2 bg-positive",
+            value < 0n
+              ? `right-1/2 ${TONE.negative.fill}`
+              : `left-1/2 ${TONE.positive.fill}`,
           )}
           style={{ width: `${width}%` }}
         />

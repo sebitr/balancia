@@ -123,7 +123,7 @@ function DangerRow({
       onClick={onClick}
       className={cn(
         "flex min-h-11 w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-medium",
-        "transition-colors hover:bg-foreground/4 focus-visible:ring-3 focus-visible:ring-ring/50",
+        "transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50",
         "focus-visible:-outline-offset-2 focus-visible:outline-none",
         "not-first:border-t not-first:border-border",
         destructive && "text-destructive",

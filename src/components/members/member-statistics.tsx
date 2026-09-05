@@ -193,7 +193,7 @@ export function MemberStatistics({
         <div
           role="tablist"
           aria-label={t("rangeLabel")}
-          className="flex gap-0.5 rounded-full bg-foreground/[0.06] p-[3px]"
+          className="flex gap-0.5 rounded-full bg-wash-2 p-[3px]"
         >
           {RANGES.map((candidate) => {
             const active = candidate === range;
@@ -480,7 +480,7 @@ function PaidAgainstShare({
           </p>
         </div>
 
-        <div className="relative h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
+        <div className="relative h-1.5 overflow-hidden rounded-full bg-wash-3">
           <span
             className="absolute inset-y-0 left-0 rounded-full bg-[color-mix(in_oklch,var(--chart-2)_70%,transparent)]"
             style={{ width: `${fill}%` }}
@@ -718,7 +718,7 @@ function CategorySplit({
               </div>
               <span
                 aria-hidden="true"
-                className="mt-1.5 block h-1 overflow-hidden rounded-full bg-foreground/[0.07]"
+                className="mt-1.5 block h-1 overflow-hidden rounded-full bg-wash-2"
               >
                 <span
                   className="block h-full rounded-full"
@@ -893,7 +893,7 @@ function ActivityCard({
 
 /** Nothing, a little, a lot — four steps, because a fifth reads as noise. */
 const SHADES = [
-  "bg-foreground/[0.06]",
+  "bg-wash-2",
   "bg-[color-mix(in_oklch,var(--chart-1)_30%,transparent)]",
   "bg-[color-mix(in_oklch,var(--chart-1)_60%,transparent)]",
   "bg-[var(--chart-1)]",

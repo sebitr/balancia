@@ -72,7 +72,7 @@ export function CurrencyPicker({
         <button
           type="button"
           onClick={onBack}
-          className="tap-target -ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground/85 transition-colors duration-150 hover:bg-foreground/8 hover:text-foreground"
+          className="tap-target -ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground/85 transition-colors duration-150 hover:bg-wash-3 hover:text-foreground"
         >
           <ArrowLeft aria-hidden="true" className="size-[18px]" />
           <span className="sr-only">{t("back")}</span>
@@ -140,7 +140,7 @@ function SearchField({
   const t = useTranslations("currencyPicker");
 
   return (
-    <div className="flex h-11 items-center gap-2.5 rounded-[14px] bg-foreground/5 px-3 inset-ring inset-ring-foreground/10">
+    <div className="flex h-11 items-center gap-2.5 rounded-[14px] bg-wash-2 px-3 inset-ring inset-ring-foreground/10">
       <Search
         aria-hidden="true"
         className="size-4 shrink-0 text-muted-foreground"
@@ -161,7 +161,7 @@ function SearchField({
         tabIndex={value === "" ? -1 : undefined}
         aria-hidden={value === ""}
         className={cn(
-          "tap-target flex size-[26px] shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/85 transition-[opacity,background-color] duration-150 hover:bg-foreground/14",
+          "tap-target flex size-[26px] shrink-0 items-center justify-center rounded-full bg-wash-3 text-foreground/85 transition-[opacity,background-color] duration-150 hover:bg-wash-4",
           value === "" ? "pointer-events-none opacity-0" : "opacity-100",
         )}
       >
@@ -200,7 +200,7 @@ function CurrencyRow({
         "flex h-14 items-center gap-3 rounded-[14px] pr-2 pl-2.5 transition-[background-color,box-shadow] duration-150",
         selected
           ? "bg-primary/12 inset-ring inset-ring-primary/45"
-          : "hover:bg-foreground/6",
+          : "hover:bg-wash-2",
       )}
     >
       <button
@@ -244,7 +244,7 @@ function CurrencyRow({
         onClick={onToggleFavorite}
         aria-pressed={favorite}
         className={cn(
-          "tap-target flex size-[34px] shrink-0 items-center justify-center rounded-full transition-colors duration-150 hover:bg-foreground/8",
+          "tap-target flex size-[34px] shrink-0 items-center justify-center rounded-full transition-colors duration-150 hover:bg-wash-3",
           favorite ? "text-primary-ink" : "text-muted-foreground/85",
         )}
       >

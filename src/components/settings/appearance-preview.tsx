@@ -10,10 +10,10 @@ import { BalanceAmount } from "@/components/money/amount";
  * Every colour here is a token: the ground is `--card`, the pill is the
  * accent, the three figures are the three balance inks, the bar is the two
  * balance fills. Nothing is passed in and nothing is stored, so the moment
- * a swatch below repaints the document root this repaints with it — the
- * accent turning mint and, in the same frame, the "gets back" green stepping
- * aside to grass. It is what the note under the accents promises, shown
- * rather than said.
+ * a swatch below repaints the document root this repaints with it — the pill
+ * and the button turning mint while the three figures and the bar stay
+ * exactly where they were. It is what the note under the accents promises,
+ * shown rather than said.
  *
  * The button is a picture of one, not a control: it has nothing to do, and a
  * focusable element that does nothing is a trap for a keyboard.
@@ -53,7 +53,7 @@ export function AppearancePreview({ currency }: { currency: string }) {
 
       <span
         aria-hidden="true"
-        className="flex h-1 overflow-hidden rounded-full bg-foreground/[0.08]"
+        className="flex h-1 overflow-hidden rounded-full bg-wash-3"
       >
         <span className="w-[70%] bg-positive" />
         <span className="w-[30%] bg-negative" />

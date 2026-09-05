@@ -131,7 +131,7 @@ export function MemberPill({
         "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
         selected
           ? cn(PILL_TONE[tone], "font-semibold text-foreground")
-          : "border-border bg-white/4 font-normal text-muted-foreground",
+          : "border-border bg-wash-1 font-normal text-muted-foreground",
       )}
     >
       <MemberAvatar name={name} selected={selected} tone={tone} guest={guest} />
@@ -187,7 +187,7 @@ export function ChoicePill({
         Icon ? "pr-4 pl-1" : "px-4",
         selected
           ? "border-primary bg-primary/15 font-semibold text-foreground"
-          : "border-border bg-white/4 font-normal text-muted-foreground",
+          : "border-border bg-wash-1 font-normal text-muted-foreground",
       )}
     >
       {Icon && (
@@ -196,7 +196,7 @@ export function ChoicePill({
             "grid size-8 shrink-0 place-items-center rounded-full",
             selected
               ? "bg-primary text-primary-foreground"
-              : "bg-white/6 text-muted-foreground",
+              : "bg-wash-2 text-muted-foreground",
           )}
         >
           <Icon aria-hidden={true} className="size-[18px]" />

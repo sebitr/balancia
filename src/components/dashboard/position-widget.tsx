@@ -196,7 +196,7 @@ export function PositionWidget({
   return (
     <section
       aria-labelledby={labelId}
-      className="overflow-hidden rounded-[20px] bg-card shadow-[inset_0_1px_0_0_oklch(1_0_0/7%)] ring-1 ring-foreground/10"
+      className="overflow-hidden rounded-[20px] bg-card shadow-[inset_0_1px_0_0_var(--border)] ring-1 ring-foreground/10"
     >
       <div className="flex flex-col gap-[18px] px-[18px] pt-5 pb-4">
         <div className="flex flex-col gap-1.5">
@@ -204,7 +204,12 @@ export function PositionWidget({
             {t("positionEyebrow")}
           </p>
           {allSquare ? (
-            <p className="text-[1.875rem] font-semibold tracking-[-0.025em] text-neutral-balance-ink">
+            <p
+              className={cn(
+                "text-[1.875rem] font-semibold tracking-[-0.025em]",
+                TONE.neutral.ink,
+              )}
+            >
               {tMoney("settledUpBadge")}
             </p>
           ) : ratesUnavailable ? (
@@ -247,13 +252,13 @@ export function PositionWidget({
                       {owed > 0 && (
                         <span
                           style={{ flexGrow: owed }}
-                          className="rounded-full bg-positive"
+                          className={cn("rounded-full", TONE.positive.fill)}
                         />
                       )}
                       {owing > 0 && (
                         <span
                           style={{ flexGrow: owing }}
-                          className="rounded-full bg-negative"
+                          className={cn("rounded-full", TONE.negative.fill)}
                         />
                       )}
                     </>
@@ -350,7 +355,7 @@ export function PositionWidget({
         <Button
           asChild
           variant="outline"
-          className="h-11 grow rounded-xl border-foreground/25 bg-foreground/[0.06] px-[13px] py-[5px] text-sm md:h-[34px] md:grow-0 dark:border-foreground/25 dark:bg-foreground/[0.06]"
+          className="h-11 grow rounded-xl border-foreground/25 bg-wash-2 px-[13px] py-[5px] text-sm md:h-[34px] md:grow-0 dark:border-foreground/25 dark:bg-wash-2"
         >
           {/* Opens the create sheet on this page rather than pushing a screen. */}
           <Link href="?new" replace scroll={false}>

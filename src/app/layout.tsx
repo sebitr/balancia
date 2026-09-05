@@ -13,12 +13,7 @@ import {
 import { CurrencyFavoritesProvider } from "@/components/money/currency-favorites";
 import { resolveCurrencyFavorites } from "@/modules/currencies/preferences";
 import { accentTokens } from "@/modules/profile/accent";
-import {
-  CONTRAST_PREPAINT_SCRIPT,
-  surfaceAttributes,
-  themeColorFor,
-} from "@/modules/profile/surface";
-import { ContrastFollower } from "@/components/theme/contrast-follower";
+import { surfaceAttributes, themeColorFor } from "@/modules/profile/surface";
 import { getEnv } from "@/lib/env";
 import { Toaster } from "@/components/ui/sonner";
 import { SerwistRegister } from "@/components/pwa/serwist-register";
@@ -67,10 +62,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * The browser chrome is tinted with the page's own ground, so it follows
- * the surface the reader chose: paper white rather than cream, near-black
- * rather than plum. Which of the two applies is the system's call, as it
- * was before — the theme itself is settled in the browser, after this.
+ * The browser chrome is tinted with the page's own ground, so at night it
+ * follows the surface the reader chose: near-black rather than plum. The
+ * light ground is not a choice, so it is a constant. Which of the two
+ * applies is the system's call, as it was before — the theme itself is
+ * settled in the browser, after this.
  */
 export async function generateViewport(): Promise<Viewport> {
   const surfaces = await resolveSurfacePreferences();
@@ -78,7 +74,7 @@ export async function generateViewport(): Promise<Viewport> {
     themeColor: [
       {
         media: "(prefers-color-scheme: light)",
-        color: themeColorFor(surfaces.light),
+        color: themeColorFor("cream"),
       },
       {
         media: "(prefers-color-scheme: dark)",
@@ -101,35 +97,27 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // resolved here rather than in each of the seven forms that opens one.
   const favorites = await resolveCurrencyFavorites();
   // The accent, painted onto the root element in the server's own HTML. An
-  // inline declaration outranks both `:root` and `.dark`, so the three tokens
+  // inline declaration outranks both `:root` and `.dark`, so the six tokens
   // it sets are the ones every accent in the app reads.
   const accent = await resolveAccentColor();
-  // The surfaces and the contrast choice, as attributes on the same element,
-  // where the override blocks in globals.css look for them.
+  // The dark surface, as an attribute on the same element, where the override
+  // block in globals.css looks for it.
   const surfaces = await resolveSurfacePreferences();
-  // Two inline scripts run before paint — the theme provider's and the
-  // contrast one below — and under the strict CSP both need the nonce.
+  // The theme provider's pre-paint script runs before anything is drawn, and
+  // under the strict CSP it needs the nonce.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html
       lang={locale}
       // The theme provider's pre-paint script sets `class` and `style` on this
-      // element before React hydrates, and the contrast script may set
-      // `data-contrast` — a mismatch by construction.
+      // element before React hydrates — a mismatch by construction.
       suppressHydrationWarning
       className={`${instrumentSans.variable} ${instrumentSerif.variable} ${GeistMono.variable} h-full antialiased`}
       style={accentTokens(accent)}
       {...surfaceAttributes(surfaces)}
     >
       <body className="flex min-h-full flex-col">
-        {/* First thing in the body, so it has run before anything below is
-            laid out — the same place the theme provider's script goes. */}
-        <script
-          nonce={nonce}
-          dangerouslySetInnerHTML={{ __html: CONTRAST_PREPAINT_SCRIPT }}
-        />
-        <ContrastFollower choice={surfaces.contrast} />
         <SerwistRegister />
         {/* Locale and messages are inherited from the server render; Client
             Components below can call useTranslations without prop drilling. */}

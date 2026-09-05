@@ -177,7 +177,7 @@ export default async function SettingsHubPage() {
               icon={Server}
               label={t("administration")}
               badge={
-                <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-foreground/10 px-2 text-2xs font-semibold text-muted-foreground">
+                <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-wash-3 px-2 text-2xs font-semibold text-muted-foreground">
                   {t("adminBadge")}
                 </span>
               }

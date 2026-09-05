@@ -11,6 +11,7 @@ appending at once conflict on different lines.
 
 Started, on a branch, not yet merged.
 
+- [ ] Stop deriving the money colours from the accent: one green, one red, one amber on every account, one red for owing and deleting, and the appearance screen down to what earns its place — `fix/money-colours-hold-still`
 - [ ] Stand the mark and the name of a group screen's header on the same pixels the dashboard's wordmark uses, at the same size — `fix/header-logo-parity`
 - [ ] Name the two home-screen actions after what they do, and give each the glyph the app already uses for it — `fix/dashboard-cta-glyphs`
 - [ ] Settle three drifts a UX pass found: the tab now says Transactions like the screen it opens, Settle up hands over coins instead of ticking itself done, and every signed figure is written the one way — `fix/vocabulary-drift`

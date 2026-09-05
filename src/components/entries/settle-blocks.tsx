@@ -299,12 +299,12 @@ export function OutstandingList({
       <button
         type="button"
         onClick={onPickSomeoneElse}
-        className="flex w-full items-center gap-3 border-b border-white/8 p-3 text-left text-muted-foreground transition-colors last:border-b-0 hover:bg-white/4"
+        className="flex w-full items-center gap-3 border-b border-border p-3 text-left text-muted-foreground transition-colors last:border-b-0 hover:bg-wash-1"
       >
         {/* Dashed, because there is no member to show yet. */}
         <span
           aria-hidden="true"
-          className="flex size-7 shrink-0 items-center justify-center rounded-full border border-dashed border-white/30"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full border border-dashed border-input"
         >
           <Plus className="size-3.5" />
         </span>
@@ -324,11 +324,11 @@ export function OutstandingList({
   if (pairs.length === 0) {
     return (
       <section className="space-y-2">
-        <p className="rounded-[17px] bg-card p-4 text-center text-sm text-muted-foreground shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+        <p className="rounded-[17px] bg-card p-4 text-center text-sm text-muted-foreground shadow-hairline">
           {t("nothingOutstanding")}
         </p>
         {escapeHatch && (
-          <ul className="overflow-hidden rounded-[17px] bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+          <ul className="overflow-hidden rounded-[17px] bg-card shadow-hairline">
             {escapeHatch}
           </ul>
         )}
@@ -341,7 +341,7 @@ export function OutstandingList({
       <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
         {t("outstanding")}
       </h2>
-      <ul className="overflow-hidden rounded-[17px] bg-card shadow-[0_0_0_1px_oklch(1_0_0_/_0.1)]">
+      <ul className="overflow-hidden rounded-[17px] bg-card shadow-hairline">
         {pairs.map((pair, index) => {
           const active = index === selectedIndex;
           return (
@@ -351,8 +351,8 @@ export function OutstandingList({
                 onClick={() => onSelect(index)}
                 aria-pressed={active}
                 className={cn(
-                  "flex w-full items-center gap-3 border-b border-white/8 p-3 text-left transition-colors last:border-b-0",
-                  active && "bg-white/6",
+                  "flex w-full items-center gap-3 border-b border-border p-3 text-left transition-colors last:border-b-0",
+                  active && "bg-wash-2",
                 )}
               >
                 <MemberAvatar name={pair.fromName} selected={active} />
@@ -381,7 +381,7 @@ export function OutstandingList({
                     "flex size-4 shrink-0 items-center justify-center rounded-full border",
                     active
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-white/25",
+                      : "border-input",
                   )}
                 >
                   {active && <Check className="size-3" />}
@@ -460,7 +460,7 @@ export function PaymentMethodRow({
                 "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border transition-colors",
                 active
                   ? "border-primary bg-primary/10"
-                  : "border-border bg-white/4",
+                  : "border-border bg-wash-1",
               )}
             >
               <MethodMark method={method} label={label} />
@@ -485,7 +485,7 @@ export function PaymentMethodRow({
             "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed transition-colors",
             offRow
               ? "border-primary bg-primary/10"
-              : "border-white/22 text-muted-foreground",
+              : "border-input text-muted-foreground",
           )}
         >
           {offRow ? null : (

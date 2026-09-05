@@ -35,13 +35,14 @@
   --muted-foreground: oklch(0.5 0.03 319);
   --accent: oklch(0.9 0.018 319);
   --accent-foreground: oklch(0.33 0.088 319);
-  --destructive: oklch(0.53 0.2 22);
+  --destructive: oklch(0.53 0.2 25);
+  --destructive-ink: oklch(0.515 0.2 25);
   --positive: oklch(0.654 0.13 167);
   --positive-foreground: oklch(0.977 0.007 85);
   --positive-ink: oklch(0.496 0.13 167);
-  --negative: oklch(0.639 0.18 32);
+  --negative: oklch(0.6 0.2 25);
   --negative-foreground: oklch(0.977 0.007 85);
-  --negative-ink: oklch(0.534 0.18 32);
+  --negative-ink: oklch(0.53 0.2 25);
   --neutral-balance: oklch(0.62 0.035 319);
   --neutral-balance-ink: oklch(0.525 0.035 319);
   --payer: oklch(0.72 0.145 70);
@@ -58,12 +59,12 @@
   --radius: 0.75rem;
   --sidebar: oklch(0.96 0.01 85);
   --sidebar-foreground: oklch(0.226 0.072 319);
-  --sidebar-primary: oklch(0.712 0.168 30);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: oklch(0.226 0.072 319);
   --sidebar-accent: oklch(0.9 0.018 319);
   --sidebar-accent-foreground: oklch(0.33 0.088 319);
   --sidebar-border: oklch(0.9 0.012 82);
-  --sidebar-ring: oklch(0.712 0.168 30);
+  --sidebar-ring: var(--ring);
 
   /* derived scale — @theme inline in globals.css */
   --radius-sm: calc(var(--radius) * 0.6);
@@ -106,13 +107,14 @@
   --muted-foreground: oklch(0.72 0.035 319);
   --accent: oklch(0.33 0.06 319);
   --accent-foreground: oklch(0.977 0.007 85);
-  --destructive: oklch(0.65 0.18 22);
+  --destructive: oklch(0.65 0.18 25);
+  --destructive-ink: oklch(0.72 0.174 25);
   --positive: oklch(0.75 0.13 167);
   --positive-foreground: oklch(0.226 0.072 319);
   --positive-ink: oklch(0.75 0.13 167);
-  --negative: oklch(0.72 0.16 32);
+  --negative: oklch(0.72 0.18 25);
   --negative-foreground: oklch(0.226 0.072 319);
-  --negative-ink: oklch(0.734 0.16 32);
+  --negative-ink: oklch(0.735 0.162 25);
   --neutral-balance: oklch(0.7 0.03 319);
   --neutral-balance-ink: oklch(0.7 0.03 319);
   --payer: oklch(0.82 0.14 78);
@@ -128,32 +130,18 @@
   --chart-5: oklch(0.55 0.09 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
-  --sidebar-primary: oklch(0.712 0.168 30);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: oklch(0.226 0.072 319);
   --sidebar-accent: oklch(0.33 0.06 319);
   --sidebar-accent-foreground: oklch(0.977 0.007 85);
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.712 0.168 30);
+  --sidebar-ring: var(--ring);
 
   --notice-warning: oklch(0.78 0.13 70);
   --notice-info: oklch(0.68 0.12 250);
 }
 
-/* ── surfaces and contrast: overrides, as in globals.css ── */
-:root:not(.dark)[data-light="paper"] {
-  --background: oklch(0.99 0 0);
-  --card: oklch(1 0 0);
-  --popover: oklch(1 0 0);
-  --secondary: oklch(0.935 0.006 300);
-  --muted: oklch(0.955 0.003 260);
-  --accent: oklch(0.935 0.006 300);
-  --border: oklch(0.89 0.004 260);
-  --input: oklch(0.87 0.005 260);
-  --sidebar: oklch(0.975 0.002 260);
-  --sidebar-accent: oklch(0.935 0.006 300);
-  --sidebar-border: oklch(0.89 0.004 260);
-}
-
+/* ── the dark surface, and the system's contrast preference ── */
 .dark[data-dark="midnight"] {
   --background: oklch(0.15 0.03 319);
   --card: oklch(0.2 0.035 319);
@@ -168,28 +156,31 @@
   --sidebar-border: oklch(1 0 0 / 10%);
 }
 
-:root:not(.dark)[data-contrast="more"] {
-  --muted-foreground: oklch(0.4 0.035 319);
-  --border: oklch(0.62 0.02 82);
-  --input: oklch(0.58 0.02 82);
-  --sidebar-border: oklch(0.62 0.02 82);
-  --primary-ink: oklch(0.442 0.168 30);
-  --positive-ink: oklch(0.409 0.084 167);
-  --negative-ink: oklch(0.429 0.164 32);
-  --payer-ink: oklch(0.43 0.093 70);
-  --neutral-balance-ink: oklch(0.42 0.035 319);
-}
+@media (prefers-contrast: more) {
+  :root:not(.dark) {
+    --muted-foreground: oklch(0.4 0.035 319);
+    --border: oklch(0.62 0.02 82);
+    --input: oklch(0.58 0.02 82);
+    --sidebar-border: oklch(0.62 0.02 82);
+    --primary-ink: oklch(0.442 0.168 30);
+    --positive-ink: oklch(0.409 0.084 167);
+    --negative-ink: oklch(0.429 0.164 32);
+    --payer-ink: oklch(0.43 0.093 70);
+    --neutral-balance-ink: oklch(0.42 0.035 319);
+  }
 
-.dark[data-contrast="more"] {
-  --muted-foreground: oklch(0.84 0.03 319);
-  --border: oklch(1 0 0 / 38%);
-  --input: oklch(1 0 0 / 42%);
-  --sidebar-border: oklch(1 0 0 / 38%);
-  --primary-ink: oklch(0.847 0.084 30);
-  --positive-ink: oklch(0.83 0.13 167);
-  --negative-ink: oklch(0.85 0.082 32);
-  --payer-ink: oklch(0.87 0.118 78);
-  --neutral-balance-ink: oklch(0.84 0.03 319);
+  /* `:root.dark`, not `.dark` — it has to win the tie against Midnight. */
+  :root.dark {
+    --muted-foreground: oklch(0.84 0.03 319);
+    --border: oklch(1 0 0 / 38%);
+    --input: oklch(1 0 0 / 42%);
+    --sidebar-border: oklch(1 0 0 / 38%);
+    --primary-ink: oklch(0.847 0.084 30);
+    --positive-ink: oklch(0.83 0.13 167);
+    --negative-ink: oklch(0.85 0.082 32);
+    --payer-ink: oklch(0.87 0.118 78);
+    --neutral-balance-ink: oklch(0.84 0.03 319);
+  }
 }
 
 /* ── base ── */

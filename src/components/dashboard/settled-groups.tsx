@@ -80,7 +80,7 @@ export function SettledGroups({
                   requestAnimationFrame(() => inputRef.current?.focus());
                 }}
                 aria-label={t("searchLabel")}
-                className="tap-target -my-[7px] inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-foreground/[0.06] text-muted-foreground transition-colors hover:bg-foreground/[0.12] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="tap-target -my-[7px] inline-flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-wash-2 text-muted-foreground transition-colors hover:bg-wash-4 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Search aria-hidden="true" className="size-[15px]" />
               </button>
@@ -201,14 +201,14 @@ function QuietRow({
       <Link
         href={`/groups/${group.id}`}
         transitionTypes={PUSH}
-        className="flex items-center gap-3 py-3.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+        className="flex items-center gap-3 py-3.5 transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
       >
         <GroupIconTile
           icon={group.icon}
           color={group.iconColor}
           name={group.name}
           muted
-          className="size-10 rounded-xl bg-foreground/[0.05] text-neutral-balance-ink"
+          className="size-10 rounded-xl bg-wash-2 text-neutral-balance-ink"
           iconClassName="size-[19px]"
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">

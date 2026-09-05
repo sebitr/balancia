@@ -190,7 +190,7 @@ export function GroupSettingsForm({
                   icon={draft.icon}
                   color={draft.color}
                   name={draft.name}
-                  className="size-10 rounded-lg bg-foreground/5 text-muted-foreground"
+                  className="size-10 rounded-lg bg-wash-2 text-muted-foreground"
                   iconClassName="size-5"
                 />
               </button>

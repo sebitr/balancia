@@ -71,7 +71,7 @@ export function GroupList({
             transitionTypes={PUSH}
             // The padding belongs to the link rather than the item, so the
             // hover fill covers the full height of the row.
-            className="flex items-center gap-3 py-3.5 transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+            className="flex items-center gap-3 py-3.5 transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
           >
             {/* The tile tints itself only when the group has chosen an icon,
                 so `bg-accent` here is the fallback behind the initial. */}

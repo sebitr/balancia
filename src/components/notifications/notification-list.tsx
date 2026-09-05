@@ -302,7 +302,7 @@ export function NotificationList({
       <div
         role="group"
         aria-label={t("filterLabel")}
-        className="flex gap-0.5 rounded-xl bg-foreground/5 p-[3px]"
+        className="flex gap-0.5 rounded-xl bg-wash-2 p-[3px]"
       >
         {FILTERS.map((one) => (
           <button
@@ -325,7 +325,7 @@ export function NotificationList({
       {quiet.map((group) => (
         <div
           key={group.groupId}
-          className="mt-2 flex items-center justify-between gap-2 rounded-[11px] bg-foreground/5 py-[7px] pr-2 pl-3"
+          className="mt-2 flex items-center justify-between gap-2 rounded-[11px] bg-wash-2 py-[7px] pr-2 pl-3"
         >
           <p className="min-w-0 truncate text-xs text-muted-foreground">
             {group.snoozedUntil
@@ -336,7 +336,7 @@ export function NotificationList({
             type="button"
             onClick={() => unquieten(group)}
             disabled={isPending}
-            className="shrink-0 rounded-lg px-2 py-1 text-2xs font-semibold text-primary-ink transition-colors hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+            className="shrink-0 rounded-lg px-2 py-1 text-2xs font-semibold text-primary-ink transition-colors hover:bg-wash-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
             {group.snoozedUntil ? t("resume") : t("unmute")}
           </button>
@@ -537,7 +537,7 @@ export function NotificationList({
 }
 
 const ICON_BUTTON =
-  "tap-target inline-flex size-8 items-center justify-center rounded-[11px] text-foreground/85 transition-colors hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
+  "tap-target inline-flex size-8 items-center justify-center rounded-[11px] text-foreground/85 transition-colors hover:bg-wash-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
 
 /**
  * The copy each filter shows when it has nothing to show.

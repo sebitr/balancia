@@ -124,7 +124,7 @@ function Chip({
         "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         selected
           ? "bg-primary text-primary-foreground"
-          : "border border-input text-foreground hover:bg-foreground/6",
+          : "border border-input text-foreground hover:bg-wash-2",
       )}
     >
       {label}

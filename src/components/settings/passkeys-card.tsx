@@ -150,7 +150,7 @@ export function PasskeysCard({
             >
               <span
                 aria-hidden="true"
-                className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-foreground/8"
+                className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-wash-3"
               >
                 <Shield className="size-4" strokeWidth={1.9} />
               </span>
@@ -172,7 +172,7 @@ export function PasskeysCard({
                 aria-label={tPasskeys("removeLabel", {
                   name: passkey.name || tPasskeys("thisPasskey"),
                 })}
-                className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-wash-3 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
               >
                 <Trash2 aria-hidden="true" className="size-4" />
               </button>

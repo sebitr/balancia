@@ -239,7 +239,12 @@ function CurrencyRow({
 
           <span className="flex shrink-0 items-center gap-2">
             {tone === "neutral" ? (
-              <span className="flex items-center gap-[5px] text-xs font-medium text-neutral-balance-ink">
+              <span
+                className={cn(
+                  "flex items-center gap-[5px] text-xs font-medium",
+                  TONE.neutral.ink,
+                )}
+              >
                 <Minus aria-hidden="true" className="size-[15px] shrink-0" />
                 {t("settledUpRow")}
               </span>
@@ -388,7 +393,7 @@ function MemberLine({
       </span>
 
       {tone === "neutral" ? (
-        <span className="shrink-0 text-xs font-medium text-neutral-balance-ink">
+        <span className={cn("shrink-0 text-xs font-medium", TONE.neutral.ink)}>
           {t("settledUpRow")}
         </span>
       ) : (

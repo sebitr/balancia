@@ -51,7 +51,7 @@ export default async function AdminSettingsPage() {
       back={{ href: "/settings", label: t("backToSettings") }}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-1.5">
-        <span className="inline-flex h-5 items-center rounded-full bg-foreground/10 px-2 text-2xs font-semibold text-muted-foreground">
+        <span className="inline-flex h-5 items-center rounded-full bg-wash-3 px-2 text-2xs font-semibold text-muted-foreground">
           {t("instanceAdmin")}
         </span>
         <span className="text-xs text-muted-foreground">

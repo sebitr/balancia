@@ -411,7 +411,7 @@ function SubcategoryPane({
           type="button"
           onClick={onBack}
           aria-label={t("backToCategories")}
-          className="tap-target grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white/4 text-muted-foreground transition-colors hover:bg-muted"
+          className="tap-target grid size-9 shrink-0 place-items-center rounded-full border border-border bg-wash-1 text-muted-foreground transition-colors hover:bg-muted"
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
         </button>
@@ -429,7 +429,7 @@ function SubcategoryPane({
         type="button"
         onClick={() => onSelect(null)}
         aria-pressed={selected === ""}
-        className="flex h-12 shrink-0 items-center justify-between gap-3 rounded-xl border border-border bg-white/4 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+        className="flex h-12 shrink-0 items-center justify-between gap-3 rounded-xl border border-border bg-wash-1 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
       >
         <span className="truncate">
           {t("just", { category: vocabulary.label(category) })}
