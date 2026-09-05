@@ -46,7 +46,21 @@ const proofOfWorkSchema = z
   .nullish();
 
 const identitySchema = z.object({
-  name: z.string().trim().min(1).max(120),
+  /**
+   * Absent or null on the routes whose name screen comes after this one.
+   *
+   * An empty string is still refused — a form that posts one has a field
+   * somebody cleared, which is not the same as never having been asked — and
+   * a signup with no name at all gets a placeholder and a row the dashboard
+   * knows to ask about.
+   */
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .nullish()
+    .transform((value) => value ?? null),
   email: z.email(),
   proofOfWork: proofOfWorkSchema,
 });

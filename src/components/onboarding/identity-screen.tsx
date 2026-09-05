@@ -103,14 +103,18 @@ export function IdentityScreen({
   const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address);
 
   /**
-   * The name an account is created with, before its own screen has been seen.
+   * The name the account is created with, or null when there is none yet.
    *
    * On a personal invitation the name is asked for *after* the address, so at
-   * this point there may be none. The address's local part stands in — it is
-   * what the authenticator will show in its prompt, and the profile screen
-   * that follows overwrites it a few seconds later.
+   * this point there may genuinely be none — and null is what says so. The
+   * server stands the address's local part in for the authenticator's prompt
+   * and leaves the account marked unnamed, which is what lets the profile
+   * screen a few seconds later be told apart from never arriving at all.
+   * Inventing the placeholder here instead made the two indistinguishable,
+   * and the dashboard nagged people whose name was their address's local part
+   * for good.
    */
-  const provisionalName = name.trim() || address.split("@")[0] || address;
+  const typedName = name.trim() || null;
 
   const fail = (message: string) => {
     setError(message);
@@ -137,7 +141,7 @@ export function IdentityScreen({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: provisionalName,
+          name: typedName,
           email: address,
           proofOfWork: await solution(),
         }),
@@ -189,7 +193,7 @@ export function IdentityScreen({
         // account already exists, and the address is its own rate limit.
         await requestSignInCodeAction({ email: address })
       : await startCodeSignupAction({
-          name: provisionalName,
+          name: typedName,
           email: address,
           proofOfWork: await solution(),
         });
