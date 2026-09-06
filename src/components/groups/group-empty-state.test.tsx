@@ -110,7 +110,7 @@ describe("GroupEmptyState", () => {
     renderEmpty();
 
     expect(screen.getByText("balancia.test/join/g/SECRET-TOKEN")).toBeTruthy();
-    expect(screen.getByText("In 7 days")).toBeTruthy();
+    expect(screen.getByText("Expires in 7 days")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Share" })).toBeTruthy();
   });
 

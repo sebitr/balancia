@@ -212,6 +212,7 @@ export function GroupEmptyState({
                       <RemainingLabel
                         expiresAt={invite.expiresAt}
                         now={Date.parse(now)}
+                        withVerb
                       />
                     </span>
                   </div>

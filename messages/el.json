@@ -1422,6 +1422,8 @@
     },
     "inHours": "",
     "inDays": "",
+    "expiresInHours": "",
+    "expiresInDays": "",
     "expiredValue": "",
     "expiryFailed": "",
     "noDuplicates": "",
