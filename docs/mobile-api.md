@@ -41,12 +41,43 @@ their own. No parallel token scheme to issue or revoke.
 | Method | Path                | Notes                                                                                                                                                                   |
 | ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/auth/session` | `{email, password}` → `{user}`, sets cookie. 401 on bad credentials, 429 under the `signIn` rate bucket.                                                                |
+| POST   | `/api/auth/session` | `{email, code}` — the six digits `POST /api/auth/code` mailed — → `{user}`, sets cookie. 401 on a wrong or expired code, 429 under `verifyCode`, keyed by address.      |
+| POST   | `/api/auth/code`    | `{email}` → `{ok: true}`, always, whether or not the address has an account. Mails a sign-in code under the `signInCode` bucket; 422 on an instance without SMTP.       |
+| GET    | `/api/auth/options` | Anonymous: `{password, code, passkey, apple}` — which ways in this instance offers, so a client hides a button before offering one that cannot work.                    |
 | GET    | `/api/auth/session` | Who am I: `{user, guest}` — `guest` names the one group a guest cookie is pinned to; `user.accentColor` is an accent _name_ (see `docs/appearance.md`). 401 signed out. |
 | DELETE | `/api/auth/session` | Revokes the session and clears the cookie.                                                                                                                              |
 
 Guests are not signed in here: the `/join/[token]` and `/join/g/[token]`
 routes are already plain HTTP and set the guest cookie themselves — see
 _Invitation links_ below for how a native client redeems one.
+
+### Signing in with a mailed code
+
+An account created with a code or a passkey on another device has no password,
+and "Incorrect email or password" is the sentence it used to get from a native
+client. `POST /api/auth/code` is the web's "Email me a sign-in code" over JSON:
+it mails six digits to the address if there is an account behind it, and
+answers `{ok: true}` either way — which addresses are registered is not this
+route's to say. The code is then the proof on `POST /api/auth/session`, in place
+of the password:
+
+```json
+{ "email": "…", "code": "482 913" }
+```
+
+Spaces and anything else that is not a digit are dropped before the code is
+checked, so what iOS offers from the keyboard works as typed. A code lives ten
+minutes and works once; a wrong guess does not spend it, but the address's
+`verifyCode` bucket bounds how many may be tried. Asking for another code
+retires the one before it, so a client should wait on the first mail rather
+than tap twice — the web's button counts down thirty seconds for exactly that
+reason.
+
+`GET /api/auth/options` says whether the instance can do this at all — `code`
+is false without SMTP, and on the public demo — and, beside it, whether Sign in
+with Apple is configured. The web's page knows these when it renders and hides
+the buttons that cannot work; a native client reads them here before laying out
+its screen, because the instance it is pointed at may be anybody's.
 
 `POST /api/auth/register` is `registerUser` over JSON — `{name, email,
 password}` → 201 `{user, verificationRequired}` under the `signUp` rate

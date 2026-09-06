@@ -5,6 +5,8 @@ import { users } from "@/lib/db/schema";
 import { getClientIp, getCurrentActor } from "@/lib/security/actor";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import { signInWithPassword } from "@/modules/auth/service";
+import { signInWithCode } from "@/modules/auth/signup";
+import { normalizeCode } from "@/modules/auth/code-format";
 import { revokeSession } from "@/modules/auth/sessions";
 import {
   clearSessionCookie,
@@ -28,7 +30,7 @@ import { DEFAULT_LOCALE, isAppLocale } from "@/i18n/locales";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
- * Password sessions for native clients.
+ * Sessions for native clients.
  *
  * The web signs in through a Server Action; a native client cannot, so this
  * route does the same work over JSON: the same rate limit before any scrypt
@@ -37,15 +39,36 @@ import { trackRoute } from "@/lib/metrics/http";
  * native app gets the browser's session model without a parallel token
  * scheme to issue, rotate and revoke.
  *
+ * POST takes one of two proofs beside the address: a `password`, or the
+ * `code` that `POST /api/auth/code` mailed — the web's "Email me a sign-in
+ * code", which is the only way in this route can offer an account that was
+ * created with a code or a passkey and so has no password to type. Each
+ * proof keeps the bucket the web's action holds it to: the password by
+ * caller, the code by address, because the guessing a code limit stops is
+ * guessing at *one account's* code, and an attacker changing IP between
+ * attempts must not get a fresh allowance for it.
+ *
  * GET answers "who am I" for app launch; DELETE is sign-out. A guest cookie
  * is reported by GET but never created here — guests come in through the
  * `/join` links, which are already plain HTTP routes.
  */
 
-const signInSchema = z.object({
+const passwordSchema = z.object({
   email: z.email("Enter a valid email address."),
   password: z.string().min(1, "Enter your password."),
 });
+
+const codeSchema = z.object({
+  email: z.email("Enter a valid email address."),
+  code: z.string().trim().min(1, "Enter the code from the email."),
+});
+
+/**
+ * The password first, so a body carrying both is a password sign-in and a
+ * body carrying neither is refused with the sentence about the password —
+ * the proof every account may have.
+ */
+const signInSchema = z.union([passwordSchema, codeSchema]);
 
 export async function POST(request: Request) {
   return trackRoute("/api/auth/session", "POST", () => handlePost(request));
@@ -63,15 +86,31 @@ async function handlePost(request: Request) {
 
   try {
     const ipAddress = await getClientIp();
-    const limit = await consumeRateLimit("signIn", ipAddress);
-    if (!limit.allowed) {
-      throw new RateLimitedError(limit.retryAfterSeconds);
-    }
-
-    const result = await signInWithPassword(parsed.data, {
+    const context = {
       userAgent: request.headers.get("user-agent"),
       ipAddress,
-    });
+    };
+
+    let result;
+    if ("password" in parsed.data) {
+      const limit = await consumeRateLimit("signIn", ipAddress);
+      if (!limit.allowed) {
+        throw new RateLimitedError(limit.retryAfterSeconds);
+      }
+      result = await signInWithPassword(parsed.data, context);
+    } else {
+      const limit = await consumeRateLimit(
+        "verifyCode",
+        parsed.data.email.toLowerCase(),
+      );
+      if (!limit.allowed) {
+        throw new RateLimitedError(limit.retryAfterSeconds);
+      }
+      result = await signInWithCode(
+        { email: parsed.data.email, code: normalizeCode(parsed.data.code) },
+        context,
+      );
+    }
     await setSessionCookie(result.session.token, result.session.expiresAt);
 
     return noStore({ user: await currentUserPayload(result.user.userId) });
