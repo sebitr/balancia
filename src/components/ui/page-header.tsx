@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 export function PageHeader({
   title,
   back,
+  badge,
   trailing,
   className,
 }: {
@@ -45,6 +46,12 @@ export function PageHeader({
   title?: string;
   /** The way back. Its label is what a screen reader announces on the arrow. */
   back?: { href: string; label: string };
+  /**
+   * A chip that belongs to the title, drawn straight after the words rather
+   * than at the far end of the row: it says what the title names, so it reads
+   * with the title and not with the controls.
+   */
+  badge?: ReactNode;
   /** A control at the far end of the row. `<PageHeaderClose>`, or nothing. */
   trailing?: ReactNode;
   className?: string;
@@ -67,14 +74,20 @@ export function PageHeader({
       {title === undefined ? (
         <span aria-hidden="true" className="min-h-8.5 flex-1" />
       ) : (
-        <h1
-          className={cn(
-            "min-w-0 flex-1 truncate font-heading font-semibold",
-            back ? "text-base" : "text-2xl tracking-tight",
-          )}
-        >
-          {title}
-        </h1>
+        // The title takes only the width its words need, so a badge sits
+        // against them; the row it shares carries the `flex-1`, which is what
+        // still pushes a trailing control to the far end.
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h1
+            className={cn(
+              "min-w-0 truncate font-heading font-semibold",
+              back ? "text-base" : "text-2xl tracking-tight",
+            )}
+          >
+            {title}
+          </h1>
+          {badge}
+        </div>
       )}
 
       {trailing}
