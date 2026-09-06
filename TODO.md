@@ -14,6 +14,7 @@ words must not change when it moves. See _Keeping the list_.
 Started, on a branch, not yet merged.
 
 - [ ] Modernise passkeys: one handle per account so a password manager shows one entry, the Signal API so a removed passkey stops being offered, a silent upgrade after a password sign-in, and a name for the provider each one lives in — `feat/passkey-modernisation`
+- [ ] Run the formatter over the file #296 committed unformatted, so main's own CI goes green again, and record #297 where it should have been — `chore/tidy-after-merges`
 - [ ] Say in `.gitattributes` that GitHub ignores the union driver, so the next chat stops hunting for a conflict git does not have — `chore/todo-github-union`
 - [ ] Keep PGlite out of the bundler, so a demo instance starts instead of answering Internal Server Error on every page — `fix/demo-pglite-external`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-restore`
@@ -38,6 +39,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-05 Make the repository page do the converting: put the live demo where somebody lands, keep only the badges that carry information, add a donation route, and show several screens instead of one — #297
 - [x] 2026-09-05 Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — #293
 - [x] 2026-09-05 Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — #292
 - [x] 2026-09-05 Read the favicon journey's colours from the palette the icons are generated from, so `pnpm test:e2e` stops failing on main — #291
