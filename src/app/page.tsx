@@ -324,6 +324,7 @@ export default async function LandingPage() {
             <Wordmark
               className="gap-2.5 text-[18px] tracking-[-0.02em]"
               markClassName="size-[26px]"
+              wordClassName="hidden min-[440px]:inline"
             />
           </a>
           <nav
@@ -331,21 +332,29 @@ export default async function LandingPage() {
             className="flex items-center gap-1.5 sm:gap-2"
           >
             <MarketingLanguageSwitcher />
+            {/* A phone header has room for the switcher, one text link and
+                the button, and not for a fourth thing: on a 360pt phone the
+                row is 328pt wide and the mark, the switcher, "Se connecter"
+                and the button take 322 of them. The link is "Sign in" —
+                somebody who already has an account is the one reader the
+                hero's button does nothing for, and the source is linked
+                twice more down the page. GitHub comes back at 721px, and the
+                wordmark's word at 440px, the width at which the row first
+                fits in French with the word in it. The link keeps its label
+                on one line whatever the width: wrapped inside a fixed 36px
+                box, "Se" and "connecter" would both show and neither read. */}
             <a
               href={GITHUB}
               target="_blank"
               rel="noreferrer"
-              aria-label={t("header.github")}
-              className="inline-flex h-9 items-center gap-[7px] rounded-[10px] px-3 text-sm font-medium text-marketing-cream no-underline transition-colors hover:bg-white/9"
+              className="hidden h-9 items-center gap-[7px] rounded-[10px] px-3 text-sm font-medium text-marketing-cream no-underline transition-colors hover:bg-white/9 min-[721px]:inline-flex"
             >
               <GithubMark />
-              <span className="hidden min-[721px]:inline">
-                {t("header.github")}
-              </span>
+              {t("header.github")}
             </a>
             <Link
               href="/sign-in"
-              className="hidden h-9 items-center rounded-[10px] px-3 text-sm font-medium text-marketing-cream no-underline transition-colors hover:bg-white/9 min-[721px]:inline-flex"
+              className="inline-flex h-9 items-center rounded-[10px] px-2 text-sm font-medium whitespace-nowrap text-marketing-cream no-underline transition-colors hover:bg-white/9 min-[721px]:px-3"
             >
               {t("header.signIn")}
             </Link>
@@ -414,6 +423,22 @@ export default async function LandingPage() {
               <p className="mt-[18px] text-sm text-marketing-dark-dim">
                 {t("hero.reassurance")}
               </p>
+              {/* For the reader the button above does nothing for. The
+                  header's link sits squeezed beside that button and the
+                  closing section's is a page away; this one is where the
+                  choice is being made. With registration closed the button
+                  itself is "Sign in", and the line would only repeat it. */}
+              {env.ALLOW_REGISTRATION && (
+                <p className="mt-2.5 text-sm text-marketing-dark-muted">
+                  {t("hero.haveAccount")}{" "}
+                  <Link
+                    href="/sign-in"
+                    className="font-semibold text-marketing-cream underline decoration-white/40 underline-offset-4 transition-colors hover:decoration-marketing-cream"
+                  >
+                    {t("header.signIn")}
+                  </Link>
+                </p>
+              )}
               <ul className="mt-9 flex flex-wrap gap-x-[26px] gap-y-2.5 border-t border-white/12 pt-[22px] text-sm text-marketing-dark-trust">
                 {[
                   t("hero.trust.noAds"),

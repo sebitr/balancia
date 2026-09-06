@@ -63,14 +63,22 @@ export function BalanciaMarkMono({ className }: { className?: string }) {
 export function Wordmark({
   className,
   markClassName,
+  wordClassName,
 }: {
   className?: string;
   markClassName?: string;
+  /** The word on its own — the marketing header hides it on the narrowest phones. */
+  wordClassName?: string;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <BalanciaMark className={markClassName} />
-      <span className="font-heading text-lg font-semibold tracking-tight">
+      <span
+        className={cn(
+          "font-heading text-lg font-semibold tracking-tight",
+          wordClassName,
+        )}
+      >
         Balancia
       </span>
     </span>
