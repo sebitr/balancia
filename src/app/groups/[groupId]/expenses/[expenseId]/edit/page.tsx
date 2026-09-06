@@ -1,4 +1,4 @@
-import { EntryScreen, sheetFromQuery } from "../../../entry-screen";
+import { EntryScreen } from "../../../entry-screen";
 
 /**
  * Change an entry, on the screen it was written on.
@@ -10,7 +10,6 @@ import { EntryScreen, sheetFromQuery } from "../../../entry-screen";
  */
 export default async function EditExpensePage({
   params,
-  searchParams,
 }: PageProps<"/groups/[groupId]/expenses/[expenseId]/edit">) {
   const { groupId, expenseId } = await params;
   return (
@@ -18,7 +17,6 @@ export default async function EditExpensePage({
       groupId={groupId}
       dismissTo="group"
       edit={{ kind: "expense", id: expenseId }}
-      openSheet={sheetFromQuery(await searchParams)}
     />
   );
 }

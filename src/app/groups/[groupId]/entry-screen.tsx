@@ -35,7 +35,6 @@ import {
 } from "@/modules/expenses/service";
 import { getSettlement } from "@/modules/settlements/service";
 import { PUSH } from "@/components/motion/transitions";
-import type { SettleIntent } from "@/components/entries/settle-intent";
 
 /**
  * Everything the entry drawer needs, loaded once.
@@ -46,25 +45,19 @@ import type { SettleIntent } from "@/components/entries/settle-intent";
  * goes and which entry — if any — is already there, so those are the only two
  * things this takes as arguments. Four copies of a page that loads five things
  * would drift on the first change to any of them.
+ *
+ * Nothing here reads the URL's query, and nothing should: what a link tells
+ * the drawer — a debt to open on, a draft to restore, a sheet to raise — is in
+ * the fragment, which only the drawer can see. `drawer-fragment.ts` says why.
  */
 export async function EntryScreen({
   groupId,
   dismissTo,
   edit,
-  settle,
   whenGone = "notFound",
-  openSheet,
 }: {
   groupId: string;
   dismissTo: "back" | "group";
-  /**
-   * A debt the screen that linked here had already stated, off the query.
-   *
-   * The drawer then opens on the settle tab with that pair picked. What it
-   * does *not* take from the query is the amount: see `settle-intent`, and the
-   * lookup against `outstanding` below.
-   */
-  settle?: SettleIntent | null;
   /** The entry to reopen, by the table it lives in. Absent means a new one. */
   edit?: { kind: "expense" | "settlement"; id: string };
   /**
@@ -86,13 +79,6 @@ export async function EntryScreen({
    * holds on every other group route — see its `default.tsx`.
    */
   whenGone?: "notFound" | "nothing";
-  /**
-   * A sheet the link asked to have open. See `AddEntryForm.openSheet`.
-   *
-   * Narrowed from the query string by the route, not here: a page reads its
-   * own search params, and an unrecognised value is simply no sheet.
-   */
-  openSheet?: "split";
 }) {
   const access = await requireGroupAccess(groupId);
 
@@ -187,22 +173,6 @@ export async function EntryScreen({
     }))
     .sort((a, b) => Number(BigInt(b.amountMinor) - BigInt(a.amountMinor)));
 
-  /*
-   * The stated debt, priced from the balances just loaded rather than from the
-   * link that was followed. A debt somebody else has settled in the meantime is
-   * no longer in this list, and then the two names stand on their own with the
-   * amount left for the reader — which is the honest answer, and the one that
-   * keeps the form from opening on a figure nobody owes any more.
-   */
-  const stated = settle
-    ? (outstanding.find(
-        (pair) =>
-          pair.fromParticipantId === settle.fromParticipantId &&
-          pair.toParticipantId === settle.toParticipantId &&
-          pair.currency === settle.currency,
-      ) ?? null)
-    : null;
-
   const editing = edit ? await loadEditing(access.groupId, edit) : undefined;
   // Null only ever comes back from a load that was asked for: an entry that is
   // not in this group, or has already been removed under the reader.
@@ -262,17 +232,6 @@ export async function EntryScreen({
         defaultCurrency={defaultEntryCurrency}
         timezone={access.group.timezone}
         outstanding={outstanding}
-        prefill={
-          settle
-            ? {
-                fromParticipantId: settle.fromParticipantId,
-                toParticipantId: settle.toParticipantId,
-                amountMinor: stated?.amountMinor ?? null,
-                currency: settle.currency,
-                method: settle.method,
-              }
-            : undefined
-        }
         categoryMappings={categoryMappings}
         frequentCategories={frequentCategories}
         semanticCategorization={isSemanticCategorizationEnabled()}
@@ -282,7 +241,6 @@ export async function EntryScreen({
         // is going. Its key stays on the server and is never sent here.
         receiptOcrProvider={configuredOcrProviderName()}
         editing={editing}
-        openSheet={openSheet}
         recentEntries={recentEntries}
         canAddGuests={access.permissions.manageParticipants}
         defaultSplit={groupSplitDefault(
@@ -292,20 +250,6 @@ export async function EntryScreen({
       />
     </>
   );
-}
-
-/**
- * The sheet a link asked for, from the query it arrived in.
- *
- * One value is recognised and everything else is none. A query string is
- * something anybody can type, so this is a whitelist rather than a cast —
- * an unknown sheet name opens no sheet rather than a broken one.
- */
-export function sheetFromQuery(
-  query: Record<string, string | string[] | undefined> | undefined,
-): "split" | undefined {
-  const value = query?.sheet;
-  return value === "split" ? "split" : undefined;
 }
 
 /**

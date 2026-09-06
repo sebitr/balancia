@@ -130,6 +130,7 @@ import { heardEntry } from "./heard-entry";
 import { VoiceButton } from "./voice-button";
 import { savedSummary } from "./saved-summary";
 import { worthDrafting, type EntryDraftFields } from "./draft-fields";
+import { SHEET_PARAM, withFragment } from "./drawer-fragment";
 import { discardDraft, saveDraft } from "@/lib/offline/drafts";
 import {
   worthSaving,
@@ -1774,7 +1775,7 @@ export function AddEntryForm({
       href ? (
         <Link
           key={key}
-          href={`${href}?sheet=split`}
+          href={withFragment(href, { [SHEET_PARAM]: "split" })}
           className="text-primary-ink underline-offset-2 hover:underline"
         >
           {label}

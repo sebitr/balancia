@@ -51,6 +51,7 @@ import {
 } from "@/components/expenses/category-icon";
 import { signOf } from "@/modules/expenses/direction";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
+import { withFragment } from "@/components/entries/drawer-fragment";
 import { PUSH } from "@/components/motion/transitions";
 
 /**
@@ -374,8 +375,10 @@ export default async function TransactionDetailPage({
           // The filters go into the drawer with it, so that a save which turns
           // this entry into a repayment — and so lands the reader on another
           // detail screen — still leaves them a way back to the list they were
-          // reading.
-          href={withQuery(
+          // reading. In the fragment, because the drawer is an intercepted
+          // route and a query on one of those wedges it: see
+          // `components/entries/drawer-fragment.ts`.
+          href={withFragment(
             `/groups/${groupId}/expenses/${expenseId}/edit`,
             listFilters,
           )}

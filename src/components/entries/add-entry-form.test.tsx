@@ -104,13 +104,13 @@ vi.mock("@/lib/offline/outbox", () => ({ enqueueEntry: enqueue }));
 vi.mock("@/components/expenses/upload-receipt", () => ({
   uploadReceipt: upload,
 }));
+// Nothing here stands in for the URL. What the drawer reads off it — a debt to
+// open on, the filters of the list the reader came from — is a fact about the
+// route it was opened at, and it reads it from the real `location`, which
+// `renderForm` sets; a mock returning a fixed set would test nothing about
+// that.
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace, back, refresh: vi.fn() }),
-  // Backed by the real URL rather than a stand-in, because what the drawer
-  // reads off it — the filters of the list the reader came from — is a fact
-  // about the route it was opened at, and a mock returning a fixed set would
-  // test nothing about that.
-  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 // The confirmation is a toast now, and a toast needs a `<Toaster />` mounted
 // somewhere above it to render. What matters here is that it was raised, and
@@ -1790,6 +1790,27 @@ describe("editing an entry", () => {
     ).toBeNull();
     expect(screen.getByRole("button", { name: "Add expense" })).toBeVisible();
   });
+
+  /**
+   * The saved-entry toast's "Paid by" and "Split between" link to the split
+   * sheet of the entry they describe, naming it in the URL's fragment. The
+   * drawer is what reads that, so this is where it is checked.
+   */
+  it("opens the split sheet when the link names it", () => {
+    renderForm({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit#sheet=split");
+
+    expect(
+      screen.getByRole("dialog", { name: "Payment and split" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens no sheet for a name it does not know", () => {
+    renderForm({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit#sheet=payer");
+
+    expect(
+      screen.queryByRole("dialog", { name: "Payment and split" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 /**
@@ -1902,7 +1923,7 @@ describe("leaving the drawer", () => {
     const user = userEvent.setup();
     renderForm(
       { editing: EXPENSE },
-      "/groups/g1/expenses/e1/edit?cat=lodging&q=h%C3%B4tel",
+      "/groups/g1/expenses/e1/edit#cat=lodging&q=h%C3%B4tel",
     );
 
     await user.click(screen.getByRole("tab", { name: "Settle" }));
@@ -1920,7 +1941,7 @@ describe("leaving the drawer", () => {
     const user = userEvent.setup();
     renderForm(
       { editing: SETTLEMENT },
-      "/groups/g1/settlements/s1/edit?kind=settlement",
+      "/groups/g1/settlements/s1/edit#kind=settlement",
     );
 
     await user.click(screen.getByRole("tab", { name: "Expense" }));
@@ -1939,7 +1960,7 @@ describe("leaving the drawer", () => {
 
   it("carries nothing to the group after a deletion", async () => {
     const user = userEvent.setup();
-    renderForm({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit?cat=lodging");
+    renderForm({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit#cat=lodging");
 
     await user.click(screen.getByRole("button", { name: "Delete this entry" }));
     await user.click(
@@ -2153,19 +2174,16 @@ describe("picking the people on a repayment", () => {
  * The settle-up screen and the overview's settlement list both name a pair and
  * a figure before anybody taps anything. What must not happen next is the form
  * asking the same three questions again — and what must not happen either is
- * the figure being taken on trust from a link that may be minutes old.
+ * the figure being taken on trust from a link that may be minutes old. The
+ * link names the pair in the URL's fragment, and the drawer prices it from the
+ * balances it was handed.
  */
 describe("a drawer opened on a stated debt", () => {
-  const PREFILL = {
-    fromParticipantId: "herve",
-    toParticipantId: "seb",
-    amountMinor: "12840",
-    currency: "CHF",
-    method: null,
-  };
+  const STATED =
+    "/groups/g1/expenses/new#settleFrom=herve&settleTo=seb&settleIn=CHF";
 
   it("opens on the settle tab with the pair and the amount filled in", () => {
-    renderForm({ prefill: PREFILL }, "/groups/g1/expenses/new");
+    renderForm({}, STATED);
 
     expect(screen.getByRole("tab", { name: "Settle" })).toHaveAttribute(
       "aria-selected",
@@ -2179,7 +2197,7 @@ describe("a drawer opened on a stated debt", () => {
 
   it("records that pair without anybody touching the form", async () => {
     const user = userEvent.setup();
-    renderForm({ prefill: PREFILL }, "/groups/g1/expenses/new");
+    renderForm({}, STATED);
 
     await user.click(screen.getByRole("button", { name: "Record payment" }));
 
@@ -2202,10 +2220,7 @@ describe("a drawer opened on a stated debt", () => {
    * the picker's list has moved on, in whatever language it was recorded in.
    */
   it("opens with the method the settle screen was showing", () => {
-    renderForm(
-      { prefill: { ...PREFILL, method: "twint" } },
-      "/groups/g1/expenses/new",
-    );
+    renderForm({}, `${STATED}&settleVia=twint`);
 
     expect(screen.getByRole("button", { name: /TWINT/ })).toHaveAttribute(
       "aria-pressed",
@@ -2215,10 +2230,7 @@ describe("a drawer opened on a stated debt", () => {
 
   it("records it without anybody touching the picker", async () => {
     const user = userEvent.setup();
-    renderForm(
-      { prefill: { ...PREFILL, method: "twint" } },
-      "/groups/g1/expenses/new",
-    );
+    renderForm({}, `${STATED}&settleVia=twint`);
 
     await user.click(screen.getByRole("button", { name: "Record payment" }));
 
@@ -2230,7 +2242,7 @@ describe("a drawer opened on a stated debt", () => {
 
   it("leaves the picker untouched when the link named no method", async () => {
     const user = userEvent.setup();
-    renderForm({ prefill: PREFILL }, "/groups/g1/expenses/new");
+    renderForm({}, STATED);
 
     await user.click(screen.getByRole("button", { name: "Record payment" }));
 
@@ -2242,14 +2254,12 @@ describe("a drawer opened on a stated debt", () => {
 
   /**
    * A debt somebody else cleared while this reader was looking at it. The
-   * route hands back no amount, and the two names stand on their own rather
-   * than a figure nobody owes any more being typed in for them.
+   * balances no longer list it, so there is no amount, and the two names stand
+   * on their own rather than a figure nobody owes any more being typed in for
+   * them.
    */
   it("names the people but no amount once the debt is gone", () => {
-    renderForm(
-      { prefill: { ...PREFILL, amountMinor: null }, outstanding: [] },
-      "/groups/g1/expenses/new",
-    );
+    renderForm({ outstanding: [] }, STATED);
 
     expect(screen.getByRole("tab", { name: "Settle" })).toHaveAttribute(
       "aria-selected",

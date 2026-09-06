@@ -269,7 +269,7 @@ describe("the actions on a row", () => {
       screen.getByRole("link", { name: "Record Seb's payment to Amélie" }),
     ).toHaveAttribute(
       "href",
-      "/groups/g1/expenses/new?settleFrom=seb&settleTo=amelie&settleIn=EUR",
+      "/groups/g1/expenses/new#settleFrom=seb&settleTo=amelie&settleIn=EUR",
     );
   });
 
@@ -311,7 +311,7 @@ describe("the actions on a row", () => {
       screen.getByRole("link", { name: "Record Ravi's payment to Seb" }),
     ).toHaveAttribute(
       "href",
-      "/groups/g1/expenses/new?settleFrom=ravi&settleTo=seb&settleIn=CHF",
+      "/groups/g1/expenses/new#settleFrom=ravi&settleTo=seb&settleIn=CHF",
     );
   });
 
