@@ -150,21 +150,34 @@ export function CopyButton({
   variant = "outline",
   className,
   label,
+  iconOnly = false,
 }: {
   url: string;
-  variant?: "outline" | "default";
+  variant?: "outline" | "default" | "ghost";
   className?: string;
   /** Overrides "Copy" where the button is the screen's main action. */
   label?: string;
+  /**
+   * Just the glyph, for the one place the button sits inside the chip it
+   * copies. The word would be a second name for something the chip beside it
+   * has already named, and there is no room for it; the label moves to
+   * `aria-label`, where it still says which link is being copied — and still
+   * turns into "Copied", because a check mark on its own is not an
+   * announcement.
+   */
+  iconOnly?: boolean;
 }) {
   const t = useTranslations("inviteLink");
   const { copied, copy } = useCopy();
+  const name = copied ? t("copied") : (label ?? t("copy"));
 
   return (
     <Button
       type="button"
       variant={variant}
-      className={cn("h-10", className)}
+      size={iconOnly ? "icon-lg" : "default"}
+      aria-label={iconOnly ? name : undefined}
+      className={cn(!iconOnly && "h-10", className)}
       onClick={() => void copy(url)}
     >
       {copied ? (
@@ -172,7 +185,7 @@ export function CopyButton({
       ) : (
         <Copy aria-hidden="true" />
       )}
-      {copied ? t("copied") : (label ?? t("copy"))}
+      {!iconOnly && name}
     </Button>
   );
 }
@@ -181,11 +194,18 @@ export function CopyButton({
 export function ShareButton({
   url,
   groupName,
+  variant = "default",
   className,
   children,
 }: {
   url: string;
   groupName: string;
+  /**
+   * Secondary where the link is one row of a card rather than the screen's
+   * own last step, so the primary fill stays with whatever that screen is
+   * actually for.
+   */
+  variant?: "default" | "secondary";
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -195,6 +215,7 @@ export function ShareButton({
   return (
     <Button
       type="button"
+      variant={variant}
       className={cn("h-10", className)}
       onClick={() =>
         void shareOrCopy(
