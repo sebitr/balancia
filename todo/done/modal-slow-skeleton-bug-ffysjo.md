@@ -1,6 +1,6 @@
 # Stop the settle-up buttons opening the entry drawer slowly, and a second open inside half a minute showing a skeleton for ever
 
-Branch: `claude/modal-slow-skeleton-bug-ffysjo`
+Merged: 2026-09-06 in #310
 
 "J'ai remboursé Hervé" took a round trip longer than it should, and pressing
 it — or the button beside it — again after closing without saving left the
