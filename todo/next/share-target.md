@@ -1,0 +1,1 @@
+# Share target: register for images, PDFs and text, so a receipt shared from another app lands in the drawer — the other half of `briefs/entry-friction.md` idea 6, left out of the Add Entry rework because it is manifest and route work rather than drawer work

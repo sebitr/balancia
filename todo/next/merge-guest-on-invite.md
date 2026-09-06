@@ -1,0 +1,1 @@
+# Merge somebody into an existing guest when they accept an invite — `briefs/entry-friction.md` idea 7's second half. Match on name, ask, never merge silently: merging two people's balances by mistake is unrecoverable in a way nothing else in this app is
