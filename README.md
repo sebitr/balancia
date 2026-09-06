@@ -265,7 +265,7 @@ the domains are paid for out of pocket.
 
 A recurring donation pays the hosting; a one-off pays a year of a domain. Both
 are welcome, and neither buys a feature — the roadmap stays in
-[TODO.md](./TODO.md), in the open. If money is not what you have to give, a
+[todo/](./todo/), in the open. If money is not what you have to give, a
 [star](https://github.com/sebitr/balancia), a bug report or
 [a translation](https://hosted.weblate.org/engage/balancia/) all help more than
 they look like they do.

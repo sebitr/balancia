@@ -1,141 +1,121 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readTodo, type TodoItem } from "../../scripts/todo-list";
 
 /**
- * `.gitattributes` marks TODO.md `merge=union`, because every branch appends to
- * the head of the same two sections and a three-way merge called that a
- * conflict on nearly every pull request. Union merge keeps both sides instead
- * of asking — and says nothing when it does. Move a line from **Now** to
- * **Done** while another branch appends beside it and the **Now** copy can
- * survive, leaving one item in two sections at once with no marker on it.
+ * Guards on the list, which is a directory of one file per item.
  *
- * Nothing else would catch that, so this does. Two signals find the same
- * accident from either end: a line that landed in the wrong section still
- * carries the wrong section's pointer, and an item keeps its words when it
- * moves, so a resurrected line is a second copy of a text already seen.
+ * It used to be one file, and most of what this test did was catch what union
+ * merge broke: a line resurrected in **Now** after it had moved to **Done**,
+ * because union merge keeps both sides and has no way to express a deletion.
+ * That class of accident is gone by construction. Moving an item is a rename
+ * now, and git merges a rename against a branch that only edited the file's
+ * contents without asking anybody.
+ *
+ * What is left is what the shape cannot enforce on its own. An item is only
+ * useful to somebody who was not in the chat that wrote it if it says what
+ * changes and points at something — a branch while it is being done, a pull
+ * request once it has merged. And two chats claiming one branch is the thing
+ * **Now** exists to prevent, which no filesystem rule catches.
  */
-const SOURCE = readFileSync(path.join(process.cwd(), "TODO.md"), "utf8");
 
-/** The sections that hold items. _Keeping the list_ is prose about them. */
-const LIST_SECTIONS = ["Now", "Next", "Someday", "Done"] as const;
+const ITEMS = readTodo();
+const inState = (state: TodoItem["state"]): TodoItem[] =>
+  ITEMS.filter((item) => item.state === state);
 
-type Item = {
-  section: string;
-  line: number;
-  raw: string;
-  /** The words, with the tick, the merge date and the pointer taken off. */
-  words: string;
-};
-
-function parse(): Item[] {
-  const items: Item[] = [];
-  let section = "";
-  let fenced = false;
-
-  SOURCE.split("\n").forEach((raw, index) => {
-    if (raw.startsWith("```")) {
-      fenced = !fenced;
-      return;
-    }
-    if (fenced) return;
-
-    const heading = /^## (.+)$/.exec(raw);
-    if (heading) {
-      section = heading[1]!;
-      return;
-    }
-
-    const item = /^- \[[ x]\] (.+)$/.exec(raw);
-    if (!item) return;
-    if (!(LIST_SECTIONS as readonly string[]).includes(section)) return;
-
-    const words = item[1]!
-      .replace(/^\d{4}-\d{2}-\d{2} /, "")
-      .replace(/ — (?:`[^`]+`|#\d+)$/, "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
-
-    items.push({ section, line: index + 1, raw, words });
-  });
-
-  return items;
-}
-
-const ITEMS = parse();
-
-describe("TODO.md", () => {
-  it("parses the list at all", () => {
+describe("the list", () => {
+  it("parses at all", () => {
     expect(
       ITEMS.length,
-      "no items parsed — the headings or the item form moved",
+      "no items read — todo/ moved, or the item form did",
     ).toBeGreaterThan(0);
     expect(
-      ITEMS.some((item) => item.section === "Done"),
-      "nothing parsed under ## Done, which is never empty for long",
-    ).toBe(true);
+      inState("done").length,
+      "nothing under todo/done, which is never empty for long",
+    ).toBeGreaterThan(0);
   });
 
-  /**
-   * The one union merge cannot be trusted with. An item that shipped is written
-   * once, under **Done**; finding its words twice means a merge put it back.
-   */
-  it("writes each item once", () => {
-    const seen = new Map<string, Item>();
+  it("says what changes, in every item", () => {
     for (const item of ITEMS) {
-      const first = seen.get(item.words);
+      expect(
+        item.words,
+        `todo/${item.state}/${item.slug}.md has no heading. The first line is ` +
+          `what changes, in the words a user would recognise.`,
+      ).not.toBe("");
+    }
+  });
+
+  it("holds each item in one state only", () => {
+    // A file cannot be in two directories, so this only fires when somebody
+    // copies rather than moves — which is the one way back to an item that
+    // says it is both in flight and finished.
+    const seen = new Map<string, TodoItem>();
+    for (const item of ITEMS) {
+      const first = seen.get(item.slug);
       expect(
         first,
         first &&
-          `two items share their words — union merge duplicates a line rather ` +
-            `than conflicting on it, and this is what that looks like:\n` +
-            `  ## ${first.section}, line ${first.line}: ${first.raw}\n` +
-            `  ## ${item.section}, line ${item.line}: ${item.raw}`,
+          `\`${item.slug}\` is in two states at once — todo/${first.state}/ ` +
+            `and todo/${item.state}/. Moving an item is a rename, not a copy.`,
       ).toBeUndefined();
-      seen.set(item.words, item);
+      seen.set(item.slug, item);
     }
   });
 
-  /**
-   * A line that union merge moved between sections keeps the pointer it had, so
-   * the pointer says which section a line belongs in even when the words match
-   * nothing.
-   */
-  it("points started work at a branch and finished work at a pull request", () => {
-    for (const item of ITEMS.filter((entry) => entry.section === "Now")) {
+  it("points started work at a branch", () => {
+    for (const item of inState("now")) {
       expect(
-        item.raw,
-        `## Now, line ${item.line}: an item that has started ends with its ` +
-          `branch in backticks. A pull request number here means a finished ` +
-          `item came back:\n  ${item.raw}`,
-      ).toMatch(/^- \[ \] .+ — `[^`]+`$/);
-    }
-
-    for (const item of ITEMS.filter((entry) => entry.section === "Done")) {
+        item.branch,
+        `todo/now/${item.slug}.md needs a "Branch: \`name\`" line. Several ` +
+          `chats work this repository at once, in separate worktrees, and the ` +
+          `branch is the only way to see that a thing is already being done.`,
+      ).not.toBeNull();
       expect(
-        item.raw,
-        `## Done, line ${item.line}: a merged item is ticked, dated, and ends ` +
-          `with its pull request number:\n  ${item.raw}`,
-      ).toMatch(/^- \[x\] \d{4}-\d{2}-\d{2} .+ — #\d+$/);
+        item.pullRequest,
+        `todo/now/${item.slug}.md carries a pull request number, so it has ` +
+          `merged and belongs in todo/done/.`,
+      ).toBeNull();
     }
   });
 
-  /** Two chats on one branch is the thing **Now** exists to prevent. */
+  it("points finished work at a pull request, with the date it merged", () => {
+    for (const item of inState("done")) {
+      expect(
+        item.pullRequest,
+        `todo/done/${item.slug}.md needs a "Merged: YYYY-MM-DD in #123" line.`,
+      ).not.toBeNull();
+      expect(
+        item.branch,
+        `todo/done/${item.slug}.md still names a branch. A merged item is ` +
+          `pointed at its pull request; the branch has been reaped.`,
+      ).toBeNull();
+    }
+  });
+
   it("claims each branch once", () => {
-    const claims = new Map<string, number>();
-    for (const item of ITEMS.filter((entry) => entry.section === "Now")) {
-      const branch = /— `([^`]+)`$/.exec(item.raw)?.[1];
-      if (!branch) continue;
-      const first = claims.get(branch);
+    const claims = new Map<string, string>();
+    for (const item of inState("now")) {
+      if (!item.branch) continue;
+      const first = claims.get(item.branch);
       expect(
         first,
         first === undefined
           ? undefined
-          : `\`${branch}\` is claimed by two items, on lines ${first} and ` +
-              `${item.line}`,
+          : `\`${item.branch}\` is claimed by two items, ${first} and ` +
+              `${item.slug}. One branch, one topic, one item.`,
       ).toBeUndefined();
-      claims.set(branch, item.line);
+      claims.set(item.branch, item.slug);
     }
+  });
+
+  it("keeps nothing where the old single file was", async () => {
+    // The rendering is produced on demand by `pnpm todo` and never committed.
+    // A checked-in copy would be one more file every branch edits at the same
+    // two anchors, which is the conflict this directory exists to end.
+    const { existsSync } = await import("node:fs");
+    expect(
+      existsSync("TODO.md"),
+      "TODO.md is back. The list is todo/, and a committed rendering of it " +
+        "recreates the conflict that split it up.",
+    ).toBe(false);
   });
 });

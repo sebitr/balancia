@@ -36,6 +36,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --import ./scripts/load-env.ts --conditions=react-server scripts/migrate.ts",
     "db:seed": "tsx --import ./scripts/load-env.ts --conditions=react-server scripts/seed.ts",
+    "todo": "tsx --import ./scripts/load-env.ts scripts/todo.ts",
     "audit:prod": "pnpm audit --prod",
     "design-system": "node design-system/build.mjs",
     "weblate": "./scripts/weblate.sh",
