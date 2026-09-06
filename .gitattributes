@@ -10,4 +10,18 @@
 # once with no marker to show for it. src/lib/todo-list.test.ts fails the build
 # on an item whose words appear twice — the only thing standing between this
 # line and a list that quietly lies.
+#
+# It also reaches git and nothing else. GitHub does not apply merge drivers from
+# this file, so its mergeability check re-derives the conflict the union driver
+# just resolved, and a pull request whose merge is clean still shows "This
+# branch has conflicts that must be resolved" the moment another branch touches
+# TODO.md. There is nothing to resolve: merge main locally, where the driver
+# applies, hand-correct Now if todo-list.test.ts fires, and push. The banner
+# clears. To see the difference for yourself:
+#
+#   git merge-tree --write-tree --messages HEAD origin/main
+#   git -c attr.tree=<a commit before this rule> merge-tree --write-tree \
+#       --messages HEAD origin/main
+#
+# The first auto-merges. The second is what GitHub sees.
 TODO.md merge=union

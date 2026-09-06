@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { resetEnvCache } from "@/lib/env";
 
@@ -50,5 +52,41 @@ describe("a demo instance", () => {
 
     expect(first).toBe(second);
     expect(first).toBe(getDb());
+  });
+});
+
+/**
+ * The other half of the guarantee, and the one nothing else notices.
+ *
+ * PGlite ships pre-minified ESM that reaches its WebAssembly two ways a
+ * bundler breaks: the payload is addressed as
+ * `new URL("./pglite.wasm", import.meta.url)`, and the `instantiateWasm` hook
+ * its Emscripten glue calls is a cross-chunk import sharing a name with the
+ * option it is assigned to. Bundled, the two collapse together and
+ * `bootstrapDemoDatabase()` throws `h.instantiateWasm is not a function`.
+ *
+ * That happens in the instrumentation hook, before the first request, so
+ * there is no page to show it: every path answers Internal Server Error and
+ * the log says nothing about a database. This suite cannot catch it — Vitest
+ * imports PGlite from node_modules, exactly as the fix arranges for Next to —
+ * so the fix is asserted where it lives instead.
+ */
+describe("the demo database's bundling", () => {
+  it("is left to Node, not to Turbopack", () => {
+    const config = readFileSync(
+      path.join(process.cwd(), "next.config.ts"),
+      "utf8",
+    );
+    const list = /serverExternalPackages:\s*\[([^\]]*)\]/.exec(config)?.[1];
+
+    expect(
+      list,
+      "next.config.ts no longer declares serverExternalPackages",
+    ).toBeDefined();
+    expect(
+      list,
+      "@electric-sql/pglite must stay out of the bundler, or DEMO_MODE=true " +
+        "cannot start: see the comment above serverExternalPackages",
+    ).toContain("@electric-sql/pglite");
   });
 });

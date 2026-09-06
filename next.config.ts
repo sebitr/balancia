@@ -17,7 +17,26 @@ const nextConfig: NextConfig = {
 
   // pg and pg-boss must stay outside the bundler: they load native/dynamic
   // modules that Turbopack cannot statically resolve.
-  serverExternalPackages: ["pg", "pg-boss", "pino", "pino-pretty"],
+  //
+  // @electric-sql/pglite is here for a neighbouring reason, and it is the demo
+  // instance's whole database (docs/demo.md). It ships pre-minified ESM whose
+  // Emscripten glue reaches its WebAssembly two ways the bundler breaks: the
+  // payload is addressed as `new URL("./pglite.wasm", import.meta.url)`, which
+  // stops pointing at anything once the module is moved into a chunk, and the
+  // `instantiateWasm` hook the glue calls is a cross-chunk import that happens
+  // to share its name with the option it is assigned to. Re-bundled, the two
+  // collapse onto each other and starting a demo dies in the instrumentation
+  // hook with `h.instantiateWasm is not a function` — before the first request,
+  // so every page is an Internal Server Error and the log says nothing about a
+  // database. Left external it is loaded by Node from node_modules, which is
+  // what the runtime stage of the Dockerfile copies in whole.
+  serverExternalPackages: [
+    "pg",
+    "pg-boss",
+    "pino",
+    "pino-pretty",
+    "@electric-sql/pglite",
+  ],
 
   images: {
     // Balancia serves only its own images; no remote loaders are configured.

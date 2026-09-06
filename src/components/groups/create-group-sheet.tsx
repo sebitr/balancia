@@ -3,14 +3,13 @@
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronRight, Loader2, Plus, X } from "lucide-react";
+import { ChevronRight, Loader2, Lock, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CurrencyPicker } from "@/components/money/currency-picker";
 import { currencyEntry } from "@/modules/currencies/catalog";
-import { TimezoneSelect } from "@/components/groups/timezone-select";
 import { GroupIconPicker } from "@/components/groups/group-icon-picker";
 import { GroupReady } from "@/components/groups/group-ready";
 import { GroupIconTile } from "@/components/groups/group-icon";
@@ -25,6 +24,7 @@ import {
   type GroupIconColor,
 } from "@/modules/groups/icons";
 import type { CurrencyMode } from "@/modules/currencies/conversion";
+import { timezoneCity } from "@/lib/timezones";
 import { cn } from "@/lib/utils";
 
 interface Member {
@@ -81,9 +81,15 @@ export function CreateGroupSheet({
   const [color, setColor] = useState<GroupIconColor>(DEFAULT_GROUP_ICON_COLOR);
   const [pending, setPending] = useState(false);
 
+  /*
+   * Detected, stated in the footer, and never asked for. The zone decides one
+   * thing — which day an expense lands on — and the device already knows the
+   * answer, so a searchable list of four hundred zones was a question with a
+   * right answer already in it. Correcting it lives in the group's settings,
+   * where the handful of groups that need to are.
+   */
   const detected = useDetectedTimezone();
-  const [chosenZone, setChosenZone] = useState<string | null>(null);
-  const timezone = chosenZone ?? detected ?? defaultTimezone;
+  const timezone = detected ?? defaultTimezone;
 
   const draftRef = useRef<HTMLInputElement>(null);
 
@@ -202,13 +208,11 @@ export function CreateGroupSheet({
                 }
               />
 
-              <Currencies
+              <CurrencyQuestion
                 mode={mode}
                 onMode={setMode}
                 currency={currency}
                 onOpenCurrency={() => setView("currency")}
-                timezone={timezone}
-                onTimezone={setChosenZone}
               />
             </div>
 
@@ -216,7 +220,15 @@ export function CreateGroupSheet({
             <input type="hidden" name="icon" value={icon ?? ""} />
             <input type="hidden" name="iconColor" value={color} />
             <input type="hidden" name="currencyMode" value={mode} />
-            <input type="hidden" name="baseCurrency" value={currency} />
+            {/*
+             * Only the mode that has one. The code stays in state either way,
+             * so switching back and forth does not lose it, but a separate
+             * group is submitted without a base currency — which is what it
+             * has.
+             */}
+            {mode === "converted" && (
+              <input type="hidden" name="baseCurrency" value={currency} />
+            )}
             <input type="hidden" name="timezone" value={timezone} />
             <input
               type="hidden"
@@ -234,7 +246,16 @@ export function CreateGroupSheet({
                 />
               ))}
 
-            <footer className="shrink-0 bg-linear-to-t from-card from-62% to-transparent px-5 pt-3 pb-[22px]">
+            <footer className="flex shrink-0 flex-col gap-2 bg-linear-to-t from-card from-62% to-transparent px-5 pt-3 pb-[22px]">
+              {/*
+               * The zone, said rather than asked. It sits by the button
+               * because that is the last thing read before committing, and it
+               * names the city rather than the IANA zone — nobody recognises
+               * `Europe/Zurich` faster than they recognise Zurich.
+               */}
+              <p className="text-xs text-pretty text-muted-foreground">
+                {t("timezoneFootnote", { city: timezoneCity(timezone) })}
+              </p>
               <button
                 type="submit"
                 disabled={!ready || pending}
@@ -279,11 +300,9 @@ export function CreateGroupSheet({
           // room to close things.
           <CurrencyPicker
             value={currency}
-            // Mirrors the row that opened it, which says different things
-            // depending on whether the group converts.
-            title={
-              mode === "separate" ? t("defaultCurrency") : t("baseCurrency")
-            }
+            // Mirrors the row that opened it, which is now reachable from one
+            // mode only and so says one thing.
+            title={t("balanceCurrency")}
             onSelect={(code) => {
               setCurrency(code);
               setView("form");
@@ -510,40 +529,49 @@ function Participants({
   );
 }
 
-/** The one decision here that is awkward to change later, so both are shown. */
-function Currencies({
+/**
+ * The one question left at creation, and the answer that needs a currency.
+ *
+ * Everything else on this sheet can be changed afterwards; this cannot
+ * (`settingsPage.currencyModeFixed`), and it decides what every amount the
+ * group ever records means. So it stays — reduced to the thing a reader has to
+ * decide, which is what happens when somebody pays in another currency.
+ *
+ * The two paragraphs that used to explain it are gone. They described the
+ * mechanism — a rate frozen on the day, a balance per currency — to somebody
+ * who has not recorded an expense yet and cannot picture either. A line each
+ * says the outcome instead, and the group's settings say the rest once there
+ * is a group to say it about.
+ */
+function CurrencyQuestion({
   mode,
   onMode,
   currency,
   onOpenCurrency,
-  timezone,
-  onTimezone,
 }: {
   mode: CurrencyMode;
   onMode: (mode: CurrencyMode) => void;
   currency: string;
   onOpenCurrency: () => void;
-  timezone: string;
-  onTimezone: (zone: string) => void;
 }) {
   const t = useTranslations("groupForm");
 
   const options = [
     {
       value: "converted" as const,
-      title: t("convertedTitle"),
-      body: t("convertedBody"),
+      title: t("modeConvertedTitle"),
+      subtitle: t("modeConvertedSubtitle", { currency }),
     },
     {
       value: "separate" as const,
-      title: t("separateTitle"),
-      body: t("separateBody"),
+      title: t("modeSeparateTitle"),
+      subtitle: t("modeSeparateSubtitle"),
     },
   ];
 
   return (
     <section className="flex flex-col gap-1.5">
-      <SectionLabel>{t("currencies")}</SectionLabel>
+      <SectionLabel>{t("foreignCurrencyQuestion")}</SectionLabel>
 
       <div role="radiogroup" className="flex flex-col gap-1.5">
         {options.map((option) => {
@@ -556,16 +584,16 @@ function Currencies({
               aria-checked={selected}
               onClick={() => onMode(option.value)}
               className={cn(
-                "flex gap-2.5 rounded-[14px] p-3 text-left transition-colors duration-150",
+                "flex h-14 items-center gap-3 rounded-[14px] px-3 text-left transition-colors duration-150",
                 selected
-                  ? "bg-primary/10 inset-ring inset-ring-primary/50"
-                  : "bg-wash-1 inset-ring inset-ring-foreground/8",
+                  ? "bg-primary/12 inset-ring inset-ring-primary/45"
+                  : "bg-wash-1 inset-ring inset-ring-foreground/7",
               )}
             >
               <span
                 aria-hidden="true"
                 className={cn(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full transition-colors duration-150",
+                  "flex size-4.5 shrink-0 items-center justify-center rounded-full transition-colors duration-150",
                   selected
                     ? "inset-ring inset-ring-primary"
                     : "inset-ring inset-ring-foreground/28",
@@ -573,15 +601,15 @@ function Currencies({
               >
                 <span
                   className={cn(
-                    "size-[7px] rounded-full bg-primary transition-transform duration-150",
+                    "size-2 rounded-full bg-primary transition-transform duration-150",
                     selected ? "scale-100" : "scale-0",
                   )}
                 />
               </span>
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium">{option.title}</span>
-                <span className="text-xs leading-[1.45] text-muted-foreground">
-                  {option.body}
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-semibold">{option.title}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {option.subtitle}
                 </span>
               </span>
             </button>
@@ -589,17 +617,26 @@ function Currencies({
         })}
       </div>
 
-      <div className="mt-1.5">
+      {/*
+       * The base currency, asked under the converted answer and nowhere else.
+       * A separate group has no base currency — `createGroup` stores null and
+       * every balance reader gates on the mode — so asking for one in that
+       * mode collected a value the group would not keep. Worse, a value it did
+       * keep would outrank the group's own habit in `defaultCurrency()` and
+       * open the entry drawer on a currency nobody in the group had used.
+       */}
+      {mode === "converted" && (
         <CurrencyRow
           value={currency}
-          label={mode === "separate" ? t("defaultCurrency") : t("baseCurrency")}
+          label={t("balanceCurrencyLabel")}
           onOpen={onOpenCurrency}
         />
-      </div>
+      )}
 
-      <div className="mt-1.5">
-        <TimezoneRow value={timezone} onValueChange={onTimezone} />
-      </div>
+      <p className="mt-0.5 flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
+        <Lock aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+        {t("modeFixedShort")}
+      </p>
     </section>
   );
 }
@@ -612,6 +649,9 @@ function Currencies({
  * looking for the fifth, and for them the row of chips was a row of wrong
  * answers to tap past. One row that says what is chosen and opens a search is
  * the same tap for everybody.
+ *
+ * Indented past the radio dot above it, so that it reads as part of the answer
+ * it belongs to rather than as a fourth question.
  */
 function CurrencyRow({
   value,
@@ -629,55 +669,16 @@ function CurrencyRow({
     <button
       type="button"
       onClick={onOpen}
-      className="flex h-12 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-wash-1"
+      className="ml-[30px] flex h-12 items-center gap-2.5 rounded-[14px] px-3.5 text-left inset-ring inset-ring-foreground/12 transition-colors duration-150 hover:bg-wash-1"
     >
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="flex flex-1 items-center justify-end gap-1.5 text-sm font-medium">
+      <span className="flex flex-1 items-center justify-end gap-1.5 text-sm font-semibold">
         <span aria-hidden="true" className="text-base leading-none">
           {entry?.flag}
         </span>
         {value}
-        <ChevronRight aria-hidden="true" className="size-3.5 opacity-50" />
+        <ChevronRight aria-hidden="true" className="size-3.5 opacity-45" />
       </span>
     </button>
-  );
-}
-
-/**
- * Detected, and one tap from being corrected.
- *
- * The row is drawn here and the app's timezone picker is laid transparent over
- * it, so the design's label-and-value row keeps the searchable list behind it
- * rather than growing a second implementation of one.
- */
-function TimezoneRow({
-  value,
-  onValueChange,
-}: {
-  value: string;
-  onValueChange: (zone: string) => void;
-}) {
-  const t = useTranslations("groupForm");
-
-  return (
-    <div className="relative flex h-12 items-center justify-between rounded-[14px] px-3.5 inset-ring inset-ring-foreground/10 transition-colors duration-150 hover:bg-wash-1">
-      <span aria-hidden="true" className="text-xs text-muted-foreground">
-        {t("timezoneShort")}
-      </span>
-      <span
-        aria-hidden="true"
-        className="flex items-center gap-1.5 text-sm font-medium"
-      >
-        {value.replace(/_/g, " ").replace("/", " / ")}
-        <ChevronRight className="size-3.5 opacity-50" />
-      </span>
-      {/* The real control: invisible, but still the thing that is focused,
-          named and operated. */}
-      <TimezoneSelect
-        value={value}
-        onValueChange={onValueChange}
-        className="absolute inset-0 size-full opacity-0"
-      />
-    </div>
   );
 }

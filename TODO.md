@@ -16,11 +16,15 @@ Started, on a branch, not yet merged.
 - [ ] Modernise passkeys: one handle per account so a password manager shows one entry, the Signal API so a removed passkey stops being offered, a silent upgrade after a password sign-in, and a name for the provider each one lives in — `feat/passkey-modernisation`
 - [ ] Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — `chore/todo-union-merge`
 - [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-install`
+- [ ] Say in `.gitattributes` that GitHub ignores the union driver, so the next chat stops hunting for a conflict git does not have — `chore/todo-github-union`
+- [ ] Keep PGlite out of the bundler, so a demo instance starts instead of answering Internal Server Error on every page — `fix/demo-pglite-external`
+- [ ] Clone without the history nobody running an instance reads — `docs/shallow-clone-restore`
 
 ## Next
 
 Agreed on, not started. Pick from the top.
 
+- [ ] Give every list item its own file under `todo/`, so two branches never edit the same lines and GitHub stops flagging a conflict git resolves on its own — the union driver in `.gitattributes` fixes the merge but cannot reach GitHub's mergeability check, so every pull request still shows the banner and somebody still merges main by hand to clear it. One file per item makes the anchor per-item: a branch adds `todo/<slug>.md`, moves it between `now/`, `next/` and `done/`, and two branches touching different items cannot collide. Costs a renderer for the list — a script or a README generator — and a rewrite of `src/lib/todo-list.test.ts`, which reads one file today
 - [ ] Share target: register for images, PDFs and text, so a receipt shared from another app lands in the drawer — the other half of `briefs/entry-friction.md` idea 6, left out of the Add Entry rework because it is manifest and route work rather than drawer work
 - [ ] Merge somebody into an existing guest when they accept an invite — `briefs/entry-friction.md` idea 7's second half. Match on name, ask, never merge silently: merging two people's balances by mistake is unrecoverable in a way nothing else in this app is
 - [ ] Use the whole window on a desktop, instead of a phone column with a bottom bar — `src/components/layout/app-shell.tsx`
@@ -36,6 +40,8 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-05 Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — #293
+- [x] 2026-09-05 Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — #292
 - [x] 2026-09-05 Read the favicon journey's colours from the palette the icons are generated from, so `pnpm test:e2e` stops failing on main — #291
 - [x] 2026-09-05 Stop asking for a name the account already has: stamp when somebody chose one instead of guessing from the address — #290
 - [x] 2026-09-05 Say nothing when a setting saves itself and the control is its own way back — the language list, the format chips, the notification, mute, telemetry and push switches — #289
