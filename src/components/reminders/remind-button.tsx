@@ -74,7 +74,7 @@ export function RemindButton({
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="mx-auto max-h-[90svh] max-w-[390px] gap-0 overflow-y-auto rounded-t-[28px] bg-background px-5 pt-2.5 pb-[22px] data-[side=bottom]:border-t-0"
+          className="mx-auto max-h-[90svh] max-w-[390px] gap-0 overflow-y-auto rounded-t-[28px] bg-background px-5 pb-[22px] data-[side=bottom]:border-t-0"
         >
           {/* The step's own heading is the sheet's title — a second, hidden
               one would only make a screen reader say it twice. */}

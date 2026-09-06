@@ -26,6 +26,7 @@ import {
   cancelPasskeyCeremony,
   signInWithPasskey,
   supportsPasskeyAutofill,
+  upgradeToPasskey,
 } from "@/modules/auth/passkey-client";
 import { usePasskeySupport } from "./use-passkey-support";
 import { AppleSignInButton } from "./apple-sign-in-button";
@@ -43,6 +44,11 @@ import { AppleSignInButton } from "./apple-sign-in-button";
  * on mount, where a returning reader meets it without having read the page —
  * see the effect below. The button stays, because most browsers still do not
  * offer conditional mediation and none of them announce it in the field.
+ *
+ * A password or a code that works also earns a passkey, silently, from the
+ * password manager the reader just used — see `upgradeToPasskey`. It is
+ * started and not waited for: they asked to sign in, so they are signed in,
+ * and the ceremony finishes or does not while the dashboard loads.
  *
  * Where the instance can send mail, a six-digit code is the fourth way in,
  * and for an account created with a code or a passkey on another device it is
@@ -132,6 +138,9 @@ export function SignInForm({
       setFormError(result.error ?? tErrors("generic"));
       return;
     }
+    // Not awaited: it shows nothing and can be slow, and nobody signing in
+    // should wait on housekeeping they did not ask for.
+    void upgradeToPasskey();
     router.push("/dashboard");
     router.refresh();
   });
@@ -175,6 +184,10 @@ export function SignInForm({
         setCode("");
         return;
       }
+      // A code leaves no credential behind at all, so this is the sign-in that
+      // most needs the offer — the next device would otherwise start from the
+      // inbox again.
+      void upgradeToPasskey();
       router.push("/dashboard");
       router.refresh();
     } finally {
@@ -267,13 +280,27 @@ export function SignInForm({
       if (cancelled || pending) return;
       pending = true;
       try {
-        await armPasskeyAutofill();
-        if (!cancelled) onAutofillSignedIn();
+        // False is the request declining to arm — a refused options handout,
+        // which is not an arrival and not news.
+        const signedIn = await armPasskeyAutofill();
+        if (signedIn && !cancelled) onAutofillSignedIn();
       } catch (error) {
         if (cancelled) return;
         // Raised when the button starts its own modal ceremony, when this
         // screen unmounts, and once on React's development double-mount.
         if (error instanceof Error && error.name === "AbortError") return;
+        /*
+         * And `NotAllowedError`, which is the same silence for the same
+         * reason. It is what a browser raises when there is no authenticator
+         * to offer, and when somebody dismisses a prompt they never summoned —
+         * so on the armed request it reports a refusal of something nobody
+         * asked for. It was landing on the sign-in page as "That passkey
+         * request was cancelled" above a form the reader had only just opened.
+         *
+         * The button keeps saying it, because there somebody pressed
+         * something and is waiting to hear what happened.
+         */
+        if (error instanceof Error && error.name === "NotAllowedError") return;
         // The challenge lives five minutes and a sign-in page left open
         // outlives it. Fetch a fresh one — once, so that a server refusing
         // every challenge cannot turn this into a loop.

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { toastUndoable } from "@/components/ui/sonner";
 import { useAutosave } from "@/components/ui/use-autosave";
 import { setDisplayNameAction } from "@/modules/profile/actions";
+import { refreshPasskeyUserDetails } from "@/modules/auth/passkey-client";
 
 /**
  * The name on the account, written as it is typed.
@@ -37,6 +38,13 @@ export function DisplayNameForm({ initialName }: { initialName: string }) {
         toast.error(result.error ?? t("nameFailed"));
         return false;
       }
+      /*
+       * The account's passkeys are captioned with this name inside the
+       * reader's password manager, and nothing else will ever tell it that the
+       * name changed. Not awaited: it is best-effort housekeeping, and the
+       * field has already saved.
+       */
+      void refreshPasskeyUserDetails();
       return true;
     },
     announce: (undo) => {
