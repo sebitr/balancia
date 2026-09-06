@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { SettleUpScreen } from "@/components/settlements/settle-up-screen";
 import { requireGroupAccess } from "@/lib/actions";
-import { listParticipants } from "@/modules/groups/service";
 import { listRemindRecipients } from "@/modules/reminders/service";
 import { loadSettleUp } from "@/modules/settlements/settle-up";
 import { buildPayoutHints } from "@/modules/payouts/hints";
@@ -31,10 +30,9 @@ export default async function SettleUpPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [view, recipients, participants] = await Promise.all([
+  const [view, recipients] = await Promise.all([
     loadSettleUp(access),
     listRemindRecipients(access),
-    listParticipants(access.groupId),
   ]);
 
   /*
@@ -71,7 +69,6 @@ export default async function SettleUpPage({
         settledOn: repayment.settledOn,
         paymentMethod: repayment.paymentMethod,
       }))}
-      participantCount={participants.length}
       groupId={groupId}
       groupName={access.group.name}
       senderName={senderName}

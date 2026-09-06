@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronRight } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  Receipt,
+} from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { RemindButton } from "@/components/reminders/remind-button";
 import {
@@ -17,29 +23,37 @@ import type {
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { useDateFormatter } from "@/i18n/format-context";
 import type { RemindRecipient } from "@/modules/reminders/types";
-import { POP } from "@/components/motion/transitions";
+import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
-import { TONE } from "@/components/money/balance-tone";
+import { TONE, type BalanceTone } from "@/components/money/balance-tone";
 
 /**
  * Settle up: the shortest set of transfers that clears the group.
  *
- * Each transfer is a sentence — "Seb pays Amélie" — and carries the one action
- * that fits it. Balancia never moves money, so the actions are only ever
- * *record it* and *ask for it*, and both hand off to the flows that already
- * own those jobs rather than growing a second form here.
+ * The amount comes first. A reader arriving here is holding one question —
+ * *how much, and to whom* — and the screen answers it in that order: a hero
+ * that states their own outstanding position, a bar that says what it is made
+ * of, and only then the payments, as flat rows rather than a stack of cards.
+ * Each row is one line and one action, and the way to actually hand the money
+ * over sits inside the row that owes it.
  *
- * Three rules the screen keeps to:
+ * Balancia never moves money, so the actions are only ever *record it* and
+ * *ask for it*, and both hand off to the flows that already own those jobs
+ * rather than growing a second form here.
  *
- *  - **Currencies never meet.** A separate-currency group gets one card each,
- *    and a currency that is square says "settled up" instead of showing 0.00.
- *  - **Direction is said three ways** — the word order of the sentence, an
- *    arrow, and the colour — so it survives greyscale and a screen reader,
- *    per the design system's money rules.
+ * Four rules the screen keeps to:
+ *
+ *  - **Currencies never meet.** A separate-currency group gets one hero and
+ *    one set of rows per currency, and a currency that is square says
+ *    "settled up" instead of showing 0.00.
+ *  - **Direction is said three ways** — the eyebrow above the hero, an arrow,
+ *    and the colour — so it survives greyscale and a screen reader, per the
+ *    design system's money rules.
+ *  - **The bar is a money surface**, so its segments take their fill from
+ *    `TONE` and never from the accent. `AGENTS.md` explains why that rule
+ *    exists and why it beats a handoff that says otherwise.
  *  - **Nobody nudges on someone else's behalf.** Rows between two other people
  *    can be recorded, never reminded; see `modules/reminders/service`.
  */
@@ -125,91 +139,62 @@ export function SettleUpScreen({
   currencies,
   transferCount,
   lastSettled,
-  participantCount,
   ...shared
 }: Shared & {
   currencies: readonly SettleUpCurrencyView[];
   transferCount: number;
   lastSettled: readonly SettledRepaymentView[];
-  participantCount: number;
 }) {
   const t = useTranslations("settleUp");
-  const converted = shared.currencyMode === "converted";
-
-  const subtitle = converted
-    ? t("subtitleConverted", {
-        group: shared.groupName,
-        currency: shared.baseCurrency ?? currencies[0]?.currency ?? "",
-      })
-    : t("subtitlePeople", {
-        group: shared.groupName,
-        count: participantCount,
-      });
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex flex-col gap-1">
-        <PageHeader
-          title={t("title")}
-          back={{
-            href: `/groups/${shared.groupId}`,
-            label: t("backToGroup"),
-          }}
-        />
-        {/* Which group, and how much of it this plan covers. It reads as a
-            line under the title, so it is indented to sit under the words
-            rather than under the arrow. */}
-        <p className="truncate pl-10.5 text-xs text-muted-foreground">
-          {subtitle}
-        </p>
-      </div>
+    <div className="flex flex-col">
+      <PageHeader
+        title={t("title")}
+        back={{
+          href: `/groups/${shared.groupId}`,
+          label: t("backToGroup"),
+        }}
+      />
 
       {transferCount === 0 ? (
         <NothingToSettle groupId={shared.groupId} lastSettled={lastSettled} />
       ) : (
-        <div className="mt-1 flex flex-col gap-3.5">
-          {/* A converted group settles in one currency, so the count is the
-              whole plan and belongs at the top of the screen. A group holding
-              several has one count per card instead — there is no number that
-              covers all of them without adding currencies together. */}
-          {converted && (
-            <h2 className="text-lg font-semibold tracking-[-0.025em]">
-              {t("clearsGroup", { count: transferCount })}
-            </h2>
-          )}
-
-          {currencies.map((entry) => (
-            <CurrencyCard
-              key={entry.currency}
-              entry={entry}
-              showHead={!converted}
-              {...shared}
-            />
-          ))}
-        </div>
+        currencies.map((entry) => (
+          <CurrencySection
+            key={entry.currency}
+            entry={entry}
+            /* Which sentence counts the plan. One currency is the whole of it
+               and says so; several can only ever be counted apart, because
+               there is no number that covers two currencies without adding
+               them together. */
+            countsWholePlan={currencies.length === 1}
+            {...shared}
+          />
+        ))
       )}
     </div>
   );
 }
 
 /**
- * One currency's card, or one card for the whole group when it converts.
+ * One currency: where the reader stands in it, and what to do about it.
  *
- * The group labels appear only when there is something in both groups: a card
- * holding a single transfer needs no heading to tell the reader which of two
- * lists they are looking at.
+ * A group balancing in three currencies gets three of these, one under
+ * another, each with its own hero — which is the only honest way to state a
+ * position that cannot be totalled.
  */
-function CurrencyCard({
+function CurrencySection({
   entry,
-  showHead,
+  countsWholePlan,
   ...shared
-}: Shared & { entry: SettleUpCurrencyView; showHead: boolean }) {
+}: Shared & { entry: SettleUpCurrencyView; countsWholePlan: boolean }) {
   const t = useTranslations("settleUp");
   const count = entry.yours.length + entry.others.length;
 
   if (count === 0) {
     return (
-      <section className="flex items-center justify-between gap-3 rounded-[18px] bg-card px-4 py-4 ring-1 ring-border">
+      <section className="mt-4 flex items-center justify-between gap-3 rounded-[18px] bg-card px-4 py-4 ring-1 ring-border">
         <h2 className="text-2xs font-bold tracking-[0.1em] uppercase">
           {entry.currency}
         </h2>
@@ -222,38 +207,25 @@ function CurrencyCard({
     );
   }
 
-  const labelled = entry.yours.length > 0 && entry.others.length > 0;
-
   return (
     <section
       aria-labelledby={`settle-${entry.currency}`}
-      className="overflow-hidden rounded-[18px] bg-card ring-1 ring-border"
+      className="flex flex-col"
     >
-      {showHead ? (
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 pt-4 pb-3">
-          <h2
-            id={`settle-${entry.currency}`}
-            className="text-2xs font-bold tracking-[0.1em] uppercase"
-          >
-            {entry.currency}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {t("clearsCurrency", { count })}
-          </p>
-        </div>
-      ) : (
-        <h2 id={`settle-${entry.currency}`} className="sr-only">
-          {entry.currency}
-        </h2>
-      )}
+      <h2 id={`settle-${entry.currency}`} className="sr-only">
+        {entry.currency}
+      </h2>
+
+      <Hero entry={entry} countsWholePlan={countsWholePlan} count={count} />
 
       {entry.yours.length > 0 && (
         <>
-          {labelled && <GroupLabel>{t("yourPayments")}</GroupLabel>}
-          {entry.yours.map((transfer) => (
-            <TransferRow
+          <Rule />
+          {entry.yours.map((transfer, index) => (
+            <PaymentBlock
               key={rowKey(transfer)}
               transfer={transfer}
+              first={index === 0}
               {...shared}
             />
           ))}
@@ -262,12 +234,13 @@ function CurrencyCard({
 
       {entry.others.length > 0 && (
         <>
-          {labelled && <GroupLabel>{t("betweenOthers")}</GroupLabel>}
+          <Rule className="mt-6" />
+          <Eyebrow className="pt-4 pb-1">{t("notYourConcern")}</Eyebrow>
           {entry.others.map((transfer) => (
-            <TransferRow
+            <TheirRow
               key={rowKey(transfer)}
               transfer={transfer}
-              {...shared}
+              groupId={shared.groupId}
             />
           ))}
         </>
@@ -276,11 +249,249 @@ function CurrencyCard({
   );
 }
 
-function GroupLabel({ children }: { children: React.ReactNode }) {
+/**
+ * The screen's own divider, drawn to both edges.
+ *
+ * The gutter belongs to the words, not to the rule: a line that stops 16px
+ * short reads as the edge of a card, and there are no cards on this screen any
+ * more.
+ */
+function Rule({ className }: { className?: string }) {
+  return <div aria-hidden="true" className={cn("-mx-4 border-t", className)} />;
+}
+
+function Eyebrow({
+  children,
+  className,
+  id,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <p className="border-t bg-background px-4 pt-2.5 pb-2 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+    <p
+      id={id}
+      className={cn(
+        "text-2xs font-semibold tracking-[0.1em] text-muted-foreground uppercase",
+        className,
+      )}
+    >
       {children}
     </p>
+  );
+}
+
+/**
+ * How much, which way, and what it is made of.
+ *
+ * The figure is the reader's own net position in this currency — not the total
+ * of the plan, which includes payments they are neither making nor receiving.
+ * The bar underneath is the plan: one segment per payment of theirs, then one
+ * for everything between other people, so the difference between "my share"
+ * and "the whole thing" is visible rather than asserted.
+ *
+ * The eyebrow is not decoration. It is the word half of the direction, which
+ * the colour and the arrow say the other two ways — and it is the half that
+ * survives a screen reader and a greyscale screen.
+ */
+function Hero({
+  entry,
+  countsWholePlan,
+  count,
+}: {
+  entry: SettleUpCurrencyView;
+  countsWholePlan: boolean;
+  count: number;
+}) {
+  const t = useTranslations("settleUp");
+
+  const outgoing = entry.yours.filter((transfer) => transfer.fromIsSelf);
+  const incoming = entry.yours.filter((transfer) => transfer.toIsSelf);
+  const net = total(incoming) - total(outgoing);
+
+  const tone: BalanceTone =
+    net > 0n ? "positive" : net < 0n ? "negative" : "neutral";
+  const magnitude = net < 0n ? -net : net;
+
+  /*
+   * The sub-line answers "and then what". One debt owed to the reader is
+   * waiting on one person, so it names them; anything else is a plan, and a
+   * plan is counted.
+   */
+  const single = entry.yours.length === 1 ? entry.yours[0] : null;
+  const subline =
+    single && single.toIsSelf
+      ? t("personStillOwesYou", { name: single.fromName })
+      : countsWholePlan
+        ? t("clearsGroup", { count })
+        : t("clearsCurrency", { count });
+
+  return (
+    <div className="flex flex-col gap-2.5 pt-4 pb-4">
+      <div className="flex flex-col gap-1">
+        <Eyebrow>
+          {tone === "positive"
+            ? t("heroReceiving")
+            : tone === "negative"
+              ? t("heroOwing")
+              : t("heroBalance")}
+        </Eyebrow>
+
+        <p className={cn("flex items-center gap-1.5", TONE[tone].ink)}>
+          {tone === "negative" && (
+            <ArrowUpRight aria-hidden="true" className="size-[22px]" />
+          )}
+          {tone === "positive" && (
+            <ArrowDownLeft aria-hidden="true" className="size-[22px]" />
+          )}
+          <Amount
+            minorUnits={magnitude.toString()}
+            currency={entry.currency}
+            display="code"
+            className="text-2xl font-semibold tracking-[-0.02em]"
+          />
+        </p>
+      </div>
+
+      <p className="text-xs text-muted-foreground">{subline}</p>
+
+      <CompositionBar entry={entry} />
+    </div>
+  );
+}
+
+/** One segment of the plan: how big it is, what colour says so, and its name. */
+interface Segment {
+  readonly key: string;
+  readonly label: string;
+  readonly minorUnits: bigint;
+  readonly fill: string;
+}
+
+/**
+ * What the plan is made of, as one bar and its legend.
+ *
+ * Drawn only when there is more than one thing in it. A single segment is a
+ * full-width block that says exactly what the figure above it already said,
+ * and a legend of one is a label for a thing that has no alternative.
+ *
+ * The reader's own payments alternate between the tone's fill and its ink —
+ * two tokens `token-contrast.test.ts` already holds to a ratio — so two debts
+ * in the same direction can be told apart without reaching for the accent,
+ * which `AGENTS.md` keeps off money surfaces. Everything between other people
+ * is one neutral segment: it is not the reader's direction, and it is not
+ * theirs to break down.
+ */
+function CompositionBar({ entry }: { entry: SettleUpCurrencyView }) {
+  const t = useTranslations("settleUp");
+
+  const mine = entry.yours.map((transfer, index): Segment => {
+    const own: BalanceTone = transfer.fromIsSelf ? "negative" : "positive";
+    return {
+      key: rowKey(transfer),
+      // With one payment of their own, naming the other party would only
+      // repeat the row directly beneath it; with several, the name is the
+      // whole point of the legend.
+      label:
+        entry.yours.length === 1
+          ? t("barYou")
+          : transfer.fromIsSelf
+            ? transfer.toName
+            : transfer.fromName,
+      minorUnits: BigInt(transfer.minorUnits),
+      fill: index % 2 === 0 ? TONE[own].fill : INK_FILL[own],
+    };
+  });
+
+  const rest = total(entry.others);
+  const segments: Segment[] = [
+    ...mine,
+    ...(rest > 0n
+      ? [
+          {
+            key: "others",
+            label: t("betweenOthers"),
+            minorUnits: rest,
+            fill: NOT_MINE_FILL,
+          },
+        ]
+      : []),
+  ];
+
+  if (segments.length < 2) return null;
+
+  return (
+    <div className="flex flex-col gap-1.5 pt-0.5">
+      <div className="flex h-[9px] gap-[3px]" aria-hidden="true">
+        {segments.map((segment) => (
+          <span
+            key={segment.key}
+            // Grown by size rather than sized by percentage: the segments and
+            // the gaps between them share one row, and flex is the only thing
+            // that can divide what is left after the gaps.
+            style={{ flexGrow: Number(segment.minorUnits) }}
+            className={cn("min-w-1 rounded-full", segment.fill)}
+          />
+        ))}
+      </div>
+
+      {/* The legend is the bar in words, so it carries the figures the bar can
+          only imply — and it is what a screen reader gets, the bar itself
+          being a picture of these same numbers. */}
+      <ul className="flex flex-wrap justify-between gap-x-3 gap-y-1">
+        {segments.map((segment) => (
+          <li
+            key={segment.key}
+            className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground"
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "mr-0.5 size-[7px] shrink-0 rounded-full",
+                segment.fill,
+              )}
+            />
+            <span className="truncate">{segment.label}</span>
+            <Amount
+              minorUnits={segment.minorUnits.toString()}
+              currency={entry.currency}
+              display="none"
+              className="shrink-0"
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * The ink of a tone, as a fill.
+ *
+ * `TONE` names its ink as a text class because that is what an ink is for.
+ * Here it is the second shade of one direction, and only the two tokens
+ * already checked for contrast are allowed to be it.
+ */
+const INK_FILL: Record<"positive" | "negative", string> = {
+  positive: "bg-positive-ink",
+  negative: "bg-negative-ink",
+};
+
+/**
+ * The segment that is not the reader's money.
+ *
+ * `TONE.neutral.fill` lightened, and written out in full because Tailwind
+ * reads class names out of the source: a string built at run time is a class
+ * nothing generated. At full weight it competed with the segment beside it for
+ * the eye, on a bar whose whole job is to say which part is theirs.
+ */
+const NOT_MINE_FILL = "bg-neutral-balance/45";
+
+function total(transfers: readonly SettleUpTransferView[]): bigint {
+  return transfers.reduce(
+    (sum, transfer) => sum + BigInt(transfer.minorUnits),
+    0n,
   );
 }
 
@@ -289,18 +500,19 @@ function rowKey(transfer: SettleUpTransferView): string {
 }
 
 /**
- * One transfer: who pays whom, how much, and what to do about it.
+ * One payment the reader is in: the line, and the one thing to do about it.
  *
- * The reader's own debt is the only tinted row on the screen — it is the one
- * thing here they can settle without waiting on anybody.
+ * A row, not a card. The screen already has a card's worth of hierarchy at the
+ * top of it, and stacking two or three more under that turned a list of two
+ * payments into a scroll. What separates them is a rule.
  */
-function TransferRow({
+function PaymentBlock({
   transfer,
+  first,
   ...shared
-}: Shared & { transfer: SettleUpTransferView }) {
+}: Shared & { transfer: SettleUpTransferView; first: boolean }) {
   const t = useTranslations("settleUp");
   const format = useFormatter();
-  const involved = transfer.fromIsSelf || transfer.toIsSelf;
 
   // Shown only on a row the reader is the one paying: it answers "where do I
   // send it", which nobody else on this screen is asking.
@@ -324,8 +536,8 @@ function TransferRow({
    */
   const [picked, setPicked] = useState(() => payout?.methods[0]?.method ?? "");
 
-  // The face is whoever the row is about from here: the other party when the
-  // reader is in the sentence, and the person who owes when they are not.
+  // The face is the other party: on this row the reader is always one of the
+  // two, and their own initials would say nothing.
   const face = transfer.fromIsSelf ? transfer.toName : transfer.fromName;
 
   /*
@@ -363,70 +575,49 @@ function TransferRow({
   });
 
   /*
-   * A row between two other people is the whole target.
+   * The button that records it, which lives in one of two places.
    *
-   * Nothing on it is copyable, nothing about it can be chased, and the one
-   * thing it offers — recording that they squared up — used to be a small
-   * button off to the right with sixty pixels of dead row beside it. The
-   * sentence is what the reader aims at, so the sentence is the button.
+   * Where there are payment rails, it is the last thing in the panel: the
+   * reader has just copied a number and gone to their bank, and the button
+   * they come back to should be under the thing they used. Where there are
+   * none, the row has no panel and the button is the row's own action.
    */
-  if (!involved) {
-    return (
-      <Link
-        href={recordHref}
-        // Two stacked lines in one control run together into "Poul pays
-        // SebRecord for them" for a screen reader, so the row states its own
-        // name rather than being read out of its parts.
-        aria-label={recordLabel}
-        className="flex min-h-[60px] items-center gap-3 border-t py-3 pr-3.5 pl-4 transition-colors hover:bg-wash-1"
-      >
-        <Avatar className="size-9 shrink-0">
-          <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
-            {initialsOf(face)}
-          </AvatarFallback>
-        </Avatar>
-
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <p className="truncate text-sm font-medium tracking-[-0.01em]">
-            {t("paysSentence", {
-              from: transfer.fromName,
-              to: transfer.toName,
-            })}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {t("recordForThem")}
-          </p>
-        </div>
-
-        <TransferAmount transfer={transfer} />
-        <ChevronRight
-          aria-hidden="true"
-          className="size-4 shrink-0 text-muted-foreground"
-        />
-      </Link>
-    );
-  }
-
-  return (
-    <div
+  const record = (tall: boolean) => (
+    <Button
+      asChild
+      size="lg"
       className={cn(
-        "flex flex-col gap-3 border-t px-4 py-3.5",
-        transfer.fromIsSelf && "bg-primary/5",
+        "w-full font-semibold",
+        tall ? "h-[50px] rounded-[16px] text-sm" : "h-[46px] rounded-[14px]",
       )}
     >
+      {/* First person, and past tense. The button does not move the money —
+          nothing here does — so it must not read like an instruction that
+          would. What it records is something the reader has already gone and
+          done. */}
+      <Link href={recordHref} aria-label={recordLabel}>
+        {t("iPaid", { name: transfer.toName })}
+      </Link>
+    </Button>
+  );
+
+  return (
+    <div className={cn("flex flex-col gap-3.5 py-4", !first && "border-t")}>
       <div className="flex items-center gap-3">
-        <Avatar className="size-9 shrink-0">
-          <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
+        <Avatar className="size-10 shrink-0">
+          <AvatarFallback className="bg-accent text-sm font-semibold text-accent-foreground">
             {initialsOf(face)}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex min-w-0 flex-col gap-0.5">
-          <p className="truncate text-sm font-medium tracking-[-0.01em]">
-            {t("paysSentence", {
-              from: transfer.fromName,
-              to: transfer.toName,
-            })}
+          {/* The row is an instruction, not a report: "Pay Hervé back" is what
+              the reader came to do, where "Seb pays Hervé" made them work out
+              which of the two names was theirs. */}
+          <p className="truncate text-base font-semibold tracking-[-0.01em]">
+            {transfer.fromIsSelf
+              ? t("payBack", { name: transfer.toName })
+              : t("personRepaysYou", { name: transfer.fromName })}
           </p>
           {reminded && (
             <p className="truncate text-xs text-muted-foreground">
@@ -437,15 +628,22 @@ function TransferRow({
           )}
         </div>
 
-        <TransferAmount transfer={transfer} />
+        {/* No arrow here. The hero above already said which way the money
+            goes, and a second arrow per row turns a statement into a pattern
+            the eye stops reading. */}
+        <Amount
+          minorUnits={transfer.minorUnits}
+          currency={transfer.currency}
+          display="code"
+          className={cn(
+            "ml-auto shrink-0 text-xl font-semibold tracking-[-0.01em]",
+            TONE[transfer.fromIsSelf ? "negative" : "positive"].ink,
+          )}
+        />
       </div>
 
-      {/* A rule between the debt and the ways to pay it. The row is two things
-          now — what is owed, and how to hand it over — and without the line the
-          chips read as a third row of the sentence above them. */}
-      {payout && (
+      {payout ? (
         <PayoutHint
-          className="border-t pt-3"
           name={transfer.toName}
           groupName={shared.groupName}
           methods={payout.methods}
@@ -455,95 +653,124 @@ function TransferRow({
           currency={transfer.currency}
           qr={payout.qr}
           qrMissing={payout.qrMissing}
+          action={record(true)}
         />
-      )}
-
-      {/* Wraps, because one of these buttons carries a name. "Relancer Grace"
-          and "J'ai reçu le paiement" fit beside each other on a 375px phone;
-          "Relancer Katherine" and the same second button need 356px of a 311px
-          row, and `flex-1` cannot rescue that — `min-width: auto` holds every
-          flex item at its label's min-content width, so instead of shrinking,
-          the second button ran 13px off the side of the screen with its label
-          cut mid-word. Wrapping puts it on its own line, where `flex-1` gives
-          it the full width. A longer translation lands the same way. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {transfer.fromIsSelf ? (
-          /* First person, and past tense. The button does not move the money —
-             nothing here does — so it must not read like an instruction that
-             would. What it records is something the reader has already gone
-             and done. */
+      ) : transfer.fromIsSelf ? (
+        record(false)
+      ) : (
+        /* Wraps, because one of these buttons carries a name. "Relancer" and
+           "J'ai reçu le paiement" fit beside each other on a 375px phone, and
+           a longer translation of either does not — `flex-1` cannot rescue
+           that, because `min-width: auto` holds every flex item at its label's
+           min-content width, so instead of shrinking the second button runs
+           off the side of the screen with its label cut mid-word. Wrapping
+           puts it on its own line, where `flex-1` gives it the full width. */
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             asChild
             size="lg"
-            className="h-[46px] flex-1 rounded-[14px] text-sm font-semibold"
+            className="h-[46px] flex-1 rounded-[14px] font-semibold"
           >
             <Link href={recordHref} aria-label={recordLabel}>
-              {t("iPaid", { name: transfer.toName })}
+              {t("iWasPaid")}
             </Link>
           </Button>
-        ) : (
-          <>
-            {recipients.length > 0 && (
-              <RemindButton
-                groupId={shared.groupId}
-                groupName={shared.groupName}
-                senderName={shared.senderName}
-                recipients={recipients}
-                label={t("remindPerson", { name: transfer.fromName })}
-                variant="default"
-                className="h-[46px] flex-1 rounded-[14px] text-sm font-semibold"
-              />
-            )}
-            <Button
-              asChild
+          {recipients.length > 0 && (
+            <RemindButton
+              groupId={shared.groupId}
+              groupName={shared.groupName}
+              senderName={shared.senderName}
+              recipients={recipients}
+              label={t("remindShort")}
+              // The word on the button is short because the row above it says
+              // who; out of that context — a screen reader running the
+              // buttons of a screen with three of these — it would not.
+              ariaLabel={t("remindPerson", { name: transfer.fromName })}
               variant="outline"
-              size="lg"
-              className="h-[46px] flex-1 rounded-[14px] text-sm font-medium"
-            >
-              <Link href={recordHref} aria-label={recordLabel}>
-                {t("iWasPaid")}
-              </Link>
-            </Button>
-          </>
-        )}
-      </div>
+              className="h-[46px] rounded-[14px] px-4 font-medium"
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 /**
- * The figure, with its direction said in colour and in an arrow as well as in
- * the sentence beside it. A transfer between two other people is neither
- * coming nor going, so it carries neither.
+ * A payment between two other people.
+ *
+ * Nothing on it is copyable, nothing about it can be chased, and the one thing
+ * it offers — recording that they squared up — used to be a small button off
+ * to the right with sixty pixels of dead row beside it. The sentence is what
+ * the reader aims at, so the sentence is the button.
  */
-function TransferAmount({ transfer }: { transfer: SettleUpTransferView }) {
-  const outgoing = transfer.fromIsSelf;
-  const incoming = transfer.toIsSelf;
+function TheirRow({
+  transfer,
+  groupId,
+}: {
+  transfer: SettleUpTransferView;
+  groupId: string;
+}) {
+  const t = useTranslations("settleUp");
+
+  const recordHref = settleIntentPath(groupId, {
+    fromParticipantId: transfer.fromParticipantId,
+    toParticipantId: transfer.toParticipantId,
+    currency: transfer.currency,
+    method: null,
+  });
 
   return (
-    <span
-      className={cn(
-        "ml-auto flex shrink-0 items-center gap-1",
-        outgoing && TONE.negative.ink,
-        incoming && TONE.positive.ink,
-      )}
+    <Link
+      href={recordHref}
+      // Two stacked lines in one control run together into "Poul pays
+      // SebRecord for them" for a screen reader, so the row states its own
+      // name rather than being read out of its parts.
+      aria-label={t("recordFor", {
+        from: transfer.fromName,
+        to: transfer.toName,
+      })}
+      className="-mx-2 flex min-h-14 items-center gap-3 rounded-[14px] px-2 transition-colors hover:bg-wash-1"
     >
-      {outgoing && <ArrowUpRight aria-hidden="true" className="size-[15px]" />}
-      {incoming && <ArrowDownLeft aria-hidden="true" className="size-[15px]" />}
+      <Avatar className="size-8 shrink-0 opacity-60">
+        <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+          {initialsOf(transfer.fromName)}
+        </AvatarFallback>
+      </Avatar>
+
+      <div className="flex min-w-0 flex-col">
+        <p className="truncate text-sm font-medium text-secondary-foreground">
+          {t("paysSentence", {
+            from: transfer.fromName,
+            to: transfer.toName,
+          })}
+        </p>
+        <p className="truncate text-2xs text-muted-foreground">
+          {t("recordForThem")}
+        </p>
+      </div>
+
       <Amount
         minorUnits={transfer.minorUnits}
         currency={transfer.currency}
         display="code"
-        className={cn(
-          "text-sm",
-          outgoing || incoming ? "font-semibold" : "font-medium",
-        )}
+        className="ml-auto shrink-0 text-sm font-semibold text-neutral-balance-ink"
       />
-    </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-muted-foreground"
+      />
+    </Link>
   );
 }
 
-/** Nothing owed anywhere: what happened last, and the way back. */
+/**
+ * Nothing owed anywhere.
+ *
+ * A state, not a list of zeros. The card says the group is done and offers the
+ * one thing there is left to do with it — read what happened — and the last
+ * repayments sit under it as the evidence, read-only.
+ */
 function NothingToSettle({
   groupId,
   lastSettled,
@@ -552,78 +779,66 @@ function NothingToSettle({
   lastSettled: readonly SettledRepaymentView[];
 }) {
   const t = useTranslations("settleUp");
-  const dates = useDateFormatter();
 
   return (
-    <div className="mt-1 flex flex-col gap-3.5">
-      <EmptyState
-        icon={Check}
-        title={t("allSettledTitle")}
-        description={t("allSettledDescription")}
-        className="rounded-[18px] px-7 py-13"
-      />
+    <>
+      <section className="mt-6 flex flex-col items-center gap-3 rounded-[22px] bg-card px-5 py-8 text-center ring-1 ring-foreground/10">
+        <span className="flex size-13 items-center justify-center rounded-full bg-positive/15 text-positive-ink">
+          <Check aria-hidden="true" className="size-6.5" strokeWidth={2.6} />
+        </span>
+        <h2 className="text-xl font-semibold tracking-[-0.02em]">
+          {t("allSettledTitle")}
+        </h2>
+        <p className="max-w-[28ch] text-xs text-pretty text-muted-foreground">
+          {t("allSettledDescription")}
+        </p>
+        <Button
+          asChild
+          variant="outline"
+          size="lg"
+          className="mt-1 h-[46px] rounded-[14px] px-4.5 font-semibold"
+        >
+          <Link href={`/groups/${groupId}/expenses`} transitionTypes={PUSH}>
+            <Receipt aria-hidden="true" className="size-4" />
+            {t("seeTransactions")}
+          </Link>
+        </Button>
+      </section>
 
       {lastSettled.length > 0 && (
-        <section
-          aria-labelledby="last-settled"
-          className="overflow-hidden rounded-[18px] bg-card ring-1 ring-border"
-        >
-          <h2
-            id="last-settled"
-            className="px-4 pt-4 pb-3 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-          >
+        <section aria-labelledby="last-settled" className="mt-10">
+          <Eyebrow className="pb-1" id="last-settled">
             {t("lastSettled")}
-          </h2>
+          </Eyebrow>
           <ul>
             {lastSettled.map((repayment) => (
               <li
                 key={repayment.id}
-                className="flex items-center gap-3 border-t px-4 py-3"
+                className="flex min-h-12 items-center gap-3"
               >
-                <Avatar className="size-8 shrink-0">
+                <Avatar className="size-8 shrink-0 opacity-60">
                   <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
                     {initialsOf(repayment.fromName)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <p className="truncate text-sm font-medium">
-                    {t("paidSentence", {
-                      from: repayment.fromName,
-                      to: repayment.toName,
-                    })}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {repayment.paymentMethod
-                      ? t("settledOnVia", {
-                          when: dates.plain(repayment.settledOn),
-                          method: repayment.paymentMethod,
-                        })
-                      : dates.plain(repayment.settledOn)}
-                  </p>
-                </div>
+                <p className="min-w-0 truncate text-sm font-medium text-secondary-foreground">
+                  {t("paidSentence", {
+                    from: repayment.fromName,
+                    to: repayment.toName,
+                  })}
+                </p>
                 <Amount
                   minorUnits={repayment.minorUnits}
                   currency={repayment.currency}
                   display="code"
-                  className="ml-auto shrink-0 text-sm font-medium"
+                  className="ml-auto shrink-0 text-sm font-semibold text-neutral-balance-ink"
                 />
               </li>
             ))}
           </ul>
         </section>
       )}
-
-      <Button
-        asChild
-        variant="outline"
-        size="lg"
-        className="mx-auto h-11 rounded-[14px] px-5 text-sm font-medium"
-      >
-        <Link href={`/groups/${groupId}`} transitionTypes={POP}>
-          {t("backToGroup")}
-        </Link>
-      </Button>
-    </div>
+    </>
   );
 }
 

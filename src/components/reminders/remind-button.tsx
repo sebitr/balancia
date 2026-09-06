@@ -23,6 +23,7 @@ export function RemindButton({
   senderName,
   recipients,
   label,
+  ariaLabel,
   variant = "outline",
   className,
 }: {
@@ -32,6 +33,14 @@ export function RemindButton({
   recipients: readonly RemindRecipient[];
   /** Overview cards can name one person or say "all" more precisely. */
   label?: string;
+  /**
+   * What the button is called when the row it sits in is not there to say it.
+   *
+   * The settle screen's rows carry a bare "Remind", because the line above
+   * names the person; a screen reader running the controls on their own gets
+   * this instead, which names them too.
+   */
+  ariaLabel?: string;
   variant?: "default" | "outline";
   className?: string;
 }) {
@@ -61,6 +70,7 @@ export function RemindButton({
         variant={variant}
         size="lg"
         onClick={() => setOpen(true)}
+        aria-label={ariaLabel}
         className={cn("h-9 rounded-xl px-3.5 text-sm font-medium", className)}
       >
         <Bell aria-hidden="true" className="size-4" />
