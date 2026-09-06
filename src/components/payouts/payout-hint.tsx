@@ -463,7 +463,7 @@ function QrSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="mx-auto max-h-[90svh] max-w-[390px] items-center gap-3 overflow-y-auto rounded-t-[24px] bg-card px-5 pt-2.5 pb-[22px] data-[side=bottom]:border-t-0"
+        className="mx-auto max-h-[90svh] max-w-[390px] items-center gap-3 overflow-y-auto rounded-t-[24px] bg-card px-5 pb-[22px] data-[side=bottom]:border-t-0"
       >
         <SheetTitle className="text-base font-semibold tracking-[-0.02em]">
           {qr ? t("qrSheetTitle", { name }) : t("qrScanTitle", { method })}

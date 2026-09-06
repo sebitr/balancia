@@ -2330,7 +2330,7 @@ export function AddEntryForm({
             // as one piece.
             sheet === "currency"
               ? "h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] overflow-hidden p-0"
-              : "max-h-[86vh] overflow-y-auto px-4 pt-3.5 pb-5",
+              : "max-h-[86vh] overflow-y-auto px-4 pb-5",
           )}
         >
           {sheet === "split" && (

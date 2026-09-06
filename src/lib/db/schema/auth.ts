@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { mintWebauthnUserHandle } from "@/modules/auth/user-handle";
 import {
   boolean,
   check,
@@ -74,6 +75,28 @@ export const users = pgTable(
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     /** scrypt hash. Null for an account that only has passkeys. */
     passwordHash: text("password_hash"),
+    /**
+     * The account's WebAuthn user handle: what an authenticator files this
+     * account's passkeys under, and the only name the Signal API answers to.
+     *
+     * Random rather than the row id, because this value leaves the server and
+     * is kept by somebody's password manager for years. It is minted with the
+     * account and never changes: the handle is how a provider decides that two
+     * credentials belong to one entry in its list, so an account that changed
+     * it would appear twice — which is exactly the state this column was added
+     * to end. A passkey signup mints it before the row exists, so the handle
+     * the ceremony committed to is carried in and stored here verbatim.
+     *
+     * Accounts that predate the column carry their id, because that is what
+     * `startPasskeyRegistration` sent as the handle before this existed.
+     *
+     * Defaulted here rather than at the call sites so that no path can create
+     * an account without one — a seed, a factory or a fixture that inserts a
+     * user directly gets a handle it never had to think about.
+     */
+    webauthnUserHandle: text("webauthn_user_handle")
+      .notNull()
+      .$defaultFn(() => mintWebauthnUserHandle()),
     /**
      * Preferred interface language ("en", "fr"). Null means "not chosen yet",
      * which falls back to the browser's Accept-Language. Stored so the choice
@@ -152,11 +175,33 @@ export const users = pgTable(
      * still change the moment a new photo lands: it is the cache key.
      */
     avatarUpdatedAt: timestamp("avatar_updated_at", { withTimezone: true }),
+    /**
+     * When this account last removed a passkey of its own.
+     *
+     * A fact rather than a preference, but one policy reads it: the silent
+     * upgrade after a password sign-in will not run for an account that has
+     * this stamp. Without it, somebody who deliberately removes their passkey
+     * gets a new one minted behind their back the next time they type their
+     * password, which is the app quietly overruling them — and doing it
+     * silently, so they would only find out by visiting the settings screen
+     * they had just used to say no.
+     *
+     * It does not stand in the way of the button. Asking for a passkey
+     * explicitly is a fresh decision and always allowed; this only governs
+     * what happens without being asked.
+     */
+    passkeyRemovedAt: timestamp("passkey_removed_at", { withTimezone: true }),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
   },
   (table) => [
     // Case-insensitive uniqueness: nobody gets a second account by capitalising.
     uniqueIndex("users_email_unique").on(sql`lower(${table.email})`),
+    // Two accounts sharing a handle would share one entry in a password
+    // manager's list. Thirty-two random bytes will not collide; the index is
+    // what makes that a guarantee rather than an expectation.
+    uniqueIndex("users_webauthn_user_handle_unique").on(
+      table.webauthnUserHandle,
+    ),
     check(
       "users_preferred_currency_format",
       sql`${table.preferredCurrency} IS NULL OR ${table.preferredCurrency} ~ '^[A-Z]{3}$'`,
@@ -256,6 +301,33 @@ export const passkeys = pgTable(
     backedUp: boolean("backed_up").notNull().default(false),
     /** Comma-separated transports hint ("internal,hybrid"). */
     transports: text("transports"),
+    /**
+     * The user handle this particular credential is filed under, as the
+     * authenticator holds it — which is not always what `users` now says.
+     *
+     * Every Signal API call that reconciles a list is keyed by the handle, so
+     * a credential whose handle is unknown cannot be signalled about: the
+     * browser would look under a name no authenticator ever stored and
+     * silently match nothing. New registrations write the account's handle
+     * here. Rows that predate the column are null until their next sign-in,
+     * where the assertion carries `userHandle` and repairs them — the handle a
+     * passkey signup minted was discarded with its challenge row, so the
+     * authenticator is the only remaining copy.
+     */
+    userHandle: text("user_handle"),
+    /**
+     * The authenticator's model identifier, as a dashed UUID.
+     *
+     * This is what turns a list of identical shields into "iCloud Keychain"
+     * and "1Password" — the one thing that tells a reader which of their four
+     * passkeys the removal sheet is about. It identifies a model, never a
+     * person or a device: every iPhone in the world reports the same AAGUID
+     * for iCloud Keychain, which is what makes it safe to store.
+     *
+     * All zeroes is the documented "declines to say" and several
+     * authenticators mean it, so it is stored as null rather than looked up.
+     */
+    aaguid: text("aaguid"),
     /** User-chosen label, e.g. "Work laptop". */
     name: text("name"),
     createdAt: timestamp("created_at", { withTimezone: true })

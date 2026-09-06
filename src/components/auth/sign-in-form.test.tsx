@@ -27,6 +27,7 @@ const supportsPasskeyAutofill = vi.fn();
 const armPasskeyAutofill = vi.fn();
 const cancelPasskeyCeremony = vi.fn();
 const signInWithPasskey = vi.fn();
+const upgradeToPasskey = vi.fn();
 
 vi.mock("@/modules/auth/actions", () => ({
   signInAction: (...args: unknown[]) => signInAction(...args),
@@ -46,6 +47,7 @@ vi.mock("@/modules/auth/passkey-client", () => ({
   armPasskeyAutofill: () => armPasskeyAutofill(),
   cancelPasskeyCeremony: () => cancelPasskeyCeremony(),
   signInWithPasskey: () => signInWithPasskey(),
+  upgradeToPasskey: () => upgradeToPasskey(),
 }));
 
 const { SignInForm } = await import("./sign-in-form");
@@ -244,11 +246,25 @@ describe("passkey autofill", () => {
 
   it("goes to the dashboard when the passkey is picked from the dropdown", async () => {
     supportsPasskeyAutofill.mockResolvedValue(true);
-    armPasskeyAutofill.mockResolvedValue(undefined);
+    armPasskeyAutofill.mockResolvedValue(true);
 
     renderWithIntl(<SignInForm mailEnabled={false} />);
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("stays put when the request never armed", async () => {
+    supportsPasskeyAutofill.mockResolvedValue(true);
+    // False is the options handout refusing — the rate limiter, most likely,
+    // which somebody flicking between tabs can reach without doing anything
+    // wrong. Nothing was offered, so nothing was picked.
+    armPasskeyAutofill.mockResolvedValue(false);
+
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    await waitFor(() => expect(armPasskeyAutofill).toHaveBeenCalledOnce());
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("says nothing when the request is aborted", async () => {
@@ -256,6 +272,22 @@ describe("passkey autofill", () => {
     // What the passkey button raises on the pending request as it starts its
     // own ceremony, and what unmounting raises. Nobody asked for either.
     armPasskeyAutofill.mockRejectedValue(named("AbortError", "cancelled"));
+
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    await waitFor(() => expect(armPasskeyAutofill).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("says nothing when there was no authenticator to offer", async () => {
+    supportsPasskeyAutofill.mockResolvedValue(true);
+    // `NotAllowedError` on the armed request means a browser with nothing to
+    // put in the dropdown, or somebody dismissing a prompt they never
+    // summoned. Either way it is a refusal of something nobody asked for, and
+    // it was showing up as "That passkey request was cancelled" over a form
+    // the reader had only just opened.
+    armPasskeyAutofill.mockRejectedValue(named("NotAllowedError", "no"));
 
     renderWithIntl(<SignInForm mailEnabled={false} />);
 

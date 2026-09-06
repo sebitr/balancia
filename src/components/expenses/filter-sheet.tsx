@@ -154,7 +154,7 @@ export function FilterSheet({
         onOpenAutoFocus={openOnContent}
         // A fixed frame with a scrolling middle: the header and the apply
         // button hold their places, and only the sections move.
-        className="mx-auto flex max-h-[88dvh] max-w-[430px] flex-col gap-0 overflow-hidden rounded-t-[22px] px-0 pt-2.5 pb-0"
+        className="mx-auto flex max-h-[88dvh] max-w-[430px] flex-col gap-0 overflow-hidden rounded-t-[22px] px-0 pb-0"
       >
         <div className="flex items-center gap-3 px-4 pt-1 pb-3">
           <SheetTitle className="flex-1 text-lg font-semibold tracking-[-0.02em]">

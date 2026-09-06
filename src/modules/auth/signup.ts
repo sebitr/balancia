@@ -184,17 +184,23 @@ export async function finishPasskeySignup(
   assertRegistrationOpen();
   const db = options.db ?? getDb();
 
-  const { identity, credential } = await verifySignupPasskeyRegistration(
-    response,
-    { db },
-  );
+  const { identity, credential, userHandle } =
+    await verifySignupPasskeyRegistration(response, { db });
 
   const userId = await db.transaction(async (tx) => {
     const created = await insertUser(
-      { email: identity.email, name: identity.name, passwordHash: null },
+      {
+        email: identity.email,
+        name: identity.name,
+        passwordHash: null,
+        // The handle the ceremony already promised the authenticator, adopted
+        // rather than replaced: a fresh one here would leave this credential
+        // in an entry that no passkey added later ever joins.
+        webauthnUserHandle: userHandle,
+      },
       { db: tx },
     );
-    await insertPasskey(created, credential, undefined, { db: tx });
+    await insertPasskey(created, credential, undefined, { db: tx, userHandle });
     return created;
   });
 
