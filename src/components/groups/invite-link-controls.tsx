@@ -94,19 +94,41 @@ export function useCanShare(): boolean | null {
 }
 
 /**
+ * What the share sheet is handed: the message, and the link on the line under
+ * it, as one text.
+ *
+ * The link rides inside the text rather than in the payload's `url` field,
+ * because given both, every share target does something different with them.
+ * Android joins the two into one message; iOS hands each app the two as
+ * separate items, and the chat apps keep the link and leave the words behind
+ * — which is how the invitation arrived as a bare URL, in either language.
+ * One text arrives whole everywhere, the message on top and the link on the
+ * last line, where a chat app still turns it into a preview. The reminder
+ * sheet hands its message over the same way.
+ */
+export function shareText(message: string, url: string): string {
+  return `${message}\n${url}`;
+}
+
+/**
  * Opens the native share sheet, which is what puts the group's chat app first.
  *
  * A dismissed sheet rejects, and that is not a failure worth a toast — the
  * reader closed it on purpose. Anything else falls back to the clipboard,
- * which is the same outcome by a slower route.
+ * which is the same outcome by a slower route. Only the link is copied: the
+ * words were written to be sent, and the button beside the chip that copies
+ * the same link has already taught the reader what "Copied" means.
  */
 export async function shareOrCopy(
-  payload: { title: string; text: string; url: string },
+  payload: { title: string; message: string; url: string },
   fallback: (value: string) => Promise<void>,
 ): Promise<void> {
   if (typeof navigator !== "undefined" && "share" in navigator) {
     try {
-      await navigator.share(payload);
+      await navigator.share({
+        title: payload.title,
+        text: shareText(payload.message, payload.url),
+      });
       return;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -221,7 +243,7 @@ export function ShareButton({
         void shareOrCopy(
           {
             title: t("shareTitle", { group: groupName }),
-            text: t("shareText", { group: groupName }),
+            message: t("shareText", { group: groupName }),
             url,
           },
           copy,
