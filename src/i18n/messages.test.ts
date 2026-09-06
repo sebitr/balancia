@@ -288,10 +288,10 @@ describe("French copy", () => {
 
   it("addresses the reader as tu, homepage included", () => {
     // Balancia tutoies. `vous` is correct only where a string addresses more
-    // than one person at once, which is rare enough to name.
+    // than one person at once, which is rare enough to name. The invitation
+    // sent to the rest of the group is not one of them: it is read by one
+    // person at a time, in their own chat, and tutoies like everything else.
     const ADDRESSES_SEVERAL = new Set([
-      // The invitation the reader sends to the rest of the group.
-      "inviteLink.shareText",
       // "lequel d'entre vous vient de l'ouvrir" — the group, not the reader.
       "onboarding.welcome.sharedSub",
       // "Entre vous deux" — the reader and one other member.
