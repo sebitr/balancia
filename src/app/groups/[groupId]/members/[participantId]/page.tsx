@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/ui/page-header";
 import { MemberPosition } from "@/components/members/member-position";
 import { MemberStatistics } from "@/components/members/member-statistics";
 import { requireGroupAccess } from "@/lib/actions";
-import { cn } from "@/lib/utils";
 import { getDateFormatter } from "@/i18n/preferences";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { counterpartiesOf } from "@/modules/groups/overview";
@@ -139,30 +137,16 @@ export default async function MemberStatsPage({
 
   return (
     <div className="flex flex-col gap-3.5">
-      {/* Untitled: the block directly below is this person's name at three
-          times the size, with their face beside it. */}
-      <PageHeader
-        back={{ href: `/groups/${groupId}`, label: tCommon("backToGroup") }}
-      />
-
-      <div className="flex items-center gap-3">
-        <Avatar className="size-13">
-          <AvatarFallback
-            className={cn(
-              "text-xl font-semibold",
-              viewingSelf
-                ? "bg-primary/15 text-primary-ink"
-                : "bg-accent text-accent-foreground",
-            )}
-          >
-            {name.trim().charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-xl font-semibold tracking-[-0.02em]">
-              {viewingSelf ? t("you") : name}
-            </h1>
+      {/* The screen is the person, so the person is its title — named beside
+          the arrow like every other pushed screen, and named rather than
+          addressed: the reader's own screen used to be headed "You" while the
+          badge beside it said the same word again. Second person belongs in
+          the sentences below, which is where it still is. */}
+      <div className="flex flex-col gap-0.5">
+        <PageHeader
+          title={name}
+          back={{ href: `/groups/${groupId}`, label: tCommon("backToGroup") }}
+          badge={
             <span className="inline-flex h-[19px] shrink-0 items-center rounded-full bg-secondary px-2 text-2xs font-semibold text-secondary-foreground">
               {viewingSelf
                 ? t("badgeYou")
@@ -172,14 +156,16 @@ export default async function MemberStatsPage({
                     ? t("badgeGuest")
                     : t("badgeMember")}
             </span>
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {t("joined", {
-              group: access.group.name,
-              date: dates.at(person.createdAt),
-            })}
-          </p>
-        </div>
+          }
+        />
+        {/* Indented past the arrow, so it reads as a line under the words
+            rather than under the way back. */}
+        <p className="truncate pl-10.5 text-xs text-muted-foreground">
+          {t("joined", {
+            group: access.group.name,
+            date: dates.at(person.createdAt),
+          })}
+        </p>
       </div>
 
       {positions.map((position) => (

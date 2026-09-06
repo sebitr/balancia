@@ -34,14 +34,32 @@ describe("a page header", () => {
   });
 
   it("keeps the row's height when the screen names itself below", () => {
-    // A member's screen opens on their face and their name, so the header
-    // carries the arrow and nothing else — and still has to hold its line.
+    // A screen whose own hero carries its name leaves the header with the
+    // arrow and nothing else — and it still has to hold its line.
     const { container } = render(
       <PageHeader back={{ href: "/groups/g1", label: "Back to the group" }} />,
     );
 
     expect(screen.queryByRole("heading")).toBeNull();
     expect(container.querySelector(".min-h-8\\.5")).not.toBeNull();
+  });
+
+  it("keeps a badge against the words rather than at the far end", () => {
+    // A member's screen titles itself with a person and badges them "You" or
+    // "Owner" — which says what the title names, so it reads as part of the
+    // title, and the truncation stays the name's alone.
+    render(
+      <PageHeader
+        title="Ada Lovelace"
+        back={{ href: "/groups/g1", label: "Back to the group" }}
+        badge={<span>You</span>}
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveClass("truncate");
+    expect(heading).not.toHaveClass("flex-1");
+    expect(heading.nextElementSibling).toHaveTextContent("You");
   });
 
   it("puts a trailing control at the far end of the same row", () => {
