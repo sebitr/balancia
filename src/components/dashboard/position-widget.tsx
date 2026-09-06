@@ -26,7 +26,9 @@ import { TONE, toneFor } from "@/components/money/balance-tone";
  * The proportional rule is decorative and hidden from assistive technology;
  * the two totals underneath say the same thing in a form a screen reader can
  * read. Each is named by the column it sits in, so neither carries a sign —
- * direction is in the word above the number, never in colour alone.
+ * direction is in the word above the number, never in colour alone. Those
+ * columns exist only under a single converted total, which is the one figure
+ * they can decompose into something it did not already say.
  *
  * Every figure here is rounded to whole units. This is an answer to "roughly
  * where do I stand?", and centimes on a five-digit total are noise; the exact
@@ -66,12 +68,15 @@ export interface PositionWidgetProps {
  * The position, one figure per currency, when there is no rate to combine them.
  *
  * These are not a consolation for the missing total — they are the position,
- * and there is nothing approximate about them. What stood here before was the
- * sentence explaining why there is more than one, which spent the largest type
- * on the screen saying what the app could not do and left the figures to the
- * columns underneath. An instance that took the defaults never turns rate
- * suggestions on, so for anyone holding two currencies that sentence was not
- * an edge case; it was the header.
+ * and there is nothing approximate about them. Nothing sits under them. The
+ * "owed to you / you owe" columns that follow a converted total would only
+ * repeat each figure beside a zero here, since a currency's net has one
+ * direction; and the sentence that used to explain why there is more than one
+ * figure spent a line of the screen apologising for a rate the instance never
+ * had. An instance that took the defaults never turns rate suggestions on, so
+ * for anyone holding two currencies that line was not an edge case; it was
+ * the header. The explanation is a tap away instead, behind the figures
+ * themselves, the way the conversion disclosure already is.
  *
  * A currency that nets to zero is dropped: it is settled, and a "0" competes
  * with the lines that are not. If every one of them nets to zero they are all
@@ -79,13 +84,16 @@ export interface PositionWidgetProps {
  *
  * Each figure carries its sign, since there is no single word above these the
  * way there is above the converted total — direction stays readable without
- * colour, which is the rule the balance palette is built on.
+ * colour, which is the rule the balance palette is built on. The word the
+ * columns used to carry for a screen reader follows each figure instead.
  */
 function CurrencyFigures({
   totals,
 }: {
   totals: PositionWidgetProps["currencyTotals"];
 }) {
+  const t = useTranslations("dashboard");
+  const tMoney = useTranslations("money");
   const nets = totals.map((total) => ({
     currency: total.currency,
     net: BigInt(total.owedToYou) - BigInt(total.youOwe),
@@ -102,23 +110,66 @@ function CurrencyFigures({
         ? "text-[2.125rem]"
         : "text-[1.625rem]";
 
+  // Spans throughout, because this sits inside the button that opens its
+  // footnote, and a button holds phrasing content only.
   return (
-    <div className="flex flex-col gap-1">
+    <span className="flex flex-col gap-1">
       {shown.map(({ currency, net }) => (
-        <Amount
-          key={currency}
-          minorUnits={net.toString()}
-          currency={currency}
-          fractionDigits={0}
-          signDisplay="exceptZero"
-          className={cn(
-            size,
-            "leading-none font-semibold tracking-[-0.035em]",
-            TONE[toneFor(net)].ink,
-          )}
-        />
+        <span key={currency} className="block">
+          <Amount
+            minorUnits={net.toString()}
+            currency={currency}
+            fractionDigits={0}
+            signDisplay="exceptZero"
+            className={cn(
+              size,
+              "leading-none font-semibold tracking-[-0.035em]",
+              TONE[toneFor(net)].ink,
+            )}
+          />
+          <span className="sr-only">
+            {" "}
+            {net > 0n
+              ? t("owedToYouLabel")
+              : net < 0n
+                ? t("youOweLabel")
+                : tMoney("settledUpBadge")}
+          </span>
+        </span>
       ))}
-    </div>
+    </span>
+  );
+}
+
+/**
+ * A figure that opens its own footnote.
+ *
+ * The widget shows a total without saying how it got there — a standing line
+ * under every balance is noise on the days nothing has moved — but the
+ * disclosure is not allowed to disappear, so the figure itself opens it. The
+ * converted total explains its rate this way; the per-currency figures
+ * explain why there is more than one of them.
+ */
+function FigureDisclosure({
+  label,
+  note,
+  children,
+}: {
+  /** What the tap does, for a screen reader; the figures are the visible name. */
+  label: string;
+  note: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger className="self-start rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+        {children}
+        <span className="sr-only">{label}</span>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto max-w-[17rem]">
+        <p className="text-muted-foreground">{note}</p>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -154,22 +205,21 @@ export function PositionWidget({
   /*
    * Three states, and they are not the same absence. Square everywhere is a
    * result and gets the word; a missing rate is a failure and gets the
-   * per-currency figures with a line saying so. An account holding no balance
-   * at all reaches the first through `currencyTotals` being empty rather than
-   * through a zero.
+   * per-currency figures, with the reason a tap behind them. An account
+   * holding no balance at all reaches the first through `currencyTotals`
+   * being empty rather than through a zero.
+   *
+   * The totals band only follows a single converted figure. Under the
+   * per-currency figures it had nothing to add: each currency nets in one
+   * direction, so every row of it was the figure above beside a zero.
    */
   const allSquare =
     (netUnits !== null && netUnits === 0n) ||
     (net === null && currencyTotals.length === 0);
   const ratesUnavailable = net === null && currencyTotals.length > 0;
-  const showTotals = !allSquare && (net !== null || ratesUnavailable);
+  const showTotals = !allSquare && net !== null;
 
-  /*
-   * The rate the figure was converted at, one tap away. The widget shows a
-   * converted total without saying so — a standing footnote under every
-   * balance is noise on the days nothing has moved — but the disclosure is not
-   * allowed to disappear, so the figure itself opens it.
-   */
+  /** The rate the figure was converted at, phrased for the day it is from. */
   const disclosure =
     converted && displayCurrency && !allSquare
       ? ratesAsOf === today
@@ -213,28 +263,21 @@ export function PositionWidget({
               {tMoney("settledUpBadge")}
             </p>
           ) : ratesUnavailable ? (
-            <CurrencyFigures totals={currencyTotals} />
+            <FigureDisclosure
+              label={t("perCurrencyDisclosureLabel")}
+              note={t("ratesUnavailable")}
+            >
+              <CurrencyFigures totals={currencyTotals} />
+            </FigureDisclosure>
           ) : disclosure ? (
-            <Popover>
-              <PopoverTrigger className="self-start rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-                {figure}
-                <span className="sr-only">{t("rateDisclosureLabel")}</span>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto max-w-[17rem]">
-                <p className="text-muted-foreground">{disclosure}</p>
-              </PopoverContent>
-            </Popover>
+            <FigureDisclosure
+              label={t("rateDisclosureLabel")}
+              note={disclosure}
+            >
+              {figure}
+            </FigureDisclosure>
           ) : (
             figure
-          )}
-
-          {/* Under the figures rather than instead of them. It explains why
-              there is more than one number, which is a footnote — the numbers
-              themselves are the answer. */}
-          {ratesUnavailable && (
-            <p className="text-xs text-muted-foreground">
-              {t("ratesUnavailable")}
-            </p>
           )}
         </div>
 
@@ -269,39 +312,21 @@ export function PositionWidget({
 
             <div className="-mt-2 grid grid-cols-2">
               <TotalsColumn label={t("owedToYouLabel")}>
-                {net && owedToYou ? (
+                {owedToYou && (
                   <TintedTotal
                     minorUnits={owedToYou.minorUnits}
                     currency={owedToYou.currency}
                     tone="positive"
                   />
-                ) : (
-                  currencyTotals.map((total) => (
-                    <TintedTotal
-                      key={total.currency}
-                      minorUnits={total.owedToYou}
-                      currency={total.currency}
-                      tone="positive"
-                    />
-                  ))
                 )}
               </TotalsColumn>
               <TotalsColumn label={t("youOweLabel")} divided>
-                {net && youOwe ? (
+                {youOwe && (
                   <TintedTotal
                     minorUnits={youOwe.minorUnits}
                     currency={youOwe.currency}
                     tone="negative"
                   />
-                ) : (
-                  currencyTotals.map((total) => (
-                    <TintedTotal
-                      key={total.currency}
-                      minorUnits={total.youOwe}
-                      currency={total.currency}
-                      tone="negative"
-                    />
-                  ))
                 )}
               </TotalsColumn>
             </div>
