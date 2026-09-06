@@ -38,6 +38,7 @@ Worth doing, nobody has committed to it, safe to ignore for months.
 Merged. Trim entries older than a couple of months; git history is the real
 record.
 
+- [x] 2026-09-05 Make the repository page do the converting: put the live demo where somebody lands, keep only the badges that carry information, add a donation route, and show several screens instead of one — #297
 - [x] 2026-09-05 Reap the worktrees and branches whose pull request has merged, instead of somebody asking every couple of days — #293
 - [x] 2026-09-05 Stop TODO.md conflicting on every pull request, and correct the list for what has already merged — #292
 - [x] 2026-09-05 Read the favicon journey's colours from the palette the icons are generated from, so `pnpm test:e2e` stops failing on main — #291

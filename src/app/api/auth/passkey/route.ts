@@ -3,7 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/security/actor";
 import { describeError } from "@/lib/server-errors";
 import { AuthError } from "@/modules/auth/service";
-import { deletePasskey, listPasskeys } from "@/modules/auth/webauthn";
+import {
+  deletePasskey,
+  listPasskeys,
+  passkeySignalState,
+} from "@/modules/auth/webauthn";
+import { getEnv } from "@/lib/env";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
@@ -11,6 +16,12 @@ import { trackRoute } from "@/lib/metrics/http";
  *
  * GET    → the user's registered passkeys
  * DELETE → remove one, scoped to the signed-in account
+ *
+ * The delete answers with more than an acknowledgement, because deleting the
+ * row is only half of it: until the browser tells the reader's password
+ * manager, the credential goes on being offered at every sign-in and fails
+ * when it is chosen. `signal` is what the browser needs to say so, and the
+ * relying-party ID travels with it so the caller has nothing to look up.
  */
 
 export async function GET() {
@@ -32,6 +43,7 @@ async function handleGet() {
         name: credential.name,
         deviceType: credential.deviceType,
         backedUp: credential.backedUp,
+        aaguid: credential.aaguid,
         createdAt: credential.createdAt.toISOString(),
         lastUsedAt: credential.lastUsedAt?.toISOString() ?? null,
       })),
@@ -63,8 +75,17 @@ async function handleDelete(request: Request) {
   }
 
   try {
-    await deletePasskey(user.userId, body.id);
-    return NextResponse.json({ ok: true });
+    const { userHandle } = await deletePasskey(user.userId, body.id);
+    // Computed after the row is gone, and told about the handle that went with
+    // it: an account whose last passkey this was has nothing left to name it.
+    const signal = await passkeySignalState(user.userId, {
+      alsoClear: [userHandle],
+    });
+    return NextResponse.json({
+      ok: true,
+      rpId: getEnv().webAuthnRpId,
+      signal,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(
