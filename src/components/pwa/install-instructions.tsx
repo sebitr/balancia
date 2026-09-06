@@ -50,7 +50,7 @@ export function InstallInstructions() {
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="mx-auto max-h-[85dvh] gap-4 overflow-y-auto rounded-t-[22px] px-5 pt-4 pb-[max(1.375rem,env(safe-area-inset-bottom))] sm:max-w-sm"
+        className="mx-auto max-h-[85dvh] gap-4 overflow-y-auto rounded-t-[22px] px-5 pb-[max(1.375rem,env(safe-area-inset-bottom))] sm:max-w-sm"
       >
         {/* The grabber is the sheet's own, now that every bottom sheet has
             one — a second would only sit under the first. */}

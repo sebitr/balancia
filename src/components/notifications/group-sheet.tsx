@@ -49,7 +49,7 @@ export function GroupSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="gap-0 rounded-t-[20px] px-4 pt-2 pb-[calc(1.375rem+env(safe-area-inset-bottom))]"
+        className="gap-0 rounded-t-[20px] px-4 pb-[calc(1.375rem+env(safe-area-inset-bottom))]"
       >
         <SheetHeader className="flex-row items-center gap-2 px-0.5 pt-0 pb-3">
           <span

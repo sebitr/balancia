@@ -75,7 +75,7 @@ export function AddExpenseSheet({
         // The list is the point. Most people have a handful of groups and tap
         // the one they mean; the search is for the person who has thirty.
         onOpenAutoFocus={openOnContent}
-        className="gap-4 rounded-t-[22px] bg-card px-5 pt-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-card-foreground"
+        className="gap-4 rounded-t-[22px] bg-card px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-card-foreground"
       >
         <div className="flex flex-col gap-0.5">
           <SheetTitle className="text-base font-semibold tracking-[-0.02em]">
