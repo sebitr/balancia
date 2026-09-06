@@ -411,10 +411,18 @@ export function ExpiryRow({
 export function RemainingLabel({
   expiresAt,
   now,
+  withVerb = false,
 }: {
   expiresAt: string | null;
   /** Epoch milliseconds. See `ExpiryRow` for why this is passed in. */
   now: number;
+  /**
+   * Says the verb itself — "Expires in 6 days" rather than "In 6 days" — for
+   * the callers that show this on its own. Inside `ExpiryRow` the row already
+   * carries a label saying what the date is, and repeating it there would read
+   * as "Link expires: Expires in 6 days".
+   */
+  withVerb?: boolean;
 }) {
   const t = useTranslations("inviteLink");
   const remaining = remainingFor(
@@ -428,8 +436,12 @@ export function RemainingLabel({
     case "expired":
       return t("expiredValue");
     case "hours":
-      return t("inHours", { count: remaining.count });
+      return t(withVerb ? "expiresInHours" : "inHours", {
+        count: remaining.count,
+      });
     case "days":
-      return t("inDays", { count: remaining.count });
+      return t(withVerb ? "expiresInDays" : "inDays", {
+        count: remaining.count,
+      });
   }
 }

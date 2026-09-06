@@ -1808,6 +1808,8 @@
     },
     "inHours": "{count, plural, one {In 1 hour} other {In # hours}}",
     "inDays": "{count, plural, one {In 1 day} other {In # days}}",
+    "expiresInHours": "{count, plural, one {Expires in 1 hour} other {Expires in # hours}}",
+    "expiresInDays": "{count, plural, one {Expires in 1 day} other {Expires in # days}}",
     "expiredValue": "Expired",
     "expiryFailed": "The expiry date could not be changed.",
     "noDuplicates": "No duplicates",
