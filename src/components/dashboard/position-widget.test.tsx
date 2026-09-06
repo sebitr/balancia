@@ -145,14 +145,51 @@ describe("PositionWidget", () => {
     // signed: a real plus, a space, then the figure.
     expect(screen.getByText("+ CHF 210")).toBeVisible();
     expect(screen.getByText("+ €148")).toBeVisible();
-    // Why there is more than one figure, as a footnote under them.
+    // Nothing under them. The columns would only have repeated each figure
+    // beside a zero, and the reason there is more than one figure is not a
+    // standing line either.
+    expect(screen.queryByText("CHF 210")).not.toBeInTheDocument();
+    expect(screen.queryByText("€248")).not.toBeInTheDocument();
+    expect(screen.queryByText("€100")).not.toBeInTheDocument();
+    expect(screen.queryByText(/no exchange rate/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the reason for the per-currency figures one tap behind them", async () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      currencyTotals: [
+        { currency: "CHF", owedToYou: "21000", youOwe: "0" },
+        { currency: "EUR", owedToYou: "0", youOwe: "10000" },
+      ],
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /CHF\s210/ }));
+
     expect(
-      screen.getByText("One total per currency — no rate to combine them"),
+      await screen.findByText(
+        "Shown per currency. There is no exchange rate to combine them into one total.",
+      ),
     ).toBeVisible();
-    // The gross split stays in the columns underneath.
-    expect(screen.getByText("CHF 210")).toBeVisible();
-    expect(screen.getByText("€248")).toBeVisible();
-    expect(screen.getByText("€100")).toBeVisible();
+  });
+
+  /** Colour and a sign are never the only signals: each figure says its way. */
+  it("says the direction of each per-currency figure in words", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      currencyTotals: [
+        { currency: "CHF", owedToYou: "21000", youOwe: "0" },
+        { currency: "EUR", owedToYou: "0", youOwe: "10000" },
+      ],
+    });
+
+    expect(screen.getByText("− €100")).toBeVisible();
+    const figures = screen.getByRole("button", { name: /CHF\s210/ });
+    expect(figures).toHaveAccessibleName(/Owed to you/);
+    expect(figures).toHaveAccessibleName(/You owe/);
   });
 
   /** A currency that has come out level is not a position to lead with. */
