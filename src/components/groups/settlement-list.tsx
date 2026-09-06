@@ -144,7 +144,7 @@ export function SettlementList({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={openOnContent}
-          className="mx-auto max-w-[430px] gap-0 rounded-t-[26px] bg-background px-5 pt-2.5 pb-7 data-[side=bottom]:border-t-0"
+          className="mx-auto max-w-[430px] gap-0 rounded-t-[26px] bg-background px-5 pb-7 data-[side=bottom]:border-t-0"
         >
           {/* The grabber comes from `SheetContent`; `gap-0` above means the
               room under it has to be stated rather than inherited. */}

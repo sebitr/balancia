@@ -291,12 +291,27 @@ function SheetContent({
         {...props}
         ref={sheet}
       >
-        {/* The grabber says the sheet can be pushed away before anyone tries. */}
+        {/*
+          The grabber says the sheet can be pushed away before anyone tries.
+
+          It carries the room above it as a margin of its own, and that is the
+          whole point: a sheet's top padding is the caller's to set, and every
+          caller set a different one — 10px on most, 14px on the group picker,
+          16px on the install steps, 8px on the notification sheet, and nothing
+          at all on the eight that never thought to. With nothing the 4px pill
+          lands 1px under the border, inside a 24px corner radius, so it read
+          as a smudge on the sheet's edge rather than as a handle on the sheet.
+
+          A margin because padding cannot be made to hold. The entry drawer
+          lays out its own chrome and says `p-0`, `cn` merges that after
+          anything this component states, and a `pt-*` from here would be
+          dropped on exactly the sheet that needed it most.
+        */}
         {bottom && (
           <span
             aria-hidden="true"
             data-slot="sheet-grabber"
-            className="mx-auto mb-1 h-1 w-9 shrink-0 rounded-full bg-muted-foreground/30"
+            className="mx-auto mt-2.5 mb-1 h-1 w-9 shrink-0 rounded-full bg-muted-foreground/30"
           />
         )}
         {children}

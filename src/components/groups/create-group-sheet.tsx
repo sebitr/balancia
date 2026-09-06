@@ -159,7 +159,7 @@ export function CreateGroupSheet({
         // `dvh` or `min()` cannot drop the height and leave the sheet at its
         // content's height. Both for the reasons written out in
         // `add-entry-drawer`, which is the same sheet in a different hat.
-        className="h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card pt-2.5 text-card-foreground"
+        className="h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card text-card-foreground"
       >
         {view === "form" ? (
           <form

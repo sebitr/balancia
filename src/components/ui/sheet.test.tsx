@@ -224,12 +224,56 @@ describe("a sheet that scrolls itself", () => {
  * than as a handle.
  *
  * They had a reason, which is why this is a test and not a note. The
- * primitive's grabber carries `mb-1` and gets the rest of its room from the
- * container's `gap-4`; a sheet that spaces its children by hand turns that gap
- * off, the pill ends up 4px from the title, and adding a grabber with the
- * margin baked in looks exactly like the fix. So the rule is enforced from
+ * primitive's grabber carries `mb-1` and gets the rest of the room under it
+ * from the container's `gap-4`; a sheet that spaces its children by hand turns
+ * that gap off, the pill ends up 4px from the title, and adding a grabber with
+ * the margin baked in looks exactly like the fix. So the rule is enforced from
  * both ends: the primitive draws one, and no component may draw its own.
  */
+/**
+ * Every `<SheetContent …>` opening tag in a file, children left behind.
+ *
+ * A regex to the first `>` would stop inside `data-[side=bottom]:border-t-0`
+ * or an arrow function, and one to the first `>` on a line of its own would
+ * swallow the children of the sheets written on a single line — which is how
+ * a padding on a row inside the sheet gets blamed on the sheet. So the tag is
+ * scanned: quotes, `//` comments and braces are stepped over, and the `>` that
+ * closes the tag is the one found outside all three.
+ */
+function openingTags(source: string): string[] {
+  const tags: string[] = [];
+
+  for (const match of source.matchAll(/<SheetContent\b/g)) {
+    const start = match.index;
+    let depth = 0;
+    let quote: string | undefined;
+    let i = start + match[0].length;
+
+    for (; i < source.length; i += 1) {
+      const c = source[i];
+      if (quote) {
+        if (c === quote) quote = undefined;
+      } else if (c === "/" && source[i + 1] === "/") {
+        const end = source.indexOf("\n", i);
+        if (end === -1) break;
+        i = end;
+      } else if (c === '"' || c === "'" || c === "`") {
+        quote = c;
+      } else if (c === "{") {
+        depth += 1;
+      } else if (c === "}") {
+        depth -= 1;
+      } else if (c === ">" && depth === 0) {
+        break;
+      }
+    }
+
+    tags.push(source.slice(start, i + 1));
+  }
+
+  return tags;
+}
+
 describe("the grabber", () => {
   it("is drawn once on a bottom sheet, and not at all on a side one", () => {
     const { unmount } = render(
@@ -286,5 +330,54 @@ describe("the grabber", () => {
     // is a second bar under the first: delete it, and if the sheet has turned
     // off `gap-4`, state the room under the grabber on its first child.
     expect(offenders).toEqual(["src/components/ui/sheet.tsx"]);
+  });
+
+  /**
+   * And the room above it is drawn in that one place too.
+   *
+   * Twenty-two bottom sheets each said how far from the top edge the pill
+   * should sit, and gave four different answers plus silence: `pt-2.5` on
+   * eleven, `pt-3.5` on the group picker, `pt-4` on the install steps, `pt-2`
+   * on the notification sheet, and nothing at all on the other eight. Nothing
+   * is the bad one — a 4px pill 1px under the border, inside a 24px corner
+   * radius, reads as a mark on the sheet's edge rather than as a handle.
+   *
+   * So the grabber carries `mt-2.5` itself, and a sheet that states a top
+   * padding is now adding to it rather than setting it. The padding also
+   * cannot be moved into the primitive: `cn` merges the caller's last, and the
+   * entry drawer's `p-0` would drop it.
+   */
+  it("gets its room above from the primitive, not from the sheet", () => {
+    const grabber = readFileSync(
+      path.join(process.cwd(), "src", "components", "ui", "sheet.tsx"),
+      "utf8",
+    );
+    expect(grabber).toContain('className="mx-auto mt-2.5 mb-1 h-1 w-9');
+
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith(".tsx")) continue;
+        const source = readFileSync(full, "utf8");
+        // The whole opening tag, `cn` branches and all — a padding hidden in a
+        // ternary spaces the sheet just as wrongly as one spelled plainly.
+        for (const tag of openingTags(source)) {
+          if (/\b(?:pt|py|p)-(?!0\b)/.test(tag)) {
+            offenders.push(path.relative(process.cwd(), full));
+          }
+        }
+      }
+    };
+    walk(path.join(process.cwd(), "src", "components"));
+
+    // A sheet listed here has pushed its own grabber down. Take the padding
+    // off; the room above the pill is the same on every screen and comes from
+    // `ui/sheet.tsx`. `p-0` is fine — it says "no padding", which is true.
+    expect(offenders).toEqual([]);
   });
 });

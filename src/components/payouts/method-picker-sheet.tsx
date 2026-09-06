@@ -117,7 +117,7 @@ export function MethodPickerSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="h-[calc(100dvh-56px-env(safe-area-inset-top))] max-h-[calc(100%-56px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card pt-2.5 text-card-foreground"
+        className="h-[calc(100dvh-56px-env(safe-area-inset-top))] max-h-[calc(100%-56px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[28px] bg-card text-card-foreground"
       >
         <header className="flex shrink-0 items-center gap-2 px-4 pt-1.5 pb-3">
           <SheetTitle className="min-w-0 flex-1 text-base font-semibold">

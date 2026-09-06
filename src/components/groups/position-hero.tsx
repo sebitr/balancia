@@ -250,7 +250,7 @@ export function PositionHero({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={openOnContent}
-          className="mx-auto max-h-[90svh] max-w-[430px] gap-0 overflow-y-auto rounded-t-[26px] bg-background px-5 pt-2.5 pb-7 data-[side=bottom]:border-t-0"
+          className="mx-auto max-h-[90svh] max-w-[430px] gap-0 overflow-y-auto rounded-t-[26px] bg-background px-5 pb-7 data-[side=bottom]:border-t-0"
         >
           {/* `SheetContent` draws the grabber itself on a bottom sheet. Its
               own `mb-1` is the other half of the default `gap-4`, which this
