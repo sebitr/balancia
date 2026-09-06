@@ -205,9 +205,7 @@ describe("CreateGroupSheet", () => {
     await user.click(
       screen.getByRole("radio", { name: /A balance per currency/ }),
     );
-    await user.click(
-      screen.getByRole("radio", { name: /One shared balance/ }),
-    );
+    await user.click(screen.getByRole("radio", { name: /One shared balance/ }));
 
     await user.click(screen.getByRole("button", { name: "Create group" }));
 
