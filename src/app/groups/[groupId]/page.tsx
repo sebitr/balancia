@@ -3,7 +3,10 @@ import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { BalanceList } from "@/components/groups/balance-list";
 import { CurrencyBalances } from "@/components/groups/currency-balances";
-import { GroupEmptyState } from "@/components/groups/group-empty-state";
+import {
+  GroupEmptyState,
+  type StartHerePerson,
+} from "@/components/groups/group-empty-state";
 import { DraftRow } from "@/components/entries/draft-row";
 import { PositionCard } from "@/components/groups/position-card";
 import { PositionHero } from "@/components/groups/position-hero";
@@ -12,7 +15,10 @@ import { SpendingCard } from "@/components/groups/spending-card";
 import { SinceLastOpened } from "@/components/activity/since-last-opened";
 import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
 import { requireGroupAccess } from "@/lib/actions";
+import { describeJoinLink } from "@/lib/security/join-link";
+import type { GroupAccess } from "@/lib/security/authorization";
 import { listGroupActivity } from "@/modules/activity/service";
+import { listParticipants } from "@/modules/groups/service";
 import { countContributions } from "@/modules/guests/service";
 import {
   isMultiCurrency,
@@ -62,6 +68,47 @@ function strongestPosition(
   return strongest;
 }
 
+/**
+ * What "Start here" needs: who is in the group, and the link that lets one
+ * more person in.
+ *
+ * The link is read only for a reader who could do anything with it, exactly as
+ * the People tab does — the rest of the group pays nothing for a row they are
+ * not shown. Only a live link comes back: an expired or revoked one is still
+ * worth showing where it can be replaced, which is settings, and is worth
+ * nothing at all in a row whose whole offer is "send this to somebody".
+ */
+async function loadStartHere(
+  access: GroupAccess,
+  { now }: { now: Date },
+): Promise<{
+  people: StartHerePerson[];
+  invite: { url: string; expiresAt: string | null } | null;
+}> {
+  const [roster, link] = await Promise.all([
+    listParticipants(access.groupId),
+    access.permissions.manageInvitations
+      ? describeJoinLink(access.groupId, { now })
+      : null,
+  ]);
+
+  const people = roster.map((participant) => ({
+    participantId: participant.id,
+    name: participant.displayName,
+    isSelf: participant.id === access.participantId,
+  }));
+
+  return {
+    // Join order, except that the reader goes first: the stack and the names
+    // line both start with the face the reader is looking for.
+    people: people.sort((a, b) => Number(b.isSelf) - Number(a.isSelf)),
+    invite:
+      link?.status === "active" && link.url
+        ? { url: link.url, expiresAt: link.expiresAt?.toISOString() ?? null }
+        : null,
+  };
+}
+
 export default async function GroupOverviewPage({
   params,
 }: PageProps<"/groups/[groupId]">) {
@@ -98,7 +145,24 @@ export default async function GroupOverviewPage({
     });
   }
 
-  const empty = overview.expenseCount === 0;
+  /*
+   * The roster and the group's guest link, for the empty screen only — and
+   * so, non-null exactly when this group has no money in it yet, which is
+   * what decides which of the two overviews below renders.
+   *
+   * The comment above the first load records that the roster was deliberately
+   * taken off this page, and that reasoning still holds for every group with
+   * money in it — nothing on the full overview reads a list of names. A group
+   * with nothing in it is the exception: "who is here" and "send the link" are
+   * the two things left to do, and the screen now does them rather than
+   * pointing at the tab where they live.
+   *
+   * Loaded after the overview rather than beside it, because whether the
+   * group is empty is the overview's own answer. That costs a second round
+   * trip on the one screen where there is nothing else to wait for.
+   */
+  const startHere =
+    overview.expenseCount === 0 ? await loadStartHere(access, { now }) : null;
 
   // Which of the two overviews this group gets, and why, is `isMultiCurrency`.
   const multiCurrency = isMultiCurrency(overview.currencies);
@@ -134,11 +198,14 @@ export default async function GroupOverviewPage({
        */}
       <DraftRow groupId={groupId} />
 
-      {empty ? (
+      {startHere ? (
         <GroupEmptyState
           groupId={groupId}
+          groupName={access.group.name}
           canImport={access.permissions.importData}
-          canInvite={access.permissions.manageInvitations}
+          people={startHere.people}
+          invite={startHere.invite}
+          now={now.toISOString()}
         />
       ) : (
         <>
