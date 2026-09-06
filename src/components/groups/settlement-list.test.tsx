@@ -84,7 +84,7 @@ describe("SettlementList", () => {
       screen.getByRole("link", { name: "Record payment" }),
     ).toHaveAttribute(
       "href",
-      "/groups/g1/expenses/new?settleFrom=p-blaise&settleTo=p-ada&settleIn=EUR",
+      "/groups/g1/expenses/new#settleFrom=p-blaise&settleTo=p-ada&settleIn=EUR",
     );
   });
 

@@ -1,20 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 import { draftFields, type EntryDraftFields } from "./draft-fields";
+import { RESUME_PARAM, sheetOf } from "./drawer-fragment";
+import { settleIntentOf, settlePrefill } from "./settle-intent";
+import { useFragmentParams } from "./use-fragment-params";
 import { loadDraft } from "@/lib/offline/drafts";
-
-/**
- * What the draft row adds to the URL to say "put it back".
- *
- * A parameter rather than a route: it is the same drawer either way, and a
- * second route would be a second place for the form to be constructed.
- */
-export const RESUME_PARAM = "draft";
 
 /**
  * The add-entry screen, as a drawer over the group it belongs to.
@@ -28,6 +23,11 @@ export const RESUME_PARAM = "draft";
  * The drawer stops short of the top edge rather than filling the screen. That
  * strip of group showing above it is what makes it read as a layer that can be
  * pushed away, and the swipe that pushes it away is the sheet's own.
+ *
+ * Whatever the link that opened it had to say — a debt to open on, a draft to
+ * put back, a sheet to raise, the list to hand on to — is in the URL's
+ * fragment, and this is the one component that reads it. `drawer-fragment.ts`
+ * says why it is a fragment and not a query.
  */
 
 /**
@@ -135,7 +135,7 @@ type Exit =
 export function AddEntryDrawer({
   dismissTo,
   ...form
-}: AddEntryFormProps & {
+}: Omit<AddEntryFormProps, "draft" | "prefill" | "openSheet"> & {
   /**
    * Where leaving leads — saved or dismissed, it is the same way out.
    *
@@ -152,14 +152,17 @@ export function AddEntryDrawer({
 }) {
   const router = useRouter();
   /*
-   * The filters of the list the reader came from, which this route was opened
-   * carrying and which the screen it hands them on to must carry too.
+   * What the link said, off the URL's fragment; null until the client has read
+   * it, which only a cold load of the standalone route makes it wait for.
    *
-   * The drawer is the one that knows them. The form below builds a path to a
-   * row in another table — an id it has just been given — and has no business
-   * knowing which list somebody was reading when they opened it.
+   * Among it are the filters of the list the reader came from, which the edit
+   * drawer was opened carrying and which the screen it hands them on to must
+   * carry too. The drawer is the one that knows them. The form below builds a
+   * path to a row in another table — an id it has just been given — and has no
+   * business knowing which list somebody was reading when they opened it; and
+   * the route above cannot see a fragment at all.
    */
-  const searchParams = useSearchParams();
+  const params = useFragmentParams();
   const [exit, setExit] = useState<Exit | null>(null);
 
   useEffect(() => {
@@ -224,24 +227,38 @@ export function AddEntryDrawer({
    * storage before showing a form nobody asked to restore would make the
    * ordinary case pay for the rare one.
    */
-  const resuming = searchParams.get(RESUME_PARAM) === "1" && !form.editing;
-  const [draft, setDraft] = useState<EntryDraftFields | null | undefined>(
-    resuming ? undefined : null,
+  const resuming =
+    params !== null && params.get(RESUME_PARAM) === "1" && !form.editing;
+  const [stored, setStored] = useState<EntryDraftFields | null | undefined>(
+    undefined,
   );
   const memberKey = form.members.map((member) => member.id).join(",");
   useEffect(() => {
     if (!resuming) return;
     let cancelled = false;
-    void loadDraft(form.groupId).then((stored) => {
+    void loadDraft(form.groupId).then((found) => {
       if (cancelled) return;
-      setDraft(
-        stored ? draftFields(stored.fields, memberKey.split(",")) : null,
-      );
+      setStored(found ? draftFields(found.fields, memberKey.split(",")) : null);
     });
     return () => {
       cancelled = true;
     };
   }, [resuming, form.groupId, memberKey]);
+  // Seeded into the form, or `undefined` for as long as that is unknown: until
+  // the fragment has been read, and then — only when it asks for the draft —
+  // until the store has answered.
+  const draft: EntryDraftFields | null | undefined =
+    params === null ? undefined : resuming ? stored : null;
+
+  /*
+   * The debt a link named, if it named one. Priced here, from the balances the
+   * route loaded, and not from the link — see `settlePrefill` for why the link
+   * carries no amount.
+   */
+  const intent = params === null ? null : settleIntentOf(params);
+  const prefill = intent ? settlePrefill(intent, form.outstanding) : undefined;
+  const openSheet = params === null ? undefined : sheetOf(params);
+  const filters = params === null ? "" : listQuery(params);
 
   return (
     <Sheet
@@ -258,6 +275,8 @@ export function AddEntryDrawer({
           <AddEntryForm
             {...form}
             draft={draft}
+            prefill={prefill}
+            openSheet={openSheet}
             onClose={() => setExit({ kind: "dismiss" })}
             // A saved entry leaves the same way a dismissed one does — the
             // confirmation is a toast, which outlives the drawer.
@@ -275,9 +294,7 @@ export function AddEntryDrawer({
             onRemoved={(to) =>
               setExit({
                 kind: "gone",
-                to: to
-                  ? withQuery(to, listQuery(searchParams))
-                  : `/groups/${form.groupId}`,
+                to: to ? withQuery(to, filters) : `/groups/${form.groupId}`,
               })
             }
           />

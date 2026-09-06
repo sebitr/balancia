@@ -1,17 +1,19 @@
-import { EntryScreen, sheetFromQuery } from "../../../../entry-screen";
+import { EntryScreen } from "../../../../entry-screen";
 
 /**
  * The edit drawer, opened over whatever the reader was looking at.
  *
  * `whenGone="nothing"` because this is the slot, not the screen: a cold link
  * to the same URL lands on the route next to this one, which still answers 404.
+ *
+ * A sheet to open with it, and the filters of the list the reader came from,
+ * arrive in the URL's fragment and are read by the drawer; this route takes no
+ * search params. See `components/entries/drawer-fragment.ts`.
  */
 export default async function InterceptedEditExpensePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ groupId: string; expenseId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { groupId, expenseId } = await params;
   return (
@@ -20,7 +22,6 @@ export default async function InterceptedEditExpensePage({
       dismissTo="back"
       edit={{ kind: "expense", id: expenseId }}
       whenGone="nothing"
-      openSheet={sheetFromQuery(await searchParams)}
     />
   );
 }

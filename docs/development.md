@@ -370,6 +370,16 @@ ceremony. Page data comes from Server Components.
 mutations, and there is no offline data entry. That is deliberate: queueing
 financial writes would need conflict resolution this product does not have.
 
+**The entry drawer's URL carries no query string.** The drawer is an
+intercepted route (`app/groups/[groupId]/@entry`), and everything a link tells
+it — the debt to open on, that a draft should be put back, which sheet to
+raise, the list filters to hand on — goes after the `#`, through
+`src/components/entries/drawer-fragment.ts`, and is read on the client by the
+drawer. Next 16.3 mis-records the query of a prefetched intercepted route, and
+with a query on the link the first open paid for a retry from the root while a
+second open inside `staleTimes.dynamic` rendered the loading skeleton for ever.
+Ordinary screens keep their queries; the fault was specific to interception.
+
 **A screen names itself, and offers the way back, on one line.**
 `src/components/ui/page-header.tsx` is that line, and every screen reached by a
 push uses it — the settings hub and its screens, an entry, a member, the

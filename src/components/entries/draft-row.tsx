@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { discardDraft, loadDraft, type EntryDraft } from "@/lib/offline/drafts";
-import { RESUME_PARAM } from "./add-entry-drawer";
+import { RESUME_PARAM, withFragment } from "./drawer-fragment";
 
 /**
  * The entry somebody started and did not finish, offered back.
@@ -48,7 +48,9 @@ export function DraftRow({ groupId }: { groupId: string }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-3">
       <Link
-        href={`/groups/${groupId}/expenses/new?${RESUME_PARAM}=1`}
+        href={withFragment(`/groups/${groupId}/expenses/new`, {
+          [RESUME_PARAM]: "1",
+        })}
         className="min-w-0 flex-1 text-sm"
       >
         <span className="font-medium">{t("label")}</span>

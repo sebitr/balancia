@@ -35,6 +35,7 @@ import { loadGroupBalances } from "@/modules/balances/service";
 import { moneyForGroup } from "@/modules/currencies/display";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
+import { withFragment } from "@/components/entries/drawer-fragment";
 import { PUSH } from "@/components/motion/transitions";
 
 /**
@@ -263,7 +264,9 @@ export default async function SettlementDetailPage({
 
       <ActionBar>
         <Link
-          href={withQuery(
+          // The list's filters ride into the drawer in the fragment — see the
+          // expense screen's edit link, and `drawer-fragment.ts`.
+          href={withFragment(
             `/groups/${groupId}/settlements/${settlementId}/edit`,
             listFilters,
           )}

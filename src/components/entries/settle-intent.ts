@@ -1,4 +1,6 @@
 import { isKnownPayoutMethod } from "@/modules/payouts/fields";
+import type { AddEntryFormProps } from "./add-entry-form";
+import { withFragment } from "./drawer-fragment";
 
 /**
  * A repayment the screen that opened the drawer already knows the shape of.
@@ -9,8 +11,13 @@ import { isKnownPayoutMethod } from "@/modules/payouts/fields";
  * rather than in a store, because the drawer is a route: it has to survive a
  * refresh, a shared link and a cold load, all of which a store does not.
  *
+ * On the URL's fragment, not its query. The drawer is an intercepted route,
+ * and a query on one of those is what wedged it — `drawer-fragment.ts` has the
+ * whole account. The drawer reads the fragment on the client, which is also
+ * where it prices the debt; see `settlePrefill`.
+ *
  * Three names live here rather than at either end, so the screen that writes
- * them and the route that reads them cannot drift apart. The amount is
+ * them and the drawer that reads them cannot drift apart. The amount is
  * deliberately *not* one of them — see `settleIntentOf`.
  */
 
@@ -55,9 +62,9 @@ export interface SettleIntent {
 }
 
 /**
- * Either shape the query arrives in: `useSearchParams` in a client island, and
- * the plain record a Server Component is handed. Mirrors `list-query`, which
- * reads the same two shapes for the same reason.
+ * Either shape the parameters arrive in: a `URLSearchParams` — the fragment,
+ * via `useFragmentParams` — or a plain record. Mirrors `list-query`, whose
+ * readers take the same two shapes.
  */
 export type ParamSource =
   URLSearchParams | Readonly<Record<string, string | string[] | undefined>>;
@@ -80,21 +87,21 @@ export function settleIntentPath(
   // Left off entirely rather than written empty: a caller with no method to
   // name should produce the same link it produced before there was one.
   if (intent.method) query.set(SETTLE_METHOD_PARAM, intent.method);
-  return `/groups/${groupId}/expenses/new?${query.toString()}`;
+  return withFragment(`/groups/${groupId}/expenses/new`, query);
 }
 
 /**
- * The intent on a query, or null when the drawer was opened plain.
+ * The intent in the fragment, or null when the drawer was opened plain.
  *
  * All three or nothing: two thirds of a debt is not a debt, and prefilling one
  * name and leaving the other blank would be a worse start than an empty form.
  *
  * There is no amount here on purpose. The screen that linked here rendered its
- * figure at *its* request, and by the time this route runs somebody else may
+ * figure at *its* request, and by the time the drawer opens somebody else may
  * have recorded a payment against the same debt. Naming the two people and
  * letting the drawer read what is outstanding *now* means the amount on the
  * form is the amount that is actually owed, rather than a number copied out of
- * a stale screen.
+ * a stale screen. `settlePrefill` is where that reading happens.
  */
 export function settleIntentOf(source: ParamSource): SettleIntent | null {
   const from = valueOf(source, SETTLE_FROM_PARAM);
@@ -117,6 +124,45 @@ export function settleIntentOf(source: ParamSource): SettleIntent | null {
     // `?settleVia=<anything>` is not a way to choose what a settlement says
     // it was paid by.
     method: isKnownPayoutMethod(method) ? method : null,
+  };
+}
+
+/** What the form is opened with when a link named a debt. */
+export type SettlePrefill = NonNullable<AddEntryFormProps["prefill"]>;
+
+/**
+ * The stated debt, priced from the balances the drawer loaded rather than from
+ * the link that was followed.
+ *
+ * `outstanding` is the engine's own list of what clears the group, as the
+ * drawer was handed it. A debt somebody else has settled in the meantime is no
+ * longer in that list, and then the two names stand on their own with the
+ * amount left for the reader — which is the honest answer, and the one that
+ * keeps the form from opening on a figure nobody owes any more.
+ */
+export function settlePrefill(
+  intent: SettleIntent,
+  outstanding: readonly {
+    readonly fromParticipantId: string;
+    readonly toParticipantId: string;
+    readonly currency: string;
+    readonly amountMinor: string;
+  }[],
+): SettlePrefill {
+  const stated =
+    outstanding.find(
+      (pair) =>
+        pair.fromParticipantId === intent.fromParticipantId &&
+        pair.toParticipantId === intent.toParticipantId &&
+        pair.currency === intent.currency,
+    ) ?? null;
+
+  return {
+    fromParticipantId: intent.fromParticipantId,
+    toParticipantId: intent.toParticipantId,
+    amountMinor: stated?.amountMinor ?? null,
+    currency: intent.currency,
+    method: intent.method,
   };
 }
 
