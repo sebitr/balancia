@@ -140,7 +140,12 @@ test("records a settlement and clears the balance", async ({ page }) => {
   await page.getByLabel("Paying back").fill("10.00");
   await page.getByRole("button", { name: "Record payment" }).click();
 
-  await expect(page.getByText("Everyone is settled up")).toBeVisible();
+  // Back on the settle-up screen, which now reads as a state: one card saying
+  // the group is settled, with the repayment just recorded listed under it.
+  await expect(
+    page.getByRole("heading", { name: "The group is settled" }),
+  ).toBeVisible();
+  await expect(page.getByText("Blaise paid Ada Lovelace back")).toBeVisible();
 });
 
 test("records a multi-currency expense in a converted group", async ({
