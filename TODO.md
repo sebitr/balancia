@@ -13,6 +13,7 @@ words must not change when it moves. See _Keeping the list_.
 
 Started, on a branch, not yet merged.
 
+- [ ] Redraw Settle up amount-first: a hero position and a bar saying what it is made of, payments as flat rows instead of cards, the payment rails in a panel inside the row that owes them, and a settled group that reads as a state — `feat/settle-amount-first`
 - [ ] Make a brand-new group's overview do the first two steps instead of describing them: a quieter empty state, and a "Start here" card carrying the roster and the guest link itself — `feat/new-group-start-here`
 - [ ] Run the formatter over the file #296 committed unformatted, so main's own CI goes green again, and record #297 where it should have been — `chore/tidy-after-merges`
 - [ ] Say in `.gitattributes` that GitHub ignores the union driver, so the next chat stops hunting for a conflict git does not have — `chore/todo-github-union`

@@ -90,6 +90,7 @@ export function PayoutHint({
   currency,
   qr = null,
   qrMissing = null,
+  action,
 }: {
   className?: string;
   name: string;
@@ -107,6 +108,16 @@ export function PayoutHint({
   qr?: { standard: PaymentQrStandard; payload: string } | null;
   /** Why there is no code, when the reader can act on the reason. */
   qrMissing?: PaymentQrRefusal | null;
+  /**
+   * What the reader does once they have paid, drawn at the foot of the panel.
+   *
+   * The panel is the whole of "how do I hand this over", and the last step of
+   * that is saying it happened — so the button belongs inside it, under the
+   * number that was copied, rather than adrift below a panel that has already
+   * closed the subject. The caller owns it because it is the caller's action:
+   * this component knows how to pay somebody, not what recording it means.
+   */
+  action?: React.ReactNode;
 }) {
   const t = useTranslations("payouts");
   const tMethods = useTranslations("paymentMethods");
@@ -232,8 +243,20 @@ export function PayoutHint({
   const shownDetail = displayPayoutDetail(chosen.method, chosen.detail);
 
   return (
-    <div className={cn("flex flex-col gap-2.5", className)}>
-      <span id={labelId} className="text-2xs text-muted-foreground">
+    /* A panel, not a run of controls under a line. Everything in here answers
+       one question — how the money actually gets there — and the reader is
+       switching between methods inside it, so it needs an edge of its own to
+       switch inside of. */
+    <div
+      className={cn(
+        "flex flex-col gap-2.5 rounded-[18px] bg-card p-3.5 ring-1 ring-foreground/10",
+        className,
+      )}
+    >
+      <span
+        id={labelId}
+        className="text-2xs font-semibold tracking-[0.1em] text-muted-foreground uppercase"
+      >
         {t("settle.howToPay", { name })}
       </span>
 
@@ -263,23 +286,23 @@ export function PayoutHint({
               aria-pressed={active}
               onClick={() => onPick(entry.method)}
               className={cn(
-                "tap-target flex h-9 items-center gap-2 rounded-lg border py-0 pr-2.5 pl-2 text-sm font-medium transition-colors",
+                "flex h-11 items-center gap-2 rounded-[14px] border py-0 pr-3 pl-2.5 text-sm font-medium transition-colors duration-150",
                 active
-                  ? "border-accent bg-accent"
-                  : "border-input bg-wash-1 hover:bg-wash-3",
+                  ? "border-primary/30 bg-primary/5"
+                  : "border-border bg-background hover:bg-wash-1",
               )}
             >
               <MethodMark
                 method={findPaymentMethod(entry.method) ?? null}
                 label={entryLabel}
-                size={20}
+                size={22}
               />
               {entryLabel}
               {/* Only ever on the first, because "preferred" is a statement
                   about the owner's own ordering — and with nothing to prefer it
                   over, it is a badge that says nothing. */}
               {index === 0 && methods.length > 1 && (
-                <span className="flex h-[18px] items-center rounded-full bg-primary/15 px-1.5 text-2xs font-semibold text-primary-ink">
+                <span className="flex h-5 items-center rounded-full bg-accent px-2 text-2xs font-medium text-accent-foreground">
                   {t("preferred")}
                 </span>
               )}
@@ -296,21 +319,21 @@ export function PayoutHint({
         className="flex flex-col gap-2.5 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
       >
         {hasDetail ? (
-          <div className="flex items-center gap-2 rounded-lg bg-muted/60 py-2 pr-2 pl-3">
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-2xs text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-[14px] bg-muted py-2 pr-2 pl-3.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-2xs font-semibold tracking-[0.09em] text-muted-foreground uppercase">
                 {fieldNameOf(chosen.method, label, t("fields.iban.label"))}
               </span>
               {/* Mono, because this is read a character at a time and typed
                   into another app: a 1 that could be an l costs a payment. */}
-              <span className="truncate font-mono text-xs">{shownDetail}</span>
+              <span className="truncate font-mono text-sm">{shownDetail}</span>
             </div>
 
             <button
               type="button"
               onClick={() => void copy()}
               aria-label={copied ? t("copied") : t("copy")}
-              className="tap-target flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"
+              className="flex size-11 shrink-0 items-center justify-center rounded-[12px] border border-border bg-card transition-colors duration-150 hover:bg-wash-1"
             >
               {copied ? (
                 <Check
@@ -330,7 +353,7 @@ export function PayoutHint({
         ) : (
           /* Cash has nothing to copy and no app to open. Naming the sum is the
              only useful thing left, and it beats an empty surface. */
-          <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          <p className="rounded-[14px] bg-muted px-3.5 py-3 text-xs text-muted-foreground">
             {t("cashNothing", { amount })}
           </p>
         )}
@@ -344,7 +367,7 @@ export function PayoutHint({
             type="button"
             variant="outline"
             onClick={() => setShowingQr(true)}
-            className="h-9 w-full rounded-lg border-input bg-wash-1 text-sm font-medium"
+            className="h-[46px] w-full rounded-[14px] border-border bg-background text-sm font-medium"
           >
             <QrCode aria-hidden="true" />
             {chosenQr ? t("qrShowSheet") : t("qrScanWithPhone")}
@@ -356,7 +379,7 @@ export function PayoutHint({
             <Button
               asChild
               variant="outline"
-              className="h-9 w-full rounded-lg border-input bg-wash-1 text-sm font-medium"
+              className="h-[46px] w-full rounded-[14px] border-border bg-background text-sm font-medium"
             >
               {/* `noreferrer` because where somebody paid a debt from is not
                   the payee's business. */}
@@ -378,6 +401,11 @@ export function PayoutHint({
           </div>
         )}
       </div>
+
+      {/* Outside the keyed block: the button is the same button whichever
+          method is lit, and replaying its entrance on every chip press would
+          say something had changed about it when nothing had. */}
+      {action && <div className="pt-0.5">{action}</div>}
 
       {/* Kept outside the keyed block so switching chips does not unmount an
           open sheet. The account it names is the bank entry's, which is what

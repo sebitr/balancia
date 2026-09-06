@@ -60,7 +60,6 @@ function render(
       currencies={currencies}
       transferCount={count}
       lastSettled={[]}
-      participantCount={5}
       groupId="g1"
       groupName="Lisbon trip"
       senderName="Seb"
@@ -74,14 +73,41 @@ function render(
 }
 
 describe("the transfers", () => {
-  it("writes each one as a sentence with its amount", () => {
+  it("writes each one as the thing the reader has to do, with its amount", () => {
     render();
 
-    expect(screen.getByText("Seb pays Amélie")).toBeInTheDocument();
-    expect(screen.getByText("EUR 148.60")).toBeInTheDocument();
+    expect(screen.getByText("Pay Amélie back")).toBeInTheDocument();
+    // Twice: the hero states the position, the row states the payment that
+    // makes it up. With one payment they are the same figure.
+    expect(screen.getAllByText("EUR 148.60")).toHaveLength(2);
   });
 
-  it("keeps every currency in its own card and never totals them", () => {
+  it("names the person paying the reader back on a row coming their way", () => {
+    render({}, [
+      {
+        currency: "CHF",
+        yours: [
+          transfer({
+            fromParticipantId: "ravi",
+            fromName: "Ravi",
+            toParticipantId: "seb",
+            toName: "Seb",
+            currency: "CHF",
+            minorUnits: "6200",
+            fromIsSelf: false,
+            toIsSelf: true,
+          }),
+        ],
+        others: [],
+      },
+    ]);
+
+    expect(screen.getByText("Ravi pays you back")).toBeInTheDocument();
+    expect(screen.getByText("You get back")).toBeInTheDocument();
+    expect(screen.getByText("Ravi still owes you this")).toBeInTheDocument();
+  });
+
+  it("keeps every currency apart and never totals them", () => {
     render({}, [
       { currency: "EUR", yours: [transfer()], others: [] },
       {
@@ -104,8 +130,9 @@ describe("the transfers", () => {
 
     expect(screen.getByText("EUR")).toBeInTheDocument();
     expect(screen.getByText("CHF")).toBeInTheDocument();
-    expect(screen.getByText("EUR 148.60")).toBeInTheDocument();
-    expect(screen.getByText("CHF 62.00")).toBeInTheDocument();
+    expect(screen.getAllByText("EUR 148.60")).toHaveLength(2);
+    expect(screen.getAllByText("CHF 62.00")).toHaveLength(2);
+    expect(screen.queryByText("EUR 210.60")).toBeNull();
   });
 
   it("says a settled currency in words rather than showing 0.00", () => {
@@ -118,7 +145,7 @@ describe("the transfers", () => {
     expect(screen.queryByText(/0\.00/)).not.toBeInTheDocument();
   });
 
-  it("labels the two groups only when both have something in them", () => {
+  it("sets the payments that are not the reader's apart, and says so", () => {
     render({}, [
       {
         currency: "EUR",
@@ -137,15 +164,100 @@ describe("the transfers", () => {
       },
     ]);
 
-    expect(screen.getByText("Your payments")).toBeInTheDocument();
-    expect(screen.getByText("Between others")).toBeInTheDocument();
+    expect(screen.getByText("Not your concern")).toBeInTheDocument();
+    expect(screen.getByText("Ravi pays Lena")).toBeInTheDocument();
   });
 
-  it("leaves the labels off a card holding only one group", () => {
+  it("says nothing about other people when there are none in the plan", () => {
     render();
 
-    expect(screen.queryByText("Your payments")).not.toBeInTheDocument();
-    expect(screen.queryByText("Between others")).not.toBeInTheDocument();
+    expect(screen.queryByText("Not your concern")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The amount, and what it is made of, before anything asks to be pressed.
+ *
+ * The hero is the reader's own outstanding position — never the total of the
+ * plan, which counts payments they are neither making nor receiving. The bar
+ * under it is the plan, so the difference between the two is visible rather
+ * than asserted.
+ */
+describe("the hero", () => {
+  it("states the reader's own position, not the size of the plan", () => {
+    render({}, [
+      {
+        currency: "EUR",
+        yours: [transfer()],
+        others: [
+          transfer({
+            fromParticipantId: "ravi",
+            fromName: "Ravi",
+            toParticipantId: "lena",
+            toName: "Lena",
+            minorUnits: "9940",
+            fromIsSelf: false,
+            toIsSelf: false,
+          }),
+        ],
+      },
+    ]);
+
+    expect(screen.getByText("You owe")).toBeInTheDocument();
+    // 148.60 and 99.40 are in the plan; only the first is the reader's.
+    expect(screen.getAllByText("EUR 148.60")).toHaveLength(2);
+    expect(screen.queryByText("EUR 248.00")).toBeNull();
+  });
+
+  it("splits the bar between the reader's share and everyone else's", () => {
+    render({}, [
+      {
+        currency: "EUR",
+        yours: [transfer()],
+        others: [
+          transfer({
+            fromParticipantId: "ravi",
+            fromName: "Ravi",
+            toParticipantId: "lena",
+            toName: "Lena",
+            minorUnits: "9940",
+            fromIsSelf: false,
+            toIsSelf: false,
+          }),
+        ],
+      },
+    ]);
+
+    const legend = screen.getByRole("list");
+    expect(within(legend).getByText("For you")).toBeInTheDocument();
+    expect(within(legend).getByText("Between others")).toBeInTheDocument();
+    expect(within(legend).getByText("99.40")).toBeInTheDocument();
+  });
+
+  it("names each payee where the reader owes more than one person", () => {
+    render({}, [
+      {
+        currency: "EUR",
+        yours: [
+          transfer(),
+          transfer({ toParticipantId: "lena", toName: "Lena" }),
+        ],
+        others: [],
+      },
+    ]);
+
+    const legend = screen.getByRole("list");
+    expect(within(legend).getByText("Amélie")).toBeInTheDocument();
+    expect(within(legend).getByText("Lena")).toBeInTheDocument();
+    expect(within(legend).queryByText("For you")).toBeNull();
+    // The two are the reader's own, so the hero adds them.
+    expect(screen.getByText("EUR 297.20")).toBeInTheDocument();
+  });
+
+  it("draws no bar for a plan with one payment in it", () => {
+    render();
+
+    expect(screen.queryByRole("list")).toBeNull();
   });
 });
 
@@ -263,32 +375,17 @@ describe("the actions on a row", () => {
 });
 
 describe("the header", () => {
-  it("counts the people in a group that balances per currency", () => {
-    render();
-
-    expect(screen.getByText("Lisbon trip · 5 people")).toBeInTheDocument();
-  });
-
-  it("names the settlement currency in a converted group", () => {
-    render({ currencyMode: "converted", baseCurrency: "CHF" });
-
-    expect(
-      screen.getByText("Lisbon trip · settles in CHF"),
-    ).toBeInTheDocument();
-  });
-
-  it("counts the whole plan once when the group settles in one currency", () => {
-    render({ currencyMode: "converted", baseCurrency: "CHF" }, [
+  it("counts the whole plan once when the group balances in one currency", () => {
+    render({}, [
       {
-        currency: "CHF",
-        yours: [transfer({ currency: "CHF" })],
+        currency: "EUR",
+        yours: [transfer()],
         others: [
           transfer({
             fromParticipantId: "ravi",
             fromName: "Ravi",
             toParticipantId: "lena",
             toName: "Lena",
-            currency: "CHF",
             minorUnits: "9940",
             fromIsSelf: false,
             toIsSelf: false,
@@ -297,9 +394,7 @@ describe("the header", () => {
       },
     ]);
 
-    expect(
-      screen.getByRole("heading", { name: "2 payments clear the group" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("2 payments clear the group")).toBeInTheDocument();
   });
 
   it("counts each currency separately when they are balanced apart", () => {
@@ -319,6 +414,7 @@ describe("the header", () => {
           }),
         ],
       },
+      { currency: "GBP", yours: [], others: [] },
     ]);
 
     expect(
@@ -338,7 +434,26 @@ describe("the header", () => {
 });
 
 describe("nothing to settle", () => {
-  it("says so, and names what cleared it", () => {
+  it("reads as a state rather than a list of zeros", () => {
+    render({ transferCount: 0, lastSettled: [] }, []);
+
+    expect(screen.getByText("The group is settled")).toBeInTheDocument();
+    expect(screen.queryByText(/0\.00/)).toBeNull();
+    // Nothing to press but the way onwards: no payment left to record, and no
+    // hero stating a position of nothing.
+    expect(screen.queryByRole("link", { name: /record/i })).toBeNull();
+    expect(screen.queryByText("You owe")).toBeNull();
+  });
+
+  it("offers the transactions, which is where a settled group is read", () => {
+    render({ transferCount: 0, lastSettled: [] }, []);
+
+    expect(
+      screen.getByRole("link", { name: "See the transactions" }),
+    ).toHaveAttribute("href", "/groups/g1/expenses");
+  });
+
+  it("names what cleared it", () => {
     render(
       {
         transferCount: 0,
@@ -357,47 +472,9 @@ describe("nothing to settle", () => {
       [],
     );
 
-    expect(screen.getByText("Everyone is settled up")).toBeInTheDocument();
     const list = screen.getByRole("list");
-    expect(within(list).getByText("Ravi paid Seb")).toBeInTheDocument();
-    expect(within(list).getByText(/Wero/)).toBeInTheDocument();
+    expect(within(list).getByText("Ravi paid Seb back")).toBeInTheDocument();
     expect(within(list).getByText("CHF 62.00")).toBeInTheDocument();
-  });
-
-  it("leaves the method out when none was recorded", () => {
-    render(
-      {
-        transferCount: 0,
-        lastSettled: [
-          {
-            id: "s1",
-            fromName: "Ravi",
-            toName: "Seb",
-            currency: "CHF",
-            minorUnits: "6200",
-            settledOn: "2026-08-22",
-            paymentMethod: null,
-          },
-        ],
-      },
-      [],
-    );
-
-    const list = screen.getByRole("list");
-    expect(within(list).queryByText(/·/)).not.toBeInTheDocument();
-  });
-
-  it("offers the way back and nothing to record", () => {
-    render({ transferCount: 0, lastSettled: [] }, []);
-
-    // Two of them, deliberately: the arrow beside the title, and the button
-    // at the foot of a screen that has just said there is nothing to do here.
-    const back = screen.getAllByRole("link", { name: "Back to the group" });
-    expect(back).toHaveLength(2);
-    for (const link of back) {
-      expect(link).toHaveAttribute("href", "/groups/g1");
-    }
-    expect(screen.queryByRole("link", { name: /record/i })).toBeNull();
   });
 });
 
