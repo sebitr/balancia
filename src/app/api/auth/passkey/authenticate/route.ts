@@ -8,8 +8,10 @@ import { describeError } from "@/lib/server-errors";
 import { AuthError } from "@/modules/auth/service";
 import {
   finishPasskeyAuthentication,
+  passkeySignalState,
   startPasskeyAuthentication,
 } from "@/modules/auth/webauthn";
+import { getEnv } from "@/lib/env";
 import { createSession } from "@/modules/auth/sessions";
 import { setSessionCookie } from "@/modules/auth/cookies";
 import { logger } from "@/lib/logger";
@@ -23,6 +25,12 @@ import { trackRoute } from "@/lib/metrics/http";
  *
  * Rate limited like password sign-in: a passkey assertion is cheap to attempt
  * but the lookup and verification should not be a free resource to burn.
+ *
+ * Both verbs are limited, on separate buckets. The GET is not a credential
+ * attempt but it is not free either: every answer stores a challenge row, and
+ * autofill asks for one on every load of the sign-in page — so an unmetered
+ * GET is a table anybody can grow by reloading, cleaned up only by a
+ * maintenance job running hours later.
  */
 
 export async function GET() {
@@ -30,6 +38,22 @@ export async function GET() {
 }
 
 async function handleGet() {
+  const limit = await consumeRateLimit("passkeyChallenge", await getClientIp());
+  if (!limit.allowed) {
+    const t = await getTranslations("serverErrors");
+    return NextResponse.json(
+      {
+        error: t("rateLimitedFor", {
+          minutes: Math.max(1, Math.ceil(limit.retryAfterSeconds / 60)),
+        }),
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterSeconds) },
+      },
+    );
+  }
+
   try {
     const options = await startPasskeyAuthentication();
     return NextResponse.json(options, {
@@ -91,11 +115,30 @@ async function handlePost(request: Request) {
     });
     await setSessionCookie(session.token, session.expiresAt);
 
-    return NextResponse.json({ ok: true });
+    /*
+     * Every sign-in is also a chance to tidy: the reader's password manager
+     * may still be offering a credential this account no longer has, and this
+     * is the one moment we can prove who they are before saying so.
+     */
+    const signal = await passkeySignalState(verified.userId);
+    return NextResponse.json({
+      ok: true,
+      rpId: getEnv().webAuthnRpId,
+      signal,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(
-        { error: await describeError(error) },
+        {
+          error: await describeError(error),
+          /*
+           * The reason, not just the sentence. `passkeyUnknown` is the one the
+           * browser can act on — it means the credential it just offered is
+           * not registered here, which is the cue to stop offering it — and
+           * prose cannot be matched on once it has been translated.
+           */
+          code: error.code ?? null,
+        },
         { status: 400 },
       );
     }

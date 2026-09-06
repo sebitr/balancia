@@ -13,6 +13,7 @@ words must not change when it moves. See _Keeping the list_.
 
 Started, on a branch, not yet merged.
 
+- [ ] Modernise passkeys: one handle per account so a password manager shows one entry, the Signal API so a removed passkey stops being offered, a silent upgrade after a password sign-in, and a name for the provider each one lives in — `feat/passkey-modernisation`
 - [ ] Head a member's screen with the person's name beside the back arrow, and stop titling the reader's own with the word the badge next to it already says — `feat/member-header-name`
 - [ ] Run the formatter over the file #296 committed unformatted, so main's own CI goes green again, and record #297 where it should have been — `chore/tidy-after-merges`
 - [ ] Say in `.gitattributes` that GitHub ignores the union driver, so the next chat stops hunting for a conflict git does not have — `chore/todo-github-union`

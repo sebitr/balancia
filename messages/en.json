@@ -1961,7 +1961,10 @@
     "addedToast": "Passkey added",
     "removedToast": "Passkey removed",
     "registerFailed": "That passkey could not be registered.",
-    "removeFailed": "That passkey could not be removed."
+    "removeFailed": "That passkey could not be removed.",
+    "synced": "synced",
+    "deviceOnly": "not synced",
+    "removeLastBody": "This is the only way into your account. Remove it and you will have to use your email address to get back in."
   },
   "importWizard": {
     "fileLabel": "Backup or export",

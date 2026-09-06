@@ -164,6 +164,15 @@ export async function insertUser(
     readonly name: string | null;
     /** Null for an account whose only credential is a passkey or a code. */
     readonly passwordHash: string | null;
+    /**
+     * The WebAuthn handle this account's passkeys are filed under.
+     *
+     * Supplied only by a passkey signup, which had to promise one to the
+     * authenticator before there was a row to put it on; every other path
+     * leaves it out and gets a fresh one. It can never be changed afterwards
+     * without splitting the reader's password manager entry in two.
+     */
+    readonly webauthnUserHandle?: string;
   },
   options: { db?: Database } = {},
 ): Promise<string> {
@@ -176,6 +185,11 @@ export async function insertUser(
         name: input.name ?? provisionalNameFor(input.email),
         nameChosenAt: input.name === null ? null : new Date(),
         passwordHash: input.passwordHash,
+        // Omitted rather than minted when absent: the column defaults itself,
+        // and one place deciding what a handle looks like is enough.
+        ...(input.webauthnUserHandle
+          ? { webauthnUserHandle: input.webauthnUserHandle }
+          : {}),
         /*
          * The first account on an instance is its administrator: on a
          * self-hosted deployment, whoever registers first is the person who

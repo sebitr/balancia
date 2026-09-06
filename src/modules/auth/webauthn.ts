@@ -1,5 +1,4 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import {
   generateAuthenticationOptions,
@@ -18,6 +17,8 @@ import { logger } from "@/lib/logger";
 import { telemetry } from "@/lib/telemetry";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { provisionalNameFor } from "@/modules/profile/provisional-name";
+import { storableAaguid } from "./passkey-providers";
+import { mintWebauthnUserHandle } from "./user-handle";
 import { AuthError } from "./service";
 
 /**
@@ -36,6 +37,10 @@ import { AuthError } from "./service";
  *    replayed against another.
  *  - The signature counter is checked and advanced; a counter that fails to
  *    increase suggests a cloned authenticator and is refused.
+ *  - Every ceremony for an existing account files the credential under that
+ *    account's one stable user handle, because the handle is what a password
+ *    manager groups its list by. Two handles on one account means two entries
+ *    in the reader's list for one Balancia login.
  */
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -145,7 +150,12 @@ export async function startPasskeyRegistration(
   const { rpID, rpName } = relyingParty();
 
   const [user] = await db
-    .select({ id: users.id, email: users.email, name: users.name })
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      userHandle: users.webauthnUserHandle,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -169,9 +179,9 @@ export async function startPasskeyRegistration(
     rpID,
     userName: user.email,
     userDisplayName: user.name,
-    // Stable per-account handle so re-registering replaces rather than
-    // duplicates the credential on the authenticator.
-    userID: new TextEncoder().encode(user.id),
+    // The account's one handle, so this credential joins the entry the
+    // reader's password manager already has rather than opening a second one.
+    userID: new TextEncoder().encode(user.userHandle),
     attestationType: "none",
     // Stops the same authenticator registering twice for one account.
     excludeCredentials: existing.map((credential) => ({
@@ -181,7 +191,15 @@ export async function startPasskeyRegistration(
         : undefined,
     })),
     authenticatorSelection: {
-      residentKey: "preferred",
+      /*
+       * Required, not preferred, and the reason is that sign-in has no other
+       * mode: `startPasskeyAuthentication` sends no `allowCredentials`, so a
+       * credential the authenticator cannot find on its own can never be used
+       * to sign in. "Preferred" let one be created anyway — a security key
+       * with no slots left, some enterprise configurations — and the settings
+       * list then showed a working passkey that was not one.
+       */
+      residentKey: "required",
       userVerification: "preferred",
     },
   });
@@ -215,8 +233,23 @@ export async function finishPasskeyRegistration(
     );
   }
 
+  const [user] = await db
+    .select({ userHandle: users.webauthnUserHandle })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) {
+    throw new AuthError(
+      "Sign in again to register a passkey.",
+      "passkeySignInAgain",
+    );
+  }
+
   const verified = await verifyRegistration(response, clientChallenge);
-  return insertPasskey(userId, verified, name, { db });
+  return insertPasskey(userId, verified, name, {
+    db,
+    userHandle: user.userHandle,
+  });
 }
 
 /** What an authenticator's answer amounts to, once it has been checked. */
@@ -227,6 +260,8 @@ export interface VerifiedRegistration {
   readonly deviceType: string;
   readonly backedUp: boolean;
   readonly transports: string | null;
+  /** Which model of authenticator answered, or null if it declined to say. */
+  readonly aaguid: string | null;
 }
 
 /**
@@ -268,7 +303,7 @@ async function verifyRegistration(
     );
   }
 
-  const { credential, credentialDeviceType, credentialBackedUp } =
+  const { credential, credentialDeviceType, credentialBackedUp, aaguid } =
     verification.registrationInfo;
 
   return {
@@ -278,6 +313,7 @@ async function verifyRegistration(
     deviceType: credentialDeviceType,
     backedUp: credentialBackedUp,
     transports: response.response.transports?.join(",") ?? null,
+    aaguid: storableAaguid(aaguid),
   };
 }
 
@@ -292,7 +328,7 @@ export async function insertPasskey(
   userId: string,
   verified: VerifiedRegistration,
   name: string | undefined,
-  options: { db?: Database } = {},
+  options: { db?: Database; userHandle: string },
 ): Promise<{ id: string }> {
   const db = options.db ?? getDb();
   try {
@@ -306,6 +342,11 @@ export async function insertPasskey(
         deviceType: verified.deviceType,
         backedUp: verified.backedUp,
         transports: verified.transports,
+        // What this credential is filed under on the authenticator, recorded
+        // now because every later Signal API call is keyed by it and nothing
+        // else on the row can be turned into it.
+        userHandle: options.userHandle,
+        aaguid: verified.aaguid,
         name: name?.trim() ? name.trim().slice(0, 80) : null,
       })
       .returning({ id: passkeys.id });
@@ -341,7 +382,7 @@ export async function startSignupPasskeyRegistration(
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
   const db = options.db ?? getDb();
   const { rpID, rpName } = relyingParty();
-  const userHandle = randomBytes(32).toString("base64url");
+  const userHandle = mintWebauthnUserHandle();
 
   const registrationOptions = await generateRegistrationOptions({
     rpName,
@@ -385,6 +426,13 @@ export async function verifySignupPasskeyRegistration(
 ): Promise<{
   identity: { email: string; name: string | null };
   credential: VerifiedRegistration;
+  /**
+   * The handle this credential was just filed under, which the account about
+   * to be created must adopt as its own. Minting a second one for the row
+   * would leave the reader's first passkey in an entry their second one never
+   * joins.
+   */
+  userHandle: string;
 }> {
   const db = options.db ?? getDb();
   const clientChallenge = decodeClientDataChallenge(
@@ -401,6 +449,7 @@ export async function verifySignupPasskeyRegistration(
   return {
     identity: { email: consumed.signup.email, name: consumed.signup.name },
     credential: await verifyRegistration(response, clientChallenge),
+    userHandle: consumed.signup.userHandle,
   };
 }
 
@@ -461,6 +510,7 @@ export async function finishPasskeyAuthentication(
       publicKey: passkeys.publicKey,
       counter: passkeys.counter,
       transports: passkeys.transports,
+      userHandle: passkeys.userHandle,
       email: users.email,
       name: users.name,
       disabledAt: users.disabledAt,
@@ -527,12 +577,65 @@ export async function finishPasskeyAuthentication(
     );
   }
 
+  /*
+   * The backup state is re-read on every assertion rather than trusted from
+   * registration, because it changes underneath us: a credential created
+   * before somebody switched on iCloud Keychain is single-device on the day it
+   * was made and synced a week later. The settings list reads these columns to
+   * say whether a passkey survives a lost phone, so a frozen answer is a
+   * screen telling somebody the wrong thing about their own recovery.
+   */
+  const { credentialDeviceType, credentialBackedUp } =
+    verification.authenticationInfo;
+
+  /*
+   * What the authenticator says it filed this credential under, which is the
+   * only remaining copy for any passkey made before the column existed — the
+   * signup handle was discarded with its challenge row. Learning it here is
+   * what lets `passkeySignalState` speak for that credential later.
+   */
+  const assertedHandle = decodeUserHandle(response.response.userHandle);
+
   await db
     .update(passkeys)
-    .set({ counter: newCounter, lastUsedAt: new Date() })
+    .set({
+      counter: newCounter,
+      lastUsedAt: new Date(),
+      deviceType: credentialDeviceType,
+      backedUp: credentialBackedUp,
+      ...(assertedHandle ? { userHandle: assertedHandle } : {}),
+    })
     .where(eq(passkeys.id, stored.id));
 
   return { userId: stored.userId, email: stored.email, name: stored.name };
+}
+
+/**
+ * Reads the user handle out of an assertion.
+ *
+ * The authenticator returns the bytes it was given at registration, which were
+ * the UTF-8 of a handle string, so decoding is symmetric with the
+ * `TextEncoder` on the way out.
+ *
+ * Anything that does not survive the round trip exactly is treated as absent,
+ * and the shape check is the load-bearing half rather than belt-and-braces.
+ * Base64url decoding never throws and UTF-8 decoding substitutes rather than
+ * failing, so a mangled handle would arrive here looking like a real one — and
+ * a *wrong* handle is far worse than a missing one. Missing keeps the account
+ * in the state where `passkeySignalState` says nothing at all; wrong makes the
+ * account look completely known while filing one credential under a name
+ * nothing holds, and the reconcile that follows would tell a password manager
+ * to delete the sibling credential it thinks has gone.
+ *
+ * Every handle Balancia has ever issued is base64url text or a UUID, and both
+ * fit the character class below.
+ */
+const ISSUABLE_HANDLE = /^[A-Za-z0-9_-]{1,256}$/;
+
+export function decodeUserHandle(handle: string | undefined): string | null {
+  if (!handle) return null;
+  const decoded = Buffer.from(handle, "base64url").toString("utf8");
+  return ISSUABLE_HANDLE.test(decoded) ? decoded : null;
 }
 
 export interface PasskeySummary {
@@ -540,6 +643,8 @@ export interface PasskeySummary {
   readonly name: string | null;
   readonly deviceType: string | null;
   readonly backedUp: boolean;
+  /** Names the password manager it lives in, where we can name one. */
+  readonly aaguid: string | null;
   readonly createdAt: Date;
   readonly lastUsedAt: Date | null;
 }
@@ -555,6 +660,7 @@ export async function listPasskeys(
       name: passkeys.name,
       deviceType: passkeys.deviceType,
       backedUp: passkeys.backedUp,
+      aaguid: passkeys.aaguid,
       createdAt: passkeys.createdAt,
       lastUsedAt: passkeys.lastUsedAt,
     })
@@ -562,17 +668,25 @@ export async function listPasskeys(
     .where(eq(passkeys.userId, userId));
 }
 
+/**
+ * Removes a passkey, and says which handle it was filed under.
+ *
+ * The handle comes back because the row is gone the moment this returns, and
+ * it is the one thing the browser needs afterwards: without it, a reader who
+ * removes their last passkey here still has it offered to them by their
+ * password manager forever. See `passkeySignalState`.
+ */
 export async function deletePasskey(
   userId: string,
   passkeyId: string,
   options: { db?: Database } = {},
-): Promise<void> {
+): Promise<{ userHandle: string | null }> {
   const db = options.db ?? getDb();
   // Scoped by user: a passkey ID from another account resolves to nothing.
   const deleted = await db
     .delete(passkeys)
     .where(and(eq(passkeys.id, passkeyId), eq(passkeys.userId, userId)))
-    .returning({ id: passkeys.id });
+    .returning({ id: passkeys.id, userHandle: passkeys.userHandle });
 
   if (deleted.length === 0) {
     throw new AuthError(
@@ -580,6 +694,124 @@ export async function deletePasskey(
       "passkeyNotYours",
     );
   }
+
+  /*
+   * Stamped so the silent upgrade stays out of the way afterwards. Somebody
+   * who removes a passkey and then signs in with their password would
+   * otherwise have a new one minted behind their back within seconds, which is
+   * the app overruling a decision they had just gone to a settings screen to
+   * make. The button on that same screen still works: asking is a fresh
+   * decision, and this only governs what happens without being asked.
+   */
+  await db
+    .update(users)
+    .set({ passkeyRemovedAt: new Date() })
+    .where(eq(users.id, userId));
+
+  return { userHandle: deleted[0].userHandle };
+}
+
+/**
+ * Whether this account should be offered a passkey it did not ask for.
+ *
+ * False once they have removed one. There is no expiry on that and no second
+ * attempt after a decent interval: "I do not want this" said once is said, and
+ * an app that asks again in a month has simply learned to wait.
+ */
+export async function acceptsSilentPasskeyUpgrade(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const [user] = await db
+    .select({ removedAt: users.passkeyRemovedAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user ? user.removedAt === null : false;
+}
+
+/** One handle, and every credential of this account filed under it. */
+export interface PasskeySignalGroup {
+  readonly userHandle: string;
+  readonly credentialIds: string[];
+}
+
+/**
+ * What the browser needs to bring a password manager's list back in line.
+ *
+ * `signalAllAcceptedCredentials` **deletes** every credential stored under a
+ * handle that the list it is handed leaves out. That makes an incomplete list
+ * destructive: hand it one credential when the authenticator holds two and the
+ * second is thrown away, and a passkey is not recoverable. So the whole
+ * account has to be knowable before any of it is signalled, and `groups` comes
+ * back empty — meaning "say nothing" — the moment one row's handle is still
+ * null. Those rows repair themselves at their next sign-in.
+ *
+ * Groups are plural because an account really can hold two handles: one
+ * created by a passkey signup before this column existed, another used by
+ * everything registered from the settings screen since. Each is a separate
+ * entry in the reader's list and has to be reconciled on its own terms.
+ */
+export interface PasskeySignalState {
+  /** The account's address, which is what a provider shows as the username. */
+  readonly name: string;
+  readonly displayName: string;
+  readonly groups: PasskeySignalGroup[];
+}
+
+export async function passkeySignalState(
+  userId: string,
+  options: { db?: Database; alsoClear?: readonly (string | null)[] } = {},
+): Promise<PasskeySignalState | null> {
+  const db = options.db ?? getDb();
+
+  const [user] = await db
+    .select({
+      email: users.email,
+      name: users.name,
+      userHandle: users.webauthnUserHandle,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) return null;
+
+  const rows = await db
+    .select({
+      credentialId: passkeys.credentialId,
+      userHandle: passkeys.userHandle,
+    })
+    .from(passkeys)
+    .where(eq(passkeys.userId, userId));
+
+  // One unknown handle and the account's picture is incomplete, which is the
+  // one state in which this call must not be made.
+  if (rows.some((row) => row.userHandle === null)) {
+    return { name: user.email, displayName: user.name, groups: [] };
+  }
+
+  const byHandle = new Map<string, string[]>();
+  // The account's own handle is always spoken for, even with nothing under it:
+  // that empty list is exactly what clears the entry left behind when somebody
+  // removes their last passkey.
+  byHandle.set(user.userHandle, []);
+  for (const handle of options.alsoClear ?? []) {
+    if (handle) byHandle.set(handle, byHandle.get(handle) ?? []);
+  }
+  for (const row of rows) {
+    const handle = row.userHandle as string;
+    byHandle.set(handle, [...(byHandle.get(handle) ?? []), row.credentialId]);
+  }
+
+  return {
+    name: user.email,
+    displayName: user.name,
+    groups: [...byHandle].map(([userHandle, credentialIds]) => ({
+      userHandle,
+      credentialIds,
+    })),
+  };
 }
 
 /**
