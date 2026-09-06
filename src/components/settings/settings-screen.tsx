@@ -50,11 +50,18 @@ export function SettingsScreen({
         )}
       />
 
-      {/* The bottom inset clears the iOS home indicator. The hub spaces its
+      {/* The pixel at the top is the first card's own outline. Every card here
+          is drawn with `ring-1`, and a ring is painted *outside* the border
+          box — so a column starting flush against the header puts that line
+          under a sticky, near-opaque, blurred bar, and the top card arrives
+          with three sides. The rest of the column never notices, because a
+          gap already stands between one card and the next.
+
+          The bottom inset clears the iOS home indicator. The hub spaces its
           labelled groups further apart than a detail screen spaces its cards. */}
       <div
         className={cn(
-          "flex flex-1 flex-col px-3.5 pb-[calc(1.625rem+env(safe-area-inset-bottom))]",
+          "flex flex-1 flex-col px-3.5 pt-px pb-[calc(1.625rem+env(safe-area-inset-bottom))]",
           back ? "gap-3.5" : "gap-4.5",
         )}
       >
