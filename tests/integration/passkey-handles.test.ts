@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/client";
 import { passkeys, users } from "@/lib/db/schema";
 import { insertUser } from "@/modules/auth/service";
 import {
+  acceptsSilentPasskeyUpgrade,
   deletePasskey,
   insertPasskey,
   passkeySignalState,
@@ -251,6 +252,66 @@ describe("deletePasskey", () => {
     );
 
     await expect(deletePasskey(mine.userId, created.id)).rejects.toThrow();
+  });
+});
+
+describe("the silent upgrade after a password sign-in", () => {
+  it("is offered to an account that has never said otherwise", async () => {
+    const { userId } = await anAccount("upgradable@example.test");
+
+    expect(await acceptsSilentPasskeyUpgrade(userId)).toBe(true);
+  });
+
+  it("stops once the reader has removed a passkey", async () => {
+    /*
+     * The point of the whole flag. Somebody who goes to the settings screen and
+     * takes a passkey off has said what they think of having one; minting
+     * another the next time they type their password would be the app
+     * overruling them, and doing it invisibly, so the only way to notice would
+     * be to go back to the screen where they said no.
+     */
+    const { userId, handle } = await anAccount("declined@example.test");
+    const created = await insertPasskey(userId, credential(), undefined, {
+      userHandle: handle,
+    });
+
+    await deletePasskey(userId, created.id);
+
+    expect(await acceptsSilentPasskeyUpgrade(userId)).toBe(false);
+  });
+
+  it("does not stop the button, which is a fresh decision", async () => {
+    // Removing one must not lock somebody out of ever adding another. Only the
+    // unasked-for ceremony is refused; the settings screen still issues
+    // options exactly as before.
+    const { userId, handle } = await anAccount("asks-again@example.test");
+    const created = await insertPasskey(userId, credential(), undefined, {
+      userHandle: handle,
+    });
+    await deletePasskey(userId, created.id);
+
+    const options = await startPasskeyRegistration(userId);
+
+    expect(options.challenge).toBeTruthy();
+  });
+
+  it("stays refused, with no second attempt after a decent interval", async () => {
+    // There is no expiry on the stamp, deliberately: "I do not want this" said
+    // once is said, and an app that asks again in a month has only learned to
+    // wait.
+    const { userId, handle } = await anAccount("still-no@example.test");
+    const first = await insertPasskey(userId, credential(), undefined, {
+      userHandle: handle,
+    });
+    await deletePasskey(userId, first.id);
+
+    // Even after adding one deliberately and removing it again.
+    const second = await insertPasskey(userId, credential(), undefined, {
+      userHandle: handle,
+    });
+    await deletePasskey(userId, second.id);
+
+    expect(await acceptsSilentPasskeyUpgrade(userId)).toBe(false);
   });
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "passkey_removed_at" timestamp with time zone;

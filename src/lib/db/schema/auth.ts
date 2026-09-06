@@ -175,6 +175,22 @@ export const users = pgTable(
      * still change the moment a new photo lands: it is the cache key.
      */
     avatarUpdatedAt: timestamp("avatar_updated_at", { withTimezone: true }),
+    /**
+     * When this account last removed a passkey of its own.
+     *
+     * A fact rather than a preference, but one policy reads it: the silent
+     * upgrade after a password sign-in will not run for an account that has
+     * this stamp. Without it, somebody who deliberately removes their passkey
+     * gets a new one minted behind their back the next time they type their
+     * password, which is the app quietly overruling them — and doing it
+     * silently, so they would only find out by visiting the settings screen
+     * they had just used to say no.
+     *
+     * It does not stand in the way of the button. Asking for a passkey
+     * explicitly is a fresh decision and always allowed; this only governs
+     * what happens without being asked.
+     */
+    passkeyRemovedAt: timestamp("passkey_removed_at", { withTimezone: true }),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
   },
   (table) => [

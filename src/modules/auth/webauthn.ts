@@ -695,7 +695,40 @@ export async function deletePasskey(
     );
   }
 
+  /*
+   * Stamped so the silent upgrade stays out of the way afterwards. Somebody
+   * who removes a passkey and then signs in with their password would
+   * otherwise have a new one minted behind their back within seconds, which is
+   * the app overruling a decision they had just gone to a settings screen to
+   * make. The button on that same screen still works: asking is a fresh
+   * decision, and this only governs what happens without being asked.
+   */
+  await db
+    .update(users)
+    .set({ passkeyRemovedAt: new Date() })
+    .where(eq(users.id, userId));
+
   return { userHandle: deleted[0].userHandle };
+}
+
+/**
+ * Whether this account should be offered a passkey it did not ask for.
+ *
+ * False once they have removed one. There is no expiry on that and no second
+ * attempt after a decent interval: "I do not want this" said once is said, and
+ * an app that asks again in a month has simply learned to wait.
+ */
+export async function acceptsSilentPasskeyUpgrade(
+  userId: string,
+  options: { db?: Database } = {},
+): Promise<boolean> {
+  const db = options.db ?? getDb();
+  const [user] = await db
+    .select({ removedAt: users.passkeyRemovedAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user ? user.removedAt === null : false;
 }
 
 /** One handle, and every credential of this account filed under it. */

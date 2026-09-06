@@ -145,17 +145,29 @@ export async function registerPasskey(name?: string): Promise<void> {
  * is a success as far as this is concerned. That is what makes it safe to call
  * on every password sign-in without keeping a note of whether it worked.
  *
+ * It asks `/upgrade` rather than `/register`, and the difference is consent.
+ * That route answers 204 for an account that has removed a passkey: somebody
+ * who has been to the settings screen to take one off has said what they think
+ * of having one, and minting another moments after their next password would
+ * be the app overruling them — invisibly, so the only way to notice would be
+ * to go back to the screen where they said no. The button on that screen still
+ * works, because pressing it is a fresh decision.
+ *
  * Nothing is said afterwards, and that is deliberate rather than an omission.
  * A toast would announce a credential the reader did not ask to create, over a
  * page that is already navigating away; the password manager itself is what
- * tells them a passkey was saved, in its own words, where they can act on it.
+ * tells them a passkey was saved, in its own words, where they can act on it —
+ * and the settings list is where it can be found and removed later, which is
+ * the part that has to be true rather than the part that has to be loud.
  */
 export async function upgradeToPasskey(): Promise<void> {
   try {
     if (!(await supportsPasskeyUpgrade())) return;
 
-    const optionsResponse = await fetch("/api/auth/passkey/register");
-    if (!optionsResponse.ok) return;
+    const optionsResponse = await fetch("/api/auth/passkey/upgrade");
+    // 204: this account has said no already. Anything else unreadable is a
+    // non-event for a ceremony nobody asked for.
+    if (!optionsResponse.ok || optionsResponse.status === 204) return;
     const options = await optionsResponse.json();
 
     const attestation = await startRegistration({
