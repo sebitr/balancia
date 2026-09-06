@@ -50,7 +50,6 @@ export interface CurrencyBalanceView {
   readonly currency: string;
   /** All-time group spend in this currency, in minor units. */
   readonly totalSpent: string;
-  readonly expenseCount: number;
   /** The reader's own signed balance. */
   readonly position: string;
   readonly members: readonly CurrencyMemberView[];
@@ -66,6 +65,10 @@ export interface CurrencyBalanceView {
  * what a glance needs — which currency, what it cost, how many payments would
  * clear it, and where the reader stands — and the rest waits behind a tap.
  * Screen length is then roughly constant from two currencies to six.
+ *
+ * A currency everyone is square in is a line, not a row that opens. Its body
+ * used to be one sentence saying everyone was square — which the header had
+ * already said — and the chevron on it promised more than there was.
  *
  * One row is open at a time, on purpose. Two open rows put two sets of member
  * balances on screen in two different currencies, which is precisely the
@@ -212,6 +215,77 @@ function CurrencyRow({
   const outstanding = entry.members.filter(
     (member) => BigInt(member.minorUnits) !== 0n,
   );
+  // Nobody owes anybody here: nothing to list, so nothing to open.
+  const square = outstanding.length === 0;
+
+  const summary = (
+    <>
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span
+          className={cn(
+            "min-w-[34px] shrink-0 text-xs font-semibold tracking-[0.05em]",
+            tone === "neutral" && "text-muted-foreground",
+          )}
+        >
+          {entry.currency}
+        </span>
+        <span className="truncate text-xs text-muted-foreground">{meta}</span>
+      </span>
+
+      <span className="flex shrink-0 items-center gap-2">
+        {tone === "neutral" ? (
+          <span
+            className={cn(
+              "flex items-center gap-[5px] text-xs font-medium",
+              TONE.neutral.ink,
+            )}
+          >
+            <Minus aria-hidden="true" className="size-[15px] shrink-0" />
+            {t("settledUpRow")}
+          </span>
+        ) : (
+          <span
+            className={cn(
+              "flex items-center gap-[5px] text-sm font-semibold",
+              TONE[tone].ink,
+            )}
+          >
+            <DirectionArrow tone={tone} className="size-[14px]" />
+            {/* The section heading names no side, so every amount under it
+                    carries its own word — hidden here only because the arrow
+                    and the colour already say it to anyone who can see them. */}
+            <span className="sr-only">
+              {tone === "positive" ? t("youGetBackWord") : t("youOweWord")}
+            </span>
+            <Amount
+              minorUnits={magnitude.toString()}
+              currency={entry.currency}
+              display="none"
+            />
+          </span>
+        )}
+        {!square && (
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              "size-[15px] shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
+              expanded && "rotate-180",
+            )}
+          />
+        )}
+      </span>
+    </>
+  );
+
+  if (square) {
+    return (
+      <div className="border-t first:border-t-0">
+        <h3 className="flex min-h-11 items-center justify-between gap-3 px-4 py-3.5">
+          {summary}
+        </h3>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t first:border-t-0">
@@ -223,60 +297,7 @@ function CurrencyRow({
           onClick={onToggle}
           className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
         >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span
-              className={cn(
-                "min-w-[34px] shrink-0 text-xs font-semibold tracking-[0.05em]",
-                tone === "neutral" && "text-muted-foreground",
-              )}
-            >
-              {entry.currency}
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {meta}
-            </span>
-          </span>
-
-          <span className="flex shrink-0 items-center gap-2">
-            {tone === "neutral" ? (
-              <span
-                className={cn(
-                  "flex items-center gap-[5px] text-xs font-medium",
-                  TONE.neutral.ink,
-                )}
-              >
-                <Minus aria-hidden="true" className="size-[15px] shrink-0" />
-                {t("settledUpRow")}
-              </span>
-            ) : (
-              <span
-                className={cn(
-                  "flex items-center gap-[5px] text-sm font-semibold",
-                  TONE[tone].ink,
-                )}
-              >
-                <DirectionArrow tone={tone} className="size-[14px]" />
-                {/* The section heading names no side, so every amount under it
-                    carries its own word — hidden here only because the arrow
-                    and the colour already say it to anyone who can see them. */}
-                <span className="sr-only">
-                  {tone === "positive" ? t("youGetBackWord") : t("youOweWord")}
-                </span>
-                <Amount
-                  minorUnits={magnitude.toString()}
-                  currency={entry.currency}
-                  display="none"
-                />
-              </span>
-            )}
-            <ChevronDown
-              aria-hidden="true"
-              className={cn(
-                "size-[15px] shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
-                expanded && "rotate-180",
-              )}
-            />
-          </span>
+          {summary}
         </button>
       </h3>
 
@@ -292,36 +313,24 @@ function CurrencyRow({
       >
         <div id={bodyId} inert={!expanded} className="overflow-hidden">
           <div className="flex flex-col gap-3 px-4 pt-1 pb-3.5">
-            {outstanding.length === 0 ? (
-              <p className="text-xs text-pretty text-muted-foreground">
-                {t("everyoneSquare", {
-                  currency: entry.currency,
-                  count: entry.expenseCount,
-                  amount: spent,
-                })}
-              </p>
-            ) : (
-              <>
-                {entry.members.map((member) => (
-                  <MemberLine
-                    key={member.participantId}
-                    member={member}
-                    currency={entry.currency}
-                  />
-                ))}
-                {entry.transfers.map((transfer) => (
-                  <TransferLine
-                    key={`${transfer.fromParticipantId}-${transfer.toParticipantId}`}
-                    transfer={transfer}
-                    currency={entry.currency}
-                    groupId={groupId}
-                    groupName={groupName}
-                    senderName={senderName}
-                    recipients={recipients}
-                  />
-                ))}
-              </>
-            )}
+            {entry.members.map((member) => (
+              <MemberLine
+                key={member.participantId}
+                member={member}
+                currency={entry.currency}
+              />
+            ))}
+            {entry.transfers.map((transfer) => (
+              <TransferLine
+                key={`${transfer.fromParticipantId}-${transfer.toParticipantId}`}
+                transfer={transfer}
+                currency={entry.currency}
+                groupId={groupId}
+                groupName={groupName}
+                senderName={senderName}
+                recipients={recipients}
+              />
+            ))}
           </div>
         </div>
       </div>

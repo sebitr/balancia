@@ -241,3 +241,119 @@ describe("more than one currency", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The card above the sheet.
+ *
+ * It used to draw a tile per currency, level ones included, over a sentence
+ * saying the tiles must never be added up — a reader owed dollars and square
+ * in euros got a grey "Settled EUR" tile with the same weight as the figure
+ * that mattered. What these hold is the shape that replaced it: the figures
+ * the reader is not square in lead, a level currency is one line naming it,
+ * and the conversion rule lives in the sheet rather than on the card.
+ */
+describe("the headline", () => {
+  const level = (currency: string): PositionCardView => ({
+    currency,
+    minorUnits: "0",
+    counterparties: [],
+    breakdown: {
+      paid: "0",
+      share: "0",
+      revenueReceived: "0",
+      revenueCredited: "0",
+      settlementsPaid: "0",
+      settlementsReceived: "0",
+      otherAdjustments: "0",
+    },
+  });
+
+  /** The reader owes forty-five euros: a figure on the other side. */
+  const OWED: PositionCardView = {
+    ...level("EUR"),
+    minorUnits: "-4500",
+    breakdown: { ...level("EUR").breakdown, share: "4500" },
+  };
+
+  function renderCard(positions: readonly PositionCardView[]) {
+    return renderWithIntl(
+      <PositionCard
+        positions={positions}
+        groupId="g1"
+        groupName="Chalet"
+        senderName="Seb"
+        recipients={[]}
+      />,
+    );
+  }
+
+  it("leads with the currency the reader is not square in, and names the level one", () => {
+    renderCard([level("EUR"), CHALET]);
+
+    expect(screen.getByText(chf(1310533n))).toBeVisible();
+    expect(screen.getByText("You get back")).toBeVisible();
+    expect(screen.getByText("Settled up in EUR")).toBeVisible();
+    // Named, never drawn: "EUR 0.00" is a figure the reader has to parse to
+    // learn that there is nothing to parse.
+    expect(screen.queryByText(/EUR\s0\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Settled\s+EUR/)).not.toBeInTheDocument();
+  });
+
+  it("lists every level currency in the one line", () => {
+    renderCard([CHALET, level("EUR"), level("GBP")]);
+
+    expect(screen.getByText("Settled up in EUR and GBP")).toBeVisible();
+  });
+
+  /**
+   * Colour never carries the side alone. When every figure is on one side
+   * the card says the word once, under them; when they differ, the word
+   * rides with each figure for a screen reader, and the signs already differ
+   * for everyone else.
+   */
+  it("says the side once when the figures agree, and per figure when they do not", () => {
+    const { unmount } = renderCard([CHALET, level("EUR")]);
+
+    expect(screen.getAllByText("You get back")).toHaveLength(1);
+    expect(screen.getByText(chf(1310533n)).parentElement).not.toHaveTextContent(
+      /You get back/,
+    );
+    unmount();
+
+    renderCard([CHALET, OWED]);
+
+    expect(screen.getByText("− EUR 45.00")).toBeVisible();
+    expect(screen.getByText(chf(1310533n)).parentElement).toHaveTextContent(
+      /You get back/,
+    );
+    expect(screen.getByText("− EUR 45.00").parentElement).toHaveTextContent(
+      /You owe/,
+    );
+  });
+
+  it("says the word when every currency is level, and offers nothing to calculate", () => {
+    renderCard([level("EUR"), level("GBP")]);
+
+    expect(screen.getByText("Settled up")).toBeVisible();
+    expect(screen.queryByText(/Settled up in/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0\.00/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /How this is calculated/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the conversion rule in the sheet, beside the ledgers it is about", async () => {
+    const user = userEvent.setup();
+    renderCard([CHALET, OWED]);
+
+    expect(screen.queryByText(/never converts/)).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /How this is calculated/ }),
+    );
+
+    expect(
+      await screen.findByText(/Balancia never converts between them/),
+    ).toBeVisible();
+  });
+});

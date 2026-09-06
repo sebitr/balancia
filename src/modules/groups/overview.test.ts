@@ -7,6 +7,7 @@ import {
   positionBreakdownOf,
   spendingPeriodsOf,
   type CurrencyOverview,
+  type SettlementSuggestion,
 } from "./overview";
 import type { CurrencyBalances } from "@/modules/balances/engine";
 
@@ -305,19 +306,37 @@ describe("the ledger behind a position", () => {
 /**
  * Which row the overview lands open on.
  *
- * The choice is deliberately one function, because it is an open product
- * question: the group's main currency is what ships, and the currency the
- * reader *owes* in is the argument against it. Flipping that is a change here
- * and nowhere else, which is the whole reason this is not inlined in the
- * component's `useState`.
+ * The choice is deliberately one function, so that a change of mind is a
+ * change here and nowhere else. It shipped as the group's base currency,
+ * which on a trip kept in EUR with one stray USD debt opened a row saying
+ * everyone was square — so the row with money outstanding in it wins now,
+ * the reader's own first, and the base currency only settles ties.
  */
-const entry = (currency: string, totalSpent: bigint): CurrencyOverview => ({
+const TRANSFER: SettlementSuggestion = {
+  fromParticipantId: "padi",
+  fromName: "Padi",
+  toParticipantId: "me",
+  toName: "Seb",
+  currency: "EUR",
+  amount: 100n,
+  fromIsSelf: false,
+  toIsSelf: true,
+};
+
+const entry = (
+  currency: string,
+  totalSpent: bigint,
+  outstanding: { position?: bigint; transfers?: number } = {},
+): CurrencyOverview => ({
   currency,
   totalSpent,
   expenseCount: 1,
-  position: 0n,
+  position: outstanding.position ?? 0n,
   members: [],
-  transfers: [],
+  transfers: Array.from({ length: outstanding.transfers ?? 0 }, () => ({
+    ...TRANSFER,
+    currency,
+  })),
 });
 
 /**
@@ -351,7 +370,35 @@ describe("isMultiCurrency", () => {
 });
 
 describe("mainCurrencyOf", () => {
-  it("opens the group's base currency", () => {
+  /** Lisbon Trip: kept in EUR, everyone square in it, one debt in USD. */
+  it("opens the currency the reader is not square in, over the base one", () => {
+    const currencies = [
+      entry("EUR", 11790n),
+      entry("USD", 1332n, { position: 888n, transfers: 2 }),
+    ];
+
+    expect(mainCurrencyOf(currencies, "EUR")).toBe("USD");
+  });
+
+  it("opens a currency other people still owe in, over a level one", () => {
+    const currencies = [
+      entry("EUR", 11790n),
+      entry("USD", 1332n, { transfers: 1 }),
+    ];
+
+    expect(mainCurrencyOf(currencies, "EUR")).toBe("USD");
+  });
+
+  it("settles a tie between two live currencies on the base currency", () => {
+    const currencies = [
+      entry("USD", 90000n, { position: 100n, transfers: 1 }),
+      entry("CHF", 35000n, { position: -100n, transfers: 1 }),
+    ];
+
+    expect(mainCurrencyOf(currencies, "CHF")).toBe("CHF");
+  });
+
+  it("opens the group's base currency when every currency is level", () => {
     const currencies = [entry("USD", 90000n), entry("CHF", 35000n)];
 
     expect(mainCurrencyOf(currencies, "CHF")).toBe("CHF");
