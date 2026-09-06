@@ -169,21 +169,31 @@ export function isMultiCurrency(
 /**
  * Which currency's row the overview opens on.
  *
- * The group's own base currency, falling back to the one it has spent most in
- * when a group kept in separate currencies has never named a base. Product has
- * an open question here — the currency the reader *owes* in is arguably the
- * actionable one — so the choice is this function and nothing else, and
- * flipping it is a one-line change with a test already pointed at it.
+ * The one with something to do in it: a currency the reader is not square
+ * in first, then one anybody still owes in, then any. The base currency used
+ * to win outright, which on a trip kept in EUR with one stray USD debt
+ * opened a row whose whole body said everyone was square in EUR, and left
+ * the two people who owed dollars behind a tap. Base currency, then most
+ * spent, now only settle a tie inside a tier — and decide alone when every
+ * currency is level, where it makes no difference which row opens.
+ *
+ * The choice is this function and nothing else; the screen never derives it.
  */
 export function mainCurrencyOf(
   currencies: readonly CurrencyOverview[],
   baseCurrency: string | null,
 ): string | null {
   if (currencies.length === 0) return null;
-  const base = currencies.find((entry) => entry.currency === baseCurrency);
+  const tiers = [
+    currencies.filter((entry) => entry.position !== 0n),
+    currencies.filter((entry) => entry.transfers.length > 0),
+    currencies,
+  ];
+  const tier = tiers.find((candidates) => candidates.length > 0) ?? currencies;
+  const base = tier.find((entry) => entry.currency === baseCurrency);
   if (base) return base.currency;
-  let largest = currencies[0];
-  for (const entry of currencies) {
+  let largest = tier[0];
+  for (const entry of tier) {
     if (entry.totalSpent > largest.totalSpent) largest = entry;
   }
   return largest.currency;

@@ -12,10 +12,10 @@ import {
  *
  * What these hold is the part of the design that is design-system law rather
  * than preference: one row open at a time, a settled balance phrased instead
- * of printed as `0.00`, and a direction word attached to every amount even
- * where the layout hides it — the section heading names no side, so an amount
- * with only an arrow and a colour to explain it says nothing to a screen
- * reader.
+ * of printed as `0.00`, a currency everyone is square in drawn as a line with
+ * nothing to open, and a direction word attached to every amount even where
+ * the layout hides it — the section heading names no side, so an amount with
+ * only an arrow and a colour to explain it says nothing to a screen reader.
  *
  * The rows are `<button>`s with `aria-expanded` and `aria-controls`, so the
  * queries here go through the accessibility tree on purpose: a test that found
@@ -26,7 +26,6 @@ import {
 const CHF: CurrencyBalanceView = {
   currency: "CHF",
   totalSpent: "35000",
-  expenseCount: 4,
   position: "11666",
   members: [
     { participantId: "p2", name: "Hervé", minorUnits: "-11666", isSelf: false },
@@ -49,7 +48,6 @@ const CHF: CurrencyBalanceView = {
 const USD: CurrencyBalanceView = {
   currency: "USD",
   totalSpent: "12630",
-  expenseCount: 2,
   position: "-4210",
   members: [
     { participantId: "p1", name: "Seb", minorUnits: "-4210", isSelf: true },
@@ -72,7 +70,6 @@ const USD: CurrencyBalanceView = {
 const GBP: CurrencyBalanceView = {
   currency: "GBP",
   totalSpent: "4800",
-  expenseCount: 3,
   position: "0",
   members: [
     { participantId: "p1", name: "Seb", minorUnits: "0", isSelf: true },
@@ -85,7 +82,6 @@ const GBP: CurrencyBalanceView = {
 const EUR: CurrencyBalanceView = {
   currency: "EUR",
   totalSpent: "2600",
-  expenseCount: 1,
   position: "0",
   members: [
     { participantId: "p1", name: "Seb", minorUnits: "0", isSelf: true },
@@ -137,6 +133,11 @@ function row(code: string): HTMLElement {
   return screen.getByRole("button", { name: new RegExp(`^${code}`) });
 }
 
+/** One currency's line, whether or not it is a disclosure. */
+function heading(code: string): HTMLElement {
+  return screen.getByRole("heading", { name: new RegExp(`^${code}`) });
+}
+
 /** What that row opens, resolved through `aria-controls` rather than by class. */
 function body(code: string): HTMLElement {
   const id = row(code).getAttribute("aria-controls");
@@ -152,7 +153,7 @@ describe("CurrencyBalances", () => {
 
     expect(row("CHF")).toHaveAttribute("aria-expanded", "true");
     expect(row("USD")).toHaveAttribute("aria-expanded", "false");
-    expect(row("GBP")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: /^GBP/ })).toBeNull();
   });
 
   it("closes the open row when another is opened", async () => {
@@ -171,7 +172,7 @@ describe("CurrencyBalances", () => {
 
     await user.click(row("CHF"));
 
-    for (const code of ["CHF", "USD", "GBP"]) {
+    for (const code of ["CHF", "USD"]) {
       expect(row(code)).toHaveAttribute("aria-expanded", "false");
     }
   });
@@ -206,7 +207,7 @@ describe("CurrencyBalances", () => {
   it("phrases a settled currency instead of printing a zero", () => {
     renderList();
 
-    const settled = row("GBP");
+    const settled = heading("GBP");
     expect(within(settled).getByText("Settled up")).toBeInTheDocument();
     expect(settled).not.toHaveTextContent("0.00");
     // A currency with nothing to clear counts no payments.
@@ -220,15 +221,18 @@ describe("CurrencyBalances", () => {
     expect(row("CHF")).toHaveTextContent(/350\.00 spent · 1 payment/);
   });
 
-  it("replaces the member lines of a square currency with one sentence", async () => {
-    const user = userEvent.setup();
+  /**
+   * A currency everyone is square in has nothing to list, so it is a line
+   * rather than a disclosure: no chevron, no body, and no tap that answers
+   * with one sentence the header had already said.
+   */
+  it("folds a currency everyone is square in into a line that opens nothing", () => {
     renderList();
 
-    await user.click(row("GBP"));
-
-    expect(body("GBP")).toHaveTextContent(
-      "Everyone is square in GBP. 3 expenses, 48.00 total.",
-    );
+    expect(screen.queryByRole("button", { name: /^GBP/ })).toBeNull();
+    expect(heading("GBP")).toHaveTextContent(/48\.00 spent/);
+    expect(heading("GBP")).toHaveTextContent("Settled up");
+    expect(screen.queryByText(/Everyone is square/)).not.toBeInTheDocument();
   });
 
   it("offers Pay on the reader's own debt and Remind on one owed to them", async () => {
@@ -261,8 +265,10 @@ describe("CurrencyBalances", () => {
     expect(within(opened).queryByRole("link", { name: "Pay" })).toBeNull();
 
     // The reader is square here even though the currency is not, so the row
-    // shows their position as settled and the body still lists the debt.
+    // shows their position as settled, stays a disclosure, and the body still
+    // lists the debt.
     expect(within(row("EUR")).getByText("Settled up")).toBeInTheDocument();
+    expect(row("EUR")).toHaveAttribute("aria-expanded", "true");
   });
 
   it("holds its shape at one currency and at six", () => {
@@ -276,7 +282,7 @@ describe("CurrencyBalances", () => {
       currency: code,
     }));
     renderList(many, "CHF");
-    expect(screen.getAllByRole("button", { name: /spent/ })).toHaveLength(6);
+    expect(screen.getAllByRole("heading", { name: /spent/ })).toHaveLength(6);
     expect(screen.getByText("6 currencies · 3 people")).toBeInTheDocument();
   });
 

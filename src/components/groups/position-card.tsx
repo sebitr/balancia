@@ -2,15 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  Bell,
-  Check,
-  ChevronRight,
-  HandCoins,
-  Minus,
-  Plus,
-} from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
+import { Bell, Check, ChevronRight, HandCoins, Minus } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { TONE, toneFor } from "@/components/money/balance-tone";
 import { RemindButton } from "@/components/reminders/remind-button";
@@ -30,18 +23,21 @@ import { cn } from "@/lib/utils";
 export type { PositionView as PositionCardView } from "./position-breakdown";
 
 /**
- * The first answer on the screen: one tile per currency, then the two things
- * to do about them.
+ * The first answer on the screen: the currencies the reader is not square
+ * in, as figures, then the two things to do about them.
  *
- * A single hero amount used to sit here, which works for one currency and
- * falls apart at four — the screen either picked a currency to shout and
- * buried the rest, or stacked four heroes and became a wall. A tile grid is
- * flat: every currency gets the same room, the reader's eye finds the red one,
- * and the card's height grows by a row per pair rather than by a screenful.
+ * This was a tile per currency, level ones included, over a line saying that
+ * the tiles must never be added up. A reader owed USD 8.88 and square in EUR
+ * met a grey "Settled EUR" tile drawn with the same weight as the green one,
+ * then a sentence about conversion, before reaching a button: the card
+ * explained the system instead of stating the number. Now the figure that
+ * matters is the headline, a currency that has come out level is one muted
+ * line naming it, and the conversion rule waits in the sheet behind "How
+ * this is calculated", beside the ledgers it is about.
  *
- * The footnote is load-bearing, not decoration. Four amounts in a grid invite
- * being added up, and these four can never be added up; the line under them is
- * what says so.
+ * The figures still cannot be added up, and the layout no longer invites it:
+ * each is its own line, in its own colour, with its own sign, the way the
+ * home screen stacks them.
  */
 export function PositionCard({
   positions,
@@ -57,14 +53,29 @@ export function PositionCard({
   recipients: readonly RemindRecipient[];
 }) {
   const t = useTranslations("group");
+  const tMoney = useTranslations("money");
+  const format = useFormatter();
   const [positionOpen, setPositionOpen] = useState(false);
 
-  // Settled currencies are counted and shown: "across 4 currencies" is a
-  // statement about where this group has been active, and dropping the square
-  // ones would make the number shrink as the reader settles up.
-  const settled = positions.every(
+  const open = positions.filter(
+    (position) => BigInt(position.minorUnits) !== 0n,
+  );
+  const level = positions.filter(
     (position) => BigInt(position.minorUnits) === 0n,
   );
+  const settled = open.length === 0;
+  const incoming = open.every((position) => BigInt(position.minorUnits) > 0n);
+  const outgoing = open.every((position) => BigInt(position.minorUnits) < 0n);
+
+  // One word for the lot when the figures agree on a side. When they do not,
+  // the word rides with each figure instead, and the signs already differ.
+  const direction = settled
+    ? null
+    : incoming
+      ? t("youGetBack")
+      : outgoing
+        ? t("youOwe")
+        : null;
 
   return (
     <>
@@ -72,24 +83,59 @@ export function PositionCard({
         aria-labelledby="your-position"
         className="flex flex-col gap-3.5 rounded-2xl bg-card p-4 ring-1 ring-border"
       >
-        <h2 id="your-position" className="sr-only">
-          {t("yourPosition")}
-        </h2>
+        <div className="flex flex-col gap-1.5">
+          <h2 id="your-position" className="text-xs text-muted-foreground">
+            {t("yourPosition")}
+          </h2>
 
-        <p className="text-xs text-muted-foreground">
-          {t("positionAcross", { count: positions.length })}
-        </p>
+          {settled ? (
+            <p
+              className={cn(
+                "text-[1.875rem] leading-none font-semibold tracking-[-0.025em]",
+                TONE.neutral.ink,
+              )}
+            >
+              {tMoney("settledUpBadge")}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {open.map((position) => (
+                <PositionFigure
+                  key={position.currency}
+                  position={position}
+                  count={open.length}
+                  worded={direction === null}
+                />
+              ))}
+            </ul>
+          )}
 
-        <ul className="grid grid-cols-2 gap-2">
-          {positions.map((position) => (
-            <PositionTile key={position.currency} position={position} />
-          ))}
-        </ul>
+          {direction && (
+            <p
+              className={cn(
+                "text-xs font-medium",
+                incoming ? TONE.positive.ink : TONE.negative.ink,
+              )}
+            >
+              {direction}
+            </p>
+          )}
+        </div>
 
-        {/* Why four amounts in a grid are not a total. */}
-        <p className="text-2xs text-pretty text-muted-foreground">
-          {t("keptApart")}
-        </p>
+        {/* A currency that has come out level is named, not drawn. A "Settled
+            EUR" tile beside a green one was a figure the reader had to parse
+            to learn that there was nothing to parse. */}
+        {!settled && level.length > 0 && (
+          <p className="flex items-center gap-[5px] text-xs text-muted-foreground">
+            <Minus aria-hidden="true" className="size-[15px] shrink-0" />
+            {t("settledIn", {
+              currencies: format.list(
+                level.map((position) => position.currency),
+                { type: "conjunction" },
+              ),
+            })}
+          </p>
+        )}
 
         {/* Wraps for the reason the hero's row does: `flex-1` cannot shrink a
             button below its own label, so a pair that does not fit overflows
@@ -167,10 +213,12 @@ export function PositionCard({
           <SheetTitle className="mt-4 text-xl font-semibold tracking-[-0.02em]">
             {t("positionSheetTitle")}
           </SheetTitle>
-          {/* The three subtotals explain the sheet now; this stays for the
-              screen reader, which Radix requires to have something to name. */}
-          <SheetDescription className="sr-only">
-            {t("positionSheetDescription")}
+          {/* The rule the card used to state under its tiles. It belongs
+              here, where the ledgers it is about are drawn one under the
+              other — and it is the description Radix wants the sheet to
+              have, so it is read out on the way in. */}
+          <SheetDescription className="mt-1.5 text-sm text-pretty text-muted-foreground">
+            {t("keptApart")}
           </SheetDescription>
 
           <div className="mt-[18px] flex flex-col gap-5">
@@ -189,75 +237,48 @@ export function PositionCard({
 }
 
 /**
- * One currency's standing, in a tinted tile.
+ * One currency the reader is not square in, as a signed figure.
  *
- * The amount is unsigned and the sign is a separate glyph beside it, so the
- * direction survives greyscale and a screen reader reads the word rather than
- * a minus. A settled tile carries neither: it names the currency under the
- * word "Settled" and stops, because "GBP 0.00" is a figure the reader has to
- * parse to learn that there is nothing to parse.
+ * The sign is the app's own — a real plus or minus, then the figure — and the
+ * colour follows it, so the direction survives greyscale. The word is there
+ * for a screen reader only when the card has not already said it once for
+ * every figure.
  */
-function PositionTile({ position }: { position: PositionView }) {
-  const t = useTranslations("money");
+function PositionFigure({
+  position,
+  count,
+  worded,
+}: {
+  position: PositionView;
+  count: number;
+  worded: boolean;
+}) {
+  const t = useTranslations("group");
   const tone = toneFor(position.minorUnits);
-  const value = BigInt(position.minorUnits);
-  const magnitude = value < 0n ? -value : value;
 
-  const label =
-    tone === "positive"
-      ? t("getsBack")
-      : tone === "negative"
-        ? t("owes")
-        : t("settled");
+  // The type steps down as the list grows, as the home screen's does, so
+  // three currencies still sit in about the room one figure would take.
+  const size = count <= 2 ? "text-[2.125rem]" : "text-[1.625rem]";
 
   return (
-    <li
-      className={cn(
-        "flex flex-col gap-0.5 rounded-lg px-[11px] py-[9px]",
-        TONE[tone].tint,
+    <li>
+      <Amount
+        minorUnits={position.minorUnits}
+        currency={position.currency}
+        display="code"
+        signDisplay="exceptZero"
+        className={cn(
+          size,
+          "leading-none font-semibold tracking-[-0.035em]",
+          TONE[tone].ink,
+        )}
+      />
+      {worded && (
+        <span className="sr-only">
+          {" "}
+          {tone === "positive" ? t("youGetBack") : t("youOwe")}
+        </span>
       )}
-    >
-      <span
-        className={cn(
-          "text-2xs font-semibold tracking-[0.07em] uppercase",
-          TONE[tone].ink,
-        )}
-      >
-        {label}
-      </span>
-      <span
-        className={cn(
-          "flex items-center gap-[5px] text-base leading-none font-semibold tracking-[-0.01em]",
-          TONE[tone].ink,
-        )}
-      >
-        {tone !== "neutral" &&
-          (tone === "positive" ? (
-            <Plus
-              aria-hidden="true"
-              strokeWidth={2.2}
-              className="size-[15px] shrink-0"
-            />
-          ) : (
-            <Minus
-              aria-hidden="true"
-              strokeWidth={2.2}
-              className="size-[15px] shrink-0"
-            />
-          ))}
-        {tone === "neutral" ? (
-          <span>{position.currency}</span>
-        ) : (
-          // The code travels with the number rather than being set beside
-          // it: which side it belongs on is the locale's call, and Intl is
-          // the only thing here that knows.
-          <Amount
-            minorUnits={magnitude.toString()}
-            currency={position.currency}
-            display="code"
-          />
-        )}
-      </span>
     </li>
   );
 }

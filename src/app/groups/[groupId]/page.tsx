@@ -247,7 +247,6 @@ export default async function GroupOverviewPage({
                 currencies={overview.currencies.map((entry) => ({
                   currency: entry.currency,
                   totalSpent: entry.totalSpent.toString(),
-                  expenseCount: entry.expenseCount,
                   position: entry.position.toString(),
                   members: entry.members.map((member) => ({
                     participantId: member.participantId,
