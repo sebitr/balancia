@@ -50,31 +50,39 @@ The remote half is settled at the source: the repository now has
 request merges. The reaper's remote pass is for the backlog and for anything
 merged while that setting was off.
 
-# The list of work lives in TODO.md
+# The list of work lives in todo/
 
-`TODO.md` at the repository root is the list of what is planned, in flight and
-recently merged. Read it before you start: an item already sitting under
-**Now** with a branch name against it is being done in another worktree right
-this minute, and picking it up again is how two chats end up writing the same
-feature twice.
+One file per item, in the directory that says what state it is in: `todo/now/`,
+`todo/next/`, `todo/someday/`, `todo/done/`. `pnpm todo` prints the lot, and
+`todo/README.md` has the rules in full.
 
-Move the line you are working on to **Now** and append your branch name to it.
-Move it to **Done** with the date and the pull request number when the pull
-request merges, and delete it outright if the work is abandoned. Do this as
-part of the change, in the same commit — a list updated afterwards is a list
-nobody updates.
+Read `todo/now/` before you start. An item sitting there with a branch against
+it is being done in another worktree right this minute, and picking it up again
+is how two chats end up writing the same feature twice. The filename is the
+branch's last segment, so the listing _is_ the set of branches in flight.
 
-Every branch edits this one file at the head of the same two sections, so a
-three-way merge conflicted on it in 23 of 30 consecutive pull requests before
-somebody counted. `.gitattributes` marks `TODO.md` `merge=union`: git keeps
-both sides' lines instead of asking. That suits appending, which is most of
-what this file gets, and it cannot express a deletion at all: a line you take
-out of **Now** comes back if the other side still holds it, silently. The branch
-that added the rule merged `main` once and got all nineteen lines it had cleared
-back in one go. So **an item keeps its words when it moves**; only the tick, the
-date and the pointer change. `src/lib/todo-list.test.ts` then fails the build on
-the duplicate instead of letting the list quietly lie — expect it to fire after
-a merge, and resolve **Now** by hand when it does.
+Move the file you are working on into `todo/now/`, rename it after your branch,
+and put a `Branch:` line in it. Move it to `todo/done/` with `Merged: <date> in
+#<pr>` when the pull request merges, and delete it outright if the work is
+abandoned. Do this as part of the change, in the same commit — a list updated
+afterwards is a list nobody updates. Keep the heading when it moves: it is what
+somebody recognises the item by months later.
+
+This was one file until #304, and it was the worst thing in the repository for
+merge friction: every branch appended to the head of the same two sections, so
+a three-way merge conflicted on 23 of 30 consecutive pull requests. Marking it
+`merge=union` fixed git and nothing else — GitHub does not apply merge drivers,
+so its mergeability check re-derived the conflict the driver had resolved, and
+every pull request showed the banner again each time main moved. Union merge
+also could not express a deletion, so a line cleared from **Now** came back
+silently. Separate files end both: two branches touching different items have
+nothing to conflict over, and a rename is something git merges rather than
+argues about.
+
+`src/lib/todo-list.test.ts` fails the build on what the shape cannot enforce —
+an item with no heading, a `now/` file with no branch, a `done/` file with no
+pull request, two items claiming one branch, or a committed `TODO.md`, which
+would be one more file every branch edits at the same two anchors.
 
 Nothing else enforces this, which is exactly why it is written down here.
 
