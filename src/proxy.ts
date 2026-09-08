@@ -144,7 +144,14 @@ export function proxy(request: NextRequest): NextResponse {
     "Permissions-Policy",
     // camera=(self): the receipt scanner's live document camera. Frames are
     // processed on the device and never uploaded; see src/lib/doc-scan.
-    "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
+    // microphone=(self): saying an entry instead of typing it, in
+    // src/components/entries/voice-button.tsx. The recogniser is the
+    // browser's own and nothing here keeps or uploads audio. Leaving this
+    // empty does not merely withhold a permission prompt — it disables the
+    // microphone for the document, so the recogniser is refused before the
+    // reader is ever asked, which is how the voice button spent a release
+    // listening and hearing nothing.
+    "camera=(self), microphone=(self), geolocation=(), interest-cohort=()",
   );
   response.headers.set("X-Request-Id", requestId);
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");

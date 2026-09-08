@@ -3163,7 +3163,8 @@
     "voice": {
       "start": "Dicter",
       "listening": "J’écoute…",
-      "stop": "Arrêter l’écoute"
+      "stop": "Arrêter l’écoute",
+      "failed": "Impossible d’écouter pour le moment. Saisis-la à la main."
     }
   },
   "paymentMethods": {
