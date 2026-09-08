@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  actionError,
   requireGroupAccess,
   runAction,
   type ActionResult,
 } from "@/lib/actions";
+import { reminderInputSchema } from "./schemas";
 import { sendReminder } from "./service";
 import type { RemindResult } from "./types";
 
@@ -18,19 +20,16 @@ import type { RemindResult } from "./types";
  */
 export async function sendReminderAction(
   groupId: string,
-  input: {
-    toParticipantId: string;
-    message: string;
-    logToActivity: boolean;
-  },
+  input: unknown,
 ): Promise<ActionResult<RemindResult>> {
+  const parsed = reminderInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return actionError("Check the reminder before sending it.");
+  }
+
   return runAction("sendReminder", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    const result = await sendReminder(access, {
-      toParticipantId: input.toParticipantId,
-      message: input.message,
-      logToActivity: Boolean(input.logToActivity),
-    });
+    const result = await sendReminder(access, parsed.data);
     // The row the reminder came from now shows when it went out.
     revalidatePath(`/groups/${groupId}`);
     return result;

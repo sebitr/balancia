@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, isNull, lt } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, ne } from "drizzle-orm";
 import { getDb, rowsAffected, type Database } from "@/lib/db/client";
 import { sessions, users } from "@/lib/db/schema";
 import {
@@ -135,16 +135,67 @@ export async function revokeSession(
     .where(eq(sessions.tokenHash, hashToken(rawToken)));
 }
 
-/** Ends every session for a user — used after a password reset. */
+/**
+ * Ends every session for a user, this one included.
+ *
+ * For the paths where there is no session to keep: a password reset, which is
+ * reached by someone who could not sign in, and an email change, which is
+ * confirmed from a link that may well be open on a device the account has
+ * never used. Both are answers to "I have lost control of this account", so
+ * both take the whole set.
+ */
 export async function revokeAllSessionsForUser(
   userId: string,
-  options: { db?: Database; exceptSessionId?: string } = {},
+  options: { db?: Database } = {},
 ): Promise<number> {
   const db = options.db ?? getDb();
   const revoked = await db
     .update(sessions)
     .set({ revokedAt: new Date() })
     .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+    .returning({ id: sessions.id });
+  return revoked.length;
+}
+
+/**
+ * Ends every session for a user *except* the one asking.
+ *
+ * What a password change needs. Changing a password is the thing somebody does
+ * when they think a session of theirs has been taken, and for a long time it
+ * did not end that session — the row kept working for the rest of its thirty
+ * days, and with no device list anywhere in the app there was nothing else to
+ * press. The only remedy was to sign out and use the forgotten-password flow
+ * instead, which is the opposite of what anybody would guess.
+ *
+ * Keyed on the token's hash rather than a session id, because that is what the
+ * caller already holds — the cookie — and hashing it is local. Asking for an id
+ * would mean a lookup to answer a question the cookie has already answered.
+ *
+ * A caller with no usable cookie revokes everything, which is the safe way for
+ * this to fail: better to sign the asker out too than to leave a session
+ * standing because a token could not be read.
+ */
+export async function revokeOtherSessionsForUser(
+  userId: string,
+  currentRawToken: string | undefined,
+  options: { db?: Database } = {},
+): Promise<number> {
+  const db = options.db ?? getDb();
+  const keep =
+    currentRawToken && isWellFormedToken(currentRawToken)
+      ? hashToken(currentRawToken)
+      : null;
+
+  const revoked = await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt),
+        ...(keep ? [ne(sessions.tokenHash, keep)] : []),
+      ),
+    )
     .returning({ id: sessions.id });
   return revoked.length;
 }

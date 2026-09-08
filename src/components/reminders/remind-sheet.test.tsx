@@ -5,6 +5,7 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RemindSheet } from "./remind-sheet";
 import { sendReminderAction } from "@/modules/reminders/actions";
+import { reminderInputSchema } from "@/modules/reminders/schemas";
 import type { RemindRecipient } from "@/modules/reminders/types";
 
 // The sheet is being tested, not the server: the action is the boundary.
@@ -349,8 +350,17 @@ describe("writing the message", () => {
 
     await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
     const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
-    expect(input.message).not.toContain("/groups/g1");
-    expect(input.message).toContain("€148.00");
+    /*
+     * Parsed rather than cast: the action's parameter is `unknown`, and the
+     * schema's own field is what narrows it. Only the message, because the
+     * recipients in this file are named "jonas" and "padi" rather than the
+     * UUIDs the real column holds.
+     */
+    const message = reminderInputSchema.shape.message.parse(
+      (input as { message: unknown }).message,
+    );
+    expect(message).not.toContain("/groups/g1");
+    expect(message).toContain("€148.00");
   });
 
   it("goes back without losing who was chosen", async () => {

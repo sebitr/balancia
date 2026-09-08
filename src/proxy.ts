@@ -148,6 +148,14 @@ export function proxy(request: NextRequest): NextResponse {
   );
   response.headers.set("X-Request-Id", requestId);
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  // Nothing here is meant to be pulled into another site's page. Receipts are
+  // already behind an authorized handler that answers with
+  // `Content-Disposition: attachment`, so this is the same rule stated once
+  // more at the edge, where it also covers whatever is added next.
+  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  // Adobe's crossdomain.xml convention. Long dead in browsers, still read by
+  // some PDF and Flash-descended clients, and one line to close.
+  response.headers.set("X-Permitted-Cross-Domain-Policies", "none");
 
   if (!isDevelopment) {
     response.headers.set(

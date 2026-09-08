@@ -299,10 +299,13 @@ export async function changePasswordAction(
     if (!user) {
       throw new AuthError("Sign in to change your password.", "signInRequired");
     }
+    // The cookie this request arrived with is the one session the change
+    // keeps; see `revokeOtherSessionsForUser`.
     await changePassword(
       user.userId,
       parsed.data.currentPassword,
       parsed.data.newPassword,
+      { currentSessionToken: await readSessionCookie() },
     );
     revalidatePath("/settings/security");
   });

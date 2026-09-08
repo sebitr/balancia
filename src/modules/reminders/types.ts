@@ -61,3 +61,28 @@ export interface RemindResult {
 
 /** How long a person is left alone after being reminded. */
 export const REMIND_LOCK_HOURS = 24;
+
+/**
+ * The longest a reminder may be.
+ *
+ * A draft is one sentence and a link; this is room for somebody to rewrite it
+ * into a short paragraph and no more. It is a bound on what reaches the
+ * `notifications` payload column rather than a rule about writing — the text
+ * is stored per recipient, and a field with no ceiling is a field somebody
+ * eventually posts a megabyte into.
+ *
+ * This is the whole message, which is not what the sheet's textarea holds:
+ * the link is appended after the writer is done with it. `REMIND_BODY_MAX_LENGTH`
+ * is the part they type, and the gap between the two is the room the link needs.
+ */
+export const REMIND_MESSAGE_MAX_LENGTH = 1000;
+
+/**
+ * The longest the *typed* part may be — what the textarea caps.
+ *
+ * Two hundred characters short of the message limit, which is more than any
+ * origin plus `/groups/<uuid>` needs. Capping the box rather than only the
+ * action is what stops the limit being discovered as a refusal after the
+ * writing is done.
+ */
+export const REMIND_BODY_MAX_LENGTH = 800;
