@@ -10,7 +10,7 @@ they share `--app-header-h`, which the strip needs and the header now states.
 The position strip is the interesting one. It is entirely CSS: `scroll(root
 block)` as an animation timeline, no listener and no measuring. Two traps are
 written up beside it in `globals.css` and both are silent. `scroll()` without
-`root` resolves to the *nearest* scroll container, and a `fixed` element
+`root` resolves to the _nearest_ scroll container, and a `fixed` element
 descends from none, so the timeline never advances and the strip simply never
 appears. And an `animation-timeline` a browser does not understand falls back
 to the document timeline, playing the animation through once on load — so the
@@ -25,7 +25,7 @@ way.
 Balance rows were considered for the swipe and left alone. `BalanceList` is a
 server component whose rows are `grid-cols-subgrid` onto the list's own tracks;
 wrapping each in a client swipe container breaks the subgrid that keeps the
-bars in line, and swiping to *navigate* is not an idiom the hand knows.
+bars in line, and swiping to _navigate_ is not an idiom the hand knows.
 
 Haptics are Android-only — `navigator.vibrate`, which Safari does not
 implement at all. Nothing depends on the buzz; it is laid over confirmations

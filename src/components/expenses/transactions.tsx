@@ -1078,7 +1078,7 @@ function Row({
       // the list now sit on `SwipeToDelete` around it, which clips at its own
       // edge — see the note there. The ring is inset for the same reason: an
       // outset one would be cropped by that clip on both sides.
-      className="flex items-center gap-2.5 rounded-[10px] px-1.5 py-[7px] transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none active:bg-muted motion-reduce:transition-none"
+      className="flex items-center gap-2.5 rounded-[10px] px-1.5 py-[7px] transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset active:bg-muted motion-reduce:transition-none"
     >
       {body}
     </Link>

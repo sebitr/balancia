@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { getEnv } from "@/lib/env";
 import { getCurrentActor, getCurrentUser } from "@/lib/security/actor";
-import { authorizeGroup } from "@/lib/security/authorization";
+import {
+  authorizeGroup,
+  requirePermission,
+  type GroupAccess,
+} from "@/lib/security/authorization";
 import {
   createJoinLink,
   describeJoinLink,
@@ -17,11 +21,36 @@ import {
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
- * The group-wide join link. GET describes the live one (prefix and age — the
- * token itself is only a hash by now), POST mints a fresh one and returns the
- * full URL once, DELETE revokes it. Any member may share the group they are
- * in, same as the web.
+ * The group-wide join link: the group's front door.
+ *
+ * GET describes the newest one — its state, its age, and the URL itself where
+ * the sealed copy still opens; POST mints a fresh one, revoking whatever the
+ * group had; DELETE revokes it.
+ *
+ * All three are the owner's, through `manageInvitations`, which is the
+ * permission gating the card they are called from on the web. This route used
+ * to check only that the caller was in the group at all, on the strength of a
+ * comment saying any member may share the group they are in — which the web
+ * has never done: all three of its pages read this link behind that same
+ * permission, so a member has never been shown one. What the route actually
+ * offered was a guest — somebody holding a forwarded invitation — the ability
+ * to mint a standing way into the group, and to revoke the owner\'s.
+ *
+ * The URL is new here, and it is the reason the permission could not stay
+ * loose. The web has shown it since the token gained a sealed copy
+ * (`describeJoinLink`), and this route kept answering with the prefix alone,
+ * so the phone could name a link it could not hand over.
  */
+async function requireLinkAdmin(
+  groupId: string,
+  requireActive = false,
+): Promise<GroupAccess> {
+  const actor = await getCurrentActor();
+  const access = await authorizeGroup(actor, groupId, { requireActive });
+  requirePermission(access, "manageInvitations");
+  return access;
+}
+
 export async function GET(
   request: Request,
   context: RouteContext<"/api/groups/[groupId]/join-link">,
@@ -40,12 +69,17 @@ async function handleGet(
   }
 
   try {
-    const actor = await getCurrentActor();
-    const access = await authorizeGroup(actor, groupId);
+    const access = await requireLinkAdmin(groupId);
     const link = await describeJoinLink(access.groupId);
     return noStore({
       link: link
         ? {
+            status: link.status,
+            // Null for a link minted before the sealed copy existed, or under
+            // a since-rotated `AUTH_SECRET`. It still works for everybody
+            // holding it; it just cannot be shown again, which is why the
+            // prefix stays beside it rather than being replaced by it.
+            url: link.url,
             prefix: link.prefix,
             createdAt: link.createdAt.toISOString(),
             expiresAt: link.expiresAt?.toISOString() ?? null,
@@ -88,10 +122,7 @@ async function handlePost(
       : {};
 
   try {
-    const actor = await getCurrentActor();
-    const access = await authorizeGroup(actor, groupId, {
-      requireActive: true,
-    });
+    const access = await requireLinkAdmin(groupId, true);
     const parsed = createLinkSchema.safeParse({
       expiresInDays: raw.expiresInDays ?? undefined,
     });
@@ -140,8 +171,7 @@ async function handleDelete(
   }
 
   try {
-    const actor = await getCurrentActor();
-    const access = await authorizeGroup(actor, groupId);
+    const access = await requireLinkAdmin(groupId);
     await revokeJoinLink(access.groupId);
     return noStore({ ok: true });
   } catch (error) {
