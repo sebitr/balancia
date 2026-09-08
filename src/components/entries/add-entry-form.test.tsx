@@ -903,6 +903,35 @@ describe("settlement", () => {
   });
 
   /**
+   * A five-figure balance leaves a phone row too little for two names and a
+   * verb beside it, and truncation spent the shortfall on the receiver:
+   * "Cyril pays S…", the very name that tells two rows with the same payer
+   * apart. So the figure sits under the sentence rather than next to it,
+   * which no layout-free test can measure — what it can hold is the shape
+   * that decides it: one column, two lines, and no truncation on the pair.
+   */
+  it("stacks the figure under the pair instead of cropping a name off it", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    const sentence = screen.getByText("Hervé pays Seb back");
+    const amount = screen.getByText("CHF 128.40");
+
+    // One column beside the avatar, so the sentence has the row's whole
+    // width and an ordinary pair never comes near the edge.
+    expect(amount.parentElement).toBe(sentence.parentElement);
+    expect(sentence.className).toContain("block");
+    expect(amount.className).toContain("block");
+
+    expect(sentence.className).not.toMatch(/(^|\s)truncate(\s|$)/);
+    // Wrapping anywhere, so a pair long enough to overrun even the full
+    // width wraps rather than pushing the tick off the card.
+    expect(sentence.className).toContain("wrap-anywhere");
+  });
+
+  /**
    * A group that keeps its currencies separate has no base to pin a repayment
    * to, and the debt is denominated anyway — in whatever it was run up in.
    */

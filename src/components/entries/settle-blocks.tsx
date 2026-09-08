@@ -356,24 +356,47 @@ export function OutstandingList({
                 )}
               >
                 <MemberAvatar name={pair.fromName} selected={active} />
-                <span className="flex-1 truncate text-sm">
-                  {t("paysBack", { from: pair.fromName, to: pair.toName })}
-                </span>
-                <span
-                  className={cn(
-                    "text-sm tabular-nums",
-                    active
-                      ? "font-semibold text-positive-ink"
-                      : "text-muted-foreground",
-                  )}
-                >
+                {/*
+                 * The sentence and the figure are stacked, not set side by
+                 * side. Two names, a verb and a five-figure amount do not fit
+                 * one phone line: sharing it, the sentence was the only part
+                 * that could give ground, and what it gave up was its end —
+                 * the receiver, which is the name the row is chosen by, and
+                 * the one that matters most where several rows open with the
+                 * same payer. The row read "Cyril rembourse S…".
+                 *
+                 * Stacked, the sentence has the whole width and a pair of
+                 * ordinary names never comes near it, so every row is two
+                 * lines of the same height rather than one line here and a
+                 * ragged three there. The figures line up down the card as a
+                 * column of their own, which is how the list is scanned.
+                 */}
+                <span className="min-w-0 flex-1">
                   {/*
-                   * A pair the reader named has no balance to show, and
-                   * "0.00" would be a figure rather than the absence of one.
-                   * Present tense: the others describe a debt that exists,
-                   * this one a payment about to happen.
+                   * `wrap-anywhere` is the safety net under a pair long
+                   * enough to still overrun: it takes the min-content width
+                   * with it, so a single unbroken name wraps instead of
+                   * pushing the tick off the card.
                    */}
-                  {pair.isCustom ? t("noBalance") : pair.amountFormatted}
+                  <span className="block text-sm wrap-anywhere">
+                    {t("paysBack", { from: pair.fromName, to: pair.toName })}
+                  </span>
+                  <span
+                    className={cn(
+                      "block text-sm tabular-nums",
+                      active
+                        ? "font-semibold text-positive-ink"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {/*
+                     * A pair the reader named has no balance to show, and
+                     * "0.00" would be a figure rather than the absence of
+                     * one. Present tense: the others describe a debt that
+                     * exists, this one a payment about to happen.
+                     */}
+                    {pair.isCustom ? t("noBalance") : pair.amountFormatted}
+                  </span>
                 </span>
                 <span
                   aria-hidden="true"
