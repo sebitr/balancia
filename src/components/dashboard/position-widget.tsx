@@ -3,7 +3,8 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { ReceiptText, Users } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ReceiptText, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -13,6 +14,7 @@ import {
 import { Amount } from "@/components/money/amount";
 import { AddExpenseSheet, type PickableGroup } from "./add-expense-sheet";
 import { cn } from "@/lib/utils";
+import { currencyExponent } from "@/modules/currencies/iso-4217";
 import { TONE, toneFor } from "@/components/money/balance-tone";
 
 /**
@@ -30,9 +32,12 @@ import { TONE, toneFor } from "@/components/money/balance-tone";
  * columns exist only under a single converted total, which is the one figure
  * they can decompose into something it did not already say.
  *
- * Every figure here is rounded to whole units. This is an answer to "roughly
- * where do I stand?", and centimes on a five-digit total are noise; the exact
- * amount is a tap away, inside the group that owes it.
+ * A converted total is rounded to whole units. A rate has already been applied
+ * to it, so centimes on a five-digit approximation are noise, and the exact
+ * amount is a tap away inside the group that owes it. The per-currency figures
+ * keep theirs: nothing was converted to reach them, each is the amount that
+ * would actually settle that currency, and the header leads on one of them
+ * precisely so it can be acted on.
  */
 
 interface Figure {
@@ -64,80 +69,155 @@ export interface PositionWidgetProps {
   readonly lastCleared: { at: string; groupName: string } | null;
 }
 
+/** One currency's standing: what it nets to, and which way. */
+interface CurrencyNet {
+  readonly currency: string;
+  /** Signed minor units; positive means the reader is owed. */
+  readonly net: bigint;
+}
+
 /**
- * The position, one figure per currency, when there is no rate to combine them.
+ * The currencies with something outstanding, in the order the header reads
+ * them.
  *
- * These are not a consolation for the missing total — they are the position,
- * and there is nothing approximate about them. Nothing sits under them. The
- * "owed to you / you owe" columns that follow a converted total would only
- * repeat each figure beside a zero here, since a currency's net has one
- * direction; and the sentence that used to explain why there is more than one
- * figure spent a line of the screen apologising for a rate the instance never
- * had. An instance that took the defaults never turns rate suggestions on, so
- * for anyone holding two currencies that line was not an edge case; it was
- * the header. The explanation is a tap away instead, behind the figures
- * themselves, the way the conversion disclosure already is.
+ * What the reader owes comes first — a debt is the fact they can act on, and
+ * the header leads on it — and within a direction the largest amount comes
+ * first. That size comparison is not a real one: there is no rate here, which
+ * is the whole reason this header exists. It decides the order of the rows and
+ * nothing else, and no figure derived for it is ever shown.
  *
- * A currency that nets to zero is dropped: it is settled, and a "0" competes
- * with the lines that are not. If every one of them nets to zero they are all
- * kept, because a header with nothing in it says less than a row of zeroes.
+ * The magnitudes are scaled to the widest exponent in the set before they are
+ * compared, because minor units are not a common unit either: ¥1000 and €10.00
+ * are both "1000" until they are.
  *
- * Each figure carries its sign, since there is no single word above these the
- * way there is above the converted total — direction stays readable without
- * colour, which is the rule the balance palette is built on. The word the
- * columns used to carry for a screen reader follows each figure instead.
+ * A currency that nets to zero is dropped. It is settled — the reader is owed
+ * in one group exactly what they owe in another — and a "0" competes with the
+ * lines that are not. When every one of them nets to zero the caller has
+ * nothing left to lead on and says the word instead.
  */
-function CurrencyFigures({
-  totals,
+function outstandingByCurrency(
+  totals: PositionWidgetProps["currencyTotals"],
+): CurrencyNet[] {
+  const outstanding = totals
+    .map((total) => ({
+      currency: total.currency,
+      net: BigInt(total.owedToYou) - BigInt(total.youOwe),
+    }))
+    .filter((entry) => entry.net !== 0n);
+
+  const widest = outstanding.reduce(
+    (digits, entry) => Math.max(digits, currencyExponent(entry.currency)),
+    0,
+  );
+  const size = ({ currency, net }: CurrencyNet) =>
+    (net < 0n ? -net : net) *
+    10n ** BigInt(widest - currencyExponent(currency));
+  const owing = ({ net }: CurrencyNet) => (net < 0n ? 0 : 1);
+
+  return outstanding.sort((a, b) => {
+    if (owing(a) !== owing(b)) return owing(a) - owing(b);
+    const difference = size(b) - size(a);
+    return difference === 0n ? 0 : difference < 0n ? -1 : 1;
+  });
+}
+
+/**
+ * Which way a balance runs, as a picture.
+ *
+ * Out of the reader's hands and up to the right when they owe; back down to
+ * them when they are owed. It is one of three cues that say the same thing —
+ * the arrow, the word beside it and the ink — so none of them is carrying the
+ * meaning alone, and the figures themselves stay unsigned.
+ */
+function DirectionArrow({
+  owed,
+  className,
 }: {
-  totals: PositionWidgetProps["currencyTotals"];
+  owed: boolean;
+  className?: string;
 }) {
+  const Glyph = owed ? ArrowDownLeft : ArrowUpRight;
+  return <Glyph aria-hidden="true" className={cn("shrink-0", className)} />;
+}
+
+/**
+ * The one figure the header leads on when there is no rate to combine the
+ * currencies into one total.
+ *
+ * Every currency used to get a display-size numeral of its own, so an account
+ * holding four of them arrived at four competing headlines, and the list of
+ * groups underneath was pushed off the screen. One of them leads now and the
+ * rest are rows: the reader still gets every figure, but only the one they can
+ * act on is sized like an answer.
+ *
+ * Spans throughout, because this sits inside the button that opens its
+ * footnote, and a button holds phrasing content only.
+ */
+function LeadFigure({ entry }: { entry: CurrencyNet }) {
   const t = useTranslations("dashboard");
-  const tMoney = useTranslations("money");
-  const nets = totals.map((total) => ({
-    currency: total.currency,
-    net: BigInt(total.owedToYou) - BigInt(total.youOwe),
-  }));
-  const outstanding = nets.filter((entry) => entry.net !== 0n);
-  const shown = outstanding.length > 0 ? outstanding : nets;
+  const owed = entry.net > 0n;
+  const magnitude = entry.net < 0n ? -entry.net : entry.net;
 
-  // The type steps down as the list grows, so three currencies still sit in
-  // about the room one converted total would have taken.
-  const size =
-    shown.length === 1
-      ? "text-[2.875rem]"
-      : shown.length === 2
-        ? "text-[2.125rem]"
-        : "text-[1.625rem]";
-
-  // Spans throughout, because this sits inside the button that opens its
-  // footnote, and a button holds phrasing content only.
   return (
     <span className="flex flex-col gap-1">
-      {shown.map(({ currency, net }) => (
-        <span key={currency} className="block">
-          <Amount
-            minorUnits={net.toString()}
-            currency={currency}
-            fractionDigits={0}
-            signDisplay="exceptZero"
-            className={cn(
-              size,
-              "leading-none font-semibold tracking-[-0.035em]",
-              TONE[toneFor(net)].ink,
-            )}
-          />
-          <span className="sr-only">
-            {" "}
-            {net > 0n
-              ? t("owedToYouLabel")
-              : net < 0n
-                ? t("youOweLabel")
-                : tMoney("settledUpBadge")}
-          </span>
-        </span>
-      ))}
+      <span
+        className={cn("flex items-center gap-2", TONE[toneFor(entry.net)].ink)}
+      >
+        <DirectionArrow owed={owed} className="size-[26px]" />
+        {/* Steps down rather than wrapping mid-number where the screen is
+            narrower than the 376px this was drawn at. */}
+        <Amount
+          minorUnits={magnitude.toString()}
+          currency={entry.currency}
+          signDisplay="never"
+          className="text-[2.125rem] leading-[1.05] font-semibold tracking-[-0.02em] max-[359px]:text-[1.75rem]"
+        />
+      </span>
+      {/* Indented to the figure, so the word reads as its caption rather than
+          as the first of the rows below it. */}
+      <span className="block pl-[34px] text-xs text-muted-foreground">
+        {owed ? t("wordOwedToYou") : t("wordYouOwe")}
+      </span>
     </span>
+  );
+}
+
+/**
+ * The currencies the header did not lead on, one compact line each.
+ *
+ * A row says the same three things the headline does — direction as an arrow,
+ * as a word and as ink, then the amount — at the size of a list rather than of
+ * an answer. Nothing here is a link: a currency is not a screen, and the
+ * groups behind it are already listed below.
+ */
+function CurrencyRows({ entries }: { entries: readonly CurrencyNet[] }) {
+  const t = useTranslations("dashboard");
+
+  return (
+    <ul className="flex flex-col gap-0.5 border-t pt-3">
+      {entries.map((entry) => {
+        const owed = entry.net > 0n;
+        const ink = TONE[toneFor(entry.net)].ink;
+        const magnitude = entry.net < 0n ? -entry.net : entry.net;
+        return (
+          <li
+            key={entry.currency}
+            className="flex items-center justify-between gap-3 py-[7px]"
+          >
+            <span className="flex items-center gap-[7px] text-xs text-muted-foreground">
+              <DirectionArrow owed={owed} className={cn("size-[15px]", ink)} />
+              {owed ? t("wordOwedToYou") : t("wordYouOwe")}
+            </span>
+            <Amount
+              minorUnits={magnitude.toString()}
+              currency={entry.currency}
+              signDisplay="never"
+              className={cn("text-base font-semibold", ink)}
+            />
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -202,12 +282,16 @@ export function PositionWidget({
   const netUnits = net ? BigInt(net.minorUnits) : null;
   const positive = netUnits !== null && netUnits > 0n;
 
+  const outstanding = outstandingByCurrency(currencyTotals);
+  const [lead, ...rest] = outstanding;
+
   /*
    * Three states, and they are not the same absence. Square everywhere is a
    * result and gets the word; a missing rate is a failure and gets the
    * per-currency figures, with the reason a tap behind them. An account
    * holding no balance at all reaches the first through `currencyTotals`
-   * being empty rather than through a zero.
+   * being empty rather than through a zero — and so does one whose currencies
+   * each net out on their own, which is settled by another name.
    *
    * The totals band only follows a single converted figure. Under the
    * per-currency figures it had nothing to add: each currency nets in one
@@ -215,8 +299,8 @@ export function PositionWidget({
    */
   const allSquare =
     (netUnits !== null && netUnits === 0n) ||
-    (net === null && currencyTotals.length === 0);
-  const ratesUnavailable = net === null && currencyTotals.length > 0;
+    (net === null && outstanding.length === 0);
+  const ratesUnavailable = net === null && outstanding.length > 0;
   const showTotals = !allSquare && net !== null;
 
   /** The rate the figure was converted at, phrased for the day it is from. */
@@ -249,37 +333,49 @@ export function PositionWidget({
       className="overflow-hidden rounded-[20px] bg-card shadow-[inset_0_1px_0_0_var(--border)] ring-1 ring-foreground/10"
     >
       <div className="flex flex-col gap-[18px] px-[18px] pt-5 pb-4">
-        <div className="flex flex-col gap-1.5">
-          <p id={labelId} className="text-xs text-muted-foreground">
+        {/* The label names the region as well as the figure, and the badge
+            beside it says how many currencies are in play — the one number
+            that would otherwise have to be counted off the rows. It is never a
+            total: these currencies are not added up anywhere. */}
+        <div className="flex items-center justify-between gap-2.5">
+          <p
+            id={labelId}
+            className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+          >
             {t("positionEyebrow")}
           </p>
-          {allSquare ? (
-            <p
-              className={cn(
-                "text-[1.875rem] font-semibold tracking-[-0.025em]",
-                TONE.neutral.ink,
-              )}
-            >
-              {tMoney("settledUpBadge")}
-            </p>
-          ) : ratesUnavailable ? (
-            <FigureDisclosure
-              label={t("perCurrencyDisclosureLabel")}
-              note={t("ratesUnavailable")}
-            >
-              <CurrencyFigures totals={currencyTotals} />
-            </FigureDisclosure>
-          ) : disclosure ? (
-            <FigureDisclosure
-              label={t("rateDisclosureLabel")}
-              note={disclosure}
-            >
-              {figure}
-            </FigureDisclosure>
-          ) : (
-            figure
+          {ratesUnavailable && outstanding.length > 1 && (
+            <Badge variant="secondary" className="shrink-0 text-2xs">
+              {t("currencyCount", { count: outstanding.length })}
+            </Badge>
           )}
         </div>
+
+        {allSquare ? (
+          <p
+            className={cn(
+              "text-[1.875rem] font-semibold tracking-[-0.025em]",
+              TONE.neutral.ink,
+            )}
+          >
+            {tMoney("settledUpBadge")}
+          </p>
+        ) : ratesUnavailable && lead ? (
+          <FigureDisclosure
+            label={t("perCurrencyDisclosureLabel")}
+            note={t("ratesUnavailable")}
+          >
+            <LeadFigure entry={lead} />
+          </FigureDisclosure>
+        ) : disclosure ? (
+          <FigureDisclosure label={t("rateDisclosureLabel")} note={disclosure}>
+            {figure}
+          </FigureDisclosure>
+        ) : (
+          figure
+        )}
+
+        {ratesUnavailable && rest.length > 0 && <CurrencyRows entries={rest} />}
 
         {showTotals && (
           <>

@@ -57,8 +57,8 @@ describe("PositionWidget", () => {
   it("names the figure rather than leaving the number to speak for itself", () => {
     renderWidget();
 
-    expect(screen.getByRole("region", { name: "Your position" })).toBeVisible();
-    expect(screen.getByText("Your position")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Total balance" })).toBeVisible();
+    expect(screen.getByText("Total balance")).toBeVisible();
   });
 
   it("leaves the totals unsigned — their column labels carry direction", () => {
@@ -130,42 +130,77 @@ describe("PositionWidget", () => {
     expect(screen.getByText("Nothing outstanding in 11 groups")).toBeVisible();
   });
 
-  it("leads on one figure per currency when a rate is missing", () => {
+  /**
+   * Four currencies used to arrive as four display-size figures stacked on top
+   * of one another, and the list of groups they came from was pushed off the
+   * screen. One of them leads now; the rest are rows.
+   */
+  const NO_RATE = {
+    net: null,
+    owedToYou: null,
+    youOwe: null,
+    // CHF 2,161.00 owed, $180.00 owed, €632.00 owing.
+    currencyTotals: [
+      { currency: "CHF", owedToYou: "0", youOwe: "216100" },
+      { currency: "EUR", owedToYou: "63200", youOwe: "0" },
+      { currency: "USD", owedToYou: "0", youOwe: "18000" },
+    ],
+  } satisfies Partial<PositionWidgetProps>;
+
+  it("leads on the largest debt and keeps the rest as rows", () => {
+    renderWidget(NO_RATE);
+
+    // The one figure sized like an answer, and the only one the disclosure
+    // sits behind.
+    const lead = screen.getByRole("button", { name: /CHF\s*2,161\.00/ });
+    expect(lead).toBeVisible();
+    expect(screen.getByText("$180.00")).toBeVisible();
+    expect(screen.getByText("€632.00")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /180\.00|632\.00/ }),
+    ).toBeNull();
+  });
+
+  /** A debt is the fact the reader can act on, so it goes first. */
+  it("ranks what is owed before what is owing, largest first", () => {
+    renderWidget(NO_RATE);
+
+    const rows = screen.getAllByRole("listitem").map((row) => row.textContent);
+    expect(rows).toEqual(["you owe$180.00", "you are owed€632.00"]);
+  });
+
+  /**
+   * Minor units are not a common unit: ¥4,500 is "4500" and €50.00 is "5000",
+   * so comparing them as stored would put the smaller figure on top.
+   */
+  it("ranks currencies by the figure on the screen, not by its minor units", () => {
     renderWidget({
       net: null,
       owedToYou: null,
       youOwe: null,
       currencyTotals: [
-        { currency: "CHF", owedToYou: "21000", youOwe: "0" },
-        { currency: "EUR", owedToYou: "24800", youOwe: "10000" },
+        { currency: "EUR", owedToYou: "0", youOwe: "5000" },
+        { currency: "JPY", owedToYou: "0", youOwe: "4500" },
       ],
     });
 
-    // The header is the position, signed the way every other balance is
-    // signed: a real plus, a space, then the figure.
-    expect(screen.getByText("+ CHF 210")).toBeVisible();
-    expect(screen.getByText("+ €148")).toBeVisible();
-    // Nothing under them. The columns would only have repeated each figure
-    // beside a zero, and the reason there is more than one figure is not a
-    // standing line either.
-    expect(screen.queryByText("CHF 210")).not.toBeInTheDocument();
-    expect(screen.queryByText("€248")).not.toBeInTheDocument();
-    expect(screen.queryByText("€100")).not.toBeInTheDocument();
-    expect(screen.queryByText(/no exchange rate/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /¥4,500/ })).toBeVisible();
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("€50.00")).toBeVisible();
+  });
+
+  it("counts the currencies rather than adding them up", () => {
+    renderWidget(NO_RATE);
+
+    expect(screen.getByText("3 currencies")).toBeVisible();
   });
 
   it("keeps the reason for the per-currency figures one tap behind them", async () => {
-    renderWidget({
-      net: null,
-      owedToYou: null,
-      youOwe: null,
-      currencyTotals: [
-        { currency: "CHF", owedToYou: "21000", youOwe: "0" },
-        { currency: "EUR", owedToYou: "0", youOwe: "10000" },
-      ],
-    });
+    renderWidget(NO_RATE);
 
-    await userEvent.click(screen.getByRole("button", { name: /CHF\s210/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /CHF\s*2,161\.00/ }),
+    );
 
     expect(
       await screen.findByText(
@@ -174,22 +209,18 @@ describe("PositionWidget", () => {
     ).toBeVisible();
   });
 
-  /** Colour and a sign are never the only signals: each figure says its way. */
-  it("says the direction of each per-currency figure in words", () => {
-    renderWidget({
-      net: null,
-      owedToYou: null,
-      youOwe: null,
-      currencyTotals: [
-        { currency: "CHF", owedToYou: "21000", youOwe: "0" },
-        { currency: "EUR", owedToYou: "0", youOwe: "10000" },
-      ],
-    });
+  /**
+   * Colour is never the only signal. The word used to be `sr-only` under a
+   * signed figure; it is on the screen now, beside an arrow, so the figures
+   * themselves carry no sign.
+   */
+  it("says each direction in a word, and signs no figure", () => {
+    renderWidget(NO_RATE);
 
-    expect(screen.getByText("− €100")).toBeVisible();
-    const figures = screen.getByRole("button", { name: /CHF\s210/ });
-    expect(figures).toHaveAccessibleName(/Owed to you/);
-    expect(figures).toHaveAccessibleName(/You owe/);
+    // Twice: once as the headline's caption, once on the dollar row.
+    expect(screen.getAllByText("you owe")).toHaveLength(2);
+    expect(screen.getAllByText("you are owed")).toHaveLength(1);
+    expect(screen.queryByText(/^[+−]/)).toBeNull();
   });
 
   /** A currency that has come out level is not a position to lead with. */
@@ -204,9 +235,29 @@ describe("PositionWidget", () => {
       ],
     });
 
-    expect(screen.getByText("+ CHF 210")).toBeVisible();
-    expect(screen.queryByText("+ €0")).not.toBeInTheDocument();
-    expect(screen.queryByText("€0")).not.toBeInTheDocument();
+    expect(screen.getByText("CHF 210.00")).toBeVisible();
+    expect(screen.queryByText(/€0/)).toBeNull();
+    // One currency left standing is not a set to count.
+    expect(screen.queryByText("1 currency")).toBeNull();
+  });
+
+  /**
+   * Owed in one group exactly what is owed in another, in every currency: no
+   * rate could change that answer, so it is settled rather than a row of
+   * zeroes.
+   */
+  it("says the word when every currency nets out on its own", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      currencyTotals: [
+        { currency: "EUR", owedToYou: "10000", youOwe: "10000" },
+      ],
+    });
+
+    expect(screen.getByText("Settled up")).toBeVisible();
+    expect(screen.queryByText(/0\.00/)).toBeNull();
   });
 
   it("shows neither a figure nor a total for an account holding no balance", () => {
