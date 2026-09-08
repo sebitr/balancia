@@ -5,6 +5,11 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Push a row off to the left to be rid of it.
  *
+ * Two lists use it — the notification inbox and the group's transactions — so
+ * it lives here rather than beside either of them. What "rid of it" means is
+ * the call site's business: the inbox dismisses, the transactions list deletes
+ * with an Undo behind it. This hook only knows about the finger.
+ *
  * Modelled on the sheet's drag-to-dismiss, and for the same reasons: the node
  * arrives in state rather than in a ref so the effect can wait for it, and the
  * row is moved by writing `transform` directly rather than by holding the

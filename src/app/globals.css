@@ -575,6 +575,29 @@
   }
 }
 
+/* ========================================================================== *
+ *  The app frame
+ * ========================================================================== */
+
+:root {
+  /*
+   * The height of the signed-in header's content box, without its hairline.
+   *
+   * Stated rather than measured, and applied by `app-shell.tsx` as a height
+   * rather than left to come out of the padding and whatever the tallest
+   * control in the row happens to be. Anything that has to hang *below* the
+   * header — see the position strip in the Motion section — needs this number
+   * at author time, in CSS, with no way to ask the DOM for it.
+   *
+   * 4rem is what the row measured when it was `py-3` around a 40px control, so
+   * fixing it here changed nothing on screen. It does mean a taller control
+   * dropped into that row now overflows instead of pushing the header down,
+   * which is the trade: one number two things agree on, rather than two that
+   * drift.
+   */
+  --app-header-h: 4rem;
+}
+
 /* The marketing page has a fixed art direction and does not inherit the
    signed-in product shell's light/dark theme. Descendant token overrides keep
    the brand bands plum and cream in either system theme. */
@@ -999,6 +1022,108 @@
   inset: 0;
   background-color: oklch(0 0 0 / 0.22);
   opacity: calc(1 - var(--swipe-progress));
+}
+
+/* -------------------------------------------------------------------------- *
+ *  The position strip
+ *
+ *  A group's overview opens with the one figure the reader came for, and then
+ *  they scroll past it to read the balances that explain it — at which point
+ *  the answer is off the top of the screen and the only way back to it is up.
+ *  The strip is that figure, kept under the header once the card carrying it
+ *  has gone: the large-title collapse every phone OS does, which is worth
+ *  copying here for the same reason the push and the swipe were.
+ *
+ *  ## Why this is CSS and not a scroll listener
+ *
+ *  The whole animation is driven by `scroll()` — the document's own scroll
+ *  progress used as a timeline. Nothing listens, nothing measures, nothing
+ *  re-renders, and the strip tracks the finger exactly rather than a frame or
+ *  two behind it. Dragging back up runs it backwards for free.
+ *
+ *  ## Why the whole thing is inside @supports
+ *
+ *  This is the trap in scroll-driven animations, and it is a silent one. An
+ *  `animation` with an `animation-timeline` the browser does not understand
+ *  does not fail to run — it falls back to the *document* timeline and plays
+ *  through once, on load, over its duration. So a browser without the feature
+ *  would fade the strip in immediately and leave it there, over content it is
+ *  supposed to be announcing. `display: none` outside the query is the whole
+ *  fallback: no strip, no harm, and the figure is still where it always was.
+ *
+ *  Note the strip is `fixed`, not `sticky`. Sticky would make it a box in the
+ *  overview's flex column, and a zero-height one still takes a `gap` — every
+ *  screen in the group would shift down by 14px to make room for something
+ *  that is not there yet. Out of flow, it costs the layout nothing.
+ * -------------------------------------------------------------------------- */
+
+[data-slot="position-strip"] {
+  display: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  [data-slot="position-strip"] {
+    display: block;
+    position: fixed;
+    inset-inline: 0;
+    /* The hairline under the header is the header's, not part of its box. */
+    top: calc(var(--app-header-h) + 1px);
+    /* Under the header, which owns 40, and level with the bottom bar. */
+    z-index: 30;
+    /* It is a copy of something already on the page, so it is announced by
+       nothing and catches nothing. `aria-hidden` is on the element too. */
+    pointer-events: none;
+    border-bottom: 1px solid var(--border);
+    background-color: color-mix(in oklch, var(--background) 92%, transparent);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    animation: position-strip linear both;
+    /*
+     * `scroll(root block)`, and the `root` is doing real work: the default is
+     * `scroll(nearest)`, and a `fixed` element is out of flow, so it descends
+     * from no scroll container at all. The timeline resolved to nothing, the
+     * animation sat in its before-phase, and the strip stayed at `opacity: 0`
+     * however far the page was scrolled — a failure with no error and nothing
+     * to see. Naming the document's scroller sidesteps the question.
+     */
+    animation-timeline: scroll(root block);
+    /*
+     * Starts once the hero's own figure has gone under the header and finishes
+     * shortly after, so the two are never both readable and never both absent.
+     * Pixels rather than percentages: the trigger is how far the card has
+     * travelled, which does not change with the length of the page below it.
+     */
+    animation-range: 104px 168px;
+  }
+
+  @keyframes position-strip {
+    from {
+      opacity: 0;
+      translate: 0 -0.5rem;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+
+  /* The travel goes; the fade stays. Tying opacity to the scroll is direct
+     manipulation rather than motion — it does the same thing a finger on a
+     sheet does — and losing it would leave the strip snapping in and out. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot="position-strip"] {
+      animation-name: position-strip-fade;
+    }
+  }
+
+  @keyframes position-strip-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------- *

@@ -124,6 +124,55 @@ function markSvg(size: number, variant: Variant): string {
 </svg>`;
 }
 
+/**
+ * The glyphs the manifest's shortcuts wear in the home-screen long-press menu.
+ *
+ * Not the Balancia mark. Every shortcut wearing the app's own icon is the same
+ * menu as no icons at all — the reader is already looking at the app, and what
+ * they need to tell apart is the two destinations. So each is drawn as what it
+ * goes to: a list of groups, and the plus that makes another one.
+ *
+ * Authored here on a 24-unit grid rather than pulled from lucide, because the
+ * generator has no bundler behind it and these are two rectangles each. They
+ * are not lucide glyphs and are not trying to be — nothing else in the app
+ * shows them at this size, on this ground, or beside these words.
+ */
+const SHORTCUT_GLYPHS = {
+  /** Three bars: the list of groups. */
+  groups: [
+    `<rect x="4" y="6.5" width="16" height="2.6" rx="1.3"/>`,
+    `<rect x="4" y="10.7" width="16" height="2.6" rx="1.3"/>`,
+    `<rect x="4" y="14.9" width="16" height="2.6" rx="1.3"/>`,
+  ].join(""),
+  /** A plus: one more of them. */
+  create: [
+    `<rect x="10.7" y="4" width="2.6" height="16" rx="1.3"/>`,
+    `<rect x="4" y="10.7" width="16" height="2.6" rx="1.3"/>`,
+  ].join(""),
+} as const;
+
+type Shortcut = keyof typeof SHORTCUT_GLYPHS;
+
+/**
+ * A shortcut tile: the same plum ground and corner radius as the app icon, so
+ * the row reads as belonging to it, with the glyph in cream at the middle.
+ *
+ * The glyph is held to half the tile. Android draws these small and often
+ * against a light sheet, and a mark run out to the edges at that size loses
+ * the rounded square that identifies whose shortcuts these are.
+ */
+function shortcutSvg(size: number, shortcut: Shortcut): string {
+  const glyph = size * 0.5;
+  const offset = (size - glyph) / 2;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="${n(size * 0.22)}" fill="${GROUND}"/>
+  <g transform="translate(${n(offset)} ${n(offset)}) scale(${n(glyph / 24)})" fill="${INK}">
+    ${SHORTCUT_GLYPHS[shortcut]}
+  </g>
+</svg>`;
+}
+
 /** Renders the tile to a PNG buffer at one size. */
 function renderPng(size: number, variant: Variant): Promise<Buffer> {
   return sharp(Buffer.from(markSvg(size, variant)))
@@ -191,6 +240,27 @@ async function main(): Promise<void> {
     await writeFile(
       path.join(iconsDir, target.name),
       await renderPng(target.size, target.variant),
+    );
+    console.log(`Wrote public/icons/${target.name}`);
+  }
+
+  /*
+   * The manifest's shortcut icons, at the 96px Android asks for. Named by the
+   * manifest like everything above them, so these filenames are load-bearing
+   * too — a shortcut whose icon 404s falls back to the generic glyph, silently
+   * and only on somebody's home screen.
+   */
+  const shortcuts: { name: string; shortcut: Shortcut }[] = [
+    { name: "shortcut-groups-96.png", shortcut: "groups" },
+    { name: "shortcut-create-96.png", shortcut: "create" },
+  ];
+
+  for (const target of shortcuts) {
+    await writeFile(
+      path.join(iconsDir, target.name),
+      await sharp(Buffer.from(shortcutSvg(96, target.shortcut)))
+        .png()
+        .toBuffer(),
     );
     console.log(`Wrote public/icons/${target.name}`);
   }

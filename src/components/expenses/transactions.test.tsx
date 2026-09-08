@@ -35,6 +35,10 @@ vi.mock("next/navigation", () => ({
         () => "",
       ),
     ),
+  // Every row is wrapped in `SwipeToDelete`, which refreshes the list after a
+  // deletion. Nothing in this file swipes, so the stub is only here to let the
+  // rows render — the gesture and what follows it are `swipe-to-delete`'s own.
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 const replaceState = window.history.replaceState.bind(window.history);

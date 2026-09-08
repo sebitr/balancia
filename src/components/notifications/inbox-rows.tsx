@@ -18,8 +18,8 @@ import { useDateFormatter } from "@/i18n/format-context";
 import type { NotificationType } from "@/modules/notifications/types";
 import { cn } from "@/lib/utils";
 import { initialOf } from "@/components/entries/initials";
+import { useSwipeAway } from "@/components/ui/use-swipe-away";
 import { isPlainCreation, type InboxRow } from "./grouping";
-import { useSwipeAway } from "./use-swipe-away";
 
 /**
  * The shapes a notification takes in the inbox.

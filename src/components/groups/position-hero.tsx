@@ -110,6 +110,45 @@ export function PositionHero({
 
   return (
     <>
+      {/*
+        The same figure, kept under the header once this card has scrolled off
+        the top of it. Everything about how and when it appears is CSS — see
+        "The position strip" in globals.css — and on a browser without
+        scroll-driven animations it is not rendered at all.
+
+        `aria-hidden`, because it is the second copy of a figure the screen
+        already states. A screen reader reads the card above; a thumb halfway
+        down the balances gets this.
+      */}
+      {!settled && (
+        <div data-slot="position-strip" aria-hidden="true">
+          <div className="mx-auto flex w-full max-w-3xl items-baseline gap-2.5 px-4 py-2">
+            <span className="flex shrink-0 items-baseline gap-2.5">
+              {open.map((position) => (
+                <Amount
+                  key={position.currency}
+                  minorUnits={position.minorUnits}
+                  currency={position.currency}
+                  display="code"
+                  signDisplay="exceptZero"
+                  className={cn(
+                    "text-sm font-semibold tabular-nums",
+                    TONE[BigInt(position.minorUnits) > 0n ? "positive" : "negative"]
+                      .ink,
+                  )}
+                />
+              ))}
+            </span>
+            {/* Truncated rather than wrapped: the strip is one line under the
+                header, and a second line would push it over the content it is
+                meant to sit above. */}
+            <span className="truncate text-xs text-muted-foreground">
+              {subline}
+            </span>
+          </div>
+        </div>
+      )}
+
       <section
         aria-labelledby="your-position"
         className="flex flex-col gap-3.5 rounded-[22px] bg-card p-5 ring-1 ring-border"

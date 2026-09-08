@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import { countUnread } from "@/modules/notifications/service";
 import { cn } from "@/lib/utils";
 import { PUSH } from "@/components/motion/transitions";
+import { AppBadge } from "./app-badge";
 
 /**
  * The unread indicator in the header.
@@ -12,6 +13,11 @@ import { PUSH } from "@/components/motion/transitions";
  * Server-rendered, so the count is correct on first paint rather than
  * appearing a moment later. `NotificationRefresh` re-renders it when a push
  * arrives while the tab is open.
+ *
+ * The installed app's icon is badged from here too, off the same count and in
+ * the same render — see `AppBadge`. That is what keeps the two honest: the
+ * number on the home screen cannot drift from the one in the header, because
+ * neither is fetched separately.
  *
  * Guests never see it: they have no account for a notification to belong to.
  */
@@ -23,28 +29,31 @@ export async function NotificationBell() {
   const unread = await countUnread(user.userId);
 
   return (
-    <Link
-      href="/notifications"
-      transitionTypes={PUSH}
-      aria-label={unread > 0 ? t("bellUnread", { count: unread }) : t("bell")}
-      className={cn(
-        "tap-target relative inline-flex size-9 items-center justify-center rounded-md",
-        "text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
-      )}
-    >
-      <Bell className="size-5" aria-hidden="true" />
-      {unread > 0 && (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "absolute top-1 right-1 flex min-w-4 items-center justify-center",
-            "rounded-full bg-primary px-1 text-2xs leading-4 font-medium text-primary-foreground",
-          )}
-        >
-          {unread > 99 ? "99+" : unread}
-        </span>
-      )}
-    </Link>
+    <>
+      <AppBadge count={unread} />
+      <Link
+        href="/notifications"
+        transitionTypes={PUSH}
+        aria-label={unread > 0 ? t("bellUnread", { count: unread }) : t("bell")}
+        className={cn(
+          "tap-target relative inline-flex size-9 items-center justify-center rounded-md",
+          "text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+        )}
+      >
+        <Bell className="size-5" aria-hidden="true" />
+        {unread > 0 && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "absolute top-1 right-1 flex min-w-4 items-center justify-center",
+              "rounded-full bg-primary px-1 text-2xs leading-4 font-medium text-primary-foreground",
+            )}
+          >
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </Link>
+    </>
   );
 }
