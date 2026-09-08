@@ -8,6 +8,7 @@ import {
   type VapidKeyPair,
 } from "./vapid";
 import { PushKeyError } from "./keys";
+import { isSendableEndpoint } from "@/lib/security/internal-hosts";
 
 /**
  * Delivery of one encrypted message to one push endpoint.
@@ -155,6 +156,22 @@ export async function sendPush(
   const keys = getVapidKeys();
   if (!keys) {
     return { status: "failed", reason: "Push is not configured." };
+  }
+
+  /*
+   * The endpoint is checked again here, not only where it was stored.
+   *
+   * `subscriptionInputSchema` refuses an address inside the network, but it
+   * only ever sees new subscriptions — rows written before that rule existed
+   * are still in the table, and this is the function that would actually make
+   * the request. Reported as `expired` so the caller deletes the row: an
+   * endpoint that may not be called is not a device to keep trying.
+   */
+  if (!isSendableEndpoint(target.endpoint)) {
+    return {
+      status: "expired",
+      reason: "Endpoint is not a public HTTPS address.",
+    };
   }
 
   let body: Buffer;

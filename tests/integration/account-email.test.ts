@@ -231,6 +231,25 @@ describe("changing the address on an account", () => {
     ).rejects.toThrow(AuthError);
   });
 
+  /*
+   * The address on an account is its recovery channel, so moving it is the
+   * same class of event as resetting the password — and a step in an account
+   * takeover at least as often as it is housekeeping. Nothing is kept, unlike
+   * a password change: this link is opened wherever the new inbox is read,
+   * which is frequently a device that never signed in at all.
+   */
+  it("ends every session the account had", async () => {
+    const account = await createPasswordUser();
+    const laptop = await createSession(account.userId);
+    const phone = await createSession(account.userId);
+
+    await requestEmailChange(account.userId, uniqueEmail("moved"));
+    expect(await confirmEmailChange(linkToken(sent[1].text))).toBe("changed");
+
+    expect(await resolveSession(laptop.token)).toBeNull();
+    expect(await resolveSession(phone.token)).toBeNull();
+  });
+
   it("spends the link once", async () => {
     const account = await createPasswordUser();
     await requestEmailChange(account.userId, uniqueEmail("moved"));

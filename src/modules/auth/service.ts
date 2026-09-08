@@ -30,6 +30,7 @@ import {
 import {
   createSession,
   revokeAllSessionsForUser,
+  revokeOtherSessionsForUser,
   type CreatedSession,
 } from "./sessions";
 import { sendMail } from "./mailer";
@@ -1231,11 +1232,23 @@ export async function resetPassword(
   return true;
 }
 
+/**
+ * Changing a password from the Security screen.
+ *
+ * `currentSessionToken` is the cookie of whoever is asking, and every other
+ * session for the account ends when the password does. Somebody changing their
+ * password is usually answering a suspicion, and a new password that leaves the
+ * old sessions signed in answers nothing — there is no device list in this app,
+ * so this is the only gesture that evicts anyone.
+ *
+ * Optional, and omitting it signs the caller out as well. A caller that cannot
+ * name its own session should lose it rather than be guessed at.
+ */
 export async function changePassword(
   userId: string,
   currentPassword: string,
   newPassword: string,
-  options: { db?: Database } = {},
+  options: { db?: Database; currentSessionToken?: string } = {},
 ): Promise<void> {
   const db = options.db ?? getDb();
 
@@ -1274,6 +1287,15 @@ export async function changePassword(
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+
+  // Everyone signed in with the old password, except the browser that just
+  // typed the new one.
+  const ended = await revokeOtherSessionsForUser(
+    userId,
+    options.currentSessionToken,
+    { db },
+  );
+  logger.info({ userId, ended }, "Password changed; other sessions revoked");
 }
 
 /**
@@ -1432,7 +1454,24 @@ export async function confirmEmailChange(
     throw error;
   }
 
-  logger.info({ userId }, "Email change confirmed");
+  /*
+   * Every session ends, this browser's included.
+   *
+   * The address on an account is its recovery channel: whoever holds it can
+   * ask for a password reset and get one. Moving it is therefore the same
+   * class of event as resetting the password, and it is a step in an account
+   * takeover as often as it is housekeeping — so it should not leave a
+   * previously-signed-in device holding a live session.
+   *
+   * Nothing is kept here, unlike a password change, because there is nothing
+   * to keep: this link is opened wherever the new inbox is read, which is
+   * frequently a device that has never signed in. The route already sends a
+   * caller with no session to /sign-in, so the person who confirms on their
+   * phone lands where they were going anyway — now with the new address.
+   */
+  const ended = await revokeAllSessionsForUser(userId, { db });
+
+  logger.info({ userId, ended }, "Email change confirmed; sessions revoked");
   return "changed";
 }
 

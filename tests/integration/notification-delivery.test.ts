@@ -229,6 +229,27 @@ describe("push delivery", () => {
     expect(remaining).toHaveLength(0);
   });
 
+  /*
+   * `subscriptionInputSchema` refuses these at the door, but it only ever sees
+   * new subscriptions — a row written before that rule existed is still in the
+   * table, and this is the layer that would make the request. Dropped rather
+   * than retried: an endpoint the worker may not call is not a device.
+   */
+  it("never calls a subscription pointing inside the network, and drops it", async () => {
+    const { member, notificationId } = await setup();
+    await subscribe(member.actor.userId, "https://169.254.169.254/latest/meta");
+
+    const report = await deliverNotifications([notificationId]);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(report).toMatchObject({ sent: 0, expired: 1 });
+    const remaining = await getDb()
+      .select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, member.actor.userId));
+    expect(remaining).toHaveLength(0);
+  });
+
   it("keeps a subscription that failed for a temporary reason", async () => {
     const { member, notificationId } = await setup();
     await subscribe(member.actor.userId, "https://push.example.test/busy");

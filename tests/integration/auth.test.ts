@@ -254,6 +254,47 @@ describe("changing a password", () => {
     });
     expect(result.user.email).toBe(email);
   });
+
+  /*
+   * The reason the feature exists: somebody changes their password because
+   * they think a session of theirs has been taken. For a long time the taken
+   * session went on working for the rest of its thirty days, and with no
+   * device list in the app there was nothing else to press.
+   */
+  it("ends every other session, and keeps the one that asked", async () => {
+    const registered = await registerUser({
+      name: "Evictor",
+      email: uniqueEmail("evict"),
+      password: PASSWORD,
+    });
+    const userId = registered.user.userId;
+
+    const mine = await createSession(userId);
+    const stolen = await createSession(userId);
+    const alsoStolen = await createSession(userId);
+
+    await changePassword(userId, PASSWORD, "a-new-password-1", {
+      currentSessionToken: mine.token,
+    });
+
+    expect(await resolveSession(stolen.token)).toBeNull();
+    expect(await resolveSession(alsoStolen.token)).toBeNull();
+    expect(await resolveSession(mine.token)).not.toBeNull();
+  });
+
+  it("ends every session when the caller names none", async () => {
+    const registered = await registerUser({
+      name: "Anonymous",
+      email: uniqueEmail("anon"),
+      password: PASSWORD,
+    });
+    const userId = registered.user.userId;
+    const session = await createSession(userId);
+
+    await changePassword(userId, PASSWORD, "a-new-password-1");
+
+    expect(await resolveSession(session.token)).toBeNull();
+  });
 });
 
 describe("verification tokens", () => {

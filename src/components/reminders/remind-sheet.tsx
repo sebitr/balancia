@@ -29,7 +29,11 @@ import {
   pickDraft,
   type RemindTone,
 } from "@/modules/reminders/messages";
-import type { RemindDebt, RemindRecipient } from "@/modules/reminders/types";
+import {
+  REMIND_BODY_MAX_LENGTH,
+  type RemindDebt,
+  type RemindRecipient,
+} from "@/modules/reminders/types";
 
 /**
  * Two steps: who owes you, and what to say to them — or one, when only one
@@ -497,6 +501,7 @@ export function RemindSheet({
           value={current ? bodyFor(current) : ""}
           aria-label={t("messageLabel")}
           rows={1}
+          maxLength={REMIND_BODY_MAX_LENGTH}
           onChange={(event) => setEdited(event.target.value)}
           className="min-h-[45px] resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-base leading-[1.5] shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm dark:bg-transparent"
         />

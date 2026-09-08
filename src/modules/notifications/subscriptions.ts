@@ -10,6 +10,7 @@ import {
   decodePublicKey,
   PushKeyError,
 } from "@/lib/push/keys";
+import { isSendableEndpoint } from "@/lib/security/internal-hosts";
 
 /**
  * The devices one account has agreed to be notified on.
@@ -34,6 +35,11 @@ export interface DeviceSummary {
  * `http:`, `file:`, or a URL pointing at a private address — would turn this
  * table into a server-side request forgery primitive, since the worker POSTs
  * to whatever is stored here.
+ *
+ * That last clause described the intent for a long time without anything
+ * implementing it: the refinement checked the scheme and stopped, so
+ * `https://169.254.169.254/` was a perfectly acceptable device to be notified
+ * on. `isInternalHost` is the missing half.
  */
 export const subscriptionInputSchema = z.object({
   endpoint: z
@@ -43,6 +49,10 @@ export const subscriptionInputSchema = z.object({
     .refine(
       (value) => value.startsWith("https://"),
       "A push endpoint must use HTTPS",
+    )
+    .refine(
+      isSendableEndpoint,
+      "A push endpoint must be a public address, not one inside the network",
     ),
   keys: z.object({
     p256dh: z.string().min(1).max(200),
