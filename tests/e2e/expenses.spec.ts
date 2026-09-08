@@ -255,7 +255,7 @@ test("saving from the intercepted drawer leaves the group uncovered", async ({
   // report. Whether the assertion caught the first render was a coin flip,
   // and CI lost it both times.
   await expect(
-    page.getByRole("region", { name: "Your position" }),
+    page.getByRole("region", { name: "Total balance" }),
   ).toBeVisible();
 
   // And going back from the group leaves it, rather than reopening the form.
