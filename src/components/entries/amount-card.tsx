@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { currencyEntry } from "@/modules/currencies/catalog";
 import { convertMoney, formatMoney, money } from "@/modules/currencies/money";
 import { parseAmountToMinor } from "@/components/expenses/expense-form-logic";
+import { FIGURE_MAX_PX, useFittedFigure } from "./figure-fit";
 
 /**
  * The amount, and everything that qualifies it.
@@ -27,12 +28,14 @@ import { parseAmountToMinor } from "@/components/expenses/expense-form-logic";
  */
 
 /**
- * The figure's type, shared by the field and the sign in front of it so the
- * two sit on one baseline. The size is also what stops iOS zooming the page in
- * when the field takes focus, which anything under 16px would.
+ * The figure's type, shared by the field, the sign in front of it and the
+ * invisible copy they are measured against, so all three sit on one baseline.
+ *
+ * Every size but the tracking is here; the size itself is set inline, because
+ * it is whatever fits — `figure-fit.ts` says how, and why it can never land
+ * under the 16px that makes iOS zoom the page in.
  */
-const FIGURE =
-  "text-[44px] leading-none font-semibold tracking-[-0.03em] tabular-nums";
+const FIGURE = "leading-none font-semibold tracking-[-0.03em] tabular-nums";
 
 export function AmountCard({
   label,
@@ -69,6 +72,8 @@ export function AmountCard({
 }) {
   const t = useTranslations("addEntry.amount");
 
+  const { size, chipSize, fieldRef, mirrorRef, chipRef } =
+    useFittedFigure(amountText);
   const empty = amountText === "" || Number.parseFloat(amountText) === 0;
   const flag = currencyEntry(currency, locale)?.flag;
   const parsed = parseAmountToMinor(amountText || "0", currency);
@@ -85,12 +90,19 @@ export function AmountCard({
 
       {/* The figure and its currency on one line, because they are one value.
           The field takes the room that is left rather than the room it wants,
-          so a six-figure amount pushes nothing off the card. */}
-      <div className="flex w-full items-center gap-3">
+          so a six-figure amount pushes nothing off the card — and the figure
+          is drawn at whatever size that room allows, so it is never the field
+          that decides how much of the amount a reader gets to see. */}
+      <div className="relative flex min-h-12 w-full items-center gap-3">
         {/* The sign belongs to the figure, not to the value: it is never typed
-            and must never come back out of the field. */}
+            and must never come back out of the field. It takes the fitted size
+            too, or a shrunk amount would be signed in type a third larger. */}
         {positive && !empty && (
-          <span aria-hidden="true" className={cn(FIGURE, "text-positive-ink")}>
+          <span
+            aria-hidden="true"
+            style={{ fontSize: size }}
+            className={cn(FIGURE, "text-positive-ink")}
+          >
             +
           </span>
         )}
@@ -105,6 +117,8 @@ export function AmountCard({
           // handed down as a ref, because the thing that needs naming is which
           // field a reader starts in, and that is a fact about this card.
           data-entry-amount=""
+          ref={fieldRef}
+          style={{ fontSize: size }}
           value={amountText}
           onChange={(event) => onAmountChange(event.target.value)}
           // Nothing to submit — the entry is saved from its own button — so
@@ -123,6 +137,27 @@ export function AmountCard({
           )}
         />
 
+        {/* The same text, at full size, where nobody can see it: the width the
+            figure would want if it had the room, which is what the field's own
+            width is measured against.
+
+            The box around it is nothing at all — no size, and clipped — so a
+            twelve-character amount cannot reach past the card and put a
+            horizontal scrollbar on the sheet. The span inside keeps its
+            natural width all the same, which is the width being read. */}
+        <span
+          aria-hidden="true"
+          className="invisible absolute top-0 left-0 size-0 overflow-hidden"
+        >
+          <span
+            ref={mirrorRef}
+            style={{ fontSize: FIGURE_MAX_PX }}
+            className={cn(FIGURE, "inline-block whitespace-pre")}
+          >
+            {amountText}
+          </span>
+        </span>
+
         {/* Always a chip that opens the list, repayments included. A
             settlement usually is denominated by the debt it clears — which is
             what picking one off the outstanding list already fills in — but
@@ -132,18 +167,26 @@ export function AmountCard({
         <button
           type="button"
           onClick={onOpenCurrency}
+          ref={chipRef}
           // The code is read together with the figure beside it, so it is
           // sized to be read from the same distance — the top of the scale
-          // rather than the bottom of it, and the chip grown to hold it.
-          className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full border border-border bg-wash-2 px-3.5 text-2xl leading-none font-semibold tracking-[-0.02em] transition-colors active:bg-wash-4"
+          // rather than the bottom of it, and the chip grown to hold it. When
+          // the figure has to shrink the chip goes with it, and `tap-target`
+          // keeps the finger its 44px however small the pill is drawn.
+          style={{ fontSize: chipSize }}
+          // Every length in the pill is in `em`, so the one size carries the
+          // whole of it: 2em is the 48px it stands at beside a full-size
+          // figure, 0.583em the 14px of padding, 0.333em the 8px between flag,
+          // code and chevron.
+          className="tap-target inline-flex h-[2em] shrink-0 items-center gap-[0.333em] rounded-full border border-border bg-wash-2 px-[0.583em] leading-none font-semibold tracking-[-0.02em] whitespace-nowrap transition-colors active:bg-wash-4"
         >
           {flag && (
-            <span aria-hidden="true" className="text-xl leading-none">
+            <span aria-hidden="true" className="text-[0.833em] leading-none">
               {flag}
             </span>
           )}
           {currency}
-          <ChevronDown aria-hidden="true" className="size-4.5" />
+          <ChevronDown aria-hidden="true" className="size-[0.75em]" />
         </button>
       </div>
 

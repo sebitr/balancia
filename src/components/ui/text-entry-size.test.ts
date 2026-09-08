@@ -25,8 +25,10 @@ import { describe, expect, it } from "vitest";
  *    what `text-base md:text-sm` is for; or
  *  - it states no size at all, and inherits one. `globals.css` puts a
  *    `max(1rem, 1em)` floor under every such control below `md`, so inheriting
- *    is safe — and `text-[44px]` on the amount field still wins, because a
- *    utility outranks that base rule.
+ *    is safe. The amount field is the one control that states its size
+ *    inline — it is drawn at whatever fits the amount typed into it, which
+ *    `figure-fit.ts` keeps between 16 and 44px — and an inline size outranks
+ *    both the floor and anything a class could say.
  *
  * What fails is the third case: a size stated explicitly, and too small.
  */
