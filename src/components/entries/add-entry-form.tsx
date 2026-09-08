@@ -56,6 +56,7 @@ import {
   type SplitMessage,
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/haptics";
 import { formatMoney, money } from "@/modules/currencies/money";
 import {
   isValidSubcategoryFor,
@@ -1429,6 +1430,11 @@ export function AddEntryForm({
 
       // The entry exists now, so the draft of it does not.
       void discardDraft(groupId);
+
+      // Something that moves the money has landed. The toast below says so and
+      // the list behind it shows it; this is only for the hand that is already
+      // leaving the screen, and on iOS it does nothing at all — see haptics.ts.
+      haptic("confirm");
 
       /*
        * Remember the split, or forget the one the group had.

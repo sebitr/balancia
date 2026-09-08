@@ -13,7 +13,13 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
  * theme provider, none of which exist in jsdom; each is swapped for a stub
  * that leaves a trace, since the subject here is only what the header holds.
  */
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+// `useRouter` is for `RefreshOnReturn`, which the shell mounts on every
+// screen. It refreshes on a `visibilitychange` and nothing here fires one, so
+// there is nothing for the stub to record.
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/dashboard",
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 vi.mock("next/link", () => ({
   default: ({

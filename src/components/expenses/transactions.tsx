@@ -53,6 +53,7 @@ import {
   type RowView,
 } from "./list-filter";
 import { FilterSheet } from "./filter-sheet";
+import { SwipeToDelete } from "./swipe-to-delete";
 import { forgetPlace, readPlace, rememberPlace } from "./list-place";
 
 /**
@@ -702,14 +703,21 @@ export function Transactions({
                   style={{ animationDelay: `${Math.min(index * 24, 280)}ms` }}
                   className="animate-in duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] fill-mode-both fade-in slide-in-from-bottom-2 motion-reduce:animate-none"
                 >
-                  <Row
-                    row={row}
+                  <SwipeToDelete
                     groupId={groupId}
-                    rail={railOf(row.category)}
-                    name={row.category === null ? null : nameOf(row.category)}
-                    query={filterQuery}
-                    onOpen={remember}
-                  />
+                    kind={row.kind}
+                    id={row.id}
+                    description={row.title}
+                  >
+                    <Row
+                      row={row}
+                      groupId={groupId}
+                      rail={railOf(row.category)}
+                      name={row.category === null ? null : nameOf(row.category)}
+                      query={filterQuery}
+                      onOpen={remember}
+                    />
+                  </SwipeToDelete>
                 </li>
               ))}
             </ul>
@@ -1065,7 +1073,12 @@ function Row({
       onClick={onOpen}
       // A finger never hovers, so the row answers the press itself — every
       // other list in the app already does.
-      className="-mx-1.5 -my-[7px] flex items-center gap-2.5 rounded-[10px] px-1.5 py-[7px] transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-muted motion-reduce:transition-none"
+      //
+      // The negative margins that used to pull this out to the full width of
+      // the list now sit on `SwipeToDelete` around it, which clips at its own
+      // edge — see the note there. The ring is inset for the same reason: an
+      // outset one would be cropped by that clip on both sides.
+      className="flex items-center gap-2.5 rounded-[10px] px-1.5 py-[7px] transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none active:bg-muted motion-reduce:transition-none"
     >
       {body}
     </Link>

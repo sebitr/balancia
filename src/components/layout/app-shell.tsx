@@ -7,6 +7,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NotificationRefresh } from "@/components/notifications/notification-refresh";
 import { Screen } from "@/components/motion/screen";
 import { DemoBanner } from "@/components/demo/demo-banner";
+import { RefreshOnReturn } from "./refresh-on-return";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +56,10 @@ export function AppShell({
       >
         {/* Positioned, so a leading control can anchor a panel to the header's
             full width rather than to its own. */}
-        <div className="relative mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        {/* The height is stated rather than left to the tallest control in the
+            row, because the position strip has to hang exactly below it and
+            cannot measure it — see `--app-header-h` in globals.css. */}
+        <div className="relative mx-auto flex h-(--app-header-h) w-full max-w-3xl items-center justify-between gap-3 px-4">
           {leading ?? (
             <Link
               href={actor.isGuest ? "#" : "/dashboard"}
@@ -101,6 +105,12 @@ export function AppShell({
 
       {/* Re-reads the unread count when a push lands on an open tab. */}
       {!actor.isGuest && <NotificationRefresh />}
+
+      {/* Re-reads the screen itself when the reader comes back to it after
+          long enough away. Guests get it too: their balances go stale in
+          exactly the same way, and an installed app gives neither of them a
+          reload button. */}
+      <RefreshOnReturn />
     </div>
   );
 }
