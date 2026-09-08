@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Mic } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
  *
  * The API is prefixed on every engine that has it and unspecified in TypeScript's
  * DOM library, so the shapes below are declared rather than imported. They are
- * the three fields this component actually reads.
+ * the fields this component actually reads.
  */
 
 interface SpeechResultAlternative {
@@ -39,7 +40,7 @@ interface SpeechRecognitionLike {
         results: ArrayLike<ArrayLike<SpeechResultAlternative>>;
       }) => void)
     | null;
-  onerror: (() => void) | null;
+  onerror: ((event: { readonly error: string }) => void) | null;
   onend: (() => void) | null;
 }
 
@@ -57,6 +58,34 @@ function recogniser(): RecognitionConstructor | null {
 /** Nothing ever changes whether a browser has a recogniser. */
 function subscribeNever(): () => void {
   return () => {};
+}
+
+/** Where a reader's own tag says nothing, the region to recognise against. */
+const DEFAULT_REGION: Readonly<Record<string, string>> = {
+  en: "en-US",
+  fr: "fr-FR",
+};
+
+/**
+ * The tag to listen in.
+ *
+ * The app's locale is a bare language — "en", "fr" — and a recogniser wants a
+ * region on it. Chrome answers a tag it does not know with
+ * `language-not-supported`, which looks from the outside exactly like hearing
+ * nothing at all.
+ *
+ * The reader's own tag is the better guess whenever it is the same language,
+ * because it is the accent they will speak in: a French speaker in Geneva is
+ * `fr-CH`, and the app has no way to know that. The map is only the fallback.
+ */
+function recognitionLanguage(locale: string): string {
+  const wanted = `${locale.toLowerCase()}-`;
+  const offered =
+    typeof navigator === "undefined"
+      ? []
+      : (navigator.languages ?? [navigator.language]);
+  const regional = offered.find((tag) => tag.toLowerCase().startsWith(wanted));
+  return regional ?? DEFAULT_REGION[locale] ?? locale;
 }
 
 export function VoiceButton({
@@ -107,17 +136,31 @@ export function VoiceButton({
     if (!Recognition) return;
 
     const recognition = new Recognition();
-    recognition.lang = locale;
+    recognition.lang = recognitionLanguage(locale);
     recognition.interimResults = false;
     recognition.continuous = false;
     recognition.onresult = (event) => {
       const transcript = event.results[0]?.[0]?.transcript;
       if (transcript) onHeard(transcript);
     };
-    // A failure is silence, not a message. Permission refused, no microphone,
-    // nothing heard — in all three the reader is looking at a form they can
-    // still type into, and an error would only tell them so.
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = (event) => {
+      setListening(false);
+      /*
+       * Nothing said, or the reader pressed stop again: the form is untouched
+       * and they are looking at it. Silence is the answer, because the button
+       * that stopped pulsing has already given it.
+       *
+       * Anything else is the shortcut *broken* rather than unused — the
+       * microphone refused, the recogniser's service unreachable, the
+       * language unsupported — and no button can say that by going quiet. It
+       * is a refusal, so it is spoken, per `toastUndoable`'s doctrine in
+       * src/components/ui/sonner.tsx. Swallowing these is what once let a
+       * `Permissions-Policy` that never named the microphone look, for a
+       * whole release, like a recogniser that simply never heard anything.
+       */
+      if (event.error === "no-speech" || event.error === "aborted") return;
+      toast.error(t("failed"));
+    };
     recognition.onend = () => {
       setListening(false);
       active.current = null;

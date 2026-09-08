@@ -3163,7 +3163,8 @@
     "voice": {
       "start": "Say it",
       "listening": "Listening…",
-      "stop": "Stop listening"
+      "stop": "Stop listening",
+      "failed": "Could not listen just now. Type it instead."
     }
   },
   "paymentMethods": {
