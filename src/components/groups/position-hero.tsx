@@ -133,8 +133,9 @@ export function PositionHero({
                   signDisplay="exceptZero"
                   className={cn(
                     "text-sm font-semibold tabular-nums",
-                    TONE[BigInt(position.minorUnits) > 0n ? "positive" : "negative"]
-                      .ink,
+                    TONE[
+                      BigInt(position.minorUnits) > 0n ? "positive" : "negative"
+                    ].ink,
                   )}
                 />
               ))}
