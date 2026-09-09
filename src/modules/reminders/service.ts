@@ -15,7 +15,9 @@ import {
   dispatchNotifications,
   recordNotifications,
 } from "@/modules/notifications/service";
+import { getPayoutAddress, listPayoutMethods } from "@/modules/payouts/service";
 import { compareDebts, sumByCurrency } from "./debts";
+import { payWithOptions } from "./pay-with";
 import {
   REMIND_LOCK_HOURS,
   type RemindChannel,
@@ -72,9 +74,15 @@ export function isLocked(
  * each currency on its own, so somebody who owes in euros and in yen appears
  * twice in that list and once here — because they are one person, to be asked
  * once, under one 24-hour limit, in a message that names both amounts.
+ *
+ * Each row also carries how that person could pay it — see `pay-with.ts`. It
+ * is built here rather than fetched when the sheet opens because a payment
+ * instruction is made of a debt, and the debts are already in hand: the two
+ * extra reads are the reader's *own* methods and address, which is one pair
+ * for the whole list however long it is.
  */
 export async function listRemindRecipients(
-  access: Pick<GroupAccess, "groupId" | "group" | "participantId">,
+  access: Pick<GroupAccess, "groupId" | "group" | "participantId" | "actor">,
   options: { db?: Database; now?: Date } = {},
 ): Promise<RemindRecipient[]> {
   const db = options.db ?? getDb();
@@ -159,6 +167,22 @@ export async function listRemindRecipients(
     preferences.filter((row) => !row.remindersEnabled).map((row) => row.userId),
   );
 
+  /*
+   * How the reader themself wants to be paid back.
+   *
+   * Their own rows, read with their own id — there is no permission question
+   * here, which is exactly what distinguishes this from `listPayoutsOwed`. A
+   * guest asks for nothing: they have no account, so there is nothing to read
+   * and no method to offer.
+   */
+  const creditor = access.actor.kind === "user" ? access.actor : null;
+  const [payoutMethodList, payoutAddress] = creditor
+    ? await Promise.all([
+        listPayoutMethods(creditor.userId, { db }),
+        getPayoutAddress(creditor.userId, { db }),
+      ])
+    : [[], null];
+
   const lastSent = new Map<string, Date>();
   for (const row of sent) {
     if (!lastSent.has(row.toParticipantId)) {
@@ -186,15 +210,27 @@ export async function listRemindRecipients(
         ? "push"
         : "share";
     const remindedAt = lastSent.get(participantId) ?? null;
+    const debts = sumByCurrency(owed);
 
     return {
       participantId,
       name: person?.displayName ?? "",
-      debts: sumByCurrency(owed),
+      debts,
       channel,
       lastRemindedAt: remindedAt?.toISOString() ?? null,
       locked: isLocked(remindedAt, now),
       muted: isMuted,
+      // Per person, because the amount written into a code is this person's
+      // debt — and because somebody owing in two currencies has none to write.
+      payWith: creditor
+        ? payWithOptions({
+            methods: payoutMethodList,
+            address: payoutAddress,
+            creditorName: creditor.name,
+            groupName: access.group.name,
+            debts,
+          })
+        : [],
     } satisfies RemindRecipient;
   });
 

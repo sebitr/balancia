@@ -117,6 +117,7 @@ function renderList(
           name: "Hervé",
           debts: [{ amount: "11666", currency: "CHF" }],
           channel: "share",
+          payWith: [],
           lastRemindedAt: null,
           locked: false,
           muted: false,

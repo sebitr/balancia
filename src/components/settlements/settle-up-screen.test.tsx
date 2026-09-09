@@ -38,6 +38,7 @@ function recipient(overrides: Partial<RemindRecipient> = {}): RemindRecipient {
     name: "Ravi",
     debts: [{ amount: "6200", currency: "CHF" }],
     channel: "push",
+    payWith: [],
     lastRemindedAt: null,
     locked: false,
     muted: false,

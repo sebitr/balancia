@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useNumberLocale } from "@/i18n/format-context";
 import { toast } from "sonner";
@@ -9,9 +9,12 @@ import {
   Check,
   ChevronLeft,
   Clock,
+  ExternalLink,
   Link as LinkIcon,
+  QrCode,
   Share2,
   Shuffle,
+  Wallet,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +23,8 @@ import { SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Amount } from "@/components/money/amount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { paymentCodeFile } from "@/components/payouts/qr-image";
+import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 import { cn } from "@/lib/utils";
 import { formatMoney, money } from "@/modules/currencies/money";
 import { sendReminderAction } from "@/modules/reminders/actions";
@@ -32,6 +37,7 @@ import {
 import {
   REMIND_BODY_MAX_LENGTH,
   type RemindDebt,
+  type RemindPayOption,
   type RemindRecipient,
 } from "@/modules/reminders/types";
 
@@ -55,6 +61,14 @@ import {
  * once a day, asking them per currency would spend the whole allowance on half
  * the debt. Their amounts are listed instead — beside each other in the row,
  * and both named in the one message — because two currencies have no sum.
+ *
+ * A reminder that has to travel carries the way to pay it, not only the sum.
+ * "€148.00" and "€148.00, and here is the Girocode" are different messages, and
+ * only the second one gets paid that evening — so the reader's own payout
+ * method goes in the same bubble, as a line of text and, where the scheme has
+ * a code and the device will carry a file, as a picture beside it. Which
+ * method is theirs to choose, and whether to send it at all is one press,
+ * because a reminder into a group chat is read by more people than owe it.
  *
  * A list of one is not a choice. Where a single person can be reminded the
  * picker is skipped and the sheet opens on the message, with no arrow back
@@ -99,6 +113,7 @@ export function RemindSheet({
   onDone: () => void;
 }) {
   const t = useTranslations("remind");
+  const tMethods = useTranslations("paymentMethods");
   const format = useFormatter();
   const locale = useNumberLocale();
   const [isPending, startTransition] = useTransition();
@@ -122,6 +137,20 @@ export function RemindSheet({
   /** Set once the sender types: their words then survive a tone change. */
   const [edited, setEdited] = useState<string | null>(null);
   const [logToActivity, setLogToActivity] = useState(true);
+  /**
+   * Whether the way to pay goes with the message, and which one.
+   *
+   * On by default — attaching it is the whole point, and a sender who wanted
+   * only the sum would have to have thought about it. Off is one press, and
+   * the press is worth having: a reminder pasted into a group chat is read by
+   * everybody in it, not only the person who owes.
+   *
+   * The method is held by name rather than by index, so it survives moving on
+   * to the next recipient in the queue — whose options are a different list of
+   * the same methods, carrying their own debt's figure.
+   */
+  const [attachPay, setAttachPay] = useState(true);
+  const [payMethod, setPayMethod] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<readonly string[]>([]);
 
   // Locked recipients are shown but never selectable — the 24-hour limit is
@@ -199,10 +228,87 @@ export function RemindSheet({
       group: groupName,
     });
 
-  /** The whole message as it leaves the app: the draft, then the link. */
-  const composeFor = (recipient: RemindRecipient): string => {
+  /**
+   * The ways this particular person could pay, and the one that will go.
+   *
+   * Only for a reminder that leaves the app: one delivered inside it lands on
+   * a card with a Settle up button, and behind that button is the payout panel
+   * with the same code drawn large. Sending it twice to the same person on the
+   * same screen would be the second copy, not the first.
+   */
+  const payOptions =
+    current && current.channel !== "push" ? current.payWith : [];
+  const chosenPay: RemindPayOption | null = attachPay
+    ? (payOptions.find((option) => option.method === payMethod) ??
+      payOptions[0] ??
+      null)
+    : null;
+
+  /**
+   * The scannable half, drawn ahead of the press rather than during it.
+   *
+   * `navigator.share` has to be called inside the gesture that triggered it,
+   * and awaiting a canvas first is exactly the kind of gap Safari refuses. So
+   * the picture is ready before the button is touched, and `send` stays
+   * synchronous up to the hand-off.
+   */
+  const codePayload = chosenPay?.code?.payload ?? null;
+  const codeStandard = chosenPay?.code?.standard ?? null;
+  /**
+   * Kept beside the payload it was drawn from, and read back only when the two
+   * still agree.
+   *
+   * That is what makes switching method safe: the picture for the old one is
+   * simply no longer the answer to the question being asked, rather than
+   * something an effect has to race to clear.
+   */
+  const [drawn, setDrawn] = useState<{ payload: string; file: File } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!codePayload) return;
+    let live = true;
+    void paymentCodeFile(
+      codePayload,
+      codeStandard,
+      "balancia-payment.png",
+    ).then((file) => {
+      if (live && file) setDrawn({ payload: codePayload, file });
+    });
+    return () => {
+      live = false;
+    };
+  }, [codePayload, codeStandard]);
+  const codeFile =
+    drawn && codePayload && drawn.payload === codePayload ? drawn.file : null;
+
+  const methodLabel = (method: string): string => {
+    const known = findPaymentMethod(method);
+    return known ? tMethods(known.id) : method;
+  };
+
+  /**
+   * The whole message as it leaves the app: the draft, the way to pay, then
+   * the link.
+   *
+   * All three are lines rather than one paragraph, because a chat app makes a
+   * URL and a pasteable payload tappable only when nothing else shares their
+   * line — and because the payment line is the one somebody will select and
+   * copy by hand when their app does neither.
+   */
+  const composeFor = (
+    recipient: RemindRecipient,
+    pay: RemindPayOption | null,
+  ): string => {
     const origin = typeof window === "undefined" ? "" : window.location.origin;
-    return `${bodyFor(recipient)}\n${origin}/groups/${groupId}`;
+    const lines = [bodyFor(recipient)];
+    if (pay) {
+      lines.push(
+        t("payWithLine", { method: methodLabel(pay.method), detail: pay.text }),
+      );
+    }
+    lines.push(`${origin}/groups/${groupId}`);
+    return lines.join("\n");
   };
 
   const shuffle = () => {
@@ -278,11 +384,25 @@ export function RemindSheet({
       return;
     }
 
-    const message = composeFor(current);
+    const message = composeFor(current, chosenPay);
 
     if (typeof navigator !== "undefined" && navigator.share) {
+      /*
+       * The code goes as a picture, when there is one and the platform will
+       * carry it. `canShare` is asked rather than assumed: a browser that takes
+       * text and refuses files throws on the whole call, which would lose the
+       * message over the attachment — the wrong half to drop, since the line of
+       * text names the same account the picture does.
+       */
+      const files =
+        codeFile && navigator.canShare?.({ files: [codeFile] })
+          ? [codeFile]
+          : undefined;
+
       try {
-        await navigator.share({ text: message });
+        await navigator.share(
+          files ? { text: message, files } : { text: message },
+        );
       } catch (error) {
         // Backing out of the share sheet is a decision, and says so by
         // saying nothing. Anything else genuinely went wrong.
@@ -513,11 +633,70 @@ export function RemindSheet({
          * that will not be sent.
          */}
         {current?.channel !== "push" && (
-          <p className="mt-2.5 flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
-            <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
-            <span className="sr-only">{t("groupLink")}</span>
-            <span className="truncate">{groupLinkLabel(groupId)}</span>
-          </p>
+          <div className="mt-2.5 flex flex-col gap-1.5">
+            {/*
+             * The choice first, then the two things it will be sent with —
+             * a control between them would split a pair that is one idea:
+             * here is what rides along behind the words.
+             *
+             * Only where there is a choice to make. One method is the sender's
+             * answer already, and a row of one is a control that does nothing.
+             */}
+            {chosenPay && payOptions.length > 1 && (
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="group"
+                aria-label={t("payWithChoose")}
+              >
+                {payOptions.map((option) => (
+                  <button
+                    key={option.method}
+                    type="button"
+                    aria-pressed={option.method === chosenPay.method}
+                    onClick={() => setPayMethod(option.method)}
+                    className={cn(
+                      "tap-target h-7 rounded-full border px-2.5 text-2xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                      option.method === chosenPay.method
+                        ? PICKED_CHIP
+                        : UNPICKED,
+                    )}
+                  >
+                    {methodLabel(option.method)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/*
+             * What will be sent, in the words it will be sent in — the same
+             * line, not a description of one. The sender is about to put their
+             * own account number in somebody's chat app, and reading it back
+             * is the only way to be sure which account it is.
+             */}
+            {chosenPay && (
+              <p className="flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
+                <PayKindIcon kind={chosenPay.kind} />
+                <span className="truncate">
+                  {t("payWithLine", {
+                    method: methodLabel(chosenPay.method),
+                    detail: chosenPay.text,
+                  })}
+                </span>
+                {codeFile && (
+                  <span className="ml-auto shrink-0">
+                    <QrCode aria-hidden="true" className="size-3.5" />
+                    <span className="sr-only">{t("payCodeAttached")}</span>
+                  </span>
+                )}
+              </p>
+            )}
+
+            <p className="flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
+              <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
+              <span className="sr-only">{t("groupLink")}</span>
+              <span className="truncate">{groupLinkLabel(groupId)}</span>
+            </p>
+          </div>
         )}
 
         <div className="-mx-3.5 mt-2 flex justify-end border-t px-2.5 pt-2">
@@ -546,6 +725,24 @@ export function RemindSheet({
           <Clock aria-hidden="true" className="size-3.5" />
           {t("logActivity")}
         </button>
+
+        {/* Absent rather than disabled when there is nothing to attach: a
+            reader who has never said how they want to be paid back, or a
+            reminder the app delivers itself. */}
+        {payOptions.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setAttachPay((on) => !on)}
+            aria-pressed={attachPay}
+            className={cn(
+              "tap-target inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              attachPay ? PICKED_CHIP : UNPICKED,
+            )}
+          >
+            <Wallet aria-hidden="true" className="size-3.5" />
+            {t("payWith")}
+          </button>
+        )}
       </div>
 
       {current && (
@@ -572,6 +769,21 @@ export function RemindSheet({
       )}
     </div>
   );
+}
+
+/**
+ * What the reader is about to be handed, as an icon.
+ *
+ * The three shapes a payment instruction comes in ask three different things
+ * of whoever receives it: a link is tapped, a code is pasted or scanned, an
+ * account number is typed. Deliberately not the link icon the group address
+ * below it already owns — two of those stacked would read as one thing said
+ * twice.
+ */
+function PayKindIcon({ kind }: { kind: RemindPayOption["kind"] }) {
+  const Icon =
+    kind === "link" ? ExternalLink : kind === "code" ? QrCode : Wallet;
+  return <Icon aria-hidden="true" className="size-3.5 shrink-0" />;
 }
 
 /** The host, without its scheme: a chip, not an address bar. */
