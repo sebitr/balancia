@@ -246,3 +246,36 @@ describe("the words around it", () => {
     );
   });
 });
+
+/**
+ * The words another reader has already claimed.
+ *
+ * `heardPeople` reads the clauses that name people and hands back the ranges
+ * they filled; cutting them out is this file's job, because this is the file
+ * that decides which words describe the money. What is asserted here is the
+ * contract itself — `heard-people.test.ts` has the sentences.
+ */
+describe("what somebody else has read", () => {
+  it("keeps a claimed clause out of the description", () => {
+    const spoken = "Anna paid 30 francs for the taxi";
+    expect(heardEntry(spoken, "", [[0, 10]])).toEqual({
+      amountText: "30",
+      currency: "CHF",
+      description: "taxi",
+    });
+  });
+
+  it("tidies the seam the clause left, and only then", () => {
+    const spoken = "40 francs taxi, split with Anna";
+    expect(heardEntry(spoken, "", [[15, 31]]).description).toBe("taxi");
+    // Nothing claimed, so nothing tidied: the comma is still doing the work
+    // it was said for.
+    expect(heardEntry(spoken).description).toBe("taxi, split with Anna");
+  });
+
+  it("changes nothing at all when nothing was claimed", () => {
+    expect(heardEntry("24 francs Coop", "", [])).toEqual(
+      heardEntry("24 francs Coop"),
+    );
+  });
+});

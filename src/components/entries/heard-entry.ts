@@ -1,5 +1,6 @@
 import { foldText } from "@/modules/categorization";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
+import type { HeardSpan } from "./heard-people";
 
 /**
  * What a spoken sentence turns into.
@@ -20,9 +21,13 @@ import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
  *    in the description and the amount is left empty and focused. The reader
  *    is one field from done rather than back where they started.
  *
- * Deliberately not here: the payer and "just me". They are one tap in a sheet
- * that shows faces, and a misheard *name* is the correction people most often
- * have to make — guessing at one would spend the trust the rest of this buys.
+ * Deliberately not here: the people. A misheard *name* is the correction
+ * people most often have to make, so nothing in this file resolves one — the
+ * money and the words are all it reads. Who paid and who shares it are
+ * `heard-people.ts`, which answers with a proposal the reader accepts or
+ * refuses rather than with fields; what this file wants from it is only the
+ * `skip` below, so that "Anna paid" and "split with me and Jonas" do not end
+ * up in the description of a taxi.
  */
 
 export interface HeardEntry {
@@ -256,11 +261,28 @@ function tokenize(text: string): Token[] {
   return tokens;
 }
 
-export function heardEntry(spoken: string, fallbackCurrency = ""): HeardEntry {
+export function heardEntry(
+  spoken: string,
+  fallbackCurrency = "",
+  /**
+   * Stretches of the sentence another reader has already claimed.
+   *
+   * Only `heardPeople` produces these, and only for a clause whose names it
+   * actually resolved — "Anna paid", "split with me and Jonas". They are cut
+   * out here rather than there because a clause is words in a sentence, and
+   * this is the file that decides which words describe the money. Left
+   * empty, nothing about this function changes.
+   */
+  skip: readonly HeardSpan[] = [],
+): HeardEntry {
   const text = spoken.trim();
   if (text === "") {
     return { amountText: "", currency: "", description: "" };
   }
+
+  /** Whether this word belongs to a clause somebody else has read. */
+  const claimed = (token: Token): boolean =>
+    skip.some(([from, to]) => token.start < to && token.end > from);
 
   const match = AMOUNT.exec(text);
   const read = match ? readAmount(match[0]) : null;
@@ -271,8 +293,35 @@ export function heardEntry(spoken: string, fallbackCurrency = ""): HeardEntry {
 
   const tokens = tokenize(text);
   let start = 0;
-  while (start < tokens.length && LEADING_WORDS.has(fold(tokens[start]!.text))) {
-    start += 1;
+  /**
+   * A clause has just been taken off the front, so an article may follow it.
+   *
+   * The same rule the description already keeps at its head, for the same
+   * reason: an article goes only in something's wake. "Anna a payé le taxi"
+   * leaves a "le" that belonged to the verb the reader has just been handed
+   * as a chip, and English strips its "the" here anyway — a capital still
+   * holds, so "Anna paid La Poste" keeps the shopfront.
+   */
+  let afterClause = false;
+  while (start < tokens.length) {
+    const token = tokens[start]!;
+    if (claimed(token)) {
+      afterClause = true;
+      start += 1;
+      continue;
+    }
+    const folded = fold(token.text);
+    if (LEADING_WORDS.has(folded)) {
+      afterClause = false;
+      start += 1;
+      continue;
+    }
+    if (afterClause && ARTICLES.has(folded) && !looksLikeName(token.text)) {
+      afterClause = false;
+      start += 1;
+      continue;
+    }
+    break;
   }
 
   let currency = "";
@@ -284,6 +333,7 @@ export function heardEntry(spoken: string, fallbackCurrency = ""): HeardEntry {
 
   for (let i = start; i < tokens.length; i += 1) {
     const token = tokens[i]!;
+    if (claimed(token)) continue;
     const word = token.text;
 
     // Read any sign before the word can be dropped for being the amount:
@@ -344,10 +394,22 @@ export function heardEntry(spoken: string, fallbackCurrency = ""): HeardEntry {
   const amountText =
     read === null ? "" : cents === "" ? read.text : `${read.text}.${cents}`;
 
+  /*
+   * The seam a removed clause leaves behind.
+   *
+   * "Anna paid the 120 taxi, split with me and Jonas" ends its description on
+   * the comma that used to join it to the split — punctuation that only made
+   * sense next to the words that are gone. Only ever tidied where something
+   * was actually taken out, so a sentence nobody claimed comes back exactly
+   * as it did before.
+   */
+  const words = kept.join(" ").trim();
+  const description = skip.length === 0 ? words : words.replace(/[,;:]+$/, "");
+
   return {
     amountText,
     // A sentence with no currency in it does not mean "no currency".
     currency: currency || fallbackCurrency,
-    description: kept.join(" ").trim(),
+    description,
   };
 }

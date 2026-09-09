@@ -128,6 +128,8 @@ import {
   summariseMultiPayer,
 } from "./multi-payer";
 import { heardEntry } from "./heard-entry";
+import { heardPeople } from "./heard-people";
+import { HeardPeopleChips } from "./heard-people-chips";
 import { VoiceButton } from "./voice-button";
 import { savedSummary } from "./saved-summary";
 import { worthDrafting, type EntryDraftFields } from "./draft-fields";
@@ -344,6 +346,22 @@ function sendsWeekOfMonth(state: RecurrenceState): boolean {
 function sendsDayOfMonth(state: RecurrenceState): boolean {
   if (state.frequency === "daily" || state.frequency === "weekly") return false;
   return !(state.frequency === "monthly" && state.weekOfMonth !== null);
+}
+
+/**
+ * Whether two rosters hold the same people, in whatever order.
+ *
+ * A split is a set: "Anna and Jonas" and "Jonas and Anna" are one answer, and
+ * a chip that offered the second while the row showed the first would be
+ * offering nothing.
+ */
+function sameMembers(
+  one: readonly string[],
+  other: readonly string[],
+): boolean {
+  if (one.length !== other.length) return false;
+  const held = new Set(other);
+  return one.every((id) => held.has(id));
 }
 
 const NO_MAPPINGS: readonly LearnedMerchantMapping[] = [];
@@ -670,6 +688,21 @@ export function AddEntryForm({
 
   const [scan, setScan] = useState<ScannedExpense | null>(null);
   const [bannerVisible, setBannerVisible] = useState(false);
+  /**
+   * Who the last dictated sentence named, still waiting to be answered.
+   *
+   * Held rather than applied. The amount and the description go straight into
+   * their fields because a wrong one is visible where it landed; a payer is
+   * not — the split row would read as true whoever was put in it — so a name
+   * only ever becomes a chip, and the chip only ever becomes a field when it
+   * is pressed. Each half is emptied as it is taken, which is what stops a
+   * proposal the reader has already answered coming back at them the next
+   * time they open the split sheet.
+   */
+  const [namedPeople, setNamedPeople] = useState<{
+    payerId: string;
+    participantIds: readonly string[];
+  } | null>(null);
   /** Uploaded as they are chosen; linked to the entry when it is saved. */
   const [attachments, setAttachments] = useState<readonly EntryAttachment[]>(
     [],
@@ -966,6 +999,25 @@ export function AddEntryForm({
     eachFormatted,
     byItem,
   });
+
+  /**
+   * The half of a dictated proposal that still says something new.
+   *
+   * A chip offering what the row already shows is a chip that does nothing,
+   * so each half is measured against the form rather than against the
+   * sentence: "Anna paid" disappears the moment Anna is the payer, however
+   * she got there.
+   */
+  const heardPayerId =
+    namedPeople && namedPeople.payerId !== "" && namedPeople.payerId !== payerId
+      ? namedPeople.payerId
+      : "";
+  const heardIncluded =
+    namedPeople &&
+    namedPeople.participantIds.length > 0 &&
+    !sameMembers(namedPeople.participantIds, effectiveIncluded)
+      ? namedPeople.participantIds
+      : [];
 
   /**
    * What the split does not add up to, said out loud.
@@ -1901,7 +1953,15 @@ export function AddEntryForm({
           <VoiceButton
             className="self-start"
             onHeard={(transcript) => {
-              const heard = heardEntry(transcript, currency);
+              /*
+               * The people first, because what they were said in is words the
+               * description must not keep: "Anna paid the 120 taxi, split
+               * with me and Jonas" is a taxi, and the rest of it is a chip.
+               * A clause whose names did not resolve claims nothing, so those
+               * words fall through to the description as they always did.
+               */
+              const people = heardPeople(transcript, members, selfId);
+              const heard = heardEntry(transcript, currency, people.spans);
               /*
                * Anything not heard stays at its default, and nothing is
                * overwritten with nothing: a sentence with no amount in it
@@ -1918,6 +1978,20 @@ export function AddEntryForm({
                * `heardEntry` puts everything it could not read here.
                */
               if (heard.description !== "") setDescription(heard.description);
+              /*
+               * And the people are offered rather than written. A sentence
+               * that named nobody clears the last one's offer with them: the
+               * chips answer for the sentence on screen, never for the one
+               * before it.
+               */
+              setNamedPeople(
+                people.payerId === "" && people.participantIds.length === 0
+                  ? null
+                  : {
+                      payerId: people.payerId,
+                      participantIds: people.participantIds,
+                    },
+              );
             }}
           />
         )}
@@ -2212,6 +2286,37 @@ export function AddEntryForm({
             summary={summary}
             received={isIncome}
             onOpen={() => setSheet("split")}
+          />
+        )}
+
+        {/*
+         * What the sentence said about people, under the row it would change.
+         * Beside the field rather than inside it: the parser proposes and
+         * these are the two taps that dispose, which is the whole reason a
+         * name is allowed to be read at all.
+         */}
+        {!isSettle && namedPeople && (
+          <HeardPeopleChips
+            members={members}
+            selfId={selfId}
+            payerId={heardPayerId}
+            participantIds={heardIncluded}
+            onPayer={() => {
+              setPayerId(heardPayerId);
+              setNamedPeople((current) =>
+                current === null ? null : { ...current, payerId: "" },
+              );
+            }}
+            onSplit={() => {
+              setIncludedIds([...heardIncluded]);
+              // Per-item amounts were written against a different roster, so
+              // they are no longer an answer to this split.
+              setByItem(false);
+              setNamedPeople((current) =>
+                current === null ? null : { ...current, participantIds: [] },
+              );
+            }}
+            onDismiss={() => setNamedPeople(null)}
           />
         )}
 
