@@ -18,10 +18,9 @@ import { heardEntry } from "./heard-entry";
  * languages rather than written from the inside — which is how every
  * vocabulary list in `heard-entry.ts` was got wrong the first time. The
  * vocabulary that *was* written from the inside fails 44 of the 108
- * assertions below, 41 of them in the two tables, across seven separate
- * faults and not one of them inside a single rule. It lives here rather than
- * in a scratch script because the value was never the one run: it is the
- * table.
+ * assertions below, 42 of them in the tables, across seven separate faults
+ * and not one of them inside a single rule. It lives here rather than in a
+ * scratch script because the value was never the one run: it is the table.
  */
 
 const GROUP = [
@@ -451,6 +450,7 @@ describe("what people actually say", () => {
     ["Anna nous a payé le taxi 30 francs", "anna", "", "taxi"],
     ["l'hôtel 200 francs réglé par Anna", "anna", "", "l'hôtel"],
     ["le taxi c'est Anna qui paye, 30 francs", "anna", "", "le taxi"],
+    ["Anna a dépensé 40 francs en boissons", "anna", "", "boissons"],
     // Qui partage.
     ["on a partagé le taxi 40 francs avec Anna", "", "seb+anna", "taxi"],
     ["40 francs taxi partagé entre Anna et moi", "", "seb+anna", "taxi"],
@@ -490,22 +490,21 @@ describe("what people actually say", () => {
   });
 
   /*
-   * Sentences whose *money* the parser next door is still learning to read —
-   * "3 beers 15 euros" takes the count for the price, and "50/50" is a figure
-   * before it is a fraction. Both are fixed on the branch this one follows,
-   * so only the people are asserted here rather than encoding a number that
-   * is about to change.
+   * And the two parsers reading one sentence between them. "3 beers 15 euros"
+   * is a count in front of a price, and "50/50" is two figures before it is a
+   * fraction — the money parser picks the one the unit is stuck to, and the
+   * words the people took are gone by the time it looks.
    */
   it.each([
-    ["3 beers 15 euros with Jonas", "seb+jonas"],
-    ["split it 50/50 with Anna, 40 francs", "seb+anna"],
-  ])("hears the people in %s whatever the figure does", (spoken, split) => {
-    expect(heard(spoken).participantIds.join("+")).toBe(split);
-  });
-
-  it("hears the payer in a sentence the money parser trips on", () => {
-    // "en" joins the joining words on the branch this one follows; until it
-    // does, the description keeps it. The payer is the part under test.
-    expect(heard("Anna a dépensé 40 francs en boissons").payerId).toBe("anna");
-  });
+    ["3 beers 15 euros with Jonas", "15", "seb+jonas", "3 beers"],
+    ["split it 50/50 with Anna, 40 francs", "40", "seb+anna", ""],
+  ])(
+    "reads the money and the people out of %s",
+    (spoken, amountText, split, description) => {
+      const result = heard(spoken);
+      expect(result.amountText).toBe(amountText);
+      expect(result.participantIds.join("+")).toBe(split);
+      expect(result.description).toBe(description);
+    },
+  );
 });
