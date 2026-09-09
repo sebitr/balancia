@@ -3187,6 +3187,13 @@
         "cancel": "Ne pas écouter",
         "allowAlways": "Écouter et ne plus demander",
         "allowOnce": "Écouter cette fois"
+      },
+      "heard": {
+        "label": "Aussi entendu",
+        "payer": "{name} a payé",
+        "split": "Partagé entre {names}",
+        "justYou": "Juste toi",
+        "dismiss": "Ignorer ce qui a été entendu sur les personnes"
       }
     }
   },
