@@ -246,3 +246,130 @@ describe("the words around it", () => {
     );
   });
 });
+
+/**
+ * The sentences people actually say, in both languages the app ships.
+ *
+ * Written after a sweep of a hundred-odd realistic transcripts found the
+ * reader losing in four different ways at once. A table rather than prose
+ * because the failures were never in one rule — they were in the collisions
+ * between them, and a collision is only visible next to the case it breaks.
+ */
+describe("what people actually say", () => {
+  it.each([
+    // The commonest shape of all: what it was, then what it cost.
+    ["coffee 5 francs", "5", "CHF", "coffee"],
+    ["lunch 20 euros", "20", "EUR", "lunch"],
+    ["groceries 45.50 francs", "45.50", "CHF", "groceries"],
+    ["rent 1200 francs", "1200", "CHF", "rent"],
+    ["movie tickets 30 francs", "30", "CHF", "movie tickets"],
+    ["gift for Marie 40 euros", "40", "EUR", "gift for Marie"],
+    ["electricity bill 120 francs", "120", "CHF", "electricity bill"],
+    // Cost first.
+    ["24 francs Coop", "24", "CHF", "Coop"],
+    ["12 euros for coffee", "12", "EUR", "coffee"],
+    // Narrated rather than commanded.
+    ["I paid 30 euros for the train", "30", "EUR", "train"],
+    ["I spent 15 on groceries", "15", "", "groceries"],
+    ["we spent 60 francs at the market", "60", "CHF", "market"],
+    ["I bought coffee for 5 francs", "5", "CHF", "bought coffee"],
+    // No unit said at all: the group's own currency is left alone.
+    ["coffee 5", "5", "", "coffee"],
+    ["groceries 45.50", "45.50", "", "groceries"],
+  ])("hears %s", (spoken, amountText, currency, description) => {
+    expect(heardEntry(spoken)).toEqual({ amountText, currency, description });
+  });
+
+  it.each([
+    ["restaurant 50 francs", "50", "CHF", "restaurant"],
+    ["café 5 francs", "5", "CHF", "café"],
+    ["courses 45 francs", "45", "CHF", "courses"],
+    ["loyer 1200 francs", "1200", "CHF", "loyer"],
+    ["billets de train 120 francs", "120", "CHF", "billets de train"],
+    ["cadeau pour Marie 40 euros", "40", "EUR", "cadeau pour Marie"],
+    ["abonnement Netflix 15,90 francs", "15.90", "CHF", "abonnement Netflix"],
+    ["50 francs de courses", "50", "CHF", "courses"],
+    ["80 francs au restaurant", "80", "CHF", "restaurant"],
+    ["j'ai dépensé 30 francs en courses", "30", "CHF", "courses"],
+    ["on a payé 45 euros au restaurant", "45", "EUR", "restaurant"],
+    ["une pizza 18 euros", "18", "EUR", "pizza"],
+    ["20 balles pour le ciné", "20", "CHF", "ciné"],
+    ["pain au chocolat 3 francs", "3", "CHF", "pain au chocolat"],
+    ["dîner chez Pierre 80 francs", "80", "CHF", "dîner chez Pierre"],
+  ])("entend %s", (spoken, amountText, currency, description) => {
+    expect(heardEntry(spoken)).toEqual({ amountText, currency, description });
+  });
+
+  /*
+   * People count things out loud, and the count comes first because that is
+   * the order the words go in. Taking the first figure made "2 coffees 8
+   * francs" an expense of two francs described as "coffees 8" — so the figure
+   * is read from the unit stuck to it rather than from its place in the line.
+   */
+  it.each([
+    ["2 coffees 8 francs", "8", "2 coffees"],
+    ["3 beers 15 euros", "15", "3 beers"],
+    ["2 train tickets 90 francs", "90", "2 train tickets"],
+    ["2 cafés 8 francs", "8", "2 cafés"],
+    ["4 pizzas 72 euros", "72", "4 pizzas"],
+    ["dinner for 4 people 120 francs", "120", "dinner for 4 people"],
+    ["12/03 dinner 45 francs", "45", "12/03 dinner"],
+    ["2 nuits hôtel 240 francs", "240", "2 nuits hôtel"],
+  ])("takes the figure the unit is on in %s", (spoken, amountText, description) => {
+    expect(heardEntry(spoken).amountText).toBe(amountText);
+    expect(heardEntry(spoken).description).toBe(description);
+  });
+
+  it("still reads a unit that came first", () => {
+    expect(heardEntry("CHF 24 Coop")).toEqual({
+      amountText: "24",
+      currency: "CHF",
+      description: "Coop",
+    });
+  });
+
+  /*
+   * Switzerland groups thousands with an apostrophe, and this is a Swiss app
+   * with francs for a default. A rent dictated as "1'200 francs" was read as
+   * two hundred.
+   */
+  it.each([
+    ["loyer 1'200 francs", "1200"],
+    ["maison 1'234'567 francs", "1234567"],
+    ["loyer 1'200.50 francs", "1200.50"],
+  ])("reads the Swiss grouping in %s", (spoken, amountText) => {
+    expect(heardEntry(spoken).amountText).toBe(amountText);
+  });
+
+  /*
+   * Three-letter words are cheap and the ISO list is long. Every one of these
+   * is a currency somewhere, and folding case before the lookup let the word
+   * take the currency — which then left the real unit sitting in the
+   * description, because it had already been claimed.
+   */
+  it.each([
+    ["coffee cup 5 francs", "CHF", "coffee cup"],
+    ["top up 20 francs", "CHF", "top up"],
+    ["mad hatter 40 euros", "EUR", "mad hatter"],
+    ["gel douche 8 francs", "CHF", "gel douche"],
+    ["sos plombier 90 francs", "CHF", "sos plombier"],
+  ])("does not take the word %s for a currency code", (spoken, currency, description) => {
+    expect(heardEntry(spoken).currency).toBe(currency);
+    expect(heardEntry(spoken).description).toBe(description);
+  });
+
+  it("still takes a code that was written as one", () => {
+    expect(heardEntry("courses 45 CHF").currency).toBe("CHF");
+    expect(heardEntry("30 EUR train").currency).toBe("EUR");
+  });
+
+  it("takes the word for the cents along with the cents", () => {
+    expect(heardEntry("50 francs 20 centimes")).toEqual({
+      amountText: "50.20",
+      currency: "CHF",
+      description: "",
+    });
+    // "cent" is a hundred everywhere it is not two digits behind a unit.
+    expect(heardEntry("cent balles").description).toBe("cent");
+  });
+});
