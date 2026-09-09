@@ -1,6 +1,6 @@
 # Get the format job back to green, and file the finished items that were still sitting in Now
 
-Branch: `chore/format-and-todo-sweep`
+Merged: 2026-09-09 in #338
 
 CI's "Lint, types and format" job had been red on `main` for several merges.
 Only `prettier --check .` was failing, on six files: two docs, two source files

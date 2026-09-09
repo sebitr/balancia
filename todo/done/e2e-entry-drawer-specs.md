@@ -1,6 +1,6 @@
 # Get the Playwright journeys back to green: the headless browser was killing the tab, and one assertion could never pass
 
-Branch: `fix/e2e-entry-drawer-specs`
+Merged: 2026-09-09 in #342
 
 Twelve specs were red on `main` — every test that renders the add-entry form or
 its drawer, and no other test in those four files:
