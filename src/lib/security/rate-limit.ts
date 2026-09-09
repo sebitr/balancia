@@ -37,6 +37,7 @@ export type RateLimitBucket =
   | "upload"
   | "receiptScan"
   | "rateLookup"
+  | "parseText"
   | "passkeyChallenge"
   | "pushSubscribe"
   | "pushTest"
@@ -142,6 +143,12 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // Generous: a form re-asks whenever the currency or date changes, and the
     // answers are cached, so this only has to stop outright abuse.
     rateLookup: { limit: 240, windowSeconds: 600 },
+    // A parse is a regular expression over one sentence — no outbound call, no
+    // row written, nothing to bill. The ceiling is here so the endpoint cannot
+    // be used as free CPU, and it is set high because a shortcut run from a
+    // share sheet is a burst: somebody pasting a bank's month of texts in one
+    // sitting should not be told to come back later.
+    parseText: { limit: 120, windowSeconds: 600 },
     // Subscribing happens once per device, plus the odd re-subscribe when a
     // browser rotates an endpoint.
     pushSubscribe: { limit: 30, windowSeconds: 600 },
