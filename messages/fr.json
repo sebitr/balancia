@@ -599,7 +599,7 @@
     "allSettled": "Tout est soldé",
     "noOutstandingBalances": "Aucun solde en attente",
     "remindPerson": "Relancer {name}",
-    "remindAll": "Tout relancer",
+    "remindAll": "Relancer",
     "howCalculated": "Voir le détail du solde",
     "positionSheetTitle": "Détail de ton solde",
     "positionSheetDescription": "Les montants enregistrés qui donnent ton solde actuel.",
