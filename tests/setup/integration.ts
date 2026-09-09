@@ -45,6 +45,7 @@ const DOMAIN_TABLES = [
   "proof_of_work_challenges",
   "passkeys",
   "sessions",
+  "api_tokens",
   "users",
 ];
 

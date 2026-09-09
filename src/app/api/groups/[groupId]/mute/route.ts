@@ -1,7 +1,8 @@
-import { getCurrentActor, getCurrentUser } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { setGroupMuted } from "@/modules/notifications/service";
 import {
+  apiActor,
+  apiUser,
   isUuid,
   mobileApiError,
   noStore,
@@ -40,14 +41,17 @@ async function handlePut(
   }
 
   try {
-    const user = await getCurrentUser();
+    const user = await apiUser(request, "/api/groups/[groupId]/mute", "PUT");
     if (!user) {
       return noStore(
         { error: "Sign in with an account to mute a group." },
         { status: 403 },
       );
     }
-    const access = await authorizeGroup(await getCurrentActor(), groupId);
+    const access = await authorizeGroup(
+      await apiActor(request, "/api/groups/[groupId]/mute", "PUT"),
+      groupId,
+    );
     await setGroupMuted(user.userId, access.groupId, raw.muted);
     return noStore({ ok: true });
   } catch (error) {

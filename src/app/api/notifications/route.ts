@@ -1,9 +1,9 @@
-import { getCurrentUser } from "@/lib/security/actor";
 import {
   countUnread,
   listNotifications,
 } from "@/modules/notifications/service";
 import {
+  apiUser,
   mobileApiError,
   noStore,
   serializeNotification,
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
 async function handleGet(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await apiUser(request, "/api/notifications", "GET");
     if (!user) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }

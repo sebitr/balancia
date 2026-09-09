@@ -39,6 +39,7 @@ export type RateLimitBucket =
   | "rateLookup"
   | "parseText"
   | "passkeyChallenge"
+  | "apiToken"
   | "pushSubscribe"
   | "pushTest"
   | "telemetryCrash"
@@ -149,6 +150,25 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // share sheet is a burst: somebody pasting a bank's month of texts in one
     // sitting should not be told to come back later.
     parseText: { limit: 120, windowSeconds: 600 },
+    /*
+     * One API key's requests, keyed by the key's row id.
+     *
+     * Not a credential bucket: the key has already been resolved by the time
+     * this is spent, so there is nothing here to guess. What it bounds is a
+     * key that has escaped — pasted into a public repository, or left on a
+     * device somebody sold — being used to walk a group's history as fast as
+     * the instance will serve it.
+     *
+     * Keyed by token id rather than by IP because a key is a *thing*, and the
+     * useful ceiling is on the thing rather than on wherever it happens to be
+     * running: a wall tablet and a cron job on the same home connection should
+     * not spend each other's allowance, and a key used from a rotating address
+     * should not escape one. Six hundred in ten minutes is a request a second
+     * sustained, which is far above a Shortcut, a nightly export or a tablet
+     * refreshing every ten seconds, and far below anything worth doing with a
+     * stolen key.
+     */
+    apiToken: { limit: 600, windowSeconds: 600 },
     // Subscribing happens once per device, plus the odd re-subscribe when a
     // browser rotates an endpoint.
     pushSubscribe: { limit: 30, windowSeconds: 600 },

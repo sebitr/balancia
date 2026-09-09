@@ -1,7 +1,6 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { restoreSettlement } from "@/modules/settlements/service";
-import { isUuid, mobileApiError, noStore } from "@/app/api/mobile";
+import { apiActor, isUuid, mobileApiError, noStore } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
 /** Undo for a deletion, same as the web's toast offers. */
@@ -11,17 +10,21 @@ type Context =
   RouteContext<"/api/groups/[groupId]/settlements/[settlementId]/restore">;
 
 export async function POST(request: Request, context: Context) {
-  return trackRoute(ROUTE, "POST", () => handlePost(context));
+  return trackRoute(ROUTE, "POST", () => handlePost(request, context));
 }
 
-async function handlePost(context: Context) {
+async function handlePost(request: Request, context: Context) {
   const { groupId, settlementId } = await context.params;
   if (!isUuid(groupId) || !isUuid(settlementId)) {
     return noStore({ error: "Not found." }, { status: 404 });
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/settlements/[settlementId]/restore",
+      "POST",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

@@ -1,7 +1,6 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { restoreRecurringExpense } from "@/modules/recurring/service";
-import { isUuid, mobileApiError, noStore } from "@/app/api/mobile";
+import { apiActor, isUuid, mobileApiError, noStore } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
@@ -14,17 +13,21 @@ type Context =
   RouteContext<"/api/groups/[groupId]/recurring/[templateId]/restore">;
 
 export async function POST(request: Request, context: Context) {
-  return trackRoute(ROUTE, "POST", () => handlePost(context));
+  return trackRoute(ROUTE, "POST", () => handlePost(request, context));
 }
 
-async function handlePost(context: Context) {
+async function handlePost(request: Request, context: Context) {
   const { groupId, templateId } = await context.params;
   if (!isUuid(groupId) || !isUuid(templateId)) {
     return noStore({ error: "Not found." }, { status: 404 });
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/recurring/[templateId]/restore",
+      "POST",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

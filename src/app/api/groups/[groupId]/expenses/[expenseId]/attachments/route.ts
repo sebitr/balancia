@@ -1,7 +1,6 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { listAttachmentsForExpense } from "@/modules/attachments/service";
-import { isUuid, mobileApiError, noStore } from "@/app/api/mobile";
+import { apiActor, isUuid, mobileApiError, noStore } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
@@ -15,11 +14,12 @@ export async function GET(
   return trackRoute(
     "/api/groups/[groupId]/expenses/[expenseId]/attachments",
     "GET",
-    () => handleGet(context),
+    () => handleGet(request, context),
   );
 }
 
 async function handleGet(
+  request: Request,
   context: RouteContext<"/api/groups/[groupId]/expenses/[expenseId]/attachments">,
 ) {
   const { groupId, expenseId } = await context.params;
@@ -28,7 +28,11 @@ async function handleGet(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/expenses/[expenseId]/attachments",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const attachments = await listAttachmentsForExpense(
       access.groupId,

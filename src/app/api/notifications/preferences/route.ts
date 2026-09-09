@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/security/actor";
 import {
   getPreferences,
   listMutedGroups,
   savePreferences,
 } from "@/modules/notifications/service";
 import {
+  apiUser,
   invalidInput,
   mobileApiError,
   noStore,
@@ -17,13 +17,19 @@ import { trackRoute } from "@/lib/metrics/http";
  * Which categories reach this reader, and which groups they have silenced.
  * The switches are all-or-nothing per category, same as the web page.
  */
-export async function GET() {
-  return trackRoute("/api/notifications/preferences", "GET", handleGet);
+export async function GET(request: Request) {
+  return trackRoute("/api/notifications/preferences", "GET", () =>
+    handleGet(request),
+  );
 }
 
-async function handleGet() {
+async function handleGet(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await apiUser(
+      request,
+      "/api/notifications/preferences",
+      "GET",
+    );
     if (!user) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }
@@ -62,7 +68,11 @@ async function handlePut(request: Request) {
   }
 
   try {
-    const user = await getCurrentUser();
+    const user = await apiUser(
+      request,
+      "/api/notifications/preferences",
+      "PUT",
+    );
     if (!user) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }

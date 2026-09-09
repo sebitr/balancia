@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
   listRemindRecipients,
@@ -8,6 +7,7 @@ import {
 } from "@/modules/reminders/service";
 import { REMIND_MESSAGE_MAX_LENGTH } from "@/modules/reminders/types";
 import {
+  apiActor,
   invalidInput,
   isUuid,
   mobileApiError,
@@ -27,11 +27,12 @@ export async function GET(
   context: RouteContext<"/api/groups/[groupId]/reminders">,
 ) {
   return trackRoute("/api/groups/[groupId]/reminders", "GET", () =>
-    handleGet(context),
+    handleGet(request, context),
   );
 }
 
 async function handleGet(
+  request: Request,
   context: RouteContext<"/api/groups/[groupId]/reminders">,
 ) {
   const { groupId } = await context.params;
@@ -40,7 +41,11 @@ async function handleGet(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/reminders",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const recipients = await listRemindRecipients(access);
     return noStore({ recipients });
@@ -91,7 +96,11 @@ async function handlePost(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/reminders",
+      "POST",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

@@ -1,8 +1,7 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { classifyTransactionSync } from "@/modules/categorization";
 import { loadMappings } from "@/modules/categorization/service";
-import { isUuid, mobileApiError, noStore } from "@/app/api/mobile";
+import { apiActor, isUuid, mobileApiError, noStore } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
 const ROUTE = "/api/groups/[groupId]/categorize";
@@ -40,7 +39,11 @@ async function handlePost(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/categorize",
+      "POST",
+    );
     const access = await authorizeGroup(actor, groupId);
 
     const body = (await request.json().catch(() => null)) as {

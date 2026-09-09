@@ -1,7 +1,7 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { listGroupActivity } from "@/modules/activity/service";
 import {
+  apiActor,
   isUuid,
   mobileApiError,
   noStore,
@@ -36,7 +36,11 @@ async function handleGet(
       : 100;
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/activity",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const activity = await listGroupActivity(access.groupId, { limit });
     return noStore({ activity: activity.map(serializeActivity) });

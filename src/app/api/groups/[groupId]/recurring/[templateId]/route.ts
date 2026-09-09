@@ -1,10 +1,10 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
   deleteRecurringExpense,
   setRecurringPaused,
 } from "@/modules/recurring/service";
 import {
+  apiActor,
   isUuid,
   mobileApiError,
   noStore,
@@ -45,7 +45,11 @@ async function handlePatch(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/recurring/[templateId]",
+      "PATCH",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
@@ -67,11 +71,12 @@ export async function DELETE(
   return trackRoute(
     "/api/groups/[groupId]/recurring/[templateId]",
     "DELETE",
-    () => handleDelete(context),
+    () => handleDelete(request, context),
   );
 }
 
 async function handleDelete(
+  request: Request,
   context: RouteContext<"/api/groups/[groupId]/recurring/[templateId]">,
 ) {
   const { groupId, templateId } = await context.params;
@@ -80,7 +85,11 @@ async function handleDelete(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/recurring/[templateId]",
+      "DELETE",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

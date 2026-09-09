@@ -1,4 +1,3 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
   deleteExpense,
@@ -7,6 +6,7 @@ import {
 } from "@/modules/expenses/service";
 import { expenseInputSchema } from "@/modules/expenses/schemas";
 import {
+  apiActor,
   invalidInput,
   isUuid,
   mobileApiError,
@@ -28,17 +28,21 @@ const ROUTE = "/api/groups/[groupId]/expenses/[expenseId]";
 type Context = RouteContext<"/api/groups/[groupId]/expenses/[expenseId]">;
 
 export async function GET(request: Request, context: Context) {
-  return trackRoute(ROUTE, "GET", () => handleGet(context));
+  return trackRoute(ROUTE, "GET", () => handleGet(request, context));
 }
 
-async function handleGet(context: Context) {
+async function handleGet(request: Request, context: Context) {
   const { groupId, expenseId } = await context.params;
   if (!isUuid(groupId) || !isUuid(expenseId)) {
     return noStore({ error: "Not found." }, { status: 404 });
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/expenses/[expenseId]",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const expense = await getExpense(access.groupId, expenseId);
     if (!expense) {
@@ -74,7 +78,11 @@ async function handlePatch(request: Request, context: Context) {
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/expenses/[expenseId]",
+      "PATCH",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
@@ -86,17 +94,21 @@ async function handlePatch(request: Request, context: Context) {
 }
 
 export async function DELETE(request: Request, context: Context) {
-  return trackRoute(ROUTE, "DELETE", () => handleDelete(context));
+  return trackRoute(ROUTE, "DELETE", () => handleDelete(request, context));
 }
 
-async function handleDelete(context: Context) {
+async function handleDelete(request: Request, context: Context) {
   const { groupId, expenseId } = await context.params;
   if (!isUuid(groupId) || !isUuid(expenseId)) {
     return noStore({ error: "Not found." }, { status: 404 });
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/expenses/[expenseId]",
+      "DELETE",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

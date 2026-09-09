@@ -1989,6 +1989,34 @@
     "deviceOnly": "not synced",
     "removeLastBody": "This is the only way into your account. Remove it and you will have to use your email address to get back in."
   },
+  "apiTokens": {
+    "title": "API keys",
+    "keyCount": "{count, plural, one {# key} other {# keys}}",
+    "emptyDescription": "Give a Shortcut, a script or a wall tablet its own key, so it never has to hold your password.",
+    "cardHint": "A key can read and write entries. It can never change your account, your groups' membership, or export a group.",
+    "nameLabel": "What is this key for",
+    "namePlaceholder": "Kitchen tablet",
+    "scopeLabel": "What it may do",
+    "scopeRead": "Read only",
+    "scopeWrite": "Read and write",
+    "groupLabel": "Which group",
+    "allGroups": "All my groups",
+    "create": "Create key",
+    "createFailed": "That key could not be created.",
+    "created": "Added {date}",
+    "lastUsed": "last used {date}",
+    "neverUsed": "never used",
+    "mintedTitle": "Your new key",
+    "mintedOnce": "Copy it now. It will not be shown again — if you lose it, revoke it and create another.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "revokeLabel": "Revoke {name}",
+    "revokeTitle": "Revoke this key?",
+    "revokeBody": "Anything still using it stops working straight away, and it cannot be brought back. You can always create another.",
+    "revokeConfirm": "Revoke",
+    "revokedToast": "{name} revoked",
+    "revokeFailed": "That key could not be revoked."
+  },
   "importWizard": {
     "fileLabel": "Backup or export",
     "fileHelp": "A Balancia JSON export, a Splitwise group CSV, or a Splitwise JSON backup. The file is parsed on this server and never sent anywhere else.",
@@ -2531,7 +2559,10 @@
     "passwordTooLong": "That password is too long.",
     "passwordCommon": "That password is one of the most commonly used ones. Choose another.",
     "passwordPersonal": "Your password should not contain your name or your email address.",
-    "proofOfWorkRequired": "Your browser did not finish its verification. Reload the page and try again."
+    "proofOfWorkRequired": "Your browser did not finish its verification. Reload the page and try again.",
+    "apiTokenNameRequired": "Give this key a name.",
+    "apiTokenNameTooLong": "That name is too long.",
+    "apiTokenLimit": "You have as many API keys as one account can hold. Revoke one first."
   },
   "serverValidation": {
     "checkForm": "Check the form.",

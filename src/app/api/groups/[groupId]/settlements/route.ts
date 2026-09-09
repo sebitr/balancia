@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
   createSettlement,
@@ -7,6 +6,7 @@ import {
 } from "@/modules/settlements/service";
 import { settlementInputSchema } from "@/modules/expenses/schemas";
 import {
+  apiActor,
   invalidInput,
   isUuid,
   mobileApiError,
@@ -45,7 +45,11 @@ async function handleGet(
   );
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/settlements",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const settlements = await listSettlements(access.groupId, { limit });
     return noStore({
@@ -86,7 +90,11 @@ async function handlePost(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/settlements",
+      "POST",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

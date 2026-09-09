@@ -1,5 +1,9 @@
 import { sql } from "drizzle-orm";
 import { mintWebauthnUserHandle } from "@/modules/auth/user-handle";
+// `groups` imports `users` from this file, so the two modules are a cycle.
+// It resolves because every reference on both sides is a thunk — drizzle calls
+// them after both modules have finished evaluating, never during.
+import { groups } from "./groups";
 import {
   boolean,
   check,
@@ -46,6 +50,17 @@ export const verificationPurposeEnum = pgEnum("verification_purpose", [
 ]);
 
 export const oauthProviderEnum = pgEnum("oauth_provider", ["apple"]);
+
+/**
+ * What an API token may do. Two values and no more.
+ *
+ * Anything finer would be a permission system in a second place: the group
+ * roles in `security/authorization.ts` already decide who may do what, and a
+ * token cannot widen them — it only narrows what its holder could already do.
+ * So the question this answers is the one a person minting a key for a
+ * Shortcut can actually answer: does it only look, or does it also write.
+ */
+export const apiTokenScopeEnum = pgEnum("api_token_scope", ["read", "write"]);
 
 export const users = pgTable(
   "users",
@@ -270,6 +285,74 @@ export const sessions = pgTable(
     uniqueIndex("sessions_token_hash_unique").on(table.tokenHash),
     index("sessions_user_idx").on(table.userId),
     index("sessions_expires_idx").on(table.expiresAt),
+  ],
+);
+
+/**
+ * A key somebody's own software holds: a Shortcut, a cron script, a tablet on
+ * a wall.
+ *
+ * The same doctrine as `sessions` above, because it is the same kind of
+ * secret: 256 bits from `generateToken()`, only the SHA-256 hash stored, and a
+ * unique index on the hash so a lookup is one indexed comparison of a full
+ * digest. What is different is everything around it.
+ *
+ * **It does not expire.** A token that silently stops working is a wall tablet
+ * that goes blank on a Tuesday and a cron job nobody notices died, and the
+ * failure arrives long after anyone remembers minting it. `lastUsedAt` is what
+ * makes a forgotten token visible instead — the settings list prints it, and
+ * revoking is one tap. A key that has not been used since March is a question
+ * somebody can answer; a key that stopped working at 3am is an outage.
+ *
+ * **It is narrower than the session it stands in for.** `scope` is read or
+ * write; `groupId` set pins it to one group and null means every group its
+ * owner is in. Neither can widen anything: what the token may reach is the
+ * intersection of its scope with what its owner could already do, decided in
+ * `modules/api-tokens/scope.ts` before a record is fetched.
+ *
+ * `prefix` is the first twelve characters of the raw token — `blc_` plus eight
+ * — kept for the same reason invitation links keep theirs: so a row can be
+ * named in a list, and matched against a key found in somebody's script,
+ * without the server holding anything that opens a door.
+ */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** What the person called it: "Kitchen tablet", "Weekly export". */
+    name: text("name").notNull(),
+    /** SHA-256 of the raw token, hex encoded. */
+    tokenHash: text("token_hash").notNull(),
+    /** `blc_` plus eight characters, for showing a key without revealing it. */
+    prefix: text("prefix").notNull(),
+    scope: apiTokenScopeEnum("scope").notNull(),
+    /**
+     * The one group this key may touch, or null for all of them.
+     *
+     * Cascades with the group: a key pinned to a group that has been deleted
+     * opens nothing, and keeping the row would only put a dead entry in a list
+     * whose whole job is to be readable.
+     */
+    groupId: uuid("group_id").references(() => groups.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /**
+     * When this key last authenticated a request. Null means it never has —
+     * which on a key minted a month ago is the most useful thing the list can
+     * say, because it means whatever it was pasted into never worked.
+     */
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("api_tokens_token_hash_unique").on(table.tokenHash),
+    index("api_tokens_user_idx").on(table.userId),
   ],
 );
 

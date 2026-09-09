@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentActor } from "@/lib/security/actor";
+import { apiActor } from "@/app/api/mobile";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { downloadAttachment } from "@/modules/attachments/service";
 import { ObjectNotFoundError } from "@/lib/storage";
@@ -26,13 +26,17 @@ export async function GET(
 }
 
 async function handleGet(
-  _request: Request,
+  request: Request,
   context: RouteContext<"/api/groups/[groupId]/attachments/[attachmentId]">,
 ) {
   const { groupId, attachmentId } = await context.params;
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/attachments/[attachmentId]",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const file = await downloadAttachment(access, attachmentId);
 
@@ -67,6 +71,13 @@ async function handleGet(
         { error: "Sign in to continue." },
         { status: 401 },
       );
+    }
+    // An API key that will not do — read-only, pinned elsewhere. By name
+    // rather than by class, like the two above: this catch dispatches on
+    // `error.name` throughout, and one branch importing a constructor while
+    // its neighbours do not would read as a distinction that isn't there.
+    if (error instanceof Error && error.name === "TokenScopeError") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
     logger.error(
       { err: error instanceof Error ? error.message : String(error), groupId },

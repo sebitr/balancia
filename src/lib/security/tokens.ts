@@ -50,3 +50,49 @@ export function hashToken(raw: string): string {
 export function isWellFormedToken(candidate: string): boolean {
   return /^[A-Za-z0-9_-]{40,64}$/.test(candidate);
 }
+
+/**
+ * What an API token announces itself as on the wire.
+ *
+ * Session and guest tokens are bare base64url and indistinguishable from each
+ * other, from a UUID, and from anything else of that shape — which is fine for
+ * a value that only ever travels in a cookie between one browser and one
+ * server. An API token is pasted into other people's software: into a
+ * Shortcut, a crontab, a tablet's configuration screen, a `.env` file that
+ * ends up in a repository. It has to be greppable in a log and recognisable to
+ * a secret scanner before it leaks rather than after.
+ */
+export const API_TOKEN_PREFIX = "blc_";
+
+/** `blc_` plus eight characters: enough to name a key, useless as a key. */
+const API_TOKEN_PREFIX_LENGTH = API_TOKEN_PREFIX.length + 8;
+
+export function generateApiToken(): GeneratedToken {
+  const raw = API_TOKEN_PREFIX + randomBytes(TOKEN_BYTES).toString("base64url");
+  return {
+    raw,
+    hash: hashToken(raw),
+    prefix: raw.slice(0, API_TOKEN_PREFIX_LENGTH),
+  };
+}
+
+/**
+ * A sibling of `isWellFormedToken` rather than a widening of it.
+ *
+ * The direction that matters is this one: a bearer header is attacker-supplied,
+ * so what it accepts must be exactly what this feature mints — never a session
+ * cookie, a join link or a guest invitation, all of which are bare base64url
+ * and all of which `isWellFormedToken` accepts.
+ *
+ * The reverse overlap is left alone on purpose. `blc_` is itself valid
+ * base64url, so the shared predicate accepts an API key's shape, and
+ * tightening it to reject the prefix would refuse the one session token in
+ * sixteen million that happens to be minted starting `blc_` — signing somebody
+ * out for nothing. Nothing needs the shapes to be disjoint: every caller of
+ * the shared predicate uses it as a gate in front of a hash lookup in one
+ * named table, so a key offered as a cookie costs a query that finds nothing.
+ * The tables are the guard; the regexes only keep garbage off them.
+ */
+export function isWellFormedApiToken(candidate: string): boolean {
+  return /^blc_[A-Za-z0-9_-]{40,64}$/.test(candidate);
+}

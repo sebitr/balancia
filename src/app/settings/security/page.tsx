@@ -3,10 +3,14 @@ import { getTranslations } from "next-intl/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SettingsScreen } from "@/components/settings/settings-screen";
 import { PasskeysCard } from "@/components/settings/passkeys-card";
+import { ApiTokensCard } from "@/components/settings/api-tokens-card";
 import { FallbacksCard } from "@/components/settings/fallbacks-card";
 import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getLinkedAppleIdentity, hasPassword } from "@/modules/auth/service";
+import { listGroupsForUser } from "@/modules/groups/service";
+import { listApiTokens } from "@/modules/api-tokens/service";
+import { serializeApiToken } from "@/modules/api-tokens/actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("userSettings");
@@ -43,9 +47,11 @@ export default async function SecuritySettingsPage({
     appleError = tErrors.has(key) ? tErrors(key) : tErrors("generic");
   }
 
-  const [password, apple] = await Promise.all([
+  const [password, apple, apiTokens, userGroups] = await Promise.all([
     hasPassword(user.userId),
     env.appleSignInEnabled ? getLinkedAppleIdentity(user.userId) : null,
+    listApiTokens(user.userId),
+    listGroupsForUser(user.userId),
   ]);
 
   // WebAuthn refuses to run outside a secure context, and an operator who has
@@ -91,6 +97,16 @@ export default async function SecuritySettingsPage({
         relyingPartyId={env.webAuthnRpId}
         secureContext={secureContext}
         hasOtherWayIn={password || apple !== null}
+      />
+
+      {/* Beside the passkeys: both answer "what can get into this account",
+          and a key is the one answer that is not a person at a keyboard. */}
+      <ApiTokensCard
+        tokens={apiTokens.map(serializeApiToken)}
+        groups={userGroups.map((group) => ({
+          id: group.id,
+          name: group.name,
+        }))}
       />
 
       <FallbacksCard

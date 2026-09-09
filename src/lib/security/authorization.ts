@@ -17,7 +17,9 @@ import { groupMembers, groups } from "@/lib/db/schema";
  *     "load the expense, then check its group" path — repository helpers take a
  *     group ID and filter on it.
  *  2. A guest's access is pinned to the group in their session. Passing a
- *     different group ID cannot widen it; it can only fail.
+ *     different group ID cannot widen it; it can only fail. A user acting
+ *     through a group-pinned API token is pinned by the same rule and in the
+ *     same place — see `tokenGroupId` below.
  */
 
 export type ActorKind = "user" | "guest";
@@ -27,6 +29,21 @@ export interface UserActor {
   readonly userId: string;
   readonly email: string;
   readonly name: string;
+  /**
+   * The one group this actor may touch, when they arrived on an API token
+   * pinned to a group. Absent for every other way in — a cookie, a native
+   * client, an unpinned key — which is the ordinary case.
+   *
+   * It lives on the actor rather than being checked by each route because a
+   * pin is a fact about *who is asking*, exactly like a guest's `groupId` two
+   * interfaces down, and `authorizeGroup` is the one place that already reads
+   * such a fact before it fetches anything. A route cannot forget it, and a
+   * route added next year inherits it without knowing tokens exist.
+   *
+   * Set only by `apiActor` in `app/api/mobile.ts`. `getCurrentActor()` never
+   * produces one, so no Server Component and no Server Action can see it.
+   */
+  readonly tokenGroupId?: string;
 }
 
 export interface GuestActor {
@@ -249,6 +266,13 @@ export async function authorizeGroup(
       permissions: GUEST_PERMISSIONS,
       group,
     };
+  }
+
+  // A pinned key names exactly one group, and — like the guest branch above —
+  // any other target is a refusal rather than a lookup. Before the query, so
+  // that a key cannot be used to find out which group ids exist.
+  if (actor.tokenGroupId !== undefined && actor.tokenGroupId !== groupId) {
+    throw new AuthorizationError();
   }
 
   const [membership] = await db
