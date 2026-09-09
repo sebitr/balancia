@@ -111,6 +111,28 @@ describe("the currency", () => {
   });
 
   /*
+   * A Swiss recogniser writes francs the way a till receipt does. Asked for
+   * "restaurant 50 francs" it returns "restaurant 50 fr.", and the dot is
+   * folded off before anything is matched while "fr" is two letters short of
+   * an ISO code — so the abbreviation fell through every rule here and the
+   * description came back as "restaurant fr." with the group's own currency
+   * left on the figure.
+   */
+  it.each([
+    ["restaurant 50 fr.", "restaurant"],
+    ["restaurant 50 fr", "restaurant"],
+    ["restaurant 50 frs", "restaurant"],
+    ["restaurant 50 Fr.", "restaurant"],
+    ["50 sfr Coop", "Coop"],
+  ])("reads the Swiss abbreviation in %s", (spoken, description) => {
+    expect(heardEntry(spoken)).toEqual({
+      amountText: "50",
+      currency: "CHF",
+      description,
+    });
+  });
+
+  /*
    * Dictating money is exactly where a recogniser writes the sign instead of
    * the word — "30 €" for "trente euros", and closed up in front in English.
    * Reading only the words missed all of these and quietly left the group's
