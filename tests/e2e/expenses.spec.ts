@@ -254,8 +254,16 @@ test("saving from the intercepted drawer leaves the group uncovered", async ({
   // it; the second, which is the one left on screen, has nothing unseen to
   // report. Whether the assertion caught the first render was a coin flip,
   // and CI lost it both times.
+  //
+  // "Your position" is what names that region here — the `sr-only` heading
+  // `PositionHero` and `PositionCard` are labelled by, rendered only once the
+  // group has something in it to take a position on. It read "Total balance"
+  // from #323 until this branch, which is the home screen's eyebrow on the
+  // dashboard's own widget and has never been on a group: the replacement
+  // assertion was never capable of passing, and it failed on every run from
+  // the day it landed.
   await expect(
-    page.getByRole("region", { name: "Total balance" }),
+    page.getByRole("region", { name: "Your position" }),
   ).toBeVisible();
 
   // And going back from the group leaves it, rather than reopening the form.

@@ -28,6 +28,34 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    /*
+     * The real Chromium, headless — not `chromium_headless_shell`, which is
+     * what Playwright reaches for by default and which is a different binary
+     * with a different set of services compiled into it.
+     *
+     * The shell has no speech recognition behind it, but it still advertises
+     * the whole API: `SpeechRecognition.available` is a function there, and
+     * `SpeechRecognitionPhrase` exists, so nothing the page can read tells it
+     * apart from a browser that means it. Calling
+     * `available({ processLocally: true })` then asks the browser process for
+     * `media.mojom.OnDeviceSpeechRecognition`, finds no binder, and the
+     * browser *terminates the renderer* for a bad Mojo message — reason 123.
+     * That is not an exception: no JS error is raised, no console line is
+     * written, and a `try`/`catch` around the call catches nothing. The tab
+     * simply dies, and Playwright reports `Target crashed` on whatever the
+     * test did next.
+     *
+     * `VoiceButton` makes that call from an effect on mount, so every screen
+     * holding the dictate button took the tab with it: twelve specs across
+     * `expenses`, `guest`, `motion` and `responsive`, which between them are
+     * every test that renders the add-entry form or its drawer. The full
+     * Chromium answers the same probe with "downloadable" and carries on.
+     *
+     * So this is fidelity rather than a workaround: the binary under test is
+     * now the engine people actually run, and a capability the app probes for
+     * is answered rather than half-advertised.
+     */
+    channel: "chromium",
   },
 
   projects: [
