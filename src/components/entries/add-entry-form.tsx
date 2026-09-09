@@ -57,7 +57,7 @@ import {
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
-import { formatMoney, money } from "@/modules/currencies/money";
+import { convertMoney, formatMoney, money } from "@/modules/currencies/money";
 import {
   isValidSubcategoryFor,
   type LearnedMerchantMapping,
@@ -102,7 +102,7 @@ import {
 import { ALL_ENTRY_TYPES, EntryTypeTabs } from "./entry-type-tabs";
 import { enqueueEntry } from "@/lib/offline/outbox";
 import { randomKey } from "@/lib/offline/idb";
-import { ScanBanner, ScanCard, ReceiptItems } from "./receipt-blocks";
+import { ScanBanner, ScanRow, ReceiptItems } from "./receipt-blocks";
 import {
   RecurrenceSheet,
   upcomingOccurrences,
@@ -955,6 +955,16 @@ export function AddEntryForm({
   const payerName =
     members.find((member) => member.id === payerId)?.displayName ?? "";
 
+  /*
+   * The faces on the right of the split row, in roster order rather than in
+   * the order they happened to be ticked: the stack shows the first four, and
+   * which four that is should not depend on the order somebody tapped them.
+   */
+  const includedMembers = useMemo(
+    () => members.filter((member) => effectiveIncluded.includes(member.id)),
+    [members, effectiveIncluded],
+  );
+
   const eachFormatted =
     preview.ok && preview.allocations.length > 0
       ? preview.allocations[0].formatted
@@ -1301,16 +1311,45 @@ export function AddEntryForm({
     recentEntries,
   ]);
 
+  /**
+   * The debt behind the Full chip, with the money it is held in.
+   *
+   * The currency travels with the figure because the two can come apart: the
+   * pill above is free, so a debt quoted in francs can be sitting over a field
+   * set to euros, and offering "Full 128.40" there would restore a franc
+   * figure as euros. Pressing it therefore puts both back.
+   */
   const settleBalance = useMemo(() => {
     const row =
       outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
     if (!row || row.isCustom) return null;
-    return BigInt(row.amountMinor);
+    const minor = BigInt(row.amountMinor);
+    if (minor <= 0n) return null;
+    return { minor, currency: row.currency };
   }, [settlePairs, outstandingIndex]);
 
   const outcome = useMemo(() => {
     const row =
       outstandingIndex >= 0 ? settlePairs[outstandingIndex] : undefined;
+    const paid = totalMinor.ok ? totalMinor.value : 0n;
+    /*
+     * The payment in the debt's own money, which is the only unit the two can
+     * be compared in.
+     *
+     * The rate the form already collects is the entry's own — into the base
+     * currency — so it converts exactly when the debt is held in base, which
+     * in a converting group is every debt there is. A group that keeps its
+     * currencies apart has no base and no rate, and its debts genuinely do
+     * not reach each other; that is a null, and the sentence says so.
+     */
+    const againstDebt =
+      row === undefined
+        ? null
+        : currency === row.currency
+          ? paid
+          : needsRate && row.currency === baseCurrency
+            ? convertOrNull(paid, currency, row.currency, rate)
+            : null;
     return settleOutcome({
       pair:
         selectedPair && row
@@ -1319,12 +1358,30 @@ export function AddEntryForm({
               toName: selectedPair.toName,
               owedMinor: row.isCustom ? 0n : BigInt(row.amountMinor),
               isCustom: row.isCustom === true,
+              currency: row.currency,
             }
           : null,
-      amountMinor: totalMinor.ok ? totalMinor.value : 0n,
+      amountMinor: paid,
+      currency,
+      amountAgainstDebtMinor: againstDebt,
+      awaitingRate:
+        row !== undefined &&
+        currency !== row.currency &&
+        needsRate &&
+        row.currency === baseCurrency,
       hasMethod: methodLabel !== "",
     });
-  }, [selectedPair, settlePairs, outstandingIndex, totalMinor, methodLabel]);
+  }, [
+    selectedPair,
+    settlePairs,
+    outstandingIndex,
+    totalMinor,
+    methodLabel,
+    currency,
+    baseCurrency,
+    needsRate,
+    rate,
+  ]);
 
   /** Switching split method seeds sensible values instead of empty fields. */
   const changeMethod = (next: SplitMethod) => {
@@ -1822,21 +1879,96 @@ export function AddEntryForm({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 pt-1.5 pb-3">
-        <SheetTitle className="flex-1 truncate text-xl font-semibold tracking-[-0.02em]">
-          {editing ? t(`editTitles.${type}`) : t(`titles.${type}`)}
-        </SheetTitle>
-        {/* The group's name is not repeated here: the group is on screen
-            behind this, which is the whole reason it is a drawer. */}
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors duration-150 hover:bg-wash-4 hover:text-foreground"
-          >
-            <X aria-hidden="true" className="size-4" />
-            <span className="sr-only">{t("close")}</span>
-          </button>
+      {/*
+       * The header holds *how* the entry is being filled in; the body holds the
+       * entry. So the title, the kind of entry and the two ways in that skip
+       * the form stay here, above the scroll, and the amount is the first thing
+       * that moves.
+       *
+       * The three of them used to be the first cards of the body, which is the
+       * one place they could not do their job: opening the drawer puts the
+       * caret in the amount, the keyboard takes half the screen, and everything
+       * above the amount scrolls out of sight in the same instant. The shortcut
+       * that would have saved the typing vanished exactly as the typing began,
+       * and the tabs went with it — so switching to Income meant scrolling up
+       * through the form you were trying to stop filling in.
+       */}
+      <header className="flex shrink-0 flex-col gap-3 border-b border-border px-4 pt-1.5 pb-3">
+        <div className="flex items-center gap-3">
+          <SheetTitle className="flex-1 truncate text-xl font-semibold tracking-[-0.02em]">
+            {editing ? t(`editTitles.${type}`) : t(`titles.${type}`)}
+          </SheetTitle>
+          {/* The group's name is not repeated here: the group is on screen
+              behind this, which is the whole reason it is a drawer. */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors duration-150 hover:bg-wash-4 hover:text-foreground"
+            >
+              <X aria-hidden="true" className="size-4" />
+              <span className="sr-only">{t("close")}</span>
+            </button>
+          )}
+        </div>
+
+        <EntryTypeTabs value={type} onChange={changeType} types={entryTypes} />
+
+        {/*
+         * Scan and voice, side by side because they are the same kind of thing
+         * — a way in that skips the form — and both only propose.
+         *
+         * `empty:hidden` because either can decline to render: no reader
+         * configured, no recogniser in this browser, no network behind
+         * Chrome's. The row is then genuinely childless, and a gap under the
+         * tabs for two buttons that are not there is a header that looks
+         * broken.
+         */}
+        {type === "expense" && !editing && (
+          <div className="flex gap-2 empty:hidden">
+            {/* Nothing to scan into a form a scan has already filled: the
+                entry point would be pressed again on top of the values it
+                produced. Saying it another way still proposes, so voice
+                stays. */}
+            {!scan && receiptScanning && (
+              <ScanReceiptEntry
+                enabled={receiptScanning}
+                localEnabled={receiptOcrLocal}
+                provider={receiptOcrProvider}
+                groupId={groupId}
+                participants={members.map((member) => ({
+                  id: member.id,
+                  displayName: member.displayName,
+                }))}
+                defaultCurrency={currency}
+                onApply={applyScan}
+                trigger={ScanRow}
+              />
+            )}
+            <VoiceButton
+              onHeard={(transcript) => {
+                const heard = heardEntry(transcript, currency);
+                /*
+                 * Anything not heard stays at its default, and nothing is
+                 * overwritten with nothing: a sentence with no amount in it
+                 * leaves the amount alone rather than clearing what is there.
+                 */
+                if (heard.amountText !== "") {
+                  setAmountText(
+                    sanitiseAmount(heard.amountText, heard.currency),
+                  );
+                }
+                if (heard.currency !== "") setCurrency(heard.currency);
+                /*
+                 * When nothing parsed, the raw words go in the description and
+                 * the amount is left empty — the reader is one field from done
+                 * rather than back where they started. That is the same branch:
+                 * `heardEntry` puts everything it could not read here.
+                 */
+                if (heard.description !== "") setDescription(heard.description);
+              }}
+            />
+          </div>
         )}
       </header>
 
@@ -1844,8 +1976,6 @@ export function AddEntryForm({
           children may shrink turns a long member list into a row of
           squashed avatars instead of a scroll. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [&>*]:shrink-0">
-        <EntryTypeTabs value={type} onChange={changeType} types={entryTypes} />
-
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -1872,55 +2002,6 @@ export function AddEntryForm({
               hasCustomPair={customPair !== null}
             />
           ))}
-
-        {/* Nothing to scan into an entry that already exists: the amount, the
-            date and the split are all facts now, and a scan's business is
-            proposing them. A file can still be attached further down. */}
-        {type === "expense" && !editing && !scan && receiptScanning && (
-          <ScanReceiptEntry
-            enabled={receiptScanning}
-            localEnabled={receiptOcrLocal}
-            provider={receiptOcrProvider}
-            groupId={groupId}
-            participants={members.map((member) => ({
-              id: member.id,
-              displayName: member.displayName,
-            }))}
-            defaultCurrency={currency}
-            onApply={applyScan}
-            trigger={ScanCard}
-          />
-        )}
-
-        {/*
-         * Saying it instead of typing it. Beside the scan button because they
-         * are the same kind of thing — a way in that skips the form — and
-         * both only propose.
-         */}
-        {type === "expense" && !editing && (
-          <VoiceButton
-            className="self-start"
-            onHeard={(transcript) => {
-              const heard = heardEntry(transcript, currency);
-              /*
-               * Anything not heard stays at its default, and nothing is
-               * overwritten with nothing: a sentence with no amount in it
-               * leaves the amount alone rather than clearing what is there.
-               */
-              if (heard.amountText !== "") {
-                setAmountText(sanitiseAmount(heard.amountText, heard.currency));
-              }
-              if (heard.currency !== "") setCurrency(heard.currency);
-              /*
-               * When nothing parsed, the raw words go in the description and
-               * the amount is left empty — the reader is one field from done
-               * rather than back where they started. That is the same branch:
-               * `heardEntry` puts everything it could not read here.
-               */
-              if (heard.description !== "") setDescription(heard.description);
-            }}
-          />
-        )}
 
         {scan && bannerVisible && (
           <ScanBanner
@@ -1982,23 +2063,31 @@ export function AddEntryForm({
         {/*
          * The two things somebody does with a debt: clear it, or pay some of
          * it. `Full` names the figure rather than saying "full", so you can
-         * see what you are restoring after typing over it. Hidden for a named
-         * pair and for a debt of nothing, both of which have no full amount
-         * to offer.
+         * see what you are restoring after typing over it, and it restores the
+         * currency with it — the figure means nothing without the money it is
+         * in. Hidden for a named pair and for a debt of nothing, both of which
+         * have no full amount to offer.
          */}
-        {isSettle && settleBalance !== null && settleBalance > 0n && (
+        {isSettle && settleBalance !== null && (
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                setCurrency(settleBalance.currency);
                 setAmountText(
-                  formatMinorUnits(settleBalance.toString(), currency),
-                )
-              }
+                  formatMinorUnits(
+                    settleBalance.minor.toString(),
+                    settleBalance.currency,
+                  ),
+                );
+              }}
               className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
             >
               {t("settle.full", {
-                amount: formatMinorUnits(settleBalance.toString(), currency),
+                amount: formatMinorUnits(
+                  settleBalance.minor.toString(),
+                  settleBalance.currency,
+                ),
               })}
             </button>
             <button
@@ -2118,6 +2207,27 @@ export function AddEntryForm({
           </RowCard>
         )}
 
+        {/* The split row is always visible on an income now: it is where
+            "credited to" is answered, and it used to be hidden by the mode
+            that claimed to answer it instead.
+
+            It sits above the date because the body runs from what has to be
+            filled in to what rarely is, and these two are at opposite ends of
+            that: the date defaults to today and is right nearly every time,
+            while who paid and who is in are the most-corrected facts in the
+            entry. Under the date they were also the two rows the keyboard
+            covered. */}
+        {!isSettle && (
+          <SplitSummaryRow
+            payerName={payerName}
+            included={includedMembers}
+            memberCount={members.length}
+            summary={summary}
+            received={isIncome}
+            onOpen={() => setSheet("split")}
+          />
+        )}
+
         <RowCard>
           <Row className="relative">
             <CalendarDays
@@ -2202,19 +2312,6 @@ export function AddEntryForm({
           )}
         </RowCard>
 
-        {/* The split row is always visible on an income now: it is where
-            "credited to" is answered, and it used to be hidden by the mode
-            that claimed to answer it instead. */}
-        {!isSettle && (
-          <SplitSummaryRow
-            payerName={payerName}
-            amountFormatted={amountFormatted}
-            summary={summary}
-            received={isIncome}
-            onOpen={() => setSheet("split")}
-          />
-        )}
-
         {scan && !isSettle && (
           <ReceiptItems
             items={receiptRows(scan, members, currency, locale)}
@@ -2235,7 +2332,11 @@ export function AddEntryForm({
 
         {isSettle && (
           <p className="text-xs text-muted-foreground">
-            <SettleOutcomeLine outcome={outcome} currency={currency} />
+            <SettleOutcomeLine
+              outcome={outcome}
+              currency={currency}
+              locale={locale}
+            />
           </p>
         )}
 
@@ -2532,25 +2633,59 @@ export function AddEntryForm({
 }
 
 /**
+ * One amount in another currency, or nothing at all.
+ *
+ * Half-typed rates ("1.", "0") throw rather than return a wrong number, and a
+ * rate that is not there yet is not an error — so the caller gets a null and
+ * says what it does not know instead of a figure it made up.
+ */
+function convertOrNull(
+  minor: bigint,
+  from: string,
+  to: string,
+  rate: string,
+): bigint | null {
+  if (rate.trim() === "") return null;
+  try {
+    return convertMoney(money(minor, from), to, rate.trim()).amount;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The settlement's resulting ledger, in words.
  *
  * The decision is `settleOutcome`'s; this only looks the sentence up and
- * formats the figure in it. Splitting them is what lets the seven branches be
+ * formats the figure in it. Splitting them is what lets the nine branches be
  * tested without a renderer, and it keeps the one thing that has to stay true
  * — which sentence — out of JSX.
+ *
+ * The figure is formatted in the currency the outcome names rather than the
+ * one in the amount field: what is left of a debt is in the debt's money, and
+ * printing it under the field's code turned francs into euros on screen.
+ *
+ * And it carries that code, because this is a *stated* amount rather than
+ * something to type over. The prefill formatter it used to borrow prints a
+ * bare `4500`, which in a sentence that also names a second currency is a
+ * figure with nothing saying which one it is.
  */
 function SettleOutcomeLine({
   outcome,
   currency,
+  locale,
 }: {
   outcome: SettleOutcome;
+  /** The payment's own currency, for the sentence that names it. */
   currency: string;
+  locale: string;
 }) {
   const t = useTranslations("addEntry.settle");
 
   if (outcome.kind === "noPair") return t("outcomeNoPair");
   if (outcome.kind === "noMethod") return t("outcomeNoMethod");
   if (outcome.kind === "zeroAmount") return t("outcomeZero");
+  if (outcome.kind === "awaitingRate") return t("outcomeAwaitingRate");
   if (outcome.kind === "exact") {
     // The only sentence with a remainder of nothing, so it names no figure.
     return t("outcomeExact", {
@@ -2562,6 +2697,21 @@ function SettleOutcomeLine({
   const remainder = outcome.remainder;
   if (!remainder) return null;
 
+  const amount = formatMoney(money(remainder.amountMinor, remainder.currency), {
+    locale,
+  });
+
+  // The one sentence that names the money it was paid in as well as the money
+  // it failed to reach, because the gap between the two is the whole point.
+  if (outcome.kind === "otherCurrency") {
+    return t("outcomeOtherCurrency", {
+      from: remainder.fromName,
+      to: remainder.toName,
+      amount,
+      currency,
+    });
+  }
+
   const key =
     outcome.kind === "custom"
       ? "outcomeCustom"
@@ -2572,7 +2722,7 @@ function SettleOutcomeLine({
   return t(key, {
     from: remainder.fromName,
     to: remainder.toName,
-    amount: formatMinorUnits(remainder.amountMinor.toString(), currency),
+    amount,
   });
 }
 
