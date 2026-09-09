@@ -39,11 +39,21 @@ export interface HeardEntry {
  *
  * Spoken, not written: nobody says "CHF" out loud in a shop. The codes
  * themselves are matched too, since a recogniser sometimes writes them.
+ *
+ * And it writes the *abbreviation* rather than either — which is the whole
+ * reason "restaurant 50 francs" came back with "fr." sitting in the
+ * description. Ask a Swiss recogniser for francs and it gives you the way
+ * Switzerland writes them on a till receipt: "50 fr.". The dot is folded away
+ * before any of this is matched, and "fr" is two letters, so the ISO-code path
+ * never saw it either.
  */
 const SPOKEN_CURRENCIES: Readonly<Record<string, string>> = {
   franc: "CHF",
   francs: "CHF",
   balles: "CHF",
+  fr: "CHF",
+  frs: "CHF",
+  sfr: "CHF",
   euro: "EUR",
   euros: "EUR",
   dollar: "USD",

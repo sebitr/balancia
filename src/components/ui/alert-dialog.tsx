@@ -32,6 +32,28 @@ function AlertDialogPortal({
   );
 }
 
+/**
+ * The scrim behind a dialog — and nothing once the dialog is closed.
+ *
+ * The `!` is the whole of the fix. Radix keeps the overlay mounted while it
+ * plays the exit animation and unmounts it on `animationend`; an overlay
+ * nested inside an open sheet has been seen to miss that event and stay
+ * mounted for good, `data-state="closed"` and still `fixed inset-0`. What
+ * makes that fatal rather than untidy is the second half: while the body is
+ * locked to `pointer-events: none`, each layer re-enables itself with an
+ * **inline** `pointer-events: auto`, and an inline style outranks every class
+ * we could write. So the abandoned scrim goes on taking every click, and no
+ * ordinary utility can take it back.
+ *
+ * Ten percent black over a sheet that is already dimmed is invisible, so what
+ * the reader gets is not a covered screen but a dead one — the dictate
+ * consent dialog was answered once and nothing on the form responded again
+ * until the page was reloaded.
+ *
+ * A closed overlay has no business receiving input whether it lingers for a
+ * hundred milliseconds or forever. Worth having even where the unmount works:
+ * for the length of the fade the scrim used to swallow the click after it.
+ */
 function AlertDialogOverlay({
   className,
   ...props
@@ -40,7 +62,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:pointer-events-none! data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}
