@@ -6,6 +6,7 @@ import {
   ReminderError,
   sendReminder,
 } from "@/modules/reminders/service";
+import { REMIND_MESSAGE_MAX_LENGTH } from "@/modules/reminders/types";
 import {
   invalidInput,
   isUuid,
@@ -52,7 +53,14 @@ async function handleGet(
 
 const sendSchema = z.object({
   toParticipantId: z.uuid(),
-  message: z.string().trim().min(1, "Write the reminder.").max(1000),
+  message: z
+    .string()
+    .trim()
+    .min(1, "Write the reminder.")
+    // The constant rather than the number it happened to be: the message grew
+    // a payment line, and a route with its own copy of the old ceiling would
+    // refuse what the action accepts.
+    .max(REMIND_MESSAGE_MAX_LENGTH),
   logToActivity: z.boolean().default(false),
 });
 

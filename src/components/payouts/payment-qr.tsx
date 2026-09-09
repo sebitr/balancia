@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { encode } from "uqr";
 import type { PaymentQrStandard } from "@/modules/payouts/qr/payment-qr";
+import { QR_QUIET_MODULES, swissCrossRects } from "./qr-geometry";
 
 /**
  * A payment code, drawn from its payload.
@@ -44,10 +45,7 @@ export function PaymentQr({
     [payload],
   );
 
-  // A quiet zone of four modules is part of the QR specification, not padding:
-  // a reader is entitled to assume it, and a code drawn tight to the edge of a
-  // dark surface is one that sometimes will not scan.
-  const quiet = 4;
+  const quiet = QR_QUIET_MODULES;
   const side = matrix.size + quiet * 2;
 
   return (
@@ -78,51 +76,20 @@ export function PaymentQr({
   );
 }
 
-/**
- * The recognition symbol, which the guidelines make part of the code.
- *
- * "The Swiss QR Code created for printout is overlaid with a cross logo in
- * black and white, measuring 7 x 7 mm" — on the 46 mm code the payment part
- * specifies, so a shade over 15% of the side, drawn to that ratio rather than
- * to a pixel count so it holds at any size.
- *
- * It covers real modules. That is what the M error-correction level is for,
- * and it is why this is drawn over a code encoded at M rather than at L.
- */
+/** The recognition symbol, drawn from the shared geometry in `qr-geometry`. */
 function SwissCross({ side }: { side: number }) {
-  const size = side * (7 / 46);
-  const origin = (side - size) / 2;
-  // The white keyline is part of the logo: without it the black square merges
-  // into whatever modules happen to sit under its edge.
-  const inset = size * 0.06;
-  const arm = size * 0.18;
-  const reach = size * 0.62;
-  const centre = side / 2;
-
   return (
     <g aria-hidden="true">
-      <rect x={origin} y={origin} width={size} height={size} fill="#ffffff" />
-      <rect
-        x={origin + inset}
-        y={origin + inset}
-        width={size - inset * 2}
-        height={size - inset * 2}
-        fill="#000000"
-      />
-      <rect
-        x={centre - arm / 2}
-        y={centre - reach / 2}
-        width={arm}
-        height={reach}
-        fill="#ffffff"
-      />
-      <rect
-        x={centre - reach / 2}
-        y={centre - arm / 2}
-        width={reach}
-        height={arm}
-        fill="#ffffff"
-      />
+      {swissCrossRects(side).map((rect, index) => (
+        <rect
+          key={index}
+          x={rect.x}
+          y={rect.y}
+          width={rect.width}
+          height={rect.height}
+          fill={rect.dark ? "#000000" : "#ffffff"}
+        />
+      ))}
     </g>
   );
 }
