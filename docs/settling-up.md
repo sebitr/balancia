@@ -124,17 +124,17 @@ evening.
 question: **what survives being pasted into a chat app.** Three shapes, in the
 order they are preferred.
 
-| In the message   | From                                        | Also attached      |
-| ---------------- | ------------------------------------------- | ------------------ |
-| **A link**       | The https deep links — never `upi://`       | —                  |
-| **A pasted code**| Pix, SPAYD, ZBP, Swish — the one-line ones  | The code, as a PNG |
-| **The detail**   | An IBAN, a handle, a number                 | The code, as a PNG |
+| In the message    | From                                       | Also attached      |
+| ----------------- | ------------------------------------------ | ------------------ |
+| **A link**        | The https deep links — never `upi://`      | —                  |
+| **A pasted code** | Pix, SPAYD, ZBP, Swish — the one-line ones | The code, as a PNG |
+| **The detail**    | An IBAN, a handle, a number                | The code, as a PNG |
 
 The scannable code goes as a **picture**, drawn onto a canvas by
 `components/payouts/qr-image.ts` and handed to `navigator.share` as a file
 where `canShare` says the platform will carry one. That is the whole point for
 the two SEPA standards: an EPC payload is eleven newline-separated lines and a
-Swiss one is thirty-odd, so the Girocode *is* the image and never was text. A
+Swiss one is thirty-odd, so the Girocode _is_ the image and never was text. A
 `upi://` intent travels the same way and for the reason the settle screen
 already gives — a message has no way to know whether it will be read on a phone
 — so its address goes as text and its intent goes as a picture.

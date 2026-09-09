@@ -1,6 +1,6 @@
 # Stop the home-screen position saying itself three times: one figure per currency, nothing repeated under it, and the reason a tap away instead of a footnote
 
-Branch: `fix/position-widget-repeats`
+Merged: 2026-09-06 in #307
 
 The first item of a UX pass against the 2026 field. On an account holding
 balances in several currencies with no rate to combine them, the widget showed

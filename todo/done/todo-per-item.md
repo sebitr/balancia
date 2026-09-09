@@ -1,6 +1,6 @@
 # Give every list item its own file, so two branches never edit the same lines and GitHub stops flagging a conflict git resolves on its own
 
-Branch: `chore/todo-per-item`
+Merged: 2026-09-06 in #304
 
 The union driver in `.gitattributes` fixed the merge but could not reach
 GitHub's mergeability check, so every pull request still showed "This branch has
