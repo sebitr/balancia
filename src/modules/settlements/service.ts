@@ -1,5 +1,15 @@
 import "server-only";
-import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  max,
+  ne,
+} from "drizzle-orm";
 import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import { participants, settlements } from "@/lib/db/schema";
@@ -452,6 +462,47 @@ export async function hasSettlements(
     .where(and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)))
     .limit(1);
   return row !== undefined;
+}
+
+/**
+ * How this group usually pays each other back.
+ *
+ * A hint, and deliberately not a default. Nothing on the settle screen is
+ * preselected — a lit chip is a claim, and the country's first suggestion
+ * arriving lit recorded "TWINT" on repayments that were nothing of the kind —
+ * but a flatshare that has settled by TWINT eleven times is saying something,
+ * and saying it beside the tiles pre-empts nothing.
+ *
+ * The label rather than a code, because the label is what the column holds: a
+ * repayment recorded as "TWINT" still says TWINT years after the picker's list
+ * has moved on, and imports arrive with names nothing here ever offered. The
+ * row matches it back by name and simply shows nothing when it cannot.
+ *
+ * Ties go to whichever was used most recently. Without that a two-all split
+ * between cash and TWINT would come back in whatever order the planner felt
+ * like, and the hint would change between visits with nothing behind it.
+ */
+export async function mostUsedPaymentMethod(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<string | null> {
+  const db = options.db ?? getDb();
+  const uses = count();
+  const [row] = await db
+    .select({ method: settlements.paymentMethod, uses })
+    .from(settlements)
+    .where(
+      and(
+        eq(settlements.groupId, groupId),
+        isNull(settlements.deletedAt),
+        isNotNull(settlements.paymentMethod),
+        ne(settlements.paymentMethod, ""),
+      ),
+    )
+    .groupBy(settlements.paymentMethod)
+    .orderBy(desc(uses), desc(max(settlements.createdAt)))
+    .limit(1);
+  return row?.method ?? null;
 }
 
 /**

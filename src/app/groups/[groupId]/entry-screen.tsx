@@ -33,7 +33,10 @@ import {
   listExpenses,
   type ExpenseSummary,
 } from "@/modules/expenses/service";
-import { getSettlement } from "@/modules/settlements/service";
+import {
+  getSettlement,
+  mostUsedPaymentMethod,
+} from "@/modules/settlements/service";
 import { PUSH } from "@/components/motion/transitions";
 
 /**
@@ -90,6 +93,7 @@ export async function EntryScreen({
     locale,
     recentExpenses,
     preferredCurrency,
+    usualPaymentMethod,
   ] = await Promise.all([
     listParticipants(access.groupId),
     loadMappings(access),
@@ -116,6 +120,13 @@ export async function EntryScreen({
     access.actor.kind === "user"
       ? getUserPreferredCurrency(access.actor.userId)
       : null,
+    /*
+     * How this group has usually paid, for the hint over the method tiles. One
+     * grouped count on an index the settle list already uses, loaded with
+     * everything else rather than fetched from the drawer — the drawer is a
+     * route, and a hint that arrives after the tiles is a hint nobody reads.
+     */
+    mostUsedPaymentMethod(access.groupId),
   ]);
 
   const t = await getTranslations("expensePages");
@@ -232,6 +243,7 @@ export async function EntryScreen({
         defaultCurrency={defaultEntryCurrency}
         timezone={access.group.timezone}
         outstanding={outstanding}
+        usualPaymentMethod={usualPaymentMethod}
         categoryMappings={categoryMappings}
         frequentCategories={frequentCategories}
         semanticCategorization={isSemanticCategorizationEnabled()}
