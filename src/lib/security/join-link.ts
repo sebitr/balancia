@@ -3,6 +3,12 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { getEnv } from "@/lib/env";
 import { groupJoinLinks, groups, users } from "@/lib/db/schema";
+import {
+  isGroupIcon,
+  isGroupIconColor,
+  type GroupIcon,
+  type GroupIconColor,
+} from "@/modules/groups/icons";
 import { open, seal } from "./secret-box";
 import { generateToken, hashToken, isWellFormedToken } from "./tokens";
 
@@ -54,6 +60,13 @@ export interface JoinLinkContext {
   readonly linkId: string;
   readonly groupId: string;
   readonly groupName: string;
+  /**
+   * The decoration the group wears, for the card a chat app draws around the
+   * link. Slugs, not colour values — `@/modules/groups/icons` says why — and
+   * either may be null, which is a group that never chose.
+   */
+  readonly groupIcon: GroupIcon | null;
+  readonly groupIconColor: GroupIconColor | null;
   /** Who created the link. Null when that account is gone. */
   readonly inviterName: string | null;
 }
@@ -106,6 +119,8 @@ export async function resolveJoinLink(
       expiresAt: groupJoinLinks.expiresAt,
       revokedAt: groupJoinLinks.revokedAt,
       groupName: groups.name,
+      groupIcon: groups.icon,
+      groupIconColor: groups.iconColor,
       groupArchivedAt: groups.archivedAt,
       inviterName: users.name,
     })
@@ -128,6 +143,13 @@ export async function resolveJoinLink(
     linkId: link.id,
     groupId: link.groupId,
     groupName: link.groupName,
+    // Narrowed rather than trusted: the column is checked for the *shape* of a
+    // slug and not for membership of the catalogue, so a row written by an
+    // older build can name an icon this one no longer draws.
+    groupIcon: isGroupIcon(link.groupIcon) ? link.groupIcon : null,
+    groupIconColor: isGroupIconColor(link.groupIconColor)
+      ? link.groupIconColor
+      : null,
     inviterName: link.inviterName,
   };
 }

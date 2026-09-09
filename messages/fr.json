@@ -1585,6 +1585,14 @@
       "signIn": "Se connecter"
     }
   },
+  "linkPreview": {
+    "groupTitle": "Rejoindre {group} sur Balancia",
+    "groupFrom": "{inviter} t’invite à rejoindre {group} et à suivre qui doit quoi.",
+    "group": "Une invitation à rejoindre {group} et à suivre qui doit quoi.",
+    "personalTitle": "{group} sur Balancia",
+    "personal": "Ta place dans {group} est prête. Ouvre le lien pour voir ce que tu as payé et ce qu’on te doit.",
+    "imageAlt": "{group} sur Balancia"
+  },
   "onboarding": {
     "back": "Retour",
     "joinFailed": "Impossible de t’ajouter au groupe. Réessaie dans un instant.",
