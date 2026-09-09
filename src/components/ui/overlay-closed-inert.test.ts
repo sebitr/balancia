@@ -28,10 +28,7 @@ const OVERLAYS = [
 
 describe("every dialog scrim", () => {
   it.each(OVERLAYS)("is inert once closed in %s", (file, component) => {
-    const source = readFileSync(
-      new URL(`./${file}`, import.meta.url),
-      "utf8",
-    );
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
     const start = source.indexOf(`function ${component}(`);
     expect(start, `${component} not found in ${file}`).toBeGreaterThan(-1);
     // The component body, up to the next declaration at the left margin.

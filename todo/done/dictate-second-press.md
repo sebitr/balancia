@@ -1,6 +1,6 @@
 # Let the dictate button be pressed a second time, and read the francs a Swiss recogniser actually writes
 
-Branch: `fix/dictate-second-press`
+Merged: 2026-09-09 in #332
 
 Two things reported from using the feature: dictate worked once per page load
 and then the form went dead, and "restaurant 50 francs" saved a description of

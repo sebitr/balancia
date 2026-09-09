@@ -1,6 +1,6 @@
 # Hear who paid and who shares it, and offer them as a chip beside the split row
 
-Branch: `feat/heard-entry-people`
+Merged: 2026-09-09 in #335
 
 The dictation parser refused to guess the payer, and the reason was good: a
 misheard _name_ is the correction people most often have to make, and guessing

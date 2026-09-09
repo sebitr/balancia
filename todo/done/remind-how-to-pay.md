@@ -1,6 +1,6 @@
 # Send the way to pay in the same bubble as the amount
 
-Branch: `feat/remind-how-to-pay`
+Merged: 2026-09-09 in #336
 
 Six QR standards and seven payment deep links were already implemented, chosen
 by what is being paid into rather than by preference — a Swiss banking app

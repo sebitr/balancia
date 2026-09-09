@@ -1,6 +1,6 @@
 # Make the installed app behave like one on a phone: the position kept under the header once you scroll past it, the unread count on the home-screen icon, a screen that re-reads itself when you come back to it, swipe a transaction away to delete it, and icons on the manifest's shortcuts
 
-Branch: `feat/native-mobile-polish`
+Merged: 2026-09-08 in #324
 
 Five things a phone does that this did not, from a sweep of the shipped
 screens at 375×812 against what 2026 actually shipped in browsers. They are

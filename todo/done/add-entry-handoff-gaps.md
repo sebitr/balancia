@@ -1,6 +1,6 @@
 # Close four gaps the Add Entry handoff left open: a repayment in another currency that claimed to settle a debt, the split back above the date, the type tabs and the ways in held in the header, and the split row drawn as a picture
 
-Branch: `feat/add-entry-handoff-gaps`
+Merged: 2026-09-09 in #334
 
 The drawer shipped in #271 from a handoff exported the day before, and four of
 its decisions did not survive the port. Three are layout; the fourth was a

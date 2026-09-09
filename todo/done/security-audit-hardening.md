@@ -1,6 +1,6 @@
 # Changing a password signs out the other devices, and three smaller hardenings
 
-Branch: `fix/security-audit-hardening`
+Merged: 2026-09-08 in #322
 
 From a security audit of the whole tree. Four findings, one branch, because
 they are one topic — what the audit turned up — rather than four features.

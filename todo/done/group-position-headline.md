@@ -1,6 +1,6 @@
 # Make a multi-currency group's overview state the number instead of explaining the system: headline the currency that matters, fold the settled one into a line, and open the row with money in it
 
-Branch: `fix/group-position-headline`
+Merged: 2026-09-06 in #315
 
 The third item of a UX pass against the 2026 field. Lisbon Trip opened on two
 tiles of equal weight — one saying "Settled EUR", one saying "gets back

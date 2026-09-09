@@ -1,6 +1,6 @@
 # Let the iOS app ask for a sign-in code and spend it, and tell it which ways in this instance offers
 
-Branch: `feat/mobile-sign-in-code`
+Merged: 2026-09-06 in #314
 
 The web's "Email me a sign-in code" reaches the phone: `POST /api/auth/code` is
 `requestSignInCodeAction` over JSON, `POST /api/auth/session` takes `{email,
