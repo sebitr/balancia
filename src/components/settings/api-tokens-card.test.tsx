@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { ApiTokensCard } from "./api-tokens-card";
-import type { SerializedApiToken } from "@/modules/api-tokens/actions";
+import type { SerializedApiToken } from "@/modules/api-tokens/serialize";
 
 /**
  * Minting a key, and taking one back.

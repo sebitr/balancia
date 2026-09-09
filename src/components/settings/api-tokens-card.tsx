@@ -27,8 +27,8 @@ import { ConfirmSheet } from "./confirm-sheet";
 import {
   createApiTokenAction,
   revokeApiTokenAction,
-  type SerializedApiToken,
 } from "@/modules/api-tokens/actions";
+import type { SerializedApiToken } from "@/modules/api-tokens/serialize";
 import type { TokenScope } from "@/modules/api-tokens/scope";
 
 /**
