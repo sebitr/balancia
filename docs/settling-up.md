@@ -112,6 +112,46 @@ Only where the method has no scheme code of its own. Where it does, that code
 is the better artefact — it is what the payer's bank designed its scanner
 around — and two codes on one row is a choice nobody should have to make.
 
+## A reminder carries it too
+
+All of the above lives on the settle-up screen, which is the screen the person
+who owes you is precisely not looking at. A reminder is — so the way to pay
+goes in the same bubble as the amount. "€148.00" and "€148.00, and here is the
+Girocode" are different messages, and only the second one gets paid that
+evening.
+
+`src/modules/reminders/pay-with.ts` asks the same catalogue a narrower
+question: **what survives being pasted into a chat app.** Three shapes, in the
+order they are preferred.
+
+| In the message   | From                                        | Also attached      |
+| ---------------- | ------------------------------------------- | ------------------ |
+| **A link**       | The https deep links — never `upi://`       | —                  |
+| **A pasted code**| Pix, SPAYD, ZBP, Swish — the one-line ones  | The code, as a PNG |
+| **The detail**   | An IBAN, a handle, a number                 | The code, as a PNG |
+
+The scannable code goes as a **picture**, drawn onto a canvas by
+`components/payouts/qr-image.ts` and handed to `navigator.share` as a file
+where `canShare` says the platform will carry one. That is the whole point for
+the two SEPA standards: an EPC payload is eleven newline-separated lines and a
+Swiss one is thirty-odd, so the Girocode *is* the image and never was text. A
+`upi://` intent travels the same way and for the reason the settle screen
+already gives — a message has no way to know whether it will be read on a phone
+— so its address goes as text and its intent goes as a picture.
+
+Two rules narrower than the screen's:
+
+- **Only a reminder that leaves the app.** One Balancia delivers itself lands
+  on a card with a Settle up button, and behind that button is the payout panel
+  with the same code drawn large. The same rule already governs the group link.
+- **Nothing names a figure that is not the debt.** Somebody owing in two
+  currencies has no single sum, so every amount-carrying artefact is dropped
+  for them and what is left names only the account.
+
+Which method goes is the sender's, defaulting to the first they ranked; whether
+it goes at all is one press, because a reminder pasted into a group chat is
+read by everybody in it.
+
 ## What is deliberately absent
 
 Not oversights. Each of these is a scheme whose payment instruction cannot be

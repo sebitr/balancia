@@ -1,68 +1,65 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Camera, ScanLine, Upload, X } from "lucide-react";
+import { Camera, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CaptureActions } from "@/components/receipts/scan-receipt-entry";
 
 /**
  * The receipt, before and after it has been read.
  *
- * Scanning is offered at the *top* of the form rather than as an afterthought
+ * Scanning is offered in the drawer's *header* rather than as an afterthought
  * at the bottom, because a scan fills in the amount, the date, the merchant
  * and the split — everything below it. Offering it last invites someone to
  * type all of that first and then find out they needn't have.
  *
- * Once a scan has run the card is replaced by a banner, so the entry point
- * cannot be pressed again on top of values it already produced.
+ * The header is also the only place it stays put. It used to be the first card
+ * of the scrolling body, where the keyboard opening on the amount pushed it off
+ * the top of the screen: the shortcut that would have saved the typing
+ * disappeared at the exact moment the typing began.
+ *
+ * Which is what makes it a row rather than a card. A heading, a subtitle and a
+ * 40px tile explaining what scanning is for cost 96px of a fixed header, and
+ * the header has to hold the title, the type tabs and the ways in — so the
+ * explanation goes and the two buttons stay. What it does is not a mystery the
+ * subtitle was solving.
  *
  * Camera and Upload are two buttons that do two things, and each opens its own
  * picker on the spot. They used to be painted labels on one big button that
  * opened a dialog asking the same question a second time — so choosing
- * "Camera" cost two taps and told you nothing the first tap had not. The card
- * is the scanner's `trigger` component, and takes the two pickers as its props.
+ * "Camera" cost two taps and told you nothing the first tap had not. The row is
+ * the scanner's `trigger` component, and takes the two pickers as its props.
+ *
+ * Once a scan has run the row is replaced by a banner, so the entry point
+ * cannot be pressed again on top of values it already produced.
  */
 
-export function ScanCard({ camera, upload }: CaptureActions) {
+export function ScanRow({ camera, upload }: CaptureActions) {
   const t = useTranslations("addEntry.scan");
 
   return (
-    <div className="w-full space-y-3 rounded-[17px] bg-card p-4 text-left shadow-hairline">
-      <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <ScanLine aria-hidden="true" className="size-5 text-primary-ink" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold">{t("title")}</span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {t("subtitle")}
-          </span>
-        </span>
-      </div>
-
-      <div className="flex gap-2">
-        {/* Only where there is a camera to open. A fine pointer means a desktop,
-            and a desktop's "camera" is a picker that finds no camera. */}
-        <button
-          type="button"
-          onClick={camera}
-          className="hidden h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 pointer-coarse:flex"
-        >
-          <Camera aria-hidden="true" className="size-4" />
-          {t("camera")}
-        </button>
-        {/* Which leaves Upload as the only action there, so it takes the
-            primary weight — and gives it back once Camera is alongside it. */}
-        <button
-          type="button"
-          onClick={upload}
-          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors active:opacity-80 pointer-coarse:border pointer-coarse:border-border pointer-coarse:bg-transparent pointer-coarse:font-medium pointer-coarse:text-foreground"
-        >
-          <Upload aria-hidden="true" className="size-4" />
-          {t("upload")}
-        </button>
-      </div>
-    </div>
+    <>
+      {/* Only where there is a camera to open. A fine pointer means a desktop,
+          and a desktop's "camera" is a picker that finds no camera. */}
+      <button
+        type="button"
+        onClick={camera}
+        className="hidden h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 pointer-coarse:flex"
+      >
+        <Camera aria-hidden="true" className="size-4 shrink-0" />
+        <span className="truncate">{t("camera")}</span>
+      </button>
+      {/* Which leaves Upload as the only action there, so it takes the
+          primary weight — and gives it back once Camera is alongside it. */}
+      <button
+        type="button"
+        onClick={upload}
+        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors active:opacity-80 pointer-coarse:border pointer-coarse:border-border pointer-coarse:bg-transparent pointer-coarse:font-medium pointer-coarse:text-muted-foreground"
+      >
+        <Upload aria-hidden="true" className="size-4 shrink-0" />
+        <span className="truncate">{t("upload")}</span>
+      </button>
+    </>
   );
 }
 

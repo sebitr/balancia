@@ -1,7 +1,18 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb, onlyRow, rowsAffected, type Database } from "@/lib/db/client";
-import { guestInvitations, guestSessions, participants } from "@/lib/db/schema";
+import {
+  groups,
+  guestInvitations,
+  guestSessions,
+  participants,
+} from "@/lib/db/schema";
+import {
+  isGroupIcon,
+  isGroupIconColor,
+  type GroupIcon,
+  type GroupIconColor,
+} from "@/modules/groups/icons";
 import { telemetry } from "@/lib/telemetry";
 import { generateToken, hashToken, isWellFormedToken } from "./tokens";
 
@@ -52,6 +63,82 @@ export class InvalidInvitationError extends Error {
     super(message);
     this.name = "InvalidInvitationError";
   }
+}
+
+export interface InvitationPreview {
+  readonly groupName: string;
+  readonly groupIcon: GroupIcon | null;
+  readonly groupIconColor: GroupIconColor | null;
+  /** The name the group already has for whoever the link was sent to. */
+  readonly displayName: string;
+}
+
+/**
+ * The invitation, read and not spent.
+ *
+ * `redeemInvitation` below is the only way in, and it is emphatically not a
+ * read: it writes a session row and its caller records a join in the group's
+ * history. That is the right thing to do for a person and the wrong thing to
+ * do for a crawler drawing a chat bubble, which would otherwise put a stranger
+ * in the activity feed every time the link was pasted somewhere.
+ *
+ * So this refuses on exactly the conditions redemption refuses on — the two
+ * are checked side by side in `guest-invite-preview.test.ts` — and returns
+ * only what a bubble shows. Anything past that is the redemption's to hand
+ * out.
+ */
+export async function describeInvitation(
+  rawInvitationToken: string,
+  options: { now?: Date; db?: Database } = {},
+): Promise<InvitationPreview> {
+  if (!isWellFormedToken(rawInvitationToken)) {
+    throw new InvalidInvitationError();
+  }
+  const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+
+  const [invitation] = await db
+    .select({
+      expiresAt: guestInvitations.expiresAt,
+      revokedAt: guestInvitations.revokedAt,
+      displayName: participants.displayName,
+      participantRemovedAt: participants.removedAt,
+      participantUserId: participants.userId,
+      groupName: groups.name,
+      groupIcon: groups.icon,
+      groupIconColor: groups.iconColor,
+    })
+    .from(guestInvitations)
+    .innerJoin(
+      participants,
+      eq(participants.id, guestInvitations.participantId),
+    )
+    .innerJoin(groups, eq(groups.id, guestInvitations.groupId))
+    .where(eq(guestInvitations.tokenHash, hashToken(rawInvitationToken)))
+    .limit(1);
+
+  if (
+    !invitation ||
+    invitation.revokedAt !== null ||
+    invitation.participantRemovedAt !== null ||
+    (invitation.expiresAt !== null && invitation.expiresAt <= now)
+  ) {
+    throw new InvalidInvitationError(
+      invitation?.revokedAt !== null && invitation?.participantUserId
+        ? "claimed"
+        : "invalid",
+    );
+  }
+
+  return {
+    groupName: invitation.groupName,
+    // Narrowed rather than trusted, for the reason `resolveJoinLink` gives.
+    groupIcon: isGroupIcon(invitation.groupIcon) ? invitation.groupIcon : null,
+    groupIconColor: isGroupIconColor(invitation.groupIconColor)
+      ? invitation.groupIconColor
+      : null,
+    displayName: invitation.displayName,
+  };
 }
 
 /**

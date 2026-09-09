@@ -1585,6 +1585,14 @@
       "signIn": "Se connecter"
     }
   },
+  "linkPreview": {
+    "groupTitle": "Rejoindre {group} sur Balancia",
+    "groupFrom": "{inviter} t’invite à rejoindre {group} et à suivre qui doit quoi.",
+    "group": "Une invitation à rejoindre {group} et à suivre qui doit quoi.",
+    "personalTitle": "{group} sur Balancia",
+    "personal": "Ta place dans {group} est prête. Ouvre le lien pour voir ce que tu as payé et ce qu’on te doit.",
+    "imageAlt": "{group} sur Balancia"
+  },
   "onboarding": {
     "back": "Retour",
     "joinFailed": "Impossible de t’ajouter au groupe. Réessaie dans un instant.",
@@ -2771,6 +2779,10 @@
     "toneCheeky": "Espiègle",
     "shuffle": "Autre suggestion",
     "groupLink": "Lien du groupe",
+    "payWith": "Comment payer",
+    "payWithLine": "{method} : {detail}",
+    "payWithChoose": "Quel moyen de paiement",
+    "payCodeAttached": "Un code à scanner part avec",
     "logActivity": "Visible dans le groupe",
     "sendPush": "Envoyer à {name} dans Balancia",
     "sendShare": "Partager avec {name}",
@@ -2909,6 +2921,8 @@
       "receivedBy": "Reçu par",
       "creditedTo": "Crédité à",
       "splitBetween": "Partagé entre",
+      "everyone": "Tout le monde",
+      "someOf": "{count} sur {total}",
       "done": "Terminé",
       "methods": {
         "equal": "À parts égales",
@@ -3087,10 +3101,12 @@
       "outcomeNoMethod": "Choisis comment l’argent a changé de mains.",
       "outcomeNoPair": "Choisis qui paie qui.",
       "outcomeZero": "Saisis le montant qui a changé de mains.",
+      "outcomeAwaitingRate": "Saisis le taux, pour que ce paiement compte sur ce qui est dû.",
       "outcomeCustom": "Aucune dette n’existait — {from} devra {amount} à {to}.",
       "outcomeUnder": "Paiement partiel — {from} devra encore {amount} à {to}.",
       "outcomeOver": "Plus que dû — {from} devra {amount} à {to}.",
       "outcomeExact": "{from} et {to} seront à jour.",
+      "outcomeOtherCurrency": "Payé en {currency} — {from} doit toujours {amount} à {to}.",
       "someoneElse": "Quelqu’un d’autre",
       "changeWhoPays": "Changer qui paie",
       "pairTitle": "Payer quelqu’un d’autre",
@@ -3174,7 +3190,7 @@
       },
       "heard": {
         "label": "Aussi entendu",
-        "payer": "Payé par {name}",
+        "payer": "{name} a payé",
         "split": "Partagé entre {names}",
         "justYou": "Juste toi",
         "dismiss": "Ignorer ce qui a été entendu sur les personnes"

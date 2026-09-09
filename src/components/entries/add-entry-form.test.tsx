@@ -226,10 +226,16 @@ function sheet(name: string) {
   return within(screen.getByRole("dialog", { name }));
 }
 
-/** Opens the split editor from the summary row. */
+/**
+ * Opens the split editor from the summary row.
+ *
+ * Found by its two headings rather than by a sentence: the row states who paid
+ * and who it is split between as a picture, so `Paid by … Seb` is what a
+ * reader hears and there is no "Seb paid" to match.
+ */
 async function openSplit(
   user: ReturnType<typeof userEvent.setup>,
-  who = /Seb paid/,
+  who = /^Paid by/,
 ) {
   await user.click(screen.getByRole("button", { name: who }));
 }
@@ -409,11 +415,16 @@ describe("the default expense path", () => {
 
     await enterAmount(user, "84.60");
 
-    // The row states the split as a sentence, with the per-person figure.
-    expect(screen.getByText(/Seb paid/)).toBeInTheDocument();
+    // The row states the split as a picture — who paid on one side, who it is
+    // split between on the other — with the per-person figure underneath.
+    const row = screen.getByRole("button", { name: /^Paid by/ });
+    expect(row).toHaveTextContent("Split between");
+    expect(row).toHaveTextContent("Everyone");
     expect(
       screen.getByText(/Split equally between 3 · CHF 28\.20 each/),
     ).toBeInTheDocument();
+    // And states the total once, in the amount card above, rather than twice.
+    expect(row).not.toHaveTextContent("84.60");
   });
 
   it("will not save until there is an amount", async () => {
@@ -571,7 +582,7 @@ describe("the split sheet", () => {
     renderForm();
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
-    await openSplit(user, /Seb received/);
+    await openSplit(user, /^Received by/);
 
     const split = sheet("Income and split");
     expect(
@@ -747,7 +758,8 @@ describe("income", () => {
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
 
-    expect(screen.getByText(/Seb received/)).toBeInTheDocument();
+    const row = screen.getByRole("button", { name: /^Received by/ });
+    expect(row).toHaveTextContent("Credited to");
     expect(screen.queryByRole("radio", { name: /Mine only/ })).toBeNull();
   });
 
@@ -1079,6 +1091,68 @@ describe("settlement", () => {
       "g1",
       expect.objectContaining({ currency: "EUR" }),
     );
+  });
+
+  /**
+   * Which is what makes the outcome line's arithmetic a question about two
+   * currencies rather than two numbers. Paying EUR 128.40 against a CHF 128.40
+   * debt used to announce that the two of you were settled, because the
+   * sentence compared the minor units and nothing else.
+   */
+  describe("when the payment is not in the debt's currency", () => {
+    const toEuros = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole("button", { name: "CHF" }));
+      await user.click(sheet("Currency").getByRole("button", { name: /^EUR/ }));
+    };
+
+    it("asks for the rate instead of comparing the two figures", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("button", { name: /TWINT/ }));
+      await toEuros(user);
+
+      expect(
+        screen.getByText(
+          "Enter the rate, so this can count against what is owed.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/will be settled/)).toBeNull();
+    });
+
+    it("counts the payment at the rate once there is one", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("button", { name: /TWINT/ }));
+      await toEuros(user);
+
+      await user.type(
+        screen.getByRole("textbox", { name: /Exchange rate/ }),
+        "0.94",
+      );
+
+      // 128.40 euros is 120.70 francs, which leaves CHF 7.70 of the debt —
+      // the figure the old sentence declared settled.
+      expect(
+        screen.getByText("Part payment — Hervé will still owe Seb CHF 7.70."),
+      ).toBeInTheDocument();
+    });
+
+    /** No base currency, so the two ledgers never meet and the debt stands. */
+    it("says the debt is untouched when nothing converts them", async () => {
+      const user = userEvent.setup();
+      renderForm({ currencyMode: "separate", baseCurrency: null });
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("button", { name: /TWINT/ }));
+      await toEuros(user);
+
+      // Stated in the debt's own money, with the code on it: the sentence
+      // names two currencies, so a bare figure would belong to either.
+      expect(
+        screen.getByText("Paid in EUR — Hervé still owes Seb CHF 128.40."),
+      ).toBeInTheDocument();
+    });
   });
 
   it("takes what the repayment was for, and saves it with the payment", async () => {
@@ -1565,10 +1639,11 @@ describe("editing an entry", () => {
     expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue(
       "Migros",
     );
-    // The payer and the two people in the split, not the group's three.
-    expect(
-      screen.getByRole("button", { name: /Hervé paid/ }),
-    ).toHaveTextContent("2");
+    // The payer and the two people in the split, not the group's three — so
+    // the stack counts itself against the group rather than saying "Everyone".
+    expect(screen.getByRole("button", { name: /^Paid by/ })).toHaveTextContent(
+      "2 of 3",
+    );
   });
 
   it("saves an untouched entry as the update it is", async () => {
@@ -2497,14 +2572,15 @@ describe("what a dictated sentence says about people", () => {
     // The words that named people are not what the money was for.
     expect(screen.getByLabelText("Description")).toHaveValue("taxi");
     expect(
-      screen.getByRole("button", { name: "Paid by Hervé" }),
+      screen.getByRole("button", { name: "Hervé paid" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Split between Seb and Cyril" }),
     ).toBeInTheDocument();
     // And the row itself has not moved: a chip is an offer, not a write.
-    expect(screen.getByText(/Seb paid/)).toBeInTheDocument();
-    expect(screen.getByText(/Split equally between 3/)).toBeInTheDocument();
+    const row = screen.getByRole("button", { name: /^Paid by/ });
+    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("Everyone");
   });
 
   it("changes the payer when the chip is pressed, and says nothing", async () => {
@@ -2512,14 +2588,16 @@ describe("what a dictated sentence says about people", () => {
     renderForm();
     await say(user, "Hervé paid the 120 taxi");
 
-    await user.click(screen.getByRole("button", { name: "Paid by Hervé" }));
+    await user.click(screen.getByRole("button", { name: "Hervé paid" }));
 
-    expect(screen.getByText(/Hervé paid/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Paid by/ })).toHaveTextContent(
+      "Hervé",
+    );
     // The row moved and stayed moved, which is the confirmation, and the chip
     // it came from is gone. A toast laid over the row it was describing would
     // be a slower second copy of both.
     expect(success).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Paid by Hervé" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Hervé paid" })).toBeNull();
   });
 
   it("changes who shares it when the chip is pressed", async () => {
@@ -2560,8 +2638,9 @@ describe("what a dictated sentence says about people", () => {
     );
 
     expect(screen.queryByText("Also heard")).toBeNull();
-    expect(screen.getByText(/Seb paid/)).toBeInTheDocument();
-    expect(screen.getByText(/Split equally between 3/)).toBeInTheDocument();
+    const row = screen.getByRole("button", { name: /^Paid by/ });
+    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("Everyone");
   });
 
   /*

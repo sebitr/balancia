@@ -16,25 +16,49 @@ const pair = (
   toName: "Seb",
   owedMinor: 12840n,
   isCustom: false,
+  currency: "CHF",
   ...overrides,
 });
 
-const outcome = (overrides: Partial<SettleOutcomeInput> = {}) =>
-  settleOutcome({
+/**
+ * The ordinary case: paid in the currency the debt is held in, so the payment
+ * needs no restating and `amountAgainstDebtMinor` is the amount itself.
+ */
+const outcome = (overrides: Partial<SettleOutcomeInput> = {}) => {
+  const amountMinor = overrides.amountMinor ?? 12840n;
+  return settleOutcome({
     pair: pair(),
-    amountMinor: 12840n,
+    currency: "CHF",
+    amountAgainstDebtMinor: amountMinor,
+    awaitingRate: false,
     hasMethod: true,
     ...overrides,
+    amountMinor,
   });
+};
 
 describe("what is still missing", () => {
   it("asks for the pair first", () => {
     expect(
-      settleOutcome({ pair: null, amountMinor: 0n, hasMethod: false }).kind,
+      settleOutcome({
+        pair: null,
+        amountMinor: 0n,
+        currency: "CHF",
+        amountAgainstDebtMinor: 0n,
+        awaitingRate: false,
+        hasMethod: false,
+      }).kind,
     ).toBe("noPair");
     // Still the pair, even with everything else answered.
     expect(
-      settleOutcome({ pair: null, amountMinor: 5000n, hasMethod: true }).kind,
+      settleOutcome({
+        pair: null,
+        amountMinor: 5000n,
+        currency: "CHF",
+        amountAgainstDebtMinor: 5000n,
+        awaitingRate: false,
+        hasMethod: true,
+      }).kind,
     ).toBe("noPair");
   });
 
@@ -63,11 +87,13 @@ describe("paying an existing debt", () => {
   it("names what is left when the payment is short", () => {
     const result = outcome({ amountMinor: 5000n });
     expect(result.kind).toBe("under");
-    // Hervé still owes Seb the rest — same direction as the debt.
+    // Hervé still owes Seb the rest — same direction as the debt, and in the
+    // debt's own money rather than whatever was handed over.
     expect(result.remainder).toEqual({
       fromName: "Hervé",
       toName: "Seb",
       amountMinor: 7840n,
+      currency: "CHF",
     });
   });
 
@@ -80,6 +106,7 @@ describe("paying an existing debt", () => {
       fromName: "Seb",
       toName: "Hervé",
       amountMinor: 7160n,
+      currency: "CHF",
     });
   });
 
@@ -101,6 +128,9 @@ describe("paying somebody who was owed nothing", () => {
     const result = settleOutcome({
       pair: custom,
       amountMinor: 5000n,
+      currency: "CHF",
+      amountAgainstDebtMinor: 5000n,
+      awaitingRate: false,
       hasMethod: true,
     });
     expect(result.kind).toBe("custom");
@@ -109,6 +139,7 @@ describe("paying somebody who was owed nothing", () => {
       fromName: "Cyril",
       toName: "Seb",
       amountMinor: 5000n,
+      currency: "CHF",
     });
   });
 
@@ -117,8 +148,103 @@ describe("paying somebody who was owed nothing", () => {
     // off, and paying it again is an overpayment rather than a new debt.
     const settled = pair({ owedMinor: 0n, isCustom: false });
     expect(
-      settleOutcome({ pair: settled, amountMinor: 5000n, hasMethod: true })
-        .kind,
+      settleOutcome({
+        pair: settled,
+        amountMinor: 5000n,
+        currency: "CHF",
+        amountAgainstDebtMinor: 5000n,
+        awaitingRate: false,
+        hasMethod: true,
+      }).kind,
     ).toBe("over");
+  });
+});
+
+describe("paying in a currency the debt is not held in", () => {
+  /**
+   * The bug this whole branch exists for: CHF 128.40 owed, EUR 128.40 handed
+   * over, and a sentence that compared the two numbers because they were both
+   * numbers. It announced a settlement while CHF 7.70 was still standing.
+   */
+  it("does not settle a franc debt with euros of the same figure", () => {
+    const result = outcome({
+      currency: "EUR",
+      amountMinor: 12840n,
+      // 128.40 euros is 120.70 francs at 0.94, which does not clear 128.40.
+      amountAgainstDebtMinor: 12070n,
+    });
+    expect(result.kind).toBe("under");
+    expect(result.remainder).toEqual({
+      fromName: "Hervé",
+      toName: "Seb",
+      amountMinor: 770n,
+      currency: "CHF",
+    });
+  });
+
+  it("asks for the rate rather than guessing at one", () => {
+    const result = outcome({
+      currency: "EUR",
+      amountMinor: 12840n,
+      amountAgainstDebtMinor: null,
+      awaitingRate: true,
+    });
+    expect(result.kind).toBe("awaitingRate");
+    // Nothing is claimed about the debt while the conversion is unknown.
+    expect(result.remainder).toBeUndefined();
+  });
+
+  it("leaves the debt standing when the two ledgers never meet", () => {
+    // A group holding its currencies apart: the euro ledger and the franc
+    // ledger are different books, and no rate joins them.
+    const result = outcome({
+      currency: "EUR",
+      amountMinor: 12840n,
+      amountAgainstDebtMinor: null,
+      awaitingRate: false,
+    });
+    expect(result.kind).toBe("otherCurrency");
+    // The debt is quoted unchanged, in its own currency.
+    expect(result.remainder).toEqual({
+      fromName: "Hervé",
+      toName: "Seb",
+      amountMinor: 12840n,
+      currency: "CHF",
+    });
+  });
+
+  it("still asks the earlier questions first", () => {
+    const missing = {
+      currency: "EUR",
+      amountAgainstDebtMinor: null,
+      awaitingRate: true,
+    } as const;
+    expect(outcome({ ...missing, hasMethod: false }).kind).toBe("noMethod");
+    expect(outcome({ ...missing, amountMinor: 0n }).kind).toBe("zeroAmount");
+  });
+
+  it("puts a debt it creates in the money it was paid in", () => {
+    // No conversion to be had, so the payment lands in its own ledger — and
+    // the sentence has to say euros, not the francs the pair was quoted in.
+    const result = settleOutcome({
+      pair: pair({
+        fromName: "Seb",
+        toName: "Cyril",
+        owedMinor: 0n,
+        isCustom: true,
+      }),
+      amountMinor: 5000n,
+      currency: "EUR",
+      amountAgainstDebtMinor: null,
+      awaitingRate: false,
+      hasMethod: true,
+    });
+    expect(result.kind).toBe("custom");
+    expect(result.remainder).toEqual({
+      fromName: "Cyril",
+      toName: "Seb",
+      amountMinor: 5000n,
+      currency: "EUR",
+    });
   });
 });

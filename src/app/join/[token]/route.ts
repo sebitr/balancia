@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
+  describeInvitation,
   InvalidInvitationError,
   redeemInvitation,
 } from "@/lib/security/guest-session";
 import { setGuestCookie } from "@/modules/auth/cookies";
+import { isLinkPreviewCrawler } from "@/lib/link-preview";
+import { joinLinkPreviewResponse } from "@/modules/join/preview";
 import { getDb } from "@/lib/db/client";
 import { recordActivity } from "@/modules/activity/service";
 import { getEnv } from "@/lib/env";
@@ -21,16 +24,44 @@ import { logger } from "@/lib/logger";
  *   3. Set the session as an HttpOnly cookie.
  *   4. Redirect (303) to the invite screen, which contains no token.
  *
+ * A chat app drawing a preview of the link takes none of those steps: it is
+ * recognised first and answered with a document, below.
+ *
  * After the redirect the invitation token is not in the address bar, not in
  * history, and not in any referrer sent to a third party. It is never logged:
  * the handler logs the invitation's *id*, resolved after redemption.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: RouteContext<"/join/[token]">,
 ) {
   const { token } = await context.params;
   const env = getEnv();
+
+  /*
+   * A chat app drawing the bubble. Everything the group-wide link says about
+   * this is true here and more so: redeeming writes a guest session and puts
+   * a join in the group's history, so a crawler following the redirect used
+   * to announce a stranger's arrival every time the link was pasted anywhere.
+   * `describeInvitation` reads what the bubble needs and spends nothing.
+   */
+  if (isLinkPreviewCrawler(request.headers.get("user-agent"))) {
+    const budget = await consumeRateLimit("guestRedeem", await getClientIp());
+    const preview = budget.allowed
+      ? await describeInvitation(token).catch(() => null)
+      : null;
+    return joinLinkPreviewResponse(
+      `/join/${token}`,
+      preview
+        ? {
+            kind: "personal",
+            groupName: preview.groupName,
+            groupIcon: preview.groupIcon,
+            groupIconColor: preview.groupIconColor,
+          }
+        : { kind: "dead" },
+    );
+  }
 
   const limit = await consumeRateLimit("guestRedeem", await getClientIp());
   if (!limit.allowed) {

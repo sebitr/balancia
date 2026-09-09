@@ -6,7 +6,10 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RemindSheet } from "./remind-sheet";
 import { sendReminderAction } from "@/modules/reminders/actions";
 import { reminderInputSchema } from "@/modules/reminders/schemas";
-import type { RemindRecipient } from "@/modules/reminders/types";
+import type {
+  RemindPayOption,
+  RemindRecipient,
+} from "@/modules/reminders/types";
 
 // The sheet is being tested, not the server: the action is the boundary.
 vi.mock("@/modules/reminders/actions", () => ({
@@ -28,6 +31,7 @@ function recipient(overrides: Partial<RemindRecipient> = {}): RemindRecipient {
     name: "Jonas",
     debts: [{ amount: "14800", currency: "EUR" }],
     channel: "push",
+    payWith: [],
     lastRemindedAt: null,
     locked: false,
     muted: false,
@@ -376,5 +380,166 @@ describe("writing the message", () => {
     const boxes = screen.getAllByRole("checkbox");
     expect(boxes[0]).not.toBeChecked();
     expect(boxes[1]).toBeChecked();
+  });
+});
+
+/**
+ * "€148.00" and "€148.00, and here is the account it goes to" are different
+ * messages, and only the second one gets paid that evening. What is asserted
+ * here is that the second one is what actually leaves — in the same message as
+ * the figure, not as a second thing to go and find.
+ */
+describe("the way to pay", () => {
+  const BANK: RemindPayOption = {
+    method: "bank",
+    kind: "detail",
+    text: "DE89370400440532013000",
+    code: null,
+  };
+  const PAYPAL: RemindPayOption = {
+    method: "paypal",
+    kind: "link",
+    text: "https://paypal.me/seb/148.00EUR",
+    code: null,
+  };
+
+  /** The share sheet, which jsdom does not have. */
+  function stubShare() {
+    const share = vi.fn<(data: ShareData) => Promise<void>>(async () => {});
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+      writable: true,
+    });
+    return share;
+  }
+
+  /** The text handed to the share sheet, which is the message as it goes out. */
+  function sharedText(share: ReturnType<typeof stubShare>): string {
+    return share.mock.calls.at(-1)?.[0].text ?? "";
+  }
+
+  /** What the action was actually asked to record, narrowed by the schema. */
+  function sentMessage(): string {
+    const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
+    return reminderInputSchema.shape.message.parse(
+      (input as { message: unknown }).message,
+    );
+  }
+
+  it("shows it beside the draft rather than inside the text being edited", () => {
+    render([recipient({ channel: "share", payWith: [BANK] })]);
+
+    const draft = screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: /the message to send/i,
+    });
+    expect(draft.value).not.toContain("DE89370400440532013000");
+    expect(
+      screen.getByText("Bank transfer: DE89370400440532013000"),
+    ).toBeInTheDocument();
+  });
+
+  it("sends it in the same message as the amount", async () => {
+    const user = userEvent.setup();
+    const share = stubShare();
+    render([recipient({ channel: "share", payWith: [BANK] })]);
+
+    await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const text = sharedText(share);
+    expect(text).toContain("€148.00");
+    expect(text).toContain("Bank transfer: DE89370400440532013000");
+    expect(text).toContain("/groups/g1");
+
+    // And the same words are what gets recorded, not a tidied-up copy.
+    await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
+    expect(sentMessage()).toBe(text);
+  });
+
+  /**
+   * A reminder pasted into a group chat is read by everybody in it, not only
+   * by the person who owes — so leaving the account number out is one press.
+   */
+  it("comes out again in one press", async () => {
+    const user = userEvent.setup();
+    const share = stubShare();
+    render([recipient({ channel: "share", payWith: [BANK] })]);
+
+    await user.click(screen.getByRole("button", { name: "How to pay" }));
+
+    expect(
+      screen.queryByText("Bank transfer: DE89370400440532013000"),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const text = sharedText(share);
+    expect(text).not.toContain("DE89370400440532013000");
+    // The group link is a separate decision and stays where it was.
+    expect(text).toContain("/groups/g1");
+  });
+
+  /**
+   * The order is the reader's own ranking, so the first is what goes without
+   * anybody choosing — but a preference is not a capability, and the person
+   * being asked may only be able to use the second.
+   */
+  it("sends the first way listed, and lets the sender pick another", async () => {
+    const user = userEvent.setup();
+    render([recipient({ channel: "share", payWith: [BANK, PAYPAL] })]);
+
+    expect(
+      screen.getByText("Bank transfer: DE89370400440532013000"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "PayPal" }));
+
+    expect(
+      screen.getByText("PayPal: https://paypal.me/seb/148.00EUR"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Bank transfer: DE89370400440532013000"),
+    ).not.toBeInTheDocument();
+  });
+
+  /** One way of being paid is not a choice, so there is nothing to press. */
+  it("offers no switch when there is only one way to be paid", () => {
+    render([recipient({ channel: "share", payWith: [BANK] })]);
+
+    expect(
+      screen.queryByRole("group", { name: /which way to pay/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * A reminder Balancia delivers itself lands on a card with a Settle up
+   * button, and behind that button is the payout panel with the same code
+   * drawn large. Sending it as text too would be the second copy.
+   */
+  it("attaches nothing to a reminder that never leaves the app", async () => {
+    const user = userEvent.setup();
+    render([recipient({ payWith: [BANK] })]);
+
+    expect(
+      screen.queryByRole("button", { name: "How to pay" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Send to Jonas in Balancia" }),
+    );
+
+    await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
+    expect(sentMessage()).not.toContain("DE89370400440532013000");
+  });
+
+  /** Nothing to offer, and no dead control saying so. */
+  it("says nothing at all when the reader has never said how to pay them", () => {
+    render([recipient({ channel: "share" })]);
+
+    expect(
+      screen.queryByRole("button", { name: "How to pay" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/\/groups\/g1$/)).toBeInTheDocument();
   });
 });

@@ -13,6 +13,7 @@ import {
 import { authorizeGroup, type UserActor } from "@/lib/security/authorization";
 import { createExpense } from "@/modules/expenses/service";
 import { listNotifications } from "@/modules/notifications/service";
+import { replacePayoutMethods } from "@/modules/payouts/service";
 import type { ReminderPayload } from "@/modules/notifications/types";
 import {
   listRemindRecipients,
@@ -206,6 +207,71 @@ describe("who can be reminded", () => {
 
     const [recipient] = await listRemindRecipients(fixture.group.access);
     expect(recipient.channel).toBe("share");
+  });
+});
+
+/**
+ * The reader's own payout methods, read with their own id and attached to
+ * every row — so a reminder can carry the way to pay it rather than only the
+ * figure. There is no permission question here, which is what distinguishes
+ * this from `listPayoutsOwed`: these are the asker's own details, going into
+ * the asker's own message.
+ */
+describe("how the debt could be paid", () => {
+  it("offers nothing before the reader has said how to pay them", async () => {
+    await spend("4800");
+
+    const [recipient] = await listRemindRecipients(fixture.group.access);
+    expect(recipient.payWith).toEqual([]);
+  });
+
+  it("carries the reader's own account, with this debt's figure in the code", async () => {
+    await replacePayoutMethods(fixture.owner.userId, [
+      { method: "bank", detail: "DE89370400440532013000" },
+    ]);
+    await spend("4800");
+
+    const [recipient] = await listRemindRecipients(fixture.group.access);
+
+    expect(recipient.payWith).toHaveLength(1);
+    const [option] = recipient.payWith;
+    expect(option.method).toBe("bank");
+    expect(option.text).toBe("DE89370400440532013000");
+    // Half of a €48 dinner, written into the Girocode the message attaches.
+    expect(option.code?.standard).toBe("epc");
+    expect(option.code?.payload).toContain("EUR24.00");
+  });
+
+  /**
+   * The details belong to whoever is asking, so a second person reminding the
+   * same debtor sends their own account and never the first person's.
+   */
+  it("never hands one person's account to another person's reminder", async () => {
+    await replacePayoutMethods(fixture.owner.userId, [
+      { method: "bank", detail: "DE89370400440532013000" },
+    ]);
+    const other = await addTestMember(fixture.group.groupId, "Padi");
+    await createExpense(fixture.group.access, {
+      description: "Taxi",
+      notes: "",
+      category: "",
+      amount: "6000",
+      currency: "EUR",
+      exchangeRate: "",
+      payers: [{ participantId: other.participantId, amount: "6000" }],
+      splitMethod: "equal" as const,
+      splitEntries: [
+        { participantId: other.participantId },
+        { participantId: fixture.debtor.participantId },
+      ],
+      expenseDate: isoToday(),
+    });
+
+    const access = await authorizeGroup(other.actor, fixture.group.groupId);
+    const [recipient] = await listRemindRecipients(access);
+
+    expect(recipient.name).toBe("Jonas");
+    expect(recipient.payWith).toEqual([]);
   });
 });
 

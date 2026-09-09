@@ -1585,6 +1585,14 @@
       "signIn": "Sign in"
     }
   },
+  "linkPreview": {
+    "groupTitle": "Join {group} on Balancia",
+    "groupFrom": "{inviter} invites you to join {group} and keep track of who owes what.",
+    "group": "An invitation to join {group} and keep track of who owes what.",
+    "personalTitle": "{group} on Balancia",
+    "personal": "Your place in {group} is ready. Open the link to see what you've paid and what you're owed.",
+    "imageAlt": "{group} on Balancia"
+  },
   "onboarding": {
     "back": "Back",
     "joinFailed": "You could not be added to the group. Try again in a moment.",
@@ -2771,6 +2779,10 @@
     "toneCheeky": "Cheeky",
     "shuffle": "Another wording",
     "groupLink": "Group link",
+    "payWith": "How to pay",
+    "payWithLine": "{method}: {detail}",
+    "payWithChoose": "Which way to pay",
+    "payCodeAttached": "A code to scan goes with it",
     "logActivity": "Visible to the group",
     "sendPush": "Send to {name} in Balancia",
     "sendShare": "Share with {name}",
@@ -2909,6 +2921,8 @@
       "receivedBy": "Received by",
       "creditedTo": "Credited to",
       "splitBetween": "Split between",
+      "everyone": "Everyone",
+      "someOf": "{count} of {total}",
       "done": "Done",
       "methods": {
         "equal": "Equally",
@@ -3087,10 +3101,12 @@
       "outcomeNoMethod": "Pick how the money changed hands.",
       "outcomeNoPair": "Pick who is paying whom.",
       "outcomeZero": "Enter how much changed hands.",
+      "outcomeAwaitingRate": "Enter the rate, so this can count against what is owed.",
       "outcomeCustom": "No balance was owed — {from} will owe {to} {amount}.",
       "outcomeUnder": "Part payment — {from} will still owe {to} {amount}.",
       "outcomeOver": "More than owed — {from} will owe {to} {amount}.",
       "outcomeExact": "{from} and {to} will be settled.",
+      "outcomeOtherCurrency": "Paid in {currency} — {from} still owes {to} {amount}.",
       "someoneElse": "Someone else",
       "changeWhoPays": "Change who pays",
       "pairTitle": "Pay someone else",
@@ -3174,7 +3190,7 @@
       },
       "heard": {
         "label": "Also heard",
-        "payer": "Paid by {name}",
+        "payer": "{name} paid",
         "split": "Split between {names}",
         "justYou": "Just you",
         "dismiss": "Ignore what was heard about people"
