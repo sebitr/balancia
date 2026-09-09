@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { createExpense, listExpenses } from "@/modules/expenses/service";
 import { expenseInputSchema } from "@/modules/expenses/schemas";
 import {
+  apiActor,
   idempotencyKey,
   invalidInput,
   isUuid,
@@ -47,7 +47,11 @@ async function handleGet(
   const offset = offsetSchema.parse(searchParams.get("offset"));
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/expenses",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const expenses = await listExpenses(access.groupId, { limit, offset });
     return noStore({
@@ -89,7 +93,11 @@ async function handlePost(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/expenses",
+      "POST",
+    );
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });

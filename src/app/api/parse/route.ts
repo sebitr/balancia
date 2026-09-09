@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { getClientIp, getCurrentActor } from "@/lib/security/actor";
+import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import {
+  apiActor,
   invalidInput,
   mobileApiError,
   noStore,
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
 
 async function handlePost(request: Request) {
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(request, ROUTE, "POST");
     if (!actor) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }

@@ -1,10 +1,9 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
   loadFrequentCategories,
   loadMappings,
 } from "@/modules/categorization/service";
-import { isUuid, mobileApiError, noStore } from "@/app/api/mobile";
+import { apiActor, isUuid, mobileApiError, noStore } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
@@ -18,11 +17,12 @@ export async function GET(
   context: RouteContext<"/api/groups/[groupId]/categories">,
 ) {
   return trackRoute("/api/groups/[groupId]/categories", "GET", () =>
-    handleGet(context),
+    handleGet(request, context),
   );
 }
 
 async function handleGet(
+  request: Request,
   context: RouteContext<"/api/groups/[groupId]/categories">,
 ) {
   const { groupId } = await context.params;
@@ -31,7 +31,11 @@ async function handleGet(
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/categories",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const [frequent, mappings] = await Promise.all([
       loadFrequentCategories(access),

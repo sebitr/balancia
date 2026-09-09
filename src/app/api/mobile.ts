@@ -5,7 +5,16 @@ import {
   AuthenticationRequiredError,
   AuthorizationError,
 } from "@/lib/security/authorization";
-import { RateLimitedError } from "@/lib/security/rate-limit";
+import { getCurrentActor } from "@/lib/security/actor";
+import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
+import { resolveApiToken } from "@/modules/api-tokens/service";
+import {
+  decideScope,
+  refusalMessage,
+  scopeSatisfies,
+  TokenScopeError,
+  type ApiRoute,
+} from "@/modules/api-tokens/scope";
 import { ProofOfWorkError } from "@/lib/security/proof-of-work";
 import { PasswordError } from "@/modules/auth/passwords";
 import { logger } from "@/lib/logger";
@@ -23,7 +32,11 @@ import type { SettlementSummary } from "@/modules/settlements/service";
 import type { ParticipantSummary } from "@/modules/groups/service";
 import type { GroupOverview } from "@/modules/groups/overview";
 import type { GroupPosition, HomeOverview } from "@/modules/balances/overview";
-import type { GroupAccess } from "@/lib/security/authorization";
+import type {
+  Actor,
+  GroupAccess,
+  UserActor,
+} from "@/lib/security/authorization";
 import type { ActivityEntry } from "@/modules/activity/service";
 import type { PayoutHint } from "@/modules/payouts/hints";
 import type { RecurringSummary } from "@/modules/recurring/service";
@@ -55,6 +68,118 @@ import type {
  *  - Everything is `Cache-Control: private, no-store`: each response is one
  *    person's financial data and must not sit in a shared cache.
  */
+
+/**
+ * The actor for one API request: a bearer key if one was presented, otherwise
+ * whatever the cookies say.
+ *
+ * **Only here.** `getCurrentActor()` knows nothing about keys and never will,
+ * so a Server Component and a Server Action cannot be reached with one. That
+ * is not an accident of where the code sits: cookie-authenticated actions are
+ * protected partly by the cookie/origin model — see the CSRF note in
+ * `src/proxy.ts` — and widening that path to accept a header would buy nothing
+ * and cost the guarantee. It is also what makes minting a key with a key
+ * impossible, since the screen that mints them is Server Actions all the way
+ * down.
+ *
+ * `route` and `method` are required, and typed as the route templates in
+ * `API_ROUTES` rather than as strings. Every handler already writes both
+ * literals for `trackRoute`, so this costs one line — and a handler that
+ * forgets them, or invents a path nobody has decided about, does not compile.
+ * That is the whole of how scope stays enforced centrally: there is no way to
+ * ask this question without saying which route is asking.
+ *
+ * A pinned key is *not* checked here, because here is the wrong place: the
+ * route template says whether a group is named, but the group id itself is in
+ * the path, and re-parsing it would be a second source of truth about which
+ * group a request is for. The pin travels on the actor as `tokenGroupId` and
+ * is spent in `authorizeGroup`, beside the identical rule for guests. What
+ * this function does refuse is a pinned key on a route that names *no* group —
+ * `GET /api/groups` or the notification inbox — where there would be nothing
+ * for the pin to be checked against and it would silently widen to everything.
+ */
+export async function apiActor(
+  request: Request,
+  route: ApiRoute,
+  method: string,
+): Promise<Actor | null> {
+  const bearer = bearerToken(request);
+  if (bearer === null) return getCurrentActor();
+
+  const decision = decideScope(route, method);
+  if (!decision.allowed) {
+    throw new TokenScopeError(refusalMessage(decision.reason));
+  }
+
+  const token = await resolveApiToken(bearer);
+  // Malformed, unknown, revoked, or an account since disabled. One answer for
+  // all four: which of them it was is not something a caller holding a dead
+  // key needs, and telling them apart would say whether a key had ever existed.
+  if (!token) {
+    throw new AuthenticationRequiredError("This API key is not valid.");
+  }
+
+  const limit = await consumeRateLimit("apiToken", token.tokenId);
+  if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
+
+  if (!scopeSatisfies(token.scope, decision.requires)) {
+    throw new TokenScopeError(
+      "This API key is read-only. Mint one with write access for this.",
+    );
+  }
+  if (token.groupId !== null && !decision.pinnable) {
+    throw new TokenScopeError(
+      "This API key is pinned to one group, and this endpoint is not about a group.",
+    );
+  }
+
+  return {
+    kind: "user",
+    userId: token.userId,
+    email: token.email,
+    name: token.name,
+    ...(token.groupId === null ? {} : { tokenGroupId: token.groupId }),
+  };
+}
+
+/**
+ * The same resolution, narrowed to a signed-in user. Guests are not users, and
+ * a key always belongs to one.
+ */
+export async function apiUser(
+  request: Request,
+  route: ApiRoute,
+  method: string,
+): Promise<UserActor | null> {
+  const actor = await apiActor(request, route, method);
+  return actor?.kind === "user" ? actor : null;
+}
+
+/**
+ * Whatever followed `Bearer`, or null if the caller offered no bearer at all.
+ *
+ * Deliberately not validated here. Once somebody has written `Bearer` on a
+ * request they are authenticating with a key, and a key that turns out to be
+ * gibberish is refused **as a key** — never quietly downgraded to whatever
+ * session cookie happens to be riding along on the same request. Sorting out
+ * "is this the right shape" from "is this a real key" would only give a caller
+ * a way to tell a typo from a revocation, which is not a distinction worth
+ * handing out.
+ *
+ * Another scheme — a `Basic` header some proxy or client library adds of its
+ * own accord — is not a bearer attempt and is ignored, so it cannot turn every
+ * cookie-authenticated request into a 401.
+ */
+function bearerToken(request: Request): string | null {
+  const header = request.headers.get("Authorization")?.trim();
+  if (!header) return null;
+  // A bare `Bearer` with nothing after it matches, and yields "" — a bearer
+  // attempt carrying no key, which is refused as one. The alternative reads
+  // the same header two ways depending on whether a client's string
+  // interpolation happened to produce an empty value.
+  const match = /^Bearer(?:\s+(.*))?$/i.exec(header);
+  return match ? (match[1]?.trim() ?? "") : null;
+}
 
 /** JSON response that no shared cache may keep. */
 export function noStore(data: unknown, init: { status?: number } = {}) {
@@ -92,6 +217,13 @@ export function mobileApiError(
   }
   if (error instanceof AuthorizationError) {
     return noStore({ error: "Not found." }, { status: 404 });
+  }
+  // The one refusal that is *not* answered 404. A key that is read-only, or
+  // pinned, or pointed at the account is being told something about itself,
+  // and the holder needs it in order to mint a better one — see the note on
+  // `TokenScopeError`. Nothing about the group is disclosed either way.
+  if (error instanceof TokenScopeError) {
+    return noStore({ error: error.message }, { status: 403 });
   }
   // Credential refusals carry deliberately non-enumerating messages, so they
   // are safe to pass through; see the note on SAFE_ERRORS in lib/actions.ts.

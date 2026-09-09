@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
-import { getCurrentActor, getCurrentUser } from "@/lib/security/actor";
 import { loadHomeOverview } from "@/modules/balances/overview";
 import { createGroupSchema } from "@/modules/groups/schemas";
 import { createGroup } from "@/modules/groups/service";
 import {
+  apiActor,
+  apiUser,
   invalidInput,
   mobileApiError,
   noStore,
@@ -20,13 +21,13 @@ import { trackRoute } from "@/lib/metrics/http";
  * shows. Guests are pinned to one group and have no home; the whoami route
  * tells them which group is theirs, and they read it directly.
  */
-export async function GET() {
-  return trackRoute("/api/groups", "GET", handleGet);
+export async function GET(request: Request) {
+  return trackRoute("/api/groups", "GET", () => handleGet(request));
 }
 
-async function handleGet() {
+async function handleGet(request: Request) {
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(request, "/api/groups", "GET");
     if (!actor) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }
@@ -69,7 +70,7 @@ async function handlePost(request: Request) {
   }
 
   try {
-    const user = await getCurrentUser();
+    const user = await apiUser(request, "/api/groups", "POST");
     if (!user) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }

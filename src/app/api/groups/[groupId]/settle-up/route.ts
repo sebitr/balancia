@@ -1,8 +1,8 @@
-import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { loadSettleUp } from "@/modules/settlements/settle-up";
 import { buildPayoutHints } from "@/modules/payouts/hints";
 import {
+  apiActor,
   isUuid,
   mobileApiError,
   noStore,
@@ -22,17 +22,21 @@ const ROUTE = "/api/groups/[groupId]/settle-up";
 type Context = RouteContext<"/api/groups/[groupId]/settle-up">;
 
 export async function GET(request: Request, context: Context) {
-  return trackRoute(ROUTE, "GET", () => handleGet(context));
+  return trackRoute(ROUTE, "GET", () => handleGet(request, context));
 }
 
-async function handleGet(context: Context) {
+async function handleGet(request: Request, context: Context) {
   const { groupId } = await context.params;
   if (!isUuid(groupId)) {
     return noStore({ error: "Not found." }, { status: 404 });
   }
 
   try {
-    const actor = await getCurrentActor();
+    const actor = await apiActor(
+      request,
+      "/api/groups/[groupId]/settle-up",
+      "GET",
+    );
     const access = await authorizeGroup(actor, groupId);
     const view = await loadSettleUp(access);
     /*

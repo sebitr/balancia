@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/security/actor";
 import { markRead } from "@/modules/notifications/service";
 import {
+  apiUser,
   invalidInput,
   mobileApiError,
   noStore,
@@ -29,7 +29,7 @@ async function handlePost(request: Request) {
   }
 
   try {
-    const user = await getCurrentUser();
+    const user = await apiUser(request, "/api/notifications/read", "POST");
     if (!user) {
       return noStore({ error: "Sign in to continue." }, { status: 401 });
     }

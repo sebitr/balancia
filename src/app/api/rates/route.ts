@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { apiActor, mobileApiError } from "@/app/api/mobile";
 import { z } from "zod";
-import { getClientIp, getCurrentActor } from "@/lib/security/actor";
+import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/logger";
 import { UnknownCurrencyError } from "@/modules/currencies/iso-4217";
@@ -32,7 +33,17 @@ export async function GET(request: Request) {
 }
 
 async function handleGet(request: Request) {
-  const actor = await getCurrentActor();
+  // Resolving the caller can refuse rather than answer — a key that is
+  // read-only, pinned to a group, or no longer live — and this route's own
+  // error handling starts further down, around the provider call. So the
+  // refusal is mapped here, where it happens, rather than widening the block
+  // below to cover something it was not written for.
+  let actor;
+  try {
+    actor = await apiActor(request, "/api/rates", "GET");
+  } catch (error) {
+    return mobileApiError(error, "/api/rates GET");
+  }
   if (!actor) {
     return NextResponse.json(
       { error: "Sign in to continue." },

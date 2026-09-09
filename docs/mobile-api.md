@@ -36,7 +36,16 @@ lands here first:
 Cookie-based, exactly like the browser: `POST /api/auth/session` runs the same
 rate limit and `signInWithPassword` as the sign-in action and sets the
 `balancia_session` cookie; URLSession-style clients store and return it on
-their own. No parallel token scheme to issue or revoke.
+their own. That is the way in for a client acting _as the person_ — a native
+app, a browser, anything with a screen to type a password into.
+
+Software that is not a person holding a phone should not hold a session cookie
+at all. A Shortcut, a cron script, a wall tablet and an MCP server each want
+something narrower and revocable, and that is [an API key](#api-keys) below: a
+bearer credential the account mints for itself, scoped to reading or writing,
+optionally pinned to one group, and refused outright on the account and the
+door. The two schemes never mix on one request — see _Which credential
+answered_ below.
 
 | Method | Path                | Notes                                                                                                                                                                   |
 | ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -555,6 +564,154 @@ both are browser-only screens. The document is
 Next's router skips dot-prefixed directories under `app/`; the claim is held to
 the real URL builders by `src/lib/apple-app-site-association.test.ts`, since a
 claim that drifts away from what is minted reports nothing anywhere.
+
+## API keys
+
+A key is what you give a piece of software instead of your account. It is
+minted on **Settings → Security**, shown once, and sent as an ordinary bearer
+header:
+
+```
+Authorization: Bearer blc_kZ8s…
+```
+
+Everything else about the request is unchanged: same paths, same JSON, same
+statuses. A key authenticates _as its owner_ and can never do more than they
+could — it only ever does less.
+
+### What a key looks like
+
+`blc_` followed by 43 characters of base64url — 32 random bytes, like every
+other opaque token in Balancia. Only its SHA-256 hash is stored, so a database
+dump yields a list of keys and no way to use one, and the value cannot be shown
+again after the sheet that minted it.
+
+The prefix is the one thing that is different from a session or a join token,
+which are both bare base64url and indistinguishable from each other. A key is
+pasted into other people's software — a crontab, a Shortcut, a `.env` file that
+ends up in a repository — so it has to be greppable in a log and recognisable
+to a secret scanner **before** it leaks rather than after. `blc_` plus the
+following eight characters is also what the settings list shows, which is
+enough to match a row against a key found in a script without revealing either.
+
+### Scope, and the group pin
+
+| Choice        | Effect                                                              |
+| ------------- | ------------------------------------------------------------------- |
+| `read`        | `GET` only. A `POST`, `PATCH`, `PUT` or `DELETE` is 403.            |
+| `write`       | Reads and writes.                                                   |
+| _(no group)_  | Every group the owner is in.                                        |
+| _(one group)_ | That group only. Any other group id is 404, as if it did not exist. |
+
+Two axes and no more. Anything finer would be a second permission system beside
+the group roles in `src/lib/security/authorization.ts`, and a key cannot widen
+those in any case: what it may do is the intersection of its scope with what
+its owner could already do.
+
+The pin is spent in `authorizeGroup`, beside the identical rule that keeps a
+guest to one group — before any record is fetched, so a pinned key cannot be
+used to discover which group ids exist. A pinned key on a route that names _no_
+group (`GET /api/groups`, the notification inbox) is refused rather than
+silently widened, because there would be nothing to check the pin against.
+
+**`/api/rates` and `/api/parse` are the exception**, and are open to a pinned
+key. Neither names a group and neither reads a row: a published reference rate
+is nobody's data, and a parse is a regular expression over a sentence the
+caller supplied. There is nothing for a pin to widen to, and the pair is
+exactly what a share-sheet Shortcut reaches for on its way to writing an
+entry — refusing them would leave a pinned key able to file an expense and
+unable to work out what the sentence said or what the rate was.
+
+### What no key may reach, at any scope
+
+`src/modules/api-tokens/scope.ts` names every route under `src/app/api/` and
+says whether a key may authenticate there. It is an **allowlist**: a route
+added later is refused until somebody writes it in, and a unit test walks the
+directory and fails the build while the table and the filesystem disagree.
+
+| Refused                          | Why                                                                 |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `/api/auth/*`                    | Signing in, registering, passkeys, Apple. The account's front door. |
+| `/api/profile/*`                 | Name, address, avatar, payout details. The account itself.          |
+| `/api/push/*`                    | Somebody's phones. Not a script's business.                         |
+| `/api/join/*`, `…/join-link`     | Handing out a standing way into a group.                            |
+| `/api/groups/:id/participants/*` | Who is in a group, and their invitations.                           |
+| `DELETE /api/groups/:id`         | Taking the group and everybody's history with it.                   |
+| `GET /api/groups/:id/export`     | The whole financial history in one request — see below.             |
+
+The first six are the account and the door: a key is a narrower thing than the
+account that minted it, so it must not be able to reach back and change who can
+get in — to the account or to a group.
+
+**Export is withheld for a different reason**, and it is the same sentence
+guests are held to in `GUEST_PERMISSIONS`. It is not about secrecy: a `read`
+key can already page through every expense in the group. It is that a bearer
+credential may be forwarded, and a one-request download of a group's entire
+financial history is a sharper tool in the wrong hands than the same data read
+a page at a time. Read `/api/groups/:id/transactions` instead, which pages.
+
+Routes a key may never reach do not read the `Authorization` header at all —
+those handlers still resolve a cookie and are simply blind to it. That is a
+stronger guarantee than a check they could stop performing: there is no branch
+to get wrong. The one place the refusal is live rather than structural is a
+method that shares a file with reachable ones, which today means
+`DELETE /api/groups/:id`.
+
+### Which credential answered
+
+A request carries a key or a cookie, never both:
+
+- **No `Authorization` header** — the cookie is resolved, exactly as before.
+  Nothing about the existing API changes for a client that never sends one.
+- **`Authorization: Bearer …`** — the key is the credential. If it is
+  gibberish, revoked, or belongs to a disabled account, the request is **401**;
+  it is never quietly downgraded to whatever session cookie happened to ride
+  along on the same request. A bare `Bearer` with no value is the same 401.
+- **Another scheme** (a `Basic` header some proxy added) is not a bearer
+  attempt and is ignored.
+
+A key is resolved **only in `src/app/api/**`**, by `apiActor` in
+`src/app/api/mobile.ts`. `getCurrentActor()` knows nothing about keys, so no
+Server Component and no Server Action can be reached with one — which is also
+why minting and revoking are Server Actions: a key cannot mint a key, cannot
+revoke one, and cannot list the others an account holds. There is no check
+enforcing that; there is no path.
+
+### Refusals
+
+| Status | When                                                                       |
+| ------ | -------------------------------------------------------------------------- |
+| 401    | Unknown, revoked, malformed, or the owner's account is disabled.           |
+| 403    | The key will not do: read-only on a write, pinned where no group is named. |
+| 404    | A pinned key on another group — indistinguishable from "no such group".    |
+| 429    | The key's own rate bucket: 600 requests per 10 minutes, keyed by key.      |
+
+403 is the one refusal that is **not** answered 404. The 404 rule exists so
+group ids cannot be probed, and nothing is being probed here: the caller
+already holds the key and is being told a fact about the key itself, which they
+need in order to mint a better one.
+
+The rate limit is keyed by the key rather than by address, so a tablet and a
+cron job on one home connection do not spend each other's allowance, and a key
+used from a rotating address cannot escape its own.
+
+### Expiry
+
+There isn't any. A key works until it is revoked.
+
+A default expiry sounds prudent and is not: a key that silently stops working
+is a wall tablet that goes blank on a Tuesday and a cron job nobody notices
+died, and the failure lands months after anyone remembers minting it.
+`lastUsedAt` is the honest version of the same instinct — the settings list
+prints it, "never used" is what a key that was pasted somewhere wrong says
+about itself, and revoking is one tap.
+
+### Managing keys
+
+There is no HTTP route for this, on purpose (see _Which credential answered_).
+Keys are minted and revoked on **Settings → Security**, beside the passkeys.
+Revoking takes effect on the next request and cannot be undone: the secret was
+never stored, so there is nothing to put back — mint another instead.
 
 ## CSRF
 

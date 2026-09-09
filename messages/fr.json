@@ -1989,6 +1989,34 @@
     "deviceOnly": "non synchronisée",
     "removeLastBody": "C’est le seul moyen d’accéder à ton compte. Si tu la supprimes, tu devras passer par ton adresse e-mail pour y revenir."
   },
+  "apiTokens": {
+    "title": "Clés d’API",
+    "keyCount": "{count, plural, one {# clé} other {# clés}}",
+    "emptyDescription": "Donne à un raccourci, à un script ou à une tablette murale sa propre clé, pour qu’ils n’aient jamais à détenir ton mot de passe.",
+    "cardHint": "Une clé peut lire et écrire des dépenses. Elle ne peut jamais modifier ton compte, les membres de tes groupes, ni exporter un groupe.",
+    "nameLabel": "À quoi sert cette clé",
+    "namePlaceholder": "Tablette de la cuisine",
+    "scopeLabel": "Ce qu’elle peut faire",
+    "scopeRead": "Lecture seule",
+    "scopeWrite": "Lecture et écriture",
+    "groupLabel": "Quel groupe",
+    "allGroups": "Tous mes groupes",
+    "create": "Créer la clé",
+    "createFailed": "Cette clé n’a pas pu être créée.",
+    "created": "Ajoutée le {date}",
+    "lastUsed": "dernière utilisation le {date}",
+    "neverUsed": "jamais utilisée",
+    "mintedTitle": "Ta nouvelle clé",
+    "mintedOnce": "Copie-la maintenant. Elle ne sera plus affichée — si tu la perds, révoque-la et crée-en une autre.",
+    "copy": "Copier",
+    "copied": "Copiée",
+    "revokeLabel": "Révoquer {name}",
+    "revokeTitle": "Révoquer cette clé ?",
+    "revokeBody": "Tout ce qui l’utilise encore cessera de fonctionner immédiatement, et elle ne pourra pas être restaurée. Tu pourras toujours en créer une autre.",
+    "revokeConfirm": "Révoquer",
+    "revokedToast": "{name} révoquée",
+    "revokeFailed": "Cette clé n’a pas pu être révoquée."
+  },
   "importWizard": {
     "fileLabel": "Sauvegarde ou export",
     "fileHelp": "Un export JSON Balancia, un CSV de groupe Splitwise, ou une sauvegarde JSON Splitwise. Le fichier est analysé sur ce serveur et n’est jamais transmis ailleurs.",
@@ -2531,7 +2559,10 @@
     "passwordTooLong": "Ce mot de passe est trop long.",
     "passwordCommon": "Ce mot de passe est l’un des plus utilisés. Choisis-en un autre.",
     "passwordPersonal": "Ton mot de passe ne doit pas contenir ton nom ni ton adresse e-mail.",
-    "proofOfWorkRequired": "Ton navigateur n’a pas terminé sa vérification. Recharge la page et réessaie."
+    "proofOfWorkRequired": "Ton navigateur n’a pas terminé sa vérification. Recharge la page et réessaie.",
+    "apiTokenNameRequired": "Donne un nom à cette clé.",
+    "apiTokenNameTooLong": "Ce nom est trop long.",
+    "apiTokenLimit": "Tu as autant de clés d’API qu’un compte peut en détenir. Révoque-en une d’abord."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",
