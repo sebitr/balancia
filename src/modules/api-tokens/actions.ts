@@ -5,7 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
-import { createApiToken, revokeApiToken, type ApiTokenRecord } from "./service";
+import { createApiToken, revokeApiToken } from "./service";
+import { serializeApiToken, type MintedApiToken } from "./serialize";
 import type { TokenScope } from "./scope";
 
 /**
@@ -19,32 +20,6 @@ import type { TokenScope } from "./scope";
  * others an account holds. There is no check anywhere enforcing that; there is
  * simply no path.
  */
-
-/** The secret, handed over once, plus the row the list will show from now on. */
-export interface MintedApiToken {
-  readonly token: string;
-  readonly record: SerializedApiToken;
-}
-
-/** `ApiTokenRecord` with its instants as strings, to cross the action boundary. */
-export interface SerializedApiToken {
-  readonly id: string;
-  readonly name: string;
-  readonly prefix: string;
-  readonly scope: TokenScope;
-  readonly groupId: string | null;
-  readonly groupName: string | null;
-  readonly createdAt: string;
-  readonly lastUsedAt: string | null;
-}
-
-export function serializeApiToken(record: ApiTokenRecord): SerializedApiToken {
-  return {
-    ...record,
-    createdAt: record.createdAt.toISOString(),
-    lastUsedAt: record.lastUsedAt?.toISOString() ?? null,
-  };
-}
 
 export async function createApiTokenAction(input: {
   name: string;

@@ -10,7 +10,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import { getLinkedAppleIdentity, hasPassword } from "@/modules/auth/service";
 import { listGroupsForUser } from "@/modules/groups/service";
 import { listApiTokens } from "@/modules/api-tokens/service";
-import { serializeApiToken } from "@/modules/api-tokens/actions";
+import { serializeApiToken } from "@/modules/api-tokens/serialize";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("userSettings");

@@ -1,6 +1,6 @@
 # Give a script, a Shortcut or a wall tablet its own key: named, scoped and revocable
 
-Branch: `feat/api-tokens`
+Merged: 2026-09-09 in #340
 
 The mobile API had one way in and it was the browser's: a session cookie, minted
 by typing a password. Anything that is not a browser — a Shortcut, a cron job, a
