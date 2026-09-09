@@ -14,12 +14,14 @@ import { heardEntry } from "./heard-entry";
  * those proposes nothing at all and leaves the words where they were said.
  *
  * The corpus at the foot of this file is the other half, and it is the more
- * useful one. Written from a sweep of a hundred realistic transcripts in both
- * languages rather than from the inside — which is how every vocabulary list
- * in `heard-entry.ts` was got wrong the first time — it started at 44 of 74
- * and found seven separate faults, none of them in a single rule. It lives
- * here rather than in a scratch script because the value was never the one
- * run: it is the table.
+ * useful one. It was swept out of a hundred realistic transcripts in both
+ * languages rather than written from the inside — which is how every
+ * vocabulary list in `heard-entry.ts` was got wrong the first time. The
+ * vocabulary that *was* written from the inside fails 44 of the 108
+ * assertions below, 41 of them in the two tables, across seven separate
+ * faults and not one of them inside a single rule. It lives here rather than
+ * in a scratch script because the value was never the one run: it is the
+ * table.
  */
 
 const GROUP = [

@@ -50,8 +50,10 @@ through exactly as they did before.
 
 ## What the corpus found
 
-The first cut of the vocabulary was written from the inside and got 44 of 74
-realistic transcripts. Seven faults, none of them in a single rule:
+The first cut of the vocabulary was written from the inside, and against a
+sweep of a hundred realistic transcripts in both languages it fails 44 of the
+108 assertions the test file now holds — 41 of them in the two corpus tables.
+Seven faults, none of them in a single rule:
 
 - **Almost nobody says "pay".** They say Anna _got_ the coffees, Jonas
   _covered_ the taxi, Anna _a offert_ the round, Hervé _is paying_. Thirteen
