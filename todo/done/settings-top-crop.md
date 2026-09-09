@@ -1,6 +1,6 @@
 # Give the first settings card back the pixel its outline is drawn in
 
-Branch: `fix/settings-top-crop`
+Merged: 2026-09-06 in #306
 
 Every card on a settings screen is outlined with `ring-1`, and a ring is
 painted outside the border box. The scrolling column carried no top padding, so

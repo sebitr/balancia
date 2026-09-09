@@ -1,6 +1,6 @@
 # Read the money out of a dictated sentence the way people actually say it: grouped thousands, currency signs, cents after the unit, and the narration in front
 
-Branch: `fix/heard-entry-parsing`
+Merged: 2026-09-09 in #331
 
 Measured against thirty-nine realistic transcripts in English and French, the
 parser got twelve right. Five separate things were wrong, and the first is the
@@ -44,7 +44,7 @@ nothing it did not lose before.
 
 Thirty-seven of the thirty-nine now pass. The two that do not are numbers said
 as words — "twenty four euros", "vingt-quatre euros" — and they are left
-deliberately. Turning words into figures is the one change that could *invent*
+deliberately. Turning words into figures is the one change that could _invent_
 an amount rather than miss one: "quatre-vingts" in a shop name is a number to
 a parser and a word to a reader, and this file's whole contract is that it
 never puts a figure in the field that nobody said. Missing one is the

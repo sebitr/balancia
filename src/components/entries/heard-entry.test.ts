@@ -315,10 +315,13 @@ describe("what people actually say", () => {
     ["dinner for 4 people 120 francs", "120", "dinner for 4 people"],
     ["12/03 dinner 45 francs", "45", "12/03 dinner"],
     ["2 nuits hôtel 240 francs", "240", "2 nuits hôtel"],
-  ])("takes the figure the unit is on in %s", (spoken, amountText, description) => {
-    expect(heardEntry(spoken).amountText).toBe(amountText);
-    expect(heardEntry(spoken).description).toBe(description);
-  });
+  ])(
+    "takes the figure the unit is on in %s",
+    (spoken, amountText, description) => {
+      expect(heardEntry(spoken).amountText).toBe(amountText);
+      expect(heardEntry(spoken).description).toBe(description);
+    },
+  );
 
   it("still reads a unit that came first", () => {
     expect(heardEntry("CHF 24 Coop")).toEqual({
@@ -353,10 +356,13 @@ describe("what people actually say", () => {
     ["mad hatter 40 euros", "EUR", "mad hatter"],
     ["gel douche 8 francs", "CHF", "gel douche"],
     ["sos plombier 90 francs", "CHF", "sos plombier"],
-  ])("does not take the word %s for a currency code", (spoken, currency, description) => {
-    expect(heardEntry(spoken).currency).toBe(currency);
-    expect(heardEntry(spoken).description).toBe(description);
-  });
+  ])(
+    "does not take the word %s for a currency code",
+    (spoken, currency, description) => {
+      expect(heardEntry(spoken).currency).toBe(currency);
+      expect(heardEntry(spoken).description).toBe(description);
+    },
+  );
 
   it("still takes a code that was written as one", () => {
     expect(heardEntry("courses 45 CHF").currency).toBe("CHF");
@@ -371,5 +377,45 @@ describe("what people actually say", () => {
     });
     // "cent" is a hundred everywhere it is not two digits behind a unit.
     expect(heardEntry("cent balles").description).toBe("cent");
+  });
+});
+
+/**
+ * The words another reader has already claimed.
+ *
+ * `heardPeople` reads the clauses that name people and hands back the ranges
+ * they filled; cutting them out is this file's job, because this is the file
+ * that decides which words describe the money. What is asserted here is the
+ * contract itself — `heard-people.test.ts` has the sentences.
+ */
+describe("what somebody else has read", () => {
+  it("keeps a claimed clause out of the description", () => {
+    const spoken = "Anna paid 30 francs for the taxi";
+    expect(heardEntry(spoken, "", [[0, 10]])).toEqual({
+      amountText: "30",
+      currency: "CHF",
+      description: "taxi",
+    });
+  });
+
+  it("tidies the seam the clause left, and only then", () => {
+    const spoken = "40 francs taxi, split with Anna";
+    expect(heardEntry(spoken, "", [[15, 31]]).description).toBe("taxi");
+    // Nothing claimed, so nothing tidied: the comma is still doing the work
+    // it was said for.
+    expect(heardEntry(spoken).description).toBe("taxi, split with Anna");
+  });
+
+  it("does not read a name as a unit", () => {
+    // "Franc" is somebody's name here and Swiss francs everywhere else. The
+    // claimed clause is what tells the two apart.
+    const spoken = "Franc paid 30 euros for the taxi";
+    expect(heardEntry(spoken, "", [[0, 11]]).currency).toBe("EUR");
+  });
+
+  it("changes nothing at all when nothing was claimed", () => {
+    expect(heardEntry("24 francs Coop", "", [])).toEqual(
+      heardEntry("24 francs Coop"),
+    );
   });
 });

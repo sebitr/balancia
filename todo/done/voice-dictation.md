@@ -1,6 +1,6 @@
 # Let the dictate button reach the microphone the app had disabled for itself, listen in a tag a recogniser knows, and say so when it is refused instead of going quiet
 
-Branch: `fix/voice-dictation`
+Merged: 2026-09-08 in #325
 
 "Dicter" opened, pulsed, stopped, and left the form exactly as it was. Three
 things stacked up behind that, and the third is why the first two went unseen

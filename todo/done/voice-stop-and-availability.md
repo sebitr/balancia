@@ -1,6 +1,6 @@
 # Give the dictate button its own ways to close the microphone instead of one that belongs to the engine, and take the button away when the shortcut cannot work
 
-Branch: `fix/voice-stop-and-availability`
+Merged: 2026-09-09 in #330
 
 #325 got the microphone reaching the recogniser. It did not get it closing
 again: the button sat on "J'écoute…" with the microphone live, and pressing it
@@ -48,12 +48,12 @@ where they say "available" the recognition is pinned local with
 `processLocally` and nothing is asked — there is no risk to describe, and
 interrupting that reader would be a worse feature than never asking. Anything
 short of a plain "available" counts as no: a model that is merely
-*downloadable* has not been downloaded, so the words would still travel today.
+_downloadable_ has not been downloaded, so the words would still travel today.
 
 Everything else asks once, in an alert dialog with the three answers: listen
 this once, listen and stop asking, don't listen. The remembered answer is a
 `localStorage` key rather than an account setting, because what it consents to
-is *this* browser handing audio to *its* vendor — a phone and a laptop are two
+is _this_ browser handing audio to _its_ vendor — a phone and a laptop are two
 different promises, and the reader's account has nothing to do with it.
 
 The footer is stacked at every width, unlike every other two-button dialog in

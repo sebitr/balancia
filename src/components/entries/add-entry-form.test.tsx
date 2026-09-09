@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { AddEntryDrawer } from "./add-entry-drawer";
+import { forgetCloudConsent, writeCloudConsent } from "./voice-consent";
 
 /**
  * What the screen does, from the outside.
@@ -2491,5 +2492,169 @@ describe("with no network", () => {
 
     expect(enqueue).not.toHaveBeenCalled();
     expect(updateExpense).toHaveBeenCalled();
+  });
+});
+
+/**
+ * What a dictated sentence says about people.
+ *
+ * The money goes straight into its fields, because a wrong figure is visible
+ * in the field it landed in. A name is not: a payer nobody chose looks
+ * exactly like a payer somebody did, and the split row would read as true. So
+ * the people stop at a chip, and these are the two taps that dispose.
+ *
+ * The recogniser is faked — jsdom has no microphone, and Chrome's answers a
+ * web service — and the cloud question is answered in advance, since what is
+ * under test starts after the words arrive.
+ */
+describe("what a dictated sentence says about people", () => {
+  interface FakeRecognition {
+    lang: string;
+    interimResults: boolean;
+    continuous: boolean;
+    onresult: ((event: unknown) => void) | null;
+    onspeechend: (() => void) | null;
+    onerror: ((event: { error: string }) => void) | null;
+    onend: (() => void) | null;
+    start(): void;
+    stop(): void;
+    abort(): void;
+  }
+
+  let engine: FakeRecognition | null = null;
+
+  beforeEach(() => {
+    const fake: FakeRecognition = {
+      lang: "",
+      interimResults: false,
+      continuous: false,
+      onresult: null,
+      onspeechend: null,
+      onerror: null,
+      onend: null,
+      start() {},
+      stop() {},
+      abort() {},
+    };
+    engine = fake;
+    // `new` on a function returning an object yields that object, which keeps
+    // the wiring on a plain closure instead of aliasing `this`.
+    (window as unknown as { SpeechRecognition?: unknown }).SpeechRecognition =
+      function () {
+        return fake;
+      };
+    writeCloudConsent();
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { SpeechRecognition?: unknown })
+      .SpeechRecognition;
+    forgetCloudConsent();
+  });
+
+  /** Presses the button and hands the form a whole transcript. */
+  async function say(
+    user: ReturnType<typeof userEvent.setup>,
+    spoken: string,
+  ): Promise<void> {
+    await user.click(screen.getByRole("button", { name: "Say it" }));
+    act(() => {
+      engine?.onresult?.({ results: [[{ transcript: spoken }]] });
+    });
+  }
+
+  it("fills the money, and only offers the people", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await say(user, "Hervé paid the 120 taxi, split with me and Cyril");
+
+    // The words that named people are not what the money was for.
+    expect(screen.getByLabelText("Description")).toHaveValue("taxi");
+    expect(
+      screen.getByRole("button", { name: "Hervé paid" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Split between Seb and Cyril" }),
+    ).toBeInTheDocument();
+    // And the row itself has not moved: a chip is an offer, not a write.
+    const row = screen.getByRole("button", { name: /^Paid by/ });
+    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("Everyone");
+  });
+
+  it("changes the payer when the chip is pressed, and says nothing", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await say(user, "Hervé paid the 120 taxi");
+
+    await user.click(screen.getByRole("button", { name: "Hervé paid" }));
+
+    expect(screen.getByRole("button", { name: /^Paid by/ })).toHaveTextContent(
+      "Hervé",
+    );
+    // The row moved and stayed moved, which is the confirmation, and the chip
+    // it came from is gone. A toast laid over the row it was describing would
+    // be a slower second copy of both.
+    expect(success).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Hervé paid" })).toBeNull();
+  });
+
+  it("changes who shares it when the chip is pressed", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await say(user, "120 francs taxi split with Cyril");
+
+    await user.click(
+      screen.getByRole("button", { name: "Split between Seb and Cyril" }),
+    );
+
+    expect(
+      screen.getByText(/Split equally between 2 · CHF 60\.00 each/),
+    ).toBeInTheDocument();
+    expect(success).not.toHaveBeenCalled();
+  });
+
+  it("offers 'just you' when the sentence said so", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await say(user, "20 francs lunch just me");
+
+    await user.click(screen.getByRole("button", { name: "Just you" }));
+
+    expect(screen.getByText("All of it to one person")).toBeInTheDocument();
+  });
+
+  it("takes the whole offer away when it is refused", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await say(user, "Hervé paid the 120 taxi, split with me and Cyril");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Ignore what was heard about people",
+      }),
+    );
+
+    expect(screen.queryByText("Also heard")).toBeNull();
+    const row = screen.getByRole("button", { name: /^Paid by/ });
+    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("Everyone");
+  });
+
+  /*
+   * The group is the whole of the lookup. A recogniser that heard a name
+   * nobody in it answers to proposes nobody — and leaves the words it
+   * misheard on screen, where the reader can see what it thought it heard.
+   */
+  it("offers nobody for a name this group does not have", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await say(user, "Klaus paid 24 francs Coop");
+
+    expect(screen.queryByText("Also heard")).toBeNull();
+    expect(screen.getByLabelText("Description")).toHaveValue("Klaus paid Coop");
   });
 });

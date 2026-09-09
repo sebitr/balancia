@@ -1,6 +1,6 @@
 # Lead the multi-currency home hero on one figure — the largest debt — and drop the rest to compact rows under a count of the currencies
 
-Branch: `feat/multi-currency-hero`
+Merged: 2026-09-08 in #323
 
 From the "Multi-currency home hero" handoff, option 1a "Action first". Where
 there is no rate to combine the currencies, the header gave each of them a

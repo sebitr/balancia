@@ -1,6 +1,6 @@
 # Let a repayment row say both names: stack the figure under the pair instead of cropping the receiver off it
 
-Branch: `fix/settle-pair-fits`
+Merged: 2026-09-08 in #327
 
 The drawer's Settle tab lists the outstanding debts as "Cyril rembourse
 Sébastien" with the figure beside it, on one line that truncated. Two names, a

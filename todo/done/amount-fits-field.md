@@ -1,6 +1,6 @@
 # Draw the amount at whatever size shows all of it
 
-Branch: `fix/amount-fits-field`
+Merged: 2026-09-08 in #328
 
 The figure on the entry and repayment card is 44px, which holds about seven
 characters before the currency chip beside it. Settling a five-figure debt is

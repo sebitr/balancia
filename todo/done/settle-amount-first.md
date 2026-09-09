@@ -1,6 +1,6 @@
 # Redraw Settle up amount-first: a hero position and a bar saying what it is made of, payments as flat rows instead of cards, the payment rails in a panel inside the row that owes them, and a settled group that reads as a state
 
-Branch: `feat/settle-amount-first`
+Merged: 2026-09-06 in #305
 
 Recreates the "Régler les comptes" handoff (states 3a, 2a and 4a) with the
 app's own components. Two places where the handoff and `AGENTS.md` disagreed

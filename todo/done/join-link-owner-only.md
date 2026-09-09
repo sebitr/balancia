@@ -1,6 +1,6 @@
 # Keep the group-wide join link the owner's over the mobile API, and hand them the link itself rather than its first eight characters
 
-Branch: `fix/join-link-owner-only`
+Merged: 2026-09-08 in #326
 
 The web has always read this link behind `manageInvitations`, which is the
 owner's alone: the group overview, the members page and the settings page all

@@ -368,9 +368,7 @@ export function VoiceButton({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("consent.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("consent.body")}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("consent.body")}</AlertDialogDescription>
           </AlertDialogHeader>
           {/*
            * Stacked at every width, unlike the two-button footers everywhere

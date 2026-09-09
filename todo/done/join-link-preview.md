@@ -1,6 +1,6 @@
 # A join link pasted into a chat shows the group's name, icon and colour instead of a naked URL
 
-Branch: `feat/join-link-preview`
+Merged: 2026-09-09 in #337
 
 Both join routes are redirects, and a redirect carries no meta tag — so
 WhatsApp had nothing to draw and rendered the bare address, which is the shape

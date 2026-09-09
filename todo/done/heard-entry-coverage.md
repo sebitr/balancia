@@ -1,6 +1,6 @@
 # Read the figure the currency is attached to, not the first one in the sentence
 
-Branch: `fix/heard-entry-coverage`
+Merged: 2026-09-09 in #333
 
 A sweep of a hundred-odd realistic transcripts across English and French. It
 started at 75 of 83 and found four separate faults, none of which was in a
