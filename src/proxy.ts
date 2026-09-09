@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isWebAssemblyInferenceEnabled } from "@/lib/env";
 import { umamiDestination } from "@/lib/analytics/umami";
 import { APPLE_CALLBACK_PATH } from "@/modules/auth/apple-paths";
+import { SHARE_CARD_PREFIX } from "@/modules/groups/share-card";
 
 /**
  * Security headers and origin validation.
@@ -33,6 +34,11 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
  * route that might later be added beside it.
  */
 const CROSS_ORIGIN_POST_ALLOWED = new Set([APPLE_CALLBACK_PATH]);
+
+/** The share card, and only it — see the resource policy below. */
+function isShareCard(pathname: string): boolean {
+  return pathname.startsWith(`${SHARE_CARD_PREFIX}/`);
+}
 
 function buildCsp(nonce: string, isDevelopment: boolean): string {
   // Compiling WebAssembly needs its own token. Added only where the operator
@@ -159,7 +165,17 @@ export function proxy(request: NextRequest): NextResponse {
   // already behind an authorized handler that answers with
   // `Content-Disposition: attachment`, so this is the same rule stated once
   // more at the edge, where it also covers whatever is added next.
-  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  //
+  // The share card is the one thing that is. `/join/og/<accent>/<icon>` is
+  // the picture in the bubble a join link is pasted into, and being drawn
+  // inside somebody else's app is its entire job — a card refused there is a
+  // broken image, which is worse than the naked URL it replaced. Opening it
+  // costs nothing: the path holds no token and no group id, and the drawing
+  // is an icon and a colour. See `src/app/join/og/[color]/[icon]/route.tsx`.
+  response.headers.set(
+    "Cross-Origin-Resource-Policy",
+    isShareCard(request.nextUrl.pathname) ? "cross-origin" : "same-origin",
+  );
   // Adobe's crossdomain.xml convention. Long dead in browsers, still read by
   // some PDF and Flash-descended clients, and one line to close.
   response.headers.set("X-Permitted-Cross-Domain-Policies", "none");

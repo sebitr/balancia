@@ -1585,6 +1585,14 @@
       "signIn": "Sign in"
     }
   },
+  "linkPreview": {
+    "groupTitle": "Join {group} on Balancia",
+    "groupFrom": "{inviter} invites you to join {group} and keep track of who owes what.",
+    "group": "An invitation to join {group} and keep track of who owes what.",
+    "personalTitle": "{group} on Balancia",
+    "personal": "Your place in {group} is ready. Open the link to see what you've paid and what you're owed.",
+    "imageAlt": "{group} on Balancia"
+  },
   "onboarding": {
     "back": "Back",
     "joinFailed": "You could not be added to the group. Try again in a moment.",

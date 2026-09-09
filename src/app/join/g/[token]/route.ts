@@ -10,6 +10,8 @@ import {
   touchJoinLink,
 } from "@/lib/security/join-link";
 import { setJoinCookie } from "@/modules/auth/cookies";
+import { isLinkPreviewCrawler } from "@/lib/link-preview";
+import { joinLinkPreviewResponse } from "@/modules/join/preview";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
@@ -28,7 +30,7 @@ import { logger } from "@/lib/logger";
  * the flow finishes.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: RouteContext<"/join/g/[token]">,
 ) {
   const { token } = await context.params;
@@ -38,6 +40,40 @@ export async function GET(
       new URL(`/join/error?reason=${reason}`, env.appOrigin),
       { status: 303 },
     );
+
+  /*
+   * A chat app drawing the bubble, seconds before anybody taps it.
+   *
+   * It is answered with a document rather than the redirect, because a
+   * redirect carries no meta tag and there is nothing else in a bubble. It
+   * gets no cookie and the link is not stamped as used: the organiser's card
+   * says when the link was last opened, and a crawler has not opened it.
+   *
+   * The rate limit is the one the humans use, deliberately. The preview reads
+   * the same token space by the same hash, so leaving it unmetered would put
+   * an unmetered oracle beside a metered one — and since a crawler arrives
+   * from a datacentre and a household does not, the two never share a bucket
+   * in practice. A refusal falls through to the app's own card rather than
+   * an error: a bubble is not the place to say we are rate-limiting somebody.
+   */
+  if (isLinkPreviewCrawler(request.headers.get("user-agent"))) {
+    const budget = await consumeRateLimit("joinRedeem", await getClientIp());
+    const preview = budget.allowed
+      ? await resolveJoinLink(token).catch(() => null)
+      : null;
+    return joinLinkPreviewResponse(
+      `/join/g/${token}`,
+      preview
+        ? {
+            kind: "group",
+            groupName: preview.groupName,
+            groupIcon: preview.groupIcon,
+            groupIconColor: preview.groupIconColor,
+            inviterName: preview.inviterName,
+          }
+        : { kind: "dead" },
+    );
+  }
 
   const limit = await consumeRateLimit("joinRedeem", await getClientIp());
   if (!limit.allowed) return fail("rate-limited");

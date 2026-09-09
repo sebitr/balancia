@@ -224,6 +224,18 @@ largest creditor) that is presentation-only: it never alters recorded history.
   somebody already signed in runs the same screens: only the account question
   drops out of the flow, because they walked in holding the answer. Somebody
   already in the group is sent to the group instead — there is nothing to join.
+- Both join routes answer a link-preview crawler with a document rather than a
+  redirect, so a link pasted into a chat app renders as the group's name, its
+  icon and its accent instead of as a naked URL to a domain nobody has heard
+  of. Recognition is an allowlist of user agents (`lib/link-preview.ts`), so
+  anything unrecognised gets the redirect it has always got. The preview spends
+  nothing — no cookie, no guest session, no "last used" stamp, and no arrival in
+  the group's history, which the personal link used to record every time a
+  crawler followed its redirect. A link that no longer resolves describes only
+  the app. The picture comes from `/join/og/<accent>/<icon>`, a path holding no
+  token and no group id, so the image a crawler caches on somebody else's CDN
+  says nothing the bubble was not about to show; the group's _name_ travels in
+  `og:title`, which only a holder of the token is served.
 - The group join link is the one token stored in a form the server can read
   back, because group settings has to show the live link weeks after minting it
   — a link that can only be seen once has to be replaced to be shared with a
