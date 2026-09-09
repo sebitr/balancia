@@ -404,7 +404,7 @@ export function heardEntry(
    * as it did before.
    */
   const words = kept.join(" ").trim();
-  const description = skip.length === 0 ? words : words.replace(/[,;:]+$/, "");
+  const description = skip.length === 0 ? words : words.replace(/[.,;:]+$/, "");
 
   return {
     amountText,

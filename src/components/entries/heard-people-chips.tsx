@@ -55,7 +55,9 @@ export function HeardPeopleChips({
 
   const payerName = payerId === "" ? "" : nameOf(payerId);
   const justSelf =
-    participantIds.length === 1 && participantIds[0] === selfId && selfId !== "";
+    participantIds.length === 1 &&
+    participantIds[0] === selfId &&
+    selfId !== "";
   const splitNames = format.list(
     participantIds.map(nameOf).filter((name) => name !== ""),
     { type: "conjunction" },
