@@ -406,6 +406,13 @@ export interface AddEntryFormProps {
   /** Outstanding debts, most owed first, for the settle tab. */
   outstanding: readonly DebtPair[];
   /**
+   * How this group has usually paid each other back, as the stored label.
+   *
+   * A hint over the method tiles, never a preselection. Absent in a group with
+   * no repayments behind it. See `mostUsedPaymentMethod`.
+   */
+  usualPaymentMethod?: string | null;
+  /**
    * Which entry types this screen can offer. All three by default; the offline
    * drawer passes the two that need no server. See `EntryTypeTabs`.
    */
@@ -517,6 +524,7 @@ export function AddEntryForm({
   defaultCurrency,
   timezone,
   outstanding,
+  usualPaymentMethod = null,
   entryTypes = ALL_ENTRY_TYPES,
   categoryMappings = NO_MAPPINGS,
   frequentCategories = NO_FREQUENT,
@@ -768,6 +776,15 @@ export function AddEntryForm({
    * money moved, so it is shown as the choice and written back unchanged.
    */
   const customMethod = methodId === null ? methodLabel : "";
+  /**
+   * The group's habit, as one of the picker's own.
+   *
+   * Matched back by name for the same reason the choice above is: the column
+   * holds a label, and a habit the list no longer has a chip for has no tile
+   * to name and no mark to draw. A hint nothing can be done with is worse than
+   * no hint, so that one is simply not shown.
+   */
+  const usualMethod = matchPaymentMethod(usualPaymentMethod ?? "", tMethods);
 
   /*
    * Which vocabulary the category row is speaking.
@@ -2429,6 +2446,7 @@ export function AddEntryForm({
           <PaymentMethodRow
             methods={countryMethods}
             value={methodId}
+            usualMethod={usualMethod}
             customLabel={customMethod}
             country={country}
             onSelect={(id) => setMethodLabel(tMethods(id))}

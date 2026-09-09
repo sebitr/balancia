@@ -977,6 +977,156 @@ describe("settlement", () => {
     expect(screen.getByRole("button", { name: /TWINT/ })).toBeInTheDocument();
   });
 
+  /**
+   * The tiles are the method, and the method is not the person.
+   *
+   * `Paid by` is the payer, headed over a face on every other type this drawer
+   * offers — and half the methods here are also names: Lydia in France, Monzo
+   * in Britain, Wero across three countries. "PAID BY: Lydia" reads as a
+   * member of the group.
+   */
+  it("heads the method tiles as the method, not as the payer", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    expect(
+      screen.getByRole("heading", { name: "How was it paid" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Paid by" })).toBeNull();
+  });
+
+  /**
+   * The row's tiles in the order they are drawn, `Other` last.
+   *
+   * Read off the shared parent rather than by name, because the point of these
+   * tests is the order and which tile carries the selection.
+   */
+  const methodTiles = () => {
+    const row = screen.getByRole("button", { name: "Other" }).parentElement!;
+    return [...row.querySelectorAll("button")].map((tile) => ({
+      // The last child is the label; the first is the mark, whose lettermark
+      // would otherwise read as "TTWINT".
+      label: tile.lastElementChild?.textContent ?? "",
+      pressed: tile.getAttribute("aria-pressed"),
+    }));
+  };
+
+  describe("a method chosen from the full list", () => {
+    /**
+     * It used to take over the `Other` slot — dashed, coloured as the
+     * selection, and reading "Revolut". The one permanent way into the full
+     * list stopped saying it was one, and the only way back was to guess that
+     * a tile named after a method still opened the list.
+     */
+    it("is promoted to the front, and leaves Other alone", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+      // Switzerland offers TWINT, Cash and Bank on the row; Revolut is the
+      // fourth, which only the picker shows.
+      expect(methodTiles().map((tile) => tile.label)).toEqual([
+        "TWINT",
+        "Cash",
+        "Bank transfer",
+        "Other",
+      ]);
+
+      await user.click(screen.getByRole("button", { name: "Other" }));
+      // Twice in the picker — under "Common in Switzerland" and again in the
+      // A–Z. Either commits it; the first is the one under the thumb.
+      await user.click(
+        sheet("How was it paid").getAllByRole("button", {
+          name: /^Revolut/,
+        })[0],
+      );
+
+      expect(methodTiles()).toEqual([
+        { label: "Revolut", pressed: "true" },
+        { label: "TWINT", pressed: "false" },
+        { label: "Cash", pressed: "false" },
+        // Still a route, still unpressed, still named after what it does.
+        { label: "Other", pressed: null },
+      ]);
+    });
+
+    it("stays put when the tile was already on the row", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("button", { name: /^Cash/ }));
+
+      // Nothing moves under the finger that just touched it.
+      expect(methodTiles()).toEqual([
+        { label: "TWINT", pressed: "false" },
+        { label: "Cash", pressed: "true" },
+        { label: "Bank transfer", pressed: "false" },
+        { label: "Other", pressed: null },
+      ]);
+    });
+
+    it("gives a name typed by hand a tile of its own", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("button", { name: "Other" }));
+
+      const picker = sheet("How was it paid");
+      await user.type(
+        picker.getByRole("textbox", { name: "Search or name a method" }),
+        "Poker chips",
+      );
+      await user.click(
+        picker.getByRole("button", { name: /Use .Poker chips./ }),
+      );
+
+      expect(methodTiles()).toEqual([
+        { label: "Poker chips", pressed: "true" },
+        { label: "TWINT", pressed: "false" },
+        { label: "Cash", pressed: "false" },
+        { label: "Other", pressed: null },
+      ]);
+    });
+  });
+
+  /**
+   * A group that has settled by TWINT eleven times is saying something. It is
+   * said in words, in the header, because nothing on this row is preselected —
+   * a lit chip is a claim, and the country's first suggestion arriving lit is
+   * how repayments came to be recorded as TWINT that were nothing of the kind.
+   */
+  describe("how the group usually pays", () => {
+    it("says so beside the tiles, and pre-selects nothing", async () => {
+      const user = userEvent.setup();
+      renderForm({ usualPaymentMethod: "Revolut" });
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+      expect(screen.getByText("Usually Revolut")).toBeInTheDocument();
+      expect(methodTiles().every((tile) => tile.pressed !== "true")).toBe(true);
+    });
+
+    it("gives way once the question has been answered", async () => {
+      const user = userEvent.setup();
+      renderForm({ usualPaymentMethod: "Revolut" });
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("button", { name: /TWINT/ }));
+
+      expect(screen.queryByText("Usually Revolut")).toBeNull();
+      expect(screen.getByText("Switzerland")).toBeInTheDocument();
+    });
+
+    /** An import, or a provider since dropped: no tile, so nothing to hint. */
+    it("says nothing when the habit is a name the list cannot draw", async () => {
+      const user = userEvent.setup();
+      renderForm({ usualPaymentMethod: "Poker chips" });
+      await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+      expect(screen.queryByText(/Usually/)).toBeNull();
+      expect(screen.getByText("Switzerland")).toBeInTheDocument();
+    });
+  });
+
   it("records the payment with the method it was made by", async () => {
     const user = userEvent.setup();
     renderForm();

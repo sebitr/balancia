@@ -419,11 +419,23 @@ export function OutstandingList({
   );
 }
 
+/**
+ * One tile on the row: a method from the list, or a name somebody typed.
+ *
+ * The second exists because the column is free text and always has been. A
+ * settlement can carry "Postal order" or a provider this list has never heard
+ * of, and the row still has to show what is selected.
+ */
+type MethodTile =
+  | { readonly kind: "method"; readonly id: PaymentMethodId }
+  | { readonly kind: "custom"; readonly label: string };
+
 export function PaymentMethodRow({
   methods,
   value,
   customLabel,
   country,
+  usualMethod,
   onSelect,
   onOpenAll,
 }: {
@@ -434,6 +446,13 @@ export function PaymentMethodRow({
   /** A name typed by hand, when the choice is not one of the listed methods. */
   customLabel: string;
   country: SupportedCountry | null;
+  /**
+   * How this group has usually paid, as a hint over the tiles.
+   *
+   * Null in a group that has recorded no repayment, or one whose habit is a
+   * name this list no longer knows. See `mostUsedPaymentMethod`.
+   */
+  usualMethod: PaymentMethodId | null;
   onSelect: (id: PaymentMethodId) => void;
   onOpenAll: () => void;
 }) {
@@ -441,43 +460,97 @@ export function PaymentMethodRow({
   const tMethods = useTranslations("paymentMethods");
   const tCountries = useTranslations("countries");
 
-  // Three fit across a phone beside the "Other" button; a fourth would squeeze
-  // every label to the point of truncating "Bancontact Pay". The rest of the
-  // country's list is one tap away, at the top of the picker.
-  const shown = methods.slice(0, ROW_METHOD_COUNT);
-  // Nothing is pre-selected. The country's first suggestion used to be lit up
-  // before anybody had touched the row, and a highlighted chip is a claim —
-  // every repayment then recorded "TWINT" whether or not that is how the money
-  // moved. How it was paid is optional, so an untouched row says nothing.
-  // A method chosen from the picker takes the "Other" slot's label, so the row
-  // always shows what is actually selected — a name typed by hand included,
-  // which the row can only ever show here.
-  const offRow = value !== null ? !shown.includes(value) : customLabel !== "";
+  /*
+   * The chosen method is always on the row, and always in a tile of its own.
+   *
+   * One picked out of the full list is promoted to the front, which is what
+   * gives the country's three somewhere to go: the row holds
+   * `ROW_METHOD_COUNT`, so the last of them drops off rather than the choice
+   * being hidden. Tapping a tile already on screen promotes nothing — the row
+   * must never rearrange itself under the finger that just touched it, which
+   * is the whole reason the promotion is conditional on where the choice came
+   * from.
+   *
+   * A method chosen from the picker used to take over the `Other` slot
+   * instead. That made the one permanent way into the full list stop saying it
+   * was one — dashed, but reading "Revolut" and coloured as the selection —
+   * and left no way back but guessing that the tile still opened the list. It
+   * also lit up with no `aria-pressed` behind it, so the selection was there
+   * for the eye and not for a screen reader.
+   *
+   * Three fit across a phone beside `Other`; a fourth would squeeze every
+   * label to the point of truncating "Bancontact Pay".
+   */
+  const offRow =
+    value !== null && !methods.slice(0, ROW_METHOD_COUNT).includes(value);
+  const ids = [...(offRow && value !== null ? [value] : []), ...methods].filter(
+    (id, index, all) => all.indexOf(id) === index,
+  );
+  const shown: readonly MethodTile[] = [
+    // A name somebody typed is a choice like any other and gets a tile like
+    // any other. `MethodMark` draws it on the app's own surface rather than
+    // inventing a brand hue for it, which is the honest answer to a method
+    // that is not one of ours.
+    ...(value === null && customLabel !== ""
+      ? [{ kind: "custom", label: customLabel } as const]
+      : []),
+    ...ids.map((id) => ({ kind: "method", id }) as const),
+  ].slice(0, ROW_METHOD_COUNT);
+
+  /*
+   * The hint, and only until it has been answered.
+   *
+   * Nothing is pre-selected — the country's first suggestion used to arrive
+   * lit up, and a highlighted chip is a claim, so every repayment recorded
+   * "TWINT" whether or not that is how the money moved. This says the same
+   * thing in the one form that cannot be mistaken for a choice: words, in the
+   * header, beside the country they replace.
+   */
+  const hint = usualMethod !== null && value === null && customLabel === "";
 
   return (
     <section className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
+        {/* Not "Paid by": that is the person, three rows up on every other
+            type this drawer offers, and half the methods on this row —
+            Lydia, Monzo, Wero — are also names somebody in the group might
+            have. */}
         <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-          {t("paidBy")}
+          {t("methodTitle")}
         </h2>
-        {country && (
+        {hint ? (
           <span className="text-2xs text-muted-foreground">
-            {tCountries(country)}
+            {t("usually", { method: tMethods(usualMethod) })}
           </span>
+        ) : (
+          country && (
+            <span className="text-2xs text-muted-foreground">
+              {tCountries(country)}
+            </span>
+          )
         )}
       </div>
 
       <div className="flex gap-2">
-        {shown.map((id) => {
-          const method = findPaymentMethod(id);
-          if (!method) return null;
-          const label = tMethods(id);
-          const active = id === value;
+        {shown.map((tile) => {
+          const method =
+            tile.kind === "method"
+              ? (findPaymentMethod(tile.id) ?? null)
+              : null;
+          if (tile.kind === "method" && !method) return null;
+          const label = tile.kind === "method" ? tMethods(tile.id) : tile.label;
+          const active =
+            tile.kind === "method" ? tile.id === value : value === null;
           return (
             <button
-              key={id}
+              key={tile.kind === "method" ? tile.id : "custom"}
               type="button"
-              onClick={() => onSelect(id)}
+              // A hand-typed name has nothing to re-select — it is already the
+              // choice — so its tile is the way back to the picker that named
+              // it, which opens with that name still in the field.
+              onClick={
+                tile.kind === "method" ? () => onSelect(tile.id) : onOpenAll
+              }
               aria-pressed={active}
               className={cn(
                 "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border transition-colors",
@@ -501,27 +574,16 @@ export function PaymentMethodRow({
           );
         })}
 
+        {/* Permanently `Other`, permanently dashed, and never the selection.
+            It is a route into the full list, and a route that turns into a
+            value is one nobody can find their way back to. */}
         <button
           type="button"
           onClick={onOpenAll}
-          className={cn(
-            "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed transition-colors",
-            offRow
-              ? "border-primary bg-primary/10"
-              : "border-input text-muted-foreground",
-          )}
+          className="flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-input text-muted-foreground transition-colors"
         >
-          {offRow ? null : (
-            <Search aria-hidden="true" className="size-[18px]" />
-          )}
-          <span
-            className={cn(
-              "truncate text-xs",
-              offRow ? "font-semibold text-foreground" : "",
-            )}
-          >
-            {offRow ? (value ? tMethods(value) : customLabel) : t("other")}
-          </span>
+          <Search aria-hidden="true" className="size-[18px]" />
+          <span className="truncate text-xs">{t("other")}</span>
         </button>
       </div>
     </section>

@@ -31,7 +31,12 @@ vi.mock("@/modules/expenses/service", () => ({
   // about what happens when the *edited* one is gone.
   listExpenses: async () => [],
 }));
-vi.mock("@/modules/settlements/service", () => ({ getSettlement }));
+vi.mock("@/modules/settlements/service", () => ({
+  getSettlement,
+  // The hint over the method tiles. This suite is about what happens when the
+  // *edited* entry is gone, and a group with no habit is the ordinary case.
+  mostUsedPaymentMethod: async () => null,
+}));
 vi.mock("@/lib/actions", () => ({
   requireGroupAccess: async () => ({
     groupId: "g1",

@@ -16,6 +16,7 @@ import {
   createSettlement,
   deleteSettlement,
   listSettlements,
+  mostUsedPaymentMethod,
   restoreSettlement,
 } from "@/modules/settlements/service";
 import { loadGroupBalances } from "@/modules/balances/service";
@@ -347,6 +348,88 @@ describe("settlements", () => {
     expect(eur.balances.every((balance) => balance.amount === 0n)).toBe(true);
     // The settlement did not inflate spending.
     expect(after.totalSpend.get("EUR")).toBe(2000n);
+  });
+
+  /**
+   * The hint over the settle screen's method tiles. It is a count over a
+   * free-text column, which is exactly the kind of thing a unit test cannot
+   * answer: what the group has actually done.
+   */
+  describe("the method a group usually pays by", () => {
+    const repay = async (
+      group: Awaited<ReturnType<typeof createTestGroup>>,
+      from: string,
+      paymentMethod: string,
+    ) =>
+      createSettlement(group.access, {
+        fromParticipantId: from,
+        toParticipantId: group.ownerParticipantId,
+        amount: "100",
+        currency: "EUR",
+        exchangeRate: "",
+        settledOn: isoToday(),
+        notes: "",
+        paymentMethod,
+      });
+
+    it("says nothing until the group has paid each other back", async () => {
+      const actor = await createTestUser();
+      const group = await createTestGroup(actor);
+
+      expect(await mostUsedPaymentMethod(group.groupId)).toBeNull();
+    });
+
+    it("names the one used most, not the one used last", async () => {
+      const actor = await createTestUser();
+      const group = await createTestGroup(actor);
+      const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+      await repay(group, blaise, "TWINT");
+      await repay(group, blaise, "TWINT");
+      await repay(group, blaise, "Cash");
+
+      expect(await mostUsedPaymentMethod(group.groupId)).toBe("TWINT");
+    });
+
+    it("ignores repayments recorded with no method at all", async () => {
+      const actor = await createTestUser();
+      const group = await createTestGroup(actor);
+      const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+      await repay(group, blaise, "");
+      await repay(group, blaise, "");
+      await repay(group, blaise, "Revolut");
+
+      // Otherwise the commonest answer in most groups is "nothing", and the
+      // hint would be a blank chip.
+      expect(await mostUsedPaymentMethod(group.groupId)).toBe("Revolut");
+    });
+
+    it("forgets a repayment that has been deleted", async () => {
+      const actor = await createTestUser();
+      const group = await createTestGroup(actor);
+      const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+      const wrong = await repay(group, blaise, "Poker chips");
+      await repay(group, blaise, "Cash");
+      await deleteSettlement(group.access, wrong);
+
+      expect(await mostUsedPaymentMethod(group.groupId)).toBe("Cash");
+    });
+
+    it("keeps one group's habit out of another's", async () => {
+      const actor = await createTestUser();
+      const flat = await createTestGroup(actor);
+      const trip = await createTestGroup(actor);
+      const blaise = await addTestParticipant(flat.groupId, "Blaise");
+      const chloe = await addTestParticipant(trip.groupId, "Chloé");
+
+      await repay(flat, blaise, "TWINT");
+      await repay(trip, chloe, "Cash");
+
+      expect(await mostUsedPaymentMethod(flat.groupId)).toBe("TWINT");
+      expect(await mostUsedPaymentMethod(trip.groupId)).toBe("Cash");
+    });
   });
 });
 
