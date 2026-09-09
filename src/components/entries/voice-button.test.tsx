@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { VoiceButton } from "./voice-button";
+import { forgetCloudConsent, writeCloudConsent } from "./voice-consent";
 
 /**
  * The button that opens the microphone, and every way it has to close it
@@ -28,6 +29,7 @@ interface Fake {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
+  processLocally?: boolean;
   started: number;
   stopped: number;
   aborted: number;
@@ -42,6 +44,8 @@ interface Fake {
 
 /** The last recogniser the component built, with its wiring exposed. */
 let last: Fake | null = null;
+/** Read through a call so assigning `null` mid-test does not narrow the type. */
+const built = (): Fake | null => last;
 /** Set by the one test that asks what happens when `start()` throws. */
 let failStart = false;
 
@@ -99,6 +103,20 @@ function renderButton(onHeard = vi.fn()) {
   return { ...view, onHeard };
 }
 
+/** Lets the on-device probe resolve before anything is pressed. */
+async function settle() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+/** Say this engine can transcribe on the device, so nothing need be asked. */
+function withOnDeviceRecognition(status = "available") {
+  (
+    window as unknown as { SpeechRecognition: { available: unknown } }
+  ).SpeechRecognition.available = async () => status;
+}
+
 beforeEach(() => {
   toastError.mockReset();
   last = null;
@@ -106,12 +124,122 @@ beforeEach(() => {
   setOnline(true);
   (window as unknown as { SpeechRecognition?: unknown }).SpeechRecognition =
     FakeRecognition;
+  /*
+   * Most of what is asserted below is about listening, not about being asked
+   * whether to. The cloud recogniser's question is answered once here so those
+   * cases reach the microphone; the suite that is *about* the question clears
+   * it again.
+   */
+  writeCloudConsent();
 });
 
 afterEach(() => {
   delete (window as unknown as { SpeechRecognition?: unknown })
     .SpeechRecognition;
+  forgetCloudConsent();
   vi.useRealTimers();
+});
+
+/**
+ * The question asked before a sentence spoken in somebody's kitchen is handed
+ * to their browser's maker.
+ *
+ * It is asked once and only where it is true. An engine transcribing on the
+ * device carries no such risk, and interrupting that reader to describe one
+ * would be a worse feature than never asking at all — so the first assertion
+ * here is a silence.
+ */
+describe("VoiceButton consent", () => {
+  beforeEach(() => {
+    forgetCloudConsent();
+  });
+
+  const ask = () => screen.queryByText("Your voice leaves this device");
+
+  it("asks before sending a voice to a service off the device", async () => {
+    renderButton();
+    await settle();
+    await press("Say it");
+
+    expect(ask()).toBeTruthy();
+    // Asked, not yet listening.
+    expect(last).toBeNull();
+  });
+
+  it("does not ask when the engine transcribes on the device", async () => {
+    withOnDeviceRecognition();
+    renderButton();
+    await settle();
+    await press("Say it");
+
+    expect(ask()).toBeNull();
+    expect(last?.started).toBe(1);
+    expect(last?.processLocally).toBe(true);
+  });
+
+  /*
+   * A model that is merely downloadable has not been downloaded, so the words
+   * would still travel today. Anything short of "available" is asked about.
+   */
+  it("asks when on-device transcription is only downloadable", async () => {
+    withOnDeviceRecognition("downloadable");
+    renderButton();
+    await settle();
+    await press("Say it");
+
+    expect(ask()).toBeTruthy();
+    expect(last).toBeNull();
+  });
+
+  it("listens once without remembering the answer", async () => {
+    const { unmount } = renderButton();
+    await settle();
+    await press("Say it");
+    await press("Listen this once");
+
+    expect(last?.started).toBe(1);
+    // Nothing was set locally, so the audio goes the ordinary way.
+    expect(last?.processLocally).toBeUndefined();
+
+    // A fresh mount asks again, because nothing was remembered.
+    unmount();
+    last = null;
+    renderButton();
+    await settle();
+    await press("Say it");
+
+    expect(ask()).toBeTruthy();
+    expect(last).toBeNull();
+  });
+
+  it("stops asking once told to", async () => {
+    const { unmount } = renderButton();
+    await settle();
+    await press("Say it");
+    await press("Listen, and stop asking");
+
+    expect(last?.started).toBe(1);
+
+    unmount();
+    last = null;
+    renderButton();
+    await settle();
+    await press("Say it");
+
+    expect(ask()).toBeNull();
+    expect(built()?.started).toBe(1);
+  });
+
+  it("does not listen when the question is declined", async () => {
+    renderButton();
+    await settle();
+    await press("Say it");
+    await press("Don’t listen");
+
+    await waitFor(() => expect(ask()).toBeNull());
+    expect(last).toBeNull();
+    expect(screen.getByRole("button", { name: "Say it" })).toBeTruthy();
+  });
 });
 
 describe("VoiceButton availability", () => {

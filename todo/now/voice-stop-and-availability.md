@@ -36,3 +36,30 @@ was never that a single path was wrong. It was that there was only one.
 Worth a look while nearby: the receipt scanner is explicitly on-device and
 says so, and this ships the reader's voice to Google without mentioning it.
 `processLocally` is the opt-in. That is a separate item, not this branch.
+
+## Asking before the voice leaves the device
+
+The note above about `processLocally` turned out to belong here after all,
+because it is the same question as availability: what the button does depends
+on where the words go.
+
+Engines that can transcribe on the device are asked first, per language, and
+where they say "available" the recognition is pinned local with
+`processLocally` and nothing is asked — there is no risk to describe, and
+interrupting that reader would be a worse feature than never asking. Anything
+short of a plain "available" counts as no: a model that is merely
+*downloadable* has not been downloaded, so the words would still travel today.
+
+Everything else asks once, in an alert dialog with the three answers: listen
+this once, listen and stop asking, don't listen. The remembered answer is a
+`localStorage` key rather than an account setting, because what it consents to
+is *this* browser handing audio to *its* vendor — a phone and a laptop are two
+different promises, and the reader's account has nothing to do with it.
+
+The footer is stacked at every width, unlike every other two-button dialog in
+the app: three of these overflow a `max-w-sm` content box, which is exactly
+what the first build did.
+
+Measured on this machine, for what it is worth: `available()` reports
+`unavailable` for `en-US`, `fr-FR` and `fr-CH`, and `available` for the cloud
+path. The question is not hypothetical here.

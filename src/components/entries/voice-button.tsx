@@ -4,7 +4,23 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Mic } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import {
+  canProcessLocally,
+  readCloudConsent,
+  writeCloudConsent,
+  type LocalCapableRecognition,
+} from "./voice-consent";
 
 /**
  * Saying the entry instead of typing it.
@@ -34,6 +50,8 @@ interface SpeechRecognitionLike {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
+  /** Keep the audio on the device. Absent on engines that cannot. */
+  processLocally?: boolean;
   start(): void;
   stop(): void;
   /** Finish without waiting for a result. Absent on some older engines. */
@@ -154,6 +172,24 @@ export function VoiceButton({
   const [listening, setListening] = useState(false);
   const active = useRef<SpeechRecognitionLike | null>(null);
   const ceiling = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const language = recognitionLanguage(locale);
+  /*
+   * Whether this engine can transcribe on the device, which decides whether
+   * there is anything to ask about at all.
+   *
+   * Kept with the language it was asked about, so an answer about one
+   * language is never read as a promise about another — and so a probe still
+   * in flight reads as "no" rather than as "yes, probably". Unknown always
+   * counts as no: that nothing leaves the device is not a thing to guess at.
+   *
+   * The probe is asynchronous and `start()` has to stay inside the click that
+   * caused it, so it runs here rather than in the handler.
+   */
+  const [probe, setProbe] = useState<{ lang: string; local: boolean } | null>(
+    null,
+  );
+  const localReady = probe?.lang === language && probe.local;
+  const [asking, setAsking] = useState(false);
 
   /*
    * One way out of "listening", used by every path that ends a session.
@@ -191,18 +227,33 @@ export function VoiceButton({
     finish();
   }, [usable]);
 
+  /* Asked once per language, and never while a session is open. */
+  useEffect(() => {
+    const Recognition = recogniser();
+    if (!Recognition) return;
+    let current = true;
+    void canProcessLocally(
+      Recognition as unknown as LocalCapableRecognition,
+      language,
+    ).then((local) => {
+      if (current) setProbe({ lang: language, local });
+    });
+    return () => {
+      current = false;
+    };
+  }, [language]);
+
   if (!usable) return null;
 
-  const listen = () => {
-    if (listening) {
-      active.current?.stop();
-      return;
-    }
+  const begin = (local: boolean) => {
     const Recognition = recogniser();
     if (!Recognition) return;
 
     const recognition = new Recognition();
-    recognition.lang = recognitionLanguage(locale);
+    recognition.lang = language;
+    // Only ever set where the engine said it could honour it; setting it
+    // hopefully on an engine that cannot is how a promise gets broken.
+    if (local) recognition.processLocally = true;
     recognition.interimResults = false;
     recognition.continuous = false;
     /*
@@ -257,27 +308,89 @@ export function VoiceButton({
     }
   };
 
+  /*
+   * Nothing is asked where nothing leaves: an engine transcribing on the
+   * device is the quiet path, and interrupting it to describe a risk it does
+   * not carry would be a worse feature than no question at all.
+   *
+   * Everything else asks once. The answer is kept per browser rather than per
+   * account, because what it consents to is *this* browser handing audio to
+   * *its* vendor — a phone and a laptop are two different promises.
+   */
+  const listen = () => {
+    if (listening) {
+      active.current?.stop();
+      return;
+    }
+    if (localReady) {
+      begin(true);
+      return;
+    }
+    if (readCloudConsent()) {
+      begin(false);
+      return;
+    }
+    setAsking(true);
+  };
+
+  /** Yes, once; or yes, and stop asking. Both start listening immediately. */
+  const allow = (always: boolean) => {
+    if (always) writeCloudConsent();
+    setAsking(false);
+    begin(false);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={listen}
-      aria-pressed={listening}
-      aria-label={listening ? t("stop") : t("start")}
-      className={cn(
-        "inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-sm transition-colors",
-        listening
-          ? "border-primary bg-primary/15 font-semibold text-foreground"
-          : "border-border bg-wash-1 text-muted-foreground",
-        className,
-      )}
-    >
-      <Mic
-        aria-hidden="true"
-        className={cn("size-4 shrink-0", listening && "animate-pulse")}
-      />
-      <span className="truncate">
-        {listening ? t("listening") : t("start")}
-      </span>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={listen}
+        aria-pressed={listening}
+        aria-label={listening ? t("stop") : t("start")}
+        className={cn(
+          "inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-sm transition-colors",
+          listening
+            ? "border-primary bg-primary/15 font-semibold text-foreground"
+            : "border-border bg-wash-1 text-muted-foreground",
+          className,
+        )}
+      >
+        <Mic
+          aria-hidden="true"
+          className={cn("size-4 shrink-0", listening && "animate-pulse")}
+        />
+        <span className="truncate">
+          {listening ? t("listening") : t("start")}
+        </span>
+      </button>
+
+      <AlertDialog open={asking} onOpenChange={setAsking}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("consent.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("consent.body")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {/*
+           * Stacked at every width, unlike the two-button footers everywhere
+           * else. Three of these will not sit in a row inside a `max-w-sm`
+           * dialog — they overflow it — and a three-way choice reads better
+           * as a list anyway. `flex-col-reverse` puts the DOM's last child on
+           * top, so the order below is read bottom-up: listen once, listen
+           * always, don't.
+           */}
+          <AlertDialogFooter className="sm:flex-col-reverse">
+            <AlertDialogCancel>{t("consent.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="outline" onClick={() => allow(true)}>
+              {t("consent.allowAlways")}
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => allow(false)}>
+              {t("consent.allowOnce")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

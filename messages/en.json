@@ -3164,7 +3164,14 @@
       "start": "Say it",
       "listening": "Listening…",
       "stop": "Stop listening",
-      "failed": "Could not listen just now. Type it instead."
+      "failed": "Could not listen just now. Type it instead.",
+      "consent": {
+        "title": "Your voice leaves this device",
+        "body": "This browser cannot transcribe on the device, so what you say is sent to its maker's speech service to be turned into words. Balancia never receives the audio and never stores it.",
+        "cancel": "Don’t listen",
+        "allowAlways": "Listen, and stop asking",
+        "allowOnce": "Listen this once"
+      }
     }
   },
   "paymentMethods": {

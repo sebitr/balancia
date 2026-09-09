@@ -3164,7 +3164,14 @@
       "start": "Dicter",
       "listening": "J’écoute…",
       "stop": "Arrêter l’écoute",
-      "failed": "Impossible d’écouter pour le moment. Saisis-la à la main."
+      "failed": "Impossible d’écouter pour le moment. Saisis-la à la main.",
+      "consent": {
+        "title": "Ta voix quitte cet appareil",
+        "body": "Ce navigateur ne sait pas transcrire sur l’appareil : ce que tu dis est envoyé au service de reconnaissance vocale de son éditeur pour être mis en mots. Balancia ne reçoit jamais l’audio et ne le conserve jamais.",
+        "cancel": "Ne pas écouter",
+        "allowAlways": "Écouter et ne plus demander",
+        "allowOnce": "Écouter cette fois"
+      }
     }
   },
   "paymentMethods": {
