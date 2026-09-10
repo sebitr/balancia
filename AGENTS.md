@@ -45,6 +45,13 @@ straight past `docs/shallow-clone-install` on its first run. It throttles
 itself to once a half hour, and `--dry-run` says what it would take without
 taking it.
 
+While it has the merged set in hand it also reads `todo/now/` off
+`origin/main`, and names any item still pointing at a branch that has merged,
+with the `Merged:` line to write. That half is a notice and never an edit — a
+`now/` that has stopped saying what is in flight is the failure this repository
+keeps having, and the one thing that runs after a merge is the only thing left
+placed to catch it.
+
 The remote half is settled at the source: the repository now has
 `delete_branch_on_merge` on, so GitHub deletes each head branch as its pull
 request merges. The reaper's remote pass is for the backlog and for anything
@@ -62,11 +69,16 @@ is how two chats end up writing the same feature twice. The filename is the
 branch's last segment, so the listing _is_ the set of branches in flight.
 
 Move the file you are working on into `todo/now/`, rename it after your branch,
-and put a `Branch:` line in it. Move it to `todo/done/` with `Merged: <date> in
-#<pr>` when the pull request merges, and delete it outright if the work is
-abandoned. Do this as part of the change, in the same commit — a list updated
-afterwards is a list nobody updates. Keep the heading when it moves: it is what
-somebody recognises the item by months later.
+and put a `Branch:` line in it — as part of the change, in the same commit, a
+list updated afterwards being a list nobody updates. Delete it outright if the
+work is abandoned. Keep the heading wherever it moves: it is what somebody
+recognises the item by months later.
+
+Filing it as done is the one half that cannot ride along in that commit, since
+`Merged: <date> in #<pr>` wants two facts that do not exist until the pull
+request has merged and the chat that wrote the item has gone. It is a small
+branch of its own, afterwards — and on goodwill alone it does not happen, which
+is why `.claude/hooks/reap-merged.sh` now names the items waiting for it.
 
 This was one file until #304, and it was the worst thing in the repository for
 merge friction: every branch appended to the head of the same two sections, so

@@ -1,6 +1,6 @@
 # Stop the repayment screen heading its payment methods "Paid by", give the browse tile its name back, and say how this group usually pays
 
-Branch: `fix/settle-method-row`
+Merged: 2026-09-09 in #343
 
 Three things the Add Entry handoff asked of the "how it was paid" row that #271
 did not carry over, found rechecking the section after #334.
