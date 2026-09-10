@@ -2,6 +2,7 @@
 import { Serwist, NetworkFirst, NetworkOnly, CacheFirst } from "serwist";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { applicationServerKey } from "@/lib/push/application-server-key";
+import { saveSharedPayload } from "@/lib/offline/shared";
 
 /**
  * Balancia service worker.
@@ -40,6 +41,64 @@ const OFFLINE_URL = "/offline";
  * the current worker cannot use.
  */
 const MODEL_CACHE = "balancia-models-v2";
+
+/** Where the manifest's `share_target` posts, and the screen that reads it. */
+const SHARE_PATH = "/share";
+
+/**
+ * Another app's share sheet, arriving as a POST.
+ *
+ * Registered **before** `serwist.addEventListeners()` on purpose. Both are
+ * fetch listeners, the first to call `respondWith` wins, and Serwist's rules
+ * would otherwise send this straight to the network as an uncached mutation —
+ * where Next answers 405, because `/share` is a GET screen.
+ *
+ * What happens here is the whole of the share target's mechanism: take the
+ * form, put it in the device's own store, and answer with a redirect to the
+ * screen. The redirect matters as much as the store does. Rendering a page in
+ * response to the POST would leave a form submission in the history, and the
+ * back button would re-submit it; a 303 to a GET leaves the person on an
+ * ordinary screen they can reload, leave and come back to.
+ *
+ * `event.respondWith` is called synchronously with a promise, rather than
+ * after awaiting the form — a fetch handler that awaits first has already let
+ * the event fall through to the network by the time it decides.
+ */
+async function stashShare(request: Request): Promise<Response> {
+  try {
+    const form = await request.formData();
+    const file = form.get("media");
+    await saveSharedPayload({
+      sharedAt: Date.now(),
+      title: fieldOf(form, "title"),
+      text: fieldOf(form, "text"),
+      url: fieldOf(form, "url"),
+      file: file instanceof File && file.size > 0 ? file : null,
+    });
+  } catch {
+    // A share that cannot be stored still lands on the screen, which then
+    // shows its empty state. Failing the navigation instead would leave
+    // somebody looking at a browser error after tapping Balancia in a share
+    // sheet, which is a worse answer than an empty drawer.
+  }
+  return Response.redirect(new URL(SHARE_PATH, self.location.origin), 303);
+}
+
+function fieldOf(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : "";
+}
+
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  if (
+    event.request.method === "POST" &&
+    url.origin === self.location.origin &&
+    url.pathname === SHARE_PATH
+  ) {
+    event.respondWith(stashShare(event.request));
+  }
+});
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
