@@ -11,6 +11,7 @@ import {
 import { trackRoute } from "@/lib/metrics/http";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
 import { heardEntry } from "@/components/entries/heard-entry";
+import { minorUnitsFor } from "./minor-units";
 
 const ROUTE = "/api/parse";
 
@@ -94,10 +95,16 @@ async function handlePost(request: Request) {
     // failure — the reader is one field from done rather than back where they
     // started — and a caller treating 200-with-no-amount as a refusal would be
     // throwing away the half that did work.
+    //
+    // `amountMinor` is the same figure in the units the expenses route takes,
+    // so a caller with no ISO 4217 table can compose the two without inventing
+    // currency arithmetic. It is null wherever that conversion cannot be made
+    // honestly; `minor-units.ts` says which cases and why.
     return noStore({
       amountText: heard.amountText,
       currency: heard.currency,
       description: heard.description,
+      amountMinor: minorUnitsFor(heard.amountText, heard.currency),
     });
   } catch (error) {
     return mobileApiError(error, `${ROUTE} POST`);
