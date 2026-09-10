@@ -57,6 +57,7 @@ describe("POST /api/parse", () => {
       amountText: "24",
       currency: "CHF",
       description: "Coop",
+      amountMinor: "2400",
     });
   });
 
@@ -115,6 +116,7 @@ describe("POST /api/parse", () => {
       amountText: "",
       currency: "",
       description: "dinner with Marie",
+      amountMinor: null,
     });
   });
 
@@ -122,7 +124,44 @@ describe("POST /api/parse", () => {
     const { status, body } = await parse({ text: "   " });
 
     expect(status).toBe(200);
-    expect(body).toEqual({ amountText: "", currency: "", description: "" });
+    expect(body).toEqual({
+      amountText: "",
+      currency: "",
+      description: "",
+      amountMinor: null,
+    });
+  });
+
+  /*
+   * The field that lets this route and the expenses route compose without a
+   * caller writing currency arithmetic of its own. `minor-units.test.ts` holds
+   * the table of exponents; what matters here is that the conversion happens
+   * against the currency the *parse* settled on, whichever side named it —
+   * the words, or the caller's fallback.
+   */
+  it("converts against the currency the words named", async () => {
+    // ¥ rather than "yen": the parser knows the symbol, and the yen is the
+    // case where a hardcoded factor of a hundred is out by two orders.
+    const { body } = await parse({ text: "¥4500 sushi" });
+    expect(body.currency).toBe("JPY");
+    expect(body.amountMinor).toBe("4500");
+  });
+
+  it("converts against the caller's currency when the words name none", async () => {
+    const { body } = await parse({
+      text: "coffee 5",
+      fallbackCurrency: "SEK",
+    });
+    expect(body.amountMinor).toBe("500");
+  });
+
+  it("says nothing about minor units when no currency was settled on", async () => {
+    // The share-sheet order: parse the text, pick the group afterwards. There
+    // is no exponent to convert against yet, and guessing one would be wrong
+    // in exactly the currencies nobody tests with.
+    const { body } = await parse({ text: "84.20 dinner" });
+    expect(body.amountText).toBe("84.20");
+    expect(body.amountMinor).toBeNull();
   });
 
   it("turns nobody away from a parse it could not make sense of", async () => {

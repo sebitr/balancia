@@ -274,6 +274,7 @@ be the mistake.
 | POST   | `/api/profile/avatar`                              | `multipart/form-data` with `file`; type is sniffed, 1 MB cap, replaces and sweeps the old one                                                                                                                                             |
 | DELETE | `/api/profile/avatar`                              | 204; the account goes back to its initial                                                                                                                                                                                                 |
 | DELETE | `/api/push/subscriptions/:id`                      | forget one device by its row id — the endpoint form is how a browser unsubscribes itself                                                                                                                                                  |
+| POST   | `/api/parse`                                       | `{text, fallbackCurrency?}` → `{amountText, currency, description, amountMinor}`. Names no group and reads no row — see [Parsing a sentence](#parsing-a-sentence)                                                                         |
 
 Every restore refuses a row that is not deleted, so a client may replay one
 safely: a second call answers 404 rather than writing a second event about
@@ -313,6 +314,50 @@ Only the expense create takes a key today. The browser's own offline queue
 uses this exact route rather than the Server Action the form calls when it is
 online, because an action is addressed by an id that changes on every build and
 a queued entry has to survive a deploy — see [offline entry](offline.md).
+
+### Parsing a sentence
+
+`POST /api/parse` turns a line of text into the three fields an entry starts
+from. It is the dictate button's own parser, exposed rather than reimplemented —
+a second copy in a second language is how the two ends start disagreeing about
+what a sentence says, and that is not hypothetical: the parser was rewritten
+twice in the days after it shipped, and each rewrite fixed a figure nobody said
+landing in a field nobody was watching.
+
+```json
+{ "text": "24.50 francs Coop", "fallbackCurrency": "CHF" }
+```
+
+```json
+{
+  "amountText": "24.50",
+  "currency": "CHF",
+  "description": "Coop",
+  "amountMinor": "2450"
+}
+```
+
+`amountText` is major units, as spoken, ready for a field a person reads.
+**`amountMinor` is the same figure in the units every write here takes**, and it
+exists so that a caller with no ISO 4217 table can compose this route with the
+expenses route without inventing currency arithmetic — "multiply by a hundred"
+is right for most of the world and wrong for the yen and the dinar. It is null
+where the conversion cannot be made honestly: no amount, no currency to convert
+against, or more decimals than the currency has. `amountText` survives all
+three.
+
+There is no error case. Text holding no amount comes back as a description with
+`amountText` empty, which is the parser's graceful failure rather than a
+refusal — a caller treating that as one throws away the half that worked.
+
+`fallbackCurrency` is what an amount is denominated in when the sentence names
+nothing, and the empty string is the honest answer for a caller that has not
+picked a group yet. The route is deliberately not group-scoped, on
+`/api/rates`' argument: it reads no data and writes none, so there is no group
+to be a member of. The only access rule is that the caller be somebody.
+
+A worked example, from dictation to a filed expense, is in
+[Shortcuts](shortcuts.md).
 
 ## Invitation links
 
@@ -574,6 +619,10 @@ header:
 ```
 Authorization: Bearer blc_kZ8s…
 ```
+
+If you are here to wire up a phone rather than to write a client,
+[Shortcuts](shortcuts.md) is this same key as a recipe: three calls, from a
+dictated sentence to a filed expense.
 
 Everything else about the request is unchanged: same paths, same JSON, same
 statuses. A key authenticates _as its owner_ and can never do more than they
