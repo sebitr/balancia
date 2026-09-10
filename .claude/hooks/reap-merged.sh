@@ -64,13 +64,18 @@ git fetch --prune --quiet 2>/dev/null || true
 DEFAULT=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
 DEFAULT=${DEFAULT:-main}
 
-# The merged set, straight from the forge. Without `gh` we fall back to the
-# branches whose upstream has been deleted, which is what a merged-and-pruned
-# branch looks like from here.
-MERGED=""
+# The merged set, straight from the forge, and with it the number and date each
+# branch merged under — the two facts a finished list item has to carry, out of
+# the call the reaping needed anyway. Without `gh` we fall back to the branches
+# whose upstream has been deleted, which is what a merged-and-pruned branch
+# looks like from here: enough to reap by, not enough to quote a number from.
+MERGED=""; MERGED_PRS=""
 if command -v gh >/dev/null 2>&1; then
-  MERGED=$(gh pr list --state merged --limit 300 --json headRefName \
-             --jq '.[].headRefName' 2>/dev/null)
+  MERGED_PRS=$(gh pr list --state merged --limit 300 \
+                 --json headRefName,number,mergedAt \
+                 --jq '.[] | [.headRefName, .number, (.mergedAt | split("T")[0])] | @tsv' \
+                 2>/dev/null)
+  [ -n "$MERGED_PRS" ] && MERGED=$(printf '%s\n' "$MERGED_PRS" | cut -f1)
 fi
 if [ -z "$MERGED" ]; then
   MERGED=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
@@ -175,6 +180,37 @@ if [ "$DO_REMOTE" -eq 1 ]; then
   fi
 fi
 
+# ---- the list -------------------------------------------------------------
+# `todo/now/` is the set of branches in flight, and AGENTS.md has every chat
+# read it before picking work up. An item whose branch has merged is the one
+# thing that can make it lie, and it is also the one thing nobody is left to
+# catch: filing an item as done wants the merge date and number, which do not
+# exist until after the merge, by which time the chat that wrote it has gone.
+# So it is said here, by the only thing in the repository that runs after one.
+#
+# Read off `origin/$DEFAULT` rather than a working tree. The question is
+# whether the shared list still claims a merged branch, and the answer must not
+# depend on which branch some checkout happens to be parked on.
+#
+# A notice, never an edit. What to file and when is a person's call, and a
+# branch name reused after its first pull request merged would read as stale
+# here while being perfectly in flight.
+STALE=""
+while read -r item; do
+  [ -n "$item" ] || continue
+  br=$(git show "origin/$DEFAULT:$item" 2>/dev/null \
+         | sed -n 's/^Branch:[[:space:]]*`\([^`]*\)`[[:space:]]*$/\1/p' | head -1)
+  [ -n "$br" ] || continue
+  is_merged "$br" || continue
+  line=$(printf '%s\n' "$MERGED_PRS" \
+           | awk -F'\t' -v b="$br" '$1==b { print "Merged: " $3 " in #" $2; exit }')
+  if [ -n "$line" ]; then
+    STALE="${STALE}  $(basename "$item") — $br merged; file it as \"$line\""$'\n'
+  else
+    STALE="${STALE}  $(basename "$item") — $br merged; file it in todo/done/"$'\n'
+  fi
+done < <(git ls-tree --name-only "origin/$DEFAULT" todo/now/ 2>/dev/null | grep '\.md$')
+
 [ "$DRY_RUN" -eq 1 ] || date +%s > "$STAMP"
 
 if [ -n "$ACTIONS" ]; then
@@ -185,4 +221,14 @@ elif [ "$QUIET" -eq 0 ]; then
   echo "reap-merged: nothing to reap"
   [ -n "$NOTES" ] && { echo "left alone:"; printf '%s' "$NOTES"; }
 fi
+
+# Said whatever --quiet asked for. A list claiming a branch nobody is on is the
+# kind of thing --quiet exists to leave room for, not noise to be spared.
+if [ -n "$STALE" ]; then
+  echo "reap-merged: todo/now/ still claims a branch whose pull request has merged"
+  printf '%s' "$STALE"
+  echo "  Filing is a small branch of its own — the merge date does not exist"
+  echo "  before the merge. See todo/README.md, \"Moving an item\"."
+fi
+
 exit 0

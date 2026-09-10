@@ -51,6 +51,18 @@ updated afterwards is a list nobody updates.
 `Merged:`. **Keep the heading.** It is what somebody recognises the item by
 months later.
 
+This is the one move that cannot ride along with the work, and that is not
+laziness. `Merged:` wants the date and the number the pull request merged
+under, and neither exists while the branch is still open — so finishing is a
+separate act, afterwards, on a small branch of its own, by which time the chat
+that wrote the item has usually gone. Left to goodwill it does not happen:
+#338 filed twenty-three items at once, #344 two more, and #343's own item went
+stale the day it merged. `.claude/hooks/reap-merged.sh` closes the gap. It is
+already asking the forge which branches have merged in order to reap them, so
+at session start it reads `todo/now/` off `origin/main` too and names any item
+still pointing at one, quoting the `Merged:` line to write. It never edits the
+list — which item is worth filing, and when, is a person's call.
+
 **Abandoning:** delete the file. A stale `now/` is worse than an empty one.
 
 Moving is `git mv`, not copy-then-delete: git tracks the rename, and a rename
