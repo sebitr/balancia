@@ -83,6 +83,46 @@ export function GET() {
         ],
       },
     ],
+    /*
+     * "Balancia" in another app's share sheet.
+     *
+     * A receipt is photographed before it is entered, a booking arrives as a
+     * PDF, and the amount is usually already written down in a message
+     * somebody sent. Registering here is what turns each of those into the
+     * start of an entry instead of something to retype.
+     *
+     * `method: POST` with `multipart/form-data` is required for files — a GET
+     * share target can carry text and nothing else — and it is why
+     * `src/app/sw.ts` intercepts this path rather than a route handler
+     * answering it: the worker is the only thing that can take a `File` out of
+     * a POST and hand it to a page. `/share` itself is an ordinary GET screen,
+     * which is what the worker redirects to.
+     *
+     * `accept` is deliberately narrow. `image/*` and PDFs are what a receipt
+     * is; accepting everything would put Balancia in the share sheet of every
+     * text file and video on the device, which is how an app gets turned off
+     * there and never turned back on.
+     *
+     * Not on iOS. Safari implements no share target at all, for installed web
+     * apps or otherwise, so this reaches Android and desktop Chromium. The
+     * native app's share extension is the other half and is not in this repo.
+     */
+    share_target: {
+      action: "/share",
+      method: "POST",
+      enctype: "multipart/form-data",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+        files: [
+          {
+            name: "media",
+            accept: ["image/*", "application/pdf"],
+          },
+        ],
+      },
+    },
   };
 
   return NextResponse.json(manifest, {

@@ -118,23 +118,75 @@ signs back in.
 An entry that has been held back is listed with the reason and a **Discard**
 button. Nothing else removes one.
 
+## Sharing into Balancia
+
+Not an offline feature, and documented here anyway: it is the same database,
+the same service worker and the same draft the drawer restores, and splitting
+those across two pages is how the second one goes stale.
+
+Balancia registers as a **share target** for images, PDFs and text. Photograph
+a receipt and share it, forward the booking confirmation, or forward the
+message that says what dinner cost, and Balancia appears in the share sheet.
+Choosing it opens the entry form for a group you pick, with what you shared
+already in it.
+
+What happens in between:
+
+1. The manifest declares `share_target` with `method: POST` and
+   `multipart/form-data`, which is the only shape that can carry a file.
+2. The service worker intercepts that POST — `src/app/sw.ts`, registered
+   **before** Serwist's own fetch listener, which would otherwise send it to
+   the network as an uncached mutation. It puts the form in the
+   `shared-payloads` store and answers **303 to `/share`**.
+3. `/share` reads the store, asks which group, writes that group's draft, and
+   navigates to `…/expenses/new#draft=1`.
+
+Three decisions worth knowing:
+
+**The redirect is not a detail.** Rendering a page in response to the POST
+would leave a form submission in the history for the back button to
+re-submit. A 303 to a GET leaves somebody on a screen they can reload and
+leave.
+
+**The share never reaches the server.** The photograph and the words sit in
+IndexedDB until a group is chosen; only then is a receipt uploaded, to that
+group. A shared receipt is no more exposed than a half-written draft, and one
+abandoned at the group picker goes stale after an hour rather than sitting
+there.
+
+**A bare URL is not a sentence.** Text is parsed by the same `heardEntry` the
+dictate button uses, on the device — but a shared link is dropped rather than
+parsed, because `…/product/12345` reads as a hundred and twenty-three francs
+nobody spent, filed under a description of a web address. A share carrying only
+a link opens an empty drawer, which is the honest answer.
+
+**Not on iOS.** Safari implements no Web Share Target, for installed web apps
+or otherwise, so this reaches Android and desktop Chromium. The native app's
+share extension is the other half and is not in this repository.
+
 ## Where it lives
 
-Two IndexedDB stores, in a database called `balancia-offline`:
+Four IndexedDB stores, in a database called `balancia-offline`:
 
 - `group-snapshots` — per group, exactly the props the entry form is rendered
   with: people, categories, currency mode, timezone. No balances, no history,
   no expenses.
 - `outbox` — queued entries, keyed by their idempotency key so the queue
   structurally cannot hold two records that would write the same expense.
+- `entry-drafts` — one half-written entry per group, kept when the drawer is
+  closed with something in it, expiring after a week.
+- `shared-payloads` — what another app just shared, between the worker that
+  caught the POST and the screen that reads it. One at a time, deleted as it is
+  read, stale after an hour.
 
-Both are on the device and are never sent anywhere except as the expense they
-become. Clearing site data clears them, and clearing them while entries are
-queued loses those entries — they exist nowhere else until the server has them.
+All four are on the device and are never sent anywhere except as the expense
+they become. Clearing site data clears them, and clearing them while entries
+are queued loses those entries — they exist nowhere else until the server has
+them.
 
 The code is in `src/lib/offline/`: `idb.ts` is the whole IndexedDB dependency,
-`outbox.ts` and `snapshot.ts` are the two stores, `replay.ts` is the decision
-table above, and `flush.ts` drains the queue.
+`outbox.ts`, `snapshot.ts`, `drafts.ts` and `shared.ts` are the four stores,
+`replay.ts` is the decision table above, and `flush.ts` drains the queue.
 
 ## Notes for other clients
 

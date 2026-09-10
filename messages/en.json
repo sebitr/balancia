@@ -1398,6 +1398,17 @@
     "notSavedTitle": "Nothing saved for this group yet",
     "notSavedBody": "Open this group's add screen once while you have a connection, and it will work offline from then on."
   },
+  "share": {
+    "metaTitle": "Add to a group",
+    "title": "Which group is this for?",
+    "subtitle": "It opens the entry form with what you shared already in it.",
+    "emptyTitle": "Nothing was shared",
+    "emptyBody": "Share a receipt, a booking confirmation or a message from another app, and Balancia will start the entry for you.",
+    "toGroups": "Go to your groups",
+    "nothingReadable": "Nothing in what you shared says what was bought — the form will open empty.",
+    "failed": "That could not be filed. Try another group, or open the group and add it yourself.",
+    "noGroups": "You are not in a group yet. Make one, and it will be offered here."
+  },
   "joinError": {
     "metaTitle": "Invitation link",
     "home": "Go to the home page",

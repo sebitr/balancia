@@ -1398,6 +1398,17 @@
     "notSavedTitle": "Rien n’est encore enregistré pour ce groupe",
     "notSavedBody": "Ouvre une fois l’écran d’ajout de ce groupe avec une connexion : il fonctionnera ensuite hors ligne."
   },
+  "share": {
+    "metaTitle": "Ajouter à un groupe",
+    "title": "C’est pour quel groupe ?",
+    "subtitle": "Le formulaire s’ouvre avec ce que tu viens de partager.",
+    "emptyTitle": "Rien n’a été partagé",
+    "emptyBody": "Partage un reçu, une confirmation de réservation ou un message depuis une autre application, et Balancia commence l’écriture pour toi.",
+    "toGroups": "Aller à tes groupes",
+    "nothingReadable": "Rien dans ce partage ne dit ce qui a été acheté — le formulaire s’ouvrira vide.",
+    "failed": "Impossible d’enregistrer. Essaie un autre groupe, ou ouvre le groupe pour l’ajouter à la main.",
+    "noGroups": "Tu n’es encore dans aucun groupe. Crée-en un, il sera proposé ici."
+  },
   "joinError": {
     "metaTitle": "Lien d’invitation",
     "home": "Aller à l’accueil",

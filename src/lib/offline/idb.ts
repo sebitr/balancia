@@ -17,7 +17,7 @@
  */
 
 const DB_NAME = "balancia-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /** What the entry form needs to render with no network. See `snapshot.ts`. */
 export const SNAPSHOT_STORE = "group-snapshots";
@@ -33,6 +33,16 @@ export const OUTBOX_STORE = "outbox";
  * flatmates is worse than losing it.
  */
 export const DRAFT_STORE = "entry-drafts";
+
+/**
+ * What another app just shared, between the service worker taking the POST and
+ * the screen that reads it. See `shared.ts`.
+ *
+ * A store rather than a query string because a share carries files: a photo of
+ * a receipt cannot travel in a URL, and the worker that receives it cannot hand
+ * a `File` to a page any other way.
+ */
+export const SHARE_STORE = "shared-payloads";
 
 function available(): boolean {
   try {
@@ -73,6 +83,9 @@ function open(): Promise<IDBDatabase | null> {
       }
       if (!db.objectStoreNames.contains(DRAFT_STORE)) {
         db.createObjectStore(DRAFT_STORE, { keyPath: "groupId" });
+      }
+      if (!db.objectStoreNames.contains(SHARE_STORE)) {
+        db.createObjectStore(SHARE_STORE, { keyPath: "id" });
       }
     };
     request.onsuccess = () => resolve(request.result);
