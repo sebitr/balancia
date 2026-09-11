@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  GENERATION_HOUR,
   RecurrenceError,
+  dueThrough,
   firstOccurrence,
   nextOccurrence,
   occurrenceInstant,
@@ -153,18 +155,35 @@ describe("occurrencesUpTo", () => {
 });
 
 describe("timezone awareness", () => {
-  it("resolves an occurrence to midnight in the rule's own timezone", () => {
-    // Midnight in Paris on 1 July 2026 is 22:00 UTC on 30 June (CEST, UTC+2).
+  it("resolves an occurrence to nine in the morning, in the rule's own timezone", () => {
+    // 09:00 in Paris on 1 July 2026 is 07:00 UTC (CEST, UTC+2).
     expect(occurrenceInstant("2026-07-01", "Europe/Paris").toISOString()).toBe(
-      "2026-06-30T22:00:00.000Z",
+      "2026-07-01T07:00:00.000Z",
     );
-    // Midnight in Auckland is 12:00 UTC the previous day (NZST, UTC+12).
+    // 09:00 in Auckland is 21:00 UTC the previous day (NZST, UTC+12).
     expect(
       occurrenceInstant("2026-07-01", "Pacific/Auckland").toISOString(),
-    ).toBe("2026-06-30T12:00:00.000Z");
+    ).toBe("2026-06-30T21:00:00.000Z");
     expect(occurrenceInstant("2026-07-01", "UTC").toISOString()).toBe(
-      "2026-07-01T00:00:00.000Z",
+      "2026-07-01T09:00:00.000Z",
     );
+  });
+
+  /*
+   * Chile moves its clocks at 24:00, so 2026-09-06 has no 00:00 at all and the
+   * old midnight instant landed on 01:00 — right date, wrong hour, twice a
+   * year, in whichever zones happen to do this. Nine in the morning is an hour
+   * no zone has ever deleted.
+   */
+  it("lands on the hour it asked for in a zone whose midnight does not exist", () => {
+    const instant = occurrenceInstant("2026-09-06", "America/Santiago");
+    expect(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Santiago",
+        hour: "2-digit",
+        hour12: false,
+      }).format(instant),
+    ).toBe(String(GENERATION_HOUR).padStart(2, "0"));
   });
 
   it("crosses a daylight-saving boundary without shifting the calendar date", () => {
@@ -179,6 +198,37 @@ describe("timezone awareness", () => {
     const instant = new Date("2026-07-01T23:30:00.000Z");
     expect(todayIn("Pacific/Auckland", instant)).toBe("2026-07-02");
     expect(todayIn("America/New_York", instant)).toBe("2026-07-01");
+  });
+
+  /*
+   * What a catch-up run is measured against. A worker that comes back at three
+   * in the morning has to leave today's occurrence alone until nine, or the
+   * outage would deliver the notification at the hour the whole change exists
+   * to avoid.
+   */
+  it("holds today back until the group has reached the generation hour", () => {
+    // 06:30 and 07:30 UTC are 08:30 and 09:30 in Paris (CEST, UTC+2).
+    expect(dueThrough("Europe/Paris", new Date("2026-07-01T06:30:00Z"))).toBe(
+      "2026-06-30",
+    );
+    expect(dueThrough("Europe/Paris", new Date("2026-07-01T07:30:00Z"))).toBe(
+      "2026-07-01",
+    );
+    // 11:30 UTC is 07:30 in New York (EDT, UTC-4): a new day there, but not
+    // yet a due one.
+    expect(
+      dueThrough("America/New_York", new Date("2026-06-30T11:30:00Z")),
+    ).toBe("2026-06-29");
+  });
+
+  it("agrees with the instant it is the counterpart of", () => {
+    // The two are one rule said twice: a date is due exactly when its own
+    // instant has passed, so the boundary must not fall between them.
+    const instant = occurrenceInstant("2026-07-01", "Europe/Paris");
+    expect(dueThrough("Europe/Paris", instant)).toBe("2026-07-01");
+    expect(dueThrough("Europe/Paris", new Date(instant.getTime() - 1))).toBe(
+      "2026-06-30",
+    );
   });
 
   it("rejects an unknown timezone", () => {

@@ -28,6 +28,13 @@ Three rules apply to all of them:
 3. **Only accounts.** A guest is a link holder with nothing stored to reach
    them by, so a participant with no linked user is silently not a recipient.
 
+The recurring row is the only one nobody set off, and so the only one whose
+_hour_ is a decision. It is **09:00 in the group's own timezone**, not the
+moment the calendar turns over: it was midnight once, and a monthly rent woke
+the flat it was split between on the first of every month. The reasoning is
+written out at `GENERATION_HOUR` in `src/modules/recurring/schedule.ts`. There
+is no per-group setting for it, because nobody has asked to choose.
+
 Each person has four switches (expenses, payments, recurring, imports) and can
 quieten a group — either **muted**, which lasts until it is undone, or
 **snoozed for 24 hours**, which wears off on its own. Both are the same row in

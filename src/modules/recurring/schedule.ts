@@ -3,14 +3,15 @@ import { DateTime } from "luxon";
 /**
  * Recurring occurrence calculation.
  *
- * Pure and timezone-aware. "The 1st of every month at midnight" means midnight
- * *in the group's timezone*, so a group in Auckland and one in Los Angeles
- * generate their rent expense on different absolute instants — which is the
- * behaviour a person expects and a naive UTC calculation gets wrong twice a
- * year around daylight-saving transitions.
+ * Pure and timezone-aware. "The 1st of every month" means the 1st *in the
+ * group's timezone*, so a group in Auckland and one in Los Angeles generate
+ * their rent expense on different absolute instants — which is the behaviour a
+ * person expects and a naive UTC calculation gets wrong twice a year around
+ * daylight-saving transitions.
  *
  * Everything here works on calendar dates (`YYYY-MM-DD`) plus a timezone, and
- * only converts to an absolute instant at the very end.
+ * only converts to an absolute instant at the very end — at `GENERATION_HOUR`,
+ * which is the one clock time in this file and has a story of its own.
  */
 
 /** The frequencies, in the order the sheet offers them. */
@@ -377,17 +378,45 @@ export function upcomingOccurrences(
 }
 
 /**
- * The absolute instant an occurrence becomes due: midnight, in the rule's
- * timezone, on that calendar date. Stored as `timestamptz` so the worker can
- * compare it against `now()` without ambiguity.
+ * The hour of the group's day a due occurrence is generated at.
+ *
+ * It used to be midnight, which is the obvious reading of "on the 1st" and the
+ * wrong time to act on it: generating an expense notifies everybody it splits
+ * between, so a monthly rent woke a whole flat at 00:00 on the first of every
+ * month. The date was right and the moment was indefensible — nobody needs to
+ * be told about the rent while they are asleep.
+ *
+ * Nine is the earliest hour a phone buzzing is ordinary rather than an alarm,
+ * and it is early enough that the entry is there before the day's first look
+ * at the group. It is a fixed hour rather than a per-group setting because
+ * nobody asked to choose it; a group that wants a different one can be given
+ * the column then.
+ *
+ * Two smaller things come out right by moving off midnight. Midnight is the
+ * hour that daylight saving actually deletes in a handful of zones — Santiago,
+ * Havana, Tehran — where `startOf("day")` quietly lands on 01:00 twice a year;
+ * 09:00 exists in every zone on every date. And the recurring list renders
+ * this instant in the *reader's* zone, so a midnight due date showed the day
+ * before to anybody west of the group. Nine hours of margin covers every
+ * reader the Pacific side of the group.
+ */
+export const GENERATION_HOUR = 9;
+
+/**
+ * The absolute instant an occurrence becomes due: `GENERATION_HOUR`, in the
+ * rule's timezone, on that calendar date. Stored as `timestamptz` so the
+ * worker can compare it against `now()` without ambiguity.
  */
 export function occurrenceInstant(
   occurrenceDate: string,
   timezone: string,
 ): Date {
-  const parsed = DateTime.fromISO(occurrenceDate, { zone: timezone }).startOf(
-    "day",
-  );
+  const parsed = DateTime.fromISO(occurrenceDate, { zone: timezone }).set({
+    hour: GENERATION_HOUR,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+  });
   if (!parsed.isValid) {
     throw new RecurrenceError(
       `Cannot resolve occurrence ${occurrenceDate} in timezone ${timezone}`,
@@ -396,11 +425,33 @@ export function occurrenceInstant(
   return parsed.toJSDate();
 }
 
-/** Today's calendar date in a timezone — what "due now" is measured against. */
+/** Today's calendar date in a timezone. */
 export function todayIn(timezone: string, now: Date = new Date()): string {
   const date = DateTime.fromJSDate(now).setZone(timezone);
   if (!date.isValid) {
     throw new RecurrenceError(`Unknown timezone "${timezone}"`);
   }
   return date.toISODate() as string;
+}
+
+/**
+ * The latest occurrence date that has come due — what the worker generates up
+ * to, and the counterpart of `occurrenceInstant`.
+ *
+ * Today once the group has reached `GENERATION_HOUR`, and yesterday before
+ * that. `nextRunAt` already keeps the worker off a template until its 09:00,
+ * so on an ordinary tick this says the same thing "today" did; it matters on
+ * the catch-up path, where a template left behind by an outage is picked up at
+ * whatever hour the container came back. Measuring the run against the clock
+ * rather than the calendar is what stops that run from generating *today's*
+ * occurrence at 03:00 and notifying the group at 03:00 — the very thing this
+ * hour exists to prevent. It waits for nine like any other day.
+ */
+export function dueThrough(timezone: string, now: Date = new Date()): string {
+  const local = DateTime.fromJSDate(now).setZone(timezone);
+  if (!local.isValid) {
+    throw new RecurrenceError(`Unknown timezone "${timezone}"`);
+  }
+  const due = local.hour >= GENERATION_HOUR ? local : local.minus({ days: 1 });
+  return due.toISODate() as string;
 }

@@ -260,6 +260,13 @@
       "when": 1788985922740,
       "tag": "0036_neat_hemingway",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1789115244280,
+      "tag": "0037_recurring_generation_hour",
+      "breakpoints": true
     }
   ]
 }
