@@ -259,7 +259,10 @@ export async function startWorker(): Promise<void> {
   });
 
   // Recurring generation runs hourly: templates are timezone-aware, and an
-  // hourly tick covers every timezone's midnight without a per-group schedule.
+  // hourly tick covers every timezone's 09:00 without a per-group schedule.
+  // The half-hour and quarter-hour zones — Kolkata, Kathmandu, Chatham — are
+  // served up to forty-five minutes late by an on-the-hour tick, which is the
+  // one thing this cadence cannot fix and the one thing nobody notices.
   await boss.schedule(QUEUES.recurringGenerate, "0 * * * *");
   await boss.schedule(QUEUES.maintenance, "30 3 * * *");
   // Every five minutes: only ever finds something when the queue or the web

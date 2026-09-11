@@ -53,12 +53,12 @@ import { SPLIT_METHODS, type SplitInput } from "@/modules/expenses/split";
 import {
   RECURRENCE_FREQUENCIES,
   WEEKS_OF_MONTH,
+  dueThrough,
   firstOccurrence,
   nextOccurrence,
   occurrenceInstant,
   occurrencesUpTo,
   remainingOf,
-  todayIn,
   type RecurrenceFrequency,
   type RecurrenceRule,
   type WeekOfMonth,
@@ -621,7 +621,10 @@ export async function generateDueOccurrences(
 
   for (const template of templates) {
     const rule = ruleFrom(template);
-    const today = todayIn(template.timezone, now);
+    // Not "today": an occurrence is due once its 09:00 has passed in the
+    // group's own zone, which on a catch-up run after an outage is not the
+    // same date. See `GENERATION_HOUR`.
+    const dueDate = dueThrough(template.timezone, now);
 
     const [lastOccurrence] = await db
       .select({ occurrenceDate: recurringOccurrences.occurrenceDate })
@@ -648,7 +651,7 @@ export async function generateDueOccurrences(
               .where(eq(recurringOccurrences.recurringExpenseId, template.id))
           )[0]?.total ?? 0);
 
-    const due = occurrencesUpTo(rule, today, {
+    const due = occurrencesUpTo(rule, dueDate, {
       from: lastOccurrence?.occurrenceDate ?? null,
       // Cap catch-up so a template dormant for years cannot flood a group.
       maxOccurrences: 120,

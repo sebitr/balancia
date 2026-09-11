@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
 import { expenses, recurringOccurrences } from "@/lib/db/schema";
@@ -221,6 +222,115 @@ describe("recurring generation", () => {
 
     const report = await generateDueOccurrences({ groupId: group.groupId });
     expect(report.expensesCreated).toBe(0);
+  });
+});
+
+/**
+ * The hour of the day a group hears about its rent.
+ *
+ * `GENERATION_HOUR` is unit-tested as arithmetic, but what a person actually
+ * feels is the notification, and only two things decide when that arrives: the
+ * `next_run_at` the worker writes, and the dates a run is willing to generate.
+ * Both are read back here, in the group's own zone, because this started as a
+ * bug report about a phone going off at midnight rather than about a number.
+ */
+describe("the hour an occurrence is generated at", () => {
+  const ZONE = "Europe/Paris";
+
+  /** The clock the group reads, for an instant the database handed back. */
+  function clockIn(instant: Date | null): string | null {
+    if (!instant) return null;
+    return DateTime.fromJSDate(instant).setZone(ZONE).toFormat("HH:mm");
+  }
+
+  /** A date in the group's own zone, which after 22:00 is not the UTC one. */
+  function dayIn(offsetDays: number): string {
+    return DateTime.now()
+      .setZone(ZONE)
+      .plus({ days: offsetDays })
+      .toISODate() as string;
+  }
+
+  /** That day, at that hour, in the group's zone. */
+  function instantAt(date: string, hour: number): Date {
+    return DateTime.fromISO(date, { zone: ZONE }).set({ hour }).toJSDate();
+  }
+
+  async function dailyTemplate(startDate: string) {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor, { timezone: ZONE });
+    const other = await addTestParticipant(group.groupId, "Blaise");
+
+    await createRecurringExpense(group.access, {
+      description: "Coffee",
+      notes: "",
+      category: "",
+      amount: "400",
+      currency: "EUR",
+      exchangeRate: "",
+      payers: [{ participantId: group.ownerParticipantId, amount: "400" }],
+      splitMethod: "equal",
+      splitEntries: [
+        { participantId: group.ownerParticipantId },
+        { participantId: other },
+      ],
+      frequency: "daily",
+      interval: 1,
+      startDate,
+      endDate: "",
+    });
+
+    return group;
+  }
+
+  it("puts the next run at nine in the morning, not at midnight", async () => {
+    const { group } = await setupTemplate({ timezone: ZONE });
+
+    const [created] = await listRecurringExpenses(group.groupId);
+    expect(clockIn(created.nextRunAt)).toBe("09:00");
+
+    // And again for the one the worker works out for itself, which is a
+    // different line of code from the one creation uses.
+    await generateDueOccurrences({ groupId: group.groupId });
+    const [advanced] = await listRecurringExpenses(group.groupId);
+    expect(clockIn(advanced.nextRunAt)).toBe("09:00");
+  });
+
+  /**
+   * The catch-up path, which is the one the hour could still have escaped
+   * through: a container that comes back at three in the morning is past every
+   * overdue `next_run_at` at once, and generating today's occurrence then
+   * would deliver the notification at exactly the hour this is all about.
+   */
+  it("makes a run before nine stop at yesterday", async () => {
+    const yesterday = dayIn(-1);
+    const today = dayIn(0);
+    const group = await dailyTemplate(yesterday);
+
+    const earlyRun = await generateDueOccurrences({
+      groupId: group.groupId,
+      now: instantAt(today, 3),
+    });
+    expect(earlyRun.expensesCreated).toBe(1);
+
+    const db = getDb();
+    const afterEarly = await db
+      .select({ date: expenses.expenseDate })
+      .from(expenses)
+      .where(eq(expenses.groupId, group.groupId));
+    expect(afterEarly.map((row) => row.date)).toEqual([yesterday]);
+
+    const nineRun = await generateDueOccurrences({
+      groupId: group.groupId,
+      now: instantAt(today, 9),
+    });
+    expect(nineRun.expensesCreated).toBe(1);
+
+    const afterNine = await db
+      .select({ date: expenses.expenseDate })
+      .from(expenses)
+      .where(eq(expenses.groupId, group.groupId));
+    expect(afterNine.map((row) => row.date).sort()).toEqual([yesterday, today]);
   });
 });
 

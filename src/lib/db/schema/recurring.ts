@@ -32,9 +32,10 @@ import {
  *
  * Scheduling is timezone-aware: the group's timezone decides when "the 1st of
  * the month" actually happens, and `nextRunAt` is a `timestamptz` so the worker
- * compares absolute instants. Payers and the split configuration are stored as
- * JSON because they are template *inputs* — the generated expense materializes
- * them into real payer and share rows.
+ * compares absolute instants — 09:00 on the occurrence date in that timezone,
+ * for the reason written out at `GENERATION_HOUR`. Payers and the split
+ * configuration are stored as JSON because they are template *inputs* — the
+ * generated expense materializes them into real payer and share rows.
  */
 export const recurringExpenses = pgTable(
   "recurring_expenses",
