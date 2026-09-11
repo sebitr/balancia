@@ -13,7 +13,7 @@ counterpart `dueThrough`. The constant is the easy half: `next_run_at` is now
 covers every zone's nine the same way it covered every zone's midnight.
 
 `dueThrough` is the half that is easy to miss. The worker used to generate
-everything up to *today*, which is fine while `next_run_at` is the only gate —
+everything up to _today_, which is fine while `next_run_at` is the only gate —
 but a container that comes back from an outage at three in the morning is past
 every overdue marker at once, and would have generated today's occurrence at
 three and notified the group at three. An occurrence is due when its own 09:00
@@ -22,7 +22,7 @@ has passed, so that is what the run is measured against now.
 Two smaller things fell out. Midnight is the hour daylight saving actually
 deletes in Santiago, Havana and Tehran, where `startOf("day")` was quietly
 landing on 01:00; 09:00 exists everywhere. And the recurring list renders
-`next_run_at` in the *reader's* zone, so a midnight marker showed the day
+`next_run_at` in the _reader's_ zone, so a midnight marker showed the day
 before to anybody west of the group — nine hours of margin covers that.
 
 `0037_recurring_generation_hour.sql` moves the templates that already exist,
