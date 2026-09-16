@@ -1,6 +1,6 @@
 # File #343's item, and have the reaper say when `todo/now/` is claiming a branch that has already merged
 
-Branch: `chore/file-settle-method-row`
+Merged: 2026-09-10 in #345
 
 `todo/now/settle-method-row.md` had been sitting there since #343 merged on
 2026-09-09, so `now/` was again claiming a branch that exists neither on the

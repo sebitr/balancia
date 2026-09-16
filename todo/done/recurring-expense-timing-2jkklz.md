@@ -1,6 +1,6 @@
 # Add a recurring expense at nine in the morning, group local, rather than at midnight — generating one notifies everybody it splits between, and the rent should not wake the flat
 
-Branch: `claude/recurring-expense-timing-2jkklz`
+Merged: 2026-09-11 in #348
 
 The date was never wrong; the hour was. `occurrenceInstant` resolved an
 occurrence to midnight in the group's zone, and generating an expense writes a

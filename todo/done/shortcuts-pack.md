@@ -1,6 +1,6 @@
 # Turn the API key and the parser into a shortcut somebody can build in six actions
 
-Branch: `feat/shortcuts-pack`
+Merged: 2026-09-10 in #346
 
 The two things that made Shortcuts support need Swift both landed in #339 and
 #340 — a key a person can paste, and an endpoint that turns a sentence into an
