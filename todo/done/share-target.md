@@ -1,6 +1,6 @@
 # Share target: register for images, PDFs and text, so a receipt shared from another app lands in the drawer — the other half of `briefs/entry-friction.md` idea 6, left out of the Add Entry rework because it is manifest and route work rather than drawer work
 
-Branch: `feat/share-target`
+Merged: 2026-09-10 in #347
 
 It stayed drawer-free, as predicted. The screen writes the group's **draft** —
 the same shape the drawer already restores from `#draft=1` — and navigates
