@@ -17,33 +17,32 @@ export default defineConfig({
     },
   },
   test: {
+    root: rootDir,
     globals: true,
+    // Each inline project inherits everything above — the React plugin, the
+    // aliases, `root`, `globals` — and shares one Vite server with the others.
+    // Setting `root`, `alias` or a plugin inside a project gives it a server of
+    // its own, so those belong up here.
     projects: [
       {
-        extends: true,
         test: {
           name: "unit",
-          root: rootDir,
           environment: "node",
           include: ["src/**/*.test.ts"],
           exclude: ["src/**/*.integration.test.ts"],
         },
       },
       {
-        extends: true,
         test: {
           name: "components",
-          root: rootDir,
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
           setupFiles: ["./tests/setup/components.ts"],
         },
       },
       {
-        extends: true,
         test: {
           name: "integration",
-          root: rootDir,
           environment: "node",
           include: [
             "tests/integration/**/*.test.ts",

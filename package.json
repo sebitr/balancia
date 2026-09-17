@@ -105,7 +105,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.1",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.2",
     "eslint": "^9",
@@ -122,7 +122,8 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^6",
-    "vitest": "^4.1.11"
+    "vite": "^8.2.1",
+    "vitest": "^5.0.1"
   },
   "engines": {
     "node": ">=24.0.0"
