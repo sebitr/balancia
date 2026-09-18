@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { UmamiScript } from "@/components/analytics/umami-script";
+import { SplittingWordmark } from "@/components/brand/splitting-wordmark";
 import { Wordmark } from "@/components/brand/wordmark";
 import { MarketingLanguageSwitcher } from "@/components/i18n/language-switcher";
 import { InstallCopyButton, SplitDemo } from "@/components/marketing/SplitDemo";
@@ -321,7 +322,7 @@ export default async function LandingPage() {
             className="text-marketing-cream no-underline"
             aria-label={t("header.home")}
           >
-            <Wordmark
+            <SplittingWordmark
               className="gap-2.5 text-[18px] tracking-[-0.02em]"
               markClassName="size-[26px]"
               wordClassName="hidden min-[440px]:inline"
