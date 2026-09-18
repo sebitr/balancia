@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Wordmark } from "@/components/brand/wordmark";
+import { SplittingWordmark } from "@/components/brand/splitting-wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { InstallInstructions } from "@/components/pwa/install-instructions";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -75,7 +75,7 @@ export function AppShell({
                 actor.isGuest && "pointer-events-none",
               )}
             >
-              <Wordmark />
+              <SplittingWordmark />
             </Link>
           )}
           <div className="flex shrink-0 items-center gap-1">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wordmark } from "@/components/brand/wordmark";
+import { SplittingWordmark } from "@/components/brand/splitting-wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UmamiScript } from "@/components/analytics/umami-script";
 
@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
             href="/"
             className="inline-flex rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <Wordmark />
+            <SplittingWordmark />
           </Link>
           <ThemeToggle />
         </div>
