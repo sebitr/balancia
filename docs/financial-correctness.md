@@ -46,6 +46,28 @@ Suggested settlement payments are deterministic. The same balances produce
 the same transfer list, which makes behavior testable and avoids a result that
 appears to change randomly between page loads.
 
+## Removing somebody never strands a debt
+
+Removing a person from a group keeps their history: every expense and
+repayment that names them still counts, so their balance is still part of the
+group's. What removal takes away is the ability to name them in anything new.
+Those two rules together could leave a debt nobody can record, so three more
+hold them in place:
+
+- **Removal waits for zero.** Somebody who still owes or is owed anything, in
+  any currency the group keeps, cannot be removed; the server refuses, not
+  only the button. The check reads the balance under a row lock that every
+  write naming that person also takes, so an expense landing in the same
+  instant either counts or is refused — never both.
+- **An old entry keeps the people it had.** Editing an expense or a repayment
+  that names somebody removed since is allowed, and they may stay on it.
+  Adding a removed person to an entry they were not on is refused.
+- **A leftover debt can always be settled.** A balance can still move after
+  removal — an old expense edited, a repayment deleted, a deletion undone — so
+  a repayment may name a removed person, but only in the direction that
+  settles what they have outstanding and for no more than it. It can close a
+  debt; it cannot open one.
+
 ## Exchange rates are historical facts
 
 Converted groups store a decimal exchange rate with each foreign-currency

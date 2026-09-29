@@ -451,13 +451,16 @@ export async function commitImportRun(
       .orderBy(asc(importRows.rowNumber));
 
     // Resolve the source-name → participant-id map, creating participants the
-    // user asked for.
+    // user asked for. Held FOR SHARE until the import commits, as every write
+    // naming somebody is, so nobody it maps onto can be removed underneath it
+    // with a balance it is about to change. See `removeParticipant`.
     const existing = await tx
       .select({ id: participants.id, displayName: participants.displayName })
       .from(participants)
       .where(
         and(eq(participants.groupId, groupId), isNull(participants.removedAt)),
-      );
+      )
+      .for("share");
     const resolved = new Map<string, string>();
     const byLowerName = new Map(
       existing.map((p) => [p.displayName.trim().toLowerCase(), p.id]),

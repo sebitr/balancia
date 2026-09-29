@@ -19,6 +19,7 @@ import { ProofOfWorkError } from "@/lib/security/proof-of-work";
 import { PasswordError } from "@/modules/auth/passwords";
 import { logger } from "@/lib/logger";
 import { AllocationError } from "@/modules/expenses/allocation";
+import { OpenBalanceError } from "@/modules/balances/open-balance";
 import { AuthError } from "@/modules/auth/service";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
 import {
@@ -234,6 +235,10 @@ export function mobileApiError(
     error instanceof AllocationError ||
     error instanceof InvalidAmountError ||
     error instanceof CurrencyConfigurationError ||
+    // Somebody who still owes or is owed cannot be removed, and a repayment
+    // naming somebody removed may only settle what they left outstanding.
+    // Both name the person and say what to do instead; a 404 could not.
+    error instanceof OpenBalanceError ||
     // The password policy, and the proof of work an instance may ask a signup
     // for. Both are things the caller can fix and try again, and both carry a
     // sentence saying which — so 422 with the reason rather than the 500 an

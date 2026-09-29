@@ -2516,6 +2516,8 @@
     "reminderEmpty": "A reminder needs something to say.",
     "reminderNotOwed": "That person does not owe you anything in this group.",
     "reminderTooSoon": "That person was reminded in the last 24 hours. Give them a day.",
+    "participantHasBalance": "{name} still has money outstanding in this group. Settle up first, then remove them.",
+    "removedParticipantSettlement": "{name} is no longer in this group. A repayment can include them only to settle what is still outstanding, and for no more than that.",
     "appleNoEmail": "Apple did not share an email address with this instance, so there is nothing to create an account from.",
     "appleEmailTaken": "An account already uses that email address. Sign in with your password or passkey, then link Apple from the security page.",
     "appleLinkedElsewhere": "That Apple account is already linked to a different Balancia account.",

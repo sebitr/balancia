@@ -16,6 +16,7 @@ import { RecurrenceError } from "@/modules/recurring/schedule";
 import { UploadRejectedError } from "@/modules/attachments/service";
 import { ImportError } from "@/modules/imports/service";
 import { JoinError } from "@/modules/join/service";
+import { OpenBalanceError } from "@/modules/balances/open-balance";
 import { PasswordError } from "@/modules/auth/passwords";
 import { ReminderError } from "@/modules/reminders/service";
 import { RateLimitedError } from "@/lib/security/rate-limit";
@@ -78,6 +79,7 @@ const SAFE_ERRORS = [
   ImportError,
   InvalidAmountError,
   JoinError,
+  OpenBalanceError,
   PasswordError,
   ProofOfWorkError,
   RateLimitedError,

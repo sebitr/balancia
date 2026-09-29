@@ -2516,6 +2516,8 @@
     "reminderEmpty": "Une relance doit contenir un message.",
     "reminderNotOwed": "Cette personne ne te doit rien dans ce groupe.",
     "reminderTooSoon": "Cette personne a été relancée il y a moins de 24 heures. Laisse-lui un jour.",
+    "participantHasBalance": "{name} a encore de l’argent en suspens dans ce groupe. Solde les comptes avant de retirer cette personne.",
+    "removedParticipantSettlement": "{name} ne fait plus partie de ce groupe. Un remboursement ne peut concerner cette personne que pour solder ce qui reste en suspens, et pas au-delà.",
     "appleNoEmail": "Apple n’a communiqué aucune adresse e-mail à cette instance : il n’y a pas de quoi créer un compte.",
     "appleEmailTaken": "Un compte utilise déjà cette adresse e-mail. Connecte-toi avec ton mot de passe ou ta clé d’accès, puis associe Apple depuis la page sécurité.",
     "appleLinkedElsewhere": "Ce compte Apple est déjà associé à un autre compte Balancia.",
