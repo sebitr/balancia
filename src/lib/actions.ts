@@ -9,6 +9,7 @@ import {
 import { getCurrentActor } from "@/lib/security/actor";
 import { logger } from "@/lib/logger";
 import { AllocationError } from "@/modules/expenses/allocation";
+import { EditConflictError } from "@/modules/expenses/edit-conflict";
 import { AuthError } from "@/modules/auth/service";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
 import { InvalidAmountError } from "@/modules/currencies/money";
@@ -39,6 +40,14 @@ import {
 export interface ActionResult<T = void> {
   readonly ok: boolean;
   readonly error?: string;
+  /**
+   * The refusal's stable reason code, when the error carried one.
+   *
+   * For the screen that has to do something besides show the sentence — an
+   * edit refused because somebody else changed the entry offers to reload it —
+   * and would otherwise be matching on words that change with the language.
+   */
+  readonly code?: string;
   readonly data?: T;
 }
 
@@ -46,8 +55,13 @@ export function actionOk<T>(data?: T): ActionResult<T> {
   return { ok: true, data };
 }
 
-export function actionError(message: string): ActionResult<never> {
-  return { ok: false, error: message };
+export function actionError(
+  message: string,
+  code?: string,
+): ActionResult<never> {
+  return code === undefined
+    ? { ok: false, error: message }
+    : { ok: false, error: message, code };
 }
 
 /** Resolves group access for the current actor, or throws. */
@@ -75,6 +89,7 @@ const SAFE_ERRORS = [
   AuthorizationError,
   AuthenticationRequiredError,
   CurrencyConfigurationError,
+  EditConflictError,
   ImportError,
   InvalidAmountError,
   JoinError,
@@ -88,6 +103,11 @@ const SAFE_ERRORS = [
 
 function isSafeError(error: unknown): error is Error {
   return SAFE_ERRORS.some((candidate) => error instanceof candidate);
+}
+
+function reasonCode(error: Error): string | undefined {
+  const value = (error as { code?: unknown }).code;
+  return typeof value === "string" ? value : undefined;
 }
 
 /**
@@ -110,7 +130,7 @@ export async function runAction<T>(
       // access. Counted apart from a failure, because an alert on "actions
       // that went wrong" should not fire on somebody mistyping a percentage.
       observe(name, "rejected", startedAt);
-      return actionError(await describeError(error));
+      return actionError(await describeError(error), reasonCode(error));
     }
 
     observe(name, "failed", startedAt);

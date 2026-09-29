@@ -269,6 +269,15 @@ export interface EditingEntry {
   readonly splitValues: Readonly<Record<string, string>>;
   /** The stored label, which may predate the picker's list. */
   readonly paymentMethod: string;
+  /**
+   * The version of the entry these fields were read from, as `getExpense` and
+   * `getSettlement` hand it out.
+   *
+   * Sent back with the edit, which is refused if somebody else has saved the
+   * entry since — see `EditConflictError`. The route always fills it in;
+   * absent, the edit applies unconditionally, as every edit once did.
+   */
+  readonly version?: string;
 }
 
 /**
@@ -765,6 +774,17 @@ export function AddEntryForm({
   const [sheet, setSheet] = useState<OpenSheet>(openSheet ?? null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /*
+   * The version these fields were seeded from, held rather than read off
+   * `editing` at save time.
+   *
+   * A refused edit revalidates, and the re-render that comes back with the
+   * refusal hands this form the entry as the other person left it — a newer
+   * version in `editing`, under fields that still hold what this reader typed.
+   * Sending that one would let a second press of Save overwrite exactly the
+   * change the first press was refused for.
+   */
+  const [loadedVersion] = useState(editing?.version);
 
   const country = countryForTimezone(timezone);
   const countryMethods = useMemo(() => methodsForCountry(country), [country]);
@@ -1671,7 +1691,14 @@ export function AddEntryForm({
       return { result: await createExpenseAction(groupId, input, clientKey) };
     }
     if (!converting) {
-      return { result: await updateExpenseAction(groupId, editing.id, input) };
+      return {
+        result: await updateExpenseAction(
+          groupId,
+          editing.id,
+          input,
+          loadedVersion,
+        ),
+      };
     }
     const result = await convertSettlementToExpenseAction(
       groupId,
@@ -1758,7 +1785,12 @@ export function AddEntryForm({
     }
     if (!converting) {
       return {
-        result: await updateSettlementAction(groupId, editing.id, input),
+        result: await updateSettlementAction(
+          groupId,
+          editing.id,
+          input,
+          loadedVersion,
+        ),
       };
     }
     const result = await convertExpenseToSettlementAction(

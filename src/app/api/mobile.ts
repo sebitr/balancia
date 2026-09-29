@@ -19,6 +19,7 @@ import { ProofOfWorkError } from "@/lib/security/proof-of-work";
 import { PasswordError } from "@/modules/auth/passwords";
 import { logger } from "@/lib/logger";
 import { AllocationError } from "@/modules/expenses/allocation";
+import { EditConflictError } from "@/modules/expenses/edit-conflict";
 import { AuthError } from "@/modules/auth/service";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
 import {
@@ -182,10 +183,13 @@ function bearerToken(request: Request): string | null {
 }
 
 /** JSON response that no shared cache may keep. */
-export function noStore(data: unknown, init: { status?: number } = {}) {
+export function noStore(
+  data: unknown,
+  init: { status?: number; headers?: Record<string, string> } = {},
+) {
   return NextResponse.json(data, {
     status: init.status ?? 200,
-    headers: { "Cache-Control": "private, no-store" },
+    headers: { ...init.headers, "Cache-Control": "private, no-store" },
   });
 }
 
@@ -224,6 +228,12 @@ export function mobileApiError(
   // `TokenScopeError`. Nothing about the group is disclosed either way.
   if (error instanceof TokenScopeError) {
     return noStore({ error: error.message }, { status: 403 });
+  }
+  // An edit made from a copy somebody has since changed. 409 with a code a
+  // client can branch on without reading the sentence: the answer is to fetch
+  // the entry again, show it, and let the person decide. See `ifMatchVersion`.
+  if (error instanceof EditConflictError) {
+    return noStore({ error: error.message, code: error.code }, { status: 409 });
   }
   // Credential refusals carry deliberately non-enumerating messages, so they
   // are safe to pass through; see the note on SAFE_ERRORS in lib/actions.ts.
@@ -304,6 +314,45 @@ export function isUuid(value: string): boolean {
 export function idempotencyKey(request: Request): string | undefined {
   const header = request.headers.get("Idempotency-Key")?.trim();
   return header && isUuid(header) ? header : undefined;
+}
+
+/**
+ * An entry's version as an `ETag`: the opaque token, quoted.
+ *
+ * Sent on the single-entry reads so a client can hand it straight back as
+ * `If-Match`. The same token is also in the body as `version`, for a client
+ * that keeps the entry and not the response it came in.
+ */
+export function versionTag(version: string): string {
+  return `"${version}"`;
+}
+
+/**
+ * The version an edit says it was made from, off `If-Match`.
+ *
+ * Optional, and the default is the old behaviour: no header, or `*`, and the
+ * edit applies whatever has happened since — which is what every client built
+ * before this existed still gets. A client that sends one gets the check, and
+ * a 409 when somebody else changed the entry first.
+ *
+ * `W/` is taken off rather than refused. RFC 9110 has `If-Match` compare
+ * strongly, but a proxy that compresses the response — nginx does, by default
+ * — marks the ETag weak on the way out, and a self-hosted instance behind one
+ * would then refuse every edit its own client made. The token is ours and
+ * compared exactly either way.
+ *
+ * Anything that is not one of our tokens is passed through as it is, and fails
+ * to match: a precondition the caller asked for is never quietly dropped.
+ * Several tags in one header are not something any of our clients sends, and
+ * are treated the same way.
+ */
+export function ifMatchVersion(request: Request): string | undefined {
+  const header = request.headers.get("If-Match")?.trim();
+  if (!header || header === "*") return undefined;
+  const tag = header.startsWith("W/") ? header.slice(2) : header;
+  return tag.length >= 2 && tag.startsWith('"') && tag.endsWith('"')
+    ? tag.slice(1, -1)
+    : tag;
 }
 
 function iso(value: Date | null): string | null {

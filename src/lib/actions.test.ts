@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../messages/en.json";
 import { runAction } from "./actions";
 import { AllocationError } from "@/modules/expenses/allocation";
+import { EditConflictError } from "@/modules/expenses/edit-conflict";
 import { AuthError } from "@/modules/auth/service";
 import { AuthorizationError } from "@/lib/security/authorization";
 import { InvalidAmountError } from "@/modules/currencies/money";
@@ -70,7 +71,23 @@ describe("runAction", () => {
     expect(result).toEqual({
       ok: false,
       error: messages.serverErrors.noGroupAccess,
+      code: "noGroupAccess",
     });
+  });
+
+  /*
+   * The code rides along with the sentence, so a screen can act on the reason
+   * — an edit refused because somebody else changed the entry offers to reload
+   * it — without matching on words that change with the language.
+   */
+  it("carries an edit conflict's code beside its sentence", async () => {
+    const result = await runAction("test", async () => {
+      throw new EditConflictError();
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe("editConflict");
+    expect(result.error).toBeTruthy();
   });
 
   /*

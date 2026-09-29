@@ -125,75 +125,98 @@ export async function loadGroupBalances(
   const db = options.db ?? getDb();
   const { groupId, group } = access;
 
-  const participantRows = await db
-    .select({
-      id: participants.id,
-      displayName: participants.displayName,
-    })
-    .from(participants)
-    .where(eq(participants.groupId, groupId))
-    // Stable ordering: rounding remainders and repayment tie-breaks depend on it.
-    .orderBy(asc(participants.createdAt), asc(participants.id));
+  /*
+   * The five reads see one snapshot of the group, or the engine can be handed
+   * half an edit.
+   *
+   * Each used to be a statement of its own on the pool, and under PostgreSQL's
+   * default READ COMMITTED every statement sees whatever has committed by the
+   * time it starts. An edit that committed between the payers and the shares
+   * reads left an expense whose old payers met its new shares, and the engine
+   * — rightly — refused to balance it: the page failed to load with "Expense …
+   * is unbalanced" until somebody reloaded it. REPEATABLE READ takes the
+   * snapshot at the first statement and holds it for the rest, and READ ONLY
+   * says there is nothing here to serialize against.
+   *
+   * One after another, not in parallel: a transaction is one connection, and a
+   * connection answers one statement at a time however many are sent at it.
+   *
+   * A caller that passes a transaction of its own gets a savepoint rather than
+   * a new snapshot — Drizzle ignores the isolation settings on a nested call —
+   * and so reads under whatever that transaction already sees.
+   */
+  const rows = await db.transaction(
+    async (tx): Promise<BalanceRows> => {
+      const participantRows = await tx
+        .select({
+          id: participants.id,
+          displayName: participants.displayName,
+        })
+        .from(participants)
+        .where(eq(participants.groupId, groupId))
+        // Stable ordering: rounding remainders and repayment tie-breaks depend on it.
+        .orderBy(asc(participants.createdAt), asc(participants.id));
 
-  const expenseRows = await db
-    .select({
-      id: expenses.id,
-      direction: expenses.direction,
-      expenseDate: expenses.expenseDate,
-      currency: expenses.currency,
-      convertedCurrency: expenses.convertedCurrency,
-    })
-    .from(expenses)
-    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
+      const expenseRows = await tx
+        .select({
+          id: expenses.id,
+          direction: expenses.direction,
+          expenseDate: expenses.expenseDate,
+          currency: expenses.currency,
+          convertedCurrency: expenses.convertedCurrency,
+        })
+        .from(expenses)
+        .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 
-  const [payerRows, shareRows, settlementRows] = await Promise.all([
-    db
-      .select({
-        expenseId: expensePayers.expenseId,
-        participantId: expensePayers.participantId,
-        amount: expensePayers.amount,
-        convertedAmount: expensePayers.convertedAmount,
-      })
-      .from(expensePayers)
-      .innerJoin(expenses, eq(expenses.id, expensePayers.expenseId))
-      .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
-    db
-      .select({
-        expenseId: expenseShares.expenseId,
-        participantId: expenseShares.participantId,
-        amount: expenseShares.amount,
-        convertedAmount: expenseShares.convertedAmount,
-      })
-      .from(expenseShares)
-      .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
-      .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
-    db
-      .select({
-        id: settlements.id,
-        fromParticipantId: settlements.fromParticipantId,
-        toParticipantId: settlements.toParticipantId,
-        amount: settlements.amount,
-        currency: settlements.currency,
-        convertedAmount: settlements.convertedAmount,
-        convertedCurrency: settlements.convertedCurrency,
-      })
-      .from(settlements)
-      .where(
-        and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
-      ),
-  ]);
+      const payerRows = await tx
+        .select({
+          expenseId: expensePayers.expenseId,
+          participantId: expensePayers.participantId,
+          amount: expensePayers.amount,
+          convertedAmount: expensePayers.convertedAmount,
+        })
+        .from(expensePayers)
+        .innerJoin(expenses, eq(expenses.id, expensePayers.expenseId))
+        .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 
-  return assembleBalances(
-    group,
-    {
-      participants: participantRows,
-      expenses: expenseRows,
-      payers: payerRows,
-      shares: shareRows,
-      settlements: settlementRows,
+      const shareRows = await tx
+        .select({
+          expenseId: expenseShares.expenseId,
+          participantId: expenseShares.participantId,
+          amount: expenseShares.amount,
+          convertedAmount: expenseShares.convertedAmount,
+        })
+        .from(expenseShares)
+        .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
+        .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
+
+      const settlementRows = await tx
+        .select({
+          id: settlements.id,
+          fromParticipantId: settlements.fromParticipantId,
+          toParticipantId: settlements.toParticipantId,
+          amount: settlements.amount,
+          currency: settlements.currency,
+          convertedAmount: settlements.convertedAmount,
+          convertedCurrency: settlements.convertedCurrency,
+        })
+        .from(settlements)
+        .where(
+          and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
+        );
+
+      return {
+        participants: participantRows,
+        expenses: expenseRows,
+        payers: payerRows,
+        shares: shareRows,
+        settlements: settlementRows,
+      };
     },
-    options.contributionsFor ?? null,
+    { isolationLevel: "repeatable read", accessMode: "read only" },
   );
+
+  return assembleBalances(group, rows, options.contributionsFor ?? null);
 }
 
 /**

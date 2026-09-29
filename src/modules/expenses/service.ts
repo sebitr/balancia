@@ -40,6 +40,12 @@ import {
   type SplitInput,
 } from "./split";
 import type { ExpenseInput } from "./schemas";
+import {
+  EditConflictError,
+  entryVersion,
+  nextVersion,
+  versionIs,
+} from "./edit-conflict";
 
 /**
  * Expense service.
@@ -482,12 +488,23 @@ export async function createExpense(
   return expenseId;
 }
 
+/**
+ * Replaces an expense with `input`, whole.
+ *
+ * `expectedVersion` is the version the edit was made from — what `getExpense`
+ * handed out as `version`. With it, the write lands only if nobody has changed
+ * the expense since, and an `EditConflictError` is thrown otherwise, with
+ * nothing written. Without it the edit applies unconditionally, which is what
+ * a caller that never read a version still gets. See `./edit-conflict`.
+ *
+ * Returns the version the expense has now.
+ */
 export async function updateExpense(
   access: GroupAccess,
   expenseId: string,
   input: ExpenseInput,
-  options: { db?: Database; now?: Date } = {},
-): Promise<void> {
+  options: { db?: Database; now?: Date; expectedVersion?: string } = {},
+): Promise<string> {
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
 
@@ -499,7 +516,7 @@ export async function updateExpense(
     on: input.expenseDate,
   });
 
-  const notificationIds = await db.transaction(async (tx) => {
+  const { notificationIds, version } = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: expenses.id, description: expenses.description })
       .from(expenses)
@@ -535,7 +552,7 @@ export async function updateExpense(
     // added to it.
     const previousParticipants = await participantsOfExpense(tx, expenseId);
 
-    await tx
+    const updated = await tx
       .update(expenses)
       .set({
         direction: input.direction ?? "out",
@@ -553,9 +570,28 @@ export async function updateExpense(
         splitMethod: input.splitMethod,
         splitInput: prepared.splitInput,
         expenseDate: input.expenseDate,
-        updatedAt: new Date(),
+        updatedAt: nextVersion(expenses.updatedAt),
       })
-      .where(eq(expenses.id, expenseId));
+      .where(
+        and(
+          eq(expenses.id, expenseId),
+          eq(expenses.groupId, access.groupId),
+          options.expectedVersion === undefined
+            ? undefined
+            : versionIs(expenses.updatedAt, options.expectedVersion),
+        ),
+      )
+      .returning({ version: entryVersion(expenses.updatedAt) });
+
+    /*
+     * The row was there a moment ago — the read above found it — so the only
+     * thing that can leave this empty is the version. A concurrent edit that
+     * committed first is caught here too: this UPDATE waits on its row lock and
+     * then re-checks the condition against the row that edit left behind.
+     * Throwing rolls back everything this transaction has done so far.
+     */
+    const [written] = updated;
+    if (!written) throw new EditConflictError();
 
     // Replace allocations wholesale: a partial update could leave a stale row
     // whose share no longer belongs to the new split.
@@ -611,7 +647,7 @@ export async function updateExpense(
       { db: tx },
     );
 
-    return recordExpenseNotification(tx, access, {
+    const notificationIds = await recordExpenseNotification(tx, access, {
       type: "expense.updated",
       expenseId,
       description: input.description,
@@ -623,6 +659,7 @@ export async function updateExpense(
         ...prepared.shares.map((share) => share.participantId),
       ],
     });
+    return { notificationIds, version: written.version };
   });
 
   await dispatchNotifications(notificationIds);
@@ -631,6 +668,8 @@ export async function updateExpense(
   // or a payer is indistinguishable here from one that fixed a typo, and that
   // is the intended resolution.
   await telemetry.expenseUpdated({ splitMethod: input.splitMethod });
+
+  return version;
 }
 
 export async function deleteExpense(
@@ -922,15 +961,23 @@ export async function listSpreadEntries(
     .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 }
 
-/** A single expense, scoped to its group. Returns null if it is not there. */
+/**
+ * A single expense, scoped to its group. Returns null if it is not there.
+ *
+ * `version` is what an edit of it hands back to `updateExpense` as
+ * `expectedVersion`, so the edit is refused if somebody else got there first.
+ */
 export async function getExpense(
   groupId: string,
   expenseId: string,
   options: { db?: Database } = {},
-): Promise<(ExpenseSummary & { splitInput: SplitInput | null }) | null> {
+): Promise<
+  (ExpenseSummary & { splitInput: SplitInput | null; version: string }) | null
+> {
   const db = options.db ?? getDb();
   const [row] = await db
     .select({
+      version: entryVersion(expenses.updatedAt),
       id: expenses.id,
       direction: expenses.direction,
       description: expenses.description,

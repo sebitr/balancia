@@ -28,7 +28,9 @@ lands here first:
 - **Authorization failures are 404**, indistinguishable from a group that does
   not exist (same rule as the export route). Missing authentication is 401.
   Refusals a person should read (a bad split, a rate limit) are 422 / 429 with
-  `{"error": "..."}`.
+  `{"error": "..."}`. An edit refused because somebody else changed the entry
+  first is 409 with `code: "editConflict"` — see _Editing without overwriting
+  somebody else_.
 - Every response is `Cache-Control: private, no-store`.
 
 ## Sessions
@@ -152,9 +154,9 @@ is off, which is the default.
 | GET    | `/api/groups`                                            | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly.                                                                                                                      |
 | GET    | `/api/groups/:groupId`                                   | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, per-currency overviews, balance rows, suggested repayments, spending periods).                                                                                              |
 | GET    | `/api/groups/:groupId/expenses?limit&offset`             | `listExpenses`, newest first, payers and shares resolved.                                                                                                                                                                                                                                                                         |
-| GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                                                                                                                                     |
+| GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed, and its `version` — also sent as the `ETag` — for the edit to hand back as `If-Match`.                                                                                                                                                              |
 | GET    | `/api/groups/:groupId/settlements?limit`                 | `listSettlements`, newest first.                                                                                                                                                                                                                                                                                                  |
-| GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`).                                                                                                                                                                                                                                     |
+| GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`) and its `version`, also sent as the `ETag`.                                                                                                                                                                                          |
 | GET    | `/api/groups/:groupId/expenses/:expenseId/attachments`   | The receipts on one expense (`id`, `fileName`, `contentType`, `byteSize`); bytes come from the per-attachment download route.                                                                                                                                                                                                     |
 | GET    | `/api/groups/:groupId/participants`                      | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                                                                                                                                               |
 | GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200).                                                                                                                                                                                                                                                                         |
@@ -241,11 +243,11 @@ be the mistake.
 | Method | Path                                               | Body                                                                                                                                                                                                                                      |
 | ------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`. Takes `Idempotency-Key` — see below                                                                                                                                                             |
-| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`)                                                                                                                                                                                 |
+| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`) → `{ok, version}`. Takes `If-Match`; 409 when somebody else changed it first — see below                                                                                        |
 | DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                                                                                                                               |
 | POST   | `/api/groups/:groupId/expenses/:expenseId/restore` | undo for the delete; the expense comes back under its own id, payers and shares intact                                                                                                                                                    |
 | POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`                                                                                                                                                                                            |
-| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema`                                                                                                                                                                                                                   |
+| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema` → `{ok, version}`. Takes `If-Match`, exactly as the expense PATCH does                                                                                                                                            |
 | DELETE | `/api/groups/:groupId/settlements/:settlementId`   | soft delete                                                                                                                                                                                                                               |
 | POST   | `/api/groups/:groupId/settlements/:id/restore`     | undo for the delete                                                                                                                                                                                                                       |
 | POST   | `/api/groups`                                      | `createGroupSchema` → 201 `{groupId, participantId}`. `ownerDisplayName` defaults to the account name.                                                                                                                                    |
@@ -314,6 +316,46 @@ Only the expense create takes a key today. The browser's own offline queue
 uses this exact route rather than the Server Action the form calls when it is
 online, because an action is addressed by an id that changes on every build and
 a queued entry has to survive a deploy — see [offline entry](offline.md).
+
+### Editing without overwriting somebody else
+
+An edit replaces the whole entry, so two people with the same expense open
+used to race without knowing it: the second save put back everything the first
+had just corrected. The two single-entry reads now say which version of the
+entry they returned, and the two PATCHes can be told to apply only to that
+version.
+
+- `GET /api/groups/:groupId/expenses/:expenseId` and
+  `GET /api/groups/:groupId/settlements/:settlementId` answer with an **`ETag`**
+  header and the same token as `version` in the body. Treat it as opaque: it is
+  compared exactly, character for character, and it changes on every edit.
+- Send it back on the PATCH as **`If-Match: "<version>"`**. If nobody has
+  changed the entry since, the edit lands and the answer is
+  `{"ok": true, "version": "…"}` with the new version as the `ETag`, so a second
+  edit needs no fresh read.
+- If somebody has, nothing is written and the answer is **409**:
+
+  ```json
+  { "error": "Somebody else changed this entry…", "code": "editConflict" }
+  ```
+
+  Fetch the entry again, show the person what it says now, and let them decide
+  whether their change still stands. Keep what they typed until they have — the
+  web form does. Merging the two edits is not something the server can do for
+  you: two corrections to one amount have no right answer to pick.
+
+The header is **optional**, and without it nothing has changed: the edit
+applies whatever has happened since, which is what a client built before this
+existed still gets. `*` means the same as no header. A weak tag (`W/"…"`) is
+accepted as its strong self, because a proxy that compresses responses — nginx
+does, by default — weakens the ETag on the way out. Anything that is not a
+version this server issued is kept, not ignored, and so fails with 409: a
+precondition a client asked for is never quietly dropped.
+
+The status is 409 rather than the 412 RFC 9110 gives a failed `If-Match`, so
+that it reads as the refusal it is — somebody else got there first — and so the
+`code` is the thing a client branches on. A deleted entry is still 404, as
+before, whether or not the header was sent.
 
 ### Parsing a sentence
 
