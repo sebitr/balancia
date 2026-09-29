@@ -1566,7 +1566,7 @@ export async function deleteAccount(
     } catch (error) {
       logger.warn(
         {
-          err: error instanceof Error ? error.message : String(error),
+          err: error,
           userId,
         },
         "Avatar object outlived the account that owned it",

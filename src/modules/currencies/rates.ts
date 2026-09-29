@@ -188,7 +188,7 @@ export async function lookupRate(params: {
   } catch (error) {
     logger.warn(
       {
-        err: error instanceof Error ? error.message : String(error),
+        err: error,
         provider: provider.name,
         from,
         to,

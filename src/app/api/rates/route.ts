@@ -96,10 +96,7 @@ async function handleGet(request: Request) {
         { status: 400 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Rate lookup failed",
-    );
+    logger.error({ err: error }, "Rate lookup failed");
     return NextResponse.json(
       { error: "The rate could not be looked up." },
       { status: 500 },

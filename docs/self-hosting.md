@@ -771,7 +771,10 @@ docker compose logs -f app
 docker compose logs -f app   # or `worker`, where the jobs have their own container
 ```
 
-Secrets, tokens and passwords are redacted before anything is written.
+Secrets, tokens and passwords are redacted before anything is written, and a
+failed database statement is logged with its SQLSTATE and statement text but
+without the values bound to it — no address, amount or description rides along
+with a constraint violation into your log collector.
 
 **The database is deliberately not exposed.** To inspect it:
 

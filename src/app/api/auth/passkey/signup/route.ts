@@ -202,10 +202,7 @@ async function failure(
       { status: 400 },
     );
   }
-  logger.error(
-    { err: error instanceof Error ? error.message : String(error) },
-    "Passkey signup failed",
-  );
+  logger.error({ err: error }, "Passkey signup failed");
   const t = await getTranslations("serverErrors");
   return NextResponse.json({ error: t(fallback) }, { status: 500 });
 }

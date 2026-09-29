@@ -178,10 +178,7 @@ async function handlePost(
       );
     }
 
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Receipt scan failed",
-    );
+    logger.error({ err: error, groupId }, "Receipt scan failed");
     return NextResponse.json(
       { error: "The receipt could not be read." },
       { status: 500 },

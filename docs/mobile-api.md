@@ -551,7 +551,7 @@ emit nothing else:
 | `taken`        | 409  | The seat is held by another account — see below                                                         | **`POST` only**        |
 | `authRequired` | 401  | No session. Answered before the token is read, so it never spends one                                   | **`POST` only**        |
 | `rateLimited`  | 429  | Bucket exhausted; carries `Retry-After` in seconds                                                      | both, `GET` and `POST` |
-| `unavailable`  | 500  | A fault on this side; logged in full, reported anonymously                                              | both, `GET` and `POST` |
+| `unavailable`  | 500  | A fault on this side; logged (less any query values), reported anonymously                              | both, `GET` and `POST` |
 
 The split a client needs: **404 and 410 mean the link is dead** and only a new
 one helps; **409** means this account cannot have that particular seat, but the

@@ -152,10 +152,7 @@ async function handlePost(request: Request) {
       nonce: pending.nonce,
     });
   } catch (error) {
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Apple authorization could not be completed",
-    );
+    logger.error({ err: error }, "Apple authorization could not be completed");
     return isLink ? failedLink("appleFailed") : backToSignIn("appleFailed");
   }
 
@@ -166,15 +163,7 @@ async function handlePost(request: Request) {
       if (error instanceof AuthError) {
         return failedLink(error.code ?? "generic");
       }
-      logger.error(
-        {
-          err:
-            error instanceof Error
-              ? (error.stack ?? error.message)
-              : String(error),
-        },
-        "Linking an Apple identity failed",
-      );
+      logger.error({ err: error }, "Linking an Apple identity failed");
       return failedLink("generic");
     }
     return redirectTo("/settings/security", { linked: "apple" });
@@ -194,15 +183,7 @@ async function handlePost(request: Request) {
     if (error instanceof AuthError) {
       return backToSignIn(error.code ?? "generic");
     }
-    logger.error(
-      {
-        err:
-          error instanceof Error
-            ? (error.stack ?? error.message)
-            : String(error),
-      },
-      "Apple sign-in failed",
-    );
+    logger.error({ err: error }, "Apple sign-in failed");
     return backToSignIn("generic");
   }
 

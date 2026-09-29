@@ -444,10 +444,7 @@ async function mailCode(
     // The code is already stored, so a failed send leaves a live token nobody
     // has. Saying so is better than reporting success to a screen that will
     // then wait for a mail that is not coming.
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), purpose },
-      "Could not send a sign-in code",
-    );
+    logger.error({ err: error, purpose }, "Could not send a sign-in code");
     throw new AuthError(
       "The code could not be sent. Try again in a moment.",
       "codeSendFailed",

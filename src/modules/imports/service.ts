@@ -565,7 +565,7 @@ export async function commitImportRun(
           .where(eq(importRows.id, row.id));
         failed += 1;
         logger.warn(
-          { importRunId, rowNumber: row.rowNumber, err: message },
+          { importRunId, rowNumber: row.rowNumber, err: error },
           "Import row failed",
         );
       }

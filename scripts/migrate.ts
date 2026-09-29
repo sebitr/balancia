@@ -21,9 +21,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  logger.error(
-    { err: error instanceof Error ? error.message : String(error) },
-    "Migration failed",
-  );
+  logger.error({ err: error }, "Migration failed");
   process.exitCode = 1;
 });
