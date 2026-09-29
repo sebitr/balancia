@@ -37,6 +37,31 @@ const optionalPort = z.preprocess(
   z.coerce.number().int().min(1).max(65535).optional(),
 );
 
+/**
+ * The secrets this repository commits on purpose, by family: the development
+ * stack's `dev-only-insecure-secret-…` (and the `dev-only-secret-…` the docs
+ * show), CI's `ci-only-secret-…`, the end-to-end suite's `e2e-only-secret-…`,
+ * the unit tests' `test-secret-…`, and the image build's
+ * `build-time-placeholder-…`.
+ *
+ * Every one of them is 32 characters or more, so the length rule passes them
+ * all, and each is one paste away from a production `.env`.
+ */
+const REPOSITORY_SECRET =
+  /^(dev|ci|e2e|test)-(only-)?(insecure-)?secret|insecure|placeholder/i;
+
+/**
+ * Fewer distinct characters than this, and a secret was typed rather than
+ * generated: `aaaa…`, `abab…`, `12341234…`.
+ *
+ * Eight because of the shortest thing a generator hands out. `openssl rand
+ * -hex 16` is 32 characters over sixteen symbols, and shows fewer than eight
+ * of them about once in thirty million draws; ten would refuse one in ten
+ * thousand, and a secret that fails to boot one install in ten thousand is a
+ * bug in the check.
+ */
+const SECRET_MIN_DISTINCT_CHARACTERS = 8;
+
 const envSchema = z
   .object({
     NODE_ENV: z
@@ -88,8 +113,6 @@ const envSchema = z
     WEBAUTHN_RP_ID: optionalString,
     /** Human-readable name shown in the passkey prompt. */
     WEBAUTHN_RP_NAME: z.string().default("Balancia"),
-    /** Comma-separated extra origins allowed to call the auth API. */
-    TRUSTED_ORIGINS: optionalString,
 
     /**
      * How many reverse proxies stand in front of Balancia.
@@ -720,13 +743,38 @@ const envSchema = z
 
     if (
       value.NODE_ENV === "production" &&
-      /^(change-?me|password|secret|balancia)/i.test(value.AUTH_SECRET)
+      (/^(change-?me|password|secret|balancia)/i.test(value.AUTH_SECRET) ||
+        new Set(value.AUTH_SECRET).size < SECRET_MIN_DISTINCT_CHARACTERS)
     ) {
       context.addIssue({
         code: "custom",
         path: ["AUTH_SECRET"],
         message:
           "AUTH_SECRET looks like a placeholder. Generate a real secret, e.g. `openssl rand -base64 48`.",
+      });
+    }
+
+    /*
+     * The secrets this repository commits are refused only where APP_URL is
+     * not loopback, because several of them run production code on purpose:
+     * CI's end-to-end job and the Playwright config start a production server
+     * under theirs, and CI's build job and the Dockerfile build one. Every one
+     * of those has APP_URL on localhost, where nobody else can reach it. A
+     * public instance is the one place a secret anybody can look up costs
+     * something.
+     */
+    if (
+      value.NODE_ENV === "production" &&
+      !isLocalhost &&
+      REPOSITORY_SECRET.test(value.AUTH_SECRET)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["AUTH_SECRET"],
+        message:
+          "AUTH_SECRET is one of the values committed to the Balancia repository — for the " +
+          "development stack, CI or the image build — so anybody can read it. Generate this " +
+          "instance's own: run bootstrap.sh, or `openssl rand -base64 48`.",
       });
     }
   });
@@ -747,7 +795,6 @@ export type RawEnv = z.infer<typeof envSchema>;
 export interface AppEnv extends RawEnv {
   readonly appOrigin: string;
   readonly webAuthnRpId: string;
-  readonly trustedOrigins: readonly string[];
   readonly smtpEnabled: boolean;
   readonly pushEnabled: boolean;
   readonly appleSignInEnabled: boolean;
@@ -779,16 +826,11 @@ function buildEnv(source: NodeJS.ProcessEnv): AppEnv {
   const value = parsed.data;
   const appUrl = new URL(value.APP_URL);
   const appOrigin = appUrl.origin;
-  const extraOrigins = (value.TRUSTED_ORIGINS ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter((origin) => origin.length > 0);
 
   return {
     ...value,
     appOrigin,
     webAuthnRpId: value.WEBAUTHN_RP_ID ?? appUrl.hostname,
-    trustedOrigins: [appOrigin, ...extraOrigins],
     smtpEnabled: Boolean(value.SMTP_HOST && value.SMTP_FROM),
     pushEnabled: Boolean(
       value.PUSH_VAPID_PUBLIC_KEY && value.PUSH_VAPID_PRIVATE_KEY,
