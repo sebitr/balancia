@@ -272,7 +272,11 @@ export async function updateSettlement(
 export async function deleteSettlement(
   access: GroupAccess,
   settlementId: string,
-  options: { db?: Database } = {},
+  options: {
+    db?: Database;
+    /** The expense written in its place; see `deleteExpense`. */
+    replacedBy?: string;
+  } = {},
 ): Promise<void> {
   requirePermission(access, "addSettlement");
   const db = options.db ?? getDb();
@@ -313,6 +317,7 @@ export async function deleteSettlement(
       metadata: {
         amount: deletedSettlement.amount.toString(),
         currency: deletedSettlement.currency,
+        ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
       },
     });
 
