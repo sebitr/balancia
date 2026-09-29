@@ -287,6 +287,15 @@ mobile client: receipts upload to `POST /api/groups/:groupId/attachments`,
 `GET /api/groups/:groupId/export?format=json|csv|xlsx` downloads the group,
 and `GET /api/rates?from&to&on` suggests an exchange rate.
 
+An upload refusal is `{error, code}`: **413** with `fileTooLarge` when the
+body passes `UPLOAD_MAX_BYTES` — counted as it arrives, so a chunked upload
+gets the same answer — and **400** with `fileEmpty`, `fileType` or
+`groupStorageFull`, the last when the group already holds its 2 GiB or 5,000
+receipts. The server stores the bytes it is sent, so a native client should
+strip a photo's EXIF block itself, as the web app does before uploading. The
+export answers **429** with `Retry-After` after ten requests an hour from one
+person for one group.
+
 ### Creating an expense exactly once
 
 `POST /api/groups/:groupId/expenses` accepts an **`Idempotency-Key`** header,

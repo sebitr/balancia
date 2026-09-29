@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { getOcrProvider, OcrProviderError } from "@/lib/ocr/providers";
 import { serializeParsedReceipt } from "@/lib/ocr/serialize";
 import { trackRoute } from "@/lib/metrics/http";
+import { readUploadForm } from "@/lib/upload-limit";
 
 /**
  * Reading a receipt through the operator's configured provider.
@@ -84,15 +85,15 @@ async function handlePost(
     }
 
     const env = getEnv();
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (contentLength > env.UPLOAD_MAX_BYTES + 4096) {
+    // Counted as it arrives: a chunked request declares no length to check.
+    const formData = await readUploadForm(request, env.UPLOAD_MAX_BYTES);
+    if (!formData) {
       return NextResponse.json(
         { error: "That image is too large." },
         { status: 413 },
       );
     }
 
-    const formData = await request.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json(

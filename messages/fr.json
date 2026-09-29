@@ -2511,6 +2511,7 @@
     "fileEmpty": "Ce fichier est vide.",
     "fileTooLarge": "Ce fichier dépasse la limite d’envoi de {limit} Mo.",
     "fileType": "Les reçus doivent être une image JPEG, PNG, WebP, GIF, HEIC ou un PDF.",
+    "groupStorageFull": "Ce groupe n’a plus de place pour les reçus, celui-ci n’a donc pas été conservé.",
     "signedInRequired": "Il faut être connecté.",
     "unknownCurrency": "Balancia ne connaît pas cette devise.",
     "reminderEmpty": "Une relance doit contenir un message.",

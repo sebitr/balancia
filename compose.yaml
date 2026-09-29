@@ -41,6 +41,8 @@ x-app-environment: &app-environment
   TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
   STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
   STORAGE_LOCAL_PATH: /data/uploads
+  # At most 26214400 (25 MiB), the largest body the image is built to receive;
+  # anything higher stops the app at boot. See docs/environment.md.
   UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-10485760}
   S3_BUCKET: ${S3_BUCKET:-}
   S3_REGION: ${S3_REGION:-}

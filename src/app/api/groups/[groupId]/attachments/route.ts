@@ -4,12 +4,15 @@ import { getClientIp } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
+  fileTooLarge,
   uploadAttachment,
   UploadRejectedError,
 } from "@/modules/attachments/service";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { trackRoute } from "@/lib/metrics/http";
+import { describeError } from "@/lib/server-errors";
+import { readUploadForm } from "@/lib/upload-limit";
 
 /**
  * Receipt upload.
@@ -54,17 +57,12 @@ async function handlePost(
       );
     }
 
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    const env = getEnv();
-    // Reject oversize bodies before buffering them.
-    if (contentLength > env.UPLOAD_MAX_BYTES + 4096) {
-      return NextResponse.json(
-        { error: "That file is too large." },
-        { status: 413 },
-      );
-    }
+    // Refused on the bytes that actually arrive, not on the size the request
+    // declared: a chunked upload declares none.
+    const maxBytes = getEnv().UPLOAD_MAX_BYTES;
+    const formData = await readUploadForm(request, maxBytes);
+    if (!formData) throw fileTooLarge(maxBytes);
 
-    const formData = await request.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file was sent." }, { status: 400 });
@@ -84,7 +82,12 @@ async function handlePost(
     });
   } catch (error) {
     if (error instanceof UploadRejectedError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      // In the reader's language, and with the reason as a code for a client
+      // that words its own refusals.
+      return NextResponse.json(
+        { error: await describeError(error), code: error.code },
+        { status: error.code === "fileTooLarge" ? 413 : 400 },
+      );
     }
     if (error instanceof Error && error.name === "AuthorizationError") {
       return NextResponse.json({ error: "Not found." }, { status: 404 });

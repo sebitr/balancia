@@ -2511,6 +2511,7 @@
     "fileEmpty": "That file is empty.",
     "fileTooLarge": "That file is larger than the {limit} MB upload limit.",
     "fileType": "Receipts must be a JPEG, PNG, WebP, GIF, HEIC image or a PDF.",
+    "groupStorageFull": "This group has run out of room for receipts, so this one was not kept.",
     "signedInRequired": "You need to be signed in.",
     "unknownCurrency": "That is not a currency Balancia knows.",
     "reminderEmpty": "A reminder needs something to say.",

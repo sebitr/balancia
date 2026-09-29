@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UPLOAD_CEILING_BYTES } from "./upload-limit";
 
 /**
  * Runtime configuration, validated once at startup.
@@ -119,12 +120,24 @@ const envSchema = z
     S3_SECRET_ACCESS_KEY: optionalString,
     S3_FORCE_PATH_STYLE: booleanish.default(false),
 
-    /** Maximum receipt upload size in bytes (default 10 MiB). */
+    /**
+     * Maximum receipt upload size in bytes (default 10 MiB).
+     *
+     * Capped at `UPLOAD_CEILING_BYTES`, which the build fixed: the proxy in
+     * front of every route keeps no more of a request than `next.config.ts`
+     * allowed it, so a larger value here would promise uploads that arrive cut
+     * in half. See `src/lib/upload-limit.ts`.
+     */
     UPLOAD_MAX_BYTES: z.coerce
       .number()
       .int()
       .min(1024)
-      .max(200 * 1024 * 1024)
+      .max(
+        UPLOAD_CEILING_BYTES,
+        `UPLOAD_MAX_BYTES cannot be above ${UPLOAD_CEILING_BYTES} (25 MiB), ` +
+          "the largest body this build of Balancia can receive. Lower it, " +
+          "or remove it for the default of 10 MiB.",
+      )
       .default(10 * 1024 * 1024),
 
     /** SMTP is optional: without it, verification and recovery are disabled. */

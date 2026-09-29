@@ -5,6 +5,7 @@ import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { ObjectNotFoundError } from "@/lib/storage";
 import { logger } from "@/lib/logger";
 import { trackRoute } from "@/lib/metrics/http";
+import { readUploadForm } from "@/lib/upload-limit";
 import {
   AVATAR_MAX_BYTES,
   AvatarRejectedError,
@@ -101,14 +102,18 @@ async function handlePost(request: Request) {
     );
   }
 
-  // Refused before the body is buffered, so an oversize post costs no memory.
-  const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (contentLength > AVATAR_MAX_BYTES + 4096) {
-    return NextResponse.json({ error: t("pictureTooLarge") }, { status: 413 });
-  }
-
   try {
-    const formData = await request.formData();
+    // Refused as soon as the body passes the limit — on its declared length
+    // when it has one, on the bytes counted so far when it is chunked — so an
+    // oversize post costs no more memory than the limit.
+    const formData = await readUploadForm(request, AVATAR_MAX_BYTES);
+    if (!formData) {
+      return NextResponse.json(
+        { error: t("pictureTooLarge") },
+        { status: 413 },
+      );
+    }
+
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: t("pictureMissing") }, { status: 400 });

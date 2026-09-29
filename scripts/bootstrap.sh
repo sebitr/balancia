@@ -1658,6 +1658,32 @@ TEXT
       ;;
   esac
 
+  # UPLOAD_MAX_BYTES used to be accepted up to 200 MiB, and the app now refuses
+  # to start above 25 MiB — the most a request body can carry through the proxy
+  # layer the image is built with (UPLOAD_CEILING_BYTES in
+  # src/lib/upload-limit.ts; keep the number here in step with it). A higher
+  # value never worked past 10 MiB anyway. A repair for the same reason as the
+  # one above: the alternative is a container that restart-loops.
+  upload_max=$(value_of UPLOAD_MAX_BYTES)
+  case $upload_max in
+    '' | *[!0-9]*) ;;
+    *)
+      if [ "${#upload_max}" -gt 8 ] || [ "$upload_max" -gt 26214400 ]; then
+        heading 'The upload limit is above what Balancia can receive'
+        prose <<'TEXT'
+UPLOAD_MAX_BYTES is set above 26214400 (25 MiB), the largest request
+body this build of Balancia can take in. Uploads past that were cut off
+and failed, and Balancia will not start until the value is lowered.
+
+TEXT
+        if ask_yes_no 'Lower it to 25 MiB?' y; then
+          write_setting UPLOAD_MAX_BYTES 26214400 \
+            'The most this build can receive. Supersedes the line above: last one wins.'
+        fi
+      fi
+      ;;
+  esac
+
   # The two halves of "give the background jobs their own container" are a
   # Compose profile and an application setting, and nothing but this check ties
   # them together. Enabling the profile alone leaves the web process serving
