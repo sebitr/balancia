@@ -99,7 +99,11 @@ export interface ListedExpense extends ExpenseSummary {
   readonly cursorKey: string;
 }
 
-async function assertParticipantsInGroup(
+/**
+ * Step 1 above. Exported for recurring templates, which name the same people
+ * and are held to the same rule when they are saved.
+ */
+export async function assertParticipantsInGroup(
   tx: Database,
   groupId: string,
   participantIds: readonly string[],

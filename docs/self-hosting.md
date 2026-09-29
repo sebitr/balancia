@@ -528,7 +528,10 @@ Nothing needs configuring for this. `RUN_WORKER_IN_WEB` defaults to `true`, and
 the app logs `Background worker is running inside the web process` on startup.
 If it cannot reach the queue it says so loudly and carries on serving pages — a
 queue that is down must not take the app with it — so that line's absence from
-the log is the thing to look for when a recurring expense fails to appear.
+the log is the thing to look for when a recurring expense fails to appear. The
+other is `Recurring template failed to generate`, which names the one template
+that could not produce its entry, and its group; every other template carries
+on, and that one is retried each hour until it can.
 
 ### Giving the jobs their own container
 
