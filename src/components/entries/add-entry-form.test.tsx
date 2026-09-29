@@ -1478,6 +1478,23 @@ describe("the amount field", () => {
   });
 
   /**
+   * Copied out of a banking app, thousands and all. Every mark used to be read
+   * as the decimal, which saved this as 1.23 — a figure plausible enough that
+   * nothing on screen said it was a thousand times short.
+   */
+  it("keeps the thousands in a pasted amount", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("textbox", { name: "Amount" }));
+    await user.paste("1.234,56 €");
+
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue(
+      "1234.56",
+    );
+  });
+
+  /**
    * Yen has no minor unit. An amount already typed as francs has to be brought
    * with the new currency's rules rather than left as something the server
    * would only refuse at save time.

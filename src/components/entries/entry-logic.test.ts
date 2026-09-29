@@ -22,6 +22,17 @@ import {
 const type = (keys: string, currency = "CHF"): string =>
   [...keys].reduce((text, key) => sanitiseAmount(text + key, currency), "");
 
+/** Every value the field holds on the way there, one per key. */
+const keystrokes = (keys: string, currency = "CHF"): string[] => {
+  const held: string[] = [];
+  let text = "";
+  for (const key of keys) {
+    text = sanitiseAmount(text + key, currency);
+    held.push(text);
+  }
+  return held;
+};
+
 describe("sanitiseAmount", () => {
   it("builds an amount character by character", () => {
     expect(type("8460")).toBe("8460");
@@ -85,6 +96,93 @@ describe("sanitiseAmount", () => {
     expect(sanitiseAmount("84.6", "CHF")).toBe("84.6");
     expect(sanitiseAmount("8", "CHF")).toBe("8");
     expect(sanitiseAmount("", "CHF")).toBe("");
+  });
+});
+
+/**
+ * A figure copied out of a banking app or a receipt arrives grouped, and every
+ * mark in it used to be read as the decimal: "1.234,56 €" was saved as 1.23.
+ */
+describe("sanitiseAmount with thousands grouped", () => {
+  it("reads the last of two different marks as the decimal", () => {
+    expect(sanitiseAmount("1,234.56", "USD")).toBe("1234.56");
+    expect(sanitiseAmount("1.234,56", "EUR")).toBe("1234.56");
+    expect(sanitiseAmount("1.234.567,89", "EUR")).toBe("1234567.89");
+  });
+
+  it("reads one mark between groups of three as grouping", () => {
+    expect(sanitiseAmount("1,234,567", "USD")).toBe("1234567");
+    expect(sanitiseAmount("1.234.567", "EUR")).toBe("1234567");
+  });
+
+  /** None of them can be a decimal, so they never needed telling apart. */
+  it("drops spaces and apostrophes, which only ever group", () => {
+    expect(sanitiseAmount("1 234,56", "EUR")).toBe("1234.56");
+    expect(sanitiseAmount("1\u202f234,56", "EUR")).toBe("1234.56");
+    expect(sanitiseAmount("1\u00a0234,56", "EUR")).toBe("1234.56");
+    expect(sanitiseAmount("1'234.50", "CHF")).toBe("1234.50");
+    // The typographic apostrophe, which is what `Intl` writes for de-CH.
+    expect(sanitiseAmount("1\u2019234.50", "CHF")).toBe("1234.50");
+    expect(sanitiseAmount("1\u202f234\u202f567,89", "EUR")).toBe("1234567.89");
+  });
+
+  it("ignores the currency written around the figure", () => {
+    expect(sanitiseAmount("€ 1.234,56", "EUR")).toBe("1234.56");
+    expect(sanitiseAmount("1.234,56 €", "EUR")).toBe("1234.56");
+    expect(sanitiseAmount("1,234.56 USD", "USD")).toBe("1234.56");
+    expect(sanitiseAmount("CHF 1'234.50", "CHF")).toBe("1234.50");
+  });
+
+  it("still stops at the currency's precision", () => {
+    expect(sanitiseAmount("¥1,234,567", "JPY")).toBe("1234567");
+    expect(sanitiseAmount("1.234.567", "JPY")).toBe("1234567");
+    expect(sanitiseAmount("1,234.56", "JPY")).toBe("1234");
+    expect(sanitiseAmount("1,234.567", "BHD")).toBe("1234.567");
+    expect(sanitiseAmount("1.234,5", "BHD")).toBe("1234.5");
+    expect(sanitiseAmount("1.234.567", "BHD")).toBe("1234567");
+    expect(sanitiseAmount("1,234.5678", "BHD")).toBe("1234.567");
+  });
+
+  /** One convention's decimal is the other's thousand. */
+  it("leaves a single mark exactly as ambiguous as before", () => {
+    expect(sanitiseAmount("1.234", "CHF")).toBe("1.23");
+    expect(sanitiseAmount("1,234", "CHF")).toBe("1.23");
+    expect(sanitiseAmount("1,234", "BHD")).toBe("1.234");
+  });
+
+  /**
+   * The field rewrites itself on every key, so a mark typed by hand is a
+   * decimal point from the moment it lands, and what follows is held to that.
+   * Nothing typed ever holds a grouped figure for a later key to reread, which
+   * is the point: the amount never jumps under the reader's finger.
+   */
+  it("never jumps while a grouped figure is typed by hand", () => {
+    const decimals = ["1", "1.", "1.2", "1.23", "1.23", "1.23", "1.23"];
+    expect(keystrokes("1,234.5")).toEqual(decimals);
+    expect(keystrokes("1,234.56")).toEqual([...decimals, "1.23"]);
+    expect(keystrokes("1.234,56")).toEqual([...decimals, "1.23"]);
+
+    const dinars = ["1", "1.", "1.2", "1.23", "1.234", "1.234", "1.234"];
+    expect(keystrokes("1,234.56", "BHD")).toEqual([...dinars, "1.234"]);
+    expect(keystrokes("1.234,56", "BHD")).toEqual([...dinars, "1.234"]);
+  });
+
+  /** Yen has no decimal, so a typed mark is dropped and the digits carry on. */
+  it("lets grouping be typed in a currency with no minor unit", () => {
+    const yen = ["1", "1", "12", "123", "1234", "1234", "12345", "123456"];
+    expect(keystrokes("1,234,567", "JPY")).toEqual([...yen, "1234567"]);
+    expect(keystrokes("1.234.567", "JPY")).toEqual([...yen, "1234567"]);
+  });
+
+  /**
+   * A comma landing on an amount that already has its point is a stray key,
+   * not a German figure. Read as one, "84.6," would become 846.
+   */
+  it("does not reread a point as grouping when a comma is added to it", () => {
+    expect(sanitiseAmount("84.6,", "CHF")).toBe("84.6");
+    expect(sanitiseAmount("84.6,0", "CHF")).toBe("84.60");
+    expect(sanitiseAmount("1.234,", "BHD")).toBe("1.234");
+    expect(type("1.2,3")).toBe("1.23");
   });
 });
 
