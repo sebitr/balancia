@@ -1,3 +1,5 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -53,6 +55,7 @@ import { signOf } from "@/modules/expenses/direction";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { withFragment } from "@/components/entries/drawer-fragment";
 import { PUSH } from "@/components/motion/transitions";
+import { titleAccess } from "../../title-access";
 
 /**
  * One entry, read back.
@@ -77,6 +80,24 @@ const SPLIT_METHODS = {
   shares: { key: "splitShares", icon: PieChart },
 } as const;
 
+/**
+ * The entry, read once for the title and the screen together.
+ *
+ * `cache` is per request, so the second read is the first one's answer rather
+ * than a second round of queries for the same row.
+ */
+const findExpense = cache(getExpense);
+
+/** Named by the entry, as the screen's own heading is. */
+export async function generateMetadata({
+  params,
+}: PageProps<"/groups/[groupId]/expenses/[expenseId]">): Promise<Metadata> {
+  const { groupId, expenseId } = await params;
+  const access = await titleAccess(groupId);
+  const expense = access && (await findExpense(access.groupId, expenseId));
+  return expense ? { title: expense.description } : {};
+}
+
 export default async function TransactionDetailPage({
   params,
   searchParams,
@@ -95,7 +116,7 @@ export default async function TransactionDetailPage({
    */
   const listFilters = listQuery(await searchParams);
 
-  const expense = await getExpense(access.groupId, expenseId);
+  const expense = await findExpense(access.groupId, expenseId);
   if (!expense) {
     notFound();
   }

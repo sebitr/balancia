@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { EntryScreen } from "../../entry-screen";
 
 /**
@@ -14,6 +16,19 @@ import { EntryScreen } from "../../entry-screen";
  * repayment it names — the drawer reads it on the client. See
  * `components/entries/drawer-fragment.ts` for why it is not a query.
  */
+
+/**
+ * Titled as the drawer opens, on an expense.
+ *
+ * Only here, not on the intercepted route beside it: a slot keeps rendering
+ * its page after the reader has walked away from it (see `entry-screen.tsx`),
+ * and a title from there would go on naming a drawer that had closed.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("addEntry");
+  return { title: t("titles.expense") };
+}
+
 export default async function NewEntryPage({
   params,
 }: PageProps<"/groups/[groupId]/expenses/new">) {
