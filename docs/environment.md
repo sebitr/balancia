@@ -277,7 +277,11 @@ password recovery — both simply are not offered, rather than half-working.
 
 **Turning SMTP on changes registration:** new accounts must confirm their email
 before they can sign in. Turning it on after people have registered leaves
-existing accounts unverified and therefore unable to sign in — verify them
+existing accounts unverified and therefore unable to sign in with a password.
+Worse, the first time each of them proves the address — a reset link or a
+sign-in code — Balancia removes every passkey, Apple link and API key the
+account held before, because it cannot tell them from ones a stranger left on
+an address that was never theirs (see `SECURITY.md`). Verify existing accounts
 manually if you do this:
 
 ```sql

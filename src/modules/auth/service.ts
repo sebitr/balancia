@@ -41,6 +41,8 @@ import {
   renderVerifyEmail,
 } from "./emails/templates";
 import { sanitiseFavoriteCurrencies } from "@/modules/currencies/favorites";
+import { revokeAllApiTokensForUser } from "@/modules/api-tokens/service";
+import { endPendingEmailChanges, proveAddress } from "./address-proof";
 
 /**
  * Authentication service.
@@ -90,6 +92,7 @@ export type AuthErrorCode =
   | "passkeySignInExpired"
   | "passkeyUnverified"
   | "passkeyUnverifiedRepeatedly"
+  | "passkeyUserVerificationRequired"
   | "passkeyAlreadyRegistered"
   | "passkeyUnknown"
   | "passkeyNotYours"
@@ -1127,10 +1130,12 @@ export async function verifyEmail(
   );
   if (!consumed) return null;
 
-  await db
-    .update(users)
-    .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
-    .where(eq(users.id, consumed.userId));
+  // Anything that got into the account before its address was proved goes
+  // now; see `proveAddress`. The password stays, because this link was mailed
+  // to whoever registered with it.
+  await db.transaction((tx) =>
+    proveAddress(consumed.userId, { db: tx, password: "keep" }),
+  );
   // Whose address was just proved, so the link can sign them in: the token
   // was the whole of the proof, and asking for a password after it is
   // asking twice.
@@ -1221,13 +1226,38 @@ export async function resetPassword(
   const { userId } = consumed;
 
   const passwordHash = await hashPassword(newPassword);
-  await db
-    .update(users)
-    .set({ passwordHash, updatedAt: new Date() })
-    .where(eq(users.id, userId));
+  await db.transaction(async (tx) => {
+    /*
+     * The link was opened from the inbox, so this proves the address like any
+     * other — and for an account that never had it proved, it is the first
+     * time. Everything that got in before that goes, passkeys included; see
+     * `proveAddress`. It is also what makes the password just chosen usable:
+     * `signInWithPassword` refuses an unproved address wherever mail is on.
+     */
+    await proveAddress(userId, { db: tx, password: "keep" });
+    await tx
+      .update(users)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, userId));
 
-  // Anyone signed in with the old password loses their session.
-  await revokeAllSessionsForUser(userId, { db });
+    /*
+     * What a reset ends on every account, proved or not: each session, each
+     * API key, and any email change still waiting for its link. Those are
+     * what a session held for a few minutes by somebody else can leave behind
+     * — a key needs nothing more to mint and never expires, and a pending
+     * change would carry the recovery address off to their inbox an hour
+     * later. A reset is what the owner is told to do when they suspect exactly
+     * that, so it has to be the thing that ends it.
+     *
+     * Passkeys and an Apple link on a proved address stay. They are the
+     * owner's own in the ordinary case, and somebody who forgot a password
+     * should not have to enrol every device again as well. They are listed on
+     * the security screen, one tap each, for the owner who suspects more.
+     */
+    await revokeAllSessionsForUser(userId, { db: tx });
+    await revokeAllApiTokensForUser(userId, { db: tx });
+    await endPendingEmailChanges(userId, { db: tx });
+  });
   logger.info({ userId }, "Password reset completed");
   return true;
 }
@@ -1468,10 +1498,19 @@ export async function confirmEmailChange(
    * frequently a device that has never signed in. The route already sends a
    * caller with no session to /sign-in, so the person who confirms on their
    * phone lands where they were going anyway — now with the new address.
+   *
+   * API keys go too, for the reason they go on a reset: a key outlives every
+   * session and needs only one to mint, so ending the sessions alone would
+   * leave standing the one thing a borrowed session is most likely to have
+   * made.
    */
   const ended = await revokeAllSessionsForUser(userId, { db });
+  const revokedKeys = await revokeAllApiTokensForUser(userId, { db });
 
-  logger.info({ userId, ended }, "Email change confirmed; sessions revoked");
+  logger.info(
+    { userId, ended, revokedKeys },
+    "Email change confirmed; sessions and API keys revoked",
+  );
   return "changed";
 }
 
