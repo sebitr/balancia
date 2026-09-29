@@ -34,6 +34,10 @@ import {
 import { loadGroupBalances } from "@/modules/balances/service";
 import { balancesSumToZero } from "@/modules/balances/engine";
 import {
+  findRestorableDeletions,
+  listGroupActivity,
+} from "@/modules/activity/service";
+import {
   addTestParticipant,
   createTestGroup,
   createTestUser,
@@ -1329,6 +1333,70 @@ describe("changing an entry's kind", () => {
     ).rejects.toBeInstanceOf(AuthorizationError);
 
     expect(await liveSettlements(group.groupId)).toHaveLength(0);
+  });
+
+  /*
+   * The old row's deletion is on the Activity screen like any other, and that
+   * screen offers deletions back. This one it must not: putting the expense
+   * back beside the repayment that replaced it would count the money twice.
+   * The deletion names its replacement, which is how the screen tells.
+   */
+  it("does not offer the expense it replaced back from Activity", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    const expenseId = await createExpense(group.access, lunch);
+
+    const settlementId = await convertExpenseToSettlement(
+      group.access,
+      expenseId,
+      repayment,
+      { clientKey: randomUUID() },
+    );
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const deletion = entries.find(
+      (entry) =>
+        entry.action === "expense.deleted" && entry.entityId === expenseId,
+    );
+    expect(deletion?.metadata).toMatchObject({ replacedBy: settlementId });
+    expect(await findRestorableDeletions(group.access, entries)).toEqual(
+      new Set(),
+    );
+  });
+
+  it("does not offer the repayment it replaced back from Activity", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    const settlementId = await createSettlement(group.access, repayment);
+
+    const expenseId = await convertSettlementToExpense(
+      group.access,
+      settlementId,
+      lunch,
+      { clientKey: randomUUID() },
+    );
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const deletion = entries.find(
+      (entry) =>
+        entry.action === "settlement.deleted" &&
+        entry.entityId === settlementId,
+    );
+    expect(deletion?.metadata).toMatchObject({ replacedBy: expenseId });
+    expect(await findRestorableDeletions(group.access, entries)).toEqual(
+      new Set(),
+    );
+  });
+
+  it("still offers an ordinary deletion back from Activity", async () => {
+    // The other side of the two above: without it, a restore that was never
+    // offered for anything would pass them just as well.
+    const { group, lunch } = await lunchOwedByBlaise();
+    const expenseId = await createExpense(group.access, lunch);
+    await deleteExpense(group.access, expenseId);
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const restorable = await findRestorableDeletions(group.access, entries);
+
+    expect(restorable.size).toBe(1);
   });
 });
 

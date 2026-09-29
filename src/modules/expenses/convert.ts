@@ -45,6 +45,10 @@ import { expenseForClientKey, removeExpense, writeExpense } from "./service";
  * A move that fails for any other reason leaves the entry where it was, under
  * its old kind — which is also what the reader was looking at when they
  * pressed the button.
+ *
+ * The old row's deletion names the new one as `replacedBy`, so the Activity
+ * screen does not offer it back: restoring it beside its replacement would
+ * count the same money twice. See `findRestorableDeletions`.
  */
 
 export async function convertExpenseToSettlement(
@@ -82,7 +86,9 @@ export async function convertExpenseToSettlement(
         rateSource,
         clientKey: options.clientKey,
       });
-      const removed = await removeExpense(tx, access, expenseId);
+      const removed = await removeExpense(tx, access, expenseId, {
+        replacedBy: written.settlementId,
+      });
       return {
         ...written,
         notificationIds: [...written.notificationIds, ...removed],
@@ -145,7 +151,9 @@ export async function convertSettlementToExpense(
         rateSource,
         clientKey: options.clientKey,
       });
-      const removed = await removeSettlement(tx, access, settlementId);
+      const removed = await removeSettlement(tx, access, settlementId, {
+        replacedBy: written.expenseId,
+      });
       return {
         ...written,
         notificationIds: [...written.notificationIds, ...removed],
