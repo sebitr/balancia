@@ -356,35 +356,50 @@ export function displayMoneySql(
   };
 }
 
-/** Every currency the app supports, by how many minor-unit digits it has. */
-const CODES_BY_EXPONENT: ReadonlyMap<number, readonly string[]> = (() => {
-  const byExponent = new Map<number, string[]>();
+/**
+ * Every currency the app supports, grouped by how many minor-unit digits it
+ * has. Each group is typed non-empty because it is: a group only exists once
+ * a currency has put itself in it, so its first code is always there to
+ * stand for the rest.
+ */
+const CODES_BY_EXPONENT: readonly (readonly [string, ...string[]])[] = (() => {
+  const byExponent = new Map<number, [string, ...string[]]>();
   for (const { code, exponent } of SUPPORTED_CURRENCIES) {
-    byExponent.set(exponent, [...(byExponent.get(exponent) ?? []), code]);
+    const codes = byExponent.get(exponent);
+    if (codes) codes.push(code);
+    else byExponent.set(exponent, [code]);
   }
-  return byExponent;
+  return [...byExponent.values()];
 })();
+
+/** A typed bound in minor units, and the currencies whose minor units they are. */
+interface ExponentBound {
+  readonly codes: readonly string[];
+  readonly bound: bigint;
+}
 
 /**
  * A typed bound in the minor units of each exponent a currency can have — the
  * same `amountBound` the browser runs, once per exponent rather than once per
- * row — or null when what was typed is not a number yet.
+ * row, with any code of that exponent standing for all of them — or null when
+ * what was typed is not a number yet.
  */
-function boundsByExponent(input: string): ReadonlyMap<number, bigint> | null {
-  const bounds = new Map<number, bigint>();
-  for (const [exponent, codes] of CODES_BY_EXPONENT) {
-    const bound = amountBound(input, codes[0]);
+function boundsByExponent(input: string): readonly ExponentBound[] | null {
+  const bounds: ExponentBound[] = [];
+  for (const codes of CODES_BY_EXPONENT) {
+    const [sample] = codes;
+    const bound = amountBound(input, sample);
     if (bound === null) return null;
-    bounds.set(exponent, bound);
+    bounds.push({ codes, bound });
   }
   return bounds;
 }
 
 /** The bound that applies to a row, picked by its currency's exponent. */
-function boundSql(currency: SQL, bounds: ReadonlyMap<number, bigint>): SQL {
-  const branches = [...bounds].map(
-    ([exponent, bound]) =>
-      sql`WHEN ${currency} = ANY(${sql.param(CODES_BY_EXPONENT.get(exponent))}::text[]) THEN ${bound.toString()}::bigint`,
+function boundSql(currency: SQL, bounds: readonly ExponentBound[]): SQL {
+  const branches = bounds.map(
+    ({ codes, bound }) =>
+      sql`WHEN ${currency} = ANY(${sql.param(codes)}::text[]) THEN ${bound.toString()}::bigint`,
   );
   return sql`(CASE ${sql.join(branches, sql` `)} END)`;
 }
