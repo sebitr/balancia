@@ -432,10 +432,15 @@ Default `0`, meaning the built-in protective limits apply:
 | Action                   | Limit                        |
 | ------------------------ | ---------------------------- |
 | Sign in                  | 10 per IP per 5 minutes      |
+| Sign in, one address     | 20 per email per hour        |
+| Change password          | 10 per account per hour      |
 | Register                 | 5 per IP per hour            |
 | Register, one address    | 3 per email per day          |
 | Register, whole instance | 50 per hour                  |
 | Password reset request   | 5 per IP per hour            |
+| Reset link, one inbox    | 3 per email per hour         |
+| Sign-in code request     | 5 per IP per hour            |
+| Sign-in code, one inbox  | 3 per email per hour         |
 | Guest link redemption    | 20 per IP per 10 minutes     |
 | Receipt upload           | 60 per IP per 10 minutes     |
 | Exchange-rate lookup     | 240 per IP per 10 minutes    |
@@ -448,6 +453,15 @@ sender it can be aimed at somebody else's inbox from a pool of addresses; keyed
 on the _recipient_ it cannot. The instance-wide row is the backstop against a
 botnet, which is scarce in neither addresses nor targets.
 
+The other _one address_ and _one inbox_ rows are there for the same reason.
+Guessing at one account's password from many addresses never reaches the
+per-IP sign-in row, and nor does a stream of reset links or codes aimed at one
+inbox — each of which also cancelled the one before it. Past an inbox's share
+the request is answered as though it had gone out and nothing is sent, so the
+newest link or code stays live. The per-address sign-in row is spent for every
+address typed, registered or not, so being refused by it says nothing about
+which addresses have an account.
+
 A non-zero value raises the credential limits. **Only do this where many
 legitimate attempts genuinely share one address** — an automated test suite
 against a private instance. On a public deployment these limits are what make
@@ -458,6 +472,11 @@ Rate limiting keys on the client IP, taken from the rightmost entry of
 [`TRUSTED_PROXY_HOPS`](#trusted_proxy_hops) — and from `X-Real-IP` when there
 is no `X-Forwarded-For` at all. If your proxy sets neither, every request looks
 like one client and the limits apply to everyone collectively.
+
+An IPv6 client is counted by its /64 rather than by its address: one
+subscriber is given at least that many addresses, and would otherwise take a
+fresh allowance with each. An IPv4 address written as IPv6 (`::ffff:192.0.2.1`)
+counts as the IPv4 address. Sessions and logs still record the address itself.
 
 ---
 

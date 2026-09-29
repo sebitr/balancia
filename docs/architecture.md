@@ -249,9 +249,16 @@ largest creditor) that is presentation-only: it never alters recorded history.
   from participant to user account is an `UPDATE … WHERE user_id IS NULL`, so
   two people racing for the same name cannot both be told they won.
 - Rate limiting: PostgreSQL-backed fixed-window limiter on sign-in,
-  registration, password reset, email change and both kinds of link redemption.
-  The email-change bucket is keyed by account rather than by client address,
-  because what it spends is mail to an inbox the caller chose.
+  registration, password reset and change, sign-in codes, email change and both
+  kinds of link redemption. Where what is being spent belongs to somebody, the
+  bucket is keyed on them as well as on the caller: password sign-in on the
+  address typed, a password change and an email change on the account, reset
+  and code mail on the inbox it goes to. The client address is counted from the
+  right of `X-Forwarded-For` (`TRUSTED_PROXY_HOPS`), and an IPv6 client by its
+  /64 (`lib/security/client-address.ts`), at the one place a key is formed;
+  sessions and logs keep the full address. Reset and code mail is issued and
+  sent from `after()`, so the answer takes the same time whether or not the
+  address has an account.
 - Account recovery and email change: single-use hashed tokens, opened from a
   link, spent by a route handler so the token is consumed exactly once and does
   not survive into the address bar. A reset ends every session; an email change

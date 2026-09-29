@@ -25,6 +25,8 @@ import {
   renderVerifyCodeEmail,
 } from "./emails/templates";
 import { issueCode, consumeCode } from "./verification-codes";
+import type { Deliver } from "./deliver";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
   insertPasskey,
   startSignupPasskeyRegistration,
@@ -323,16 +325,31 @@ export async function verifySignupCode(
  *
  * Resolves the same way whether or not the address is registered — the same
  * rule `requestPasswordReset` follows, and for the same reason: an endpoint
- * that answers differently is an endpoint that lists a deployment's users.
+ * that answers differently is an endpoint that lists a deployment's users. It
+ * follows that rule's other half too, and hands the code and the mail to
+ * `deliver`, so an account's SMTP round trip is not the tell its words are
+ * careful not to be.
  */
 export async function requestSignInCode(
   email: string,
   context: RequestContext = {},
-  options: { db?: Database } = {},
+  options: { db?: Database; deliver?: Deliver } = {},
 ): Promise<void> {
   assertMailable();
   const db = options.db ?? getDb();
   const normalized = normalizeEmail(email);
+
+  // One inbox's share, for every address and before the lookup; past it,
+  // nothing is issued and the code already in that inbox stays the live one.
+  // `requestPasswordReset` has the long form.
+  const recipient = await consumeRateLimit("signInCodeEmail", normalized);
+  if (!recipient.allowed) {
+    logger.info(
+      { reason: "recipient-limit" },
+      "Sign-in code not mailed; this address has had its share for now",
+    );
+    return;
+  }
 
   const [row] = await db
     .select({
@@ -347,12 +364,15 @@ export async function requestSignInCode(
 
   if (!row || row.disabledAt) return;
 
-  await mailCode(
-    row.id,
-    row.email,
-    "sign_in_code",
-    { ...context, locale: row.locale ?? context.locale },
-    { db },
+  const deliver: Deliver = options.deliver ?? ((work) => work());
+  await deliver(() =>
+    mailCode(
+      row.id,
+      row.email,
+      "sign_in_code",
+      { ...context, locale: row.locale ?? context.locale },
+      { db },
+    ),
   );
 }
 
@@ -443,7 +463,9 @@ async function mailCode(
   } catch (error) {
     // The code is already stored, so a failed send leaves a live token nobody
     // has. Saying so is better than reporting success to a screen that will
-    // then wait for a mail that is not coming.
+    // then wait for a mail that is not coming — where there is still a screen
+    // to say it to. A sign-in code is mailed after the answer has gone, and
+    // this ends in the log `afterResponse` writes instead.
     logger.error(
       { err: error instanceof Error ? error.message : String(error), purpose },
       "Could not send a sign-in code",

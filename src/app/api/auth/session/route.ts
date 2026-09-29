@@ -3,7 +3,11 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { getClientIp, getCurrentActor } from "@/lib/security/actor";
-import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
+import {
+  consumeRateLimit,
+  enforcePasswordSignInLimits,
+  RateLimitedError,
+} from "@/lib/security/rate-limit";
 import { signInWithPassword } from "@/modules/auth/service";
 import { signInWithCode } from "@/modules/auth/signup";
 import { normalizeCode } from "@/modules/auth/code-format";
@@ -43,10 +47,10 @@ import { trackRoute } from "@/lib/metrics/http";
  * `code` that `POST /api/auth/code` mailed — the web's "Email me a sign-in
  * code", which is the only way in this route can offer an account that was
  * created with a code or a passkey and so has no password to type. Each
- * proof keeps the bucket the web's action holds it to: the password by
- * caller, the code by address, because the guessing a code limit stops is
- * guessing at *one account's* code, and an attacker changing IP between
- * attempts must not get a fresh allowance for it.
+ * proof keeps the buckets the web's action holds it to: the password by
+ * caller and by address, the code by address, because the guessing either
+ * limit stops is guessing at *one account's* secret, and an attacker changing
+ * IP between attempts must not get a fresh allowance for it.
  *
  * GET answers "who am I" for app launch; DELETE is sign-out. A guest cookie
  * is reported by GET but never created here — guests come in through the
@@ -93,10 +97,7 @@ async function handlePost(request: Request) {
 
     let result;
     if ("password" in parsed.data) {
-      const limit = await consumeRateLimit("signIn", ipAddress);
-      if (!limit.allowed) {
-        throw new RateLimitedError(limit.retryAfterSeconds);
-      }
+      await enforcePasswordSignInLimits(ipAddress, parsed.data.email);
       result = await signInWithPassword(parsed.data, context);
     } else {
       const limit = await consumeRateLimit(

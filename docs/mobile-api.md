@@ -34,7 +34,7 @@ lands here first:
 ## Sessions
 
 Cookie-based, exactly like the browser: `POST /api/auth/session` runs the same
-rate limit and `signInWithPassword` as the sign-in action and sets the
+rate limits and `signInWithPassword` as the sign-in action and sets the
 `balancia_session` cookie; URLSession-style clients store and return it on
 their own. That is the way in for a client acting _as the person_ — a native
 app, a browser, anything with a screen to type a password into.
@@ -49,7 +49,7 @@ answered_ below.
 
 | Method | Path                | Notes                                                                                                                                                                   |
 | ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/auth/session` | `{email, password}` → `{user}`, sets cookie. 401 on bad credentials, 429 under the `signIn` rate bucket.                                                                |
+| POST   | `/api/auth/session` | `{email, password}` → `{user}`, sets cookie. 401 on bad credentials, 429 under `signIn`, keyed by client, or `signInEmail`, keyed by the address typed (20 an hour).    |
 | POST   | `/api/auth/session` | `{email, code}` — the six digits `POST /api/auth/code` mailed — → `{user}`, sets cookie. 401 on a wrong or expired code, 429 under `verifyCode`, keyed by address.      |
 | POST   | `/api/auth/code`    | `{email}` → `{ok: true}`, always, whether or not the address has an account. Mails a sign-in code under the `signInCode` bucket; 422 on an instance without SMTP.       |
 | GET    | `/api/auth/options` | Anonymous: `{password, code, passkey, apple}` — which ways in this instance offers, so a client hides a button before offering one that cannot work.                    |
@@ -81,6 +81,14 @@ minutes and works once; a wrong guess does not spend it, but the address's
 retires the one before it, so a client should wait on the first mail rather
 than tap twice — the web's button counts down thirty seconds for exactly that
 reason.
+
+One inbox is sent at most three codes an hour, whoever asks. Past that the
+route still answers `{ok: true}` but mails nothing and retires nothing, so the
+last code sent stays the one that works; a client cannot tell the difference,
+and that is the point. The code is mailed after the answer has gone, so
+`{ok: true}` takes the same time for an address with an account as without,
+and a mail server that fails is a line in the instance's log rather than an
+error on the screen.
 
 `GET /api/auth/options` says whether the instance can do this at all — `code`
 is false without SMTP, and on the public demo — and, beside it, whether Sign in

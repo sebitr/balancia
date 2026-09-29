@@ -250,8 +250,8 @@ const envSchema = z
     ),
 
     /**
-     * Overrides the per-IP limit on credential endpoints (sign-in, sign-up,
-     * password reset).
+     * Overrides the limits on credential endpoints (sign-in, sign-up,
+     * password reset and change, sign-in codes), per IP and per address alike.
      *
      * Left at 0, the protective built-in limits apply. Raise it only where many
      * legitimate attempts share one address — an automated test suite against a

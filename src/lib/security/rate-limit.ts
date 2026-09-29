@@ -4,6 +4,7 @@ import { getDb, rowsAffected } from "@/lib/db/client";
 import { rateLimits } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import { rateLimitRefusals } from "@/lib/metrics/metrics";
+import { rateLimitAddress } from "./client-address";
 
 /**
  * Fixed-window rate limiting backed by PostgreSQL.
@@ -23,16 +24,20 @@ export interface RateLimitPolicy {
 
 export type RateLimitBucket =
   | "signIn"
+  | "signInEmail"
+  | "passwordChange"
   | "signUp"
   | "signUpEmail"
   | "signUpTotal"
   | "proofOfWork"
   | "verifyCode"
   | "signInCode"
+  | "signInCodeEmail"
   | "guestRedeem"
   | "guestGroup"
   | "joinRedeem"
   | "passwordReset"
+  | "passwordResetEmail"
   | "emailChange"
   | "upload"
   | "receiptScan"
@@ -59,6 +64,37 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
   const authMax = getEnv().AUTH_RATE_LIMIT_MAX;
   return {
     signIn: { limit: Math.max(10, authMax), windowSeconds: 300 },
+    /*
+     * The same guessing, counted on the address being guessed at rather than
+     * on whoever is guessing.
+     *
+     * `signIn` is per client, and an attacker is not short of clients: a
+     * proxy pool, a botnet or one IPv6 subscriber's /48 buys a fresh ten every
+     * five minutes, every one of them aimed at the same account and every one
+     * a 128 MB scrypt this instance pays for. Keyed on the address typed, the
+     * guessing cannot be spread out.
+     *
+     * Spent for any address, registered or not, before the account is looked
+     * up: the refusal arrives on the same attempt either way, in the same
+     * sentence `signIn` gives, and says nothing about whether anybody is there.
+     *
+     * Twenty an hour is two full `signIn` windows for somebody who has
+     * forgotten which password this was, and 480 guesses a day against a
+     * password the policy has already made long and uncommon. The price is
+     * that a stranger can spend it and shut somebody's password door for the
+     * rest of the hour. The code, passkey and Apple doors are counted apart,
+     * which is what keeps that an inconvenience rather than a lockout.
+     */
+    signInEmail: { limit: Math.max(20, authMax), windowSeconds: 3600 },
+    /*
+     * The Security screen's "current password", per account. Whoever reaches
+     * it already holds a session, and that is exactly the case this is for: a
+     * session taken from somebody must not become a free oracle for the one
+     * thing it does not already give the thief — the password itself, to lock
+     * the owner out with or to try somewhere else. Every attempt counts, a
+     * refused new password included; ten an hour is room for both.
+     */
+    passwordChange: { limit: Math.max(10, authMax), windowSeconds: 3600 },
     /*
      * The sign-in options handout, which writes a challenge row every time it
      * answers. Autofill arms one on every visit to the sign-in page and again
@@ -123,6 +159,21 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // so it is held to the same ceiling as a password reset.
     signInCode: { limit: Math.max(5, authMax), windowSeconds: 3600 },
     passwordReset: { limit: Math.max(5, authMax), windowSeconds: 3600 },
+    /*
+     * Those two again, keyed on the inbox being written to rather than on
+     * whoever asked — the `signUpEmail` argument, and one thing worse. Each
+     * request supersedes the link or code before it, so a stream of them
+     * aimed at one address did not only fill an inbox: it kept whatever its
+     * owner had just been sent permanently dead.
+     *
+     * Three an hour is a mail that did not arrive, one that did, and a spare.
+     * Past that the request is answered exactly as one that went out, and
+     * nothing is issued (see `requestPasswordReset`): the newest link stays
+     * the live one, and the caller — who may not own the address — learns
+     * nothing about it, not even that somebody else has been asking.
+     */
+    passwordResetEmail: { limit: Math.max(3, authMax), windowSeconds: 3600 },
+    signInCodeEmail: { limit: Math.max(3, authMax), windowSeconds: 3600 },
     // Keyed by account rather than by address: each attempt mails a stranger's
     // inbox on a signed-in person's say-so, so the ceiling belongs to whoever
     // is asking. Room for a typo and a correction, not for a mail campaign.
@@ -208,6 +259,12 @@ function windowStart(policy: RateLimitPolicy, now: Date): Date {
  * `key` should identify the actor as narrowly as is safe — usually the client
  * IP, or the IP plus a token prefix. Never pass a raw token: this value is
  * stored.
+ *
+ * A key that is a client address is counted by `rateLimitAddress` — an IPv6
+ * client by its /64 — here rather than at each call site, so a limit added
+ * tomorrow cannot forget to. `getClientIp` keeps returning the address itself,
+ * for the session rows and logs that want to know where somebody really was.
+ * Every other key, being no kind of address, is stored as given.
  */
 export async function consumeRateLimit(
   bucketName: RateLimitBucket,
@@ -217,7 +274,7 @@ export async function consumeRateLimit(
   const policy = policies()[bucketName];
   const now = options.now ?? new Date();
   const start = windowStart(policy, now);
-  const bucket = `${bucketName}:${key}`;
+  const bucket = `${bucketName}:${rateLimitAddress(key)}`;
 
   const db = getDb();
   const [row] = await db
@@ -302,6 +359,34 @@ export async function enforceSignUpLimits(
     // Lowercased, never normalised further: this is a rate-limit key, not an
     // identity, and it must not need the auth module to compute.
     ["signUpEmail", email.trim().toLowerCase()],
+  ];
+
+  for (const [bucket, key] of attempts) {
+    const limit = await consumeRateLimit(bucket, key);
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
+  }
+}
+
+/**
+ * The two ceilings a password is guessed against, spent before scrypt runs.
+ *
+ * Shared by the web's sign-in action and the mobile session route, for the
+ * reason `enforceSignUpLimits` is shared: a door that grew a limit the other
+ * did not would be the door everybody used.
+ *
+ * The caller first, so an attacker already refused for hammering from one
+ * place does not go on spending the allowance of the account they are aiming
+ * at — that allowance is its owner's too.
+ */
+export async function enforcePasswordSignInLimits(
+  ipAddress: string,
+  email: string,
+): Promise<void> {
+  const attempts: readonly [RateLimitBucket, string][] = [
+    ["signIn", ipAddress],
+    // Lowercased like `signUpEmail`, so a change of case is not a new
+    // allowance for the same account.
+    ["signInEmail", email.trim().toLowerCase()],
   ];
 
   for (const [bucket, key] of attempts) {

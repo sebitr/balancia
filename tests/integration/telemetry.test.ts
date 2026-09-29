@@ -56,7 +56,9 @@ import { addTestParticipant, isoToday } from "../helpers/factories";
 /** The signed-in user `requireInstanceAdmin` will see. */
 const currentUser = vi.hoisted(() => ({ value: null as UserActor | null }));
 
-vi.mock("@/lib/security/actor", () => ({
+vi.mock("@/lib/security/actor", async (importOriginal) => ({
+  // The real `clientIpFrom`, which the collector reads its sender with.
+  ...(await importOriginal<typeof import("@/lib/security/actor")>()),
   getCurrentUser: async () => currentUser.value,
   getCurrentActor: async () => currentUser.value,
   getClientIp: async () => "127.0.0.1",
