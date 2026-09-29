@@ -77,7 +77,10 @@ function backup(args: string[] = []) {
     {
       cwd: install,
       encoding: "utf8",
+      // Nothing else from the calling shell, so that nothing set there can
+      // change what the script does.
       env: {
+        NODE_ENV: "test",
         HOME: dir,
         PATH: `${path.join(dir, "bin")}:${process.env.PATH ?? ""}`,
       },

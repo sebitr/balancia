@@ -39,6 +39,7 @@ let work: string;
 let server: string;
 
 const gitEnv = (): NodeJS.ProcessEnv => ({
+  NODE_ENV: "test",
   // Nothing from the calling user's git configuration: commit signing, hooks
   // or a default branch of their own would each change what happens here.
   HOME: dir,
@@ -84,7 +85,6 @@ function deploy(args: string[] = []) {
       encoding: "utf8",
       env: {
         ...gitEnv(),
-        NODE_ENV: "test",
         PATH: `${path.join(dir, "bin")}:${process.env.PATH ?? ""}`,
       },
     },
