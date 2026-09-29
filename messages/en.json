@@ -978,7 +978,7 @@
     "descriptionPlaceholder": "Rent",
     "amount": "Amount",
     "currency": "Currency",
-    "rateHint": "Reused for each generated occurrence.",
+    "rateHint": "Used for each occurrence, unless that day's rate can be looked up.",
     "repeats": "Repeats",
     "weekly": "Weekly",
     "monthly": "Monthly",

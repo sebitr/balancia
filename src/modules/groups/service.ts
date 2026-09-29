@@ -22,6 +22,7 @@ import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
 import { telemetry } from "@/lib/telemetry";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import { DEFAULT_JOIN_LINK_EXPIRY, expiryDate } from "@/modules/join/expiry";
+import { rescheduleAfterUnarchive } from "@/modules/recurring/service";
 import type {
   AddParticipantInput,
   CreateGroupInput,
@@ -489,16 +490,31 @@ export async function setGroupSplitDefault(
 export async function setGroupArchived(
   access: GroupAccess,
   archived: boolean,
-  options: { db?: Database } = {},
+  options: { db?: Database; now?: Date } = {},
 ): Promise<void> {
   requirePermission(access, "manageGroupSettings");
   const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
 
   await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ archivedAt: groups.archivedAt })
+      .from(groups)
+      .where(eq(groups.id, access.groupId))
+      .limit(1);
+
     await tx
       .update(groups)
-      .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
+      .set({ archivedAt: archived ? now : null, updatedAt: now })
       .where(eq(groups.id, access.groupId));
+
+    // Coming out of the archive, recurring templates pick up at their next
+    // occurrence rather than back-filling the months the group spent there.
+    // Only when it really was archived: un-archiving a group that never was
+    // must not drop what an outage had left its templates owing.
+    if (!archived && before?.archivedAt) {
+      await rescheduleAfterUnarchive(tx, access.groupId, now);
+    }
 
     await recordActivity(tx, {
       groupId: access.groupId,

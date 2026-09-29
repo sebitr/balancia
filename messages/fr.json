@@ -978,7 +978,7 @@
     "descriptionPlaceholder": "Loyer",
     "amount": "Montant",
     "currency": "Devise",
-    "rateHint": "Réutilisé pour chaque occurrence générée.",
+    "rateHint": "Utilisé pour chaque occurrence, sauf si le taux du jour peut être récupéré.",
     "repeats": "Répétition",
     "weekly": "Chaque semaine",
     "monthly": "Chaque mois",
