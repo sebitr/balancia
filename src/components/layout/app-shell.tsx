@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { SplittingWordmark } from "@/components/brand/splitting-wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { InstallInstructions } from "@/components/pwa/install-instructions";
+import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NotificationRefresh } from "@/components/notifications/notification-refresh";
 import { Screen } from "@/components/motion/screen";
@@ -111,6 +112,12 @@ export function AppShell({
           exactly the same way, and an installed app gives neither of them a
           reload button. */}
       <RefreshOnReturn />
+
+      {/* The service worker, and with it the offline screen, the precache
+          and push, from the first screen of the app rather than from the
+          homepage. Guests get it too: a group is exactly what they would
+          want to open with no signal. */}
+      <SerwistRegister />
     </div>
   );
 }

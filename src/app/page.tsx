@@ -10,6 +10,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { MarketingLanguageSwitcher } from "@/components/i18n/language-switcher";
 import { InstallCopyButton, SplitDemo } from "@/components/marketing/SplitDemo";
 import { INSTALL_COMMANDS } from "@/components/marketing/install-commands";
+import { AreaMessages } from "@/i18n/area-messages";
 import { publicPageAnalytics } from "@/lib/analytics/umami";
 import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/lib/security/actor";
@@ -305,7 +306,7 @@ export default async function LandingPage() {
     },
   ];
 
-  return (
+  const page = (
     <div className="marketing-page min-h-dvh bg-background text-foreground">
       <UmamiScript />
       <script
@@ -820,4 +821,9 @@ export default async function LandingPage() {
       </footer>
     </div>
   );
+
+  // Everything above renders here, on the server, so the browser needs only
+  // the strings of the demo and the install block — and no other page needs
+  // those.
+  return <AreaMessages area="marketing">{page}</AreaMessages>;
 }
