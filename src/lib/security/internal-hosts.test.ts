@@ -33,6 +33,16 @@ describe("isInternalHost", () => {
     ["[fe80::1]", "IPv6 link-local"],
     ["[fd00::1]", "IPv6 unique-local"],
     ["[::ffff:127.0.0.1]", "IPv4-mapped loopback"],
+    ["[::ffff:7f00:1]", "IPv4-mapped loopback, as URL spells it"],
+    ["[0:0:0:0:0:ffff:a9fe:a9fe]", "IPv4-mapped metadata, written out"],
+    ["[::7f00:1]", "IPv4-compatible loopback"],
+    ["[64:ff9b::a9fe:a9fe]", "cloud metadata through NAT64"],
+    ["[64:ff9b:1:ab::a00:5]", "local-use NAT64"],
+    ["[ff02::1]", "IPv6 multicast"],
+    ["[FE80::1%eth0]", "link-local with a zone"],
+    ["[1::2::3]", "an address with two elisions"],
+    ["[12345::1]", "a group too wide to be one"],
+    ["[1:2:3:4:5:6:7:8:9]", "nine groups"],
     ["", "nothing at all"],
   ])("refuses %s (%s)", (host) => {
     expect(isInternalHost(host)).toBe(true);
@@ -46,6 +56,11 @@ describe("isInternalHost", () => {
     "8.8.8.8",
     "203.0.113.10",
     "push.example.org",
+    "[2606:4700:4700::1111]",
+    "[2001:4860:4860:0:0:0:0:8888]",
+    // Judged by the IPv4 address inside, which is public.
+    "[::ffff:808:808]",
+    "[64:ff9b::808:808]",
   ])("allows %s", (host) => {
     expect(isInternalHost(host)).toBe(false);
   });
@@ -68,10 +83,14 @@ describe("isInternalHost", () => {
 });
 
 describe("isSendableEndpoint", () => {
-  it("accepts a real push endpoint", () => {
-    expect(
-      isSendableEndpoint("https://fcm.googleapis.com/fcm/send/abc123:APA91b"),
-    ).toBe(true);
+  it.each([
+    "https://fcm.googleapis.com/fcm/send/abc123:APA91b",
+    "https://updates.push.services.mozilla.com/wpush/v2/abc123",
+    "https://web.push.apple.com/QDcbQwertyAbc123",
+    "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    "https://[2606:4700:4700::1111]/push",
+  ])("accepts %s", (endpoint) => {
+    expect(isSendableEndpoint(endpoint)).toBe(true);
   });
 
   it.each([
@@ -81,6 +100,25 @@ describe("isSendableEndpoint", () => {
     ["https://[::1]:8080/", "IPv6 loopback with a port"],
     ["file:///etc/passwd", "another scheme entirely"],
     ["not a url", "something that will not parse"],
+  ])("refuses %s (%s)", (endpoint) => {
+    expect(isSendableEndpoint(endpoint)).toBe(false);
+  });
+
+  /*
+   * The hostname is judged after `new URL()` has had it, and the parser
+   * rewrites an IPv6 literal on the way through: `[::ffff:127.0.0.1]` comes
+   * out as `[::ffff:7f00:1]`. A check that only knew the spelling somebody
+   * typed passed every one of these as a public address.
+   */
+  it.each([
+    ["https://[::ffff:127.0.0.1]/", "IPv4-mapped loopback"],
+    ["https://[::ffff:7f00:1]/", "the same, already in hex"],
+    ["https://[::ffff:169.254.169.254]/", "IPv4-mapped cloud metadata"],
+    ["https://[::ffff:10.0.0.5]:8443/", "IPv4-mapped private, with a port"],
+    ["https://[::127.0.0.1]/", "IPv4-compatible loopback"],
+    ["https://[64:ff9b::a9fe:a9fe]/", "cloud metadata through NAT64"],
+    ["https://[64:ff9b::169.254.169.254]/", "the same, dotted"],
+    ["https://[ff02::1]/", "IPv6 multicast"],
   ])("refuses %s (%s)", (endpoint) => {
     expect(isSendableEndpoint(endpoint)).toBe(false);
   });
