@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   check,
   index,
   jsonb,
@@ -64,6 +65,25 @@ export const groups = pgTable(
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    /**
+     * The seat a group started without an account was started from.
+     *
+     * Such a group has no owner until its creator makes an account, and the
+     * claim that does it has to know which seat is theirs: any other guest in
+     * the group can make an account first, and "the first claim wins" handed
+     * them the group, its people and its delete button. Set only by
+     * `createGroupAsGuest`; a group an account created has its owner from the
+     * start and never needs to ask.
+     *
+     * `set null` like the other creator columns, and not deferred: only the
+     * money tables' references are (see `PARTICIPANT_ON_DELETE`), because
+     * those are checks, and this is an action with nothing to wait for.
+     * Typed `AnyPgColumn` because `participants` points back at this table.
+     */
+    createdByParticipantId: uuid("created_by_participant_id").references(
+      (): AnyPgColumn => participants.id,
+      { onDelete: "set null" },
+    ),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -74,6 +94,7 @@ export const groups = pgTable(
   },
   (table) => [
     index("groups_created_by_idx").on(table.createdByUserId),
+    index("groups_created_by_participant_idx").on(table.createdByParticipantId),
     check(
       "groups_converted_requires_base_currency",
       sql`(${table.currencyMode} <> 'converted') OR (${table.baseCurrency} IS NOT NULL)`,
