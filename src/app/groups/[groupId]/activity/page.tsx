@@ -37,7 +37,7 @@ export default async function GroupActivityPage({
         title={t("activityTitle")}
         back={{ href: `/groups/${groupId}`, label: tCommon("backToGroup") }}
       />
-      <ActivityFeed entries={entries} />
+      <ActivityFeed entries={entries} timeZone={access.group.timezone} />
     </div>
   );
 }

@@ -85,5 +85,6 @@ function shareable(
       })),
       preferred,
     }),
+    timezone: group.timezone,
   };
 }

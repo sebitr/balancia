@@ -13,7 +13,9 @@ falls where it does.
 
 **Adding an expense or an income.** The full form — amount, currency,
 description, category, who paid, how it splits — from the group's own people
-and categories. Saving keeps the entry on the device and says so, in those
+and categories. It is dated today in the group's timezone, worked out from this
+device's clock when the form opens, which is the same day the online form
+would have picked. Saving keeps the entry on the device and says so, in those
 words rather than "Expense added": the group's balances have not moved yet and
 the confirmation should not claim they have.
 

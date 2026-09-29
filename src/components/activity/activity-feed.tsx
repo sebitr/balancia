@@ -12,12 +12,19 @@ import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
  *
  * Rendered on the server, which is where the reader's date notation can be
  * read from their cookies without shipping a list renderer to the browser.
+ *
+ * Times are told on the group's clock. The app's own zone is the server's —
+ * UTC unless an operator set one — and on it a group in Paris read 14:05
+ * against an expense its members had added at 16:05.
  */
 
 export async function ActivityFeed({
   entries,
+  timeZone,
 }: {
   entries: readonly ActivityEntry[];
+  /** The group's IANA zone, which every time in the feed is told in. */
+  timeZone: string;
 }) {
   const t = await getTranslations("activity");
   const dates = await getDateFormatter();
@@ -61,7 +68,7 @@ export async function ActivityFeed({
                 dateTime={entry.createdAt.toISOString()}
                 className="text-xs text-muted-foreground"
               >
-                {dates.at(entry.createdAt, { time: "short" })}
+                {dates.at(entry.createdAt, { time: "short", timeZone })}
               </time>
             </span>
           </li>
