@@ -387,11 +387,13 @@ export async function updateSettlement(
  * Soft-deletes one repayment inside a transaction somebody else holds, and
  * hands back the notification ids for them to dispatch after their commit.
  * `writeSettlement`'s counterpart; the note there says why these are apart.
+ * `replacedBy` is `deleteSettlement`'s, set by the change of kind.
  */
 export async function removeSettlement(
   tx: Database,
   access: GroupAccess,
   settlementId: string,
+  options: { replacedBy?: string } = {},
 ): Promise<string[]> {
   const deleted = await tx
     .update(settlements)
@@ -428,6 +430,7 @@ export async function removeSettlement(
     metadata: {
       amount: deletedSettlement.amount.toString(),
       currency: deletedSettlement.currency,
+      ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
     },
   });
 
@@ -444,13 +447,19 @@ export async function removeSettlement(
 export async function deleteSettlement(
   access: GroupAccess,
   settlementId: string,
-  options: { db?: Database } = {},
+  options: {
+    db?: Database;
+    /** The expense written in its place; see `deleteExpense`. */
+    replacedBy?: string;
+  } = {},
 ): Promise<void> {
   requirePermission(access, "addSettlement");
   const db = options.db ?? getDb();
 
   const notificationIds = await db.transaction((tx) =>
-    removeSettlement(tx, access, settlementId),
+    removeSettlement(tx, access, settlementId, {
+      replacedBy: options.replacedBy,
+    }),
   );
 
   await dispatchNotifications(notificationIds);

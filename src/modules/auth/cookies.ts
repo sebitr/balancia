@@ -12,6 +12,13 @@ import {
   encodePendingSignIn,
   type PendingAppleSignIn,
 } from "./apple-state";
+import {
+  REGISTRATION_COOKIE_NAME,
+  REGISTRATION_COOKIE_PATH,
+  REGISTRATION_COOKIE_TTL_SECONDS,
+  encodeRegistration,
+  registeredHere,
+} from "./registration-browser";
 
 /**
  * Cookie handling.
@@ -115,6 +122,48 @@ export async function clearJoinCookie(): Promise<void> {
 export async function readJoinCookie(): Promise<string | undefined> {
   const cookieStore = await cookies();
   return cookieStore.get(JOIN_COOKIE_NAME)?.value;
+}
+
+/**
+ * The browser that registered, for the confirmation link to recognise.
+ *
+ * The same three attributes, a path that reaches only `/verify-email`, and
+ * the life of the link. Lax is enough: the link arrives as a top-level GET
+ * from a mail client, which is exactly the cross-site request Lax still sends
+ * a cookie on. See registration-browser.ts for why it exists at all.
+ */
+export async function setRegistrationCookie(userId: string): Promise<void> {
+  const env = getEnv();
+  const cookieStore = await cookies();
+  cookieStore.set(REGISTRATION_COOKIE_NAME, encodeRegistration(userId), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.appOrigin.startsWith("https://"),
+    path: REGISTRATION_COOKIE_PATH,
+    maxAge: REGISTRATION_COOKIE_TTL_SECONDS,
+  });
+}
+
+/** Whether this browser registered `userId`, by the cookie above. */
+export async function isRegistrationBrowser(userId: string): Promise<boolean> {
+  const cookieStore = await cookies();
+  return registeredHere(
+    cookieStore.get(REGISTRATION_COOKIE_NAME)?.value,
+    userId,
+  );
+}
+
+export async function clearRegistrationCookie(): Promise<void> {
+  const env = getEnv();
+  const cookieStore = await cookies();
+  // Expired on the path it was set on; a bare delete would name `/` and miss.
+  cookieStore.set(REGISTRATION_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.appOrigin.startsWith("https://"),
+    path: REGISTRATION_COOKIE_PATH,
+    maxAge: 0,
+  });
 }
 
 /**

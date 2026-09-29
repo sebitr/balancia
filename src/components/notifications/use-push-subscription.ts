@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { applicationServerKey } from "@/lib/push/application-server-key";
+import { registerServiceWorker } from "@/components/pwa/serwist-register";
 
 /**
  * Subscribing this browser to push, and the several ways it can be impossible.
@@ -125,7 +126,11 @@ export function usePushSubscription() {
       }
 
       // `ready` rather than `getRegistration`: the worker may still be
-      // installing on a first visit, and subscribing needs it active.
+      // installing on a first visit, and subscribing needs it active. It may
+      // not be registered at all yet, either — the onboarding checklist asks
+      // before any screen of the app has registered it — and `ready` waits
+      // for a registration that nothing is going to make.
+      await registerServiceWorker();
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,

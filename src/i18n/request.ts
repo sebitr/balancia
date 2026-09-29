@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import type { Messages } from "next-intl";
 import { getRequestConfig } from "next-intl/server";
 import {
   isAppLocale,
@@ -22,6 +23,16 @@ const MESSAGE_LOADERS: Record<AppLocale, () => Promise<{ default: unknown }>> =
     fr: () => import("../../messages/fr.json"),
   };
 
+/**
+ * A whole catalogue, for the server. The offline screen reads every language
+ * through this at build time, because it cannot ask which one it will need.
+ */
+export async function loadMessages(locale: AppLocale): Promise<Messages> {
+  // Typed against English, which `messages.test.ts` keeps every other
+  // catalogue in step with.
+  return (await MESSAGE_LOADERS[locale]()).default as Messages;
+}
+
 export async function resolveRequestLocale(): Promise<AppLocale> {
   const cookieStore = await cookies();
   const stored = cookieStore.get(LOCALE_COOKIE_NAME)?.value;
@@ -33,11 +44,10 @@ export async function resolveRequestLocale(): Promise<AppLocale> {
 
 export default getRequestConfig(async () => {
   const locale = await resolveRequestLocale();
-  const messages = (await MESSAGE_LOADERS[locale]()).default;
 
   return {
     locale,
-    messages: messages as Record<string, unknown>,
+    messages: await loadMessages(locale),
     // Pinned so a date renders identically on the server and after hydration.
     // Group-scoped time zones are applied where a date is tied to a group.
     timeZone: process.env.TZ ?? "UTC",

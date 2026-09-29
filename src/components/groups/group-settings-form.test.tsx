@@ -107,8 +107,8 @@ describe("GroupSettingsForm", () => {
     await user.click(
       screen.getByRole("button", { name: "Change the group's icon" }),
     );
-    await user.click(screen.getByRole("radio", { name: "tent" }));
-    await user.click(screen.getByRole("radio", { name: "blue" }));
+    await user.click(screen.getByRole("radio", { name: "Tent" }));
+    await user.click(screen.getByRole("radio", { name: "Blue" }));
 
     // An icon and a colour are one decision, and the sheet is still open.
     expect(updateGroupAction).not.toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe("GroupSettingsForm", () => {
     await user.click(
       screen.getByRole("button", { name: "Change the group's icon" }),
     );
-    await user.click(screen.getByRole("radio", { name: "tent" }));
+    await user.click(screen.getByRole("radio", { name: "Tent" }));
     await user.click(screen.getByRole("button", { name: "Done" }));
     await user.type(nameField(), "!");
     await user.tab();

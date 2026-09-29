@@ -106,7 +106,8 @@ export async function deleteExpenseAction(
 }
 
 /**
- * Undo for a deletion, offered by the toast the deletion raises.
+ * Undo for a deletion, offered by the toast the deletion raises — and, for as
+ * long as the entry stays deleted, by the group's Activity screen.
  *
  * It revalidates the entry's own screen as well as the group's, because the
  * reader may already be looking at the detail page of what they just put back.

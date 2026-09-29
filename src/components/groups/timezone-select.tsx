@@ -184,7 +184,9 @@ export function TimezoneSelect({
           collisionPadding={8}
           className="max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) gap-0 p-0"
         >
-          <div className="flex shrink-0 items-center gap-2 border-b border-border px-2.5">
+          {/* The row is the field, so the row shows the caret — inside its
+              own edge, because it is the popover's top edge as well. */}
+          <div className="flex shrink-0 items-center gap-2 rounded-t-lg border-b border-border px-2.5 has-[input:focus-visible]:inset-ring-2 has-[input:focus-visible]:inset-ring-ring/50">
             <Search
               aria-hidden="true"
               className="size-4 shrink-0 text-muted-foreground"

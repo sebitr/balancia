@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Plus, Receipt } from "lucide-react";
@@ -55,6 +56,12 @@ import {
  * from their own queries. A proportion or a chip counted over the pages read
  * so far would redraw itself under the reader as they scrolled.
  */
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("expensesList");
+  return { title: t("eyebrow") };
+}
+
 export default async function ExpensesPage({
   params,
 }: PageProps<"/groups/[groupId]/expenses">) {

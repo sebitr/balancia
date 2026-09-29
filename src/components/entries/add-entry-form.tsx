@@ -100,7 +100,11 @@ import {
   summariseSplit,
   type EntryType,
 } from "./entry-logic";
-import { ALL_ENTRY_TYPES, EntryTypeTabs } from "./entry-type-tabs";
+import {
+  ALL_ENTRY_TYPES,
+  EntryTypeTabs,
+  entryTypeTabId,
+} from "./entry-type-tabs";
 import { enqueueEntry } from "@/lib/offline/outbox";
 import { randomKey } from "@/lib/offline/idb";
 import { ScanBanner, ScanRow, ReceiptItems } from "./receipt-blocks";
@@ -766,6 +770,44 @@ export function AddEntryForm({
   const [sheet, setSheet] = useState<OpenSheet>(openSheet ?? null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The body below, which the type tabs name as the panel they switch. */
+  const typePanelId = useId();
+
+  /*
+   * A refused save, brought to where the reader is.
+   *
+   * The alert is the first thing in the body and Save is the last, so somebody
+   * who had scrolled down to save saw the button do nothing at all: the
+   * sentence saying why had appeared a screen above them. So a refusal scrolls
+   * the alert into view and, where the mistake is one field, puts the caret in
+   * it. A fresh count on every refusal, so pressing Save twice on the same
+   * mistake brings the sentence back twice — and remounts the alert, which is
+   * what makes a screen reader say it again.
+   */
+  const errorId = useId();
+  const [refusal, setRefusal] = useState<{
+    field: string | null;
+    count: number;
+  } | null>(null);
+  const refuse = (message: string | null, field: string | null = null) => {
+    setError(message);
+    setRefusal((last) => ({ field, count: (last?.count ?? 0) + 1 }));
+  };
+  useEffect(() => {
+    if (refusal === null) return;
+    const alert = document.getElementById(errorId);
+    if (!alert) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    alert.scrollIntoView({
+      block: "nearest",
+      behavior: still ? "auto" : "smooth",
+    });
+    if (refusal.field) {
+      document
+        .querySelector<HTMLElement>(refusal.field)
+        ?.focus({ preventScroll: true });
+    }
+  }, [refusal, errorId]);
 
   /*
    * The key a repayment, or an entry changing kind, is written under.
@@ -1504,19 +1546,19 @@ export function AddEntryForm({
   const onSubmit = async () => {
     setError(null);
     if (!totalMinor.ok) {
-      setError(splitText(totalMinor.error));
+      refuse(splitText(totalMinor.error), "input[data-entry-amount]");
       return;
     }
     if (!isSettle && description.trim() === "") {
-      setError(t("errors.descriptionRequired"));
+      refuse(t("errors.descriptionRequired"), "#entry-description");
       return;
     }
     if (isSettle && !selectedPair) {
-      setError(t("errors.choosePair"));
+      refuse(t("errors.choosePair"));
       return;
     }
     if (!isSettle && !preview.ok) {
-      setError(preview.error ? splitText(preview.error) : null);
+      refuse(preview.error ? splitText(preview.error) : null);
       return;
     }
 
@@ -1563,7 +1605,7 @@ export function AddEntryForm({
       const { result, movedTo } = outcome;
 
       if (!result.ok) {
-        setError(result.error ?? t("errors.saveFailed"));
+        refuse(result.error ?? t("errors.saveFailed"));
         return;
       }
 
@@ -2001,7 +2043,12 @@ export function AddEntryForm({
           )}
         </div>
 
-        <EntryTypeTabs value={type} onChange={changeType} types={entryTypes} />
+        <EntryTypeTabs
+          value={type}
+          onChange={changeType}
+          types={entryTypes}
+          panelId={typePanelId}
+        />
 
         {/*
          * Scan and voice, side by side because they are the same kind of thing
@@ -2086,10 +2133,21 @@ export function AddEntryForm({
 
       {/* Rows overflow rather than compress: a scroll container whose
           children may shrink turns a long member list into a row of
-          squashed avatars instead of a scroll. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [&>*]:shrink-0">
+          squashed avatars instead of a scroll.
+
+          It is also the panel the type tabs above switch between: the form
+          is one body whichever of the three it is, so it is one panel, named
+          by whichever tab is chosen. */}
+      <div
+        id={typePanelId}
+        {...(entryTypes.length > 1 && {
+          role: "tabpanel",
+          "aria-labelledby": entryTypeTabId(typePanelId, type),
+        })}
+        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [&>*]:shrink-0"
+      >
         {error && (
-          <Alert variant="destructive">
+          <Alert key={refusal?.count} id={errorId} variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}

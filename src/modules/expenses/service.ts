@@ -99,7 +99,11 @@ export interface ListedExpense extends ExpenseSummary {
   readonly cursorKey: string;
 }
 
-async function assertParticipantsInGroup(
+/**
+ * Step 1 above. Exported for recurring templates, which name the same people
+ * and are held to the same rule when they are saved.
+ */
+export async function assertParticipantsInGroup(
   tx: Database,
   groupId: string,
   participantIds: readonly string[],
@@ -664,11 +668,15 @@ export async function updateExpense(
  * back the notification ids for them to dispatch after their commit.
  * `writeExpense`'s counterpart; the note at `writeSettlement` says why these
  * are apart.
+ *
+ * `replacedBy` is `deleteExpense`'s, and the change of kind in `convert.ts`
+ * is the caller that sets it.
  */
 export async function removeExpense(
   tx: Database,
   access: GroupAccess,
   expenseId: string,
+  options: { replacedBy?: string } = {},
 ): Promise<string[]> {
   const deleted = await tx
     .update(expenses)
@@ -705,6 +713,7 @@ export async function removeExpense(
       description: deletedExpense.description,
       amount: deletedExpense.amount.toString(),
       currency: deletedExpense.currency,
+      ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
     },
   });
 
@@ -723,13 +732,21 @@ export async function removeExpense(
 export async function deleteExpense(
   access: GroupAccess,
   expenseId: string,
-  options: { db?: Database } = {},
+  options: {
+    db?: Database;
+    /**
+     * The repayment written in this expense's place, when the deletion is
+     * half of a change of type. Recorded on the event so the Activity screen
+     * does not offer to put back something that was replaced rather than lost.
+     */
+    replacedBy?: string;
+  } = {},
 ): Promise<void> {
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
 
   const notificationIds = await db.transaction((tx) =>
-    removeExpense(tx, access, expenseId),
+    removeExpense(tx, access, expenseId, { replacedBy: options.replacedBy }),
   );
 
   await dispatchNotifications(notificationIds);
