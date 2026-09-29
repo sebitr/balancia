@@ -151,6 +151,14 @@ Two named volumes hold everything that matters:
 | `balancia-db-data` | The PostgreSQL database |
 | `balancia-uploads` | Receipt files           |
 
+Those names, and the containers' (`balancia-db`, `balancia-app`), are fixed
+rather than derived from the Compose project, so `docker compose -p` does not
+give you a second copy of anything: a stack started from another checkout under
+another project name still asks for these same volumes and containers, and its
+`down -v` deletes these same volumes. A second stack on the
+same host needs names of its own, which is what `compose.drill.yaml` gives a
+[restore drill](backup-and-restore.md#testing-your-backups).
+
 ### About the generated secrets
 
 Nothing in this repository contains a usable production secret. `bootstrap.sh`
