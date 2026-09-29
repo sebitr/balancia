@@ -403,10 +403,18 @@ describe("reading balances while somebody edits", () => {
         (error: unknown) => ({ ok: false as const, error }),
       );
 
+      // A client connection in this database, so neither autovacuum nor a
+      // suite running against another database on the same server can pass
+      // for the loader: a wait that is not the loader's would let the edit
+      // commit before its snapshot was taken.
       await waitUntil(async () => {
         const { rows } = await getPool().query<{ waiting: number }>(
-          `SELECT count(*)::int AS waiting FROM pg_locks
-           WHERE relation = 'expense_shares'::regclass AND NOT granted`,
+          `SELECT count(*)::int AS waiting
+           FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid
+           WHERE l.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+             AND l.relation = 'expense_shares'::regclass
+             AND NOT l.granted
+             AND a.backend_type = 'client backend'`,
         );
         return (rows[0]?.waiting ?? 0) > 0;
       });

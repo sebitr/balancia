@@ -71,23 +71,25 @@ describe("runAction", () => {
     expect(result).toEqual({
       ok: false,
       error: messages.serverErrors.noGroupAccess,
-      code: "noGroupAccess",
     });
   });
 
   /*
-   * The code rides along with the sentence, so a screen can act on the reason
-   * — an edit refused because somebody else changed the entry offers to reload
-   * it — without matching on words that change with the language.
+   * This one code rides along with the sentence, so the edit form can offer to
+   * reload the entry somebody else changed without matching on words that
+   * change with the language. The two cases above pin down that the codes
+   * nobody acts on stay behind.
    */
   it("carries an edit conflict's code beside its sentence", async () => {
     const result = await runAction("test", async () => {
       throw new EditConflictError();
     });
 
-    expect(result.ok).toBe(false);
-    expect(result.code).toBe("editConflict");
-    expect(result.error).toBeTruthy();
+    expect(result).toEqual({
+      ok: false,
+      error: messages.serverErrors.editConflict,
+      code: "editConflict",
+    });
   });
 
   /*

@@ -69,7 +69,7 @@ export class EditConflictError extends Error {
   readonly code = "editConflict";
 
   constructor(
-    message = "Somebody else changed this entry while you were editing it. Reload it to see their changes.",
+    message = "Somebody else changed this entry since you opened it, so your changes were not saved. Reload it to see their version.",
   ) {
     super(message);
     this.name = "EditConflictError";

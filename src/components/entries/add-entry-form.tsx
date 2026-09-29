@@ -293,6 +293,8 @@ interface Outcome {
   readonly result: {
     readonly ok: boolean;
     readonly error?: string;
+    /** Why it was refused, when the refusal named a reason — see `onReload`. */
+    readonly code?: string;
     /**
      * What the action created, when it created something.
      *
@@ -486,6 +488,18 @@ export interface AddEntryFormProps {
    */
   onRemoved?: (to?: string) => void;
   /**
+   * Starts the form again from `editing` as it now stands.
+   *
+   * Offered only on an edit refused because somebody else saved the entry
+   * first. Everything this reader typed is still on screen at that point, and
+   * stays there until they press it: the fields are theirs, and whether their
+   * change still stands against the other person's is a decision only they can
+   * make. The shell does the work by remounting the form, which is the one
+   * thing that reseeds every field, and the version sent with the next save,
+   * from the entry the refusal's re-render brought back.
+   */
+  onReload?: () => void;
+  /**
    * A sheet to open with the drawer, named by whoever linked here.
    *
    * Only the confirmation uses it today — see `describeSaved`. Absent for
@@ -546,6 +560,7 @@ export function AddEntryForm({
   onClose,
   onSaved,
   onRemoved,
+  onReload,
   openSheet,
   recentEntries = NO_RECENT,
   defaultSplit = null,
@@ -773,7 +788,20 @@ export function AddEntryForm({
    */
   const [sheet, setSheet] = useState<OpenSheet>(openSheet ?? null);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /*
+   * What the alert says, and the refusal's code when it had one.
+   *
+   * Held together so the Reload offer cannot outlive the sentence it belongs
+   * to: any other message replacing it — a description left empty, a delete
+   * that failed — takes the offer away with the conflict it answered.
+   */
+  const [failure, setFailure] = useState<{
+    readonly message: string;
+    readonly code?: string;
+  } | null>(null);
+  const error = failure?.message ?? null;
+  const setError = (message: string | null, code?: string) =>
+    setFailure(message === null ? null : { message, code });
   /*
    * The version these fields were seeded from, held rather than read off
    * `editing` at save time.
@@ -1570,7 +1598,7 @@ export function AddEntryForm({
       const { result, movedTo } = outcome;
 
       if (!result.ok) {
-        setError(result.error ?? t("errors.saveFailed"));
+        setError(result.error ?? t("errors.saveFailed"), result.code);
         return;
       }
 
@@ -2103,6 +2131,20 @@ export function AddEntryForm({
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+            {/* Refused because somebody else saved first: the way on sits
+                beside the reason, over fields still holding what was typed.
+                See `onReload`. */}
+            {failure?.code === "editConflict" && onReload && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-1.5 justify-self-start"
+                onClick={onReload}
+              >
+                {t("reload")}
+              </Button>
+            )}
           </Alert>
         )}
 

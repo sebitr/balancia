@@ -2506,6 +2506,7 @@
     "signInRequired": "Sign in to change your account.",
     "noGroupAccess": "You do not have access to this group.",
     "notInGroup": "That item is not part of this group.",
+    "editConflict": "Somebody else changed this entry since you opened it, so your changes were not saved. Reload it to see their version.",
     "notYourAccount": "Only they can change the name and email on their own account.",
     "authRequired": "Sign in to continue.",
     "fileEmpty": "That file is empty.",
@@ -2913,6 +2914,7 @@
   },
   "addEntry": {
     "back": "Back",
+    "reload": "Reload",
     "titles": {
       "expense": "Add expense",
       "income": "Add income",

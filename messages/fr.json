@@ -2506,6 +2506,7 @@
     "signInRequired": "Connecte-toi pour modifier ton compte.",
     "noGroupAccess": "Tu n’as pas accès à ce groupe.",
     "notInGroup": "Cet élément ne fait pas partie de ce groupe.",
+    "editConflict": "Quelqu’un d’autre a modifié cette transaction depuis que tu l’as ouverte : tes modifications n’ont pas été enregistrées. Recharge-la pour voir sa version.",
     "notYourAccount": "Seule cette personne peut modifier le nom et l’e-mail de son compte.",
     "authRequired": "Connecte-toi pour continuer.",
     "fileEmpty": "Ce fichier est vide.",
@@ -2913,6 +2914,7 @@
   },
   "addEntry": {
     "back": "Retour",
+    "reload": "Recharger",
     "titles": {
       "expense": "Ajouter une dépense",
       "income": "Ajouter un revenu",

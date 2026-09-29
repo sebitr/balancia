@@ -2069,6 +2069,152 @@ describe("editing an entry", () => {
 });
 
 /**
+ * An edit made from a copy somebody else has since saved over.
+ *
+ * The server refuses it and writes nothing. What the form owes the reader is
+ * the reason, everything they typed still in place, and a way to see the entry
+ * as it now stands. The refusal's own re-render brings that entry in as
+ * `editing`, and it must replace neither their fields nor the version the next
+ * save is checked against — pressing Save again would otherwise overwrite the
+ * very change it was just refused for. Only Reload does both.
+ */
+describe("an edit somebody else saved first", () => {
+  const OPENED = {
+    kind: "expense" as const,
+    id: "e1",
+    type: "expense" as const,
+    amountText: "84.60",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "Migros",
+    category: "",
+    subcategory: "",
+    notes: "",
+    payerId: "seb",
+    settleTo: null,
+    includedIds: ["seb", "herve"],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "",
+    version: "2026-08-12T10:00:00.000000Z",
+  };
+
+  /** The same expense, as the other person left it. */
+  const THEIRS = {
+    ...OPENED,
+    amountText: "91.20",
+    description: "Migros and the wine",
+    version: "2026-08-12T10:05:00.123456Z",
+  };
+
+  /** The server's words; the form only has to show them. */
+  const REFUSED = {
+    ok: false,
+    error: "Somebody else changed this entry since you opened it.",
+    code: "editConflict",
+  };
+
+  /** The drawer as the route renders it, around whichever copy it read. */
+  const drawer = (editing: typeof OPENED) => (
+    <AddEntryDrawer
+      dismissTo="back"
+      groupId="g1"
+      members={MEMBERS}
+      selfId="seb"
+      currencyMode="converted"
+      baseCurrency="CHF"
+      defaultCurrency="CHF"
+      timezone="Europe/Zurich"
+      outstanding={OUTSTANDING}
+      editing={editing}
+    />
+  );
+
+  const description = () =>
+    screen.getByRole("textbox", { name: "Description" });
+  const amount = () => screen.getByRole("textbox", { name: "Amount" });
+  const save = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+  };
+
+  it("says why, keeps what was typed, and reloads only when asked", async () => {
+    const user = userEvent.setup();
+    const view = renderForm({ editing: OPENED });
+    updateExpense.mockResolvedValueOnce(REFUSED).mockResolvedValueOnce(REFUSED);
+
+    await user.clear(description());
+    await user.type(description(), "Migros, and Cyril's share");
+    await save(user);
+
+    // Sent with the version its fields were read from, and refused.
+    expect(updateExpense.mock.calls[0][3]).toBe(OPENED.version);
+    expect(await screen.findByText(REFUSED.error)).toBeVisible();
+    expect(success).not.toHaveBeenCalled();
+
+    // The refusal re-renders the route, which reads the entry afresh.
+    view.rerender(drawer(THEIRS));
+
+    expect(description()).toHaveValue("Migros, and Cyril's share");
+    expect(amount()).toHaveValue("84.60");
+
+    // Still the copy this reader opened, so still refused — never an
+    // overwrite of the change it was refused for a moment ago.
+    await save(user);
+    expect(updateExpense.mock.calls[1][3]).toBe(OPENED.version);
+    expect(await screen.findByText(REFUSED.error)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Reload" }));
+
+    expect(description()).toHaveValue("Migros and the wine");
+    expect(amount()).toHaveValue("91.20");
+    expect(screen.queryByText(REFUSED.error)).not.toBeInTheDocument();
+
+    await save(user);
+    expect(updateExpense).toHaveBeenCalledTimes(3);
+    expect(updateExpense.mock.calls[2][3]).toBe(THEIRS.version);
+  });
+
+  it("offers no reload for a refusal that has nothing to do with a copy", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: OPENED });
+    updateExpense.mockResolvedValueOnce({
+      ok: false,
+      error: "You do not have access to this group.",
+    });
+
+    await save(user);
+
+    expect(
+      await screen.findByText("You do not have access to this group."),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Reload" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends a repayment's version too", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      editing: {
+        ...OPENED,
+        kind: "settlement",
+        id: "s1",
+        type: "settle",
+        description: "",
+        settleTo: "herve",
+        includedIds: [],
+      },
+    });
+
+    await save(user);
+
+    expect(updateSettlement).toHaveBeenCalledTimes(1);
+    expect(updateSettlement.mock.calls[0][3]).toBe(OPENED.version);
+  });
+});
+
+/**
  * Where the drawer goes when it closes.
  *
  * `dismissTo="back"` is the intercepted route's way out, and it is right for
