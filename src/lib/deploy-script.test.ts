@@ -88,7 +88,12 @@ function deploy(
     ],
     {
       encoding: "utf8",
-      env: { PATH: `${path.join(dir, "bin")}:${process.env.PATH ?? ""}` },
+      // Nothing else from the calling shell: a BALANCIA_DEPLOY_* or NO_COLOR
+      // set there would change what the script prints.
+      env: {
+        NODE_ENV: "test",
+        PATH: `${path.join(dir, "bin")}:${process.env.PATH ?? ""}`,
+      },
     },
   );
   const log = path.join(dir, "gh.log");
