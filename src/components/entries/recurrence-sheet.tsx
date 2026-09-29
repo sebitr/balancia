@@ -7,6 +7,10 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
+import {
+  rovingChoice,
+  type RovingChoiceProps,
+} from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import {
   RECURRENCE_FREQUENCIES,
@@ -235,6 +239,31 @@ export function RecurrenceSheet({
     },
   ];
 
+  /*
+   * Custom is the last of the presets but not a rule of its own: choosing it
+   * opens the controls below, and the rule is still whichever one they say.
+   */
+  const choosePreset = (id: PresetId) => {
+    const option = presets.find((candidate) => candidate.id === id);
+    if (option) option.apply();
+    setShowCustom(option === undefined);
+  };
+  const presetKeys = rovingChoice<PresetId>({
+    values: [...presets.map((option) => option.id), "custom"],
+    selected: preset,
+    onSelect: choosePreset,
+  });
+  const frequencyKeys = rovingChoice({
+    values: RECURRENCE_FREQUENCIES,
+    selected: state.frequency,
+    onSelect: (frequency) =>
+      set({
+        frequency,
+        // The nth-weekday rule only means anything monthly.
+        weekOfMonth: frequency === "monthly" ? state.weekOfMonth : null,
+      }),
+  });
+
   return (
     <div className="flex min-h-0 flex-col gap-4">
       <SheetTitle className="shrink-0 text-lg font-semibold tracking-[-0.02em]">
@@ -288,24 +317,32 @@ export function RecurrenceSheet({
           )}
         </div>
 
-        <ul className="overflow-hidden rounded-2xl bg-card shadow-hairline">
+        {/* A radio group that is still a list to look at: the items step out
+            of the list's semantics so the rows are read as the six options
+            they are, "3 of 6", rather than as list items that happen to hold
+            a radio each. Focus shows the way it does on the entry form's
+            cards — see `RowCard` — because the corners clip a row's own. */}
+        <ul
+          role="radiogroup"
+          aria-label={t("title")}
+          className="overflow-hidden rounded-2xl bg-card shadow-hairline has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
+        >
           {presets.map((option) => (
-            <li key={option.id}>
+            <li key={option.id} role="none">
               <PresetRow
                 label={option.label}
                 selected={preset === option.id}
-                onSelect={() => {
-                  option.apply();
-                  setShowCustom(false);
-                }}
+                keys={presetKeys(option.id)}
+                onSelect={() => choosePreset(option.id)}
               />
             </li>
           ))}
-          <li>
+          <li role="none">
             <PresetRow
               label={t("presetCustom")}
               selected={preset === "custom"}
-              onSelect={() => setShowCustom(true)}
+              keys={presetKeys("custom")}
+              onSelect={() => choosePreset("custom")}
             />
           </li>
         </ul>
@@ -323,6 +360,7 @@ export function RecurrenceSheet({
                   type="button"
                   role="radio"
                   aria-checked={frequency === state.frequency}
+                  {...frequencyKeys(frequency)}
                   onClick={() =>
                     set({
                       frequency,
@@ -588,10 +626,12 @@ export function RecurrenceSheet({
 function PresetRow({
   label,
   selected,
+  keys,
   onSelect,
 }: {
   label: string;
   selected: boolean;
+  keys: RovingChoiceProps;
   onSelect: () => void;
 }) {
   return (
@@ -599,8 +639,9 @@ function PresetRow({
       type="button"
       role="radio"
       aria-checked={selected}
+      {...keys}
       onClick={onSelect}
-      className="flex min-h-[52px] w-full items-center justify-between gap-3 border-b border-border px-4 py-2.5 text-left transition-colors last:border-b-0 active:bg-accent"
+      className="flex min-h-[52px] w-full items-center justify-between gap-3 border-b border-border px-4 py-2.5 text-left transition-colors last:border-b-0 focus-visible:bg-accent focus-visible:outline-none active:bg-accent"
     >
       <span className="truncate text-sm">{label}</span>
       {selected && (

@@ -15,7 +15,9 @@
     "optional": "optional",
     "retry": "Try again",
     "undo": "Undo",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "close": "Close",
+    "toastRegion": "Status messages"
   },
   "nav": {
     "language": "Language",
@@ -1937,7 +1939,31 @@
     "chooseIcon": "Choose an icon",
     "iconColorLabel": "Colour",
     "iconLabel": "Icon",
-    "done": "Done"
+    "done": "Done",
+    "iconNames": {
+      "plane": "Plane",
+      "luggage": "Luggage",
+      "house": "House",
+      "tent": "Tent",
+      "car": "Car",
+      "cart": "Shopping trolley",
+      "coffee": "Coffee",
+      "meal": "Meal",
+      "party": "Party",
+      "gift": "Gift",
+      "music": "Music",
+      "sport": "Sport",
+      "bike": "Bike",
+      "heart": "Heart",
+      "star": "Star"
+    },
+    "colorNames": {
+      "coral": "Coral",
+      "emerald": "Emerald",
+      "amber": "Amber",
+      "plum": "Plum",
+      "blue": "Blue"
+    }
   },
   "groupSettings": {
     "details": "Details",

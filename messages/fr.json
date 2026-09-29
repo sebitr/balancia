@@ -15,7 +15,9 @@
     "optional": "facultatif",
     "retry": "Réessayer",
     "undo": "Annuler",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "close": "Fermer",
+    "toastRegion": "Messages d’état"
   },
   "nav": {
     "language": "Langue",
@@ -1937,7 +1939,31 @@
     "chooseIcon": "Choisir une icône",
     "iconColorLabel": "Couleur",
     "iconLabel": "Icône",
-    "done": "Terminé"
+    "done": "Terminé",
+    "iconNames": {
+      "plane": "Avion",
+      "luggage": "Valise",
+      "house": "Maison",
+      "tent": "Tente",
+      "car": "Voiture",
+      "cart": "Chariot",
+      "coffee": "Café",
+      "meal": "Repas",
+      "party": "Fête",
+      "gift": "Cadeau",
+      "music": "Musique",
+      "sport": "Sport",
+      "bike": "Vélo",
+      "heart": "Cœur",
+      "star": "Étoile"
+    },
+    "colorNames": {
+      "coral": "Corail",
+      "emerald": "Émeraude",
+      "amber": "Ambre",
+      "plum": "Prune",
+      "blue": "Bleu"
+    }
   },
   "groupSettings": {
     "details": "Détails",

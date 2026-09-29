@@ -123,6 +123,10 @@ const Toaster = ({
         position={position}
         closeButton={closeButton}
         swipeDirections={swipeDirections}
+        // The landmark the toasts live in. Sonner names it "Notifications", in
+        // English whatever the page is in — and in this app that is also the
+        // name of the bell's screen, which the toasts are not.
+        containerAriaLabel={t("toastRegion")}
         icons={{
           success: (
             <Glyph icon={CheckIcon} tone="bg-positive/15 text-positive-ink" />

@@ -254,6 +254,15 @@ E2E_DATABASE_URL=postgres://balancia:balancia@localhost:5432/balancia_e2e pnpm t
 Playwright starts a **production** build, so the journeys exercise what a
 self-hoster actually runs.
 
+`tests/e2e/accessibility.spec.ts` runs axe (`@axe-core/playwright`) over the
+screens every reader passes through — sign-in, the dashboard, a group, adding
+an expense, settling up — and fails on any **serious** or **critical**
+violation of WCAG 2.2 AA. The unit rules (field sizes, type scale, tap
+targets, token contrast) all read source; this is the one check that reads
+the page the browser built, which is where a button with no name or an
+`aria-controls` pointing at nothing shows up. Moderate and minor findings are
+not gated; the failure message lists the rule and the first elements it hit.
+
 Passkey tests drive Chrome's WebAuthn virtual authenticator over CDP: the
 browser produces a genuine attestation and assertion, and the server verifies
 signature, origin, relying-party ID and challenge. Nothing is stubbed

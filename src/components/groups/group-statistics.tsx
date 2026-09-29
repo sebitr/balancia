@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   ArrowDown,
@@ -12,6 +12,10 @@ import {
 import { Amount } from "@/components/money/amount";
 import { CurrencyHeading } from "@/components/money/currency-heading";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  rovingChoice,
+  type RovingChoiceProps,
+} from "@/components/ui/roving-choice";
 import { hasGlyph } from "@/components/expenses/category-icon";
 import { useDateFormatter, useFormatPreferences } from "@/i18n/format-context";
 import { parsePlainDate } from "@/i18n/format";
@@ -195,6 +199,12 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
   const [range, setRange] = useState<StatsRange>("1y");
   const [metric, setMetric] = useState<Metric>("net");
   const [net, setNet] = useState(false);
+  const rangePanel = useId();
+  const rangeKeys = rovingChoice({
+    values: RANGES,
+    selected: range,
+    onSelect: setRange,
+  });
 
   const selected =
     stats.ranges.find((candidate) => candidate.key === range) ??
@@ -222,6 +232,9 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
             <Pill
               key={candidate}
               role="tab"
+              id={`${rangePanel}-${candidate}`}
+              controls={rangePanel}
+              keys={rangeKeys(candidate)}
               active={candidate === range}
               onClick={() => setRange(candidate)}
             >
@@ -231,26 +244,36 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
         </div>
       </div>
 
-      {!selected || selected.currencies.length === 0 ? (
-        <EmptyState
-          icon={CalendarOff}
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-        />
-      ) : (
-        selected.currencies.map((entry) => (
-          <CurrencyBlock
-            key={entry.currency}
-            entry={entry}
-            range={selected}
-            metric={metric}
-            onMetric={setMetric}
-            net={net}
-            onNet={() => setNet((on) => !on)}
-            showCurrency={selected.currencies.length > 1}
+      {/* What the range tabs switch: everything measured over the window,
+          and nothing that is not — the records below are all-time. Laid out
+          as the section is, so the panel adds no spacing of its own. */}
+      <div
+        id={rangePanel}
+        role="tabpanel"
+        aria-labelledby={`${rangePanel}-${range}`}
+        className="flex flex-col gap-3.5"
+      >
+        {!selected || selected.currencies.length === 0 ? (
+          <EmptyState
+            icon={CalendarOff}
+            title={t("emptyTitle")}
+            description={t("emptyDescription")}
           />
-        ))
-      )}
+        ) : (
+          selected.currencies.map((entry) => (
+            <CurrencyBlock
+              key={entry.currency}
+              entry={entry}
+              range={selected}
+              metric={metric}
+              onMetric={setMetric}
+              net={net}
+              onNet={() => setNet((on) => !on)}
+              showCurrency={selected.currencies.length > 1}
+            />
+          ))
+        )}
+      </div>
 
       {stats.records.map((records) => (
         <RecordsCard
@@ -312,17 +335,29 @@ function CurrencyBlock({
   );
 }
 
-/** A pill in one of the two switchers, which differ only in how they stretch. */
+/**
+ * A pill in one of the two switchers, which differ only in how they stretch.
+ *
+ * As a tab it names the panel it switches and takes the tab list's arrow keys
+ * — see `rovingChoice`.
+ */
 function Pill({
   active,
   onClick,
   role,
+  id,
+  controls,
+  keys,
   grow,
   children,
 }: {
   active: boolean;
   onClick: () => void;
   role?: "tab";
+  id?: string;
+  /** The id of the panel this tab switches. */
+  controls?: string;
+  keys?: RovingChoiceProps;
   grow?: boolean;
   children: React.ReactNode;
 }) {
@@ -330,8 +365,11 @@ function Pill({
     <button
       type="button"
       role={role}
+      id={id}
       aria-selected={role === "tab" ? active : undefined}
       aria-pressed={role === "tab" ? undefined : active}
+      aria-controls={controls}
+      {...keys}
       onClick={onClick}
       className={cn(
         "rounded-full px-2.5 py-1 text-xs font-semibold transition-colors active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0",
@@ -682,6 +720,12 @@ function WhoCarries({
 }) {
   const t = useTranslations("groupStats");
   const signed = SIGNED[metric];
+  const metricPanel = useId();
+  const metricKeys = rovingChoice({
+    values: METRICS,
+    selected: metric,
+    onSelect: onMetric,
+  });
 
   const rows = useMemo(() => {
     const valueOf = (member: MemberStandingView) => BigInt(member[metric]);
@@ -715,6 +759,9 @@ function WhoCarries({
           <Pill
             key={candidate}
             role="tab"
+            id={`${metricPanel}-${candidate}`}
+            controls={metricPanel}
+            keys={metricKeys(candidate)}
             grow
             active={candidate === metric}
             onClick={() => onMetric(candidate)}
@@ -724,82 +771,91 @@ function WhoCarries({
         ))}
       </div>
 
-      {/* Three columns declared once on the list, subgridded onto by every
-          row, as the balance list does it. The amount track is `auto`, so it
-          is as wide as the longest amount in the card actually needs and no
-          wider; a fixed width is what pushed a five-figure balance out past
-          the card and broke the smaller ones over two lines. Sizing it per
-          row instead would fit each amount to itself, and the bars would
-          start and end a few pixels apart down the card. The column gap
-          belongs to the list alone — a subgrid inherits it, and restating it
-          on a row is what pulls the tracks back out of line. */}
-      <ul className="grid grid-cols-[minmax(0,1fr)_minmax(40px,0.8fr)_auto] gap-x-2.5 divide-y divide-border">
-        {rows.map(({ member, value }) => {
-          const magnitude = value < 0n ? -value : value;
-          const width =
-            peak === 0n
-              ? 0
-              : Number((magnitude * 100n) / peak) / (signed ? 2 : 1);
-          return (
-            <li
-              key={member.participantId}
-              className="col-span-3 grid grid-cols-subgrid items-center py-2"
-            >
-              <span className="flex min-w-0 items-center gap-2.5">
+      {/* The rows and the note on what they mean are what the metric tabs
+          switch, spaced as the card spaces them. */}
+      <div
+        id={metricPanel}
+        role="tabpanel"
+        aria-labelledby={`${metricPanel}-${metric}`}
+        className="flex flex-col gap-3"
+      >
+        {/* Three columns declared once on the list, subgridded onto by every
+            row, as the balance list does it. The amount track is `auto`, so
+            it is as wide as the longest amount in the card actually needs and
+            no wider; a fixed width is what pushed a five-figure balance out
+            past the card and broke the smaller ones over two lines. Sizing it
+            per row instead would fit each amount to itself, and the bars
+            would start and end a few pixels apart down the card. The column
+            gap belongs to the list alone — a subgrid inherits it, and
+            restating it on a row is what pulls the tracks back out of line. */}
+        <ul className="grid grid-cols-[minmax(0,1fr)_minmax(40px,0.8fr)_auto] gap-x-2.5 divide-y divide-border">
+          {rows.map(({ member, value }) => {
+            const magnitude = value < 0n ? -value : value;
+            const width =
+              peak === 0n
+                ? 0
+                : Number((magnitude * 100n) / peak) / (signed ? 2 : 1);
+            return (
+              <li
+                key={member.participantId}
+                className="col-span-3 grid grid-cols-subgrid items-center py-2"
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "grid size-6.5 shrink-0 place-items-center rounded-full text-2xs font-semibold",
+                      member.isSelf
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    {member.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="truncate text-sm font-medium">
+                    {member.name}
+                  </span>
+                </span>
+
                 <span
                   aria-hidden="true"
-                  className={cn(
-                    "grid size-6.5 shrink-0 place-items-center rounded-full text-2xs font-semibold",
-                    member.isSelf
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-accent text-accent-foreground",
-                  )}
+                  className="relative h-2 rounded-full bg-wash-2"
                 >
-                  {member.name.trim().charAt(0).toUpperCase()}
+                  {signed && (
+                    <span className="absolute -top-[3px] -bottom-[3px] left-1/2 w-px bg-foreground/30" />
+                  )}
+                  <span
+                    className={cn(
+                      "absolute inset-y-0 rounded-full",
+                      !signed && "left-0 bg-[var(--chart-1)]",
+                      signed && value >= 0n && `left-1/2 ${TONE.positive.fill}`,
+                      signed && value < 0n && `right-1/2 ${TONE.negative.fill}`,
+                    )}
+                    style={{ width: `${width}%` }}
+                  />
                 </span>
-                <span className="truncate text-sm font-medium">
-                  {member.name}
-                </span>
-              </span>
 
-              <span
-                aria-hidden="true"
-                className="relative h-2 rounded-full bg-wash-2"
-              >
-                {signed && (
-                  <span className="absolute -top-[3px] -bottom-[3px] left-1/2 w-px bg-foreground/30" />
-                )}
                 <span
                   className={cn(
-                    "absolute inset-y-0 rounded-full",
-                    !signed && "left-0 bg-[var(--chart-1)]",
-                    signed && value >= 0n && `left-1/2 ${TONE.positive.fill}`,
-                    signed && value < 0n && `right-1/2 ${TONE.negative.fill}`,
+                    "text-right text-sm font-semibold tabular-nums",
+                    signed && value !== 0n && TONE[toneFor(value)].ink,
                   )}
-                  style={{ width: `${width}%` }}
-                />
-              </span>
+                >
+                  <Amount
+                    minorUnits={value.toString()}
+                    currency={entry.currency}
+                    signDisplay={signed ? "exceptZero" : "auto"}
+                  />
+                </span>
+              </li>
+            );
+          })}
+        </ul>
 
-              <span
-                className={cn(
-                  "text-right text-sm font-semibold tabular-nums",
-                  signed && value !== 0n && TONE[toneFor(value)].ink,
-                )}
-              >
-                <Amount
-                  minorUnits={value.toString()}
-                  currency={entry.currency}
-                  signDisplay={signed ? "exceptZero" : "auto"}
-                />
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-
-      <p className="text-xs text-pretty text-muted-foreground">
-        {t(`metricNotes.${metric}`)}
-      </p>
+        <p className="text-xs text-pretty text-muted-foreground">
+          {t(`metricNotes.${metric}`)}
+        </p>
+      </div>
     </div>
   );
 }

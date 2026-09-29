@@ -217,6 +217,17 @@ describe("PayoutMethodsCard", () => {
     expect(sheet.getByRole("button", { name: /PayPal/ })).toBeEnabled();
   });
 
+  /** The search field is borderless in its pill, so the pill shows focus. */
+  it("rings the picker's search pill while the field has focus", async () => {
+    const { user } = renderCard();
+
+    await user.click(screen.getByRole("button", { name: /Add a method/ }));
+    const sheet = within(await screen.findByRole("dialog"));
+
+    const pill = sheet.getByLabelText("Search payment methods").parentElement;
+    expect(pill?.className).toContain("has-[input:focus-visible]:ring-3");
+  });
+
   it("takes a method nobody listed, exactly as it was typed", async () => {
     const { user } = renderCard();
 
