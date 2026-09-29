@@ -9,7 +9,9 @@ import {
   openOnAmount,
 } from "@/components/entries/add-entry-drawer";
 import { listSnapshots, type GroupSnapshot } from "@/lib/offline/snapshot";
+import { snapshotActor } from "@/lib/offline/owner";
 import type en from "../../../messages/en.json";
+import { DeviceActorProvider } from "./device-actor";
 
 /**
  * The groups this device can still add to, on the screen that has no network.
@@ -83,24 +85,33 @@ export function OfflineGroups({
           onOpenAutoFocus={openOnAmount}
         >
           {adding && (
-            <AddEntryForm
-              groupId={adding.groupId}
-              groupName={adding.groupName}
-              members={adding.members}
-              selfId={adding.selfId}
-              currencyMode={adding.currencyMode}
-              baseCurrency={adding.baseCurrency}
-              defaultCurrency={adding.defaultCurrency}
-              timezone={adding.timezone}
-              // As in the in-app offline drawer: no repayments without
-              // balances, and no receipt reader without a network to fetch it.
-              entryTypes={["expense", "income"]}
-              outstanding={[]}
-              frequentCategories={adding.frequentCategories}
-              receiptScanning={false}
-              onClose={() => setAdding(null)}
-              onSaved={() => setAdding(null)}
-            />
+            /*
+             * Nothing on this screen was rendered by a server, so who is
+             * typing comes from the snapshot: the person the group's form was
+             * last opened for on this device. What they queue here is sent as
+             * them and nobody else. See `snapshotActor`.
+             */
+            <DeviceActorProvider {...snapshotActor(adding)}>
+              <AddEntryForm
+                groupId={adding.groupId}
+                groupName={adding.groupName}
+                members={adding.members}
+                selfId={adding.selfId}
+                currencyMode={adding.currencyMode}
+                baseCurrency={adding.baseCurrency}
+                defaultCurrency={adding.defaultCurrency}
+                timezone={adding.timezone}
+                // As in the in-app offline drawer: no repayments without
+                // balances, and no receipt reader without a network to fetch
+                // it.
+                entryTypes={["expense", "income"]}
+                outstanding={[]}
+                frequentCategories={adding.frequentCategories}
+                receiptScanning={false}
+                onClose={() => setAdding(null)}
+                onSaved={() => setAdding(null)}
+              />
+            </DeviceActorProvider>
           )}
         </SheetContent>
       </Sheet>

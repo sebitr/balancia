@@ -27,11 +27,11 @@ those is the one that usually fires: a phone that has been in a pocket is a
 frozen tab, and it wakes up somewhere with signal rather than being told it has
 arrived.
 
-**Seeing what is waiting.** A line above the group says how many entries have
-not reached the server. Tapping it lists them. They are deliberately not shown
-in the group's own list or folded into its balances, because they are not in
-the group yet — a total that included them would be a number nobody else can
-see.
+**Seeing what is waiting.** A line above the group says how many of your
+entries have not reached the server. Tapping it lists them. They are
+deliberately not shown in the group's own list or folded into its balances,
+because they are not in the group yet — a total that included them would be a
+number nobody else can see.
 
 ## What does not, and why
 
@@ -103,20 +103,91 @@ mistaken for the ones that are not.
 | ----------------------------------- | --------------------------------------------------------- |
 | 201 — written, or already written   | The server has it exactly once. The device's copy is gone |
 | No answer at all                    | Kept, retried — this is the ordinary case                 |
-| 401, session expired                | Kept, retried after signing in                            |
+| 401, session expired                | Kept, retried once its author signs back in               |
 | 429, or a 5xx                       | Kept, retried with a backoff capped at two minutes        |
 | 404 — group gone, or access lost    | Held back and shown to the reader                         |
 | 422 — refused, e.g. a removed payer | Held back and shown to the reader                         |
 
-A queued entry is never dropped except by the server accepting it or by the
-person who typed it discarding it. The 401 row is the one worth reading twice:
-a phone that has been offline for hours very often has a session that timed
-out, so that is the _likeliest_ greeting a reconnecting flush gets, and
-treating it as a refusal would throw away an evening at the moment its owner
-signs back in.
+A queued entry is never dropped except by the server accepting it, by the
+person who typed it discarding it, or by a sign-out on the device — which says
+how many it is about to delete before anybody confirms (see below). The 401 row
+is the one worth reading twice: a phone that has been offline for hours very
+often has a session that timed out, so that is the _likeliest_ greeting a
+reconnecting flush gets, and treating it as a refusal would throw away an
+evening at the moment its owner signs back in.
 
 An entry that has been held back is listed with the reason and a **Discard**
-button. Nothing else removes one.
+button. Nothing else in the group removes one.
+
+## Whose entries go
+
+The queue belongs to the device, and a device can change hands between an
+entry being typed and a network turning up: a session lapses, somebody else
+signs in. A flush sends with whatever session cookie the browser holds, so
+without a check the second person would post the first one's dinner as their
+own — and if they are in the same group, the server would take it.
+
+So every queued entry and every draft is stamped with who typed it, and only
+that person's are sent, listed or offered back:
+
+- **An account** is stamped with its user id, and its entries go from any
+  group's screen, in the order they were typed.
+- **A guest** has no account, only a seat: one participant row in the group
+  their link opened. Their entries are stamped with that seat and go from that
+  group's screen. A guest who then signs up keeps the same seat — the
+  participant row is linked to the new account — so what they typed as a guest
+  still goes.
+- **Somebody else's** entries are neither sent nor shown. They wait, untouched,
+  for their author, or for a sign-out to clear them.
+
+Knowing who is signed in costs no request: the group layout has already
+resolved the actor to authorize the page, and hands it down. The offline screen
+has no server behind it, so it reads who the group's form was last opened for
+from that group's snapshot, which records the account alongside it.
+
+**Entries from before this existed** had no author. The database's upgrade to
+version 4 adopts each one, once, as the seat named by the snapshot of its
+group: the same form wrote both, so that seat is whoever was typing. It is done
+inside the upgrade rather than at flush time because by then the snapshot may
+have been rewritten by somebody else; inside the upgrade, nothing on the new
+version has written anything yet. An entry whose group has no snapshot cannot
+be placed, and is held rather than sent as whoever happens to be signed in; no
+group lists it, and the next sign-out counts it in its warning and clears it.
+
+## Signing out
+
+A phone is often somebody else's next, and signing out takes this device's
+copy of the person off it — from every sign-out: the settings hub, the Account
+screen, and deleting the account.
+
+1. **The page cache is deleted.** The service worker keeps every screen it
+   serves in `balancia-pages` so that a dropped signal does not blank the one
+   on show. Those are server-rendered pages — balances, names, amounts — and
+   the next person could otherwise read them with the radio off, or after the
+   five seconds the worker waits for a server.
+2. **The offline database is deleted.** Snapshots, the outbox, drafts and any
+   share waiting to be filed.
+3. **The session ends**, through `DELETE /api/auth/session`, whose answer
+   carries `Clear-Site-Data: "cache"` for what the browser holds outside the
+   app's reach, in its own HTTP cache. A Server Action cannot set a response
+   header, which is why that route is called first; the sign-out action then
+   runs as before and redirects. Browsers act on the header only over HTTPS,
+   and `"cache"` does not cover the worker's Cache Storage, which the
+   specification files under `"storage"` — which is why steps 1 and 2 are
+   done by the page rather than left to the header.
+
+Before anybody confirms, the sheet counts what is still in the outbox and says
+that signing out deletes it, while **Keep it** is still there to press. Those
+entries exist nowhere else.
+
+The build output, icons and the optional model files stay: they are the same
+bytes for everybody, and the models are tens of megabytes to fetch again.
+
+**Not `Clear-Site-Data: "storage"`.** It would do steps 1 and 2 in one line,
+and it would also unregister the service worker — taking this browser's push
+subscription and the offline screen with it, for whoever picks the device up
+next, until the app is next opened with a network. Deleting the two stores that
+actually hold the person is exact; the directive is not.
 
 ## Sharing into Balancia
 
@@ -169,24 +240,28 @@ share extension is the other half and is not in this repository.
 Four IndexedDB stores, in a database called `balancia-offline`:
 
 - `group-snapshots` — per group, exactly the props the entry form is rendered
-  with: people, categories, currency mode, timezone. No balances, no history,
-  no expenses.
+  with: people, categories, currency mode, timezone — and whose account it was
+  taken for. No balances, no history, no expenses.
 - `outbox` — queued entries, keyed by their idempotency key so the queue
-  structurally cannot hold two records that would write the same expense.
+  structurally cannot hold two records that would write the same expense, each
+  stamped with who typed it.
 - `entry-drafts` — one half-written entry per group, kept when the drawer is
-  closed with something in it, expiring after a week.
+  closed with something in it, expiring after a week, and offered back only to
+  whoever was typing it.
 - `shared-payloads` — what another app just shared, between the worker that
   caught the POST and the screen that reads it. One at a time, deleted as it is
   read, stale after an hour.
 
 All four are on the device and are never sent anywhere except as the expense
-they become. Clearing site data clears them, and clearing them while entries
-are queued loses those entries — they exist nowhere else until the server has
-them.
+they become. Signing out deletes the database, and so does clearing site data;
+either one, while entries are queued, loses those entries — they exist nowhere
+else until the server has them.
 
 The code is in `src/lib/offline/`: `idb.ts` is the whole IndexedDB dependency,
 `outbox.ts`, `snapshot.ts`, `drafts.ts` and `shared.ts` are the four stores,
-`replay.ts` is the decision table above, and `flush.ts` drains the queue.
+`replay.ts` is the decision table above, `flush.ts` drains the queue,
+`owner.ts` decides whose each record is, and `forget.ts` is what signing out
+deletes.
 
 ## Notes for other clients
 

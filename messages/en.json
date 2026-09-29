@@ -778,6 +778,7 @@
     "signOut": "Sign out",
     "signOutTitle": "Sign out of Balancia?",
     "signOutBody": "Your groups stay exactly as they are. You will need your passkey or password to come back.",
+    "signOutUnsent": "{count, plural, one {# entry on this device has not synced yet, and signing out deletes it. Stay signed in and it syncs the next time you are online.} other {# entries on this device have not synced yet, and signing out deletes them. Stay signed in and they sync the next time you are online.}}",
     "keepIt": "Keep it",
     "photoAdd": "Add a photo",
     "photoChange": "Change photo",

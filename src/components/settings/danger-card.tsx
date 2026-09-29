@@ -7,8 +7,10 @@ import { LogOut, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { ConfirmSheet } from "./confirm-sheet";
+import { leaveDevice } from "./sign-out";
+import { SignOutSheet } from "./sign-out-sheet";
 import { cn } from "@/lib/utils";
-import { deleteAccountAction, signOutAction } from "@/modules/auth/actions";
+import { deleteAccountAction } from "@/modules/auth/actions";
 
 /**
  * The two things on the Account screen that ask before they act.
@@ -39,8 +41,10 @@ export function DangerCard({ email }: { email: string }) {
       toast.error(result.error ?? t("deleteFailed"));
       return;
     }
-    // The account and its session are gone; anything else this browser has
-    // cached about them is about to be wrong.
+    // The account and its session are gone, and so is what this device kept
+    // of them: the pages it cached and its offline store, exactly as signing
+    // out would. Anything left would be a closed account still readable here.
+    await leaveDevice();
     router.replace("/");
     router.refresh();
   };
@@ -64,14 +68,7 @@ export function DangerCard({ email }: { email: string }) {
         />
       </section>
 
-      <ConfirmSheet
-        open={signingOut}
-        onOpenChange={setSigningOut}
-        title={t("signOutTitle")}
-        body={t("signOutBody")}
-        confirmLabel={t("signOut")}
-        onConfirm={() => signOutAction()}
-      />
+      <SignOutSheet open={signingOut} onOpenChange={setSigningOut} />
 
       <ConfirmSheet
         open={deleting}

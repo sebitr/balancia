@@ -24,6 +24,13 @@ export interface GroupSnapshot {
   readonly members: readonly { id: string; displayName: string }[];
   /** The reader's own participant row — the default payer. */
   readonly selfId: string;
+  /**
+   * The reader's account, or null for a guest — so the offline screen, which
+   * no server rendered, knows whose entries it is queueing (`snapshotActor`).
+   * Absent on a copy taken before entries carried an author, which then reads
+   * as its seat, `selfId`.
+   */
+  readonly userId?: string | null;
   readonly currencyMode: "separate" | "converted";
   readonly baseCurrency: string | null;
   readonly defaultCurrency: string;

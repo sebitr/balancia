@@ -54,7 +54,7 @@ export default async function SharePage() {
     ...buckets.settled,
   ].map((position) => shareable(position, preferredCurrency));
 
-  return <ShareScreen groups={groups} />;
+  return <ShareScreen groups={groups} userId={user.userId} />;
 }
 
 function shareable(

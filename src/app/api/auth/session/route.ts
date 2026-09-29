@@ -152,6 +152,25 @@ export async function DELETE() {
   return trackRoute("/api/auth/session", "DELETE", handleDelete);
 }
 
+/**
+ * Sign-out, for a native client and for the web alike.
+ *
+ * The web's sign-out sheet calls this before its Server Action, because a
+ * Server Action cannot set a response header and this answer carries one:
+ * `Clear-Site-Data: "cache"`, which asks the browser to drop what its HTTP
+ * cache holds for this origin — pages and images the next person on the
+ * device has no business being served.
+ *
+ * `"cache"` and nothing more. `"storage"` would also unregister the service
+ * worker, and with it this browser's push subscription and the offline
+ * screen, for whoever picks the device up next; and the two stores that
+ * actually hold the person signing out — the worker's page cache and the
+ * offline database — are deleted by the page itself, precisely (see
+ * `src/lib/offline/forget.ts`). A native client ignores the header.
+ *
+ * It answers the same with no session at all, so the web can also call it
+ * after deleting an account, when the session has already gone with it.
+ */
 async function handleDelete() {
   try {
     const token = await readSessionCookie();
@@ -159,7 +178,9 @@ async function handleDelete() {
       await revokeSession(token);
     }
     await clearSessionCookie();
-    return noStore({ ok: true });
+    const response = noStore({ ok: true });
+    response.headers.set("Clear-Site-Data", '"cache"');
+    return response;
   } catch (error) {
     return mobileApiError(error, "/api/auth/session DELETE");
   }

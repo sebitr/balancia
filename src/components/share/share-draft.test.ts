@@ -21,6 +21,7 @@ const MEMBERS = [ME, JONAS];
 function draftFor(text: string, currency = "CHF") {
   return shareDraft({
     groupId: "group-1",
+    owner: { kind: "user", userId: "user-1" },
     text,
     fallbackCurrency: currency,
     selfParticipantId: ME,
@@ -62,6 +63,7 @@ describe("shareDraft", () => {
     // refuse the draft.
     const draft = shareDraft({
       groupId: "group-1",
+      owner: { kind: "user", userId: "user-1" },
       text: "",
       fallbackCurrency: "CHF",
       selfParticipantId: ME,
