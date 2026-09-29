@@ -895,7 +895,8 @@ of the Compose stack, it does all of its own work.
 A worker that cannot reach its queue at startup does not stop the app serving
 pages. It retries, from five seconds apart up to every five minutes, and says
 where it stands in the `worker` field of `/api/health/ready` and in the
-`balancia_worker_up` metric.
+`balancia_worker_up` metric. On SIGTERM the app gives the jobs it is running up
+to twenty seconds to finish before it exits.
 
 Set it to `false` only when something else is running those jobs, which under
 Compose means enabling the `worker` service. That takes a second line, because

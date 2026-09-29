@@ -59,6 +59,13 @@ export async function register(): Promise<void> {
   // no queue. The worker is Node-only.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // First, ahead of anything below that can fail. The Docker image sets
+  // NEXT_MANUAL_SIG_HANDLE, so Next registers no signal handler of its own,
+  // and without this one SIGTERM would end the process on the spot — running
+  // jobs, requests in flight and all. See src/worker/shutdown.ts.
+  const { installShutdownHandler } = await import("@/worker/shutdown");
+  installShutdownHandler();
+
   const env = getEnv();
 
   /*

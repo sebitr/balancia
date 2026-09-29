@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -98,5 +100,91 @@ describe("getBoss", () => {
 
     expect(first).toBe(second);
     expect(pgBoss.state.instances).toHaveLength(1);
+  });
+});
+
+describe("stopBoss", () => {
+  it("drains within the shutdown budget, then returns as soon as pg-boss has stopped", async () => {
+    // pg-boss's stop() resolves only when everything is done. Waiting for its
+    // `stopped` event afterwards — as this used to — waited for an event that
+    // had already fired, and sat out a thirty-five-second timer every time.
+    const { getBoss, stopBoss, SHUTDOWN_DRAIN_MS } = await loadQueue();
+    await getBoss();
+
+    const startedAt = Date.now();
+    await stopBoss();
+
+    expect(pgBoss.state.instances[0]?.stop).toHaveBeenCalledWith({
+      graceful: true,
+      close: true,
+      timeout: SHUTDOWN_DRAIN_MS,
+    });
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
+  });
+
+  it("gives up on a queue that never settles once the budget and the slack are spent", async () => {
+    const { getBoss, stopBoss, SHUTDOWN_DRAIN_MS, STOP_SLACK_MS } =
+      await loadQueue();
+    await getBoss();
+    pgBoss.state.stop = () => new Promise(() => {});
+    vi.useFakeTimers();
+
+    let stopped = false;
+    const stopping = stopBoss().then(() => {
+      stopped = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(SHUTDOWN_DRAIN_MS + STOP_SLACK_MS - 1);
+    expect(stopped).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await stopping;
+    expect(stopped).toBe(true);
+  });
+
+  it("starts a new queue afterwards rather than handing back the stopped one", async () => {
+    const { getBoss, stopBoss } = await loadQueue();
+    const first = await getBoss();
+
+    await stopBoss();
+
+    expect(await getBoss()).not.toBe(first);
+  });
+});
+
+/**
+ * The seconds a Compose file allows between SIGTERM and SIGKILL, for one
+ * service. Read as text, like env.test.ts reads compose.yaml: the files are
+ * simple enough, and a YAML parser is not a dependency worth one assertion.
+ */
+function gracePeriodSeconds(file: string, service: string): number {
+  const source = readFileSync(path.join(process.cwd(), file), "utf8");
+  const start = source.indexOf(`\n  ${service}:\n`);
+  expect(start, `${file} should define the ${service} service`).toBeGreaterThan(
+    -1,
+  );
+  const rest = source.slice(start + 1);
+  const next = rest.slice(1).search(/\n {2}[a-z-]+:\n/);
+  const block = next === -1 ? rest : rest.slice(0, next + 1);
+  const match = /\n {4}stop_grace_period: (\d+)s\n/.exec(block);
+  expect(match, `${file} should give ${service} a stop_grace_period`).not.toBe(
+    null,
+  );
+  return Number(match?.[1]);
+}
+
+describe("the drain fits inside every grace period", () => {
+  it.each([
+    ["compose.yaml", "app"],
+    ["compose.yaml", "worker"],
+    ["compose.dev.yaml", "worker"],
+  ])("%s gives %s long enough to drain and close", async (file, service) => {
+    // Past the grace period Docker sends SIGKILL, and a job still running
+    // then is neither finished nor handed back: it sits as active until it
+    // expires. The drain and pg-boss's own close must both fit, with time
+    // left over for the process to exit.
+    const { SHUTDOWN_DRAIN_MS, STOP_SLACK_MS } = await loadQueue();
+    expect(gracePeriodSeconds(file, service) * 1000).toBeGreaterThan(
+      SHUTDOWN_DRAIN_MS + STOP_SLACK_MS,
+    );
   });
 });

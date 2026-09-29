@@ -536,6 +536,13 @@ when a recurring expense fails to appear. The other is
 template that could not produce its entry, and its group; every other template
 carries on, and that one is retried each hour until it can.
 
+When the app is stopped — `docker compose down`, or a restart during an
+upgrade — it stops taking new jobs and gives the ones it is running up to
+twenty seconds to finish before it exits. One still running after that is
+handed back to the queue and retried by whichever process starts next. The
+app's thirty-second `stop_grace_period` is sized around that; shortening it
+below twenty-five seconds leaves a job to be killed mid-run instead.
+
 ### Giving the jobs their own container
 
 Worth doing when a job is heavy enough to be felt in request latency: a large

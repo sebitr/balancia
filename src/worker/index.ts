@@ -52,7 +52,8 @@ async function main(): Promise<void> {
     logger.info({ signal }, "Shutting down worker");
     stopHeartbeat();
     try {
-      // Graceful: let in-flight jobs finish before the pool closes.
+      // Graceful: stop fetching, let in-flight jobs finish within
+      // SHUTDOWN_DRAIN_MS, then close the pool.
       await stopBoss();
       await closeDb();
       logger.info("Worker stopped cleanly");
