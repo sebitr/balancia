@@ -11,9 +11,14 @@ import { DangerCard } from "./danger-card";
  * Two things are pinned here. What the sheet says before the tap: entries that
  * have not reached the server yet exist only on this device, and signing out
  * deletes them, so the count is spelled out while "Keep it" is still there to
- * press. And what the tap does, in order: the device forgets first, then the
- * session ends with the header that clears the browser's cache, then the
- * action that redirects.
+ * press. And what the tap does, in order: the device forgets first, then push
+ * is turned off for this browser while there is still a session to do it
+ * with, then the session ends with the header that clears the browser's cache,
+ * then the action that redirects.
+ *
+ * The push step runs for real against a stand-in service worker, so these
+ * pin what reaches the server — this browser's endpoint — and not only that a
+ * function was called.
  */
 
 const { countQueued, forgetDevice, signOutAction, deleteAccountAction } =
@@ -42,9 +47,39 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const steps: string[] = [];
 let fetchMock: ReturnType<typeof vi.fn>;
+let unsubscribe: ReturnType<typeof vi.fn>;
+
+const ENDPOINT = "https://push.example.test/send/abc123";
+
+/**
+ * What `navigator.serviceWorker` answers. jsdom has none, so it is defined
+ * on the real navigator for each test and taken away after.
+ */
+function serviceWorker(value: unknown) {
+  Object.defineProperty(window.navigator, "serviceWorker", {
+    value,
+    configurable: true,
+  });
+}
+
+/** A browser that has push turned on for whoever is signed in. */
+function subscribedBrowser() {
+  unsubscribe = vi.fn(async () => {
+    steps.push("unsubscribe");
+    return true;
+  });
+  serviceWorker({
+    getRegistration: async () => ({
+      pushManager: {
+        getSubscription: async () => ({ endpoint: ENDPOINT, unsubscribe }),
+      },
+    }),
+  });
+}
 
 beforeEach(() => {
   steps.length = 0;
+  subscribedBrowser();
   countQueued.mockReset().mockResolvedValue(0);
   forgetDevice.mockReset().mockImplementation(async () => {
     steps.push("forget");
@@ -62,6 +97,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(window.navigator, "serviceWorker");
 });
 
 async function openSheet() {
@@ -110,7 +146,7 @@ describe("SignOutButton", () => {
     expect(signOutAction).not.toHaveBeenCalled();
   });
 
-  it("clears the device, then ends the session, then redirects", async () => {
+  it("clears the device, stops push, ends the session, then redirects", async () => {
     const { user } = await openSheet();
 
     await user.click(
@@ -118,8 +154,22 @@ describe("SignOutButton", () => {
     );
 
     await waitFor(() =>
-      expect(steps).toEqual(["forget", "DELETE /api/auth/session", "action"]),
+      expect(steps).toEqual([
+        "forget",
+        // While the session still exists: the server's record of this device
+        // is removed as the account that owns it.
+        "DELETE /api/push/subscriptions",
+        "unsubscribe",
+        "DELETE /api/auth/session",
+        "action",
+      ]),
     );
+    const pushRequest = fetchMock.mock.calls.find(
+      ([url]) => url === "/api/push/subscriptions",
+    )!;
+    expect(JSON.parse((pushRequest[1] as RequestInit).body as string)).toEqual({
+      endpoint: ENDPOINT,
+    });
   });
 
   it("still signs out when the session request never came back", async () => {
@@ -134,6 +184,34 @@ describe("SignOutButton", () => {
 
     await waitFor(() => expect(signOutAction).toHaveBeenCalledOnce());
     expect(forgetDevice).toHaveBeenCalledOnce();
+    // The browser let go of push all the same.
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("still signs out when the browser will not let go of push", async () => {
+    unsubscribe.mockRejectedValue(new Error("InvalidStateError"));
+    const { user } = await openSheet();
+
+    await user.click(
+      screen.getAllByRole("button", { name: "Sign out" }).at(-1)!,
+    );
+
+    await waitFor(() => expect(signOutAction).toHaveBeenCalledOnce());
+  });
+
+  it("signs out without a push step on a browser with no service worker", async () => {
+    // A development server or plain HTTP: no worker was ever registered, so
+    // there is no subscription to remove — and nothing to wait on.
+    serviceWorker({ getRegistration: async () => undefined });
+    const { user } = await openSheet();
+
+    await user.click(
+      screen.getAllByRole("button", { name: "Sign out" }).at(-1)!,
+    );
+
+    await waitFor(() =>
+      expect(steps).toEqual(["forget", "DELETE /api/auth/session", "action"]),
+    );
   });
 });
 
@@ -150,7 +228,7 @@ describe("DangerCard", () => {
     );
   });
 
-  it("clears the device once the account is gone", async () => {
+  it("clears the device and stops push once the account is gone", async () => {
     deleteAccountAction.mockResolvedValue({ ok: true });
     const user = userEvent.setup();
     renderWithIntl(<DangerCard email="ada@example.com" />);
@@ -162,8 +240,15 @@ describe("DangerCard", () => {
     );
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
+    // The account's push rows went with it; the server's half answers with
+    // nothing to do, and the browser's half is what kills the endpoint.
     await waitFor(() =>
-      expect(steps).toEqual(["forget", "DELETE /api/auth/session"]),
+      expect(steps).toEqual([
+        "forget",
+        "DELETE /api/push/subscriptions",
+        "unsubscribe",
+        "DELETE /api/auth/session",
+      ]),
     );
   });
 
@@ -181,5 +266,6 @@ describe("DangerCard", () => {
 
     await waitFor(() => expect(deleteAccountAction).toHaveBeenCalledOnce());
     expect(forgetDevice).not.toHaveBeenCalled();
+    expect(unsubscribe).not.toHaveBeenCalled();
   });
 });

@@ -162,11 +162,13 @@ export async function DELETE() {
  * device has no business being served.
  *
  * `"cache"` and nothing more. `"storage"` would also unregister the service
- * worker, and with it this browser's push subscription and the offline
- * screen, for whoever picks the device up next; and the two stores that
- * actually hold the person signing out — the worker's page cache and the
- * offline database — are deleted by the page itself, precisely (see
- * `src/lib/offline/forget.ts`). A native client ignores the header.
+ * worker, and with it the offline screen for whoever picks the device up
+ * next. Everything it would take that belongs to the person signing out is
+ * taken by the page itself, precisely, before this request: the worker's page
+ * cache and the offline database (`src/lib/offline/forget.ts`), and this
+ * browser's push subscription, which the page also removes from the server —
+ * something a header could not do (`unsubscribeThisDevice`). A native client
+ * ignores the header.
  *
  * It answers the same with no session at all, so the web can also call it
  * after deleting an account, when the session has already gone with it.

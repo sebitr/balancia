@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * The web calls this before its Server Action precisely because an action
  * cannot set a response header, so the header is the thing worth pinning —
  * and that it is `"cache"` alone. `"storage"` would unregister the service
- * worker, taking this browser's push subscription and the offline screen with
- * it for whoever uses the device next.
+ * worker, taking the offline screen with it for whoever uses the device next;
+ * what it would take of the person signing out, the page has already taken.
  */
 
 const { readSessionCookie, clearSessionCookie, revokeSession } = vi.hoisted(

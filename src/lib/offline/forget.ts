@@ -22,6 +22,8 @@ import { deleteOfflineDatabase } from "./idb";
  * holds the offline screen, which knows nobody. And the service worker itself
  * stays registered — see `docs/offline.md` for why the sign-out response does
  * not ask the browser for `Clear-Site-Data: "storage"`, which would take it.
+ * Its push subscription is the one thing on it that is somebody's, and
+ * sign-out removes that separately, server included (`unsubscribeThisDevice`).
  *
  * Entries still in the outbox are lost with it. The sign-out sheet says how
  * many before anybody confirms (see `SignOutSheet`).

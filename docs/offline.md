@@ -167,7 +167,12 @@ screen, and deleting the account.
    five seconds the worker waits for a server.
 2. **The offline database is deleted.** Snapshots, the outbox, drafts and any
    share waiting to be filed.
-3. **The session ends**, through `DELETE /api/auth/session`, whose answer
+3. **Push stops on this browser.** The server forgets its subscription and
+   the browser unsubscribes, so the account's notifications stop reaching a
+   device somebody else may now be holding. Before the session ends, because
+   the server's half needs it. [Notifications](notifications.md#a-device-that-changes-hands)
+   has the detail.
+4. **The session ends**, through `DELETE /api/auth/session`, whose answer
    carries `Clear-Site-Data: "cache"` for what the browser holds outside the
    app's reach, in its own HTTP cache. A Server Action cannot set a response
    header, which is why that route is called first; the sign-out action then
@@ -175,6 +180,10 @@ screen, and deleting the account.
    and `"cache"` does not cover the worker's Cache Storage, which the
    specification files under `"storage"` — which is why steps 1 and 2 are
    done by the page rather than left to the header.
+
+None of the first four can hold a sign-out up: a missing service worker, a
+store the browser refuses, a request that fails — each costs what that step was
+for, and the person is still signed out.
 
 Before anybody confirms, the sheet counts what is still in the outbox and says
 that signing out deletes it, while **Keep it** is still there to press. Those
@@ -184,10 +193,11 @@ The build output, icons and the optional model files stay: they are the same
 bytes for everybody, and the models are tens of megabytes to fetch again.
 
 **Not `Clear-Site-Data: "storage"`.** It would do steps 1 and 2 in one line,
-and it would also unregister the service worker — taking this browser's push
-subscription and the offline screen with it, for whoever picks the device up
-next, until the app is next opened with a network. Deleting the two stores that
-actually hold the person is exact; the directive is not.
+and it would also unregister the service worker — taking the offline screen
+with it, for whoever picks the device up next, until the app is next opened
+with a network. It would end the push subscription too, but without telling
+the server, which step 3 does. Deleting what actually holds the person is
+exact; the directive is not.
 
 ## Sharing into Balancia
 
