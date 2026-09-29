@@ -79,7 +79,10 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 
 - UI components never query PostgreSQL. Server Components load data through
   module services; domain modules are `server-only` and lint-restricted from
-  importing React/Next.
+  importing React/Next. A domain read worth sharing across one render goes
+  through `oncePerRender` in `src/lib/render-memo.ts` instead — React's
+  per-render `cache`, which calls straight through outside a render and so
+  needs no request context.
 - Route handlers and Server Actions validate input with zod, resolve an
   `Actor` (user session or guest session), authorize through
   `src/lib/security/authorization.ts`, then call services.
@@ -199,11 +202,25 @@ produce base-currency balances. The engine guarantees Σ(balances) = 0 per
 currency and produces a deterministic greedy simplification (largest debtor →
 largest creditor) that is presentation-only: it never alters recorded history.
 
+A group's rows are read at most once per server render, through
+`oncePerRender`, however many loaders on the screen ask for its balances — the
+group overview and its reminder list, the settle-up plan and the same list, the
+join screen's summary and its claimable names. Only the pure assembly runs per
+caller. The memo lives exactly as long as one render: the render Next.js runs
+after a Server Action starts from nothing, and the action itself, route
+handlers and the worker run outside any render and read every time. A caller
+passing its own handle (a transaction) always reads for itself. The home screen
+reads every active group's rows in one batch and skips archived groups, whose
+figures nothing shows.
+
 ## Security model
 
 - Central authorization: every group-scoped read/mutation resolves the actor
   (user membership or guest session participant) before touching data;
-  queries are scoped by the authorized group ID.
+  queries are scoped by the authorized group ID. The group layout and the page
+  under it both authorize, through `requireGroupAccess`, which answers the same
+  group and the same archived-group flag once per render — the same lifetime
+  as the balance memo above. `authorizeGroup` itself remembers nothing.
 - Authentication: scrypt password hashing (N=2¹⁷, r=8, p=1) from Node's
   standard library; sign-in is constant-time with respect to account existence
   and returns one message for every credential failure. Session and invitation

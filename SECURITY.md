@@ -118,6 +118,12 @@ write:
 "Not a member" and "does not exist" both produce a 404. Membership is not
 something an outsider should be able to probe for.
 
+A group page and the layout around it both authorize, and within one server
+render the second is answered from the first rather than with another query.
+Nothing remembered outlives that render: the one that follows a Server Action
+— removing someone, say — asks afresh, and Server Actions and API routes
+themselves ask on every call. `authorizeGroup` itself remembers nothing.
+
 ### Uploads
 
 - MIME type is determined by **sniffing the file's magic bytes**, never the

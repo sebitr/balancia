@@ -220,6 +220,18 @@ the background jobs [their own container](#background-jobs), that is a second
 app-sized pool as well — plan for roughly `2 × DATABASE_POOL_MAX` against
 PostgreSQL's `max_connections` in that shape.
 
+Every connection in the app's pool is opened with two limits, which are not
+environment variables: PostgreSQL cancels a statement that runs for more than
+30 seconds, and ends a transaction left idle inside for more than a minute. The
+longest statements Balancia sends take seconds, and without the limits one
+runaway query held its connection for as long as it liked — enough of them and
+the pool ran dry for everybody. An installation that genuinely needs longer can
+say so in the connection string: `?statement_timeout=120000` (milliseconds) at
+the end of [`DATABASE_URL`](#database_url) overrides the default, which under
+Compose means setting that variable yourself. Migrations connect on their own
+and pg-boss keeps its own pool, so neither is bound by the defaults — though
+both read `DATABASE_URL` too, and would take an override written there.
+
 ---
 
 ## Receipt storage
