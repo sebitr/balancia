@@ -86,14 +86,23 @@ and the deployment side of them in
 ## Upgrading
 
 ```bash
+./backup.sh --database-only --keep 10 backups/pre-upgrade
 docker compose pull
 docker compose up -d
 ```
 
 Migrations are forward-only and never destructive without warning, and an
 already-applied migration whose file has changed fails startup loudly rather
-than running twice. Take a backup first anyway:
+than running twice. Forward-only is also why the first line is there: the dump
+it takes is the way back from an upgrade that went wrong. `backup.sh` comes
+with the standalone install; see
 [docs/backup-and-restore.md](https://github.com/sebitr/balancia/blob/main/docs/backup-and-restore.md).
+
+Going back to an older image without restoring that dump is refused: a release
+older than its database will not start, rather than run against a schema it was
+never written for. Rolling back, and the setting that overrides the refusal, are
+in
+[docs/self-hosting.md](https://github.com/sebitr/balancia/blob/main/docs/self-hosting.md#rolling-back).
 
 ## Licence
 
