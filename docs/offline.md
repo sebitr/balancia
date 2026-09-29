@@ -94,6 +94,16 @@ somebody removed the entry hands back that id and leaves the deletion standing:
 the person who removed it could see what it was, and a network retry is not a
 reason to overrule them.
 
+**Repayments carry a key too**, though they are never queued. Without a queue
+to hold the key between attempts, the form holds it instead: one key from the
+first press of **Record payment** until a save lands, so pressing again after
+an answer that never came back replays that attempt rather than paying the debt
+a second time. `POST /api/groups/:groupId/settlements` takes the same header on
+the same terms. Changing an entry between an expense and a repayment is covered
+as well: it writes the new row and removes the old one in a single transaction
+under the form's key, so a second send of the same change answers with the row
+the first one made.
+
 ## When the server says no
 
 Not every refusal is worth retrying, and the ones that are must never be

@@ -15,6 +15,10 @@ import {
   updateExpense,
 } from "./service";
 import {
+  convertExpenseToSettlement,
+  convertSettlementToExpense,
+} from "./convert";
+import {
   createSettlement,
   deleteSettlement,
   restoreSettlement,
@@ -123,9 +127,15 @@ export async function restoreExpenseAction(
   return result;
 }
 
+/**
+ * `clientKey` as in `createExpenseAction`, though nothing queues a repayment:
+ * the form holds one key until a save lands, so pressing again after an answer
+ * that never came back replays the first attempt rather than paying twice.
+ */
 export async function createSettlementAction(
   groupId: string,
   payload: unknown,
+  clientKey?: string,
 ): Promise<ActionResult<{ settlementId: string }>> {
   const parsed = settlementInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -136,7 +146,9 @@ export async function createSettlementAction(
 
   const result = await runAction("settlements.create", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    const settlementId = await createSettlement(access, parsed.data);
+    const settlementId = await createSettlement(access, parsed.data, {
+      clientKey,
+    });
     return { settlementId };
   });
 
@@ -166,25 +178,14 @@ export async function updateSettlementAction(
 }
 
 /**
- * Changing an entry's type across the two tables it can live in.
- *
- * Expense and income are one row with a sign, so switching between them is an
- * ordinary update. A repayment is not: it is modelled separately precisely so
- * that spending and settling cannot blur, which means "this was actually Alice
- * paying me back" has to move the row from one table to the other.
- *
- * Written before the old row is removed, and deliberately not wrapped in one
- * transaction. The services record their notifications inside their own
- * transaction and dispatch them once it has committed; nesting would hand the
- * dispatcher ids no other connection can yet see, and the notification would be
- * dropped rather than delayed. Sequential leaves one failure mode — a create
- * that succeeds and a delete that does not — and that way round the reader is
- * left with a visible duplicate they can remove, rather than with nothing.
+ * Changing an entry's type across the two tables it can live in: one
+ * transaction, idempotent under the form's `clientKey`. See `convert.ts`.
  */
 export async function convertExpenseToSettlementAction(
   groupId: string,
   expenseId: string,
   payload: unknown,
+  clientKey?: string,
 ): Promise<ActionResult<{ settlementId: string }>> {
   const parsed = settlementInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -195,8 +196,12 @@ export async function convertExpenseToSettlementAction(
 
   const result = await runAction("expenses.convertToSettlement", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    const settlementId = await createSettlement(access, parsed.data);
-    await deleteExpense(access, expenseId);
+    const settlementId = await convertExpenseToSettlement(
+      access,
+      expenseId,
+      parsed.data,
+      { clientKey },
+    );
     return { settlementId };
   });
 
@@ -212,6 +217,7 @@ export async function convertSettlementToExpenseAction(
   groupId: string,
   settlementId: string,
   payload: unknown,
+  clientKey?: string,
 ): Promise<ActionResult<{ expenseId: string }>> {
   const parsed = expenseInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -220,8 +226,12 @@ export async function convertSettlementToExpenseAction(
 
   const result = await runAction("settlements.convertToExpense", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    const expenseId = await createExpense(access, parsed.data);
-    await deleteSettlement(access, settlementId);
+    const expenseId = await convertSettlementToExpense(
+      access,
+      settlementId,
+      parsed.data,
+      { clientKey },
+    );
     return { expenseId };
   });
 

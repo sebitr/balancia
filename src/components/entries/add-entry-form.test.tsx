@@ -836,6 +836,7 @@ describe("switching type", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "Bus tickets" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1142,8 +1143,30 @@ describe("settlement", () => {
         amount: "12840",
         paymentMethod: "TWINT",
       }),
+      CLIENT_KEY,
     );
     expect(success).toHaveBeenCalledWith("Payment recorded", expect.anything());
+  });
+
+  /**
+   * The key a repayment goes out under belongs to the form, not to the press.
+   * Nothing queues a repayment the way the outbox queues an expense, so the
+   * second press *is* the retry — and it has to carry the first one's key, or
+   * an answer lost on the way back becomes a debt paid twice.
+   */
+  it("sends a second press under the first press's key", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    createSettlement.mockResolvedValueOnce({ ok: false, error: "Try again." });
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledTimes(2);
+    const [first, second] = createSettlement.mock.calls.map((call) => call[2]);
+    expect(first).toEqual(CLIENT_KEY);
+    expect(second).toBe(first);
   });
 
   /**
@@ -1166,6 +1189,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1199,6 +1223,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "Poker chips" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1240,6 +1265,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ currency: "EUR" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1319,6 +1345,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "Bus tickets" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1336,6 +1363,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1843,9 +1871,11 @@ describe("editing an entry", () => {
 
     expect(updateExpense).not.toHaveBeenCalled();
     expect(toSettlement).toHaveBeenCalledTimes(1);
-    const [groupId, expenseId, payload] = toSettlement.mock.calls[0];
+    const [groupId, expenseId, payload, clientKey] = toSettlement.mock.calls[0];
     expect(groupId).toBe("g1");
     expect(expenseId).toBe("e1");
+    // A move writes a row as surely as a create does, and replays the same way.
+    expect(clientKey).toEqual(CLIENT_KEY);
     expect(payload).toMatchObject({
       fromParticipantId: "herve",
       toParticipantId: "seb",
@@ -1958,9 +1988,10 @@ describe("editing an entry", () => {
 
     expect(updateSettlement).not.toHaveBeenCalled();
     expect(toExpense).toHaveBeenCalledTimes(1);
-    const [groupId, settlementId, payload] = toExpense.mock.calls[0];
+    const [groupId, settlementId, payload, clientKey] = toExpense.mock.calls[0];
     expect(groupId).toBe("g1");
     expect(settlementId).toBe("s1");
+    expect(clientKey).toEqual(CLIENT_KEY);
     expect(payload).toMatchObject({
       direction: "out",
       description: "Concert tickets",
@@ -2464,6 +2495,7 @@ describe("a drawer opened on a stated debt", () => {
         amount: "12840",
         currency: "CHF",
       }),
+      CLIENT_KEY,
     );
   });
 
@@ -2492,6 +2524,7 @@ describe("a drawer opened on a stated debt", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "TWINT" }),
+      CLIENT_KEY,
     );
   });
 
@@ -2504,6 +2537,7 @@ describe("a drawer opened on a stated debt", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "" }),
+      CLIENT_KEY,
     );
   });
 

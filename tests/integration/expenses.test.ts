@@ -1,9 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { decodeCursor, encodeCursor, type ListCursor } from "@/lib/db/keyset";
-import { activityEvents, expenseShares, expenses } from "@/lib/db/schema";
+import {
+  activityEvents,
+  expenseShares,
+  expenses,
+  settlements,
+} from "@/lib/db/schema";
 import { AuthorizationError } from "@/lib/security/authorization";
 import {
   createExpense,
@@ -13,11 +19,17 @@ import {
   updateExpense,
 } from "@/modules/expenses/service";
 import {
+  convertExpenseToSettlement,
+  convertSettlementToExpense,
+} from "@/modules/expenses/convert";
+import {
   createSettlement,
   deleteSettlement,
+  getSettlement,
   listSettlements,
   mostUsedPaymentMethod,
   restoreSettlement,
+  updateSettlement,
 } from "@/modules/settlements/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { balancesSumToZero } from "@/modules/balances/engine";
@@ -1039,5 +1051,313 @@ describe("offline replay", () => {
     const second = await createExpense(group.access, dinner(group));
 
     expect(second).not.toBe(first);
+  });
+});
+
+/**
+ * The fixtures the repayment tests below share: a lunch Seb paid for and split
+ * with Blaise, which leaves Blaise owing exactly the repayment that follows.
+ */
+async function lunchOwedByBlaise() {
+  const actor = await createTestUser({ name: "Seb" });
+  const group = await createTestGroup(actor);
+  const blaise = await addTestParticipant(group.groupId, "Blaise");
+
+  const lunch = {
+    description: "Lunch",
+    notes: "",
+    category: "",
+    amount: "5000",
+    currency: "EUR",
+    exchangeRate: "",
+    expenseDate: isoToday(),
+    payers: [{ participantId: group.ownerParticipantId, amount: "5000" }],
+    splitMethod: "equal" as const,
+    splitEntries: [
+      { participantId: group.ownerParticipantId },
+      { participantId: blaise },
+    ],
+  };
+  const repayment = {
+    fromParticipantId: blaise,
+    toParticipantId: group.ownerParticipantId,
+    amount: "2500",
+    currency: "EUR",
+    exchangeRate: "",
+    settledOn: isoToday(),
+    notes: "",
+    paymentMethod: "TWINT",
+  };
+
+  return { group, blaise, lunch, repayment };
+}
+
+function liveSettlements(groupId: string) {
+  return getDb()
+    .select()
+    .from(settlements)
+    .where(
+      and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
+    );
+}
+
+function liveExpenses(groupId: string) {
+  return getDb()
+    .select()
+    .from(expenses)
+    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
+}
+
+/**
+ * A repayment sent twice.
+ *
+ * The expense's guarantee above, by the same mechanism, for the entry where a
+ * duplicate costs most. A second copy of a repayment does not overstate a
+ * total: it pays the debt again and leaves the debtor in credit. And the
+ * button is pressed at exactly the moment money has changed hands — often
+ * twice, often on a phone whose answer does not make it back.
+ */
+describe("a repayment sent twice", () => {
+  it("writes one repayment however many times the same key arrives", async () => {
+    const { group, repayment } = await lunchOwedByBlaise();
+    const clientKey = randomUUID();
+
+    const first = await createSettlement(group.access, repayment, {
+      clientKey,
+    });
+    const second = await createSettlement(group.access, repayment, {
+      clientKey,
+    });
+
+    expect(second).toBe(first);
+    expect(await liveSettlements(group.groupId)).toHaveLength(1);
+  });
+
+  it("writes one repayment when two presses race each other", async () => {
+    // A double tap, or a retry fired while the first request was still in
+    // flight. Neither sees the other's key before writing, so both get past
+    // the lookup and the unique index is all that stands between them.
+    const { group, repayment } = await lunchOwedByBlaise();
+    const clientKey = randomUUID();
+
+    const [first, second] = await Promise.all([
+      createSettlement(group.access, repayment, { clientKey }),
+      createSettlement(group.access, repayment, { clientKey }),
+    ]);
+
+    expect(second).toBe(first);
+    expect(await liveSettlements(group.groupId)).toHaveLength(1);
+  });
+
+  it("leaves the debt paid once, not twice", async () => {
+    // What the count above is protecting. A second copy would show up here as
+    // Blaise being owed €25 he never lent anybody.
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    await createExpense(group.access, lunch);
+    const clientKey = randomUUID();
+
+    await createSettlement(group.access, repayment, { clientKey });
+    await createSettlement(group.access, repayment, { clientKey });
+
+    const balances = await loadGroupBalances(group.access);
+    const eur = balances.currencies.find((entry) => entry.currency === "EUR")!;
+    expect(eur.balances.every((balance) => balance.amount === 0n)).toBe(true);
+  });
+
+  it("writes both when two identical repayments carry different keys", async () => {
+    // Paying somebody back in two instalments of the same amount is two
+    // repayments, which is why the key is minted rather than derived.
+    const { group, repayment } = await lunchOwedByBlaise();
+
+    const first = await createSettlement(group.access, repayment, {
+      clientKey: randomUUID(),
+    });
+    const second = await createSettlement(group.access, repayment, {
+      clientKey: randomUUID(),
+    });
+
+    expect(second).not.toBe(first);
+    expect(await liveSettlements(group.groupId)).toHaveLength(2);
+  });
+
+  it("does not resurrect a repayment that was deleted after it was written", async () => {
+    const { group, repayment } = await lunchOwedByBlaise();
+    const clientKey = randomUUID();
+
+    const settlementId = await createSettlement(group.access, repayment, {
+      clientKey,
+    });
+    await deleteSettlement(group.access, settlementId);
+
+    const replayed = await createSettlement(group.access, repayment, {
+      clientKey,
+    });
+
+    expect(replayed).toBe(settlementId);
+    expect(await liveSettlements(group.groupId)).toHaveLength(0);
+  });
+
+  it("treats a key an expense has spent the way the expense path treats one a repayment has", async () => {
+    // One index over both kinds, on the group and the key alone, so a key is
+    // spent on whatever it wrote first. A write of the other kind under it
+    // writes nothing and is refused — in either direction, identically — and
+    // never answers with the other kind's id, which would point a client at a
+    // row that is not there.
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+
+    const spentOnExpense = randomUUID();
+    await createExpense(group.access, lunch, { clientKey: spentOnExpense });
+    await expect(
+      createSettlement(group.access, repayment, { clientKey: spentOnExpense }),
+    ).rejects.toSatisfy(isUniqueViolation);
+    expect(await liveSettlements(group.groupId)).toHaveLength(0);
+
+    const spentOnRepayment = randomUUID();
+    await createSettlement(group.access, repayment, {
+      clientKey: spentOnRepayment,
+    });
+    await expect(
+      createExpense(group.access, lunch, { clientKey: spentOnRepayment }),
+    ).rejects.toSatisfy(isUniqueViolation);
+    expect(await liveExpenses(group.groupId)).toHaveLength(1);
+  });
+});
+
+/**
+ * Changing an entry's kind, sent twice.
+ *
+ * The move writes one row and removes another, and it used to do them in two
+ * commits. A double submit then left two repayments behind and an error: the
+ * second call's create had committed before its delete found the expense
+ * already gone. It is one transaction now, under the form's key.
+ */
+describe("changing an entry's kind", () => {
+  it("leaves one repayment and no expense when the same move arrives twice", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    const expenseId = await createExpense(group.access, lunch);
+    const clientKey = randomUUID();
+
+    const first = await convertExpenseToSettlement(
+      group.access,
+      expenseId,
+      repayment,
+      { clientKey },
+    );
+    const second = await convertExpenseToSettlement(
+      group.access,
+      expenseId,
+      repayment,
+      { clientKey },
+    );
+
+    expect(second).toBe(first);
+    expect(await liveSettlements(group.groupId)).toHaveLength(1);
+    expect(await liveExpenses(group.groupId)).toHaveLength(0);
+  });
+
+  it("leaves one repayment when the two moves race each other", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    const expenseId = await createExpense(group.access, lunch);
+    const clientKey = randomUUID();
+
+    const [first, second] = await Promise.all([
+      convertExpenseToSettlement(group.access, expenseId, repayment, {
+        clientKey,
+      }),
+      convertExpenseToSettlement(group.access, expenseId, repayment, {
+        clientKey,
+      }),
+    ]);
+
+    expect(second).toBe(first);
+    expect(await liveSettlements(group.groupId)).toHaveLength(1);
+    expect(await liveExpenses(group.groupId)).toHaveLength(0);
+  });
+
+  it("leaves one expense and no repayment when the reverse move arrives twice", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    const settlementId = await createSettlement(group.access, repayment);
+    const clientKey = randomUUID();
+
+    const first = await convertSettlementToExpense(
+      group.access,
+      settlementId,
+      lunch,
+      { clientKey },
+    );
+    const second = await convertSettlementToExpense(
+      group.access,
+      settlementId,
+      lunch,
+      { clientKey },
+    );
+
+    expect(second).toBe(first);
+    expect(await liveExpenses(group.groupId)).toHaveLength(1);
+    expect(await liveSettlements(group.groupId)).toHaveLength(0);
+  });
+
+  it("leaves one expense when the two reverse moves race each other", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    const settlementId = await createSettlement(group.access, repayment);
+    const clientKey = randomUUID();
+
+    const [first, second] = await Promise.all([
+      convertSettlementToExpense(group.access, settlementId, lunch, {
+        clientKey,
+      }),
+      convertSettlementToExpense(group.access, settlementId, lunch, {
+        clientKey,
+      }),
+    ]);
+
+    expect(second).toBe(first);
+    expect(await liveExpenses(group.groupId)).toHaveLength(1);
+    expect(await liveSettlements(group.groupId)).toHaveLength(0);
+  });
+
+  it("writes nothing when the entry it would replace cannot be removed", async () => {
+    // The half that used to be left behind. A create that committed before its
+    // delete failed was a repayment nobody asked for; in one transaction the
+    // failed removal takes the new row down with it.
+    const { group, repayment } = await lunchOwedByBlaise();
+
+    await expect(
+      convertExpenseToSettlement(group.access, randomUUID(), repayment, {
+        clientKey: randomUUID(),
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+
+    expect(await liveSettlements(group.groupId)).toHaveLength(0);
+  });
+});
+
+describe("editing a repayment", () => {
+  it("saves a change of payment method", async () => {
+    // Re-filing a TWINT payment as cash used to be accepted and then quietly
+    // not written: every other field was saved, and the method stayed TWINT.
+    const { group, repayment } = await lunchOwedByBlaise();
+    const settlementId = await createSettlement(group.access, repayment);
+
+    await updateSettlement(group.access, settlementId, {
+      ...repayment,
+      paymentMethod: "Cash",
+    });
+
+    const saved = await getSettlement(group.groupId, settlementId);
+    expect(saved?.paymentMethod).toBe("Cash");
+  });
+
+  it("clears the method when the edit leaves it empty", async () => {
+    const { group, repayment } = await lunchOwedByBlaise();
+    const settlementId = await createSettlement(group.access, repayment);
+
+    await updateSettlement(group.access, settlementId, {
+      ...repayment,
+      paymentMethod: "",
+    });
+
+    const saved = await getSettlement(group.groupId, settlementId);
+    expect(saved?.paymentMethod).toBeNull();
   });
 });
