@@ -36,55 +36,92 @@ the database with `pg_dump`, never with `tar`.
 
 ### The whole thing, in one script
 
-```bash
-#!/usr/bin/env bash
-# balancia-backup.sh — run from the directory containing compose.yaml
-set -euo pipefail
-
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-DEST="${1:-./backups}/${STAMP}"
-mkdir -p "$DEST"
-
-echo "Backing up to $DEST"
-
-# 1. Database — a custom-format dump, compressed and restorable selectively.
-docker compose exec -T db \
-  pg_dump -U balancia -d balancia --format=custom --no-owner \
-  > "$DEST/balancia.dump"
-
-# 2. Receipts.
-docker run --rm \
-  -v balancia-uploads:/data:ro \
-  -v "$(realpath "$DEST")":/backup \
-  alpine:3.21 tar czf /backup/uploads.tar.gz -C /data .
-
-# 3. Secrets and configuration — one file, and the only copy of both.
-cp .env "$DEST/env"
-
-chmod -R go-rwx "$DEST"
-echo "Done. $(du -sh "$DEST" | cut -f1)"
-```
+`scripts/backup.sh` takes all three at once. A standalone install has it
+beside `compose.yaml`, and a checkout has it under `scripts/`; the examples on
+this page use the checkout's path, so drop the `scripts/` on a standalone
+install.
 
 ```bash
-chmod +x balancia-backup.sh
-./balancia-backup.sh /var/backups/balancia
+./backup.sh /var/backups/balancia             # standalone install
+./scripts/backup.sh /var/backups/balancia     # checkout
 ```
+
+A standalone install made before the script shipped fetches it once, into the
+directory holding `compose.yaml`:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/sebitr/balancia/main/scripts/backup.sh
+chmod +x backup.sh
+```
+
+It finds the installation from where it sits rather than from where it was
+started, so it can be run from anywhere. Each run writes one directory, named
+for the moment it was taken, in UTC:
+
+```
+/var/backups/balancia/20260929T033000Z/
+  balancia.dump     the database, a pg_dump custom-format archive
+  uploads.tar.gz    the receipts volume
+  env               a copy of .env
+```
+
+In order, it:
+
+1. **Dumps the database** with `pg_dump --format=custom` inside the `db`
+   container. The host needs no PostgreSQL client, and the dump is always
+   written by the same major version that holds the data. It then reads the
+   dump back with `pg_restore --list` through the same container, so an empty
+   file, or an error message where the archive should be, fails the run.
+2. **Archives the receipts**: a `tar` of the `balancia-uploads` volume, mounted
+   read-only into a throwaway `alpine` container. With `STORAGE_DRIVER=s3`
+   there is no volume to archive, and it says so and carries on — the bucket
+   needs [a backup of its own](#if-you-use-s3-for-receipts).
+3. **Copies `.env`**, the only copy of the secrets there is.
+
+Everything is written under `umask 077`, so nobody else on the host can read
+any of it. Anything that fails stops the run with a non-zero exit status and
+removes the half-written directory: a backup missing a part is not one you can
+restore from, and leaving it beside the good ones is how it gets restored from
+anyway. Without a destination it writes to `backups/` beside `compose.yaml`,
+which git and the Docker build both ignore.
+
+Progress goes to standard error. The one line on standard output is the
+directory it wrote, which is what makes it easy to hand on to the next command.
 
 `env` contains live credentials. Store the backup somewhere only you can read,
 and encrypt it if it leaves the machine:
 
 ```bash
-tar czf - -C /var/backups/balancia "$STAMP" \
-  | age -r age1yourpublickey... > "balancia-${STAMP}.tar.gz.age"
+dir=$(./scripts/backup.sh /var/backups/balancia)
+tar czf - -C "$(dirname "$dir")" "$(basename "$dir")" \
+  | age -r age1yourpublickey... > "balancia-$(basename "$dir").tar.gz.age"
 ```
 
 ### Automating it
 
+`--keep N` deletes all but the newest N backups in the destination. It runs
+only once the new backup is safely written, so a failing night never leaves
+fewer good backups than it found, and it only ever counts directories whose
+names it wrote itself — anything else you keep there is left alone.
+
 ```cron
-# 03:30 daily, keep 30 days
-30 3 * * * cd /srv/balancia && ./balancia-backup.sh /var/backups/balancia >> /var/log/balancia-backup.log 2>&1
-15 4 * * * find /var/backups/balancia -maxdepth 1 -type d -mtime +30 -exec rm -rf {} +
+# 03:30 daily, keep 30
+30 3 * * * cd /srv/balancia && ./scripts/backup.sh --keep 30 /var/backups/balancia >> /var/log/balancia-backup.log 2>&1
 ```
+
+### Before an upgrade
+
+`--database-only` writes the dump and nothing else. That is the restore point
+an upgrade needs — migrations change the schema, never the receipts or `.env`
+— and it is what [`scripts/deploy.sh`](self-hosting.md#upgrading-over-ssh)
+takes before every deploy. By hand, before `docker compose pull`:
+
+```bash
+./scripts/backup.sh --database-only --keep 10 backups/pre-upgrade
+```
+
+It prints the command that restores it. Going back is
+[Rolling back](self-hosting.md#rolling-back) in the self-hosting guide.
 
 ### Backing up without stopping the service
 
@@ -98,7 +135,7 @@ database up for `pg_dump`):
 
 ```bash
 docker compose stop app
-./balancia-backup.sh
+./scripts/backup.sh
 docker compose start app
 ```
 

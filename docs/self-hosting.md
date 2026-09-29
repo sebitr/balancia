@@ -18,9 +18,10 @@ Open <http://localhost:3000> and create the first account.
 
 `bootstrap.sh` is one file that does the whole installation. Downloaded on its
 own it asks where to install — `./balancia` unless you say otherwise, or
-`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml` and
-`.env.example` into that directory and copies itself in beside them, so every
-later run happens from inside the installation.
+`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml`,
+`.env.example` and [`backup.sh`](backup-and-restore.md) into that directory and
+copies itself in beside them, so every later run happens from inside the
+installation.
 
 What it fetches is pinned to its own release. The script that installs 1.4.2
 downloads 1.4.2's Compose files and runs 1.4.2's image, which is why an
@@ -603,6 +604,7 @@ On a standalone install — the one the quick start produces, which pulls the
 published image:
 
 ```bash
+./backup.sh --database-only --keep 10 backups/pre-upgrade
 docker compose pull
 docker compose up -d
 ```
@@ -611,8 +613,11 @@ In a checkout that builds its own:
 
 ```bash
 git pull
+./scripts/backup.sh --database-only --keep 10 backups/pre-upgrade
 docker compose up -d --build
 ```
+
+The first line of each is the restore point — see below.
 
 Which of the two an instance is on is the `COMPOSE_FILE` line in `.env` — see
 [Running the published image](#running-the-published-image). When a release
@@ -633,10 +638,16 @@ app` shows what went wrong.
 **Migrations are forward-only and never destructive without warning.** Applied
 migrations are recorded with a checksum; if a file that has already run is
 edited, startup fails loudly rather than applying a changed migration silently.
+And a release older than its database — one whose migrations stop short of
+those already applied — refuses to start; see [Rolling back](#rolling-back).
 
-**Take a backup before upgrading.** See
-[backup-and-restore.md](backup-and-restore.md) — it takes seconds and it is the
-difference between a bad upgrade being an inconvenience and a disaster.
+**Take a restore point before upgrading.** Forward-only means the dump taken
+just before the new image starts is the one way back from an upgrade that went
+wrong. `backup.sh --database-only` writes exactly that — the database, not the
+receipts or `.env`, which no migration touches — in seconds, keeping the newest
+ten, and prints the command that restores it. `scripts/deploy.sh` takes one
+itself on every deploy. For the full backup, and for doing it every night, see
+[backup-and-restore.md](backup-and-restore.md).
 
 ### Upgrading over SSH
 
@@ -676,6 +687,18 @@ came back, not merely that Compose accepted the command.
 Host keys, users and jump hosts are all left to `~/.ssh/config`, which already
 knows about them.
 
+Between the pull and the restart it takes a restore point:
+`scripts/backup.sh --database-only` into `backups/pre-deploy/` in the
+checkout, where the last ten are kept. The new image applies its migrations the
+moment it starts, and they only go forwards, so this dump is the way back from
+an upgrade that went wrong — the deploy ends by printing where it is and the
+command that restores it. It is taken on every deploy, not only on one whose
+commits touch `drizzle/`: an instance that pulls its image gets its migrations
+from the image, which the checkout does not describe, and a database-only dump
+costs seconds. If it fails, nothing is restarted — the checkout has moved, the
+containers have not — and the script exits with status 3. `--skip-backup`
+deploys without one.
+
 ### The database volume moved (one-time change)
 
 `compose.yaml` used to mount the `balancia-db-data` volume at
@@ -712,7 +735,7 @@ docker compose exec -T db \
   pg_dump -U balancia -d balancia --format=custom --no-owner > balancia.dump
 
 # 2. Take a full backup as well, before destroying anything.
-./balancia-backup.sh /var/backups/balancia
+./scripts/backup.sh /var/backups/balancia
 
 # 3. Stop the stack and delete ONLY the database volume. Note this is `down`
 #    without `-v`: the uploads volume must survive. Leave .env alone too — the
@@ -747,9 +770,37 @@ Keep `balancia.dump` until you have confirmed the data is there.
 Balancia does not ship down-migrations: for financial data, a scripted rollback
 that drops a column is more dangerous than a restore. To go back:
 
-1. Stop the stack: `docker compose down`
-2. Restore the database from your pre-upgrade dump.
-3. Check out the previous tag and `docker compose up -d --build`.
+1. Stop the app and leave the database up: `docker compose stop app`, adding
+   `worker` where the jobs have their own container.
+2. Restore the dump taken before the upgrade — `backup.sh` and `deploy.sh` both
+   print this line with the path filled in:
+
+   ```bash
+   docker compose exec -T db pg_restore -U balancia -d postgres \
+     --clean --if-exists --create --no-owner \
+     < backups/pre-upgrade/20260929T101500Z/balancia.dump
+   ```
+
+   `--create` alongside `--clean` drops the whole database and makes it again
+   from the dump. `--clean` alone drops only what the dump contains, so every
+   table the newer release added would stay behind — and the next upgrade would
+   fail on them, trying to create what is already there.
+
+3. Go back to the previous release: pin its tag in `compose.image.yaml`
+   (`sebitro/balancia:0.1.0`) on an instance that pulls, or check out its tag in
+   a checkout. Then `docker compose up -d`, with `--build` in a checkout.
+
+**Rolling back the image alone is refused.** Started against a database a newer
+release has migrated, the older release stops at its migration step, names the
+migrations it does not know, and does not start — the older code would run
+against a schema it was never written for, and not everything that breaks that
+way breaks loudly. The same happens moving an instance from `preview` back to
+`latest`, since `preview` carries migrations no release has yet. Restoring the
+dump, as above, is the answer that loses nothing. If there is no dump, or you
+have decided the older release is safe on the newer schema, set
+`ALLOW_NEWER_SCHEMA=true` in `.env` and it starts with a warning in its log —
+then take the line out again once a current release is back; see
+[`ALLOW_NEWER_SCHEMA`](environment.md#allow_newer_schema).
 
 ---
 

@@ -191,8 +191,9 @@ of the two you want. Either answer is a single `COMPOSE_FILE` line in `.env`.
 
 For a public domain, upgrades, reverse proxies and production responsibilities,
 read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
-database and receipt storage together; the
-[backup guide](./docs/backup-and-restore.md) provides exact commands.
+database and receipt storage together: `backup.sh`, installed beside
+`compose.yaml`, takes all three at once, and the
+[backup guide](./docs/backup-and-restore.md) covers restoring them.
 
 Want to offer the same try-before-you-sign-up demo from your own instance?
 `compose.demo.yaml` runs one, with no database and nothing persisted — see
