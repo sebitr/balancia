@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { apiActor } from "@/app/api/mobile";
+import { apiActor, isUuid } from "@/app/api/mobile";
 import { getClientIp } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
@@ -32,6 +32,11 @@ async function handlePost(
   context: RouteContext<"/api/groups/[groupId]/attachments">,
 ) {
   const { groupId } = await context.params;
+  // Before any query: PostgreSQL throws on a malformed UUID, which would
+  // answer 500 for what is only a group that does not exist.
+  if (!isUuid(groupId)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   try {
     const actor = await apiActor(

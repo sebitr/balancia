@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiActor, mobileApiError } from "@/app/api/mobile";
 import { z } from "zod";
+import { isAcceptedCalendarDate } from "@/lib/calendar-date";
 import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/logger";
@@ -25,7 +26,11 @@ import { trackRoute } from "@/lib/metrics/http";
 const querySchema = z.object({
   from: z.string().regex(/^[A-Z]{3}$/, "from must be an ISO 4217 code"),
   to: z.string().regex(/^[A-Z]{3}$/, "to must be an ISO 4217 code"),
-  on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "on must be a YYYY-MM-DD date"),
+  // A real day, not just its shape: the lookup reads the rate table by date,
+  // and PostgreSQL refuses `2025-02-30` with an error rather than a miss.
+  on: z
+    .string()
+    .refine(isAcceptedCalendarDate, "on must be a real YYYY-MM-DD date"),
 });
 
 export async function GET(request: Request) {
