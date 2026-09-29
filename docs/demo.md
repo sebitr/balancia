@@ -13,7 +13,7 @@ Sign in with   demo / demo
 Their own account, minted the moment they click the button, holding a copy of
 the workspace `pnpm db:seed` creates: a Lisbon trip that converts every currency
 to EUR, a flat share that keeps currencies apart, one expense per split method,
-a multi-payer expense, a settlement, a recurring rent template and the activity
+a multi-payer expense, a repayment, a recurring rent template and the activity
 history all of that produces.
 
 It is a copy, not a shared account. Two people trying the demo at the same time

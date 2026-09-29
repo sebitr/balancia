@@ -48,7 +48,7 @@
   <a href="https://demo.balancia.app">
     <img src="./docs/assets/balancia-group-overview.png" alt="A group's balances on a phone: EUR 281.90 owed to you, two people who owe it, and a bar for each person" width="252">
     <img src="./docs/assets/balancia-split.png" alt="Splitting a bill on a phone: who paid, who it is split between, and the choice of equally, shares, exact amounts or percent" width="252">
-    <img src="./docs/assets/balancia-settle-up.png" alt="Settling up on a phone: the two payments that clear the whole group, each with a reminder button" width="252">
+    <img src="./docs/assets/balancia-settle-up.png" alt="Settling up on a phone: the two repayments that clear the whole group, each with a reminder button" width="252">
   </a>
 </p>
 
@@ -65,7 +65,7 @@ Three ways in, in order of how much they ask of you:
 **[Open the live demo →](https://demo.balancia.app)** — one click, no sign-up,
 no email address. You get an account of your own, already holding a Lisbon trip
 that converts several currencies into euros, a flat share that keeps them apart,
-one expense per split method, a multi-payer bill, a settlement and a recurring
+one expense per split method, a multi-payer bill, a repayment and a recurring
 rent template. Add expenses, settle up, break it. Two visitors never see each
 other's data, and yours is swept a couple of hours later. (`demo` / `demo` if
 anything asks.)
@@ -92,10 +92,10 @@ it, banner and all, rather than drawn for the occasion.
 The three above are the whole loop: see where you stand, split a bill, clear
 it. These are the rest.
 
-|                                                                                        Everything, in one figure                                                                                        |                                                                                          Adding a bill                                                                                          |                                                                         What the group spent                                                                          |
-| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/balancia-dashboard.png" alt="The Balancia home screen: your position in each currency, then groups bucketed into the ones that need you and the ones that owe you" width="252"> | <img src="./docs/assets/balancia-add-expense.png" alt="The add-expense drawer: amount, description, a category suggested on the instance, a repeat switch and the resulting split" width="252"> | <img src="./docs/assets/balancia-expenses.png" alt="A group's transactions: a treemap of categories above a searchable list of expenses and settlements" width="252"> |
-|                                    Groups sorted into the ones that need you and the ones that owe you — with one total per currency, never a made-up combined one.                                     |                                                 The category is suggested by a model on your own instance. Nothing about the expense leaves it.                                                 |                                  Where the money actually went, with settlements listed beside expenses and every entry searchable.                                   |
+|                                                                                        Everything, in one figure                                                                                        |                                                                                          Adding a bill                                                                                          |                                                                         What the group spent                                                                         |
+| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/balancia-dashboard.png" alt="The Balancia home screen: your position in each currency, then groups bucketed into the ones that need you and the ones that owe you" width="252"> | <img src="./docs/assets/balancia-add-expense.png" alt="The add-expense drawer: amount, description, a category suggested on the instance, a repeat switch and the resulting split" width="252"> | <img src="./docs/assets/balancia-expenses.png" alt="A group's transactions: a treemap of categories above a searchable list of expenses and repayments" width="252"> |
+|                                    Groups sorted into the ones that need you and the ones that owe you — with one total per currency, never a made-up combined one.                                     |                                                 The category is suggested by a model on your own instance. Nothing about the expense leaves it.                                                 |                                  Where the money actually went, with repayments listed beside expenses and every entry searchable.                                   |
 
 |                                                                           Two currencies, kept apart                                                                            |                                                                                  Coming from Splitwise                                                                                   |                                                                     What it adds up to                                                                     |
 | :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -137,7 +137,7 @@ See the [full project status](./docs/implementation-status.md),
   people paid it.
 - **Multi-currency groups.** Balance currencies separately or convert into one
   base currency using a rate frozen when the expense is recorded.
-- **Suggested settlements.** See the deterministic set of payments that clears
+- **Suggested repayments.** See the deterministic set of repayments that clears
   what the group owes.
 - **Recurring expenses and income.** Schedule rent, subscriptions, utilities,
   refunds, returned deposits or shared payouts in the group's timezone.

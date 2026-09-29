@@ -221,7 +221,7 @@ describe("the group statistics island", () => {
   it("keeps repayments in their own row, out of the spending", () => {
     renderWithIntl(<GroupStatistics stats={stats()} />);
 
-    const settlements = screen.getByText("Settlements").closest("div");
+    const settlements = screen.getByText("Repayments").closest("div");
     expect(
       within(settlements as HTMLElement).getByText(
         "14 repayments between members",
@@ -229,7 +229,7 @@ describe("the group statistics island", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Settlements only move money between members and never count as spend/,
+        /Repayments only move money between members and never count as spend/,
       ),
     ).toBeInTheDocument();
   });

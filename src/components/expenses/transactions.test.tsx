@@ -468,10 +468,10 @@ describe("Transactions", () => {
     renderList();
 
     await user.click(kind("Expenses"));
-    await user.click(kind("Settlements"));
+    await user.click(kind("Repayments"));
 
     expect(kind("Expenses")).toHaveAttribute("aria-pressed", "true");
-    expect(kind("Settlements")).toHaveAttribute("aria-pressed", "true");
+    expect(kind("Repayments")).toHaveAttribute("aria-pressed", "true");
     // Spending and the repayment stand together; the revenue row is the one
     // left out, which is what proves the pair filters rather than clears.
     expect(screen.getByText("Seb paid Padi")).toBeVisible();
@@ -510,7 +510,7 @@ describe("Transactions", () => {
     renderList(ROWS.filter((row) => !row.revenue));
 
     expect(kind("Expenses")).toBeInTheDocument();
-    expect(kind("Settlements")).toBeInTheDocument();
+    expect(kind("Repayments")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Revenue" }),
     ).not.toBeInTheDocument();
@@ -770,7 +770,7 @@ describe("Transactions, left and returned to", () => {
   it("carries them into a repayment's screen too", async () => {
     renderList();
 
-    await userEvent.click(kind("Settlements"));
+    await userEvent.click(kind("Repayments"));
 
     const row = screen.getByText("Seb paid Padi").closest("li");
     expect(within(row!).getByRole("link")).toHaveAttribute(
@@ -1125,19 +1125,19 @@ describe("Transactions filter sheet, over one piece of state", () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(kind("Settlements"));
+    await user.click(kind("Repayments"));
     let sheet = await openSheet(user);
-    expect(sheet.getByRole("button", { name: "Settlements" })).toHaveAttribute(
+    expect(sheet.getByRole("button", { name: "Repayments" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
 
-    await user.click(sheet.getByRole("button", { name: "Settlements" }));
+    await user.click(sheet.getByRole("button", { name: "Repayments" }));
     await user.click(apply(sheet));
-    expect(kind("Settlements")).toHaveAttribute("aria-pressed", "false");
+    expect(kind("Repayments")).toHaveAttribute("aria-pressed", "false");
 
     sheet = await openSheet(user);
-    expect(sheet.getByRole("button", { name: "Settlements" })).toHaveAttribute(
+    expect(sheet.getByRole("button", { name: "Repayments" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );

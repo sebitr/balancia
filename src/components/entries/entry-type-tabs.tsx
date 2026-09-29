@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import type { EntryType } from "./entry-logic";
 
 /**
- * Expense · Income · Settle.
+ * Expense · Income · Repayment.
  *
  * A segmented control rather than three screens, because the three share
  * almost everything: the same amount, the same date, the same people. Only the
@@ -38,7 +38,7 @@ export function EntryTypeTabs({
   onChange: (next: EntryType) => void;
   /**
    * Which of the three to offer. All of them, unless the caller knows one
-   * cannot work — the offline drawer drops Settle, which needs balances no
+   * cannot work — the offline drawer drops Repayment, which needs balances no
    * device can compute on its own.
    *
    * A tab is removed rather than disabled: a control that is visible and

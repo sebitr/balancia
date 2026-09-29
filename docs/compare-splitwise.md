@@ -51,7 +51,7 @@ the service and its vendors process information.
 1. Export the Splitwise group as CSV, or download the account JSON backup if it
    is available on the account.
 2. In Balancia, open the destination group's **Import** page.
-3. Upload the file and review the groups, people, expenses and settlements in
+3. Upload the file and review the groups, people, expenses and repayments in
    the preview.
 4. Map imported people to Balancia participants, then confirm.
 

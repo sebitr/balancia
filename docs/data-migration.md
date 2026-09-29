@@ -16,16 +16,16 @@ name, currency mode or timezone.
 
 ### What comes back, and what does not
 
-| In the file           | On restore                                              |
-| --------------------- | ------------------------------------------------------- |
-| Expenses and payments | Restored, amount for amount                             |
-| Spending or income    | Restored the way each entry was recorded                |
-| Multiple payers       | Restored                                                |
-| Categories            | Restored as the code they were filed under              |
-| People                | Offered in the preview, matched by name or added as new |
-| Recurring expenses    | **Not restored** — set them up again                    |
-| Receipts              | **Not in the export at all**                            |
-| Converted amounts     | **Not restored** — see _Currency handling_ below        |
+| In the file             | On restore                                              |
+| ----------------------- | ------------------------------------------------------- |
+| Expenses and repayments | Restored, amount for amount                             |
+| Spending or income      | Restored the way each entry was recorded                |
+| Multiple payers         | Restored                                                |
+| Categories              | Restored as the code they were filed under              |
+| People                  | Offered in the preview, matched by name or added as new |
+| Recurring expenses      | **Not restored** — set them up again                    |
+| Receipts                | **Not in the export at all**                            |
+| Converted amounts       | **Not restored** — see _Currency handling_ below        |
 
 Whether an entry was money out or money in comes back with it. A backup
 written before Balancia recorded income says nothing about direction, and every
@@ -72,7 +72,7 @@ the interesting decisions — who is who, what will be skipped — need a human.
 2. Open **Settings → Import data**, or `/groups/<id>/import`.
 3. **Upload the file.** It is parsed on your own server. Nothing is sent
    anywhere.
-4. **Read the preview.** It reports how many expenses and payments were found,
+4. **Read the preview.** It reports how many expenses and repayments were found,
    which currencies appear, which people the file names, and every row that will
    be skipped along with the reason.
 5. **Map the people.** Each name from the export becomes either an existing
@@ -99,7 +99,7 @@ This is checked by an integration test and an end-to-end journey, because
 | Splitwise                       | Balancia                                         |
 | ------------------------------- | ------------------------------------------------ |
 | Expense                         | Expense, with per-person shares as exact amounts |
-| Payment / "Settle all balances" | Settlement (a repayment, not spending)           |
+| Payment / "Settle all balances" | Repayment, not spending                          |
 | Category                        | Category (free text)                             |
 | Date                            | Expense date                                     |
 | Currency                        | Currency, kept as-is                             |
