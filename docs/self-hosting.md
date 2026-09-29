@@ -209,11 +209,11 @@ image. The database, the volumes, the environment and the entrypoint are
 parse, so `bootstrap.sh` checks the version, keeps quiet about the choice and
 writes `COMPOSE_FILE=compose.yaml`.
 
-| Tag       | What it is                                                  |
-| --------- | ----------------------------------------------------------- |
-| `latest`  | The newest release. Moves under you at every pull.          |
-| `0.1.0`   | That release, permanently.                                  |
-| `preview` | `main` as it is now, rebuilt on every merge. Not a release. |
+| Tag       | What it is                                                                 |
+| --------- | -------------------------------------------------------------------------- |
+| `latest`  | The newest release. Moves under you at every pull.                         |
+| `0.1.0`   | That release, permanently.                                                 |
+| `preview` | `main` as it is now, rebuilt on every merge that passes CI. Not a release. |
 
 There is no floating minor series on purpose: pinning means naming a version in
 full. Do that once somebody other than you depends on the instance — `latest`
@@ -643,7 +643,17 @@ Before it changes anything, it checks in a single round trip that the path is a
 checkout with a `compose.yaml` and a `.env`, that `docker compose` is available
 to that user, that the branch is not detached and tracks an upstream, and that
 the working tree is clean. Then it fetches and prints the commits that are
-about to land. `--dry-run` stops exactly there.
+about to land.
+
+Merged is not the same as tested: origin's branch moves the moment a pull
+request merges, well before CI has finished with the result — and on an
+instance that pulls `preview`, the image for that commit is not published until
+CI has passed. So it then asks GitHub about the commit it is about to land, and
+stops if any check on it failed or is still running. That needs the
+[GitHub CLI](https://cli.github.com), signed in with `gh auth login`, on the
+machine you deploy from. `--skip-checks` goes ahead without asking, for a
+GitHub outage or a fork with no CI of its own. `--dry-run` stops once all of
+this has been checked.
 
 The pull is `--ff-only`. A deploy host that cannot fast-forward has commits of
 its own, and merging them silently is how a server ends up running something no
@@ -656,11 +666,12 @@ running. Afterwards it polls
 that have a healthcheck — so a zero exit status means the containers actually
 came back, not merely that Compose accepted the command.
 
-| Flag / variable                         | Default       | What it picks              |
-| --------------------------------------- | ------------- | -------------------------- |
-| `-H`, `--host` / `BALANCIA_DEPLOY_HOST` | `ecom-debian` | ssh alias, or `user@host`  |
-| `-C`, `--path` / `BALANCIA_DEPLOY_PATH` | `balancia`    | the checkout on the server |
-| `BALANCIA_DEPLOY_TIMEOUT`               | `180`         | seconds to wait on health  |
+| Flag / variable                         | Default       | What it picks                  |
+| --------------------------------------- | ------------- | ------------------------------ |
+| `-H`, `--host` / `BALANCIA_DEPLOY_HOST` | `ecom-debian` | ssh alias, or `user@host`      |
+| `-C`, `--path` / `BALANCIA_DEPLOY_PATH` | `balancia`    | the checkout on the server     |
+| `BALANCIA_DEPLOY_TIMEOUT`               | `180`         | seconds to wait on health      |
+| `--skip-checks`                         | off           | deploy without asking about CI |
 
 Host keys, users and jump hosts are all left to `~/.ssh/config`, which already
 knows about them.
