@@ -915,6 +915,15 @@
     "empty": "Nothing has happened in this group yet.",
     "someone": "Someone",
     "withDescription": "{action}: {description}",
+    "restore": {
+      "action": "Restore",
+      "expense": "Restore the expense “{description}”",
+      "settlement": "Restore the repayment of {amount}",
+      "recurring": "Restore the recurring expense “{description}”",
+      "unnamed": "Restore what was deleted",
+      "done": "Restored",
+      "failed": "It could not be put back. Try again."
+    },
     "actions": {
       "expense": {
         "created": "added an expense",
@@ -2409,7 +2418,7 @@
     "delete": {
       "trigger": "Delete",
       "title": "Delete this entry?",
-      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after.",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after, or restore it later from Activity.",
       "keep": "Keep it",
       "confirm": "Delete",
       "deleted": "Entry deleted",
@@ -3207,7 +3216,7 @@
     "delete": {
       "trigger": "Delete this entry",
       "title": "Delete this entry?",
-      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after, or restore it later from Activity.",
       "keep": "Keep it",
       "confirm": "Delete"
     },

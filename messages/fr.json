@@ -915,6 +915,15 @@
     "empty": "Il ne s’est encore rien passé dans ce groupe.",
     "someone": "Quelqu’un",
     "withDescription": "{action} : {description}",
+    "restore": {
+      "action": "Rétablir",
+      "expense": "Rétablir la dépense « {description} »",
+      "settlement": "Rétablir le remboursement de {amount}",
+      "recurring": "Rétablir la dépense récurrente « {description} »",
+      "unnamed": "Rétablir ce qui a été supprimé",
+      "done": "Rétabli",
+      "failed": "Le rétablissement n’a pas abouti. Réessaie."
+    },
     "actions": {
       "expense": {
         "created": "a ajouté une dépense",
@@ -2409,7 +2418,7 @@
     "delete": {
       "trigger": "Supprimer",
       "title": "Supprimer cette transaction ?",
-      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après.",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
       "keep": "La conserver",
       "confirm": "Supprimer",
       "deleted": "Transaction supprimée",
@@ -3207,7 +3216,7 @@
     "delete": {
       "trigger": "Supprimer cette transaction",
       "title": "Supprimer cette transaction ?",
-      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Cette action est irréversible depuis l’application.",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
       "keep": "La conserver",
       "confirm": "Supprimer"
     },

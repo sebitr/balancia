@@ -177,7 +177,13 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   ordinary attachment flow. The rules are code (`src/modules/receipts`) and the
   models are operator-installed files — see `docs/receipt-scanning.md`.
 - **Activity**: append-only `activity_events` written in the same transaction
-  as the financial change.
+  as the financial change. The Activity screen carries a Restore on the latest
+  deletion of an expense, a repayment or a recurring expense that is still
+  deleted — the same restore the Undo toast calls, so a deletion is not
+  recoverable only inside that toast's eight seconds. Which rows qualify is
+  worked out for the whole page in one query (`findRestorableDeletions`); a
+  deletion that was half of a change of type records `replacedBy` and is not
+  offered, since restoring it would count the same money twice.
 - **Notifications**: `notifications` is one row per person told about one
   event — the in-app inbox, and the outbox push delivery claims through
   `pushed_at`. `push_subscriptions` holds the browsers that agreed to receive

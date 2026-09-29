@@ -61,7 +61,10 @@ export async function deleteRecurringAction(
   return result;
 }
 
-/** Undo for a removal, offered by the toast the removal raises. */
+/**
+ * Undo for a removal, offered by the toast the removal raises and afterwards
+ * by the group's Activity screen.
+ */
 export async function restoreRecurringAction(
   groupId: string,
   templateId: string,

@@ -21,6 +21,13 @@ import { cn } from "@/lib/utils";
  * Longer than the four seconds a plain confirmation gets: this one is not
  * read, it is *decided on*, and the decision needs the sentence, the button
  * and a moment of doubt to fit inside it.
+ *
+ * It is still a window, and it does not wait for anybody. Sonner pauses it
+ * under a hovering pointer, for its own hotkey and while the tab is hidden —
+ * not while the toast holds keyboard focus, and it offers no way to ask it to.
+ * A screen reader, a switch or a keyboard can take longer than this to reach
+ * the button, which is why a deleted entry does not depend on it: the group's
+ * Activity keeps a Restore on the deletion for as long as it stands.
  */
 export const UNDO_WINDOW = 8000;
 

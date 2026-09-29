@@ -636,7 +636,15 @@ export async function updateExpense(
 export async function deleteExpense(
   access: GroupAccess,
   expenseId: string,
-  options: { db?: Database } = {},
+  options: {
+    db?: Database;
+    /**
+     * The repayment written in this expense's place, when the deletion is
+     * half of a change of type. Recorded on the event so the Activity screen
+     * does not offer to put back something that was replaced rather than lost.
+     */
+    replacedBy?: string;
+  } = {},
 ): Promise<void> {
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
@@ -677,6 +685,7 @@ export async function deleteExpense(
         description: deletedExpense.description,
         amount: deletedExpense.amount.toString(),
         currency: deletedExpense.currency,
+        ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
       },
     });
 
