@@ -1,5 +1,14 @@
 import "server-only";
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
 import {
@@ -817,11 +826,6 @@ export async function listExpenses(
       expenseDate: expenses.expenseDate,
       createdAt: expenses.createdAt,
       recurringExpenseId: expenses.recurringExpenseId,
-      attachmentCount: sql<number>`(
-        SELECT count(*)::int FROM ${attachments}
-        WHERE ${attachments.expenseId} = ${expenses.id}
-          AND ${attachments.deletedAt} IS NULL
-      )`,
     })
     .from(expenses)
     .where(
@@ -854,7 +858,15 @@ export async function listExpenses(
   if (rows.length === 0) return [];
 
   const expenseIds = rows.map((row) => row.id);
-  const [payerRows, shareRows] = await Promise.all([
+  /*
+   * The receipts are counted in a query of their own rather than a subquery in
+   * the select list above, which is where they used to be counted. Drizzle
+   * writes a single-table select list with bare column names, so that subquery
+   * read `WHERE "expense_id" = "id"` — the attachment's own id, not the
+   * expense's — and every row of every list said it had no receipt. The
+   * list's `With a receipt` filter never found anything.
+   */
+  const [payerRows, shareRows, receiptRows] = await Promise.all([
     db
       .select({
         expenseId: expensePayers.expenseId,
@@ -877,13 +889,27 @@ export async function listExpenses(
       .from(expenseShares)
       .innerJoin(participants, eq(participants.id, expenseShares.participantId))
       .where(inArray(expenseShares.expenseId, expenseIds)),
+    db
+      .select({ expenseId: attachments.expenseId, count: count() })
+      .from(attachments)
+      .where(
+        and(
+          inArray(attachments.expenseId, expenseIds),
+          isNull(attachments.deletedAt),
+        ),
+      )
+      .groupBy(attachments.expenseId),
   ]);
 
   const payersByExpense = groupBy(payerRows, (row) => row.expenseId);
   const sharesByExpense = groupBy(shareRows, (row) => row.expenseId);
+  const receiptsByExpense = new Map(
+    receiptRows.map((row) => [row.expenseId, row.count]),
+  );
 
   return rows.map((row) => ({
     ...row,
+    attachmentCount: receiptsByExpense.get(row.id) ?? 0,
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
