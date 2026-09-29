@@ -150,15 +150,22 @@ value_of() {
   printf '%s' "$raw"
 }
 
-stamp=$(date -u +%Y%m%dT%H%M%SZ)
-mkdir -p -- "$dest_root"
+mkdir -p -- "$dest_root" 2> /dev/null || die "Could not create $dest_root"
 dest_root=$(CDPATH='' cd -- "$dest_root" && pwd)
-dir="$dest_root/$stamp"
 
 # Not -p: a directory already there is a backup taken this same second, and
-# writing into it would mix two of them.
-mkdir -- "$dir" 2> /dev/null || die "Could not create $dir" \
-  "Either a backup from this same second is already there, or $dest_root is not writable."
+# writing into it would mix two of them. The next second is a name of its own.
+dir=''
+for _ in 1 2 3; do
+  candidate="$dest_root/$(date -u +%Y%m%dT%H%M%SZ)"
+  if mkdir -- "$candidate" 2> /dev/null; then
+    dir=$candidate
+    break
+  fi
+  [ -e "$candidate" ] || die "Could not create $candidate" "Is $dest_root writable?"
+  sleep 1
+done
+[ -n "$dir" ] || die "Could not find a free name for this backup in $dest_root."
 
 complete=false
 discard_incomplete() {

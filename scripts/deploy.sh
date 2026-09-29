@@ -6,11 +6,12 @@
 # Over SSH, in the checkout on the server:
 #
 #   git pull --ff-only
+#   ./scripts/backup.sh --database-only --keep 10 backups/pre-deploy
 #   docker compose pull --ignore-buildable app
 #   docker compose up -d --build
 #
 # and then waits for the containers to come back healthy before it says the
-# deploy worked. Those three commands are the deploy; everything else here is
+# deploy worked. Those four commands are the deploy; everything else here is
 # the checking around them, so that a run either finishes or stops somewhere it
 # can be understood.
 #
@@ -23,6 +24,7 @@
 #   -C, --path PATH     the checkout on the server, absolute or relative to the
 #                       login directory
 #                       (default: balancia, or BALANCIA_DEPLOY_PATH)
+#       --skip-backup   deploy without taking the database dump first
 #   -n, --dry-run       run every check and print the plan; change nothing
 #   -h, --help          this text
 #
@@ -33,6 +35,13 @@
 # not on the containers: they are up either way, and `docker compose logs` on
 # the server is the next thing to read.
 #
+# The dump between the pull and the restart is the restore point. Migrations
+# only go forwards, so a copy of the database taken before the new image
+# starts is the one way back from an upgrade that went wrong — and when it
+# cannot be taken, nothing is restarted and the exit status is 3. The last ten
+# are kept, under backups/pre-deploy in the checkout; --skip-backup goes ahead
+# without one, for whoever has decided that it is not needed.
+#
 # Exit status is 0 only when every service ended up running, and healthy if it
 # has a healthcheck to say so.
 set -eu
@@ -40,6 +49,7 @@ set -eu
 host=${BALANCIA_DEPLOY_HOST:-ecom-debian}
 path=${BALANCIA_DEPLOY_PATH:-balancia}
 timeout=${BALANCIA_DEPLOY_TIMEOUT:-180}
+backup=true
 dry_run=false
 
 # Colour when stdout is a terminal that wants it — the same rules, in the same
@@ -125,6 +135,10 @@ while [ $# -gt 0 ]; do
       [ $# -ge 2 ] || die '--path needs a value.'
       path=$2
       shift 2
+      ;;
+    --skip-backup)
+      backup=false
+      shift
       ;;
     -n | --dry-run)
       dry_run=true
@@ -271,15 +285,45 @@ printf '\n'
 # disables it, deliberately — is judged on being up.
 status=0
 # shellcheck disable=SC2029,SC2086  # $path is expanded by the remote shell, by design
-ssh $ssh_opts "$host" "sh -s -- $path $timeout" <<'REMOTE' || status=$?
+ssh $ssh_opts "$host" "sh -s -- $path $timeout $backup" <<'REMOTE' || status=$?
 set -eu
 target=$1
 timeout=$2
+backup=$3
 
 cd -- "$target"
 
 git pull --ff-only
 echo
+
+# The restore point. The entrypoint applies migrations the moment `up` starts
+# the new image, and they only go forwards, so the database as it stands now
+# is the one thing a bad upgrade cannot give back — and this is the last
+# moment it can be copied.
+#
+# On every deploy, not only when drizzle/ changed: an instance that pulls its
+# image gets its migrations from the image, which this checkout does not
+# describe, and a database-only dump of an instance this size takes seconds.
+# After the pull, so that the script taking it is the one this deploy brings;
+# before anything restarts, so that a dump that fails leaves the containers
+# running exactly what they ran before.
+#
+# </dev/null because this script is itself being read from ssh's stdin, and
+# anything under it that reads stdin of its own would read the rest of the
+# deploy instead. Exit 3 is how the other end tells this apart from a deploy
+# that went wrong after something had changed.
+restore_point=''
+if [ "$backup" = true ]; then
+  if ! restore_point=$(./scripts/backup.sh --database-only --keep 10 backups/pre-deploy < /dev/null); then
+    echo
+    echo "No restore point, so nothing was restarted. The checkout is at"
+    echo "$(git log --format='%h' -1); the containers still run what they ran before."
+    exit 3
+  fi
+else
+  echo 'No restore point taken: --skip-backup.'
+  echo
+fi
 
 # An instance that pulls its image rather than building one gets nothing out of
 # `up --build`: compose.image.yaml removes the build section, so there is
@@ -343,6 +387,15 @@ docker compose ps -a --format 'table {{.Service}}\t{{.Status}}'
 echo
 echo "Now at $(git log --format='%h %s' -1)"
 
+# Said again at the end, where it is still on screen when it is needed: the
+# backup's own output scrolled away under the build.
+if [ -n "$restore_point" ]; then
+  echo
+  echo "Restore point: $restore_point/balancia.dump"
+  echo "To go back to it, stop app (and worker), restore, then start the previous release:"
+  echo "  docker compose exec -T db pg_restore -U balancia -d postgres --clean --if-exists --create --no-owner < '$restore_point/balancia.dump'"
+fi
+
 [ -z "$pending" ] || exit 1
 REMOTE
 
@@ -350,6 +403,10 @@ printf '\n'
 if [ "$status" -eq 0 ]; then
   done_line "Deployed to $host."
   [ -z "$url" ] || note "$cyan$url$reset"
+elif [ "$status" -eq 3 ]; then
+  printf '  %s✗%s  %sThe database dump failed, so nothing was restarted.%s\n' "$red" "$reset" "$bold" "$reset"
+  note 'Fix what the backup said above and deploy again, or pass --skip-backup'
+  note 'to go ahead without a restore point.'
 else
   printf '  %s✗%s  %sThe deploy did not finish cleanly.%s\n' "$red" "$reset" "$bold" "$reset"
   note "ssh $host 'cd $path && docker compose logs --tail 50'"

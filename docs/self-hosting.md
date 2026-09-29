@@ -666,6 +666,18 @@ came back, not merely that Compose accepted the command.
 Host keys, users and jump hosts are all left to `~/.ssh/config`, which already
 knows about them.
 
+Between the pull and the restart it takes a restore point:
+`scripts/backup.sh --database-only` into `backups/pre-deploy/` in the
+checkout, where the last ten are kept. The new image applies its migrations the
+moment it starts, and they only go forwards, so this dump is the way back from
+an upgrade that went wrong — the deploy ends by printing where it is and the
+command that restores it. It is taken on every deploy, not only on one whose
+commits touch `drizzle/`: an instance that pulls its image gets its migrations
+from the image, which the checkout does not describe, and a database-only dump
+costs seconds. If it fails, nothing is restarted — the checkout has moved, the
+containers have not — and the script exits with status 3. `--skip-backup`
+deploys without one.
+
 ### The database volume moved (one-time change)
 
 `compose.yaml` used to mount the `balancia-db-data` volume at
