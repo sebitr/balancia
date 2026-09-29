@@ -79,19 +79,39 @@ async function start(): Promise<PgBoss> {
     );
   });
 
-  await instance.start();
-  for (const queue of Object.values(QUEUES)) {
-    await instance.createQueue(queue);
+  try {
+    await instance.start();
+    for (const queue of Object.values(QUEUES)) {
+      await instance.createQueue(queue);
+    }
+  } catch (error) {
+    // A half-started instance still holds a pool and timers. Let them go
+    // before the next attempt makes another, or every retry leaks one.
+    await instance.stop({ graceful: false, close: true }).catch(() => {});
+    throw error;
   }
   return instance;
 }
 
 export async function getBoss(): Promise<PgBoss> {
   if (boss) return boss;
-  starting ??= start().then((instance) => {
-    boss = instance;
-    return instance;
-  });
+  if (!starting) {
+    const attempt: Promise<PgBoss> = start().then(
+      (instance) => {
+        boss = instance;
+        return instance;
+      },
+      (error: unknown) => {
+        // Forget a failed start. Cached, it was handed to every later caller
+        // until the process restarted, so one database blip at boot meant no
+        // job was ever published or served again. Only this attempt is
+        // forgotten: a newer one may already be under way.
+        if (starting === attempt) starting = undefined;
+        throw error;
+      },
+    );
+    starting = attempt;
+  }
   return starting;
 }
 

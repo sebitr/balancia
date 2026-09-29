@@ -267,8 +267,8 @@ printf '\n'
 #
 # The health wait polls rather than sleeping a fixed while, because a build
 # that took ten minutes and one that hit the cache arrive at the same state at
-# very different times. A service with no healthcheck of its own — the worker
-# disables it, deliberately — is judged on being up.
+# very different times. A service with no healthcheck of its own is judged on
+# being up.
 status=0
 # shellcheck disable=SC2029,SC2086  # $path is expanded by the remote shell, by design
 ssh $ssh_opts "$host" "sh -s -- $path $timeout" <<'REMOTE' || status=$?

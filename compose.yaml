@@ -229,10 +229,18 @@ services:
       - uploads:/data/uploads
     command: ["node", "dist/worker.js"]
     # The image's HEALTHCHECK curls the web server, which this container does
-    # not run — inheriting it would leave the worker permanently "unhealthy"
-    # however well it is working. Liveness here is simply the process running.
+    # not run. Instead the worker rewrites a heartbeat file every thirty
+    # seconds for as long as it is subscribed and its database answers
+    # (src/worker/heartbeat.ts), and ninety seconds without one — three missed
+    # beats — is unhealthy.
     healthcheck:
-      disable: true
+      test:
+        - CMD-SHELL
+        - "test -f /tmp/balancia-worker.heartbeat && [ $$(( $$(date +%s) - $$(stat -c %Y /tmp/balancia-worker.heartbeat) )) -lt 90 ]"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
     # The worker finishes in-flight jobs on SIGTERM before exiting.
     stop_grace_period: 40s

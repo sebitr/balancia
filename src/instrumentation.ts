@@ -99,26 +99,14 @@ export async function register(): Promise<void> {
   if (!env.RUN_WORKER_IN_WEB) return;
 
   const { startWorker } = await import("@/worker/run");
+  const { superviseWorker } = await import("@/worker/supervise");
 
-  try {
-    await startWorker();
-    logger.info(
-      "Background worker is running inside the web process (RUN_WORKER_IN_WEB)",
-    );
-  } catch (error) {
-    // Deliberately not fatal. A queue that cannot be reached must not stop the
-    // app from serving pages — the same reason enqueuing a delivery never
-    // fails a request. Loud in the log is the point: the previous behaviour
-    // was to do nothing and say nothing.
-    logger.error(
-      {
-        err:
-          error instanceof Error
-            ? (error.stack ?? error.message)
-            : String(error),
-      },
-      "RUN_WORKER_IN_WEB is set but the background worker could not start; " +
-        "no recurring expenses, sweeps or push notifications will be delivered",
-    );
-  }
+  // Deliberately not awaited, and deliberately not fatal. A queue that cannot
+  // be reached must not stop the app from serving pages — the same reason
+  // enqueuing a delivery never fails a request — and Next holds the first
+  // request until this hook returns. So the worker starts beside the server,
+  // retries until it runs, and says where it stands in the log, in
+  // /api/health/ready and in `balancia_worker_up`. The previous behaviour was
+  // one attempt, one log line, and no worker until somebody restarted the app.
+  void superviseWorker({ start: startWorker });
 }
