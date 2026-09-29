@@ -37,12 +37,21 @@ the database with `pg_dump`, never with `tar`.
 ### The whole thing, in one script
 
 `scripts/backup.sh` takes all three at once. A standalone install has it
-beside `compose.yaml` — one that predates it gets it with `sh bootstrap.sh
---update` — and a checkout has it under `scripts/`:
+beside `compose.yaml`, and a checkout has it under `scripts/`; the examples on
+this page use the checkout's path, so drop the `scripts/` on a standalone
+install.
 
 ```bash
 ./backup.sh /var/backups/balancia             # standalone install
 ./scripts/backup.sh /var/backups/balancia     # checkout
+```
+
+A standalone install made before the script shipped fetches it once, into the
+directory holding `compose.yaml`:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/sebitr/balancia/main/scripts/backup.sh
+chmod +x backup.sh
 ```
 
 It finds the installation from where it sits rather than from where it was
