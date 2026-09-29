@@ -18,9 +18,10 @@ Open <http://localhost:3000> and create the first account.
 
 `bootstrap.sh` is one file that does the whole installation. Downloaded on its
 own it asks where to install — `./balancia` unless you say otherwise, or
-`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml` and
-`.env.example` into that directory and copies itself in beside them, so every
-later run happens from inside the installation.
+`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml`,
+`.env.example` and [`backup.sh`](backup-and-restore.md) into that directory and
+copies itself in beside them, so every later run happens from inside the
+installation.
 
 What it fetches is pinned to its own release. The script that installs 1.4.2
 downloads 1.4.2's Compose files and runs 1.4.2's image, which is why an
@@ -701,7 +702,7 @@ docker compose exec -T db \
   pg_dump -U balancia -d balancia --format=custom --no-owner > balancia.dump
 
 # 2. Take a full backup as well, before destroying anything.
-./balancia-backup.sh /var/backups/balancia
+./scripts/backup.sh /var/backups/balancia
 
 # 3. Stop the stack and delete ONLY the database volume. Note this is `down`
 #    without `-v`: the uploads volume must survive. Leave .env alone too — the

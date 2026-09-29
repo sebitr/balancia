@@ -67,8 +67,11 @@ version=${BALANCIA_VERSION:-$version}
 
 # What an installation needs beside this script. compose.image.yaml is fetched
 # even though only one of the two answers uses it, because that answer lives in
-# .env and changing your mind later should not need the network.
-companions='compose.yaml compose.image.yaml .env.example'
+# .env and changing your mind later should not need the network. backup.sh is
+# there so that the backup docs/backup-and-restore.md describes is a command to
+# run, not a listing to paste — and so that it is on the host before the first
+# upgrade that needs a restore point, rather than looked for after it.
+companions='compose.yaml compose.image.yaml .env.example scripts/backup.sh'
 
 # Where this script is, and where the installation it is setting up lives.
 #
@@ -807,13 +810,14 @@ download() {
 fetch_companions() {
   _into=$1
   for _file in $companions; do
-    # bootstrap.sh lives under scripts/ in the repository; the rest sit at the
-    # top. Only the destination is flattened — this directory is the install,
-    # not a copy of the tree.
-    if ! download "$raw_base/$version/$_file" "$_into/$_file"; then
+    # backup.sh lives under scripts/ in the repository, as this script does;
+    # the rest sit at the top. Only the destination is flattened — this
+    # directory is the install, not a copy of the tree.
+    if ! download "$raw_base/$version/$_file" "$_into/${_file##*/}"; then
       return 1
     fi
   done
+  chmod +x "$_into/backup.sh" 2> /dev/null || :
 }
 
 # Picks somewhere to install, fetches the Compose files into it, and leaves a
