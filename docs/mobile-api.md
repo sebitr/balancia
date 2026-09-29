@@ -92,6 +92,10 @@ its screen, because the instance it is pointed at may be anybody's.
 password}` → 201 `{user, verificationRequired}` under the `signUp` rate
 bucket. With SMTP configured the instance mails a confirmation and issues no
 session; without it the session cookie is set right away, like the web form.
+The confirmation link signs in only a browser holding the registration cookie
+this call sets, which a link opened from the mail app normally is not — so it
+confirms the address and lands on the web's sign-in page, and the client then
+signs in with the password it already has.
 Registration refusals (email taken, registration closed, password policy) are
 422, not the 401 a failed sign-in maps to.
 
@@ -507,7 +511,8 @@ namesake they were supposed to become.
 The fork is already there in `POST`, so a client that knows a `participantId` by
 some other route can claim correctly today. What is missing is the list to
 choose from. The web gets it from `listClaimableMembers` in
-`src/modules/join/service.ts` (unclaimed, not removed, with their balances), and
+`src/modules/join/service.ts` (unclaimed, not removed, not the seat a group
+nobody owns yet keeps for its creator, with their balances), and
 exposing it here would be an additive `claimableMembers` array on the `GET` —
 absent for personal invitations, where the seat is already decided.
 
@@ -569,7 +574,10 @@ sentence rather than the code:
   Without a `participantId` this cannot happen: a brand-new seat races with
   nobody.
 - `POST /api/join/:token` for an invitation another account already redeemed —
-  the link was minted for somebody else.
+  the link was minted for somebody else. Taking a personal invitation retires
+  it (see below), so after that `GET` on the same token answers `revoked` to
+  everybody except the account now holding the seat, and `POST` answers
+  `taken`.
 
 Two other rows are deliberate rather than incidental. An **archived group** reads
 as a revoked link because saying otherwise would confirm the group exists,
@@ -595,7 +603,11 @@ session every time it is opened.
   that wants the web's behaviour has to say `7`.
 - `DELETE` on either endpoint revokes immediately, and revocation is checked on
   every resolution, so it also ends joins already in flight.
-- A per-person link also dies when its participant is removed from the group.
+- A per-person link also dies when its participant is removed from the group,
+  and when an account claims its seat — by `POST /api/join/:token`, by a
+  `participantId` on `POST /api/join/g/:token`, or on the web. The sessions it
+  minted end with it. The account that took it still gets its seat back from
+  another `POST`, so a double tap is not a failure.
 - A group has **one** live join link: minting a second revokes the first in the
   same transaction, so the previously shared URL stops working.
 
