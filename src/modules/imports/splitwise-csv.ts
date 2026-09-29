@@ -361,14 +361,26 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         SETTLEMENT_DESCRIPTIONS.has(description.toLowerCase()) || cost.isZero();
 
       if (isSettlement) {
-        // A repayment shows one positive and one negative net of equal size.
+        // A repayment shows one positive and one negative net of equal size,
+        // and the positive one is the person who handed the money over.
+        // Splitwise stores a payment as an expense the payer paid in full and
+        // the recipient owes in full, so the net is paid − owed as on every
+        // other row. It is also the only reading under which the file's own
+        // "Total balance" row comes out: in the trip-group fixture, Ada's
+        // expenses leave her on +81.67, the payment row gives her −25, and the
+        // file ends her on +56.67 — so she received it. Taking the negative
+        // net for the payer, as this once did, reversed every repayment and
+        // put both people out by twice its amount; splitwise-fixtures.test.ts
+        // now holds every fixture to that row.
+        //
+        // `lessThan(0)` rather than `isNegative()`, which is true of −0 too.
         const payer = [...nets.entries()].find(([, value]) =>
-          value.isNegative(),
-        );
-        const receiver = [...nets.entries()].find(([, value]) =>
           value.greaterThan(0),
         );
-        if (!payer || !receiver) {
+        const recipient = [...nets.entries()].find(([, value]) =>
+          value.lessThan(0),
+        );
+        if (!payer || !recipient) {
           warnings.push({
             rowNumber,
             message: "Skipped a payment row that names no payer or recipient",
@@ -380,10 +392,10 @@ export const splitwiseCsvAdapter: ImportAdapter = {
           row: {
             kind: "settlement",
             date,
-            amount: toMinorUnits(receiver[1], currency),
+            amount: toMinorUnits(payer[1], currency),
             currency,
             fromSourceName: payer[0],
-            toSourceName: receiver[0],
+            toSourceName: recipient[0],
             notes: description || null,
           },
         });

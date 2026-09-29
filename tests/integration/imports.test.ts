@@ -15,6 +15,11 @@ import { loadGroupBalances } from "@/modules/balances/service";
 import { balancesSumToZero } from "@/modules/balances/engine";
 import { listParticipants } from "@/modules/groups/service";
 import { createTestGroup, createTestUser } from "../helpers/factories";
+import {
+  readSplitwiseFixture,
+  splitwiseFixtures,
+  splitwiseTotalBalances,
+} from "../helpers/splitwise-totals";
 
 /**
  * Splitwise import: staging, preview, commit and — the important one — retry.
@@ -138,6 +143,45 @@ describe("committing", () => {
       expect(balancesSumToZero(entry.balances)).toBe(true);
     }
   });
+
+  // The whole path — adapter, mapping, the settlement's from and to columns,
+  // the balance service — has to land where Splitwise says the group ended.
+  // A payment written the wrong way round still sums to zero, so the check
+  // above cannot see it; the file's own Total balance row can.
+  it.each(splitwiseFixtures())(
+    "lands %s on the file's own Total balance row",
+    async (name) => {
+      const actor = await createTestUser();
+      const group = await createTestGroup(actor, { currencyMode: "separate" });
+      const preview = await stageImport(group.access, {
+        name,
+        bytes: Buffer.from(readSplitwiseFixture(name)),
+      });
+      await saveParticipantMapping(
+        group.access,
+        preview.importRunId,
+        mapAllToNewParticipants(preview.sourceParticipants),
+      );
+      const report = await commitImportRun(preview.importRunId, group.groupId);
+      expect(report.failed).toBe(0);
+
+      const balances = await loadGroupBalances(group.access);
+      const imported = new Set(preview.sourceParticipants);
+      const landed = Object.fromEntries(
+        balances.currencies.flatMap((entry) =>
+          entry.balances.flatMap((balance) => {
+            const person = balances.participantNames.get(balance.participantId);
+            // The group's owner is not in the file and stays on zero.
+            return person && imported.has(person)
+              ? [[`${entry.currency}|${person}`, balance.amount]]
+              : [];
+          }),
+        ),
+      );
+
+      expect(landed).toEqual(splitwiseTotalBalances(name));
+    },
+  );
 
   it("maps a source name onto an existing participant when asked", async () => {
     const actor = await createTestUser({ name: "Ada" });

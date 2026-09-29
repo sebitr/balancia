@@ -98,8 +98,11 @@ describe("Splitwise CSV adapter", () => {
     );
     expect(settlements).toHaveLength(1);
     const settlement = settlements[0].row as StagedSettlement;
-    expect(settlement.fromSourceName).toBe("Ada");
-    expect(settlement.toSourceName).toBe("Blaise");
+    // The row reads Ada −25, Blaise +25: Blaise paid, as he would on an
+    // expense, and Ada received. The other way round ends Ada on 106.67
+    // instead of the 56.67 the file's own Total balance row reports.
+    expect(settlement.fromSourceName).toBe("Blaise");
+    expect(settlement.toSourceName).toBe("Ada");
     expect(settlement.amount).toBe("2500");
     expect(settlement.currency).toBe("EUR");
   });
@@ -248,6 +251,23 @@ describe("Splitwise CSV adapter — resilience", () => {
     expect((result.rows[0].row as StagedExpense).description).toBe(
       "Total renovation",
     );
+  });
+
+  it("does not take a −0.00 column for the recipient of a payment", () => {
+    // Decimal counts −0 as negative, so a sign test alone would pick Ada.
+    const result = splitwiseCsvAdapter.parse(
+      [
+        "Date,Description,Cost,Currency,Ada,Blaise,Grace",
+        "2026-01-01,Payment,0.00,EUR,-0.00,-25.00,25.00",
+        "",
+      ].join("\n"),
+    );
+    expect(result.rows[0].row).toMatchObject({
+      kind: "settlement",
+      fromSourceName: "Grace",
+      toSourceName: "Blaise",
+      amount: "2500",
+    });
   });
 
   it("handles a column layout without Category", () => {

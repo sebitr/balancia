@@ -116,6 +116,27 @@ Inventing a historical rate would be worse than leaving it unset. In a
 converted-currency group, review imported foreign-currency expenses and re-enter
 them with the rate you want if you need them folded into the base currency.
 
+### If you imported a CSV before October 2026
+
+Until the end of September 2026, the CSV importer read a Splitwise payment the
+wrong way round: a payment Blaise made to Ada was recorded as Ada paying
+Blaise, which moves both of them by twice the amount. Expenses were read
+correctly, and the JSON backup was never affected. Only the rows the preview
+counted as payments were — in the file, a row described as `Payment` or
+`Settle all balances`, or with a cost of zero.
+
+To check a group, compare its balances with the **Total balance** row at the
+end of the file you imported. If they agree to the cent, nothing needs doing.
+If they do not, open each payment the import created — dated as in Splitwise,
+with the row's description as its note — and swap who paid and who received,
+or delete it and record it again.
+
+Do not import the same file again to repair it. A payment now reads the other
+way round, so the import no longer recognises it as one it already wrote: it
+adds it again beside the reversed copy, and the two cancel out as if the
+payment had never happened. If that has already happened, delete the older
+copy of each payment, the one going the wrong way.
+
 ### What gets skipped, and why
 
 The preview lists every skipped row. Common reasons:
