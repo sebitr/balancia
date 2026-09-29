@@ -113,8 +113,9 @@ their method.
 
 **Imported expenses keep their original currency and carry no exchange rate.**
 Inventing a historical rate would be worse than leaving it unset. In a
-converted-currency group, review imported foreign-currency expenses and re-enter
-them with the rate you want if you need them folded into the base currency.
+converted-currency group they are balanced in that currency, beside the base —
+see _Currency handling_ below — and re-entering one with the rate you want is
+what folds it into the base currency.
 
 ### What gets skipped, and why
 
@@ -144,17 +145,26 @@ Balancia never converts during an import. If a Splitwise group mixed
 currencies:
 
 - In a **separate** group, each currency gets its own balance. Nothing to do.
-- In a **converted** group, imported foreign expenses stay in their original
-  currency with no rate, so they contribute to their own currency's balance
-  until you re-enter them.
+- In a **converted** group, imported foreign expenses and payments stay in their
+  original currency with no rate, so they contribute to their own currency's
+  balance until you re-enter them. The group then shows its base-currency
+  balances first and one more list per such currency — `€` and `¥` side by side,
+  exactly as a separate group would — and each list sums to zero on its own.
+  Statistics count those rows under their own currency too; a yen amount with no
+  rate is never added into a euro total.
+
+Re-entering an expense with a rate is what moves it into the base. A repayment
+you record in Balancia afterwards is converted into the base currency like any
+other, so it settles the base list rather than the imported one.
 
 The simplest path for a mixed-currency Splitwise group is to import into a
 `separate` group.
 
 The same holds for a restored backup. A `converted` group's export carries the
-rate each expense was converted at, but the staging model has nowhere to put a
-historical rate, so a restored row comes back in the currency it was entered in
-and the preview warns how many rows that affects.
+rate each expense and payment was converted at, but the staging model has
+nowhere to put a historical rate, so a restored row comes back in the currency
+it was entered in, is balanced there, and the preview warns how many rows that
+affects.
 
 ---
 

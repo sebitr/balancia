@@ -195,7 +195,9 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 `src/modules/balances` derives net positions per participant from payer
 contributions, expense shares and settlements — deleted expenses excluded.
 `separate` groups produce one balance list per currency; `converted` groups
-produce base-currency balances. The engine guarantees Σ(balances) = 0 per
+produce base-currency balances, plus one list per currency whose rows arrived
+with no rate — an import or a restored backup — which are never counted in the
+base at face value. The engine guarantees Σ(balances) = 0 per
 currency and produces a deterministic greedy simplification (largest debtor →
 largest creditor) that is presentation-only: it never alters recorded history.
 

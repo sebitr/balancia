@@ -98,8 +98,9 @@ export default async function ExpensesPage({
   /*
    * The spread, per currency and never across them.
    *
-   * A converted group resolves to exactly one currency, which is the screen
-   * the design draws. A `separate` group — the default — can hold several, and
+   * A converted group resolves to one currency, which is the screen the design
+   * draws — unless it holds foreign rows that arrived with no rate, which stay
+   * in their own. A `separate` group — the default — can hold several, and
    * there is no honest way to rank categories across them: the comparison the
    * spine invites would need an exchange rate nobody chose. So the spine
    * appears only when there is one currency to measure in, and simply is not

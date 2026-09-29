@@ -52,6 +52,13 @@ Converted groups store a decimal exchange rate with each foreign-currency
 expense. Multiplication uses decimal arithmetic and rounds once using the
 documented rule. A later rate update never rewrites a historical expense.
 
+A foreign-currency expense or repayment that reaches a converted group without
+a rate — an import, or a restored backup — has no base-currency value, and none
+is invented for it. It is never counted in the base at face value, which would
+read ¥30,000 as €30,000. It is balanced in its own currency instead, in a list
+of its own that sums to zero like any other, and statistics leave it out of
+base-currency totals, until somebody re-enters it with a rate.
+
 Daily rate suggestions are optional and off by default. The server—not the
 browser—records whether a saved rate matches a rate the instance fetched, so
 the provenance is verified rather than trusted from client input.
