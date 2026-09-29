@@ -710,6 +710,7 @@
       "open": "Filter and sort",
       "openWith": "Filter and sort, {count, plural, one {# filter} other {# filters}} applied",
       "apply": "{count, plural, =0 {No transactions match} one {Show # transaction} other {Show # transactions}}",
+      "applyUncounted": "Show transactions",
       "when": "When",
       "when_any": "Any time",
       "when_month": "This month",

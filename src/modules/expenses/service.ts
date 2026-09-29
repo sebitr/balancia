@@ -8,6 +8,7 @@ import {
   isNotNull,
   isNull,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
@@ -41,7 +42,7 @@ import { classifyRateSource } from "@/modules/currencies/rates";
 import { money } from "@/modules/currencies/money";
 import { AllocationError } from "./allocation";
 import type { EntryDirection } from "./direction";
-import type { SpreadEntry } from "./spread";
+import type { SpreadGroup } from "./spread";
 import {
   convertAllocations,
   resolveSplit,
@@ -797,6 +798,11 @@ async function linkAttachments(
  * continues from exactly there, at constant cost and with no risk of a row
  * being shown twice or missed. `offset` remains for the export, which reads
  * the whole list in one pass and has no reader scrolling underneath it.
+ *
+ * `where` and `orderBy` are the transactions list's filters and its other two
+ * orders, built by `transactions.ts`. `where` narrows on top of the group and
+ * deletion checks, never instead of them; `orderBy` replaces the newest-first
+ * order, and whoever passes it passes the keyset condition that goes with it.
  */
 export async function listExpenses(
   groupId: string,
@@ -805,6 +811,8 @@ export async function listExpenses(
     limit?: number;
     offset?: number;
     before?: ListCursor | null;
+    where?: SQL;
+    orderBy?: readonly SQL[];
   } = {},
 ): Promise<ListedExpense[]> {
   const db = options.db ?? getDb();
@@ -842,15 +850,18 @@ export async function listExpenses(
               options.before,
             )
           : undefined,
+        options.where,
       ),
     )
     // `id` last, and never left out: an import files hundreds of rows under
     // one transaction clock, and without it their order is the database's
     // choice — a different one per query.
     .orderBy(
-      desc(expenses.expenseDate),
-      desc(expenses.createdAt),
-      desc(expenses.id),
+      ...(options.orderBy ?? [
+        desc(expenses.expenseDate),
+        desc(expenses.createdAt),
+        desc(expenses.id),
+      ]),
     )
     .limit(options.limit ?? 100)
     .offset(options.offset ?? 0);
@@ -916,36 +927,64 @@ export async function listExpenses(
 }
 
 /**
- * Every expense in the group, reduced to what the category spread reads.
+ * Every expense in the group, summed into what the category spread reads.
  *
- * Unbounded, and deliberately so. The spine is a picture of *proportions*, and
- * a proportion measured over the newest page only is not a smaller truth, it
- * is a different and wrong one — it would also redraw itself under the
- * reader's thumb as paging brought more rows in. Six scalar columns and no
- * joins is a cheap read even for a group with years of history, and it is the
- * same shape `loadGroupBalances` already takes over the same table.
+ * Over the whole group, and deliberately so. The spine is a picture of
+ * *proportions*, and a proportion measured over the newest page only is not a
+ * smaller truth, it is a different and wrong one — it would also redraw itself
+ * under the reader's thumb as paging brought more rows in.
  *
- * The totalling stays in `categoryTotals` rather than moving into SQL: the
- * rule for which amount counts, and in which currency, is the one the balances
- * use, and there must go on being exactly one copy of it.
+ * But not a row per expense. This used to send every expense the group had
+ * ever recorded to the page on every visit, to be added up there; now the
+ * database adds them up, and what comes back is one row per combination of
+ * direction, category, subcategory and currency — tens of rows, however many
+ * years of history sit behind them.
+ *
+ * The rule for which amount counts, and in which currency, still runs in
+ * `categoryTotals`, on these sums, because it is the one the balances use and
+ * there must go on being exactly one copy of it. Summing first changes
+ * nothing it decides: every row it reads here shares its currency and its
+ * converted currency, so `moneyForGroup` picks the same field, and files it
+ * under the same currency, for the sum as for each part. (Grouping by the
+ * converted currency is also grouping by whether there is a converted amount
+ * at all: `expenses_conversion_complete` sets the two together or neither.)
  */
 export async function listSpreadEntries(
   groupId: string,
   options: { db?: Database } = {},
-): Promise<SpreadEntry[]> {
+): Promise<SpreadGroup[]> {
   const db = options.db ?? getDb();
-  return db
+  const rows = await db
     .select({
       direction: expenses.direction,
       category: expenses.category,
       subcategory: expenses.subcategory,
-      amount: expenses.amount,
       currency: expenses.currency,
-      convertedAmount: expenses.convertedAmount,
       convertedCurrency: expenses.convertedCurrency,
+      // As text: `sum(bigint)` is a numeric, and money never passes through a
+      // JavaScript number on its way to being a bigint again.
+      amount: sql<string>`sum(${expenses.amount})::text`,
+      convertedAmount: sql<
+        string | null
+      >`sum(${expenses.convertedAmount})::text`,
+      count: count(),
     })
     .from(expenses)
-    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
+    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)))
+    .groupBy(
+      expenses.direction,
+      expenses.category,
+      expenses.subcategory,
+      expenses.currency,
+      expenses.convertedCurrency,
+    );
+
+  return rows.map((row) => ({
+    ...row,
+    amount: BigInt(row.amount),
+    convertedAmount:
+      row.convertedAmount === null ? null : BigInt(row.convertedAmount),
+  }));
 }
 
 /** A single expense, scoped to its group. Returns null if it is not there. */
