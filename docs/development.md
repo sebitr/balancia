@@ -400,6 +400,10 @@ Component needs listing where that component renders.
 does, and names the file, the namespace and the provider it is missing from;
 it fails as well on a listed path nothing reads any more, and on a namespace
 that is not written out as a literal, which no reading of the code can check.
+A component test hands its provider the whole catalogue unless it says
+otherwise; `renderWithIntl(ui, { area: "group" })` (`tests/helpers/intl.tsx`)
+hands it only what that area carries, so a string missing from the list shows
+up as its key in the test and not only in the browser.
 
 **The service worker** never caches authentication endpoints, receipts or
 mutations, and there is no offline data entry. That is deliberate: queueing
