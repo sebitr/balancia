@@ -44,12 +44,20 @@ async function handleGet(request: Request, context: Context) {
      * screen puts them on. Read after the transfers and from them: a
      * recipient's details are reachable only by appearing in a debt the
      * balances say this reader owes.
+     *
+     * Never to an API key, at any scope. A key is pasted into other people's
+     * software and forwarded with it, and the debt that unlocks a hint is one
+     * the key's own holder can write — an expense "paid by them, split on me"
+     * is a single request. Nothing a script does needs somebody's IBAN, so a
+     * key reads every transfer and an empty list where the hints would be:
+     * the same shape, with nothing in it to leak.
      */
-    const hints = await buildPayoutHints(
-      access.groupId,
-      access.group.name,
-      view,
+    const readsPayouts = !(
+      access.actor.kind === "user" && access.actor.viaApiToken
     );
+    const hints = readsPayouts
+      ? await buildPayoutHints(access.groupId, access.group.name, view)
+      : [];
     return noStore({ settleUp: serializeSettleUp(view, hints) });
   } catch (error) {
     return mobileApiError(error, `${ROUTE} GET`, { groupId });

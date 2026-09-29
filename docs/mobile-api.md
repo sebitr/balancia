@@ -166,7 +166,7 @@ is off, which is the default.
 | GET    | `/api/groups/:groupId/transactions?cursor&limit`         | One page of the group's history, expenses and repayments in one list, newest first (40 by default, 500 at most). Feed `cursor` back for the next page; a null cursor is the end.                                                                                                                                                  |
 | GET    | `/api/groups/:groupId/stats`                             | `loadGroupStats`: all three windows, every currency and the all-time records in one read.                                                                                                                                                                                                                                         |
 | GET    | `/api/groups/:groupId/participants/:participantId/stats` | `loadMemberStats` for one member, removed people included.                                                                                                                                                                                                                                                                        |
-| GET    | `/api/groups/:groupId/settle-up`                         | `loadSettleUp`: the shortest set of transfers that clears the group, split into the reader's own and everybody else's.                                                                                                                                                                                                            |
+| GET    | `/api/groups/:groupId/settle-up`                         | `loadSettleUp`: the shortest set of transfers that clears the group, split into the reader's own and everybody else's, plus `payoutHints` — never for an API key.                                                                                                                                                                 |
 | GET    | `/api/notifications?limit&before`                        | The inbox plus `unread`. Users only.                                                                                                                                                                                                                                                                                              |
 | GET    | `/api/notifications/preferences`                         | Category switches plus `mutedGroupIds`.                                                                                                                                                                                                                                                                                           |
 
@@ -179,6 +179,24 @@ on free text an import kept verbatim.
 
 The group read also carries `profile` (`description`, `icon`, `iconColor` via
 `getGroupProfile`), which `GroupAccess` deliberately omits.
+
+A participant row depends on who is reading it, in the group read and in
+`/participants` alike:
+
+| Reader                                                      | `email`      | `userId`     | `hasAccount` |
+| ----------------------------------------------------------- | ------------ | ------------ | ------------ |
+| A signed-in owner or member                                 | string, null | string, null | —            |
+| An API key, on the group read (`/participants` refuses one) | string, null | string, null | —            |
+| A guest (an invitation link)                                | —            | —            | boolean      |
+
+A guest's rows carry neither the address nor the account id — the keys are
+absent, not null — and `hasAccount` says the one thing the id was read for:
+whether this person signs in or is a name somebody typed. An invitation link
+is a credential that gets forwarded, and the owner's sign-in address is copied
+onto their participant row when the group is made; whoever the link reached
+has no use for either. `id`, `displayName`, `role` and the invitation fields
+are the same for everybody. A signed-in reader's rows are unchanged, which is
+the shape a native client decodes.
 
 The two statistics reads answer with the whole screen rather than one window of
 it. Three ranges, every currency and the all-time records come out of the same
@@ -235,6 +253,25 @@ and that is structural rather than checked: a recipient reaches the list only
 by appearing in a transfer the group's own balances say the reader owes. There
 is no route that takes a name and answers with an IBAN, and adding one would
 be the mistake.
+
+Who reads `payoutHints`, and how much of it:
+
+| Reader                       | `payoutHints`                                                  |
+| ---------------------------- | -------------------------------------------------------------- |
+| A signed-in owner or member  | One per debt they owe: `methods` with each `detail`, and codes |
+| A guest (an invitation link) | The same — the detail to pay into and its code                 |
+| An API key, at any scope     | Always `[]`; the transfers are unchanged                       |
+
+A guest keeps the IBAN and the payment code of the people they owe, so that a
+group whose members are not all on the app can still pay each other. That is a
+decision rather than an oversight, and it has a cost worth naming: a guest can
+record an expense "paid by X, split on me", which is a debt to X, which is X's
+details. What a hint never carries, for anybody, is a postal address as a
+field of its own. The one standard that needs one, the Swiss QR-bill, embeds
+the creditor's address in its payload — a scanned code shows it, which is the
+standard's own requirement — and nothing else in the response spells it out.
+
+A key never reads a hint; why is under [API keys](#api-keys).
 
 ## Writes
 
@@ -698,6 +735,13 @@ key can already page through every expense in the group. It is that a bearer
 credential may be forwarded, and a one-request download of a group's entire
 financial history is a sharper tool in the wrong hands than the same data read
 a page at a time. Read `/api/groups/:id/transactions` instead, which pages.
+
+**One open route answers a key with less.** `GET /api/groups/:id/settle-up`
+gives a key every transfer and an empty `payoutHints`: the IBANs and payment
+codes of the people its owner owes are for the owner, on a screen, and not for
+a script. The debt that unlocks a hint is also one a key can write for itself
+— an expense "paid by them, split on me" is one request. The route reads
+`viaApiToken` off the actor, which `apiActor` sets and nothing else does.
 
 Routes a key may never reach do not read the `Authorization` header at all —
 those handlers still resolve a cookie and are simply blind to it. That is a
