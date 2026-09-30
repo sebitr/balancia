@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ENV_VARIABLE_NAMES, EnvironmentError, parseEnv } from "./env";
+import {
+  ENV_VARIABLE_NAMES,
+  EnvironmentError,
+  isNewerSchemaAllowed,
+  parseEnv,
+} from "./env";
 
 const base = {
   DATABASE_URL: "postgres://balancia:secret@localhost:5432/balancia",
@@ -317,6 +322,43 @@ describe("environment validation", () => {
       expect(env.EXCHANGE_RATE_API_URL).toBe(
         "https://rates.internal.example.com/v2",
       );
+    });
+  });
+
+  describe("a database newer than this build", () => {
+    const allowed = (source: Record<string, string>) =>
+      isNewerSchemaAllowed(source as unknown as NodeJS.ProcessEnv);
+
+    /**
+     * The one place this is refused by default is where the data is real. A
+     * development database is migrated by every branch in turn, and one that
+     * is "ahead" of main is what stepping back from a branch looks like.
+     */
+    it("refuses in production and warns everywhere else, when unset", () => {
+      expect(allowed({ NODE_ENV: "production" })).toBe(false);
+      expect(allowed({ NODE_ENV: "development" })).toBe(true);
+      expect(allowed({ NODE_ENV: "test" })).toBe(true);
+      expect(allowed({})).toBe(true);
+    });
+
+    it("treats the empty string Compose passes as unset", () => {
+      expect(allowed({ NODE_ENV: "production", ALLOW_NEWER_SCHEMA: "" })).toBe(
+        false,
+      );
+      expect(
+        allowed({ NODE_ENV: "development", ALLOW_NEWER_SCHEMA: " " }),
+      ).toBe(true);
+    });
+
+    it("does what it is told when it is told", () => {
+      for (const value of ["true", "1", "yes", "ON"]) {
+        expect(
+          allowed({ NODE_ENV: "production", ALLOW_NEWER_SCHEMA: value }),
+        ).toBe(true);
+      }
+      expect(
+        allowed({ NODE_ENV: "development", ALLOW_NEWER_SCHEMA: "false" }),
+      ).toBe(false);
     });
   });
 
@@ -800,6 +842,9 @@ const READ_AS_DERIVED_FIELD: Readonly<Record<string, string>> = {
   // to allow WebAssembly, so it is read through an accessor rather than off
   // the parsed object.
   RECEIPT_OCR_LOCAL: "isLocalReceiptOcrEnabled",
+  // Read by the migration runner, which runs before the app and needs nothing
+  // from the schema but a connection string.
+  ALLOW_NEWER_SCHEMA: "isNewerSchemaAllowed",
 };
 
 /**

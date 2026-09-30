@@ -1,0 +1,95 @@
+# A restore drill: a backup brought up beside production without touching it.
+#
+#   docker compose -f compose.yaml -f compose.drill.yaml -p balancia-drill …
+#
+# All three flags, on every command, down to the `down -v` at the end. The
+# drill itself is in docs/backup-and-restore.md, under "Testing your backups".
+#
+# A project name on its own is not enough, and the drill used to say it was.
+# compose.yaml names its volumes and containers outright — balancia-db-data,
+# balancia-db — rather than letting Compose derive them from the project,
+# which is what keeps an existing install's data where it has always been. It
+# also means `-p` changes none of them. A drill run with `-p` alone stops at a
+# container-name conflict with production, or, with production taken down to
+# make room, mounts production's volumes, restores the backup over them and
+# hands them to the drill's `down -v` to delete.
+#
+# So this file renames everything compose.yaml names: the project, each
+# volume, each container, and the image tag. src/lib/restore-drill.test.ts
+# holds it to that, so a volume or a service added to compose.yaml without a
+# drill name here fails the build.
+#
+# Every name is a literal rather than a variable. The drill's .env is a copy
+# of production's — it is part of what is being restored — so anything read
+# from it would resolve to production's value.
+#
+# `!override` and `!reset` need Compose 2.24.4 or newer.
+
+name: balancia-drill
+
+# The restored database holds real people's email addresses and push
+# subscriptions, and the drill runs the same background jobs production does:
+# a recurring expense falling due, or a notification the backup caught
+# undelivered, would reach them from here. So everything production talks to
+# is taken away, for the worker as well as the app.
+x-drill-environment: &drill-environment
+  # Where the drill is reached — the port below, on this host or down an SSH
+  # tunnel. Production's address would fail every sign-in on the origin check.
+  APP_URL: http://localhost:3300
+  # Empty means derived from APP_URL. Production's would not match localhost,
+  # and the app refuses to start on a mismatch.
+  WEBAUTHN_RP_ID: ""
+  # Empty, so the entrypoint builds one for the drill's own `db`. An instance
+  # whose .env points DATABASE_URL at a database outside the stack would
+  # otherwise have the drill migrate and serve production's database.
+  DATABASE_URL: ""
+  # Receipts from the drill's volume. On an S3 instance production's bucket
+  # would otherwise be the drill's to write to and delete from.
+  STORAGE_DRIVER: local
+  SMTP_HOST: ""
+  PUSH_VAPID_PUBLIC_KEY: ""
+  PUSH_VAPID_PRIVATE_KEY: ""
+  # Apple will not redirect to localhost, and the app refuses to start when it
+  # is configured with an address Apple would never accept.
+  APPLE_CLIENT_ID: ""
+  APPLE_TEAM_ID: ""
+  APPLE_KEY_ID: ""
+  APPLE_PRIVATE_KEY: ""
+  # The restored database carries production's telemetry choice with it, and a
+  # drill is not a second installation to report on.
+  TELEMETRY_MODE: "off"
+
+services:
+  db:
+    container_name: balancia-drill-db
+    # Not published at all. Every step of the drill reaches the database
+    # through `exec`, and a second copy of production's data has no business
+    # listening on a port.
+    ports: !reset []
+
+  app:
+    # Its own tag, not compose.yaml's `balancia:local`. The drill builds from
+    # its own checkout, usually at another commit, and sharing the tag would
+    # have production's next `up` restart on the drill's build.
+    image: balancia-drill:local
+    container_name: balancia-drill-app
+    environment:
+      <<: *drill-environment
+    # Loopback only, and a port nothing else in these files uses. The drill
+    # holds real accounts with their real passwords. `!override`, because
+    # Compose otherwise adds this to production's port rather than replacing
+    # it, and the drill would try to take both.
+    ports: !override
+      - "127.0.0.1:3300:3000"
+
+  worker:
+    image: balancia-drill:local
+    container_name: balancia-drill-worker
+    environment:
+      <<: *drill-environment
+
+volumes:
+  db-data:
+    name: balancia-drill-db-data
+  uploads:
+    name: balancia-drill-uploads

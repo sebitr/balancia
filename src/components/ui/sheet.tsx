@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Dialog as SheetPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
@@ -238,6 +239,9 @@ function SheetContent({
 }) {
   const bottom = side === "bottom";
   const { sheet, close } = useSwipeDismiss(bottom);
+  // The close button's name, in the reader's language: an English "Close" was
+  // the one word a French screen reader met on every sheet in the app.
+  const tCommon = useTranslations("common");
 
   /**
    * A bottom sheet with a keyboard open rides on top of it.
@@ -324,7 +328,7 @@ function SheetContent({
               size="icon-sm"
             >
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{tCommon("close")}</span>
             </Button>
           </SheetPrimitive.Close>
         )}

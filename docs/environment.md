@@ -1012,6 +1012,38 @@ confirm before rolling the app:
 docker compose run --rm --entrypoint "node dist/migrate.js" app
 ```
 
+### `ALLOW_NEWER_SCHEMA`
+
+Whether a release may start against a database that a newer release has
+already migrated. Unset, that is refused in production and allowed everywhere
+else; `compose.yaml` passes `false`.
+
+Every migration only goes forwards, and the runner knows only the migrations
+its own image carries. A database holding one it has never heard of is almost
+always an image rolled back after an upgrade, with the database left where the
+upgrade put it — and the older code would then run against a schema it was
+never written for. Some of what that breaks fails loudly; a column it does not
+know to fill, or a table whose rows it does not know to read, is money that is
+quietly wrong instead. So the migration step refuses, names the migrations it
+does not know, and the container does not start.
+
+The way back that loses nothing is to restore the dump taken before the
+upgrade and then start the older release — see
+[Rolling back](self-hosting.md#rolling-back). Set this to `true` only to run the
+older release against the newer schema anyway, having decided to accept that:
+it then starts, and logs a warning naming the migrations. Take it out again once
+a current release is back, or it will wave the next mismatch through as well;
+`./scripts/bootstrap.sh` offers to on every run.
+
+Outside production the default is to warn and carry on, because there the
+database is a development one that every branch migrates in turn, and stepping
+back from a branch that added a migration is routine. `compose.dev.yaml` sets it
+to `true` for the same reason; `DEV_ALLOW_NEWER_SCHEMA=false` shows the refusal
+production gives.
+
+Setting `RUN_MIGRATIONS=false` skips this check along with everything else the
+migration step does.
+
 ---
 
 ## Worked examples

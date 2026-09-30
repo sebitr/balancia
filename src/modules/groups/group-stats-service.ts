@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
+import { ledgerCurrencyOf } from "@/modules/currencies/display";
 import { loadGroupBalances } from "@/modules/balances/service";
 import {
   computeGroupStats,
@@ -34,6 +35,11 @@ import type { StatsSettlementFact } from "./member-stats";
  * the same reason: it is what "the currency this group balances in" means. A
  * converted group reads the frozen converted figure, a separate one reads what
  * was actually typed.
+ *
+ * A foreign row a converted group holds no rate for — an import, a restored
+ * backup — has no base figure, so it is left out of the base currency's totals
+ * and counted under its own, the same currency `ledgerCurrencyOf` puts its
+ * balance in. Adding its amount to the base would count yen as euros.
  */
 export async function loadGroupStats(
   access: Pick<GroupAccess, "groupId" | "group" | "participantId">,
@@ -67,6 +73,7 @@ export async function loadGroupStats(
         expenseDate: expenses.expenseDate,
         createdAt: expenses.createdAt,
         currency: expenses.currency,
+        convertedCurrency: expenses.convertedCurrency,
       })
       .from(expenses)
       .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
@@ -98,6 +105,7 @@ export async function loadGroupStats(
         currency: settlements.currency,
         amount: settlements.amount,
         convertedAmount: settlements.convertedAmount,
+        convertedCurrency: settlements.convertedCurrency,
         fromParticipantId: settlements.fromParticipantId,
         toParticipantId: settlements.toParticipantId,
       })
@@ -117,10 +125,14 @@ export async function loadGroupStats(
     loadGroupBalances(access, { db }),
   ]);
 
+  // A row's allocations carry a converted amount exactly when the row does, so
+  // the amount picked always matches the currency `currencyOf` names.
   const pick = (original: bigint, converted: bigint | null): bigint =>
     converts ? (converted ?? original) : original;
-  const currencyOf = (original: string): string =>
-    converts ? (group.baseCurrency as string) : original;
+  const currencyOf = (row: {
+    currency: string;
+    convertedCurrency: string | null;
+  }): string => ledgerCurrencyOf(row, group.currencyMode);
 
   const payersByEntry = new Map<
     string,
@@ -156,7 +168,7 @@ export async function loadGroupStats(
     direction: row.direction,
     expenseDate: row.expenseDate,
     createdAt: row.createdAt,
-    currency: currencyOf(row.currency),
+    currency: currencyOf(row),
     payers: payersByEntry.get(row.id) ?? [],
     shares: sharesByEntry.get(row.id) ?? [],
   }));
@@ -165,7 +177,7 @@ export async function loadGroupStats(
     id: row.id,
     settledOn: row.settledOn,
     createdAt: row.createdAt,
-    currency: currencyOf(row.currency),
+    currency: currencyOf(row),
     fromParticipantId: row.fromParticipantId,
     toParticipantId: row.toParticipantId,
     amount: pick(row.amount, row.convertedAmount),
@@ -197,5 +209,6 @@ export async function loadGroupStats(
     selfParticipantId: access.participantId ?? null,
     timezone: group.timezone,
     now: options.now ?? new Date(),
+    leadCurrency: converts ? group.baseCurrency : null,
   });
 }

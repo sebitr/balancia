@@ -2,7 +2,10 @@ import { z } from "zod";
 import { getClientIp } from "@/lib/security/actor";
 import { guardSignUp } from "@/lib/security/signup-guard";
 import { AuthError, registerUser } from "@/modules/auth/service";
-import { setSessionCookie } from "@/modules/auth/cookies";
+import {
+  setRegistrationCookie,
+  setSessionCookie,
+} from "@/modules/auth/cookies";
 import {
   invalidInput,
   mobileApiError,
@@ -66,6 +69,12 @@ async function handlePost(request: Request) {
 
     if (result.session) {
       await setSessionCookie(result.session.token, result.session.expiresAt);
+    }
+    if (result.verificationRequired) {
+      // The same proof the web form leaves. The link usually opens in a
+      // browser that is not this client's cookie jar, and then it confirms
+      // the address and the app signs in with the password it already has.
+      await setRegistrationCookie(result.user.userId);
     }
 
     return noStore(

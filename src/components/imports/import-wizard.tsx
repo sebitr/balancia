@@ -20,6 +20,7 @@ import {
   commitImportAction,
   stageImportAction,
 } from "@/modules/imports/actions";
+import { MAX_IMPORT_BYTES } from "@/modules/imports/limits";
 import type { ImportPreview, ImportReport } from "@/modules/imports/service";
 
 const CREATE_PARTICIPANT = "__create__";
@@ -64,8 +65,28 @@ export function ImportWizard({ groupId }: { groupId: string }) {
           result.data.suggestedMapping[name] ?? CREATE_PARTICIPANT;
       }
       setMapping(initial);
+    } catch {
+      // The request itself failed — the connection, or the framework refusing
+      // it — so there is no result to read an error from.
+      setError(t("readFailed"));
     } finally {
       setPending(false);
+    }
+  };
+
+  /**
+   * A file past the ceiling is refused the moment it is chosen. Sent, it would
+   * never reach the import: the framework drops an oversized action body with
+   * an error of its own, which says nothing a person could act on. Clearing
+   * the field is what keeps it from being sent anyway — the input is required.
+   */
+  const onFileChosen = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.size > MAX_IMPORT_BYTES) {
+      setError(t("tooLarge", { limit: MAX_IMPORT_BYTES / 1_000_000 }));
+      event.target.value = "";
+    } else {
+      setError(null);
     }
   };
 
@@ -86,6 +107,8 @@ export function ImportWizard({ groupId }: { groupId: string }) {
       setReport(result.data);
       toast.success(t("finished"));
       router.refresh();
+    } catch {
+      setError(t("commitFailed"));
     } finally {
       setPending(false);
     }
@@ -274,9 +297,12 @@ export function ImportWizard({ groupId }: { groupId: string }) {
             type="file"
             accept=".csv,.json"
             required
+            onChange={onFileChosen}
             className="block w-full rounded-md border border-input text-sm file:mr-3 file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground"
           />
-          <p className="text-xs text-muted-foreground">{t("fileHelp")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("fileHelp", { limit: MAX_IMPORT_BYTES / 1_000_000 })}
+          </p>
         </div>
 
         <Button type="submit" disabled={pending}>

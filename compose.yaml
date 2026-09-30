@@ -131,6 +131,12 @@ x-app-environment: &app-environment
   # Where signing out goes when this *is* a demo — the real site. Belongs to
   # compose.demo.yaml too; forwarded here so the two stacks read one schema.
   DEMO_EXIT_URL: ${DEMO_EXIT_URL:-}
+  # A release older than the database refuses to start: the image was rolled
+  # back and the database was not, and every migration only goes forwards.
+  # true lets it start anyway, for a rollback you have decided to accept — and
+  # for that long only. The way back that loses nothing is restoring the dump
+  # taken before the upgrade; see docs/self-hosting.md, "Rolling back".
+  ALLOW_NEWER_SCHEMA: ${ALLOW_NEWER_SCHEMA:-false}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:

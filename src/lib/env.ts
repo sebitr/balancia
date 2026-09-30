@@ -494,6 +494,30 @@ const envSchema = z
      * never what anybody meant, and `src/worker/index.ts` says so at startup.
      */
     RUN_WORKER_IN_WEB: booleanish.default(true),
+
+    /**
+     * Start this build against a database a newer one has migrated.
+     *
+     * The migration runner only knows this build's own files, and every
+     * migration is forward-only, so a database holding migrations the build
+     * has never heard of is one it was not written for: the upgrade went
+     * ahead, and the image was rolled back without the database. In
+     * production that refuses to start, naming the migrations, because the
+     * failures it invites are not all loud ones.
+     *
+     * Setting this true is the override for a rollback somebody has decided
+     * to accept — the build starts, and says so in its log. It is meant to be
+     * set for the length of that rollback and no longer: left on, it would
+     * wave through the next one too, unasked. `bootstrap.sh` offers to turn
+     * it back off.
+     *
+     * Unset, it follows NODE_ENV rather than defaulting to false: outside
+     * production the database is a development one that every branch
+     * migrates, and stepping back from a branch with a migration is routine.
+     * Read through `isNewerSchemaAllowed`, by the migration runner, which runs
+     * before anything has parsed this schema.
+     */
+    ALLOW_NEWER_SCHEMA: booleanish.optional(),
   })
   .superRefine((value, context) => {
     /*
@@ -901,6 +925,24 @@ export function isLocalReceiptOcrEnabled(
 ): boolean {
   const raw = (source.RECEIPT_OCR_LOCAL ?? "").trim();
   return raw === "" ? true : TRUTHY.includes(raw.toLowerCase());
+}
+
+/**
+ * Whether the migration runner may start against a database that holds
+ * migrations this build does not include.
+ *
+ * Read without validating the whole environment: the runner needs only a
+ * connection string, and `pnpm db:migrate` has to work in a checkout whose
+ * `.env.local` sets little else. An explicit value wins. Unset — or empty,
+ * which is how Compose passes an unset one — production refuses and
+ * everything else warns; see ALLOW_NEWER_SCHEMA in the schema above for why.
+ */
+export function isNewerSchemaAllowed(
+  source: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = (source.ALLOW_NEWER_SCHEMA ?? "").trim().toLowerCase();
+  if (raw !== "") return TRUTHY.includes(raw);
+  return (source.NODE_ENV ?? "").trim() !== "production";
 }
 
 /**

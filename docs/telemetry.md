@@ -408,10 +408,14 @@ for the person who runs the server, looking at their own server.
 | `balancia_build_info`                                                                                            | gauge     | `version`                                                            |
 | `process_resident_memory_bytes`, `nodejs_heap_used_bytes`, `process_cpu_seconds_total`, `process_uptime_seconds` | gauge     | —                                                                    |
 
-Recurring-expense failures, Splitwise import duration and failures, and
+Recurring-expense runs, Splitwise import duration and failures, and
 notification delivery are covered by the job metrics: the queue label
 distinguishes `recurring.generate`, `import.commit`, `notifications.deliver`
-and the rest.
+and the rest. A single recurring template that fails does not fail its run —
+every other template still generates — so it is not a `failed` job here. It
+is logged with its id and its group's, counted as `templatesFailed` in the
+run's summary line (logged as a warning when it is not zero), and sent as a
+`scheduler` crash report where those are switched on.
 
 The onboarding funnel is `balancia_onboarding_steps_total`. The flow between
 arriving and standing on a group is one URL, so page views cannot see it; this

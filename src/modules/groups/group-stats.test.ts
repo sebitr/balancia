@@ -329,6 +329,38 @@ describe("computeGroupStats", () => {
     expect(blocks.map((block) => block.totalSpent)).toEqual([10000n, 4000n]);
   });
 
+  // A converted group's yen row imported without a rate outweighs its euros in
+  // minor units. The euros are still what the group counts in, so they lead.
+  it("puts the lead currency first, whatever its volume", () => {
+    const stats = computeGroupStats(
+      input({
+        leadCurrency: "EUR",
+        facts: [
+          entry({
+            currency: "EUR",
+            payers: [{ participantId: "nora", amount: 6000n }],
+            shares: [{ participantId: "nora", amount: 6000n }],
+          }),
+          entry({
+            currency: "JPY",
+            payers: [{ participantId: "ines", amount: 30000n }],
+            shares: [{ participantId: "ines", amount: 30000n }],
+          }),
+        ],
+      }),
+    );
+
+    expect(stats.currencies).toEqual(["EUR", "JPY"]);
+    expect(year(stats).currencies.map((block) => block.currency)).toEqual([
+      "EUR",
+      "JPY",
+    ]);
+    expect(stats.records.map((records) => records.currency)).toEqual([
+      "EUR",
+      "JPY",
+    ]);
+  });
+
   it("reports the median entry, which one big bill does not move", () => {
     const amounts = [1000n, 2000n, 3000n, 90000n];
     const stats = computeGroupStats(

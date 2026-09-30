@@ -163,8 +163,9 @@ These are deliberate omissions for this version, not oversights:
   of a split, not the rule, so imports are stored as exact-amount splits.
   Balances are identical; only the "split equally" label is absent.
 - **Imported expenses carry no exchange rate.** Inventing a historical rate
-  would be worse than leaving it unset. In a converted group, re-enter foreign
-  imports if you need them folded into the base currency.
+  would be worse than leaving it unset. In a converted group they balance in
+  their own currency beside the base; re-enter foreign imports if you need them
+  folded into it.
 - **The currency mode is fixed at group creation.** Changing it would
   reinterpret every amount already recorded.
 - **The `.env` bootstrap has not been run under Docker.** `scripts/bootstrap.sh`
