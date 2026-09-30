@@ -279,13 +279,11 @@ export async function stageImport(
           )
       : [];
   const found = new Set(alreadyImported.map((row) => row.fingerprint));
+  // Keyed by each row's own fingerprint, whichever of its two was found.
   const duplicates = new Set(
-    parsed.rows.flatMap((_, index) => {
+    fingerprints.filter((fingerprint, index) => {
       const former = formerFingerprints[index];
-      return found.has(fingerprints[index]) ||
-        (former !== null && found.has(former))
-        ? [fingerprints[index]]
-        : [];
+      return found.has(fingerprint) || (former !== null && found.has(former));
     }),
   );
 
