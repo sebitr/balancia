@@ -141,12 +141,17 @@ export async function restoreExpenseAction(
  * `clientKey` as in `createExpenseAction`, though nothing queues a repayment:
  * the form holds one key until a save lands, so pressing again after an answer
  * that never came back replays the first attempt rather than paying twice.
+ * It is checked, and refused, by the same rule.
  */
 export async function createSettlementAction(
   groupId: string,
   payload: unknown,
   clientKey?: string,
 ): Promise<ActionResult<{ settlementId: string }>> {
+  if (clientKey !== undefined && !isIdempotencyKey(clientKey)) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
   const parsed = settlementInputSchema.safeParse(payload);
   if (!parsed.success) {
     return actionError(
@@ -190,6 +195,7 @@ export async function updateSettlementAction(
 /**
  * Changing an entry's type across the two tables it can live in: one
  * transaction, idempotent under the form's `clientKey`. See `convert.ts`.
+ * The key is held to `createExpenseAction`'s rule.
  */
 export async function convertExpenseToSettlementAction(
   groupId: string,
@@ -197,6 +203,10 @@ export async function convertExpenseToSettlementAction(
   payload: unknown,
   clientKey?: string,
 ): Promise<ActionResult<{ settlementId: string }>> {
+  if (clientKey !== undefined && !isIdempotencyKey(clientKey)) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
   const parsed = settlementInputSchema.safeParse(payload);
   if (!parsed.success) {
     return actionError(
@@ -229,6 +239,10 @@ export async function convertSettlementToExpenseAction(
   payload: unknown,
   clientKey?: string,
 ): Promise<ActionResult<{ expenseId: string }>> {
+  if (clientKey !== undefined && !isIdempotencyKey(clientKey)) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
   const parsed = expenseInputSchema.safeParse(payload);
   if (!parsed.success) {
     return actionError(parsed.error.issues[0]?.message ?? "Check the expense.");
