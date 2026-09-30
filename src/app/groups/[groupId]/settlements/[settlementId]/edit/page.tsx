@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { EntryScreen } from "../../../entry-screen";
 
 /**
@@ -7,6 +9,13 @@ import { EntryScreen } from "../../../entry-screen";
  * transactions list now leads. Editing is the same drawer an expense opens,
  * on the settle tab.
  */
+
+/** Titled here and not on the intercepted route — see `expenses/new`. */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("addEntry");
+  return { title: t("editTitles.settle") };
+}
+
 export default async function EditSettlementPage({
   params,
 }: PageProps<"/groups/[groupId]/settlements/[settlementId]/edit">) {

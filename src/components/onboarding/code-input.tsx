@@ -23,6 +23,11 @@ import { CODE_LENGTH, normalizeCode } from "@/modules/auth/code-format";
  * The next empty box carries the coral border, so the eye has somewhere to be
  * without a blinking caret to follow — the caret itself is hidden, since it
  * would sit in the wrong place over a box that is only drawn.
+ *
+ * The border is there whether or not the field has focus, so it cannot be the
+ * thing that says it does. The same box takes the focus ring while the hidden
+ * input is focused, which is the one sign a keyboard user has that the Tab key
+ * landed here rather than on nothing.
  */
 export function CodeInput({
   value,
@@ -49,7 +54,7 @@ export function CodeInput({
   const cursor = Math.min(value.length, CODE_LENGTH - 1);
 
   return (
-    <div className="relative">
+    <div className="group/code relative">
       <label className="sr-only" htmlFor={inputId}>
         {label}
       </label>
@@ -62,6 +67,8 @@ export function CodeInput({
               index === cursor && value.length < CODE_LENGTH
                 ? "border-primary"
                 : "border-input",
+              index === cursor &&
+                "group-has-[input:focus-visible]/code:ring-3 group-has-[input:focus-visible]/code:ring-ring/50",
             )}
           >
             {digit}

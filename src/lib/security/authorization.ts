@@ -1,5 +1,6 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
+import type { Messages } from "next-intl";
 import { getDb, type Database } from "@/lib/db/client";
 import { groupMembers, groups } from "@/lib/db/schema";
 
@@ -44,6 +45,19 @@ export interface UserActor {
    * produces one, so no Server Component and no Server Action can see it.
    */
   readonly tokenGroupId?: string;
+  /**
+   * True when this actor arrived on an API key rather than on a session.
+   *
+   * A key authenticates as its owner, and nearly every route answers it
+   * exactly as it would answer them. This is for the few that answer it with
+   * less: the settle-up route leaves out the payout details of the people its
+   * owner owes, because a key is a credential that gets pasted into other
+   * people's software and nothing a script does needs somebody's IBAN.
+   *
+   * Set only by `apiActor`, beside `tokenGroupId` and for the same reason: it
+   * is a fact about who is asking, and the actor is where such facts travel.
+   */
+  readonly viaApiToken?: true;
 }
 
 export interface GuestActor {
@@ -109,13 +123,32 @@ export interface GroupAccess {
   };
 }
 
+/**
+ * The reason a refusal gives: a key under `serverErrors` in the catalogue, so
+ * a code with no sentence behind it fails `pnpm typecheck` rather than quietly
+ * reaching the reader in English.
+ */
+export type AuthorizationCode = keyof Messages["serverErrors"];
+
 export class AuthorizationError extends Error {
   /** Translated by the Server Action funnel; see `lib/actions.ts`. */
-  readonly code: string;
+  readonly code: AuthorizationCode;
 
+  /**
+   * Built bare, it is the refusal an outsider gets, worded the same whether the
+   * group exists or not. Built with a sentence, it must name its own reason too.
+   *
+   * The funnel translates a refusal by its code and never reads the sentence,
+   * so a message passed alone used to reach the reader as the outsider's
+   * refusal: the owner of a group was told they had no access to it, and so was
+   * somebody who picked a person removed a minute before. The two overloads
+   * make that a type error instead of a sentence nobody sees.
+   */
+  constructor();
+  constructor(message: string, code: AuthorizationCode);
   constructor(
     message = "You do not have access to this group.",
-    code = "noGroupAccess",
+    code: AuthorizationCode = "noGroupAccess",
   ) {
     super(message);
     this.name = "AuthorizationError";
@@ -329,6 +362,7 @@ function assertWritable(
   if (requireActive && archivedAt !== null) {
     throw new AuthorizationError(
       "This group is archived. Restore it before making changes.",
+      "groupArchived",
     );
   }
 }
@@ -340,7 +374,8 @@ export function requirePermission(
 ): void {
   if (!access.permissions[permission]) {
     throw new AuthorizationError(
-      "You do not have permission to perform this action in this group.",
+      "You cannot do that in this group. Ask its owner.",
+      "noPermission",
     );
   }
 }

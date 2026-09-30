@@ -329,6 +329,31 @@ describe("previewing a personal invitation", () => {
     ).rejects.toMatchObject({ code: "expired" });
   });
 
+  it("reads as dead once an account took the seat — except to that account", async () => {
+    // Taking it retires the link, as the web's claim always has. The one
+    // reader for whom it still means something is whoever holds the seat now,
+    // so a second look from the app lands where the first take did.
+    const owner = await createTestUser();
+    const group = await createTestGroup(owner);
+    const seat = await addTestParticipant(group.groupId, "Bruno");
+    const invitation = await createInvitation(group.access, {
+      participantId: seat,
+    });
+    const bruno = await createTestUser();
+    const stranger = await createTestUser();
+    await redeemInvitationAs({ token: invitation.token, userId: bruno.userId });
+
+    await expect(
+      previewInvitation(invitation.token, bruno.userId),
+    ).resolves.toMatchObject({ participantName: "Bruno", alreadyMember: true });
+    await expect(
+      previewInvitation(invitation.token, stranger.userId),
+    ).rejects.toMatchObject({ code: "revoked" });
+    await expect(
+      previewInvitation(invitation.token, null),
+    ).rejects.toMatchObject({ code: "revoked" });
+  });
+
   it("refuses an invitation whose seat was removed", async () => {
     const owner = await createTestUser();
     const group = await createTestGroup(owner);

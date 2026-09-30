@@ -67,8 +67,11 @@ version=${BALANCIA_VERSION:-$version}
 
 # What an installation needs beside this script. compose.image.yaml is fetched
 # even though only one of the two answers uses it, because that answer lives in
-# .env and changing your mind later should not need the network.
-companions='compose.yaml compose.image.yaml .env.example'
+# .env and changing your mind later should not need the network. backup.sh is
+# there so that the backup docs/backup-and-restore.md describes is a command to
+# run, not a listing to paste — and so that it is on the host before the first
+# upgrade that needs a restore point, rather than looked for after it.
+companions='compose.yaml compose.image.yaml .env.example scripts/backup.sh'
 
 # Where this script is, and where the installation it is setting up lives.
 #
@@ -693,9 +696,10 @@ listens_on() {
 # older Linux, lsof where neither is installed.
 #
 # A connect test would be shorter and wrong: it cannot see a listener bound to
-# a single interface, which is exactly the kind Compose then collides with —
-# publishing a port binds the wildcard address, and that fails against any
-# listener already on the number.
+# a single interface, which is exactly the kind Compose then collides with.
+# Compose binds 127.0.0.1 unless told otherwise, and that fails against a
+# listener on the same number there or on the wildcard address — which is
+# nearly every listener there is, so any one on the number counts.
 #
 # Only a sighting counts. Where none of the three is installed the answer is
 # "free", which is where this script stood before it asked at all: better than
@@ -728,6 +732,23 @@ is_port() {
   esac
   [ "${#1}" -le 5 ] || return 1
   [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+# DB_PORT and APP_PORT hold Compose's own `[address:]port`, and these read it.
+# The number is whatever follows the last colon, which a bracketed IPv6
+# address never comes after, so `[::1]:5458` is 5458 like `127.0.0.1:5458`.
+port_of() {
+  printf '%s' "${1##*:}"
+}
+
+# Whether such a value keeps the port on this host. A bare number is not the
+# cautious reading of one: Compose publishes it on every interface, exactly as
+# it does 0.0.0.0.
+is_loopback_bind() {
+  case $1 in
+    127.*:* | localhost:* | '[::1]:'*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # The first free port at or after $1, printed, as an opening offer. Bounded
@@ -807,13 +828,14 @@ download() {
 fetch_companions() {
   _into=$1
   for _file in $companions; do
-    # bootstrap.sh lives under scripts/ in the repository; the rest sit at the
-    # top. Only the destination is flattened — this directory is the install,
-    # not a copy of the tree.
-    if ! download "$raw_base/$version/$_file" "$_into/$_file"; then
+    # backup.sh lives under scripts/ in the repository, as this script does;
+    # the rest sit at the top. Only the destination is flattened — this
+    # directory is the install, not a copy of the tree.
+    if ! download "$raw_base/$version/$_file" "$_into/${_file##*/}"; then
       return 1
     fi
   done
+  chmod +x "$_into/backup.sh" 2> /dev/null || :
 }
 
 # Picks somewhere to install, fetches the Compose files into it, and leaves a
@@ -1154,8 +1176,16 @@ TEXT
     # for a number that could have been settled here. Asked rather than
     # chosen, because the operator may know what is on it — an earlier
     # instance of this app, say — and a port is theirs to pick.
+    #
+    # Not asked at all when APP_PORT was written by hand before this ran: that
+    # is an answer already, Compose will use it as it stands, and a value found
+    # in .env is never rewritten. Only its number is wanted here.
     port_changed=0
-    if port_taken "$app_port"; then
+    app_bind=''
+    if has_value APP_PORT; then
+      app_bind=$(value_of APP_PORT)
+      app_port=$(port_of "$app_bind")
+    elif port_taken "$app_port"; then
       printf '\n'
       oops "Something is already listening on port $app_port."
       note '  Compose would not be able to bind it. Another port here changes'
@@ -1193,30 +1223,35 @@ TEXT
     write_setting APP_URL "$app_url" \
       'The public URL people type. Must match exactly, scheme included.'
 
-    # Compose publishes the app on ${APP_PORT:-3000}. Anything else has to be
-    # written down: a localhost URL naming another port would otherwise point
-    # at nothing.
-    if [ "$app_port" != 3000 ]; then
-      write_setting APP_PORT "$app_port" \
-        'Host port Compose publishes the app on, matching APP_URL.'
-    fi
-
-    if [ "$port_changed" -eq 1 ]; then
-      if is_localhost "$url_host"; then
-        note "${dim}Balancia will be at ${app_url}.${reset}"
-      else
-        note "${dim}Compose will publish on port ${app_port}; point the proxy there.${reset}"
+    # Compose publishes the app on ${APP_PORT:-127.0.0.1:3000}. Any other port
+    # has to be written down — a localhost URL naming one would otherwise
+    # point at nothing — and written with its address, because a bare number
+    # is Compose for every interface this host has.
+    if [ -z "$app_bind" ]; then
+      app_bind=127.0.0.1:$app_port
+      if [ "$app_port" != 3000 ]; then
+        write_setting APP_PORT "127.0.0.1:$app_port" \
+          'Where Compose publishes the app, as address:port. 127.0.0.1 keeps it on this host; 0.0.0.0 would put it on every interface.'
       fi
-    elif [ "$app_port" != 3000 ]; then
-      note "${dim}Compose will publish on port ${app_port} to match.${reset}"
     fi
 
-    # Compose publishes the database as well, on ${DB_PORT:-5458}, and it
-    # fails at `up` in the same way if that one is held — by a PostgreSQL
-    # already running on this host, most often. Settled in the same breath as
-    # the app's port rather than one build later. Nothing is written when 5458
-    # is free: Compose's own default is the same number.
-    if port_taken 5458; then
+    # Said for every proxied URL, not only a moved one: the proxy has to be
+    # pointed at this, and it is on this host alone.
+    if [ "$port_changed" -eq 1 ] && is_localhost "$url_host"; then
+      note "${dim}Balancia will be at ${app_url}.${reset}"
+    elif ! is_localhost "$url_host"; then
+      note "${dim}Compose will publish it on ${app_bind}; point the proxy there.${reset}"
+    elif [ "$app_bind" != 127.0.0.1:3000 ]; then
+      note "${dim}Compose will publish on ${app_bind} to match.${reset}"
+    fi
+
+    # Compose publishes the database as well, on ${DB_PORT:-127.0.0.1:5458},
+    # and it fails at `up` in the same way if that one is held — by a
+    # PostgreSQL already running on this host, most often. Settled in the same
+    # breath as the app's port rather than one build later. Nothing is written
+    # when 5458 is free, since Compose's own default is the same number, or
+    # when DB_PORT is already in .env.
+    if ! has_value DB_PORT && port_taken 5458; then
       printf '\n'
       oops 'Something is already listening on port 5458.'
       note '  Compose publishes the database there, for psql and other tooling'
@@ -1238,9 +1273,9 @@ TEXT
           break
         fi
       done
-      write_setting DB_PORT "$chosen" \
-        'Host port Compose publishes the database on. Prefix a bind address to keep it on this host: 127.0.0.1:5458'
-      note "${dim}The database will be published on port ${chosen}.${reset}"
+      write_setting DB_PORT "127.0.0.1:$chosen" \
+        'Where Compose publishes the database, as address:port. 127.0.0.1 keeps it on this host; 0.0.0.0 would put it on every interface.'
+      note "${dim}The database will be published on 127.0.0.1:${chosen}.${reset}"
     fi
   fi
 
@@ -1564,7 +1599,8 @@ job durations, error rates, database latency, memory and CPU. These are
 exact and local — Balancia never transmits them, and the only way they
 leave this server is a scraper you point at them.
 
-The app's port is published, so a token is generated to protect them.
+Your reverse proxy forwards /api/metrics like any other path, so a token
+is generated to protect them.
 
 TEXT
     if ask_yes_no 'Expose Prometheus metrics?' n; then
@@ -1572,7 +1608,7 @@ TEXT
         'Prometheus metrics at /api/metrics. Local only; nothing transmits them.'
       if ! has_value METRICS_TOKEN; then
         write_setting METRICS_TOKEN "$(random_alnum 48)" \
-          'Bearer token for /api/metrics. Clear it only if the port is on a private network.'
+          'Bearer token for /api/metrics. Clear it only if nothing but your scraper can reach the app.'
       fi
     else
       write_setting METRICS_ENABLED false \
@@ -1657,6 +1693,44 @@ TEXT
       fi
       ;;
   esac
+
+  # A secret this instance does not own. The repository commits several on
+  # purpose — the development stack's, CI's, the image build's — each long
+  # enough to pass the length rule, so one pasted in here looked fine until
+  # the app began refusing it on a public address. The same goes for a
+  # placeholder, or anything typed rather than generated. A repair for the
+  # reason the rates URL above is one: otherwise the container restart-loops
+  # with the reason only in its logs. Mirrors the checks in src/lib/env.ts.
+  auth_secret=$(value_of AUTH_SECRET)
+  weak_secret=0
+  case $(lower "$auth_secret") in
+    dev-secret* | dev-only-secret* | ci-secret* | ci-only-secret* | \
+      e2e-secret* | e2e-only-secret* | test-secret* | test-only-secret* | \
+      *insecure* | *placeholder* | change-me* | changeme* | password* | \
+      secret* | balancia*)
+      weak_secret=1
+      ;;
+  esac
+  # Fewer than eight distinct characters: typed, not generated.
+  distinct=$(printf '%s' "$auth_secret" | fold -w 1 | LC_ALL=C sort -u | wc -l | tr -d ' ')
+  [ "$distinct" -ge 8 ] || weak_secret=1
+  if [ "$weak_secret" -eq 1 ]; then
+    heading 'AUTH_SECRET is one anybody can look up'
+    prose <<'TEXT'
+The AUTH_SECRET in .env is a placeholder, or one of the values the
+Balancia repository publishes for development, CI and the image build.
+Balancia refuses to start with one on a public address.
+
+Replacing it signs nobody out and breaks no link. At most, group
+settings can no longer display an invite link made before, and offer a
+fresh one instead.
+
+TEXT
+    if ask_yes_no 'Generate this instance its own?' y; then
+      write_setting AUTH_SECRET "$(random_alnum 64)" \
+        'Instance secret, superseding the line above: last one wins.'
+    fi
+  fi
 
   # UPLOAD_MAX_BYTES used to be accepted up to 200 MiB, and the app now refuses
   # to start above 25 MiB — the most a request body can carry through the proxy
@@ -1791,25 +1865,94 @@ TEXT
   fi
 
   # Metrics say nothing about anyone's money, but they do say how many people
-  # use this instance and how much of it is failing, and the app's port is
-  # published. The schema allows an empty token because a scrape target on a
-  # private network has no use for one; it cannot tell which of the two this
-  # is, so the question gets asked here instead. Checked on every run, because
-  # METRICS_ENABLED is more often set by hand afterwards than answered above.
+  # use this instance and how much of it is failing, and the proxy in front of
+  # the app forwards their path like any other. The schema allows an empty
+  # token because a scrape target on a private network has no use for one; it
+  # cannot tell which of the two this is, so the question gets asked here
+  # instead. Checked on every run, because METRICS_ENABLED is more often set
+  # by hand afterwards than answered above.
   if is_enabled METRICS_ENABLED && [ -z "$(value_of METRICS_TOKEN)" ]; then
     heading 'Metrics are exposed without a token'
     prose <<'TEXT'
 METRICS_ENABLED is set and METRICS_TOKEN is empty, so anything that can
 reach /api/metrics can read them: user and group counts, request rates,
-error rates, memory. Leave it as it is only if that port is on a private
-network your monitoring reaches and nothing else does.
+error rates, memory. Leave it as it is only if nothing but your monitoring
+can reach the app, through the proxy or otherwise.
 
 TEXT
     if ask_yes_no 'Generate a token for it?' y; then
       write_setting METRICS_TOKEN "$(random_alnum 48)" \
-        'Bearer token for /api/metrics. Clear it only if the port is on a private network.'
+        'Bearer token for /api/metrics. Clear it only if nothing but your scraper can reach the app.'
     fi
   fi
+
+  # The override for one rollback, still on. It is there so that somebody who
+  # has decided to run an older release against a database a newer one has
+  # migrated can do so — and left in place, it waves the next such mismatch
+  # through as well, unasked, which is exactly what the refusal is for. Never a
+  # question above: it is not something an installation chooses, and a wizard
+  # that offered it would be a wizard that left it on.
+  if is_enabled ALLOW_NEWER_SCHEMA; then
+    heading 'Older releases are allowed to start on a newer database'
+    prose <<'TEXT'
+ALLOW_NEWER_SCHEMA is on. Balancia refuses to start a release older than
+its database, because that release would run against a schema it was never
+written for — and this lets it start anyway. That is what it is for during
+a rollback somebody decided to accept, and for no longer.
+
+Once this instance is back on a current release, it should be off.
+
+TEXT
+    if ask_yes_no 'Back on a current release — turn it off?' y; then
+      write_setting ALLOW_NEWER_SCHEMA false \
+        'Refuse to start a release older than the database. Supersedes the line above — last one wins.'
+    fi
+  fi
+  # A port with no address in front of it is published on every interface.
+  # Until compose.yaml kept both ports on this host by default, that is what
+  # this script wrote whenever the usual port was busy — so an instance set up
+  # then may be carrying a bare number nobody chose. Asked once: either answer
+  # writes an address, and an address is never asked about again. Checked on
+  # every run, because both are as often edited by hand.
+  for key in DB_PORT APP_PORT; do
+    published=$(value_of "$key")
+    is_port "$published" || continue
+    case $key in
+      DB_PORT)
+        heading 'The database is published on every interface'
+        prose <<TEXT
+DB_PORT is $published, with no address in front of it, so Compose
+publishes PostgreSQL on every interface this host has and the database
+password is all that stands in front of it. Docker opens the port ahead
+of a firewall such as ufw, so that firewall is never consulted.
+
+On this host only, psql and backup jobs run here are unaffected; from
+anywhere else, tunnel in over SSH.
+
+TEXT
+        ;;
+      APP_PORT)
+        heading 'The app is published on every interface'
+        prose <<TEXT
+APP_PORT is $published, with no address in front of it, so Compose
+publishes the app on every interface this host has. A client that reaches
+it there skips your reverse proxy and writes its own X-Forwarded-For, and
+the limits on sign-in, registration and join links then count whatever
+address it wrote.
+
+Keep it on this host unless the proxy runs on another machine.
+
+TEXT
+        ;;
+    esac
+    if ask_yes_no 'Keep it on this host only?' y; then
+      write_setting "$key" "127.0.0.1:$published" \
+        'On this host only. Supersedes the line above: last one wins.'
+    else
+      write_setting "$key" "0.0.0.0:$published" \
+        'On every interface, deliberately. Supersedes the line above: last one wins.'
+    fi
+  done
 fi
 
 chmod 600 "$env_file"
@@ -1919,17 +2062,32 @@ worker_summary() {
   esac
 }
 
+# Where a port is published, and who can reach it there — the address in
+# front of the number being the difference worth reporting. An empty value is
+# compose.yaml's default, $2, which is this host only; a bare number is every
+# interface, the same as 0.0.0.0.
+published_summary() {
+  _bind=$1
+  [ -n "$_bind" ] || _bind=$2
+  if is_loopback_bind "$_bind"; then
+    printf '%s, this host only' "$_bind"
+    return
+  fi
+  if is_port "$_bind"; then
+    printf '%s, every interface' "$_bind"
+    return
+  fi
+  case $_bind in
+    0.0.0.0:* | '[::]:'*) printf '%s, every interface' "$_bind" ;;
+    *) printf '%s, that address only' "$_bind" ;;
+  esac
+}
+
 summary() {
   printf '  %sThis instance%s\n\n' "$bold" "$reset"
   row 'Public address' "$(value_of APP_URL)"
-  # Published on every interface unless the operator put a bind address in
-  # front of the number, which is the difference worth reporting here.
-  db_port=$(value_of DB_PORT)
-  [ -n "$db_port" ] || db_port=5458
-  case $db_port in
-    *:*) row 'Database port' "$db_port, this host only" ;;
-    *) row 'Database port' "$db_port, published" ;;
-  esac
+  row 'App port' "$(published_summary "$(value_of APP_PORT)" 127.0.0.1:3000)"
+  row 'Database port' "$(published_summary "$(value_of DB_PORT)" 127.0.0.1:5458)"
   row 'Application' "$(image_source_summary)"
   if is_enabled ALLOW_REGISTRATION; then
     if is_enabled SIGNUP_PROOF_OF_WORK; then
@@ -1979,6 +2137,11 @@ summary() {
   else
     row 'Metrics' 'off'
   fi
+  # Only when on, like demo mode: the ordinary state is a refusal nobody sees
+  # until the day it matters.
+  if is_enabled ALLOW_NEWER_SCHEMA; then
+    row 'Older releases' 'allowed to start on a newer database'
+  fi
 }
 
 # An empty APP_URL means nothing has been answered yet — an unattended run, or
@@ -2024,13 +2187,15 @@ fi
 
 # The address to open once it is up. APP_URL is empty on a --defaults run,
 # where nothing was asked and Compose's own default is what will be served.
+# APP_PORT may carry an address in front of its number, which a URL on
+# localhost has no use for.
 app_address() {
   _url=$(value_of APP_URL)
-  [ -n "$_url" ] || _url="http://localhost:$(value_of APP_PORT)"
-  case $_url in
-    *:) printf 'http://localhost:3000' ;;
-    *) printf '%s' "$_url" ;;
-  esac
+  if [ -z "$_url" ]; then
+    _port=$(value_of APP_PORT)
+    _url="http://localhost:$(port_of "${_port:-3000}")"
+  fi
+  printf '%s' "$_url"
 }
 
 # Offered rather than printed, because printing it was the last thing standing

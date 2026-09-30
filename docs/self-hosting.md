@@ -14,13 +14,19 @@ sh bootstrap.sh
 
 Open <http://localhost:3000> and create the first account.
 
+That address is the host's own: Compose publishes the app on `127.0.0.1` only.
+On a remote server, reach it through a tunnel —
+`ssh -L 3000:127.0.0.1:3000 you@host` — until the reverse proxy in [Running on
+a domain](#running-on-a-domain) is in front of it.
+
 ### What those commands set up
 
 `bootstrap.sh` is one file that does the whole installation. Downloaded on its
 own it asks where to install — `./balancia` unless you say otherwise, or
-`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml` and
-`.env.example` into that directory and copies itself in beside them, so every
-later run happens from inside the installation.
+`--dir` names it — then fetches `compose.yaml`, `compose.image.yaml`,
+`.env.example` and [`backup.sh`](backup-and-restore.md) into that directory and
+copies itself in beside them, so every later run happens from inside the
+installation.
 
 What it fetches is pinned to its own release. The script that installs 1.4.2
 downloads 1.4.2's Compose files and runs 1.4.2's image, which is why an
@@ -72,7 +78,7 @@ flag is the one that fetches the files. It re-checks on every run, in case a
 download failed after the flag was written.
 
 The port question appears only when it has to. Compose publishes the app on
-`${APP_PORT:-3000}`, and if something on this host is already listening there,
+`127.0.0.1:3000`, and if something on this host is already listening there,
 `docker compose up` fails with `address already in use` — after the images have
 been built. So the port is checked while it can still be changed: the script
 offers the next free one, and checks every port you propose in turn. A
@@ -83,7 +89,10 @@ question; on a host with none of them nothing is checked and nothing is asked.
 
 The database's published port is checked in the same breath, and asked about
 the same way. Nothing is written while `5458` is free, because that is the
-number Compose defaults to anyway.
+number Compose defaults to anyway. Whatever is written keeps `127.0.0.1` in
+front of the number: a bare number is Compose for every interface. An `.env`
+that already holds one — which this script used to write — is asked about
+once on the next run.
 
 The telemetry question is the one that cannot switch a feature on. Balancia
 sends nothing until an administrator turns it on inside the application, and
@@ -93,10 +102,11 @@ operator who is never told the feature exists has not decided anything about
 it. [Telemetry](telemetry.md) is the long version.
 
 The metrics question is the opposite — it switches an endpoint on — so it
-defaults to no, and answering yes generates a `METRICS_TOKEN` because the app's
-port is published. If `METRICS_ENABLED` is set later by hand and no token is
-set, a re-run offers to generate one; declining leaves it open, which is the
-right answer only when that port is on a private network.
+defaults to no, and answering yes generates a `METRICS_TOKEN`, because your
+reverse proxy forwards `/api/metrics` like any other path. If
+`METRICS_ENABLED` is set later by hand and no token is set, a re-run offers to
+generate one; declining leaves it open, which is the right answer only when
+nothing but your monitoring can reach the app.
 
 Nothing has to be answered interactively. With no terminal on stdin — CI, a
 pipe — or with `--defaults`, it writes the secrets and leaves every optional
@@ -105,24 +115,18 @@ it goes with it.
 
 Compose then starts two services:
 
-| Service | Role                                                                               |
-| ------- | ---------------------------------------------------------------------------------- |
-| `db`    | PostgreSQL 18. Published on `${DB_PORT:-5458}` — see below.                        |
-| `app`   | The web application **and its background jobs**. Published on `${APP_PORT:-3000}`. |
+| Service | Role                                                                            |
+| ------- | ------------------------------------------------------------------------------- |
+| `db`    | PostgreSQL 18. Published on `127.0.0.1:5458` — see below.                       |
+| `app`   | The web application **and its background jobs**. Published on `127.0.0.1:3000`. |
 
 A third service, `worker`, is defined but not started: the app does that work
 itself. See [Background jobs](#background-jobs) below.
 
-The database port is published on every interface this host has, so that
-`psql`, a GUI client, `drizzle-kit` or a backup job can reach it directly. What
-stands between it and anyone who can reach this machine is the password
-`bootstrap.sh` generated — so on a host with a public address, put the bind
-address in the setting and tunnel in instead:
-
-```bash
-# .env
-DB_PORT=127.0.0.1:5458
-```
+Both ports are published on this host only. The app is meant to be reached
+through a reverse proxy — see [Running on a domain](#running-on-a-domain) —
+and the database is published so that `psql`, a GUI client, `drizzle-kit` or a
+backup job on this host can reach it directly. From anywhere else, tunnel in:
 
 ```bash
 ssh -L 5458:127.0.0.1:5458 you@host
@@ -133,6 +137,13 @@ The user and the database are both `balancia`; the password is
 `POSTGRES_PASSWORD` from `.env`. Like the app's port, this one is checked
 before the images are built rather than at `docker compose up`, where a port
 already held on this host fails after the build.
+
+Putting the database on the network is possible, and has to be said out loud:
+`DB_PORT=0.0.0.0:5458`. Then the generated password is the only thing between
+it and anyone who can reach this machine — Docker opens a published port with
+rules of its own, ahead of a host firewall such as ufw, so that firewall is not
+consulted. `DB_PORT` and `APP_PORT` are Compose's own `address:port`, and a
+bare number means every interface, the same as `0.0.0.0`.
 
 Migrations are not a separate service. The image's entrypoint applies any
 pending ones before the app starts, on every boot. Two containers doing it at
@@ -151,10 +162,20 @@ Two named volumes hold everything that matters:
 | `balancia-db-data` | The PostgreSQL database |
 | `balancia-uploads` | Receipt files           |
 
+Those names, and the containers' (`balancia-db`, `balancia-app`), are fixed
+rather than derived from the Compose project, so `docker compose -p` does not
+give you a second copy of anything: a stack started from another checkout under
+another project name still asks for these same volumes and containers, and its
+`down -v` deletes these same volumes. A second stack on the
+same host needs names of its own, which is what `compose.drill.yaml` gives a
+[restore drill](backup-and-restore.md#testing-your-backups).
+
 ### About the generated secrets
 
-Nothing in this repository contains a usable production secret. `bootstrap.sh`
-writes two random values into `.env`, both alphanumeric:
+Nothing in this repository contains a usable production secret: the ones it
+does carry, for development, CI and the image build, are refused at startup on
+any public address. `bootstrap.sh` writes two random values into `.env`, both
+alphanumeric:
 
 - `AUTH_SECRET` — 64 characters (~381 bits)
 - `POSTGRES_PASSWORD` — 40 characters (~238 bits)
@@ -209,11 +230,11 @@ image. The database, the volumes, the environment and the entrypoint are
 parse, so `bootstrap.sh` checks the version, keeps quiet about the choice and
 writes `COMPOSE_FILE=compose.yaml`.
 
-| Tag       | What it is                                                  |
-| --------- | ----------------------------------------------------------- |
-| `latest`  | The newest release. Moves under you at every pull.          |
-| `0.1.0`   | That release, permanently.                                  |
-| `preview` | `main` as it is now, rebuilt on every merge. Not a release. |
+| Tag       | What it is                                                                 |
+| --------- | -------------------------------------------------------------------------- |
+| `latest`  | The newest release. Moves under you at every pull.                         |
+| `0.1.0`   | That release, permanently.                                                 |
+| `preview` | `main` as it is now, rebuilt on every merge that passes CI. Not a release. |
 
 There is no floating minor series on purpose: pinning means naming a version in
 full. Do that once somebody other than you depends on the instance — `latest`
@@ -260,9 +281,6 @@ APP_URL=https://balancia.example.com
 # Optional: only when passkeys should span subdomains.
 # WEBAUTHN_RP_ID=example.com
 
-# Optional: additional origins allowed to call the app.
-# TRUSTED_ORIGINS=https://alt.example.com
-
 # Optional: email verification and password recovery.
 # SMTP_HOST=smtp.example.com
 # SMTP_PORT=587
@@ -294,17 +312,39 @@ APP_URL=https://balancia.example.com
 
 Full details in [environment.md](environment.md).
 
-### Only bind to localhost when proxied
+### The app is published on this host only
 
-If the proxy runs on the same host, do not publish Balancia on `0.0.0.0`. Add a
-`compose.override.yaml`:
+`compose.yaml` publishes the app on `127.0.0.1:3000`, not on every interface,
+and that is load-bearing rather than tidy. The proxy is what writes the
+client's address into `X-Forwarded-For`, and rate limiting believes the entry
+it wrote. A caller who could reach port 3000 directly would skip the proxy and
+write that entry themselves — a fresh address per request, and the limits on
+sign-in, registration, password reset and join links would count none of them.
 
-```yaml
-services:
-  app:
-    ports:
-      - "127.0.0.1:3000:3000"
-```
+Where the proxy runs decides how it reaches the app:
+
+- **On the same host** — Caddy, nginx or Traefik installed on the machine
+  itself. It talks to `127.0.0.1:3000`, as in the examples below. Nothing to
+  change.
+- **In a container on the same Compose network** — a Traefik or Caddy service
+  added to this project, or one attached to its network, `balancia_default`.
+  It reaches the app by service name, `app:3000`, and needs no published port
+  at all.
+- **On another machine.** Only this case needs the app on the network, and the
+  address says so, in `.env`. Name the address of the interface the proxy
+  reaches it through, and the port is published there alone:
+
+  ```bash
+  APP_PORT=10.0.0.5:3000
+  ```
+
+  `APP_PORT=0.0.0.0:3000` is every interface. Then make sure nothing but the
+  proxy can reach the port some other way: Docker opens a published port with
+  rules of its own, ahead of a host firewall such as ufw.
+
+`APP_PORT` is Compose's own `address:port`, and a bare number means every
+interface, the same as `0.0.0.0` — see
+[`APP_PORT`](environment.md#app_port).
 
 ### The proxy must forward these headers
 
@@ -312,7 +352,10 @@ Whichever proxy you use, it has to pass:
 
 - `X-Forwarded-Proto: https` — so Balancia knows the request was secure
 - `X-Forwarded-For` — the client IP, which rate limiting depends on
-- `Host` — matching `APP_URL`'s host, which WebAuthn depends on
+- `Host` — matching `APP_URL`'s host, which WebAuthn depends on. The
+  cross-origin check compares a state-changing request's `Origin` against it
+  too, so behind a proxy that rewrites `Host` every form a browser submits is
+  refused with a 403.
 
 Getting `X-Forwarded-For` wrong means every request looks like it comes from the
 proxy, and rate limits then apply to all your users collectively.
@@ -330,7 +373,7 @@ Caddy gets certificates automatically and sets the forwarded headers by default:
 
 ```caddyfile
 balancia.example.com {
-    reverse_proxy localhost:3000
+    reverse_proxy 127.0.0.1:3000
 }
 ```
 
@@ -353,7 +396,10 @@ services:
 ```
 
 Traefik sets the forwarded headers itself. Make sure the container is on the
-Traefik network and remove the `ports:` mapping.
+Traefik network: Traefik reaches it there, on port 3000, and never uses the
+published one. That one is on `127.0.0.1` and can stay; to drop it anyway, add
+`ports: !reset []` to the app service in the same override (Compose 2.24 or
+newer).
 
 ### nginx
 
@@ -528,7 +574,10 @@ Nothing needs configuring for this. `RUN_WORKER_IN_WEB` defaults to `true`, and
 the app logs `Background worker is running inside the web process` on startup.
 If it cannot reach the queue it says so loudly and carries on serving pages — a
 queue that is down must not take the app with it — so that line's absence from
-the log is the thing to look for when a recurring expense fails to appear.
+the log is the thing to look for when a recurring expense fails to appear. The
+other is `Recurring template failed to generate`, which names the one template
+that could not produce its entry, and its group; every other template carries
+on, and that one is retried each hour until it can.
 
 ### Giving the jobs their own container
 
@@ -592,6 +641,7 @@ On a standalone install — the one the quick start produces, which pulls the
 published image:
 
 ```bash
+./backup.sh --database-only --keep 10 backups/pre-upgrade
 docker compose pull
 docker compose up -d
 ```
@@ -600,8 +650,11 @@ In a checkout that builds its own:
 
 ```bash
 git pull
+./scripts/backup.sh --database-only --keep 10 backups/pre-upgrade
 docker compose up -d --build
 ```
+
+The first line of each is the restore point — see below.
 
 Which of the two an instance is on is the `COMPOSE_FILE` line in `.env` — see
 [Running the published image](#running-the-published-image). When a release
@@ -622,10 +675,16 @@ app` shows what went wrong.
 **Migrations are forward-only and never destructive without warning.** Applied
 migrations are recorded with a checksum; if a file that has already run is
 edited, startup fails loudly rather than applying a changed migration silently.
+And a release older than its database — one whose migrations stop short of
+those already applied — refuses to start; see [Rolling back](#rolling-back).
 
-**Take a backup before upgrading.** See
-[backup-and-restore.md](backup-and-restore.md) — it takes seconds and it is the
-difference between a bad upgrade being an inconvenience and a disaster.
+**Take a restore point before upgrading.** Forward-only means the dump taken
+just before the new image starts is the one way back from an upgrade that went
+wrong. `backup.sh --database-only` writes exactly that — the database, not the
+receipts or `.env`, which no migration touches — in seconds, keeping the newest
+ten, and prints the command that restores it. `scripts/deploy.sh` takes one
+itself on every deploy. For the full backup, and for doing it every night, see
+[backup-and-restore.md](backup-and-restore.md).
 
 ### Upgrading over SSH
 
@@ -643,7 +702,17 @@ Before it changes anything, it checks in a single round trip that the path is a
 checkout with a `compose.yaml` and a `.env`, that `docker compose` is available
 to that user, that the branch is not detached and tracks an upstream, and that
 the working tree is clean. Then it fetches and prints the commits that are
-about to land. `--dry-run` stops exactly there.
+about to land.
+
+Merged is not the same as tested: origin's branch moves the moment a pull
+request merges, well before CI has finished with the result — and on an
+instance that pulls `preview`, the image for that commit is not published until
+CI has passed. So it then asks GitHub about the commit it is about to land, and
+stops if any check on it failed or is still running. That needs the
+[GitHub CLI](https://cli.github.com), signed in with `gh auth login`, on the
+machine you deploy from. `--skip-checks` goes ahead without asking, for a
+GitHub outage or a fork with no CI of its own. `--dry-run` stops once all of
+this has been checked.
 
 The pull is `--ff-only`. A deploy host that cannot fast-forward has commits of
 its own, and merging them silently is how a server ends up running something no
@@ -656,14 +725,27 @@ running. Afterwards it polls
 that have a healthcheck — so a zero exit status means the containers actually
 came back, not merely that Compose accepted the command.
 
-| Flag / variable                         | Default       | What it picks              |
-| --------------------------------------- | ------------- | -------------------------- |
-| `-H`, `--host` / `BALANCIA_DEPLOY_HOST` | `ecom-debian` | ssh alias, or `user@host`  |
-| `-C`, `--path` / `BALANCIA_DEPLOY_PATH` | `balancia`    | the checkout on the server |
-| `BALANCIA_DEPLOY_TIMEOUT`               | `180`         | seconds to wait on health  |
+| Flag / variable                         | Default       | What it picks                  |
+| --------------------------------------- | ------------- | ------------------------------ |
+| `-H`, `--host` / `BALANCIA_DEPLOY_HOST` | `ecom-debian` | ssh alias, or `user@host`      |
+| `-C`, `--path` / `BALANCIA_DEPLOY_PATH` | `balancia`    | the checkout on the server     |
+| `BALANCIA_DEPLOY_TIMEOUT`               | `180`         | seconds to wait on health      |
+| `--skip-checks`                         | off           | deploy without asking about CI |
 
 Host keys, users and jump hosts are all left to `~/.ssh/config`, which already
 knows about them.
+
+Between the pull and the restart it takes a restore point:
+`scripts/backup.sh --database-only` into `backups/pre-deploy/` in the
+checkout, where the last ten are kept. The new image applies its migrations the
+moment it starts, and they only go forwards, so this dump is the way back from
+an upgrade that went wrong — the deploy ends by printing where it is and the
+command that restores it. It is taken on every deploy, not only on one whose
+commits touch `drizzle/`: an instance that pulls its image gets its migrations
+from the image, which the checkout does not describe, and a database-only dump
+costs seconds. If it fails, nothing is restarted — the checkout has moved, the
+containers have not — and the script exits with status 3. `--skip-backup`
+deploys without one.
 
 ### The database volume moved (one-time change)
 
@@ -701,7 +783,7 @@ docker compose exec -T db \
   pg_dump -U balancia -d balancia --format=custom --no-owner > balancia.dump
 
 # 2. Take a full backup as well, before destroying anything.
-./balancia-backup.sh /var/backups/balancia
+./scripts/backup.sh /var/backups/balancia
 
 # 3. Stop the stack and delete ONLY the database volume. Note this is `down`
 #    without `-v`: the uploads volume must survive. Leave .env alone too — the
@@ -736,9 +818,37 @@ Keep `balancia.dump` until you have confirmed the data is there.
 Balancia does not ship down-migrations: for financial data, a scripted rollback
 that drops a column is more dangerous than a restore. To go back:
 
-1. Stop the stack: `docker compose down`
-2. Restore the database from your pre-upgrade dump.
-3. Check out the previous tag and `docker compose up -d --build`.
+1. Stop the app and leave the database up: `docker compose stop app`, adding
+   `worker` where the jobs have their own container.
+2. Restore the dump taken before the upgrade — `backup.sh` and `deploy.sh` both
+   print this line with the path filled in:
+
+   ```bash
+   docker compose exec -T db pg_restore -U balancia -d postgres \
+     --clean --if-exists --create --no-owner \
+     < backups/pre-upgrade/20260929T101500Z/balancia.dump
+   ```
+
+   `--create` alongside `--clean` drops the whole database and makes it again
+   from the dump. `--clean` alone drops only what the dump contains, so every
+   table the newer release added would stay behind — and the next upgrade would
+   fail on them, trying to create what is already there.
+
+3. Go back to the previous release: pin its tag in `compose.image.yaml`
+   (`sebitro/balancia:0.1.0`) on an instance that pulls, or check out its tag in
+   a checkout. Then `docker compose up -d`, with `--build` in a checkout.
+
+**Rolling back the image alone is refused.** Started against a database a newer
+release has migrated, the older release stops at its migration step, names the
+migrations it does not know, and does not start — the older code would run
+against a schema it was never written for, and not everything that breaks that
+way breaks loudly. The same happens moving an instance from `preview` back to
+`latest`, since `preview` carries migrations no release has yet. Restoring the
+dump, as above, is the answer that loses nothing. If there is no dump, or you
+have decided the older release is safe on the newer schema, set
+`ALLOW_NEWER_SCHEMA=true` in `.env` and it starts with a warning in its log —
+then take the line out again once a current release is back; see
+[`ALLOW_NEWER_SCHEMA`](environment.md#allow_newer_schema).
 
 ---
 
@@ -771,7 +881,10 @@ docker compose logs -f app
 docker compose logs -f app   # or `worker`, where the jobs have their own container
 ```
 
-Secrets, tokens and passwords are redacted before anything is written.
+Secrets, tokens and passwords are redacted before anything is written, and a
+failed database statement is logged with its SQLSTATE and statement text but
+without the values bound to it — no address, amount or description rides along
+with a constraint violation into your log collector.
 
 **The database is deliberately not exposed.** To inspect it:
 
@@ -798,8 +911,9 @@ complete field list and what is deliberately not collected:
 **Metrics, if you want them.** `METRICS_ENABLED=true` exposes Prometheus text at
 `/api/metrics` for your own monitoring: request and job durations, error rates,
 database latency and pool usage, memory and CPU. Exact, local, and never
-transmitted by Balancia. Set `METRICS_TOKEN` unless the published port is on a
-private network.
+transmitted by Balancia. Set `METRICS_TOKEN` unless nothing but your scraper
+can reach the app — the reverse proxy forwards `/api/metrics` like any other
+path.
 
 **Stopping cleanly:**
 

@@ -339,7 +339,7 @@ export async function deleteAttachment(
       // not a reason to fail the user's action. The row keeps its key, and the
       // sweeper removes the object again before it removes the row.
       logger.warn(
-        { err: error instanceof Error ? error.message : String(error) },
+        { err: error },
         "Failed to remove stored receipt; it will be swept later",
       );
     });

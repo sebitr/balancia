@@ -1,12 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, type Messages } from "next-intl";
 import { RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineGroups } from "@/components/offline/offline-groups";
-import en from "../../../messages/en.json";
-import fr from "../../../messages/fr.json";
+import type { PartialMessages } from "@/i18n/client-messages";
 import {
   DEFAULT_LOCALE,
   isAppLocale,
@@ -22,21 +21,21 @@ import {
  * network at all. It therefore cannot ask the server which locale to use, and
  * cannot be a dynamic route without dropping out of the precache entirely.
  *
- * So both catalogues are bundled here and the locale cookie is read in the
- * browser. The server snapshot is the default locale and the client snapshot
- * is the cookie, so the prerendered HTML and the first client render agree and
- * React swaps in the real language after hydration — no mismatch, and the
- * brief flash is the price of a fallback that works with the network off.
+ * So the page hands down a slice of every catalogue and the locale cookie is
+ * read in the browser. The server snapshot is the default locale and the
+ * client snapshot is the cookie, so the prerendered HTML and the first client
+ * render agree and React swaps in the real language after hydration — no
+ * mismatch, and the brief flash is the price of a fallback that works with the
+ * network off.
  *
- * The catalogue chosen here is then handed to a nested provider, because what
- * this screen offers below the message is the whole entry form, and a form
- * speaking a language nobody chose is worse than a heading that does. The
- * whole catalogue was already in this chunk — these two imports pull both
- * files in their entirety for the sake of one object each — so the provider
- * costs nothing that was not already being paid.
+ * The slice chosen here is then handed to a nested provider, because what this
+ * screen offers below the message is the whole entry form, and a form speaking
+ * a language nobody chose is worse than a heading that does. It is only a
+ * slice — `OFFLINE_NAMESPACES`, the words this screen and that form ask for —
+ * and it arrives in the prerendered page rather than in this component's
+ * code. Both catalogues used to be imported here whole: three hundred
+ * kilobytes of client chunk, most of it words this screen never shows.
  */
-
-const CATALOGUES: Record<AppLocale, typeof en> = { en, fr };
 
 function readLocaleCookie(): AppLocale {
   const match = document.cookie
@@ -49,15 +48,21 @@ function readLocaleCookie(): AppLocale {
 /** The cookie is read once at hydration; nothing changes it while on screen. */
 const subscribeToNothing = () => () => {};
 
-export function OfflineNotice() {
+export function OfflineNotice({
+  catalogues,
+}: {
+  /** `OFFLINE_NAMESPACES` of every catalogue, by language. */
+  catalogues: Record<AppLocale, PartialMessages>;
+}) {
   const locale = useSyncExternalStore(
     subscribeToNothing,
     readLocaleCookie,
     () => DEFAULT_LOCALE,
   );
 
-  const catalogue = CATALOGUES[locale];
-  const messages = catalogue.offline;
+  const catalogue = catalogues[locale];
+  // Listed whole in `OFFLINE_NAMESPACES`, so it is here whole.
+  const messages = catalogue.offline as Messages["offline"];
 
   return (
     <div className="max-w-md space-y-6 text-center">

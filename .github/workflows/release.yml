@@ -3,10 +3,30 @@ name: Publish image
 # Builds Balancia and pushes it to Docker Hub as sebitro/balancia.
 #
 # Three tags, and nothing else. A version tag (v1.4.2) publishes :1.4.2 and
-# moves :latest onto it. Every merge to main publishes :preview, which is what
-# main is right now — never a release, never :latest. Nothing else is offered,
-# so a tag on the Docker Hub page is either a version somebody cut, the newest
-# of those, or main.
+# moves :latest onto it. Every merge to main that passes CI publishes
+# :preview, which is what main is right now — never a release, never :latest.
+# Nothing else is offered, so a tag on the Docker Hub page is either a version
+# somebody cut, the newest of those, or main.
+#
+# Nothing is published until CI has passed on the same commit. The first job
+# below is ci.yml itself, called as a reusable workflow, and every other job
+# needs it: a failed or cancelled CI run skips the build, and the image stays
+# where it was. That is also why ci.yml has no push trigger of its own — on
+# main and on a tag, this run is the CI run. Before this, the two ran side by
+# side, and a quarter of the merges to main were published while their CI run
+# was failing or had been cancelled by the next merge.
+#
+# `workflow_run` is the other way to build that gate — start this file when a
+# CI run completes, and publish only if it succeeded — and it was turned down
+# for two reasons. It runs the default branch's copy of this file against
+# whichever commit CI tested, so the checkout, the tags metadata-action works
+# out from github.ref and the release a tag should create would all have to be
+# rebuilt by hand from the triggering run. And it cannot gate a tag push at all
+# unless CI runs on tags too, with the two matched up by commit. Calling CI from
+# here costs one thing instead: on main its jobs show up under this workflow,
+# as "CI / …", and the README badge follows this file rather than ci.yml. The
+# ruleset asks for those checks by name on pull requests only, where ci.yml
+# still runs them on its own.
 #
 # A version tag additionally attaches scripts/bootstrap.sh to its GitHub
 # release, with the tag stamped into it. That asset is the whole installation
@@ -20,12 +40,30 @@ name: Publish image
 #   DOCKERHUB_USERNAME  the account that owns the repository
 #   DOCKERHUB_TOKEN     a Docker Hub access token with Read & Write scope
 #
+# That token is why every action here is pinned to a commit rather than a tag;
+# see the top of ci.yml.
+#
 # The two architectures are built on their own native runners rather than one
 # runner emulating the other: a Next.js build under QEMU takes the better part
 # of an hour and can run the runner out of memory. Each build pushes an image
 # with no tag on it — a bare digest, which nobody can pull by name — and the
 # last job stitches both digests into one manifest list and puts the tags on
 # that. That is what makes a plain `docker pull` serve the right image.
+#
+# What was published can be traced back here in two ways. Each architecture
+# carries BuildKit's SLSA provenance and an SPDX SBOM as attestation manifests,
+# which `imagetools create` copies into the list beside the images they
+# describe:
+#
+#   docker buildx imagetools inspect sebitro/balancia:0.1.0 --format '{{json .Provenance}}'
+#
+# Those are not signed, so anybody holding the Docker Hub token could push a
+# list with whatever provenance they liked. The list itself is therefore also
+# attested by GitHub, in a statement signed through Sigstore with a
+# certificate that names this repository and this workflow — something no
+# registry credential can produce:
+#
+#   gh attestation verify oci://docker.io/sebitro/balancia:0.1.0 -R sebitr/balancia
 
 on:
   push:
@@ -36,7 +74,9 @@ on:
 concurrency:
   group: publish-${{ github.ref }}
   # Never cancel a half-pushed release: two runs of one tag would race over the
-  # same manifest. They queue instead.
+  # same manifest. They queue instead. At most one waits: a newer merge to main
+  # replaces a queued one, which is what :preview wants — main as it is now,
+  # not every commit in turn.
   cancel-in-progress: false
 
 permissions:
@@ -46,8 +86,20 @@ env:
   IMAGE: docker.io/sebitro/balancia
 
 jobs:
+  # All of ci.yml, on this commit. `needs: ci` on the build below is the whole
+  # gate: a job whose needs did not all succeed is skipped, and so is every job
+  # after it.
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    # No secrets are passed. CI needs none, and a called workflow gets only
+    # what it is handed.
+    permissions:
+      contents: read
+
   build:
     name: Build ${{ matrix.platform }}
+    needs: ci
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -60,23 +112,23 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@v4
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Labels only. Which tags exist is decided once, in the job below.
       - id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.IMAGE }}
 
       - id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: ${{ matrix.platform }}
@@ -88,9 +140,13 @@ jobs:
           # layers and neither collides with the CI build's cache.
           cache-from: type=gha,scope=publish-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=publish-${{ matrix.platform }}
-          # Provenance would push a second, attestation-only manifest per
-          # architecture, which the digest hand-off below has no use for.
-          provenance: false
+          # How it was built, and what went into it. With either on, what this
+          # pushes is a small index — the image, and an attestation manifest
+          # that describes it — and the digest handed on below is the index's.
+          # `imagetools create` flattens both entries into the published list,
+          # so the attestations travel with every tag.
+          provenance: mode=max
+          sbom: true
 
       - name: Hand the digest to the manifest job
         run: |
@@ -98,7 +154,7 @@ jobs:
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           # Named after the runner rather than the platform: two uploads cannot
           # share a name, and an artifact name cannot contain the slash in
@@ -112,20 +168,27 @@ jobs:
     name: Tag and push the manifest
     runs-on: ubuntu-latest
     needs: build
+    # What the signed attestation at the end needs, and no more: an OIDC token
+    # to be issued a Sigstore certificate with, and leave to store the result
+    # against this repository.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       # For docs/docker-hub.md, which the last step publishes as the Docker
       # Hub page. The digests below arrive as artifacts, not from the tree.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: /tmp/digests
           pattern: digest-*
           merge-multiple: true
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@v4
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -136,7 +199,7 @@ jobs:
       # run — is :preview. There is deliberately no floating minor series:
       # pinning here means naming a version in full.
       - id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         env:
           # Annotate the manifest list rather than the two images under it.
           # The list is what a tag points at and what a registry browser
@@ -171,7 +234,32 @@ jobs:
             $(printf "$IMAGE@sha256:%s " *)
 
       - name: Show what was published
-        run: docker buildx imagetools inspect "$IMAGE:${{ steps.meta.outputs.version }}"
+        id: published
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+
+          # Read back from the registry rather than worked out here: this is
+          # the digest a pull of the tag resolves to, and so the one thing the
+          # attestation below should be about.
+          digest=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+          case $digest in
+            sha256:*) echo "digest=$digest" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::could not read the digest of $IMAGE:$VERSION back from the registry"
+              exit 1
+              ;;
+          esac
+
+      # Signed SLSA provenance for the list, stored with GitHub, where
+      # `gh attestation verify` looks it up by digest. Nothing more is pushed to
+      # Docker Hub for it.
+      - name: Attest the published manifest list
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.published.outputs.digest }}
 
       # The page somebody lands on from a `docker pull` line they were given.
       # Best-effort on purpose: Docker Hub wants read/write/delete scope for
@@ -179,7 +267,7 @@ jobs:
       # and leave the image it just published alone.
       - name: Update the Docker Hub page
         continue-on-error: true
-        uses: peter-evans/dockerhub-description@v5
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -203,7 +291,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The script fetches its Compose files, and runs its helpers out of the
       # image, at whatever $version says. Stamping it here is what stops an

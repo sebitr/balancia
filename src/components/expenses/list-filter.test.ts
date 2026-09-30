@@ -457,6 +457,19 @@ describe("readFilter and filterParams", () => {
     expect(applied.kinds).toEqual([]);
   });
 
+  it("drops an end of the range that is not a day, rather than filtering on it", () => {
+    // The date fields could never have written either of these, so neither
+    // is a filter the sheet could show the reader or let them clear.
+    const applied = readFilter(
+      new URLSearchParams("when=custom&from=soon&to=2026-02-30"),
+    );
+    expect(applied.from).toBe("");
+    expect(applied.to).toBe("");
+    expect(
+      readFilter(new URLSearchParams("when=custom&from=2024-02-29")).from,
+    ).toBe("2024-02-29");
+  });
+
   it("keeps a category the group has never used, which is a real question", () => {
     expect(readFilter(new URLSearchParams("cat=pets")).categories).toEqual([
       "pets",

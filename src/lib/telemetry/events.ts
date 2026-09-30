@@ -29,8 +29,14 @@ export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 /** What a receipt file turned out to be. Not its name, and not its contents. */
 export type AttachmentKind = "image" | "pdf";
 
-/** How a scan ended. `empty` is "the models read nothing usable". */
-export type ScanOutcome = "recognised" | "empty" | "failed";
+/**
+ * How a scan ended. `empty` is "the models read nothing usable".
+ *
+ * Also a value list, because this one field is named by the browser: the
+ * action that records it checks the word against the list at runtime.
+ */
+export const SCAN_OUTCOMES = ["recognised", "empty", "failed"] as const;
+export type ScanOutcome = (typeof SCAN_OUTCOMES)[number];
 
 export type ImportFormat = "csv" | "json";
 

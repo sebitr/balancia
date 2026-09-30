@@ -46,10 +46,7 @@ async function handleGet() {
         { status: 400 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey registration options failed",
-    );
+    logger.error({ err: error }, "Passkey registration options failed");
     return NextResponse.json(
       { error: t("passkeyRegistrationUnavailable") },
       { status: 500 },
@@ -96,10 +93,7 @@ async function handlePost(request: Request) {
         { status: 400 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey registration failed",
-    );
+    logger.error({ err: error }, "Passkey registration failed");
     return NextResponse.json(
       { error: t("passkeyNotRegistered") },
       { status: 500 },

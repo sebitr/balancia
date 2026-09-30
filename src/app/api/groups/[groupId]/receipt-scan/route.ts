@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { apiActor } from "@/app/api/mobile";
+import { apiActor, isUuid } from "@/app/api/mobile";
 import { fileTypeFromBuffer } from "file-type";
 import { getClientIp } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
@@ -59,6 +59,11 @@ async function handlePost(
   context: RouteContext<"/api/groups/[groupId]/receipt-scan">,
 ) {
   const { groupId } = await context.params;
+  // Before any query: PostgreSQL throws on a malformed UUID, which would
+  // answer 500 for what is only a group that does not exist.
+  if (!isUuid(groupId)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   try {
     const provider = getOcrProvider();
@@ -179,10 +184,7 @@ async function handlePost(
       );
     }
 
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Receipt scan failed",
-    );
+    logger.error({ err: error, groupId }, "Receipt scan failed");
     return NextResponse.json(
       { error: "The receipt could not be read." },
       { status: 500 },

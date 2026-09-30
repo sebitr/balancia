@@ -112,7 +112,9 @@ describe("MoneyFormats", () => {
 
     await user.click(row("Dates").getByRole("radio", { name: DMY }));
     await waitFor(() =>
-      expect(row("Dates").getByRole("radio", { name: "Auto" })).toBeEnabled(),
+      expect(
+        row("Dates").getByRole("radio", { name: "Auto" }),
+      ).not.toHaveAttribute("aria-disabled"),
     );
     await user.click(row("Dates").getByRole("radio", { name: "Auto" }));
 
@@ -124,6 +126,39 @@ describe("MoneyFormats", () => {
     );
     expect(row("Dates").getByRole("radio", { name: DMY })).not.toBeChecked();
     expect(toastUndoable).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A chip row is a radio group, and moves like one: one Tab stop, and the
+   * arrows choose. An arrow press starts a write, so the row must hold on to
+   * the focus while it is written — a `disabled` chip would drop it.
+   */
+  it("moves along a row with the arrow keys and keeps the focus", async () => {
+    const { user } = renderFormats();
+    let finish: (value: { ok: true }) => void = () => {};
+    setFormatPreferencesAction.mockImplementation(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+
+    const auto = row("Dates").getByRole("radio", { name: "Auto" });
+    expect(auto).toBeChecked();
+    expect(auto).toHaveAttribute("tabindex", "0");
+    auto.focus();
+    await user.keyboard("{ArrowRight}");
+
+    const next = row("Dates").getAllByRole("radio")[1]!;
+    expect(next).toHaveFocus();
+    expect(next).toBeChecked();
+    // In flight: refused rather than disabled, so the focus stays put.
+    expect(next).toHaveAttribute("aria-disabled", "true");
+    expect(next).toBeEnabled();
+    await waitFor(() =>
+      expect(setFormatPreferencesAction).toHaveBeenCalledOnce(),
+    );
+
+    finish({ ok: true });
+    await waitFor(() => expect(next).not.toHaveAttribute("aria-disabled"));
+    expect(next).toHaveFocus();
   });
 
   it("does not lose the other row's choice when one is changed", async () => {
