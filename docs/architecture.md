@@ -281,9 +281,11 @@ largest creditor) that is presentation-only: it never alters recorded history.
   because what it spends is mail to an inbox the caller chose.
 - Account recovery and email change: single-use hashed tokens, opened from a
   link, spent by a route handler so the token is consumed exactly once and does
-  not survive into the address bar. A reset ends every session; an email change
-  is announced to the old address at request time, before it can take effect,
-  and only completes when the new address is confirmed. Neither is offered on
+  not survive into the address bar. A reset ends every session, revokes every
+  API key and spends any pending email change; it keeps passkeys and the Apple
+  link. An email change is announced to the old address at request time,
+  before it can take effect, only completes when the new address is confirmed,
+  and then ends every session and revokes every API key. Neither is offered on
   an instance with no SMTP configured.
 - Email confirmation: the same kind of token, spent the same way. It verifies
   the address wherever it is opened, and starts a session only in the browser
@@ -292,6 +294,15 @@ largest creditor) that is presentation-only: it never alters recorded history.
   and scoped to `/verify-email`). Elsewhere it lands on the sign-in page, so a
   forwarded link cannot sign somebody else's browser in and claim the guest
   seat it holds.
+- The first proof of an address — reset link, sign-in code or confirmation
+  link — removes every passkey, Apple link, API key, pending email change and
+  session the account held before it (`modules/auth/address-proof.ts`). A
+  passkey signup takes its address on trust, and without this whoever typed
+  somebody else's address kept a way into the account after its owner had
+  recovered it.
+- A passkey that is the account's only credential must have verified its
+  holder: user verification is required at a passkey signup and at any sign-in
+  to an account with no password.
 - Strict security headers + CSP via `proxy.ts` (Next 16's middleware
   replacement).
 - Uploads: content-sniffed MIME allowlist (JPEG/PNG/WebP/GIF/PDF), size

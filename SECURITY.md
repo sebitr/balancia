@@ -101,6 +101,24 @@ Implemented in this repository — there is no third-party auth service.
   stored, single-use and expire in five minutes; origin and relying-party ID
   come from validated configuration; the signature counter is checked and a
   counter that fails to advance is refused as a possible cloned authenticator.
+  Where the passkey is the only credential — a passkey signup, and any sign-in
+  to an account with no password — the authenticator must have verified its
+  holder with a PIN, fingerprint or face. Beside a password, a key that only
+  proves somebody touched it is still accepted.
+- **Recovery takes the account back, not only the password.** A password reset
+  ends every session, revokes every API key and spends any email change still
+  waiting for its link. Confirming an email change ends every session and
+  revokes every API key. A reset leaves the account's passkeys and its Apple
+  link in place: they are the owner's own in the ordinary case, and each can be
+  removed from Settings → Security. Changing a password while signed in ends
+  every other session and nothing else.
+- **The first proof of an address removes everything from before it.** A
+  passkey signup takes its address on trust, so an account can exist, with
+  credentials, before anybody has shown they read its inbox. The first reset
+  link, sign-in code or confirmation link that proves the address removes every
+  passkey, Apple link, API key, pending email change and session the account
+  held until then; a sign-in code also drops a password set before the proof.
+  Whoever proves the inbox starts with only what the proof handed them.
 
 ### Guest access
 

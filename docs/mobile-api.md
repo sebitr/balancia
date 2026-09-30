@@ -82,6 +82,14 @@ retires the one before it, so a client should wait on the first mail rather
 than tap twice — the web's button counts down thirty seconds for exactly that
 reason.
 
+A code is also proof of the address. On an account whose address had never
+been proved — a passkey signup made somewhere else, say — the first code spent
+removes every passkey, Apple link, API key and session the account held until
+then, and drops any password, so the session it opens is the only way in left
+standing. A client should not be surprised when a passkey it had stored for
+that account stops being recognised afterwards: `passkeyUnknown` is the signal
+to stop offering it.
+
 `GET /api/auth/options` says whether the instance can do this at all — `code`
 is false without SMTP, and on the public demo — and, beside it, whether Sign in
 with Apple is configured. The web's page knows these when it renders and hides
@@ -831,7 +839,11 @@ used from a rotating address cannot escape its own.
 
 ### Expiry
 
-There isn't any. A key works until it is revoked.
+There isn't any. A key works until it is revoked — by hand, or by its owner
+resetting their password or confirming a new email address, both of which
+revoke every key the account holds. Those two are how an owner takes an account
+back, and a key is exactly what a session held for a few minutes by somebody
+else could have minted.
 
 A default expiry sounds prudent and is not: a key that silently stops working
 is a wall tablet that goes blank on a Tuesday and a cron job nobody notices
