@@ -101,6 +101,9 @@ fingerprints are stored, so:
   says "5 already imported" before you commit.
 - A partially failed import can be retried; rows that already landed are skipped.
 - Two exports that overlap only import the rows that are genuinely new.
+- A Splitwise payment an older version of the importer took for an expense is
+  still known by the expense's fingerprint, so importing the file again does
+  not add the payment beside it.
 
 This is checked by an integration test and an end-to-end journey, because
 "balances silently doubled" is the worst possible outcome for this feature.
@@ -116,6 +119,29 @@ This is checked by an integration test and an end-to-end journey, because
 | Date                            | Expense date                                     |
 | Currency                        | Currency, kept as-is                             |
 | People (columns or `users[]`)   | Participants, per your mapping                   |
+
+**How a payment is told apart in the CSV.** The spreadsheet has no column that
+says "this is a payment", so the importer reads one from the row:
+
+- a description of `Payment` or `Settle all balances` (or `Pago`, `Zahlung`),
+  or a cost of zero, is a payment whatever else the row says;
+- a row in the `Payment` category, or described as `<one person> paid <another>`
+  with both names spelled as their columns — `Bob paid Carol`, the way
+  Splitwise exports a payment recorded in its app — is a payment when the row
+  moves one amount from one person to one other, and nobody else's column
+  changes. A `Payment` row that splits a cost between three people is an
+  expense somebody filed oddly, and is imported as one.
+
+A payment row that names more than two people — a "Settle all balances" across
+a whole group — only gives each person's net, not who paid whom. It is recorded
+as one payment for each pair, enough to cover every net, and the preview says
+which pairs it chose. Each person's balance comes out exactly as in Splitwise;
+the pairs are the importer's.
+
+The JSON backup marks each payment outright (`payment: true`, with the payer's
+`paid_share` and the recipient's `owed_share`), so none of this applies to it.
+It skips a payment that does not have exactly two parties rather than guess
+the pairs.
 
 **Split methods are not preserved as methods.** Splitwise exports the _result_
 of a split, not the rule, so every imported expense is stored as an exact-amount
@@ -137,6 +163,54 @@ Inventing a historical rate would be worse than leaving it unset. In a
 converted-currency group they are balanced in that currency, beside the base —
 see _Currency handling_ below — and re-entering one with the rate you want is
 what folds it into the base currency.
+
+### If you imported a CSV before October 2026
+
+Until the end of September 2026, the CSV importer read a Splitwise payment the
+wrong way round: a payment Blaise made to Ada was recorded as Ada paying
+Blaise, which moves both of them by twice the amount. Expenses were read
+correctly, and the JSON backup was never affected. Only the rows the preview
+counted as payments were — in the file, a row described as `Payment` or
+`Settle all balances`, or with a cost of zero.
+
+To check a group, compare its balances with the **Total balance** row at the
+end of the file you imported. If they agree to the cent, nothing needs doing.
+If they do not, open each payment the import created — dated as in Splitwise,
+with the row's description as its note — and swap who paid and who received,
+or delete it and record it again.
+
+Do not import the same file again to repair it. A payment now reads the other
+way round, so the import no longer recognises it as one it already wrote: it
+adds it again beside the reversed copy, and the two cancel out as if the
+payment had never happened. If that has already happened, delete the older
+copy of each payment, the one going the wrong way.
+
+Two more kinds of row were misread until then:
+
+- **A payment recorded in Splitwise's app** — `Bob paid Carol`, in the
+  `Payment` category, with its amount as the cost — came in as an **expense**:
+  described `Bob paid Carol`, filed under `Payment`, paid entirely by Bob and
+  owed entirely by Carol. The balances are right, because an expense one
+  person pays wholly for another moves both of them exactly as the repayment
+  does. What is wrong is the spending: the amount counts toward the group's
+  total spend, shows as a `Payment` slice in the spending by category, and sits
+  in the transactions list as an expense rather than a settlement.
+
+  Nothing needs doing unless you want those figures right. To turn one into
+  the repayment it was, delete the expense and record a repayment from
+  **Settle up**, Bob as who paid and Carol as who received it, with the same
+  amount and date. Nobody's balance moves.
+
+  Importing the same file again is safe for these rows, and does not convert
+  them either: the import knows each one as the expense it wrote, and skips
+  it whether that expense is still there or you have already replaced it by
+  hand.
+
+- **A "Settle all balances" row naming more than two people** was recorded as
+  a single payment between the first two people on it with an amount, for the
+  whole of the first one's. Everyone else on the row was left out, so the
+  group's balances do not match the **Total balance** row. Correct that
+  payment and record the missing ones by hand, as above, until they do.
 
 ### What gets skipped, and why
 
