@@ -54,6 +54,8 @@ import {
  * fingerprint already exists in `imported_fingerprints` is marked
  * `skipped_duplicate` instead of being written again — so importing the same
  * export twice, or resuming a partially failed run, never duplicates money.
+ * A line an older importer read differently is also known by the fingerprint
+ * it was given then (`formerFingerprint`).
  *
  * Nothing is ever sent anywhere: parsing happens in this process.
  */
@@ -142,6 +144,24 @@ export function fingerprintRow(groupId: string, row: StagedRow): string {
         ].join(FIELD_SEPARATOR);
 
   return createHash("sha256").update(canonical).digest("hex");
+}
+
+/**
+ * The fingerprint an earlier importer gave the same line, when it read the
+ * line as something else — null otherwise. See `formerlyReadAs`.
+ *
+ * A row is already imported if the group holds either this or its own
+ * fingerprint. Nothing is ever stored under this one: it names what an older
+ * import wrote, so that a newer reading of the same file does not write it
+ * again.
+ */
+export function formerFingerprint(
+  groupId: string,
+  row: StagedRow,
+): string | null {
+  return row.kind === "settlement" && row.formerlyReadAs
+    ? fingerprintRow(groupId, row.formerlyReadAs)
+    : null;
 }
 
 export interface ImportPreview {
@@ -239,19 +259,35 @@ export async function stageImport(
   const fingerprints = parsed.rows.map((entry) =>
     fingerprintRow(access.groupId, entry.row),
   );
+  const formerFingerprints = parsed.rows.map((entry) =>
+    formerFingerprint(access.groupId, entry.row),
+  );
+  const lookedUp = [
+    ...fingerprints,
+    ...formerFingerprints.filter((value): value is string => value !== null),
+  ];
   const alreadyImported =
-    fingerprints.length > 0
+    lookedUp.length > 0
       ? await db
           .select({ fingerprint: importedFingerprints.fingerprint })
           .from(importedFingerprints)
           .where(
             and(
               eq(importedFingerprints.groupId, access.groupId),
-              inArray(importedFingerprints.fingerprint, fingerprints),
+              inArray(importedFingerprints.fingerprint, lookedUp),
             ),
           )
       : [];
-  const duplicates = new Set(alreadyImported.map((row) => row.fingerprint));
+  const found = new Set(alreadyImported.map((row) => row.fingerprint));
+  const duplicates = new Set(
+    parsed.rows.flatMap((_, index) => {
+      const former = formerFingerprints[index];
+      return found.has(fingerprints[index]) ||
+        (former !== null && found.has(former))
+        ? [fingerprints[index]]
+        : [];
+    }),
+  );
 
   const preview = await db.transaction(async (tx) => {
     const [run] = await tx
@@ -512,7 +548,15 @@ export async function commitImportRun(
         skipped += 1;
         continue;
       }
-      if (committed.has(row.fingerprint)) {
+      const staged = row.staged as StagedRow;
+      // The former fingerprint is checked here as well as in the preview,
+      // because this is the check that keeps a row out — the preview's answer
+      // is stale if another import of the file committed in between.
+      const former = formerFingerprint(groupId, staged);
+      if (
+        committed.has(row.fingerprint) ||
+        (former !== null && committed.has(former))
+      ) {
         await tx
           .update(importRows)
           .set({
@@ -525,7 +569,6 @@ export async function commitImportRun(
       }
 
       try {
-        const staged = row.staged as StagedRow;
         const entity =
           staged.kind === "expense"
             ? await insertImportedExpense(

@@ -191,6 +191,181 @@ describe("Splitwise CSV adapter — localised exports", () => {
   });
 });
 
+describe("Splitwise CSV adapter — a payment as Splitwise exports it", () => {
+  // A real export of four people, posted in spliit-app/spliit#342. Its one
+  // payment is written the way Splitwise writes every payment recorded in its
+  // app: "Bob paid Carol", under Payment, with the amount as its cost. That
+  // passes neither of the importer's older tests — a description of "Payment",
+  // a cost of zero — so it came in as an expense: the balances right, but a
+  // repayment counted as spending in a "Payment" category.
+  const parsed = splitwiseCsvAdapter.parse(fixture("bob-paid-carol.csv"));
+  const settlements = parsed.rows
+    .filter((entry) => entry.row.kind === "settlement")
+    .map((entry) => entry.row as StagedSettlement);
+
+  const parse = (...lines: string[]) =>
+    splitwiseCsvAdapter.parse(
+      ["Date,Description,Category,Cost,Currency,Alice,Bob,Carol", ...lines]
+        .concat("")
+        .join("\n"),
+    );
+
+  it("imports 'Bob paid Carol' as a payment from Bob to Carol", () => {
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]).toMatchObject({
+      fromSourceName: "Bob",
+      toSourceName: "Carol",
+      amount: "1000",
+      currency: "USD",
+      date: "2025-05-17",
+      notes: "Bob paid Carol",
+    });
+    const expenses = parsed.rows
+      .filter((entry) => entry.row.kind === "expense")
+      .map((entry) => (entry.row as StagedExpense).description);
+    expect(expenses).not.toContain("Bob paid Carol");
+    expect(expenses).toHaveLength(6);
+  });
+
+  it("keeps the expense an older import made of it, to know it again by", () => {
+    // Bob put in the whole 10.00 and Carol owed all of it: the expense the
+    // importer wrote for this line before it recognised it as a payment.
+    expect(settlements[0].formerlyReadAs).toEqual({
+      kind: "expense",
+      description: "Bob paid Carol",
+      category: "Payment",
+      date: "2025-05-17",
+      amount: "1000",
+      currency: "USD",
+      payers: [{ sourceName: "Bob", amount: "1000" }],
+      shares: [{ sourceName: "Carol", amount: "1000" }],
+    });
+  });
+
+  it("keeps no former reading of a row the importer always took for a payment", () => {
+    const trip = splitwiseCsvAdapter.parse(fixture("trip-group.csv"));
+    const payment = trip.rows.find((entry) => entry.row.kind === "settlement")
+      ?.row as StagedSettlement;
+    expect(payment.formerlyReadAs).toBeUndefined();
+  });
+
+  it("recognises the description on its own, under any category", () => {
+    const result = parse(
+      "2025-05-17,Bob paid Carol,General,10.00,USD,0.00,10.00,-10.00",
+    );
+    expect(result.rows[0].row).toMatchObject({
+      kind: "settlement",
+      fromSourceName: "Bob",
+      toSourceName: "Carol",
+      amount: "1000",
+    });
+  });
+
+  it("recognises the category on its own, whatever the description", () => {
+    const result = parse(
+      "2025-05-17,Rent share,Payment,10.00,USD,0.00,10.00,-10.00",
+    );
+    expect(result.rows[0].row).toMatchObject({
+      kind: "settlement",
+      fromSourceName: "Bob",
+      toSourceName: "Carol",
+    });
+  });
+
+  it("keeps a Payment row that splits a cost between three people an expense", () => {
+    // A payment moves money from one person to one other. This one has Alice
+    // paying 30.00 that the three of them share, which is an expense whatever
+    // it was filed under.
+    const result = parse(
+      "2025-05-17,Dinner,Payment,30.00,USD,20.00,-10.00,-10.00",
+    );
+    expect(result.rows).toHaveLength(1);
+    const expense = result.rows[0].row as StagedExpense;
+    expect(expense.kind).toBe("expense");
+    expect(expense.payers).toEqual([{ sourceName: "Alice", amount: "3000" }]);
+    expect(sumOf(expense.shares)).toBe(3000n);
+  });
+
+  it("keeps 'X paid Y' an expense when X or Y is not a person in the file", () => {
+    const result = parse(
+      "2025-05-17,Zoe paid Carol,General,10.00,USD,0.00,10.00,-10.00",
+      "2025-05-17,Bob paid Zoe,General,10.00,USD,0.00,10.00,-10.00",
+    );
+    expect(result.rows.map((entry) => entry.row.kind)).toEqual([
+      "expense",
+      "expense",
+    ]);
+  });
+
+  it("keeps 'X paid Y' an expense when the row has the money going the other way", () => {
+    // Bob is the one who put money in, so this is not Carol paying him.
+    const result = parse(
+      "2025-05-17,Carol paid Bob,General,10.00,USD,0.00,10.00,-10.00",
+    );
+    expect(result.rows[0].row.kind).toBe("expense");
+  });
+});
+
+describe("Splitwise CSV adapter — a payment between more than two people", () => {
+  const parse = (...lines: string[]) =>
+    splitwiseCsvAdapter.parse(
+      ["Date,Description,Cost,Currency,Ada,Blaise,Grace", ...lines]
+        .concat("")
+        .join("\n"),
+    );
+  const transfers = (result: ReturnType<typeof parse>) =>
+    result.rows.map((entry) => {
+      const row = entry.row as StagedSettlement;
+      expect(row.kind).toBe("settlement");
+      return `${row.fromSourceName}→${row.toSourceName} ${row.amount}`;
+    });
+
+  it("records one payment for each pair, covering every net on the row", () => {
+    // Ada clears what both of the others were owed. Taking only the first
+    // payer and the first recipient recorded a single 30.00 to Blaise and
+    // left Grace's 20.00 out.
+    const result = parse(
+      "2026-01-01,Settle all balances,30.00,EUR,30.00,-10.00,-20.00",
+    );
+    expect(transfers(result)).toEqual(["Ada→Blaise 1000", "Ada→Grace 2000"]);
+    expect(result.rows.every((entry) => entry.rowNumber === 2)).toBe(true);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatchObject({
+      rowNumber: 2,
+      message: expect.stringMatching(/one payment for each pair/),
+      detail: "Ada to Blaise 10.00, Ada to Grace 20.00",
+    });
+  });
+
+  it("pairs several payers with one recipient", () => {
+    const result = parse(
+      "2026-01-01,Settle all balances,30.00,EUR,10.00,20.00,-30.00",
+    );
+    expect(transfers(result)).toEqual(["Ada→Grace 1000", "Blaise→Grace 2000"]);
+  });
+
+  it("splits a payer across recipients and a recipient across payers", () => {
+    const result = splitwiseCsvAdapter.parse(
+      [
+        "Date,Description,Cost,Currency,Ada,Blaise,Grace,Hedy",
+        "2026-01-01,Settle all balances,40.00,EUR,25.00,-10.00,15.00,-30.00",
+        "",
+      ].join("\n"),
+    );
+    expect(transfers(result)).toEqual([
+      "Ada→Blaise 1000",
+      "Ada→Hedy 1500",
+      "Grace→Hedy 1500",
+    ]);
+  });
+
+  it("skips a payment whose amounts paid and received differ", () => {
+    const result = parse("2026-01-01,Payment,0.00,EUR,25.00,-20.00,0.00");
+    expect(result.rows).toHaveLength(0);
+    expect(result.warnings[0].message).toMatch(/paid and what was received/);
+  });
+});
+
 describe("Splitwise CSV adapter — resilience", () => {
   it("rejects a file that is not a Splitwise export", () => {
     expect(() => splitwiseCsvAdapter.parse("Name,Total\nAda,10\n")).toThrow(
