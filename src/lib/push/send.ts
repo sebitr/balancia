@@ -127,7 +127,7 @@ export function getVapidKeys(): VapidKeyPair | null {
     assertValidKeyPair(keys);
   } catch (error) {
     logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
+      { err: error },
       "Push notifications are configured but the VAPID keys are not usable; push is disabled",
     );
     cachedKeys = null;

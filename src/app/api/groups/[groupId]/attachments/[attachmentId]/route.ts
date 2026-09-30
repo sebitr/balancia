@@ -84,10 +84,7 @@ async function handleGet(
     if (error instanceof Error && error.name === "TokenScopeError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Attachment download failed",
-    );
+    logger.error({ err: error, groupId }, "Attachment download failed");
     return NextResponse.json({ error: "Unavailable." }, { status: 500 });
   }
 }

@@ -96,10 +96,7 @@ async function handleGet(
         { status: 401 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Group export failed",
-    );
+    logger.error({ err: error, groupId }, "Group export failed");
     return NextResponse.json({ error: "Unavailable." }, { status: 500 });
   }
 }

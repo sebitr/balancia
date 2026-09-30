@@ -110,10 +110,7 @@ async function handlePost(
     if (error instanceof Error && error.name === "TokenScopeError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Attachment upload failed",
-    );
+    logger.error({ err: error, groupId }, "Attachment upload failed");
     return NextResponse.json(
       { error: "The upload could not be completed." },
       { status: 500 },

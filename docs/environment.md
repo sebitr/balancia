@@ -940,7 +940,8 @@ either one. The operational side is in
 
 Production emits newline-delimited JSON; development pretty-prints. Secrets,
 tokens, passwords and connection strings are redacted before anything is
-written, at any level.
+written, at any level, and a failed database statement is logged with its
+SQLSTATE and statement text but without the values bound to it.
 
 ### `NODE_ENV`
 

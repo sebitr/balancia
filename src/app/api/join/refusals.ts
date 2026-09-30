@@ -124,13 +124,6 @@ export async function answerJoinFailure(
     );
   }
 
-  logger.error(
-    {
-      err:
-        error instanceof Error ? (error.stack ?? error.message) : String(error),
-      ...context,
-    },
-    `${route} failed`,
-  );
+  logger.error({ err: error, ...context }, `${route} failed`);
   return refusal("unavailable", "unavailable", 500);
 }
