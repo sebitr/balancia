@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getDateFormatter } from "@/i18n/preferences";
@@ -6,6 +7,11 @@ import { ImportWizard } from "@/components/imports/import-wizard";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import { listImportRuns } from "@/modules/imports/service";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("importPage");
+  return { title: t("title") };
+}
 
 export default async function ImportPage({
   params,

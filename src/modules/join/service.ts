@@ -1,5 +1,15 @@
 import "server-only";
-import { and, asc, count, eq, inArray, isNull, min, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNull,
+  min,
+  not,
+  sql,
+} from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import {
   expenseShares,
@@ -9,6 +19,7 @@ import {
   guestInvitations,
   participants,
 } from "@/lib/db/schema";
+import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
 import { generateToken } from "@/lib/security/tokens";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { recordActivity } from "@/modules/activity/service";
@@ -127,6 +138,36 @@ export async function loadJoinSummary(
   };
 }
 
+/**
+ * The seat a group nobody owns yet is keeping for whoever started it.
+ *
+ * A group started without an account has its creator in a guest seat, and
+ * claiming that seat is what makes an owner (see `claimGuestSession`). Their
+ * seat has no account on it yet, so without this it would be on the join
+ * link's list with everybody else's — and anyone the creator let in could
+ * pick it, as a guest or with an account, and be the group's owner in their
+ * place, or lock the creator out of their own group.
+ *
+ * Only while there is no owner. Once somebody owns the group the seat is a
+ * seat like any other, claimable as a member, which is also what it is in a
+ * group whose owner has since closed their account and been replaced.
+ *
+ * A predicate on `participants`, for the three places that decide what a
+ * link may claim: the list, the account claim and the guest join.
+ */
+function reservedForCreator() {
+  return sql`EXISTS (
+    SELECT 1 FROM ${groups}
+    WHERE ${groups.id} = ${participants.groupId}
+      AND ${groups.createdByParticipantId} = ${participants.id}
+      AND NOT EXISTS (
+        SELECT 1 FROM ${groupMembers}
+        WHERE ${groupMembers.groupId} = ${groups.id}
+          AND ${groupMembers.role} = 'owner'
+      )
+  )`;
+}
+
 /** One of the last expenses touching a claimable member. */
 export interface ClaimableExpense {
   readonly id: string;
@@ -157,7 +198,8 @@ const RECENT_EXPENSE_LIMIT = 2;
  * These are the only rows a joiner may claim, and the screens say so: someone
  * whose name is already linked to an account is not a name to take over, they
  * are a person to ask for a link. Removed participants are excluded — their
- * history stays where it is.
+ * history stays where it is — and so is the seat an ownerless group is
+ * keeping for its creator.
  *
  * The per-member figures come from one balance computation over the whole
  * group rather than a query each, because the engine has to read every expense
@@ -185,6 +227,7 @@ export async function listClaimableMembers(
         eq(participants.groupId, groupId),
         isNull(participants.userId),
         isNull(participants.removedAt),
+        not(reservedForCreator()),
       ),
     )
     .orderBy(asc(participants.createdAt), asc(participants.id));
@@ -304,7 +347,11 @@ export type JoinOutcome =
  * The guard is the `userId IS NULL` in the UPDATE predicate rather than a
  * SELECT before it: two people racing for the same name must not both be told
  * they won, and the database is the only place that can decide. Zero rows
- * updated is the loser, and it is a normal outcome rather than an error.
+ * updated is the loser, and it is a normal outcome rather than an error. The
+ * seat an ownerless group keeps for its creator loses the same way.
+ *
+ * Whatever personal link the seat had is retired with the claim, exactly as
+ * the guest-cookie claim retires it (`claimGuestSession`).
  */
 export async function claimMember(
   input: {
@@ -339,6 +386,7 @@ export async function claimMember(
           eq(participants.groupId, groupId),
           isNull(participants.userId),
           isNull(participants.removedAt),
+          not(reservedForCreator()),
         ),
       )
       .returning({
@@ -351,6 +399,29 @@ export async function claimMember(
     await tx
       .insert(groupMembers)
       .values({ groupId, userId, participantId, role: "member" });
+
+    /*
+     * The seat's personal link stood in for an account, and there is one now.
+     *
+     * Left live, the URL somebody was once sent — no expiry, by default —
+     * went on minting guest sessions that act as this account's participant,
+     * and nobody could see it to revoke it: the People screen shows a seat
+     * with an account as an account, not as a link. So it goes, with every
+     * session spent from it, in the transaction that linked the seat.
+     */
+    const retired = await tx
+      .update(guestInvitations)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(guestInvitations.participantId, participantId),
+          isNull(guestInvitations.revokedAt),
+        ),
+      )
+      .returning({ id: guestInvitations.id });
+    for (const invitation of retired) {
+      await revokeSessionsForInvitation(invitation.id, { db: tx, now });
+    }
 
     await recordActivity(tx, {
       groupId,
@@ -488,6 +559,7 @@ export async function joinAsGuest(
           and(
             eq(participants.id, input.participantId),
             eq(participants.groupId, groupId),
+            not(reservedForCreator()),
           ),
         )
         .limit(1);

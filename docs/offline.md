@@ -23,6 +23,15 @@ the confirmation should not claim they have.
 directly instead of navigating to it. Cold-starting with no network lands on
 the offline screen, which lists the groups this device can add to.
 
+Both rest on the service worker, which the first screen of the app a device
+opens registers — a group screen, a guest's included, or any signed-in one;
+not the homepage, and not a join link. Its precache holds every build chunk
+under the size line in `serwist.config.mjs`, and that is why the drawer can
+fetch its form only when it opens rather than with every group screen: the
+form is the largest thing in the app, and the device already holds it. The
+offline screen carries the form's strings in every language, read at build
+time, because it cannot know which one it will be opened in.
+
 **Sending, on its own.** The queue drains when the app is opened, when the
 browser reports a network, and when the tab becomes visible again. The last of
 those is the one that usually fires: a phone that has been in a pocket is a

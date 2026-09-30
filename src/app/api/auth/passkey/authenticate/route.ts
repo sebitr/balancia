@@ -60,10 +60,7 @@ async function handleGet() {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey authentication options failed",
-    );
+    logger.error({ err: error }, "Passkey authentication options failed");
     const t = await getTranslations("serverErrors");
     return NextResponse.json(
       { error: t("passkeySignInUnavailable") },
@@ -142,10 +139,7 @@ async function handlePost(request: Request) {
         { status: 400 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey authentication failed",
-    );
+    logger.error({ err: error }, "Passkey authentication failed");
     return NextResponse.json(
       { error: t("passkeyUnverified") },
       { status: 500 },

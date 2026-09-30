@@ -314,6 +314,17 @@ export function occurrencesUpTo(
      * and the series would never end.
      */
     alreadyGenerated?: number;
+    /**
+     * The earliest date to return. Dates of the series before it are walked
+     * past rather than returned, and do not count towards `maxOccurrences` or
+     * the rule's own count — they were never generated.
+     *
+     * This is how a template resumed after a pause skips what fell due while
+     * it stood still: `from` still says where the series last produced
+     * something, and this says where it is allowed to start again. See
+     * `firstOccurrenceDueAfter`.
+     */
+    notBefore?: string | null;
   } = {},
 ): string[] {
   validateRule(rule);
@@ -332,11 +343,46 @@ export function occurrencesUpTo(
   while (current && occurrences.length < limit) {
     const currentDate = parseDate(current, rule.timezone);
     if (currentDate > untilDate) break;
-    occurrences.push(current);
+    if (!options.notBefore || current >= options.notBefore) {
+      occurrences.push(current);
+    }
     current = nextOccurrence(rule, current);
   }
 
   return occurrences;
+}
+
+/**
+ * The first occurrence that has not yet come due at `now` — where a series
+ * picks up again after standing still.
+ *
+ * A paused template, or one in an archived group, has missed whatever fell due
+ * meanwhile, and those dates are skipped rather than back-filled: a monthly
+ * rent resumed in June should not arrive as April, May and June at once, each
+ * with its own notification. "Not yet due" is measured the way the worker
+ * measures it, against `GENERATION_HOUR` in the rule's zone: resumed at 08:00,
+ * today's occurrence is still to come; resumed at 10:00, it has gone.
+ *
+ * `from` is the last date the series produced, when there is one, so the walk
+ * starts there rather than at the beginning of the series. Stepping through
+ * the rule rather than jumping to `now` keeps an every-other-month or a
+ * fortnightly series on its own days.
+ */
+export function firstOccurrenceDueAfter(
+  rule: RecurrenceRule,
+  now: Date,
+  options: { from?: string | null } = {},
+): string | null {
+  validateRule(rule);
+  const alreadyDue = dueThrough(rule.timezone, now);
+
+  let current = options.from
+    ? nextOccurrence(rule, options.from)
+    : firstOccurrence(rule);
+  while (current && current <= alreadyDue) {
+    current = nextOccurrence(rule, current);
+  }
+  return current;
 }
 
 /**

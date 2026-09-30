@@ -1,7 +1,14 @@
 import { getTranslations } from "next-intl/server";
-import { getDateFormatter } from "@/i18n/preferences";
-import type { ActivityEntry } from "@/modules/activity/service";
+import { getDateFormatter, getNumberLocale } from "@/i18n/preferences";
+import { formatMoney, money } from "@/modules/currencies/money";
+import {
+  restorableKind,
+  type ActivityEntry,
+  type ActivityMetadata,
+  type RestorableKind,
+} from "@/modules/activity/service";
 import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
+import { RestoreDeleted } from "./restore-deleted";
 
 /**
  * Activity history rendering.
@@ -16,18 +23,28 @@ import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
  * Times are told on the group's clock. The app's own zone is the server's —
  * UTC unless an operator set one — and on it a group in Paris read 14:05
  * against an expense its members had added at 16:05.
+ *
+ * A deletion whose entry is still deleted carries a Restore. Which rows those
+ * are is the page's question, answered in one query before this renders; see
+ * `findRestorableDeletions`.
  */
 
 export async function ActivityFeed({
   entries,
+  groupId,
+  restorable,
   timeZone,
 }: {
   entries: readonly ActivityEntry[];
+  groupId: string;
+  /** The ids of the rows whose entry can still be put back. */
+  restorable: ReadonlySet<string>;
   /** The group's IANA zone, which every time in the feed is told in. */
   timeZone: string;
 }) {
   const t = await getTranslations("activity");
   const dates = await getDateFormatter();
+  const numberLocale = await getNumberLocale();
   // The action id is runtime data, so its key cannot be checked at compile
   // time; `t.has` inside the helper is what makes reading it back safe.
   const translate = t as unknown as ActivityTranslate;
@@ -48,6 +65,7 @@ export async function ActivityFeed({
         // in since-last-opened.tsx.
         const repeats =
           index > 0 && actorOf(entries[index - 1]!, translate) === actor;
+        const kind = restorableKind(entry);
 
         return (
           <li key={entry.id} className="flex gap-3 text-sm">
@@ -55,7 +73,7 @@ export async function ActivityFeed({
               aria-hidden="true"
               className="mt-2 size-1.5 shrink-0 rounded-full bg-border"
             />
-            <span className="min-w-0">
+            <span className="min-w-0 flex-1">
               <span className="block">
                 <span className={repeats ? "sr-only" : "font-medium"}>
                   {actor}{" "}
@@ -71,9 +89,66 @@ export async function ActivityFeed({
                 {dates.at(entry.createdAt, { time: "short", timeZone })}
               </time>
             </span>
+            {kind && entry.entityId && (
+              <RestoreDeleted
+                groupId={groupId}
+                kind={kind}
+                entityId={entry.entityId}
+                label={restoreLabel(entry, kind, translate, numberLocale)}
+                deleted={restorable.has(entry.id)}
+              />
+            )}
           </li>
         );
       })}
     </ol>
   );
+}
+
+/**
+ * What the Restore button is called for somebody who cannot see its row.
+ *
+ * "Restore" alone, read out of a list of the page's buttons, is several
+ * buttons with one name. So the name carries the entry's own words — its
+ * description, or for a repayment, which has none, its amount — and starts
+ * with the word printed on the button, so that a voice command naming what it
+ * sees still reaches it.
+ */
+function restoreLabel(
+  entry: ActivityEntry,
+  kind: RestorableKind,
+  t: ActivityTranslate,
+  locale: string,
+): string {
+  const metadata = entry.metadata ?? {};
+  if (kind === "settlement") {
+    const amount = amountOf(metadata, locale);
+    return amount ? t("restore.settlement", { amount }) : t("restore.unnamed");
+  }
+  const description = metadata.description;
+  if (typeof description !== "string" || description.length === 0) {
+    return t("restore.unnamed");
+  }
+  return t(kind === "expense" ? "restore.expense" : "restore.recurring", {
+    description,
+  });
+}
+
+/** The amount a deletion recorded, formatted, or null if it cannot be read. */
+function amountOf(metadata: ActivityMetadata, locale: string): string | null {
+  const { amount, currency } = metadata;
+  if (
+    typeof amount !== "string" ||
+    !/^-?\d+$/.test(amount) ||
+    typeof currency !== "string"
+  ) {
+    return null;
+  }
+  try {
+    return formatMoney(money(BigInt(amount), currency), { locale });
+  } catch {
+    // A currency this build no longer knows. The row keeps its button; only
+    // the name loses its figure.
+    return null;
+  }
 }

@@ -116,7 +116,13 @@ export async function startWorker(): Promise<void> {
     const report = await instrumented(QUEUES.recurringGenerate, () =>
       generateDueOccurrences(),
     );
-    jobLogger.info(report, "Generated recurring expenses");
+    // A template that failed does not fail the job — the rest still ran — so
+    // the summary is where it shows, one level up from the ordinary tick.
+    if (report.templatesFailed > 0) {
+      jobLogger.warn(report, "Generated recurring expenses, with failures");
+    } else {
+      jobLogger.info(report, "Generated recurring expenses");
+    }
   });
 
   await boss.work<ImportCommitPayload>(QUEUES.importCommit, async (jobs) => {

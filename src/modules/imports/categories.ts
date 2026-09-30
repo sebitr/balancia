@@ -1,7 +1,10 @@
 import {
   FALLBACK_CATEGORY,
+  classifyIncomeSync,
   classifyTransactionSync,
   isExpenseCategory,
+  isIncomeCategory,
+  isValidIncomeSubcategory,
   isValidSubcategory,
   normalizeLegacyCategory,
   normalizeLegacyPair,
@@ -9,6 +12,7 @@ import {
   type ExpenseSubcategory,
   type LearnedMerchantMapping,
 } from "@/modules/categorization";
+import { isSpending } from "@/modules/expenses/direction";
 import type { StagedExpense } from "./types";
 
 /**
@@ -293,6 +297,34 @@ export function categorizeImportedExpense(
   staged: StagedExpense,
   options: { mappings?: readonly LearnedMerchantMapping[] } = {},
 ): { category: string | null; subcategory: string | null } {
+  // Every step below reads spending: Splitwise's labels, the coarse table and
+  // the expense rules all answer "what was this money for". Money coming in
+  // asks where it came from, and a spending code on it would file a refund as
+  // groceries. So an incoming row keeps an income code it already carries — a
+  // backup's own answer, or the one a Splitwise refund is given — is offered
+  // to the income rules, and is otherwise left for somebody to file.
+  if (!isSpending(staged.direction)) {
+    if (isIncomeCategory(staged.category)) {
+      return {
+        category: staged.category,
+        subcategory: isValidIncomeSubcategory(
+          staged.category,
+          staged.subcategory,
+        )
+          ? (staged.subcategory ?? null)
+          : null,
+      };
+    }
+    const income = classifyIncomeSync({
+      merchant: staged.description,
+      description: staged.description,
+      note: staged.notes ?? undefined,
+    });
+    return income.decision === "auto_assigned" && income.category
+      ? { category: income.category, subcategory: income.subcategory ?? null }
+      : { category: null, subcategory: null };
+  }
+
   // A Balancia backup carries the pair the user actually chose, and the pair
   // is what gets brought up to date: a 2025 export saying `health` /
   // `health_insurance` restores as `insurance` / `health`, because that is

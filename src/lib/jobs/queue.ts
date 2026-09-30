@@ -73,10 +73,7 @@ async function start(): Promise<PgBoss> {
   });
 
   instance.on("error", (error: Error) => {
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Job queue error",
-    );
+    logger.error({ err: error }, "Job queue error");
   });
 
   await instance.start();

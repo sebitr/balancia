@@ -1,47 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { RouteError } from "@/components/layout/route-error";
 
 /**
  * Application error boundary.
  *
- * Shows a plain message and a way out. The underlying error is logged to the
- * browser console for a developer, never rendered — a stack trace on screen
- * can leak internals.
+ * The screen of last resort below the root layout, so it owns the whole
+ * viewport and offers the way home. A failure inside a group or inside
+ * settings is caught nearer to where it happened, by the boundaries in those
+ * segments, and keeps their chrome; one in the root layout itself is
+ * `global-error.tsx`'s.
  */
-export default function GlobalError({
+export default function AppError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   const t = useTranslations("errorBoundary");
-  const tCommon = useTranslations("common");
-
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">
-        {t("title")}
-      </h1>
-      <p className="max-w-md text-pretty text-muted-foreground">{t("body")}</p>
-      {error.digest && (
-        <p className="font-mono text-xs text-muted-foreground">
-          {t("reference", { digest: error.digest })}
-        </p>
-      )}
-      <div className="flex gap-3">
-        <Button onClick={reset}>{tCommon("retry")}</Button>
-        <Button variant="outline" asChild>
-          <a href="/dashboard">{t("goToGroups")}</a>
-        </Button>
-      </div>
-    </div>
+    <RouteError error={error} retry={retry} className="min-h-dvh">
+      <Button variant="outline" asChild>
+        <a href="/dashboard">{t("goToGroups")}</a>
+      </Button>
+    </RouteError>
   );
 }

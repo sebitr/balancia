@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getDateFormatter } from "@/i18n/preferences";
 import { RefreshCw } from "lucide-react";
@@ -28,6 +29,11 @@ function weekdayName(locale: string, isoWeekday: number): string {
     weekday: "long",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(2024, 0, isoWeekday)));
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("recurringPage");
+  return { title: t("title") };
 }
 
 export default async function RecurringPage({

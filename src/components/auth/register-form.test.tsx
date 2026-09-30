@@ -88,3 +88,49 @@ describe("the password rules", () => {
     );
   });
 });
+
+/**
+ * A refusal is tied to the field it is about.
+ *
+ * Both password errors were a bare paragraph under their field: seen, but not
+ * part of the field, so a screen reader returning to it heard the rule and not
+ * what was wrong with this attempt at it — and the confirm field heard nothing.
+ */
+describe("the password errors", () => {
+  it("describe the password field alongside its rule", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<RegisterForm />);
+
+    await fillIn(user, "password1234");
+
+    const field = screen.getByLabelText("Password", { exact: true });
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(
+      `${en.register.passwordHint} ${en.register.validation.passwordCommon}`,
+    );
+  });
+
+  it("describe the confirm field when the two do not match", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<RegisterForm />);
+
+    await user.type(screen.getByLabelText("Name"), "Grace Hopper");
+    await user.type(screen.getByLabelText("Email"), "grace@example.com");
+    await user.type(
+      screen.getByLabelText("Password", { exact: true }),
+      "orchid-lantern-42",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm password"),
+      "orchid-lantern-43",
+    );
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
+    const confirm = screen.getByLabelText("Confirm password");
+    expect(confirm).toHaveAttribute("aria-invalid", "true");
+    expect(confirm).toHaveAccessibleDescription(
+      en.register.validation.mismatch,
+    );
+    expect(registerAction).not.toHaveBeenCalled();
+  });
+});

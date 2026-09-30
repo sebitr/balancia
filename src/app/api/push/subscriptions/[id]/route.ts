@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
+import { isUuid } from "@/app/api/mobile";
 import { getCurrentUser } from "@/lib/security/actor";
 import { trackRoute } from "@/lib/metrics/http";
 import { deleteSubscriptionById } from "@/modules/notifications/subscriptions";
@@ -38,6 +39,11 @@ async function handleDelete(
   }
 
   const { id } = await context.params;
+  // Answered as a made-up id is, before the query: PostgreSQL throws on a
+  // malformed UUID, and this handler has no catch to turn that into a 404.
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: t("notFound") }, { status: 404 });
+  }
   const removed = await deleteSubscriptionById(user.userId, id);
   if (!removed) {
     return NextResponse.json({ error: t("notFound") }, { status: 404 });
