@@ -57,7 +57,9 @@ import {
  *   map people → commit in one transaction → report
  *
  * Retry safety comes from fingerprints. Each staged row gets a normalized hash
- * of its meaningful content, scoped to the group. On commit, a row whose
+ * of its meaningful content, scoped to the group, and numbered where the file
+ * holds the same line more than once, so a second copy is not taken for the
+ * first. On commit, a row whose
  * fingerprint already exists in `imported_fingerprints` is marked
  * `skipped_duplicate` instead of being written again — so importing the same
  * export twice, or resuming a partially failed run, never duplicates money.
@@ -107,14 +109,27 @@ const FIELD_SEPARATOR = "\u0000";
  * across two exports produces the same fingerprint. Deliberately excludes the
  * row number and the file it came from.
  *
+ * What a row means is not always enough to tell it from the next one. Two
+ * coffees at the same price on the same morning, split the same way, read
+ * identically, and a file can rightly hold both. `occurrence` says which copy
+ * this is — 1 for the first line of its kind, 2 for the next that reads the
+ * same, as `fingerprintRows` counts them — and a copy after the first is
+ * hashed with its number. Without it the second coffee was taken for the
+ * first, already imported, and never written.
+ *
  * These hashes are stored — `imported_fingerprints` is how a retried import
  * knows what it already wrote. Changing anything this function feeds the hash,
  * the separator included, orphans every fingerprint already in the database
- * and lets a re-import write a second copy of somebody's money. The pinned
- * digests in `fingerprint.test.ts` are there to make that impossible to do by
- * accident.
+ * and lets a re-import write a second copy of somebody's money. That is why
+ * the first copy is hashed exactly as it was before copies were counted, and
+ * why the pinned digests in `fingerprint.test.ts` are there to make changing
+ * any of it impossible to do by accident.
  */
-export function fingerprintRow(groupId: string, row: StagedRow): string {
+export function fingerprintRow(
+  groupId: string,
+  row: StagedRow,
+  occurrence = 1,
+): string {
   const canonical =
     row.kind === "expense"
       ? [
@@ -149,7 +164,15 @@ export function fingerprintRow(groupId: string, row: StagedRow): string {
           row.toSourceName.trim().toLowerCase(),
         ].join(FIELD_SEPARATOR);
 
-  return createHash("sha256").update(canonical).digest("hex");
+  // A copy's number goes on as one more field. Each kind of row has a fixed
+  // number of fields, its kind first, so the extra one cannot make a copy
+  // read as the first of some other row.
+  const counted =
+    occurrence === 1
+      ? canonical
+      : [canonical, String(occurrence)].join(FIELD_SEPARATOR);
+
+  return createHash("sha256").update(counted).digest("hex");
 }
 
 /**
@@ -160,14 +183,54 @@ export function fingerprintRow(groupId: string, row: StagedRow): string {
  * fingerprint. Nothing is ever stored under this one: it names what an older
  * import wrote, so that a newer reading of the same file does not write it
  * again.
+ *
+ * Taken with the row's own `occurrence`: the second of two identical "Bob
+ * paid Carol" lines was the second of the two expenses an older import read
+ * them as. That import wrote only the first — it took the second for the
+ * first — so nothing holds the second's former fingerprint, and the line
+ * comes in now, which is what the group was missing.
  */
 export function formerFingerprint(
   groupId: string,
   row: StagedRow,
+  occurrence = 1,
 ): string | null {
   return row.kind === "settlement" && row.formerlyReadAs
-    ? fingerprintRow(groupId, row.formerlyReadAs)
+    ? fingerprintRow(groupId, row.formerlyReadAs, occurrence)
     : null;
+}
+
+export interface RowFingerprints {
+  /** What the row is stored under once it is imported. */
+  readonly fingerprint: string;
+  /** See `formerFingerprint`. */
+  readonly former: string | null;
+}
+
+/**
+ * Both fingerprints of every row of one file, in the file's order.
+ *
+ * A row is counted only against the rows before it that read exactly the same,
+ * so the second of two identical coffees is the second whatever else the file
+ * holds, and a later export that adds other lines — before them, or between
+ * them — leaves both where they were. Which of two identical lines comes first
+ * cannot matter either: either way round, the file holds the same pair.
+ */
+export function fingerprintRows(
+  groupId: string,
+  rows: readonly StagedRow[],
+): RowFingerprints[] {
+  const copies = new Map<string, number>();
+  return rows.map((row) => {
+    const first = fingerprintRow(groupId, row);
+    const occurrence = (copies.get(first) ?? 0) + 1;
+    copies.set(first, occurrence);
+    return {
+      fingerprint:
+        occurrence === 1 ? first : fingerprintRow(groupId, row, occurrence),
+      former: formerFingerprint(groupId, row, occurrence),
+    };
+  });
 }
 
 export interface ImportPreview {
@@ -270,13 +333,14 @@ export async function stageImport(
   }
 
   // Taken from the row as the file had it, not as it is staged: see
-  // `FittedRow.source`.
-  const fingerprints = fitted.rows.map((entry) =>
-    fingerprintRow(access.groupId, entry.source),
+  // `FittedRow.source`. Both lists follow the fitted rows, which leave out a
+  // row the parsed ones still hold if its amount is too large to record.
+  const fingerprinted = fingerprintRows(
+    access.groupId,
+    fitted.rows.map((entry) => entry.source),
   );
-  const formerFingerprints = parsed.rows.map((entry) =>
-    formerFingerprint(access.groupId, entry.row),
-  );
+  const fingerprints = fingerprinted.map((entry) => entry.fingerprint);
+  const formerFingerprints = fingerprinted.map((entry) => entry.former);
   const lookedUp = [
     ...fingerprints,
     ...formerFingerprints.filter((value): value is string => value !== null),
@@ -632,6 +696,21 @@ export async function commitImportRun(
       ).map((row) => row.fingerprint),
     );
 
+    // Each row's former fingerprint, looked up by the fingerprint the row was
+    // staged under so that the two carry the same copy number. The run is
+    // counted again from what was staged, in the file's order: the fitted
+    // rows rather than the file's, but fitting only shortens text, and a
+    // payment — the one kind of row with a former reading — hashes none. A
+    // run staged before copies were counted holds every copy under the
+    // first's fingerprint, and so gets the first's former fingerprint for
+    // each, which is what its preview checked.
+    const formerOf = new Map(
+      fingerprintRows(
+        groupId,
+        rows.map((row) => row.staged as StagedRow),
+      ).map((entry) => [entry.fingerprint, entry.former]),
+    );
+
     // What this group has already taught the classifier, read once for the
     // whole run: an import of a year's history is one query, not one a row.
     const mappings = await loadGroupMappings(groupId, { db: tx });
@@ -649,7 +728,7 @@ export async function commitImportRun(
       // The former fingerprint is checked here as well as in the preview,
       // because this is the check that keeps a row out — the preview's answer
       // is stale if another import of the file committed in between.
-      const former = formerFingerprint(groupId, staged);
+      const former = formerOf.get(row.fingerprint) ?? null;
       if (
         committed.has(row.fingerprint) ||
         (former !== null && committed.has(former))
