@@ -1218,8 +1218,8 @@ describe("settlement", () => {
         },
       ],
     });
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
