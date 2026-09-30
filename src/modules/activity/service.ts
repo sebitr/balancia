@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db/client";
 import {
   activityEvents,
   expenses,
+  participants,
   recurringExpenses,
   settlements,
 } from "@/lib/db/schema";
@@ -168,6 +169,12 @@ export async function listGroupActivity(
  * Undo toast calls. The permission is the one that restore checks for itself,
  * named again here only so that the screen never offers a button the action
  * behind it would refuse.
+ *
+ * A person taken out of the group is one of them. Removal is soft, like a
+ * deletion, and its toast is the same eight seconds; missing it cost more than
+ * a missing expense, because a removed person drops out of every picker and
+ * their guest link stops working. Putting them back is the owner's alone, as
+ * removing them is, so a guest or a member sees the line and no button.
  */
 const RESTORABLE = {
   "expense.deleted": { kind: "expense", permission: "editAnyExpense" },
@@ -175,6 +182,10 @@ const RESTORABLE = {
   "recurring.deleted": {
     kind: "recurring_expense",
     permission: "manageRecurring",
+  },
+  "participant.removed": {
+    kind: "participant",
+    permission: "removeParticipants",
   },
 } as const satisfies Partial<
   Record<ActivityAction, { kind: string; permission: keyof GroupPermissions }>
@@ -220,9 +231,9 @@ export function restorableKind(entry: ActivityEntry): RestorableKind | null {
  * are offered like any other.
  *
  * One query for the page, whatever it holds: the events are joined to the
- * three tables they can name, and a row survives only if the thing it names
- * is still deleted. Answered per row, the full feed would be a hundred round
- * trips to draw one list.
+ * four tables they can name, and a row survives only if the thing it names
+ * is still deleted — or, for a person, still removed. Answered per row, the
+ * full feed would be a hundred round trips to draw one list.
  */
 export async function findRestorableDeletions(
   access: GroupAccess,
@@ -275,6 +286,14 @@ export async function findRestorableDeletions(
         eq(recurringExpenses.groupId, activityEvents.groupId),
       ),
     )
+    .leftJoin(
+      participants,
+      and(
+        eq(activityEvents.entityType, "participant"),
+        eq(participants.id, activityEvents.entityId),
+        eq(participants.groupId, activityEvents.groupId),
+      ),
+    )
     .where(
       and(
         eq(activityEvents.groupId, access.groupId),
@@ -283,6 +302,7 @@ export async function findRestorableDeletions(
           isNotNull(expenses.deletedAt),
           isNotNull(settlements.deletedAt),
           isNotNull(recurringExpenses.deletedAt),
+          isNotNull(participants.removedAt),
         ),
       ),
     );

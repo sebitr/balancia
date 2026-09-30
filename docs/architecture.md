@@ -180,8 +180,10 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 - **Activity**: append-only `activity_events` written in the same transaction
   as the financial change. The Activity screen carries a Restore on the latest
   deletion of an expense, a repayment or a recurring expense that is still
-  deleted — the same restore the Undo toast calls, so a deletion is not
-  recoverable only inside that toast's eight seconds. Which rows qualify is
+  deleted, and on the latest removal of a person who is still removed — the
+  same restore the Undo toast calls, so neither is recoverable only inside
+  that toast's eight seconds. Each is offered only to a reader whose role may
+  make that restore, which for a person is the owner. Which rows qualify is
   worked out for the whole page in one query (`findRestorableDeletions`); a
   deletion that was half of a change of type records `replacedBy` and is not
   offered, since restoring it would count the same money twice.

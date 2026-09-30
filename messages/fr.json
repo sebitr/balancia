@@ -923,6 +923,8 @@
       "expense": "Rétablir la dépense « {description} »",
       "settlement": "Rétablir le remboursement de {amount}",
       "recurring": "Rétablir la dépense récurrente « {description} »",
+      "participant": "Rétablir {name} dans le groupe",
+      "unnamedParticipant": "Rétablir la personne retirée du groupe",
       "unnamed": "Rétablir ce qui a été supprimé",
       "done": "Rétabli",
       "failed": "Le rétablissement n’a pas abouti. Réessaie."
@@ -2170,7 +2172,7 @@
     "removeBlockedOwed": "On doit encore {amounts} à {name}. Solde les comptes avant de retirer cette personne.",
     "removeBlockedMixed": "{name} a encore {amounts} en suspens. Solde les comptes avant de retirer cette personne.",
     "removeTitle": "Retirer {name} ?",
-    "removeBody": "Les dépenses passées conservent son nom, l’historique du groupe reste donc intact. Tout lien d’invitation actif cesse immédiatement de fonctionner. Tu peux annuler juste après.",
+    "removeBody": "Les dépenses passées conservent son nom, l’historique du groupe reste donc intact. Tout lien d’invitation actif cesse immédiatement de fonctionner. Tu peux annuler juste après, ou rétablir cette personne plus tard depuis l’écran Activité.",
     "keepThem": "Ne rien changer",
     "remove": "Retirer",
     "removed": "{name} ne fait plus partie du groupe",

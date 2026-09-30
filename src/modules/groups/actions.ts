@@ -302,7 +302,10 @@ export async function removeParticipantAction(
   return result;
 }
 
-/** Undo for the removal above, offered on the toast for a few seconds. */
+/**
+ * Undo for the removal above: offered on its toast for a few seconds, and on
+ * the removal's line in the group's Activity for as long as it stands.
+ */
 export async function restoreParticipantAction(
   groupId: string,
   participantId: string,
