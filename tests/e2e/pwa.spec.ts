@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { palette } from "@/modules/auth/emails/tokens";
+import { registerAndSignIn } from "./helpers";
 
 /**
  * PWA installability: the manifest, its icons, and the offline shell.
@@ -107,7 +108,18 @@ test("links a real Balancia favicon, not the framework default", async ({
   expect(svg).toContain(palette.primary.toLowerCase());
 });
 
-test("registers a service worker and serves it from the root scope", async ({
+/**
+ * The worker is served from the root, and registered by the app, not by the
+ * homepage.
+ *
+ * Installing it precaches a few megabytes of build chunks, which is the point
+ * for somebody using the app and a strange thing to do to a visitor reading
+ * the homepage — so only the app's own shells register it (see
+ * `SerwistRegister`). Once registered it controls every page at the origin,
+ * the homepage included, which is why the homepage is visited first: in the
+ * test's fresh browser, before anything has had the chance.
+ */
+test("serves the service worker from the root, and registers it from the app rather than the homepage", async ({
   page,
   request,
 }) => {
@@ -115,24 +127,29 @@ test("registers a service worker and serves it from the root scope", async ({
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toContain("javascript");
 
-  await page.goto("/");
+  const registeredScope = () =>
+    page.evaluate(async () => {
+      if (!("serviceWorker" in navigator)) return null;
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      return registration?.scope ?? null;
+    });
+
+  // Waited on until the network is quiet: every chunk the homepage asked for
+  // has arrived and run, so an effect that was going to register has had its
+  // chance. The registration below is what shows this browser would have
+  // noticed one.
+  await page.goto("/", { waitUntil: "networkidle" });
+  expect(await registeredScope()).toBeNull();
+
+  await registerAndSignIn(page);
 
   // Registration is kicked off from an effect after hydration, so it is not
   // done by the time `goto` resolves. Poll rather than sample once: asserting
   // immediately tests how fast the page hydrates, not whether the worker
   // registers.
   await expect
-    .poll(
-      () =>
-        page.evaluate(async () => {
-          if (!("serviceWorker" in navigator)) return false;
-          const registration =
-            await navigator.serviceWorker.getRegistration("/");
-          return registration !== undefined;
-        }),
-      { timeout: 10_000 },
-    )
-    .toBe(true);
+    .poll(registeredScope, { timeout: 10_000 })
+    .toBe(new URL("/", page.url()).href);
 });
 
 test("the service worker never caches authentication endpoints", async ({
