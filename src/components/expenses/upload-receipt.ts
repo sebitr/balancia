@@ -8,7 +8,14 @@
  *
  * This is the only path by which a receipt image reaches the server, and it is
  * always something the user asked for. Scanning does not use it.
+ *
+ * Being the only path is also why the photograph is redrawn here, without its
+ * EXIF block and the position in it: every way a receipt is kept — the
+ * paperclip, the scanner's checkbox, a photo shared in from another app —
+ * passes through this function. See `receipt-image.ts`.
  */
+
+import { prepareReceiptForUpload } from "./receipt-image";
 
 export interface UploadedReceipt {
   readonly id: string;
@@ -30,8 +37,9 @@ export async function uploadReceipt(
   file: Blob,
   fileName?: string,
 ): Promise<UploadResult> {
+  const prepared = await prepareReceiptForUpload(file, fileName);
   const body = new FormData();
-  body.append("file", file, fileName);
+  body.append("file", prepared.file, prepared.fileName);
 
   try {
     const response = await fetch(`/api/groups/${groupId}/attachments`, {

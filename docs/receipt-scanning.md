@@ -747,6 +747,17 @@ Tick the box and the copy changes to say the image will be uploaded and stored
 with the expense on this server — through the ordinary attachment flow,
 unchanged, the same one the paperclip button has always used.
 
+That flow redraws a photograph before sending it
+(`src/components/expenses/receipt-image.ts`): a JPEG, WebP or HEIC is decoded
+with its EXIF orientation applied, drawn onto a canvas at most 2560 pixels on
+the long side, and encoded afresh as JPEG. What is stored is pixels and
+nothing else, so the GPS position a phone writes into a photo does not reach
+the group. A picture from the live camera is already a canvas capture with no
+metadata; it passes through the same step anyway, because the upload cannot
+tell it from a photo picked from the library. A PDF is sent as it is. When the
+browser cannot decode the format — HEIC anywhere but Safari — the original is
+sent rather than nothing.
+
 Select a provider and the first line changes too, to name the server and the
 provider the photograph is going to. The checkbox is unaffected: sending an
 image to be _read_ still says nothing about whether it is _kept_, which is the

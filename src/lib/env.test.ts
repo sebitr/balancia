@@ -7,6 +7,7 @@ import {
   isNewerSchemaAllowed,
   parseEnv,
 } from "./env";
+import { UPLOAD_CEILING_BYTES } from "./upload-limit";
 
 const base = {
   DATABASE_URL: "postgres://balancia:secret@localhost:5432/balancia",
@@ -138,6 +139,27 @@ describe("environment validation", () => {
       } as unknown as NodeJS.ProcessEnv);
       expect(env.S3_BUCKET).toBe("receipts");
       expect(env.S3_FORCE_PATH_STYLE).toBe(true);
+    });
+
+    /**
+     * The proxy in front of every route keeps no more of a body than the build
+     * allowed it, and cuts the rest off without a word. A larger setting would
+     * boot and then fail every upload past the ceiling as a truncated form, so
+     * it fails at boot instead, saying which number to change.
+     */
+    it("caps the upload size at what the build can receive", () => {
+      const at = parseEnv({
+        ...base,
+        UPLOAD_MAX_BYTES: String(UPLOAD_CEILING_BYTES),
+      } as unknown as NodeJS.ProcessEnv);
+      expect(at.UPLOAD_MAX_BYTES).toBe(UPLOAD_CEILING_BYTES);
+
+      expect(() =>
+        parseEnv({
+          ...base,
+          UPLOAD_MAX_BYTES: String(UPLOAD_CEILING_BYTES + 1),
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/UPLOAD_MAX_BYTES cannot be above/);
     });
   });
 
@@ -769,6 +791,24 @@ describe("the setup wizard", () => {
     for (const value of writes) {
       expect(value).toMatch(/^(127\.0\.0\.1|0\.0\.0\.0):\$/);
     }
+  });
+
+  /**
+   * The repair that lowers an upload limit the app would refuse to boot with
+   * spells the ceiling out as a number, because a shell script cannot import
+   * it. Raising the ceiling without this would leave the wizard lowering a
+   * valid value, or waving through one that stops the container.
+   */
+  it("repairs the upload limit at the ceiling the build has", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "scripts", "bootstrap.sh"),
+      "utf8",
+    );
+
+    expect(source).toContain(`[ "$upload_max" -gt ${UPLOAD_CEILING_BYTES} ]`);
+    expect(source).toContain(
+      `write_setting UPLOAD_MAX_BYTES ${UPLOAD_CEILING_BYTES}`,
+    );
   });
 });
 

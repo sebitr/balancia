@@ -254,10 +254,32 @@ the `local` driver.
 
 ### `UPLOAD_MAX_BYTES`
 
-Default `10485760` (10 MiB). Maximum size of a single receipt.
+Default `10485760` (10 MiB). Maximum size of a single receipt. At most
+`26214400` (25 MiB).
+
+The ceiling is fixed when the image is built, not when it starts. Every
+request passes through Balancia's own proxy layer (`src/proxy.ts`) before it
+reaches a route, and Next.js keeps no more of a request body there than the
+build allows — the rest is cut off without an error, and the upload fails as a
+malformed form. Balancia builds with room for 25 MiB, and refuses to start with
+a value above that, so the setting cannot promise what the server cannot
+receive. The constant is `UPLOAD_CEILING_BYTES` in `src/lib/upload-limit.ts`,
+for anyone building their own image who needs more.
+
+The limit is enforced on the bytes that actually arrive, not on the size the
+request declares, so an upload sent without a `Content-Length` is refused with
+the same 413 as one that announced its size.
+
+You should rarely need to raise it. Photographs are redrawn in the browser
+before they are sent, at most 2560 pixels on the long side, which makes them a
+megabyte or two; the setting mostly matters for long scanned PDFs.
 
 If you raise it, raise your reverse proxy's body limit too, or the proxy will
 reject the upload before Balancia sees it (`client_max_body_size` in nginx).
+
+Separately from this, one group keeps at most 2 GiB of receipts, in at most
+5,000 files, whatever this is set to. That is not a setting; see
+`GROUP_STORAGE_MAX_BYTES` in `src/modules/attachments/service.ts`.
 
 ### S3-compatible storage
 

@@ -297,7 +297,7 @@ APP_URL=https://balancia.example.com
 # S3_SECRET_ACCESS_KEY=…
 # S3_FORCE_PATH_STYLE=true
 
-# Optional: cap on receipt uploads, in bytes. Default 10 MiB.
+# Optional: cap on receipt uploads, in bytes. Default 10 MiB, at most 25 MiB.
 # UPLOAD_MAX_BYTES=10485760
 
 # Optional: close sign-ups on a private instance.
