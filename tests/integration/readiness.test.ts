@@ -62,8 +62,9 @@ describe("GET /api/health/ready", () => {
   });
 
   it("stays ready on a database a later release has already migrated", async () => {
-    // Rolling back the image leaves the schema ahead of the code, which is
-    // harmless: migrations only ever add.
+    // Rolling back the image leaves the schema ahead of the code. Whether to
+    // run like that is the migration step's decision (ALLOW_NEWER_SCHEMA);
+    // an app that got past it is serving, and readiness says so.
     const pool = getPool();
     await pool.query(
       `INSERT INTO "__balancia_migrations" (name, checksum) VALUES ('9999_from_a_later_release.sql', 'test')`,

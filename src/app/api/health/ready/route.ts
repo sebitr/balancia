@@ -14,9 +14,10 @@ import { trackRoute } from "@/lib/metrics/http";
  * must not be sent traffic, and neither must one whose code already expects a
  * column the database does not have yet — which is what an image rolled out
  * ahead of its migrations looks like under `RUN_MIGRATIONS=false`, and which
- * "at least one migration has run" used to wave through. The reverse is fine:
- * a database that has migrations this image does not know is an older image
- * on a newer schema, and migrations only ever add.
+ * "at least one migration has run" used to wave through. The reverse is not
+ * this check's to refuse: a database that has migrations this image does not
+ * know is an older image on a newer schema, which the migration step stops
+ * before the app starts unless `ALLOW_NEWER_SCHEMA` says to carry on.
  *
  * It also says where the background worker stands, and deliberately does not
  * let that decide the status code. Readiness is what Compose's healthcheck and

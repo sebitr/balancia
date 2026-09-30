@@ -662,7 +662,9 @@ Its body says a little more than its status code:
 does not — non-zero only when the entrypoint's migration step was switched off
 (`RUN_MIGRATIONS=false`) and the new image arrived first. That is a 503: the
 code expects the newer schema. A database that is _ahead_ of the image, after
-rolling the image back, is not a 503: migrations only ever add.
+rolling the image back, is not a 503 either: that is the migration step's to
+refuse, and it does, before the app starts, unless `ALLOW_NEWER_SCHEMA` lets
+it through — see [Rolling back](#rolling-back).
 
 `worker` is where the background jobs stand in this process: `starting`,
 `running`, `failed` (it could not start and is retrying), or `stopping`; or

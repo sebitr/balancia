@@ -65,7 +65,7 @@ export function createShutdown({
       await stop(SHUTDOWN_DRAIN_MS);
     } catch (error) {
       logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
+        { err: error },
         "The job queue did not stop cleanly; unfinished jobs will be retried",
       );
     }

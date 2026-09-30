@@ -65,16 +65,13 @@ export async function superviseWorker({
       setWorkerState("failed");
       const retryInMs = retryDelayMs(failures);
 
-      // One line per failed attempt. The first carries the stack; after that
-      // it is the same failure again, and the message is enough.
+      // One line per failed attempt, at most one every five minutes once it
+      // has backed off. The error goes to the logger whole: its serializer
+      // is what keeps a failed query's bound values out of the line, and it
+      // can only do that with the thrown value, not its message.
       logger.error(
         {
-          err:
-            failures === 1 && error instanceof Error
-              ? (error.stack ?? error.message)
-              : error instanceof Error
-                ? error.message
-                : String(error),
+          err: error,
           attempt: failures,
           retryInSeconds: retryInMs / 1000,
         },

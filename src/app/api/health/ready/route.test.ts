@@ -105,7 +105,8 @@ describe("GET /api/health/ready — the migrations", () => {
   });
 
   it("stays ready on a database that is ahead of this image", async () => {
-    // An older image on a newer schema: migrations only ever add.
+    // An older image on a newer schema: the migration step's to refuse, not
+    // readiness's (ALLOW_NEWER_SCHEMA).
     database.applied = [...BUNDLED, "9999_from_a_later_release.sql"];
 
     const { status, body } = await ready();
