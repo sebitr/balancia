@@ -9,6 +9,7 @@ import {
 } from "./vapid";
 import { PushKeyError } from "./keys";
 import { isSendableEndpoint } from "@/lib/security/internal-hosts";
+import { readCapped } from "@/lib/http/read-capped";
 
 /**
  * Delivery of one encrypted message to one push endpoint.
@@ -71,6 +72,31 @@ export type PushOutcome =
  * when someone opens their laptop after lunch, and worthless the next week.
  */
 const DEFAULT_TTL_SECONDS = 4 * 60 * 60;
+
+/**
+ * Longest one send may take, from connecting to the last byte of the reply.
+ *
+ * A push service answers as soon as it has queued the message — it does not
+ * wait for the device — so a real one replies in well under a second, and one
+ * that has not replied in ten is not about to. The endpoint is also whatever
+ * a signed-in user subscribed with, so without a deadline of our own a server
+ * that accepts the connection and never answers holds one of a delivery run's
+ * eight slots for the five minutes undici waits by default, and eight such
+ * subscriptions stall everybody else's notifications behind them. Ten seconds
+ * is also about as long as anyone watching the "send a test" button will wait.
+ */
+const SEND_TIMEOUT_MS = 10_000;
+
+/**
+ * How much of a rejection's body is kept for the log.
+ *
+ * Push services explain a 400 in a sentence. Anything longer is read no
+ * further: four bytes is the most one character takes in UTF-8, so the byte
+ * cap always covers the characters kept, and the body can be as large as the
+ * other end likes without any more of it reaching memory.
+ */
+const DETAIL_CHARS = 200;
+const DETAIL_BYTES = DETAIL_CHARS * 4;
 
 let cachedKeys: VapidKeyPair | null | undefined;
 
@@ -140,6 +166,7 @@ export interface SendPushOptions {
    * of a thing rather than six versions of it.
    */
   readonly topic?: string;
+  /** Gives up sooner. `SEND_TIMEOUT_MS` applies whether or not this is set. */
   readonly signal?: AbortSignal;
 }
 
@@ -198,19 +225,36 @@ export async function sendPush(
   };
   if (options.topic) headers.Topic = options.topic;
 
+  // Our own deadline always applies, whether or not the caller brought a
+  // signal. It covers the body too: an abort after the headers have arrived
+  // errors the response stream, so a reply that trickles in is cut off at the
+  // same moment as one that never starts.
+  const deadline = AbortSignal.timeout(SEND_TIMEOUT_MS);
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, deadline])
+    : deadline;
+
   let response: Response;
   try {
     response = await fetch(target.endpoint, {
       method: "POST",
       headers,
       body: new Uint8Array(body),
-      signal: options.signal,
+      signal,
       // A push service is a third party; never send or accept cookies.
       credentials: "omit",
       redirect: "error",
       cache: "no-store",
     });
   } catch (error) {
+    // Slow is not the same as gone: the subscription is kept, and an endpoint
+    // that stays this slow is retired by the failure count like any other.
+    if (deadline.aborted) {
+      return {
+        status: "retry",
+        reason: `Push service did not answer within ${SEND_TIMEOUT_MS / 1000} seconds.`,
+      };
+    }
     return {
       status: "retry",
       reason: error instanceof Error ? error.message : String(error),
@@ -237,10 +281,11 @@ export async function sendPush(
 
   // 400/401/403/413 and friends: our request was wrong, and will be wrong
   // again. Read a little of the body — push services explain themselves there,
-  // and the message is about our own token, not about the recipient.
+  // and the message is about our own token, not about the recipient. Only a
+  // little: the endpoint may be anybody's server, and its body anything.
   let detail = "";
   try {
-    detail = (await response.text()).slice(0, 200);
+    detail = (await readCapped(response, DETAIL_BYTES)).slice(0, DETAIL_CHARS);
   } catch {
     detail = "";
   }
