@@ -25,11 +25,53 @@ lands here first:
 - **Exchange rates are decimal strings**, `1 source = rate target`.
 - **Calendar dates are `YYYY-MM-DD` strings** with no timezone; instants are
   ISO 8601.
-- **Authorization failures are 404**, indistinguishable from a group that does
+- **Refusing an outsider is 404**, indistinguishable from a group that does
   not exist (same rule as the export route). Missing authentication is 401.
   Refusals a person should read (a bad split, a rate limit) are 422 / 429 with
   `{"error": "..."}`.
 - Every response is `Cache-Control: private, no-store`.
+- **Refusing somebody in the group is not a 404.** It says what stopped them,
+  with a `code` beside the sentence — see
+  [Refused inside a group](#refused-inside-a-group).
+
+### Refused inside a group
+
+Somebody already in the group is told what stopped them, because "Not found."
+about their own group reads as the group having gone. The status says which
+kind of refusal it is, and the body carries a stable `code` beside the English
+sentence. Branch on the code, not on the prose:
+
+```json
+{
+  "error": "The group owner cannot be removed from the group. Archive it or delete it instead.",
+  "code": "ownerNotRemovable"
+}
+```
+
+| Status | `code`                  | When                                                                                                                                                  |
+| ------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 422    | `participantNotInGroup` | An expense, repayment or recurring template names somebody removed from the group, or never in it                                                     |
+| 409    | `groupArchived`         | A write to an archived group. Restoring it is the group's own PATCH, which is not refused                                                             |
+| 409    | `ownerNotRemovable`     | `DELETE …/participants/:id` on the group's owner                                                                                                      |
+| 409    | `participantHasAccount` | `POST …/participants/:id/invitation` for somebody who signs in with their own account                                                                 |
+| 403    | `noPermission`          | An owner-only action asked for by a member or a guest: removing or restoring people, invitations and the join link, the group's settings, deleting it |
+| 403    | `notYourAccount`        | `PATCH …/participants/:id` on somebody else who has an account — only they change their own name and email                                            |
+
+Each is given only after the caller has been let into the group, so none of
+them tells an outsider anything: that the group exists, and what the caller's
+role allows, are already in every group read. **A 404 with no `code` is the one
+answer that means the group is out of reach** — gone, or not the caller's —
+or that the item named in the path is not in it. On anything else, keep the
+group: show the sentence, and let the person change what they asked for.
+
+The table is `IN_GROUP_STATUS` in `src/app/api/mobile.ts`. A refusal nobody has
+placed in it falls to the 404, and `src/app/api/mobile.test.ts` fails the build
+until every refusal the services can throw has been placed or deliberately
+left there.
+
+Three routes answer their own refusals and have not moved: the receipt upload
+and the receipt scan still say 404 to a write on an archived group, and the
+export says 404 to a guest.
 
 ## Sessions
 
@@ -292,7 +334,7 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 | DELETE | `/api/groups/:groupId/participants/:id/invitation` | revoke                                                                                                                                                                                                                                    |
 | POST   | `/api/groups/:groupId/join-link`                   | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once, owner only                                                                                                                                                                       |
 | DELETE | `/api/groups/:groupId/join-link`                   | revoke, owner only                                                                                                                                                                                                                        |
-| POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id}`; checked like an expense, so payers, a split or a missing rate that would not make a valid entry are a 422, and a stranger a 404                                                                      |
+| POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id}`; checked like an expense, so payers, a split or a missing rate that would not make a valid entry are a 422, and so is somebody not in the group                                                       |
 | PATCH  | `/api/groups/:groupId/recurring/:templateId`       | `{paused: boolean}`; resuming skips what fell due while paused and picks up at the first occurrence still to come                                                                                                                         |
 | DELETE | `/api/groups/:groupId/recurring/:templateId`       | delete the template; generated expenses stay                                                                                                                                                                                              |
 | POST   | `/api/groups/:groupId/recurring/:id/restore`       | undo for the delete; the worker picks the schedule up again on its next tick                                                                                                                                                              |
@@ -414,8 +456,9 @@ prefix and a null `url`, which is enough to name the live link in a UI and to
 offer a fresh one instead.
 
 Every call on the group-wide link is the owner's, through `manageInvitations`.
-A member or a guest asking for it is answered 404, the same as somebody outside
-the group: who else the group is open to is not theirs to read or to change.
+A member or a guest asking for it is refused with 403 `noPermission`, before
+the link is looked up: who else the group is open to is not theirs to read or
+to change, and the refusal does not say whether there is a link at all.
 
 ### Redeeming one
 
@@ -776,7 +819,7 @@ enforcing that; there is no path.
 | 404    | A pinned key on another group — indistinguishable from "no such group".    |
 | 429    | The key's own rate bucket: 600 requests per 10 minutes, keyed by key.      |
 
-403 is the one refusal that is **not** answered 404. The 404 rule exists so
+A key's 403 is **not** answered 404 either. The 404 rule exists so
 group ids cannot be probed, and nothing is being probed here: the caller
 already holds the key and is being told a fact about the key itself, which they
 need in order to mint a better one.

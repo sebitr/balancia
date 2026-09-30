@@ -115,6 +115,7 @@ mistaken for the ones that are not.
 | 401, session expired                | Kept, retried after signing in                            |
 | 429, or a 5xx                       | Kept, retried with a backoff capped at two minutes        |
 | 404 — group gone, or access lost    | Held back and shown to the reader                         |
+| 409 — the group was archived        | Held back and shown to the reader, as archived            |
 | 422 — refused, e.g. a removed payer | Held back and shown to the reader                         |
 
 A queued entry is never dropped except by the server accepting it or by the
