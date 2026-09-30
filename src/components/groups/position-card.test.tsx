@@ -139,7 +139,7 @@ describe("the position sheet's ledger", () => {
 
   it("subtotals repayments as what the reader sent, less what they got", async () => {
     const user = await openSheet();
-    const section = await expand(user, /Settlements/);
+    const section = await expand(user, /Repayments/);
 
     expect(within(section).getByText(chf(-15159741n))).toBeInTheDocument();
     expect(within(section).getByText(raw(2671n))).toBeInTheDocument();

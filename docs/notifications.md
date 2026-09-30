@@ -10,12 +10,12 @@ are two surfaces, and only one of them needs configuring:
 
 ## What raises one
 
-| Event                                     | Who is told                                    |
-| ----------------------------------------- | ---------------------------------------------- |
-| An expense is added, edited or deleted    | Everyone who paid for it or owes a share of it |
-| A payment is recorded, changed or deleted | The two people it is between                   |
-| A recurring expense is generated          | Everyone in the generated split                |
-| An import finishes                        | The person who started it                      |
+| Event                                       | Who is told                                    |
+| ------------------------------------------- | ---------------------------------------------- |
+| An expense is added, edited or deleted      | Everyone who paid for it or owes a share of it |
+| A repayment is recorded, changed or deleted | The two people it is between                   |
+| A recurring expense is generated            | Everyone in the generated split                |
+| An import finishes                          | The person who started it                      |
 
 Three rules apply to all of them:
 
@@ -35,7 +35,7 @@ the flat it was split between on the first of every month. The reasoning is
 written out at `GENERATION_HOUR` in `src/modules/recurring/schedule.ts`. There
 is no per-group setting for it, because nobody has asked to choose.
 
-Each person has four switches (expenses, payments, recurring, imports) and can
+Each person has four switches (expenses, repayments, recurring, imports) and can
 quieten a group — either **muted**, which lasts until it is undone, or
 **snoozed for 24 hours**, which wears off on its own. Both are the same row in
 `notification_group_mutes`, and `snoozed_until` is the whole of the difference:

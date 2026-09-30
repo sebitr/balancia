@@ -282,9 +282,9 @@ describe("the drawer", () => {
       screen.getByRole("heading", { name: "Add expense" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     expect(
-      screen.getByRole("heading", { name: "Settle up" }),
+      screen.getByRole("heading", { name: "Record repayment" }),
     ).toBeInTheDocument();
   });
 
@@ -772,7 +772,7 @@ describe("attaching a file", () => {
     );
     expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("tab", { name: "Expense" }));
 
     expect(screen.queryByText("bill.pdf")).not.toBeInTheDocument();
@@ -862,7 +862,7 @@ describe("switching type", () => {
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
     expect(screen.getByRole("switch", { name: "Repeats" })).toBeChecked();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("tab", { name: "Expense" }));
     expect(screen.getByRole("switch", { name: "Repeats" })).not.toBeChecked();
   });
@@ -877,13 +877,13 @@ describe("switching type", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Description"), "Bus tickets");
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(
       screen.getByRole("textbox", { name: "Description (optional)" }),
     ).toHaveValue("Bus tickets");
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "Bus tickets" }),
@@ -897,7 +897,7 @@ describe("switching type", () => {
 
     await user.click(screen.getByRole("tab", { name: "Income" }));
     await user.type(screen.getByLabelText("Description"), "Deposit back");
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(
       screen.getByRole("textbox", { name: "Description (optional)" }),
@@ -914,7 +914,7 @@ describe("switching type", () => {
 
     await enterAmount(user, "84.60");
     await user.type(screen.getByLabelText("Description"), "Dinner");
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("tab", { name: "Expense" }));
 
     expect(screen.getByLabelText("Description")).toHaveValue("Dinner");
@@ -934,7 +934,7 @@ describe("switching type", () => {
 
     await enterAmount(user, "84.60");
     await user.type(screen.getByLabelText("Description"), "Dinner");
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.type(
       screen.getByRole("textbox", { name: "Description (optional)" }),
       ", minus the wine",
@@ -958,7 +958,7 @@ describe("settlement", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(screen.getByText("Hervé pays Seb back")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
@@ -978,7 +978,7 @@ describe("settlement", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     const sentence = screen.getByText("Hervé pays Seb back");
     const amount = screen.getByText("CHF 128.40");
@@ -1010,7 +1010,7 @@ describe("settlement", () => {
       ],
     });
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
       "40.00",
@@ -1021,7 +1021,7 @@ describe("settlement", () => {
   it("offers the methods that country actually uses", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     // Europe/Zurich → Switzerland → TWINT.
     expect(screen.getByText("Switzerland")).toBeInTheDocument();
@@ -1039,7 +1039,7 @@ describe("settlement", () => {
   it("heads the method tiles as the method, not as the payer", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(
       screen.getByRole("heading", { name: "How was it paid" }),
@@ -1073,7 +1073,7 @@ describe("settlement", () => {
     it("is promoted to the front, and leaves Other alone", async () => {
       const user = userEvent.setup();
       renderForm();
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
       // Switzerland offers TWINT, Cash and Bank on the row; Revolut is the
       // fourth, which only the picker shows.
@@ -1105,7 +1105,7 @@ describe("settlement", () => {
     it("stays put when the tile was already on the row", async () => {
       const user = userEvent.setup();
       renderForm();
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
       await user.click(screen.getByRole("button", { name: /^Cash/ }));
 
       // Nothing moves under the finger that just touched it.
@@ -1120,7 +1120,7 @@ describe("settlement", () => {
     it("gives a name typed by hand a tile of its own", async () => {
       const user = userEvent.setup();
       renderForm();
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
       await user.click(screen.getByRole("button", { name: "Other" }));
 
       const picker = sheet("How was it paid");
@@ -1151,7 +1151,7 @@ describe("settlement", () => {
     it("says so beside the tiles, and pre-selects nothing", async () => {
       const user = userEvent.setup();
       renderForm({ usualPaymentMethod: "Revolut" });
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
       expect(screen.getByText("Usually Revolut")).toBeInTheDocument();
       expect(methodTiles().every((tile) => tile.pressed !== "true")).toBe(true);
@@ -1160,7 +1160,7 @@ describe("settlement", () => {
     it("gives way once the question has been answered", async () => {
       const user = userEvent.setup();
       renderForm({ usualPaymentMethod: "Revolut" });
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
       await user.click(screen.getByRole("button", { name: /TWINT/ }));
 
       expect(screen.queryByText("Usually Revolut")).toBeNull();
@@ -1171,7 +1171,7 @@ describe("settlement", () => {
     it("says nothing when the habit is a name the list cannot draw", async () => {
       const user = userEvent.setup();
       renderForm({ usualPaymentMethod: "Poker chips" });
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
       expect(screen.queryByText(/Usually/)).toBeNull();
       expect(screen.getByText("Switzerland")).toBeInTheDocument();
@@ -1181,9 +1181,9 @@ describe("settlement", () => {
   it("records the payment with the method it was made by", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("button", { name: /TWINT/ }));
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -1194,7 +1194,10 @@ describe("settlement", () => {
         paymentMethod: "TWINT",
       }),
     );
-    expect(success).toHaveBeenCalledWith("Payment recorded", expect.anything());
+    expect(success).toHaveBeenCalledWith(
+      "Repayment recorded",
+      expect.anything(),
+    );
   });
 
   /**
@@ -1238,14 +1241,14 @@ describe("settlement", () => {
   it("records no method when nobody chose one", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(screen.getByRole("button", { name: /TWINT/ })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -1262,7 +1265,7 @@ describe("settlement", () => {
   it("takes a method it has never heard of, by the name it was given", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("button", { name: "Other" }));
 
     const picker = sheet("How was it paid");
@@ -1278,7 +1281,7 @@ describe("settlement", () => {
       screen.getByRole("button", { name: "Poker chips" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -1293,7 +1296,7 @@ describe("settlement", () => {
   it("will not name a method the list already answers to", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("button", { name: "Other" }));
 
     const picker = sheet("How was it paid");
@@ -1314,12 +1317,12 @@ describe("settlement", () => {
   it("lets the currency be changed away from the debt's", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     await user.click(screen.getByRole("button", { name: "CHF" }));
     await user.click(sheet("Currency").getByRole("button", { name: /^EUR/ }));
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -1342,7 +1345,7 @@ describe("settlement", () => {
     it("asks for the rate instead of comparing the two figures", async () => {
       const user = userEvent.setup();
       renderForm();
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
       await user.click(screen.getByRole("button", { name: /TWINT/ }));
       await toEuros(user);
 
@@ -1357,7 +1360,7 @@ describe("settlement", () => {
     it("counts the payment at the rate once there is one", async () => {
       const user = userEvent.setup();
       renderForm();
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
       await user.click(screen.getByRole("button", { name: /TWINT/ }));
       await toEuros(user);
 
@@ -1369,7 +1372,9 @@ describe("settlement", () => {
       // 128.40 euros is 120.70 francs, which leaves CHF 7.70 of the debt —
       // the figure the old sentence declared settled.
       expect(
-        screen.getByText("Part payment — Hervé will still owe Seb CHF 7.70."),
+        screen.getByText(
+          "Partial repayment — Hervé will still owe Seb CHF 7.70.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -1377,7 +1382,7 @@ describe("settlement", () => {
     it("says the debt is untouched when nothing converts them", async () => {
       const user = userEvent.setup();
       renderForm({ currencyMode: "separate", baseCurrency: null });
-      await user.click(screen.getByRole("tab", { name: "Settle" }));
+      await user.click(screen.getByRole("tab", { name: "Repayment" }));
       await user.click(screen.getByRole("button", { name: /TWINT/ }));
       await toEuros(user);
 
@@ -1392,13 +1397,13 @@ describe("settlement", () => {
   it("takes what the repayment was for, and saves it with the payment", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     await user.type(
       screen.getByRole("textbox", { name: "Description (optional)" }),
       "Bus tickets",
     );
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -1413,9 +1418,9 @@ describe("settlement", () => {
   it("records a repayment nobody described, rather than asking for one", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -1427,7 +1432,7 @@ describe("settlement", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     expect(
       screen.getByRole("textbox", { name: "Description (optional)" }),
     ).toBeVisible();
@@ -1442,7 +1447,7 @@ describe("settlement", () => {
     const user = userEvent.setup();
     renderForm({ outstanding: [] });
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     expect(screen.getByText("Everyone is settled up.")).toBeInTheDocument();
   });
 });
@@ -1663,7 +1668,7 @@ describe("payment method marks", () => {
   it("falls back to a lettermark, and looks for an operator-supplied logo", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     const twint = screen.getByRole("button", { name: /TWINT/ });
     // The lettermark is what is painted until a logo actually loads.
@@ -1935,7 +1940,7 @@ describe("editing an entry", () => {
     const user = userEvent.setup();
     renderForm({ editing: EXPENSE });
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     // The payer carries over as the one paying; who they repaid is the one
     // thing an expense cannot say, so it has to be picked.
     expect(screen.getByRole("radio", { name: "From: Hervé" })).toBeChecked();
@@ -1968,7 +1973,7 @@ describe("editing an entry", () => {
     const user = userEvent.setup();
     renderForm({ editing: { ...EXPENSE, notes: "" } });
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     expect(
       screen.getByRole("textbox", { name: "Description (optional)" }),
     ).toHaveValue("Migros");
@@ -1983,7 +1988,9 @@ describe("editing an entry", () => {
     const user = userEvent.setup();
     renderForm({ editing: SETTLEMENT });
 
-    expect(screen.getByRole("dialog", { name: "Edit payment" })).toBeVisible();
+    expect(
+      screen.getByRole("dialog", { name: "Edit repayment" }),
+    ).toBeVisible();
     await save(user);
 
     expect(createSettlement).not.toHaveBeenCalled();
@@ -2273,7 +2280,7 @@ describe("leaving the drawer", () => {
     const user = userEvent.setup();
     renderForm({ editing: EXPENSE });
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -2302,7 +2309,7 @@ describe("leaving the drawer", () => {
       "/groups/g1/expenses/e1/edit#cat=lodging&q=h%C3%B4tel",
     );
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -2382,7 +2389,7 @@ describe("leaving the drawer", () => {
     renderForm({ editing: EXPENSE });
     const moved = held(toSettlement);
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     await user.click(screen.getByRole("radio", { name: "To: Hervé" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     expect(replace).not.toHaveBeenCalled();
@@ -2523,7 +2530,7 @@ describe("picking the people on a repayment", () => {
       },
     });
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
     expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
 
     await user.click(screen.getByRole("radio", { name: "To: Seb" }));
@@ -2537,7 +2544,7 @@ describe("picking the people on a repayment", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
     expect(screen.getByText("Outstanding")).toBeVisible();
     expect(screen.queryByRole("radio", { name: "From: Seb" })).toBeNull();
@@ -2561,7 +2568,7 @@ describe("a drawer opened on a stated debt", () => {
   it("opens on the settle tab with the pair and the amount filled in", () => {
     renderForm({}, STATED);
 
-    expect(screen.getByRole("tab", { name: "Settle" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Repayment" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -2575,7 +2582,7 @@ describe("a drawer opened on a stated debt", () => {
     const user = userEvent.setup();
     renderForm({}, STATED);
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -2608,7 +2615,7 @@ describe("a drawer opened on a stated debt", () => {
     const user = userEvent.setup();
     renderForm({}, `${STATED}&settleVia=twint`);
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -2620,7 +2627,7 @@ describe("a drawer opened on a stated debt", () => {
     const user = userEvent.setup();
     renderForm({}, STATED);
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
@@ -2637,7 +2644,7 @@ describe("a drawer opened on a stated debt", () => {
   it("names the people but no amount once the debt is gone", () => {
     renderForm({ outstanding: [] }, STATED);
 
-    expect(screen.getByRole("tab", { name: "Settle" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Repayment" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
