@@ -41,7 +41,9 @@ numbered (`Ada (2)`) rather than merged, and the preview lets you point each
 one at the right person.
 
 Restoring the same file twice is safe: rows are fingerprinted by content, so
-the second run skips everything it already wrote.
+the second run skips everything it already wrote. Two entries that read exactly
+alike — the same coffee bought twice on one day — both come back; see
+_Re-running an import is safe_ below.
 
 A backup from a newer version of Balancia is refused rather than half-read —
 its `exportVersion` is higher than the one this instance knows.
@@ -94,8 +96,17 @@ refused with a message saying to read the file again.
 ### Re-running an import is safe
 
 Every row gets a fingerprint — a hash of its meaningful content (date,
-description, amount, currency, participants) scoped to the group. Committed
-fingerprints are stored, so:
+description, amount, currency, participants) scoped to the group.
+
+A file can hold the same line more than once and mean it: two coffees at the
+same price on one morning, split the same way, or the same repayment made twice
+in a day. So a line is also counted against the lines before it that read
+exactly alike, and the second copy is fingerprinted as the second — imported
+beside the first, not taken for it. Only identical lines count, so a later
+export that adds other rows before or between them leaves each copy's
+fingerprint where it was.
+
+Committed fingerprints are stored, so:
 
 - Importing the same file twice imports **nothing** the second time; the preview
   says "5 already imported" before you commit.
@@ -104,6 +115,9 @@ fingerprints are stored, so:
 - A Splitwise payment an older version of the importer took for an expense is
   still known by the expense's fingerprint, so importing the file again does
   not add the payment beside it.
+- A file an older version imported short — every copy of a repeated line but
+  the first left out — brings in exactly the missing copies when it is
+  imported again. See _If a file held the same line twice_ below.
 
 This is checked by an integration test and an end-to-end journey, because
 "balances silently doubled" is the worst possible outcome for this feature.
@@ -210,6 +224,31 @@ Two more kinds of row were misread until then:
   whole of the first one's. Everyone else on the row was left out, so the
   group's balances do not match the **Total balance** row. Correct that
   payment and record the missing ones by hand, as above, until they do.
+
+### If a file held the same line twice
+
+Until October 2026, a line that appeared more than once in one file — the same
+date, description, amount and currency, paid and owed by the same people — was
+imported once. Every copy after the first was taken for the first, already
+imported, and the report counted it as skipped. This was true of every format:
+a Splitwise CSV, a Splitwise JSON backup and a Balancia backup alike. A group
+imported from such a file is short by those copies, and its balances do not
+match the file's **Total balance** row.
+
+Importing the same file again now repairs it. The first copy of each line is
+recognised as already imported, as before; the copies after it are new to the
+group, and the preview counts them among the rows it will import, not among
+those already imported. So a file you expected to import nothing that offers
+to import a row or two is offering exactly the missing copies.
+
+A repeated `Bob paid Carol` line that an older import read as an expense comes
+in the same way: the first copy is known by the expense it was written as, and
+the second arrives as a repayment beside it. The two move Bob and Carol exactly
+as two repayments would, so the balances come out where the file has them.
+
+Check one thing before you confirm: whether you already added a missing copy by
+hand. If you did, importing adds it a second time. Either skip the re-import,
+or delete one of the two afterwards.
 
 ### What gets skipped, and why
 

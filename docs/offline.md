@@ -90,7 +90,9 @@ two exports of one transaction have nothing else in common. Here the client is
 the same device that queued the entry, so it mints a random key and keeps it
 with the payload — which is the only way two genuinely identical entries can
 both land. Four people splitting the same €3 coffee twice in one afternoon is
-two expenses, and a content hash would silently eat the second.
+two expenses, and a content hash would silently eat the second. An import can
+count the copies of a line within one file; a queue sends entries one at a
+time, with nothing to count them against.
 
 The key is carried on the online path too, not only from the queue. That is
 where it earns most of its keep: a save over a live connection can still lose
