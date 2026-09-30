@@ -145,12 +145,17 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   provider, so an account can have a password, passkeys, an Apple link, or any
   combination).
   `payout_methods` (per account, ordered, one row per method) says how somebody
-  wants to be paid back; it is read only for people the reader owes money to,
-  and never included in a group export, because it belongs to the person rather
-  than to the trip.
+  wants to be paid back; it is read only for people the reader owes money to —
+  a guest on an invitation link included, since a group has to be able to pay
+  a member who is owed — never for an API key, whose settle-up read carries no
+  payout hints, and never included in a group export, because it belongs to the
+  person rather than to the trip. `payout_addresses` goes no further than the
+  Swiss QR-bill payload it exists for; no reader is sent it as a field.
   `participants` are group-scoped identities, optionally linked to a user
   (`user_id` nullable). Guests are participants without a linked user who
-  authenticate through invite tokens → guest sessions.
+  authenticate through invite tokens → guest sessions. A guest reader is sent
+  no participant's `email` or `user_id` — only whether each one has an
+  account — on the web and over the API alike.
 - **Groups**: `groups` (currency mode `separate` | `converted`, optional base
   currency, timezone, archived timestamp, and — for a group a guest started —
   the creator's seat) and `group_members` (owner/member roles) for registered

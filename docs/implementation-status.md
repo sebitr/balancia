@@ -190,12 +190,17 @@ These are deliberate omissions for this version, not oversights:
   rather than from the builder, and its checksum is anchored to the published
   CRC-16/CCITT-FALSE check value; the two values most worth a real-device check
   are named in [settling-up.md](settling-up.md).
-- **The payout read path has no _integration_ test.** `listPayoutsOwed` is
-  exercised end to end by `payouts.spec.ts`, which reads a real debt row as the
-  person who owes it, so the read path does run against a database. What is
-  still missing is a test that attacks the permission rule directly — that a
-  recipient is reachable only by appearing in a debt the balances computed —
-  rather than confirming it from the outside.
+- **The payout rule is kept by its callers, not by the query.**
+  `listPayoutsOwed` answers for any participant id in the group it is handed;
+  the rule — a recipient is reachable only by appearing in a debt the balances
+  computed — is `buildPayoutHints` asking about the reader's own debts and
+  nobody else. `tests/integration/guest-and-key-reads.test.ts` attacks it
+  directly through both readers that exist, the settle-up route and the settle
+  page: a guest who owes one member is shown that member's IBAN, and not the
+  IBAN of another member owed by somebody else on the same screen. The same
+  file holds what each credential is sent — a guest no email, account id or
+  address field, an API key no payout hint. A third caller of
+  `listPayoutsOwed` would be held to the rule by review alone.
 
 ## Next priorities
 

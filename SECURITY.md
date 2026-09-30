@@ -58,6 +58,11 @@ Anything that lets someone:
     the link can be revoked and regenerated at any time.
   - Members can edit and delete each other's expenses. Groups are built on
     mutual trust; the append-only activity log is the accountability mechanism.
+  - **A guest who owes someone sees how to pay them** — the IBAN or handle and
+    the payment code — and a guest can create that debt by recording an
+    expense "paid by X, split on me". Guests keep this so that a group whose
+    people are not all on the app can still pay each other. What a guest does
+    not get is described under _Guest access_ below.
 - Reports from automated scanners with no proof of exploitability.
 
 ---
@@ -110,6 +115,25 @@ Implemented in this repository — there is no third-party auth service.
   different group ID cannot widen it; it fails.
 - Guests can do everything financial and nothing administrative: no managing
   people, links, settings, ownership or deletion, and no import.
+- A guest is sent **no email address and no account id** for anybody in the
+  group — not the owner's sign-in address, not one typed for a person without
+  an account — on the web or over the API. They learn whether each person has
+  an account, and nothing that identifies it.
+
+### Payout details
+
+How somebody wants to be paid back belongs to their account, not to a group.
+
+- It is read only by people the group's balances say owe them money, guests
+  included — see _What is out of scope_ above. There is no way to ask for a
+  named person's details.
+- What such a reader gets is the detail to pay into and its payment code. A
+  postal address is never sent as a field; the Swiss QR-bill carries the
+  creditor's address inside its payload, because the standard requires it.
+- **API keys read none of it**, at any scope. The settle-up route answers a key
+  with the transfers and an empty list of payout hints.
+- A PayPal detail must be a `paypal.me` or `paypal.com` link, and only such a
+  link is ever drawn as the "Open PayPal" button.
 - Revoking a link, regenerating it, or removing the participant kills every
   session derived from it immediately.
 - **Claiming a seat with an account retires its links**, however the claim

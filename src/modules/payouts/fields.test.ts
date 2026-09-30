@@ -117,6 +117,33 @@ describe("validatePayoutDetail", () => {
     expect(validatePayoutDetail("paypal", "sebtr")).toBe("link");
   });
 
+  it("takes PayPal's own hosts for PayPal, www or not", () => {
+    expect(validatePayoutDetail("paypal", "PayPal.Me/sebtr")).toBeNull();
+    expect(validatePayoutDetail("paypal", "www.paypal.me/sebtr")).toBeNull();
+    expect(
+      validatePayoutDetail("paypal", "https://www.paypal.com/paypalme/sebtr"),
+    ).toBeNull();
+    expect(
+      validatePayoutDetail("paypal", "paypal.com/paypalme/sebtr"),
+    ).toBeNull();
+  });
+
+  it("refuses a PayPal link that goes anywhere but PayPal", () => {
+    // The screen draws this as a button that says "Open PayPal". A host that
+    // is not PayPal's is a look-alike page behind PayPal's name.
+    expect(validatePayoutDetail("paypal", "pay.me/sebtr")).toBe("paypalHost");
+    expect(validatePayoutDetail("paypal", "https://paypa1.me/sebtr")).toBe(
+      "paypalHost",
+    );
+    // A suffix is not a host: these end in something PayPal does not own.
+    expect(validatePayoutDetail("paypal", "paypal.me.example/sebtr")).toBe(
+      "paypalHost",
+    );
+    expect(validatePayoutDetail("paypal", "pay.paypal.com/sebtr")).toBe(
+      "paypalHost",
+    );
+  });
+
   it("does not second-guess a handle's shape", () => {
     // The provider owns it, and inventing a pattern would reject valid ones.
     expect(validatePayoutDetail("revolut", "@sebtr")).toBeNull();

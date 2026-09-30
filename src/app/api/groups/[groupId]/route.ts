@@ -57,7 +57,9 @@ async function handleGet(
     return noStore({
       ...serializeAccess(access),
       profile,
-      participants: participants.map(serializeParticipant),
+      participants: participants.map((participant) =>
+        serializeParticipant(participant, access),
+      ),
       overview: serializeGroupOverview(overview),
     });
   } catch (error) {

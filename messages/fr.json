@@ -3357,6 +3357,7 @@
       "iban": "Cet IBAN ne tombe pas juste — c’est presque toujours un caractère.",
       "email": "Cela ne ressemble pas à une adresse e-mail.",
       "link": "Écris le lien en entier, comme paypal.me/toi.",
+      "paypalHost": "Ce lien n’est pas un lien PayPal. Indique ton propre lien paypal.me, comme paypal.me/toi.",
       "unknownMethod": "Ce moyen de paiement n’est pas connu de Balancia.",
       "invalid": "Ce détail ne peut pas être enregistré tel quel.",
       "address": "Indique au moins un code postal, une localité et un code pays à deux lettres."
