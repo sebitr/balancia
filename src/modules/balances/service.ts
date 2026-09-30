@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { oncePerRender } from "@/lib/render-memo";
 import {
   expensePayers,
   expenseShares,
@@ -127,6 +128,22 @@ const EMPTY_ROWS: BalanceRows = {
   settlements: [],
 };
 
+/**
+ * One group's balances.
+ *
+ * A screen often asks this twice in one render without meaning to: the group
+ * overview for its own figures and the reminder list for who owes the reader,
+ * the settle-up plan beside that same list, the join screen's summary beside
+ * its claimable names. Each ask used to read the group's entire history again,
+ * because a position is a fact about all of it. So the rows are read once per
+ * render, below, and only the assembly — pure, and cheap next to a round trip —
+ * runs per caller. That is why `contributionsFor` is not part of what is
+ * remembered: it changes what is derived from the rows, never the rows.
+ *
+ * A caller holding a handle of its own reads for itself. A transaction can see
+ * writes the pool cannot yet, and a memo shared with it would be wrong in both
+ * directions; only the application's shared handle is remembered.
+ */
 export async function loadGroupBalances(
   access: Pick<GroupAccess, "groupId" | "group">,
   options: {
@@ -140,9 +157,35 @@ export async function loadGroupBalances(
     inTransaction?: boolean;
   } = {},
 ): Promise<GroupBalances> {
-  const db = options.db ?? getDb();
   const { groupId, group } = access;
+  const rows =
+    options.db === undefined || options.db === getDb()
+      ? await readBalanceRowsOnce(groupId)
+      : await readBalanceRows(options.db, groupId);
 
+  return assembleBalances(group, rows, options.contributionsFor ?? null);
+}
+
+/**
+ * The rows, read at most once per server render.
+ *
+ * `oncePerRender` is scoped to one render and to nothing wider. Every render
+ * starts from an empty memo — including the one Next.js runs after a Server
+ * Action, which is a new render rather than the tail of the action — and
+ * outside a render (the action's own body, a route handler, the worker, a test)
+ * it calls straight through. So nothing that has just written can be shown the
+ * ledger from before it wrote. Keyed on the group id alone, because it is the
+ * only thing the reads depend on.
+ */
+const readBalanceRowsOnce = oncePerRender((groupId: string) =>
+  readBalanceRows(getDb(), groupId),
+);
+
+/** The five reads behind one group's balances. */
+async function readBalanceRows(
+  db: Database,
+  groupId: string,
+): Promise<BalanceRows> {
   const participantRows = await db
     .select({
       id: participants.id,
@@ -205,17 +248,13 @@ export async function loadGroupBalances(
     ? [await reads[0], await reads[1], await reads[2]]
     : await Promise.all(reads);
 
-  return assembleBalances(
-    group,
-    {
-      participants: participantRows,
-      expenses: expenseRows,
-      payers: payerRows,
-      shares: shareRows,
-      settlements: settlementRows,
-    },
-    options.contributionsFor ?? null,
-  );
+  return {
+    participants: participantRows,
+    expenses: expenseRows,
+    payers: payerRows,
+    shares: shareRows,
+    settlements: settlementRows,
+  };
 }
 
 /**

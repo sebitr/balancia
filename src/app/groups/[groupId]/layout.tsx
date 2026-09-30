@@ -6,11 +6,10 @@ import { OfflineEntryProvider } from "@/components/offline/offline-entry";
 import { OutboxFlusher } from "@/components/offline/outbox-flusher";
 import { PendingStrip } from "@/components/offline/pending-strip";
 import { AreaMessages } from "@/i18n/area-messages";
-import { getCurrentActor } from "@/lib/security/actor";
+import { requireGroupAccess } from "@/lib/actions";
 import {
   AuthenticationRequiredError,
   AuthorizationError,
-  authorizeGroup,
   type GroupAccess,
 } from "@/lib/security/authorization";
 
@@ -19,16 +18,17 @@ import {
  *
  * Authorization happens here, once, before any child page loads data. Members
  * and guests both land here; the difference is what `authorizeGroup` grants
- * them, not which layout they get.
+ * them, not which layout they get. The pages under it ask again, through the
+ * same `requireGroupAccess`, and are answered from what this render already
+ * read rather than with a second query.
  *
  * The authorization call is isolated in its own function so the try/catch does
  * not wrap any JSX — a rejected render inside a catch would swallow errors
  * from the children too.
  */
 async function resolveAccess(groupId: string): Promise<GroupAccess> {
-  const actor = await getCurrentActor();
   try {
-    return await authorizeGroup(actor, groupId);
+    return await requireGroupAccess(groupId);
   } catch (error) {
     if (error instanceof AuthenticationRequiredError) {
       redirect(`/sign-in?next=/groups/${groupId}`);

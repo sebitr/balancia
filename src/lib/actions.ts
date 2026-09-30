@@ -1,5 +1,6 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
+import { cache } from "react";
 import {
   AuthenticationRequiredError,
   AuthorizationError,
@@ -51,14 +52,38 @@ export function actionError(message: string): ActionResult<never> {
   return { ok: false, error: message };
 }
 
-/** Resolves group access for the current actor, or throws. */
+/**
+ * Resolves group access for the current actor, or throws.
+ *
+ * Asked at most once per server render for the same group and flag. Every
+ * group screen asks twice — the group layout, before anything under it loads,
+ * and then the page itself, which is right, because a page must not trust that
+ * a layout ran — and the second ask used to be a second membership query.
+ */
 export async function requireGroupAccess(
   groupId: string,
   options: { requireActive?: boolean } = {},
 ): Promise<GroupAccess> {
-  const actor = await getCurrentActor();
-  return authorizeGroup(actor, groupId, options);
+  return authorizeOncePerRender(groupId, options.requireActive ?? false);
 }
+
+/*
+ * The actor is not part of the key because a render has exactly one:
+ * `getCurrentActor` is itself remembered for the render, so within it the
+ * group id and the flag are the whole question. The flag stays in the key so
+ * that a read-only answer the layout was given can never stand in for a page
+ * that asks to write to an archived group.
+ *
+ * React's `cache` gives exactly the lifetime that is safe here, and no more.
+ * Every render starts from nothing, including the one Next.js runs after a
+ * Server Action — so the render that follows an action removing somebody asks
+ * again and finds them gone — and the action itself, like a route handler,
+ * runs outside any render, where `cache` calls straight through.
+ */
+const authorizeOncePerRender = cache(
+  async (groupId: string, requireActive: boolean): Promise<GroupAccess> =>
+    authorizeGroup(await getCurrentActor(), groupId, { requireActive }),
+);
 
 /**
  * These carry messages written for humans and are safe to surface verbatim.
