@@ -37,14 +37,14 @@ describe("afterResponse", () => {
   });
 
   it("logs a failure it can no longer report, and swallows it", async () => {
+    const failure = new Error(
+      "Unable to send email. Check the SMTP configuration.",
+    );
     await afterResponse(async () => {
-      throw new Error("Unable to send email. Check the SMTP configuration.");
+      throw failure;
     });
 
     await expect(deferred[0]?.()).resolves.toBeUndefined();
-    expect(logged).toHaveBeenCalledWith(
-      { err: "Unable to send email. Check the SMTP configuration." },
-      expect.any(String),
-    );
+    expect(logged).toHaveBeenCalledWith({ err: failure }, expect.any(String));
   });
 });

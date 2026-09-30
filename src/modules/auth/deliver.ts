@@ -37,8 +37,10 @@ export const afterResponse: Deliver = (work) => {
     try {
       await work();
     } catch (error) {
+      // The error itself, so the logger's serializer decides what of it is
+      // fit to keep (`error-for-log.ts`).
       logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
+        { err: error },
         "Mail sent after the response could not be delivered",
       );
     }
