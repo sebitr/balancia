@@ -23,6 +23,7 @@ function draftFor(text: string, currency = "CHF") {
     groupId: "group-1",
     text,
     fallbackCurrency: currency,
+    timezone: "Europe/Zurich",
     selfParticipantId: ME,
     memberIds: MEMBERS,
     now: new Date("2026-09-10T08:30:00Z"),
@@ -64,6 +65,7 @@ describe("shareDraft", () => {
       groupId: "group-1",
       text: "",
       fallbackCurrency: "CHF",
+      timezone: "Europe/Zurich",
       selfParticipantId: ME,
       memberIds: MEMBERS,
       attachmentId: "aaaa1111-0000-4000-8000-00000000000f",
@@ -79,6 +81,21 @@ describe("shareDraft", () => {
 
   it("dates the entry today, in the form's own format", () => {
     expect(draftFor("12 coffee").fields).toMatchObject({ date: "2026-09-10" });
+  });
+
+  it("dates it today where the group is, not in UTC", () => {
+    // Nine in the morning on the 15th in Auckland is still the 14th in UTC,
+    // and a receipt shared over breakfast is breakfast's.
+    const draft = shareDraft({
+      groupId: "group-1",
+      text: "12 coffee",
+      fallbackCurrency: "NZD",
+      timezone: "Pacific/Auckland",
+      selfParticipantId: ME,
+      memberIds: MEMBERS,
+      now: new Date("2025-03-14T20:00:00Z"),
+    });
+    expect(draft.fields).toMatchObject({ date: "2025-03-15" });
   });
 
   it("summarises itself the way the group screen's dashed row reads it", () => {

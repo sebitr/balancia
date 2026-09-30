@@ -408,6 +408,57 @@ describe("the drawer", () => {
   });
 });
 
+/**
+ * The day a new entry starts on, which is today *where the group is*.
+ *
+ * It used to be today in UTC, so a dinner in New York at half past eleven was
+ * filed on the next day, and a coffee in Auckland at nine in the morning on
+ * the day before — each in the wrong month on the edge of one, and each with
+ * the wrong day's exchange rate. Only `Date` is faked, so the typing below
+ * still has its timers.
+ */
+describe("the date a new entry starts on", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is today in New York when UTC has already moved on", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Half past eleven at night on the 14th, on summer time since the 9th.
+    vi.setSystemTime(new Date("2025-03-15T03:30:00Z"));
+    renderForm({ timezone: "America/New_York" });
+
+    expect(screen.getByLabelText("Date")).toHaveValue("2025-03-14");
+    expect(screen.getByText("Today")).toBeInTheDocument();
+  });
+
+  it("is today in Auckland while UTC is still on yesterday", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Nine in the morning on the 15th.
+    vi.setSystemTime(new Date("2025-03-14T20:00:00Z"));
+    renderForm({ timezone: "Pacific/Auckland" });
+
+    expect(screen.getByLabelText("Date")).toHaveValue("2025-03-15");
+    expect(screen.getByText("Today")).toBeInTheDocument();
+  });
+
+  it("stops being called today once the group's midnight has passed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2025-03-15T03:30:00Z"));
+    const user = userEvent.setup();
+    renderForm({ timezone: "America/New_York" });
+    expect(screen.getByText("Today")).toBeInTheDocument();
+
+    // Half past midnight in New York, with the drawer still open. The entry
+    // keeps the day it was started on; the row just stops calling it today.
+    vi.setSystemTime(new Date("2025-03-15T04:30:00Z"));
+    await enterAmount(user, "12");
+
+    expect(screen.getByLabelText("Date")).toHaveValue("2025-03-14");
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+  });
+});
+
 describe("the default expense path", () => {
   it("takes an amount and shows the computed share", async () => {
     const user = userEvent.setup();
