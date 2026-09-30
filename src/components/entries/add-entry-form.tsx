@@ -902,15 +902,20 @@ export function AddEntryForm({
   const selectedPair = useMemo(() => {
     if (settleFrom === null || settleTo === null) return null;
     if (settleFrom === settleTo) return null;
+    // Somebody removed with money still outstanding is in no roster, but the
+    // debt they left names them, and paying it is what they can still be in.
     const nameOf = (id: string) =>
-      members.find((member) => member.id === id)?.displayName ?? "";
+      members.find((member) => member.id === id)?.displayName ??
+      outstanding.find((pair) => pair.fromParticipantId === id)?.fromName ??
+      outstanding.find((pair) => pair.toParticipantId === id)?.toName ??
+      "";
     return {
       fromParticipantId: settleFrom,
       fromName: nameOf(settleFrom),
       toParticipantId: settleTo,
       toName: nameOf(settleTo),
     };
-  }, [settleFrom, settleTo, members]);
+  }, [settleFrom, settleTo, members, outstanding]);
 
   /**
    * A pair the reader named, rather than one the balances produced.

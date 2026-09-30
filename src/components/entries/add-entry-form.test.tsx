@@ -1198,6 +1198,39 @@ describe("settlement", () => {
   });
 
   /**
+   * Somebody removed from the group is in no roster, but a debt they left
+   * behind — an old entry of theirs edited since — still names them, and the
+   * server takes a repayment that clears it. The confirmation read "→ Seb"
+   * with nobody before the arrow, because it looked the name up among the
+   * people still in the group.
+   */
+  it("names somebody who has left, from the debt they left", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      outstanding: [
+        {
+          ...OUTSTANDING[0],
+          fromParticipantId: "grace",
+          fromName: "Grace",
+        },
+      ],
+    });
+    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+
+    expect(createSettlement).toHaveBeenCalledWith(
+      "g1",
+      expect.objectContaining({
+        fromParticipantId: "grace",
+        toParticipantId: "seb",
+      }),
+    );
+    const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
+      .container.textContent;
+    expect(line).toContain("Grace → Seb");
+  });
+
+  /**
    * How the money moved is optional, and the row used to answer it on the
    * reader's behalf: the country's first suggestion arrived lit up, so every
    * repayment saved without a thought said "TWINT".

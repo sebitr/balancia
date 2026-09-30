@@ -129,7 +129,16 @@ const EMPTY_ROWS: BalanceRows = {
 
 export async function loadGroupBalances(
   access: Pick<GroupAccess, "groupId" | "group">,
-  options: { db?: Database; contributionsFor?: string | null } = {},
+  options: {
+    db?: Database;
+    contributionsFor?: string | null;
+    /**
+     * Set when `db` is a transaction. A transaction is one connection, and
+     * node-postgres does not support two queries on it at once, so the reads
+     * that are otherwise issued together below go one after another.
+     */
+    inTransaction?: boolean;
+  } = {},
 ): Promise<GroupBalances> {
   const db = options.db ?? getDb();
   const { groupId, group } = access;
@@ -155,7 +164,8 @@ export async function loadGroupBalances(
     .from(expenses)
     .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 
-  const [payerRows, shareRows, settlementRows] = await Promise.all([
+  // Built here and run below: a query is only sent once it is awaited.
+  const reads = [
     db
       .select({
         expenseId: expensePayers.expenseId,
@@ -190,7 +200,10 @@ export async function loadGroupBalances(
       .where(
         and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
       ),
-  ]);
+  ] as const;
+  const [payerRows, shareRows, settlementRows] = options.inTransaction
+    ? [await reads[0], await reads[1], await reads[2]]
+    : await Promise.all(reads);
 
   return assembleBalances(
     group,
