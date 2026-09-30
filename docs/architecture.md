@@ -157,8 +157,9 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   no participant's `email` or `user_id` — only whether each one has an
   account — on the web and over the API alike.
 - **Groups**: `groups` (currency mode `separate` | `converted`, optional base
-  currency, timezone, archived timestamp) and `group_members`
-  (owner/member roles) for registered users.
+  currency, timezone, archived timestamp, and — for a group a guest started —
+  the creator's seat) and `group_members` (owner/member roles) for registered
+  users.
 - **Expenses**: `expenses` + `expense_payers` (multiple payers) +
   `expense_shares` (final integer allocations, plus the original split input
   metadata so edits can restore the chosen method). Soft-deleted via
@@ -182,7 +183,13 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   ordinary attachment flow. The rules are code (`src/modules/receipts`) and the
   models are operator-installed files — see `docs/receipt-scanning.md`.
 - **Activity**: append-only `activity_events` written in the same transaction
-  as the financial change.
+  as the financial change. The Activity screen carries a Restore on the latest
+  deletion of an expense, a repayment or a recurring expense that is still
+  deleted — the same restore the Undo toast calls, so a deletion is not
+  recoverable only inside that toast's eight seconds. Which rows qualify is
+  worked out for the whole page in one query (`findRestorableDeletions`); a
+  deletion that was half of a change of type records `replacedBy` and is not
+  offered, since restoring it would count the same money twice.
 - **Notifications**: `notifications` is one row per person told about one
   event — the in-app inbox, and the outbox push delivery claims through
   `pushed_at`. `push_subscriptions` holds the browsers that agreed to receive
@@ -200,7 +207,9 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 `src/modules/balances` derives net positions per participant from payer
 contributions, expense shares and settlements — deleted expenses excluded.
 `separate` groups produce one balance list per currency; `converted` groups
-produce base-currency balances. The engine guarantees Σ(balances) = 0 per
+produce base-currency balances, plus one list per currency whose rows arrived
+with no rate — an import or a restored backup — which are never counted in the
+base at face value. The engine guarantees Σ(balances) = 0 per
 currency and produces a deterministic greedy simplification (largest debtor →
 largest creditor) that is presentation-only: it never alters recorded history.
 
@@ -252,7 +261,20 @@ largest creditor) that is presentation-only: it never alters recorded history.
   column existed — reads as "cannot be shown", never as an error.
 - Claiming a name is decided by the database, not by a prior read: the link
   from participant to user account is an `UPDATE … WHERE user_id IS NULL`, so
-  two people racing for the same name cannot both be told they won.
+  two people racing for the same name cannot both be told they won. Every
+  claim — the guest cookie's, the app's `POST /api/join/<token>`, a name picked
+  from the group link — retires the seat's personal links and their sessions
+  in the same transaction, and a seat with an account never resolves as a
+  guest again whatever its link row says.
+- A group started by a guest has no owner until its creator makes an account.
+  `groups.created_by_participant_id` records the seat it was started from, and
+  only a claim of that seat makes an owner; while nobody owns the group, the
+  group link neither lists that seat nor lets anybody take it, as a guest or
+  with an account.
+- Closing an account (`deleteAccount`) promotes the longest-standing member of
+  a group it owned, and deletes a group left with nobody — where nobody means
+  no member and no participant holding a live guest link. A group a guest is
+  still using is kept, with no owner.
 - Rate limiting: PostgreSQL-backed fixed-window limiter on sign-in,
   registration, password reset, email change and both kinds of link redemption.
   The email-change bucket is keyed by account rather than by client address,
@@ -263,6 +285,13 @@ largest creditor) that is presentation-only: it never alters recorded history.
   is announced to the old address at request time, before it can take effect,
   and only completes when the new address is confirmed. Neither is offered on
   an instance with no SMTP configured.
+- Email confirmation: the same kind of token, spent the same way. It verifies
+  the address wherever it is opened, and starts a session only in the browser
+  that registered — the one holding the registration cookie for that account
+  (`modules/auth/registration-browser.ts`, sealed with `lib/security/secret-box.ts`
+  and scoped to `/verify-email`). Elsewhere it lands on the sign-in page, so a
+  forwarded link cannot sign somebody else's browser in and claim the guest
+  seat it holds.
 - Strict security headers + CSP via `proxy.ts` (Next 16's middleware
   replacement).
 - Uploads: content-sniffed MIME allowlist (JPEG/PNG/WebP/GIF/PDF), size

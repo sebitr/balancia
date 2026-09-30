@@ -5,6 +5,7 @@ import {
   STATS_RANGES,
   bucketIndexOf,
   bucketsFor,
+  leadingWith,
   monthsBetween,
   percentOf,
   totalOf,
@@ -198,7 +199,7 @@ export interface GroupStats {
   /** `3m`, `1y` and `all`, always all three and always in that order. */
   readonly ranges: readonly GroupRangeStats[];
   readonly records: readonly GroupRecords[];
-  /** Currencies the group has spending in, busiest first. */
+  /** Currencies the group has spending in, busiest first after the lead. */
   readonly currencies: readonly string[];
   /** The day the group's first entry landed, or null when it has none. */
   readonly firstEntry: string | null;
@@ -223,6 +224,8 @@ export interface GroupStatsInput {
   readonly selfParticipantId: string | null;
   readonly timezone: string;
   readonly now: Date;
+  /** A converted group's base currency, which `leadingWith` puts first. */
+  readonly leadCurrency?: string | null;
 }
 
 /**
@@ -807,7 +810,7 @@ function recordsFor(input: GroupStatsInput, currency: string): GroupRecords {
 }
 
 export function computeGroupStats(input: GroupStatsInput): GroupStats {
-  const currencies = currenciesOf(input.facts);
+  const currencies = leadingWith(currenciesOf(input.facts), input.leadCurrency);
   const firstEntry = input.facts.reduce<string | null>(
     (first, fact) =>
       first === null || fact.expenseDate < first ? fact.expenseDate : first,

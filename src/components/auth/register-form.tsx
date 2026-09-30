@@ -235,14 +235,22 @@ export function RegisterForm({
             type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(form.formState.errors.password)}
-            aria-describedby="password-hint"
+            // The rule, then what is wrong with this attempt at it: a screen
+            // reader returning to the field hears both, as the eye sees both.
+            aria-describedby={
+              form.formState.errors.password
+                ? "password-hint password-error"
+                : "password-hint"
+            }
             {...form.register("password")}
           />
           <p id="password-hint" className="text-xs text-muted-foreground">
             {t("passwordHint")}
           </p>
           {fieldError("password") && (
-            <p className="text-sm text-destructive">{fieldError("password")}</p>
+            <p id="password-error" className="text-sm text-destructive">
+              {fieldError("password")}
+            </p>
           )}
         </div>
 
@@ -253,10 +261,15 @@ export function RegisterForm({
             type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(form.formState.errors.confirmPassword)}
+            aria-describedby={
+              form.formState.errors.confirmPassword
+                ? "confirmPassword-error"
+                : undefined
+            }
             {...form.register("confirmPassword")}
           />
           {fieldError("confirmPassword") && (
-            <p className="text-sm text-destructive">
+            <p id="confirmPassword-error" className="text-sm text-destructive">
               {fieldError("confirmPassword")}
             </p>
           )}

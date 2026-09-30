@@ -5,6 +5,7 @@ import {
   expenses,
   groupMembers,
   groups,
+  guestInvitations,
   notificationPreferences,
   participants,
   passkeys,
@@ -12,9 +13,18 @@ import {
   sessions,
   users,
 } from "@/lib/db/schema";
+import {
+  redeemInvitation,
+  resolveGuestSession,
+} from "@/lib/security/guest-session";
 import { deleteAccount, registerUser } from "@/modules/auth/service";
 import { createSession } from "@/modules/auth/sessions";
-import { createTestUser, createTestGroup } from "../helpers/factories";
+import { createInvitation, revokeInvitation } from "@/modules/groups/service";
+import {
+  addTestParticipant,
+  createTestUser,
+  createTestGroup,
+} from "../helpers/factories";
 
 /**
  * Closing an account.
@@ -224,6 +234,79 @@ describe("deleting an account", () => {
     // Its remaining participants are names on a list rather than accounts, so
     // there is no one to promote and no way back in.
     expect(left).toHaveLength(0);
+  });
+
+  it("keeps a group a guest is still using, with nobody owning it", async () => {
+    // The guest is not a member — guests never are — but they are somebody
+    // using the group, with every financial power a member has, and the
+    // screen promised the closing account's expenses stay where they are.
+    const owner = await createTestUser({ name: "Robin" });
+    const group = await createTestGroup(owner, { name: "Chalet" });
+    const grace = await addTestParticipant(group.groupId, "Grace");
+    const invitation = await createInvitation(group.access, {
+      participantId: grace,
+    });
+    const guest = await redeemInvitation(invitation.token);
+    const db = getDb();
+    const [expense] = await db
+      .insert(expenses)
+      .values({
+        groupId: group.groupId,
+        description: "Firewood",
+        amount: 4200n,
+        currency: "EUR",
+        splitMethod: "equal",
+        expenseDate: "2026-08-13",
+        createdByActorType: "user",
+        createdByParticipantId: group.ownerParticipantId,
+      })
+      .returning({ id: expenses.id });
+
+    await deleteAccount(owner.userId);
+
+    const [kept] = await db
+      .select({ createdByUserId: groups.createdByUserId })
+      .from(groups)
+      .where(eq(groups.id, group.groupId));
+    expect(kept).toEqual({ createdByUserId: null });
+    await expect(
+      db.select().from(expenses).where(eq(expenses.id, expense.id)),
+    ).resolves.toHaveLength(1);
+    await expect(
+      db
+        .select()
+        .from(groupMembers)
+        .where(eq(groupMembers.groupId, group.groupId)),
+    ).resolves.toEqual([]);
+    // And Grace is still in, on the session she already had.
+    await expect(resolveGuestSession(guest.token)).resolves.toMatchObject({
+      groupId: group.groupId,
+      participantId: grace,
+    });
+  });
+
+  it("still removes a group whose only guest link is no longer live", async () => {
+    // A revoked or lapsed link lets nobody in, so it keeps nobody's group.
+    const owner = await createTestUser();
+    const group = await createTestGroup(owner);
+    const revoked = await addTestParticipant(group.groupId, "Revoked");
+    await createInvitation(group.access, { participantId: revoked });
+    await revokeInvitation(group.access, revoked);
+    const lapsed = await addTestParticipant(group.groupId, "Lapsed");
+    await createInvitation(group.access, {
+      participantId: lapsed,
+      expiresInDays: 1,
+    });
+    await getDb()
+      .update(guestInvitations)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(guestInvitations.participantId, lapsed));
+
+    await deleteAccount(owner.userId);
+
+    await expect(
+      getDb().select().from(groups).where(eq(groups.id, group.groupId)),
+    ).resolves.toHaveLength(0);
   });
 
   it("says nothing and does nothing for an account that is already gone", async () => {

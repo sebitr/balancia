@@ -1,15 +1,35 @@
 name: CI
 
+# Pull requests run this file directly, and its job names are the checks the
+# ruleset on main requires — rename one and every pull request waits forever
+# for a check that no longer exists.
+#
+# main and version tags do not run it on their own. release.yml calls this
+# whole file as its first job and publishes nothing unless every job in it
+# passed, on the same commit and in the same run. A push trigger here as well
+# would be the same work twice, and a run the release never looked at.
+#
+# Every action is pinned to a full commit SHA, with the release it was cut
+# from beside it. A tag is a pointer its owner can move, and these steps run
+# with the repository checked out — in release.yml, with the Docker Hub token
+# in reach. Dependabot's github-actions entry moves the SHA and the comment
+# together, so pinned is not the same as frozen.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
   workflow_dispatch:
 
-# A new push supersedes an in-flight run on the same ref.
+# A new push to a pull request supersedes the run it replaces. Nothing else is
+# ever cancelled: a run on main or on a tag is one release.yml is waiting on,
+# and cancelling it in favour of the next merge is how commits came to be
+# published with a CI run that never finished.
+#
+# The prefix is spelled out rather than taken from `github.workflow`, which
+# names the *caller* under workflow_call. A group that came out equal to
+# release.yml's own would deadlock the run against itself.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -22,11 +42,11 @@ jobs:
     name: Lint, types and format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -47,9 +67,9 @@ jobs:
     name: Unit and property tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -82,9 +102,9 @@ jobs:
       NODE_ENV: test
 
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -103,9 +123,9 @@ jobs:
       DATABASE_URL: postgres://build:build@localhost:5432/build
       AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -141,9 +161,9 @@ jobs:
       APP_URL: http://localhost:3100
 
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -156,7 +176,7 @@ jobs:
 
       - run: pnpm test:e2e
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
           name: playwright-report
@@ -166,14 +186,39 @@ jobs:
   docker:
     name: Docker image
     runs-on: ubuntu-latest
+
+    # The image is booted against this, not merely looked inside — see the
+    # last two steps. No port is published: the containers join the job's
+    # network and reach it as `postgres`, the way compose reaches `db`.
+    #
+    # The password is chosen to need percent-encoding. The entrypoint splices
+    # it into DATABASE_URL, and '/', '#', '?' and '@' are exactly the
+    # characters that break a URL spliced without it.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: balancia
+          POSTGRES_PASSWORD: "ci/p@ss#w0rd?"
+          POSTGRES_DB: balancia
+        options: >-
+          --health-cmd "pg_isready -U balancia"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      POSTGRES_PASSWORD: "ci/p@ss#w0rd?"
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Build only. Publishing to Docker Hub is release.yml's job, and it
-      # happens on a version tag, not on a branch.
-      - uses: docker/build-push-action@v7
+      # Build only, into the runner's own Docker. Publishing is release.yml's
+      # job, and release.yml runs this one before it builds anything.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: false
@@ -220,13 +265,99 @@ jobs:
           done
           echo "runtime image carries production dependencies only"
 
+      # Everything above looks at files. This runs the image the way compose
+      # does, through its own entrypoint and with no DATABASE_URL: the
+      # entrypoint has to assemble one from the POSTGRES_* parts, apply every
+      # migration with the bundled migrator, and hand over to the Next.js
+      # server — which then has to say it is ready. /api/health/ready answers
+      # 200 only once PostgreSQL answers and the migrations table has rows, so
+      # a 200 here is all three of those steps having worked.
+      #
+      # RUN_WORKER_IN_WEB is left at its default, so the web process also
+      # starts the jobs itself, as a single-container install does.
+      - name: Boot the web role against PostgreSQL
+        env:
+          NETWORK: ${{ job.services.postgres.network }}
+        run: |
+          docker run -d --name balancia-web --network "$NETWORK" -p 3000:3000 \
+            -e APP_URL=http://localhost:3000 \
+            -e AUTH_SECRET \
+            -e POSTGRES_HOST=postgres \
+            -e POSTGRES_PASSWORD \
+            balancia:ci
+
+          # Two minutes, and it gives up at once if the container has exited:
+          # a migration failure stops the entrypoint, and waiting out the rest
+          # of the clock on a dead container would only delay the logs.
+          for attempt in $(seq 1 60); do
+            if [ "$(docker inspect -f '{{.State.Running}}' balancia-web)" != true ]; then
+              echo "::error::the web container exited before it was ready"
+              docker logs balancia-web
+              exit 1
+            fi
+            if body=$(curl -fs http://127.0.0.1:3000/api/health/ready); then
+              echo "ready after $attempt attempt(s): $body"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::/api/health/ready did not answer 200 within two minutes"
+          docker logs balancia-web
+          exit 1
+
+      # The same image in its other role, the one compose's `worker` profile
+      # starts. It has no port to ask, so it is judged on what it says and on
+      # staying up: it logs this line only once pg-boss has reached the
+      # database and every queue is subscribed. It migrates too, and must find
+      # the schema the web container left already current.
+      - name: Boot the worker role against PostgreSQL
+        env:
+          NETWORK: ${{ job.services.postgres.network }}
+        run: |
+          docker run -d --name balancia-worker --network "$NETWORK" \
+            -e APP_URL=http://localhost:3000 \
+            -e AUTH_SECRET \
+            -e POSTGRES_HOST=postgres \
+            -e POSTGRES_PASSWORD \
+            -e RUN_WORKER_IN_WEB=false \
+            balancia:ci node dist/worker.js
+
+          for attempt in $(seq 1 30); do
+            if [ "$(docker inspect -f '{{.State.Running}}' balancia-worker)" != true ]; then
+              echo "::error::the worker exited before it was ready"
+              docker logs balancia-worker
+              exit 1
+            fi
+            # Matched in the shell rather than piped to `grep -q`: grep quits
+            # at the first match, and under the runner's pipefail the SIGPIPE
+            # that leaves `docker logs` with turns a match into a miss.
+            case "$(docker logs balancia-worker 2>&1)" in
+              *'Worker ready and subscribed to queues'*)
+                # The line is logged once. A process that fell over straight
+                # after printing it would still have printed it.
+                sleep 5
+                if [ "$(docker inspect -f '{{.State.Running}}' balancia-worker)" != true ]; then
+                  echo "::error::the worker started, then exited"
+                  docker logs balancia-worker
+                  exit 1
+                fi
+                echo "worker subscribed after $attempt attempt(s) and is still running"
+                exit 0
+                ;;
+            esac
+            sleep 2
+          done
+          echo "::error::the worker did not report ready within a minute"
+          docker logs balancia-worker
+          exit 1
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
