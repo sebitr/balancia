@@ -129,8 +129,8 @@ is still their net for the row. Balancia never stores a negative amount; it has
 income for money coming in, so the row is imported as income of the same size,
 filed under _Refunds_, with every sign turned round. The balances come out
 exactly as the export's columns say. Splitwise's JSON backup is read the same
-way, and a payment with a negative amount there becomes the same payment in the
-other direction.
+way, and a payment with a negative amount there becomes a repayment in the other
+direction.
 
 **Imported expenses keep their original currency and carry no exchange rate.**
 Inventing a historical rate would be worse than leaving it unset. In a
@@ -194,9 +194,9 @@ Balancia never converts during an import. If a Splitwise group mixed
 currencies:
 
 - In a **separate** group, each currency gets its own balance. Nothing to do.
-- In a **converted** group, imported foreign expenses and payments stay in their
-  original currency with no rate, so they contribute to their own currency's
-  balance until you re-enter them. The group then shows its base-currency
+- In a **converted** group, imported foreign expenses and repayments stay in
+  their original currency with no rate, so they contribute to their own
+  currency's balance until you re-enter them. The group then shows its base-currency
   balances first and one more list per such currency — `€` and `¥` side by side,
   exactly as a separate group would — and each list sums to zero on its own.
   Statistics count those rows under their own currency too; a yen amount with no
@@ -210,7 +210,7 @@ The simplest path for a mixed-currency Splitwise group is to import into a
 `separate` group.
 
 The same holds for a restored backup. A `converted` group's export carries the
-rate each expense and payment was converted at, but the staging model has
+rate each expense and repayment was converted at, but the staging model has
 nowhere to put a historical rate, so a restored row comes back in the currency
 it was entered in, is balanced there, and the preview warns how many rows that
 affects.
