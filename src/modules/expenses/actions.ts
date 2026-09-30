@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import {
   actionError,
   requireGroupAccess,
   runAction,
   type ActionResult,
 } from "@/lib/actions";
+import { isIdempotencyKey } from "@/lib/idempotency";
 import { expenseInputSchema, settlementInputSchema } from "./schemas";
 import {
   createExpense,
@@ -49,12 +51,19 @@ function revalidateGroup(groupId: string): void {
  * a request that never arrived. Carrying the key on both paths means it does
  * not have to: it queues the entry under the key it already used, and if the
  * write did land, the replay finds it and adds nothing.
+ *
+ * The key is checked with the rule the API holds its header to, and refused
+ * rather than dropped — see `isIdempotencyKey`.
  */
 export async function createExpenseAction(
   groupId: string,
   payload: unknown,
   clientKey?: string,
 ): Promise<ActionResult<{ expenseId: string }>> {
+  if (clientKey !== undefined && !isIdempotencyKey(clientKey)) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
   const parsed = expenseInputSchema.safeParse(payload);
   if (!parsed.success) {
     return actionError(parsed.error.issues[0]?.message ?? "Check the expense.");

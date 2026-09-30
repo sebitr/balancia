@@ -75,7 +75,7 @@ async function sweep(key: string | null): Promise<void> {
     await getStorage().delete(key);
   } catch (error) {
     logger.warn(
-      { err: error instanceof Error ? error.message : String(error), key },
+      { err: error, key },
       "Orphaned avatar object could not be removed",
     );
   }

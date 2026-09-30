@@ -37,6 +37,12 @@ yarn-error.log*
 # local data (receipt uploads, dev database)
 /data
 
+# scripts/backup.sh writes here by default, and scripts/deploy.sh puts its
+# restore points under it. A database dump and a copy of .env are the last two
+# things that belong in a commit — and an untracked directory would stop the
+# next deploy, which refuses a checkout that is not clean.
+/backups/
+
 # generated service worker
 public/sw.js
 public/sw.js.map

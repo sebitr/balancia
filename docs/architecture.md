@@ -145,12 +145,17 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   provider, so an account can have a password, passkeys, an Apple link, or any
   combination).
   `payout_methods` (per account, ordered, one row per method) says how somebody
-  wants to be paid back; it is read only for people the reader owes money to,
-  and never included in a group export, because it belongs to the person rather
-  than to the trip.
+  wants to be paid back; it is read only for people the reader owes money to —
+  a guest on an invitation link included, since a group has to be able to pay
+  a member who is owed — never for an API key, whose settle-up read carries no
+  payout hints, and never included in a group export, because it belongs to the
+  person rather than to the trip. `payout_addresses` goes no further than the
+  Swiss QR-bill payload it exists for; no reader is sent it as a field.
   `participants` are group-scoped identities, optionally linked to a user
   (`user_id` nullable). Guests are participants without a linked user who
-  authenticate through invite tokens → guest sessions.
+  authenticate through invite tokens → guest sessions. A guest reader is sent
+  no participant's `email` or `user_id` — only whether each one has an
+  account — on the web and over the API alike.
 - **Groups**: `groups` (currency mode `separate` | `converted`, optional base
   currency, timezone, archived timestamp, and — for a group a guest started —
   the creator's seat) and `group_members` (owner/member roles) for registered
@@ -202,7 +207,9 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 `src/modules/balances` derives net positions per participant from payer
 contributions, expense shares and settlements — deleted expenses excluded.
 `separate` groups produce one balance list per currency; `converted` groups
-produce base-currency balances. The engine guarantees Σ(balances) = 0 per
+produce base-currency balances, plus one list per currency whose rows arrived
+with no rate — an import or a restored backup — which are never counted in the
+base at face value. The engine guarantees Σ(balances) = 0 per
 currency and produces a deterministic greedy simplification (largest debtor →
 largest creditor) that is presentation-only: it never alters recorded history.
 
@@ -274,9 +281,11 @@ largest creditor) that is presentation-only: it never alters recorded history.
   because what it spends is mail to an inbox the caller chose.
 - Account recovery and email change: single-use hashed tokens, opened from a
   link, spent by a route handler so the token is consumed exactly once and does
-  not survive into the address bar. A reset ends every session; an email change
-  is announced to the old address at request time, before it can take effect,
-  and only completes when the new address is confirmed. Neither is offered on
+  not survive into the address bar. A reset ends every session, revokes every
+  API key and spends any pending email change; it keeps passkeys and the Apple
+  link. An email change is announced to the old address at request time,
+  before it can take effect, only completes when the new address is confirmed,
+  and then ends every session and revokes every API key. Neither is offered on
   an instance with no SMTP configured.
 - Email confirmation: the same kind of token, spent the same way. It verifies
   the address wherever it is opened, and starts a session only in the browser
@@ -285,6 +294,15 @@ largest creditor) that is presentation-only: it never alters recorded history.
   and scoped to `/verify-email`). Elsewhere it lands on the sign-in page, so a
   forwarded link cannot sign somebody else's browser in and claim the guest
   seat it holds.
+- The first proof of an address — reset link, sign-in code or confirmation
+  link — removes every passkey, Apple link, API key, pending email change and
+  session the account held before it (`modules/auth/address-proof.ts`). A
+  passkey signup takes its address on trust, and without this whoever typed
+  somebody else's address kept a way into the account after its owner had
+  recovered it.
+- A passkey that is the account's only credential must have verified its
+  holder: user verification is required at a passkey signup and at any sign-in
+  to an account with no password.
 - Strict security headers + CSP via `proxy.ts` (Next 16's middleware
   replacement).
 - Uploads: content-sniffed MIME allowlist (JPEG/PNG/WebP/GIF/PDF), size

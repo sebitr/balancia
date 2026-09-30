@@ -6,6 +6,7 @@
  * exhaust memory, and an error that says what went wrong without quoting the
  * receipt back into the logs.
  */
+import { readCapped } from "@/lib/http/read-capped";
 import { OcrProviderError, classifyStatus } from "./types";
 import type { OcrProviderName } from "./types";
 
@@ -46,37 +47,6 @@ function withDeadline(signal: AbortSignal | undefined): {
       signal?.removeEventListener("abort", forward);
     },
   };
-}
-
-/**
- * Reads a bounded amount of text from a response.
- *
- * `response.text()` will happily buffer whatever arrives. This stops at the
- * cap and abandons the rest rather than letting a provider decide how much
- * memory this process uses.
- */
-async function readCapped(response: Response): Promise<string> {
-  const body = response.body;
-  if (!body) return "";
-
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  const chunks: string[] = [];
-  let total = 0;
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_REPLY_BYTES) break;
-      chunks.push(decoder.decode(value, { stream: true }));
-    }
-  } finally {
-    await reader.cancel().catch(() => undefined);
-  }
-
-  return chunks.join("") + decoder.decode();
 }
 
 /**
@@ -128,7 +98,8 @@ export async function postJson(
       );
     }
 
-    const raw = await readCapped(response);
+    // A reply cut off at the cap is not JSON either, and fails as one below.
+    const raw = await readCapped(response, MAX_REPLY_BYTES);
     try {
       return JSON.parse(raw);
     } catch {

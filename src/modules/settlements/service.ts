@@ -9,6 +9,8 @@ import {
   isNull,
   max,
   ne,
+  sql,
+  type SQL,
 } from "drizzle-orm";
 import { getDb, onlyRow, type Database } from "@/lib/db/client";
 import { keysetBefore, keysetTime, type ListCursor } from "@/lib/db/keyset";
@@ -79,6 +81,7 @@ async function assertParticipants(
   if (rows.length !== new Set(ids).size) {
     throw new AuthorizationError(
       "One or more of those people are not part of this group.",
+      "participantNotInGroup",
     );
   }
 }
@@ -520,9 +523,21 @@ export async function restoreSettlement(
   });
 }
 
+/**
+ * Settlements for a group, newest first.
+ *
+ * `where` and `orderBy` are the transactions list's filters and orders — the
+ * same two options `listExpenses` takes, for the same reason.
+ */
 export async function listSettlements(
   groupId: string,
-  options: { db?: Database; limit?: number; before?: ListCursor | null } = {},
+  options: {
+    db?: Database;
+    limit?: number;
+    before?: ListCursor | null;
+    where?: SQL;
+    orderBy?: readonly SQL[];
+  } = {},
 ): Promise<ListedSettlement[]> {
   const db = options.db ?? getDb();
   const rows = await db
@@ -555,12 +570,15 @@ export async function listSettlements(
               options.before,
             )
           : undefined,
+        options.where,
       ),
     )
     .orderBy(
-      desc(settlements.settledOn),
-      desc(settlements.createdAt),
-      desc(settlements.id),
+      ...(options.orderBy ?? [
+        desc(settlements.settledOn),
+        desc(settlements.createdAt),
+        desc(settlements.id),
+      ]),
     )
     .limit(options.limit ?? 100);
 
@@ -580,24 +598,53 @@ export async function listSettlements(
 }
 
 /**
- * Whether the group has ever recorded a repayment.
+ * The group's repayments, summed per currency and converted currency.
  *
- * Asked separately from the list because the kind chips must describe the
- * group, not the page: a Settlements chip that appeared only once the reader
- * had scrolled far enough to reach one would be a control that arrives after
- * the moment it was useful.
+ * Asked separately from the list because the transactions screen's controls
+ * must describe the group, not the page. Whether there are any at all decides
+ * the Settlements chip — one that appeared only once the reader had scrolled
+ * far enough to reach a repayment would be a control that arrives after the
+ * moment it was useful. Which currencies they are in decides whether
+ * `Largest amount` is a ranking or a coincidence of denominations, and that
+ * has to be answered over rows the reader has not loaded yet.
+ *
+ * Summed rather than listed, for the same reason as `listSpreadEntries`, and
+ * in the same shape, so `moneyForGroup` reads a sum exactly as it would read
+ * each repayment inside it.
  */
-export async function hasSettlements(
+export async function settlementTotals(
   groupId: string,
   options: { db?: Database } = {},
-): Promise<boolean> {
+): Promise<
+  {
+    readonly amount: bigint;
+    readonly currency: string;
+    readonly convertedAmount: bigint | null;
+    readonly convertedCurrency: string | null;
+    readonly count: number;
+  }[]
+> {
   const db = options.db ?? getDb();
-  const [row] = await db
-    .select({ id: settlements.id })
+  const rows = await db
+    .select({
+      currency: settlements.currency,
+      convertedCurrency: settlements.convertedCurrency,
+      amount: sql<string>`sum(${settlements.amount})::text`,
+      convertedAmount: sql<
+        string | null
+      >`sum(${settlements.convertedAmount})::text`,
+      count: count(),
+    })
     .from(settlements)
     .where(and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)))
-    .limit(1);
-  return row !== undefined;
+    .groupBy(settlements.currency, settlements.convertedCurrency);
+
+  return rows.map((row) => ({
+    ...row,
+    amount: BigInt(row.amount),
+    convertedAmount:
+      row.convertedAmount === null ? null : BigInt(row.convertedAmount),
+  }));
 }
 
 /**

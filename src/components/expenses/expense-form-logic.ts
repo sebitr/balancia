@@ -155,6 +155,9 @@ const ALLOCATION_MESSAGE_KEYS = {
   valueRequired: "valueRequired",
   valueNotDecimal: "valueNotDecimal",
   valueNotInteger: "valueNotInteger",
+  // Only reachable past the form, which refuses a negative exact amount and so
+  // can never be handed a part larger than the total it already caps.
+  valueTooLarge: "amountInvalid",
   exactSumMismatch: "exactSumMismatch",
   percentageNegative: "percentageNegative",
   percentageSumMismatch: "percentageSumMismatch",

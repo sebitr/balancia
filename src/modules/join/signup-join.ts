@@ -49,7 +49,7 @@ export async function joinFromLink(
      * again.
      */
     logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
+      { err: error },
       "Signup finished with a join link that no longer resolves",
     );
     await clearJoinCookie();

@@ -6,6 +6,7 @@ import { isUniqueViolation } from "@/lib/db/errors";
 import { decodeCursor, encodeCursor, type ListCursor } from "@/lib/db/keyset";
 import {
   activityEvents,
+  attachments,
   expenseShares,
   expenses,
   settlements,
@@ -787,6 +788,56 @@ describe("paging a long list", () => {
     `);
 
     expect(await pageThrough(group.groupId, 1)).toHaveLength(2);
+  });
+});
+
+describe("receipts in a list", () => {
+  it("counts each expense's own live receipts", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const db = getDb();
+    const [kept, dropped, bare] = await db
+      .insert(expenses)
+      .values(
+        ["Kept", "Dropped", "Bare"].map((description) => ({
+          groupId: group.groupId,
+          description,
+          amount: 1000n,
+          currency: "EUR",
+          splitMethod: "equal" as const,
+          expenseDate: "2026-08-13",
+          createdByActorType: "user" as const,
+        })),
+      )
+      .returning({ id: expenses.id });
+
+    const receipt = (expenseId: string, deletedAt: Date | null) => ({
+      groupId: group.groupId,
+      expenseId,
+      storageKey: randomUUID(),
+      fileName: "receipt.jpg",
+      contentType: "image/jpeg",
+      byteSize: 1024n,
+      checksum: "x",
+      deletedAt,
+    });
+    await db
+      .insert(attachments)
+      .values([
+        receipt(kept.id, null),
+        receipt(kept.id, null),
+        receipt(dropped.id, new Date()),
+      ]);
+
+    // Counted by a subquery in the select list, this was 0 for every row:
+    // the subquery's `id` was the attachment's, not the expense's.
+    const counts = Object.fromEntries(
+      (await listExpenses(group.groupId)).map((expense) => [
+        expense.id,
+        expense.attachmentCount,
+      ]),
+    );
+    expect(counts).toEqual({ [kept.id]: 2, [dropped.id]: 0, [bare.id]: 0 });
   });
 });
 

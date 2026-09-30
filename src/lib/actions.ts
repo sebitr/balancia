@@ -92,8 +92,8 @@ function isSafeError(error: unknown): error is Error {
 
 /**
  * Wraps an action body so failures become `ActionResult` rather than an
- * unhandled rejection. Unexpected errors are logged in full and reported to
- * the user as a generic message.
+ * unhandled rejection. Unexpected errors are logged — in full, less a failed
+ * query's values — and reported to the user as a generic message.
  */
 export async function runAction<T>(
   name: string,
@@ -114,22 +114,14 @@ export async function runAction<T>(
     }
 
     observe(name, "failed", startedAt);
-    logger.error(
-      {
-        action: name,
-        err:
-          error instanceof Error
-            ? (error.stack ?? error.message)
-            : String(error),
-      },
-      "Action failed",
-    );
+    logger.error({ action: name, err: error }, "Action failed");
 
-    // The full error, with its stack, has just gone to this instance's own log
-    // where an administrator can read it. What may leave the instance — if,
-    // and only if, crash reports were switched on — is the class name and the
-    // word "server-action". Never awaited into the response path: the user is
-    // getting an error message either way, and they should not wait for a
+    // The error, with its stack, has just gone to this instance's own log
+    // where an administrator can read it — less the values of a failed query,
+    // which the logger's `err` serializer drops. What may leave the instance —
+    // if, and only if, crash reports were switched on — is the class name and
+    // the word "server-action". Never awaited into the response path: the user
+    // is getting an error message either way, and they should not wait for a
     // report to be sent first.
     void reportCrash(error, "server-action");
 

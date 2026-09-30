@@ -92,6 +92,7 @@ export const AREA_NAMESPACES = {
   ],
   onboarding: ["group", "joinError", "onboarding"],
   group: [
+    "activity.restore",
     "addEntry",
     "dangerZone",
     "exchangeRate",
