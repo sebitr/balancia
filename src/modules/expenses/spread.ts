@@ -42,6 +42,18 @@ export interface SpreadEntry {
   readonly convertedCurrency: string | null;
 }
 
+/**
+ * Many entries at once: every expense that shares a direction, a category, a
+ * subcategory, a currency and a converted currency, with their amounts summed.
+ *
+ * A `SpreadEntry` in its own right — `categoryTotals` cannot tell a sum of
+ * forty dinners from one very large dinner, and has no reason to — with the
+ * number of expenses behind it, for the filter sheet's per-category counts.
+ */
+export interface SpreadGroup extends SpreadEntry {
+  readonly count: number;
+}
+
 export interface CategoryTotal {
   /** The stored category string; null when nobody chose one. */
   readonly category: string | null;

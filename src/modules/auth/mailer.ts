@@ -75,7 +75,7 @@ export async function sendMail(message: MailMessage): Promise<void> {
     logger.error(
       {
         subject: message.subject,
-        err: error instanceof Error ? error.message : String(error),
+        err: error,
       },
       "Failed to send email",
     );

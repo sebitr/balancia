@@ -24,6 +24,7 @@ import {
   type GroupIconColor,
 } from "@/modules/groups/icons";
 import type { CurrencyMode } from "@/modules/currencies/conversion";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { timezoneCity } from "@/lib/timezones";
 import { cn } from "@/lib/utils";
 
@@ -485,7 +486,9 @@ function Participants({
         ))}
       </ul>
 
-      <div className="flex h-12 items-center gap-2.5 rounded-[14px] pr-2 pl-2.5 inset-ring inset-ring-foreground/12">
+      {/* The row is the field's edge, so the row is what shows it has the
+          caret: the input inside draws no box of its own to ring. */}
+      <div className="flex h-12 items-center gap-2.5 rounded-[14px] pr-2 pl-2.5 inset-ring inset-ring-foreground/12 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50">
         <span
           aria-hidden="true"
           className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground inset-ring inset-ring-foreground/18"
@@ -568,12 +571,21 @@ function CurrencyQuestion({
       subtitle: t("modeSeparateSubtitle"),
     },
   ];
+  const keys = rovingChoice({
+    values: options.map((option) => option.value),
+    selected: mode,
+    onSelect: onMode,
+  });
 
   return (
     <section className="flex flex-col gap-1.5">
       <SectionLabel>{t("foreignCurrencyQuestion")}</SectionLabel>
 
-      <div role="radiogroup" className="flex flex-col gap-1.5">
+      <div
+        role="radiogroup"
+        aria-label={t("foreignCurrencyQuestion")}
+        className="flex flex-col gap-1.5"
+      >
         {options.map((option) => {
           const selected = mode === option.value;
           return (
@@ -582,6 +594,7 @@ function CurrencyQuestion({
               type="button"
               role="radio"
               aria-checked={selected}
+              {...keys(option.value)}
               onClick={() => onMode(option.value)}
               className={cn(
                 "flex h-14 items-center gap-3 rounded-[14px] px-3 text-left transition-colors duration-150",

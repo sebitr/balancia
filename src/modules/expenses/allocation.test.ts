@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import Decimal from "decimal.js";
 import fc from "fast-check";
+import { MAX_MINOR_UNITS } from "@/modules/currencies/money";
 import {
   AllocationError,
   allocateByWeights,
@@ -13,6 +14,154 @@ import {
 
 const sum = (values: readonly bigint[]): bigint =>
   values.reduce((accumulator, value) => accumulator + value, 0n);
+
+/**
+ * Largest remainder worked in whole numbers, with nothing to round: what
+ * `allocateByWeights` has to return for weights already scaled to integers.
+ *
+ * The reference the bound tests below hold the real thing to. While the real
+ * thing was worked in decimal.js the two parted company: at its default twenty
+ * digits as soon as a total and a weight had more digits between them than
+ * that, well inside the amounts the schema accepts; and at any precision on a
+ * tie between shares of different lengths. Either way a rounding unit went to
+ * a part it was not owed to.
+ */
+function exactAllocation(total: bigint, weights: readonly bigint[]): bigint[] {
+  const negative = total < 0n;
+  const magnitude = negative ? -total : total;
+  const weightSum = sum(weights);
+  const floors = weights.map((weight) => (magnitude * weight) / weightSum);
+  const ranked = weights
+    .map((weight, index) => ({
+      index,
+      remainder: (magnitude * weight) % weightSum,
+    }))
+    .sort((a, b) =>
+      a.remainder === b.remainder
+        ? a.index - b.index
+        : a.remainder > b.remainder
+          ? -1
+          : 1,
+    );
+  let leftover = magnitude - sum(floors);
+  for (let cursor = 0; leftover > 0n; cursor += 1) {
+    const target = ranked[cursor % ranked.length]!;
+    floors[target.index] = floors[target.index]! + 1n;
+    leftover -= 1n;
+  }
+  return negative ? floors.map((value) => -value) : floors;
+}
+
+describe("allocation at the accepted bounds (property-based)", () => {
+  it("matches whole-number arithmetic when the weights are amounts", () => {
+    // What `convertAllocations` does: a converted total spread in proportion
+    // to the parts it came from, every one of them up to the largest amount.
+    fc.assert(
+      fc.property(
+        fc.bigInt({ min: -MAX_MINOR_UNITS, max: MAX_MINOR_UNITS }),
+        fc
+          .array(fc.bigInt({ min: 0n, max: MAX_MINOR_UNITS }), {
+            minLength: 1,
+            maxLength: 12,
+          })
+          .filter((weights) => weights.some((weight) => weight > 0n)),
+        (total, weights) => {
+          const allocation = allocateByWeights(
+            total,
+            weights.map((weight) => new Decimal(weight.toString())),
+          );
+          expect(allocation).toEqual(exactAllocation(total, weights));
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+
+  it("matches whole-number arithmetic for percentages of the largest totals", () => {
+    fc.assert(
+      fc.property(
+        fc.bigInt({ min: MAX_MINOR_UNITS / 1000n, max: MAX_MINOR_UNITS }),
+        // Hundredths of a percent, as the percentage tab writes them.
+        fc
+          .array(fc.integer({ min: 0, max: 10_000 }), {
+            minLength: 1,
+            maxLength: 12,
+          })
+          .filter((hundredths) => hundredths.some((value) => value > 0)),
+        (total, hundredths) => {
+          const allocation = allocateByWeights(
+            total,
+            hundredths.map((value) => new Decimal(value).dividedBy(100)),
+          );
+          expect(allocation).toEqual(
+            exactAllocation(
+              total,
+              hundredths.map((value) => BigInt(value)),
+            ),
+          );
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+
+  it("gives the rounding unit to the part that is owed it", () => {
+    // Found by the property above at twenty digits, kept as a fixed case
+    // because a random search only finds one in a few hundred: the products
+    // were rounded before the division, the remainders came out in the wrong
+    // order, and the last unit went to the fifth part instead of the first.
+    const total = 294804489140145177n;
+    const weights = [
+      561218906782960356n,
+      226580797222396110n,
+      52237994555873719n,
+      419167984607593237n,
+      211793515430789085n,
+    ];
+    expect(
+      allocateByWeights(
+        total,
+        weights.map((weight) => new Decimal(weight.toString())),
+      ),
+    ).toEqual([
+      112474468556780469n,
+      45409294741768669n,
+      10469071168366912n,
+      84005894553706464n,
+      42445760119522663n,
+    ]);
+  });
+
+  it("settles a tie by the caller's order, whatever the size of the shares", () => {
+    // 4 over 10:1:1 leaves every part a third of a unit over its floor. Worked
+    // in decimals, the third after 3 was cut one digit shorter than the thirds
+    // after 0, came out smaller, and the unit went to the second person.
+    expect(
+      allocateByWeights(4n, [new Decimal(10), new Decimal(1), new Decimal(1)]),
+    ).toEqual([4n, 0n, 0n]);
+
+    // The same thing at the scale the percentage property works at, where it
+    // turned up about once in twenty-five thousand runs: parts three and five
+    // are owed the same fraction, and the third comes first.
+    expect(
+      allocateByWeights(
+        688733842980964935n,
+        [1794, 2837, 5351, 9925, 1569, 1614, 4935, 7005].map((hundredths) =>
+          new Decimal(hundredths).dividedBy(100),
+        ),
+      ),
+    ).toEqual([
+      35272295584009452n,
+      55778986940822082n,
+      105207387775939006n,
+      195137978635057864n,
+      30848512693038366n,
+      31733269271232584n,
+      97028304741965799n,
+      137727107338899782n,
+    ]);
+  });
+});
 
 describe("allocateEqually", () => {
   it("splits an evenly divisible total", () => {
@@ -112,7 +261,8 @@ describe("allocation invariants (property-based)", () => {
   it("always sums exactly to the total", () => {
     fc.assert(
       fc.property(
-        fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }),
+        // The whole range an amount may have, not a comfortable corner of it.
+        fc.bigInt({ min: -MAX_MINOR_UNITS, max: MAX_MINOR_UNITS }),
         fc
           .array(weightArbitrary, { minLength: 1, maxLength: 25 })
           .filter((weights) => weights.some((weight) => weight.greaterThan(0))),

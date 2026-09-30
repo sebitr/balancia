@@ -10,6 +10,7 @@ import {
   settlements,
 } from "@/lib/db/schema";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
+import { ledgerCurrencyOf } from "@/modules/currencies/display";
 import type { GroupAccess } from "@/lib/security/authorization";
 import {
   balancesSumToZero,
@@ -29,11 +30,19 @@ import {
 /**
  * Balance service: loads the facts, hands them to the pure engine.
  *
- * The only real work here is choosing which amount column to feed the engine.
- * In a converted group that is the frozen converted amount (falling back to the
- * original when the expense was already in the base currency); in a separate
- * group it is always the original. Deleted expenses and settlements are
- * excluded at the query level.
+ * The only real work here is choosing which amount column to feed the engine,
+ * and which currency's balance it lands in. In a converted group that is the
+ * frozen converted amount, in the base currency; an entry already in the base
+ * has no conversion and brings its own amount. In a separate group it is always
+ * the original, in its own currency.
+ *
+ * One kind of entry is neither: a foreign row in a converted group that carries
+ * no conversion, which is what an import or a restored backup writes. It has
+ * no base figure, so it keeps its own amount and its own currency, and the
+ * group gets one more balance list — exactly as a separate group would — until
+ * somebody re-enters it with a rate. `ledgerCurrencyOf` is that rule.
+ *
+ * Deleted expenses and settlements are excluded at the query level.
  */
 
 export interface GroupBalances {
@@ -78,7 +87,7 @@ type GroupCurrencyFacts = Pick<
 >;
 
 /** One group's rows, however they were fetched. */
-interface BalanceRows {
+export interface BalanceRows {
   readonly participants: readonly { id: string; displayName: string }[];
   readonly expenses: readonly {
     id: string;
@@ -375,12 +384,13 @@ export async function loadBalancesForGroups(
 }
 
 /**
- * Turns one group's rows into its balances. Pure: no query, no clock.
+ * Turns one group's rows into its balances. Pure: no query, no clock — which
+ * is also what makes the currency rules testable without a database.
  *
  * Shared by both loaders above so that batching the reads cannot change an
  * answer — only how many round trips it took to get the rows.
  */
-function assembleBalances(
+export function assembleBalances(
   group: GroupCurrencyFacts,
   rows: BalanceRows,
   contributionsFor: string | null,
@@ -414,8 +424,15 @@ function assembleBalances(
     { participantId: string; amount: bigint }[]
   >();
 
+  // An allocation carries a converted amount exactly when its entry does, so
+  // the fallback here is the entry kept in its own money — base or foreign —
+  // and the amount always matches the currency `ledgerOf` labels it with.
   const pick = (original: bigint, converted: bigint | null): bigint =>
     converts ? (converted ?? original) : original;
+  const ledgerOf = (row: {
+    currency: string;
+    convertedCurrency: string | null;
+  }): string => ledgerCurrencyOf(row, group.currencyMode);
 
   for (const row of payerRows) {
     const list = payersByExpense.get(row.expenseId) ?? [];
@@ -437,7 +454,7 @@ function assembleBalances(
   const engineExpenses: BalanceInputExpense[] = expenseRows.map((row) => ({
     id: row.id,
     direction: row.direction,
-    currency: converts ? (group.baseCurrency as string) : row.currency,
+    currency: ledgerOf(row),
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
@@ -445,7 +462,7 @@ function assembleBalances(
     id: row.id,
     direction: row.direction,
     expenseDate: row.expenseDate,
-    currency: converts ? (group.baseCurrency as string) : row.currency,
+    currency: ledgerOf(row),
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
@@ -453,18 +470,30 @@ function assembleBalances(
   const engineSettlements: BalanceInputSettlement[] = settlementRows.map(
     (row) => ({
       id: row.id,
-      currency: converts ? (group.baseCurrency as string) : row.currency,
+      currency: ledgerOf(row),
       fromParticipantId: row.fromParticipantId,
       toParticipantId: row.toParticipantId,
       amount: pick(row.amount, row.convertedAmount),
     }),
   );
 
-  const currencies = computeBalances({
+  const computed = computeBalances({
     participantIds,
     expenses: engineExpenses,
     settlements: engineSettlements,
   });
+
+  // A converted group's base currency leads, whatever the alphabet says. It is
+  // the list the group was set up to keep, and a screen with room for a single
+  // position shows the first one — which, before rows could be left in their
+  // own currency, was the only one. The rest follow in code order, as a
+  // separate group's do.
+  const currencies = converts
+    ? [
+        ...computed.filter((entry) => entry.currency === group.baseCurrency),
+        ...computed.filter((entry) => entry.currency !== group.baseCurrency),
+      ]
+    : computed;
 
   // The invariant that makes the rest of the product trustworthy. If it ever
   // fails the data is inconsistent, and showing a number would be worse than

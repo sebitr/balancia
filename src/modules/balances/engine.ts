@@ -97,8 +97,11 @@ export class BalanceError extends Error {
  *
  * In `separate` mode a group can hold several currencies at once and each is
  * balanced independently. In `converted` mode the caller has already converted
- * everything to the base currency, so exactly one entry comes back. Both paths
- * run through this same function — there is no second implementation to drift.
+ * everything it holds a rate for into the base currency, so one entry comes
+ * back — plus one per currency whose rows arrived with no rate, which are
+ * balanced on their own exactly as a separate group's would be. Every path
+ * runs through this same function — there is no second implementation to
+ * drift.
  */
 export function computeBalances(
   input: BalanceComputationInput,

@@ -15,6 +15,7 @@
  */
 import type { Instrumentation } from "next";
 import { getEnv } from "@/lib/env";
+import { guardConsoleErrors } from "@/lib/error-for-log";
 import { logger } from "@/lib/logger";
 
 /**
@@ -30,6 +31,9 @@ import { logger } from "@/lib/logger";
  * no values in it. Only the last is passed on, as a coarse component — and
  * only when an administrator switched crash reports on, which is off by
  * default. The error itself never leaves in any form but its class name.
+ *
+ * Nothing is logged here: Next.js prints the error itself as soon as this
+ * returns, through the `console.error` that `register` guards below.
  */
 export const onRequestError: Instrumentation.onRequestError = async (
   error,
@@ -58,6 +62,11 @@ export async function register(): Promise<void> {
   // `register` also runs in the Edge runtime, which has no database driver and
   // no queue. The worker is Node-only.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  // Before anything can fail: an error that escapes a page is printed by
+  // Next.js itself, not by the logger, and a failed query's values would go
+  // with it. See `guardConsoleErrors`.
+  guardConsoleErrors();
 
   const env = getEnv();
 
@@ -111,12 +120,7 @@ export async function register(): Promise<void> {
     // fails a request. Loud in the log is the point: the previous behaviour
     // was to do nothing and say nothing.
     logger.error(
-      {
-        err:
-          error instanceof Error
-            ? (error.stack ?? error.message)
-            : String(error),
-      },
+      { err: error },
       "RUN_WORKER_IN_WEB is set but the background worker could not start; " +
         "no recurring expenses, sweeps or push notifications will be delivered",
     );

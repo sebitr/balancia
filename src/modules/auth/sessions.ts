@@ -143,6 +143,14 @@ export async function revokeSession(
  * confirmed from a link that may well be open on a device the account has
  * never used. Both are answers to "I have lost control of this account", so
  * both take the whole set.
+ *
+ * Sessions are not the whole answer to that, and neither caller stops here.
+ * Both also revoke every API key, which a session can mint and which never
+ * expires; a reset spends any email change still waiting for its link. What a
+ * reset leaves standing is the account's passkeys and its Apple link, which
+ * are the owner's own in the ordinary case — unless the address had never
+ * been proved, when those go too (`proveAddress`). An owner who suspects a
+ * passkey removes it from the security screen.
  */
 export async function revokeAllSessionsForUser(
   userId: string,

@@ -4,14 +4,24 @@
 #
 # Safe by construction. Something is removed only when all of these hold:
 #
-#   * its branch has a MERGED pull request on the remote;
+#   * a pull request from its branch has MERGED on the remote, and the branch
+#     is still at the very commit that pull request merged at;
+#   * no pull request from a branch of that name is open;
 #   * its worktree has no uncommitted changes;
 #   * its worktree is not locked by a Claude session that is still running;
 #   * it is not the worktree the caller is sitting in.
 #
 # A branch that never had a pull request is never touched, however old and
 # abandoned it looks. That is the rule protecting work in flight: the list of
-# merged pull requests is the only thing that authorises a deletion here.
+# merged pull requests is the only thing that authorises a deletion here, so
+# without `gh` to fetch it nothing is deleted at all.
+#
+# And a name is not a pull request. Weblate opens every translation pull
+# request from one branch, `weblate-balancia-messages`, and while this matched
+# on names alone, #188 having once merged under it was enough to delete each
+# new one at the next session start: six pull requests closed unmerged before
+# anybody saw why. A branch that has moved on since its pull request merged, or
+# been made again under an old name, is somebody's work in flight.
 #
 # Usage: reap-merged.sh [--dry-run] [--no-remote] [--quiet] [--force]
 #
@@ -29,7 +39,7 @@ for arg in "$@"; do
     --no-remote) DO_REMOTE=0 ;;
     --quiet)     QUIET=1 ;;
     --force)     FORCE=1 ;;
-    -h|--help)   sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)   sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "reap-merged: unknown option $arg" >&2; exit 2 ;;
   esac
 done
@@ -64,34 +74,65 @@ git fetch --prune --quiet 2>/dev/null || true
 DEFAULT=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
 DEFAULT=${DEFAULT:-main}
 
-# The merged set, straight from the forge, and with it the number and date each
-# branch merged under — the two facts a finished list item has to carry, out of
-# the call the reaping needed anyway. Without `gh` we fall back to the branches
-# whose upstream has been deleted, which is what a merged-and-pruned branch
-# looks like from here: enough to reap by, not enough to quote a number from.
-MERGED=""; MERGED_PRS=""
-if command -v gh >/dev/null 2>&1; then
-  MERGED_PRS=$(gh pr list --state merged --limit 300 \
-                 --json headRefName,number,mergedAt \
-                 --jq '.[] | [.headRefName, .number, (.mergedAt | split("T")[0])] | @tsv' \
-                 2>/dev/null)
-  [ -n "$MERGED_PRS" ] && MERGED=$(printf '%s\n' "$MERGED_PRS" | cut -f1)
+# The merged set, straight from the forge: for each pull request the branch it
+# came from, the number and date it merged under — the two facts a finished
+# list item has to carry, out of the call the reaping needed anyway — and the
+# commit it merged at, which is what says whether a branch of that name is
+# still that pull request. Beside it, the names with a pull request open now.
+#
+# Both come from `gh`, or nothing is reaped. This used to fall back to the
+# branches whose upstream had been deleted, which is what a merged and pruned
+# branch looks like from here — and also what a branch deleted by hand looks
+# like, or one this script deleted on a name match. That is too little to
+# delete somebody's work by, so without the forge they are only named.
+MERGED_PRS=""; OPEN=""; FORGE=0
+if command -v gh >/dev/null 2>&1 \
+   && MERGED_PRS=$(gh pr list --state merged --limit 300 \
+                     --json headRefName,number,mergedAt,headRefOid \
+                     --jq '.[] | [.headRefName, .number, (.mergedAt | split("T")[0]), .headRefOid] | @tsv' \
+                     2>/dev/null) \
+   && OPEN=$(gh pr list --state open --limit 300 --json headRefName \
+               --jq '.[].headRefName' 2>/dev/null); then
+  FORGE=1
 fi
-if [ -z "$MERGED" ]; then
-  MERGED=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
-             | awk '$2=="[gone]"{print $1}')
-  [ -n "$MERGED" ] && note "no gh: falling back to branches whose upstream is gone"
+if [ "$FORGE" -eq 0 ]; then
+  if [ "$QUIET" -eq 0 ]; then
+    echo "reap-merged: could not ask GitHub what has merged (no gh, signed out or offline), so nothing was reaped"
+    GONE=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
+             | awk '$2=="[gone]" { print "  " $1 }')
+    [ -n "$GONE" ] && { echo "upstream deleted, left for you to judge:"; printf '%s\n' "$GONE"; }
+  fi
+  exit 0
 fi
-[ -n "$MERGED" ] || exit 0
+[ -n "$MERGED_PRS" ] || exit 0
 
-is_merged() { printf '%s\n' "$MERGED" | grep -Fxq -- "$1"; }
+# The name says which pull requests to look at; only the commit says whether a
+# branch is still one of them. Here-strings rather than a pipe into `grep -q`:
+# with a commit on every line the set outgrows a pipe buffer, and an early exit
+# on a match would SIGPIPE the writer, which pipefail reports as a miss.
+tip()          { git rev-parse --verify --quiet "$1^{commit}" 2>/dev/null; }
+named_merged() { awk -F'\t' -v b="$1" '$1 == b { f = 1 } END { exit !f }' <<<"$MERGED_PRS"; }
+merged_at()    { awk -F'\t' -v b="$1" -v o="$2" 'o != "" && $1 == b && $4 == o { f = 1 } END { exit !f }' <<<"$MERGED_PRS"; }
+has_open()     { grep -Fxq -- "$1" <<<"$OPEN"; }
+
+# Why a branch named after a merged pull request has to stay, or nothing when
+# it may go.
+held() {
+  if has_open "$1"; then
+    echo "has an open pull request"
+  elif ! merged_at "$1" "$2"; then
+    echo "not at the commit its pull request merged at"
+  fi
+}
 
 # ---- worktrees ------------------------------------------------------------
 while IFS=$'\t' read -r wt br locked; do
   [ "$wt" = "$ROOT" ] && continue
   [ -n "$CALLER_WT" ] && [ "$wt" = "$CALLER_WT" ] && continue
   [ -n "$br" ] || { note "$(basename "$wt"): detached HEAD, left alone"; continue; }
-  is_merged "$br" || continue
+  named_merged "$br" || continue
+  why=$(held "$br" "$(tip "refs/heads/$br")")
+  [ -z "$why" ] || { note "$br: $why, left alone"; continue; }
 
   if [ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]; then
     note "$br: uncommitted changes, left alone"; continue
@@ -150,7 +191,9 @@ while read -r br; do
   [ "$br" = "$DEFAULT" ] && continue
   [ "$br" = "$CURRENT" ] && continue
   printf '%s\n' "$CHECKED_OUT" | grep -Fxq -- "$br" && continue
-  is_merged "$br" || continue
+  named_merged "$br" || continue
+  why=$(held "$br" "$(tip "refs/heads/$br")")
+  [ -z "$why" ] || { note "$br: $why, left alone"; continue; }
   # -D, not -d: a squash merge leaves no ancestry for -d to recognise.
   if [ "$DRY_RUN" -eq 1 ]; then
     act "would delete local branch $br"
@@ -162,20 +205,32 @@ done < <(git for-each-ref --format='%(refname:short)' refs/heads)
 # ---- remote branches ------------------------------------------------------
 # Since delete_branch_on_merge was turned on this pass usually finds nothing.
 # It stays for the backlog, and for a merge made with the setting off.
+#
+# Each delete carries a lease on the commit it was judged by, so a branch that
+# somebody pushed to between the fetch above and this push is refused rather
+# than taken. Weblate pushes on its own schedule, not around ours.
 if [ "$DO_REMOTE" -eq 1 ]; then
-  TO_DELETE=()
+  TO_DELETE=(); LEASES=()
   while read -r br; do
     [ -n "$br" ] || continue
     [ "$br" = "$DEFAULT" ] && continue
-    git show-ref --verify --quiet "refs/remotes/origin/$br" || continue
-    TO_DELETE+=("$br")
-  done < <(printf '%s\n' "$MERGED" | sort -u)
+    oid=$(tip "refs/remotes/origin/$br") || continue
+    why=$(held "$br" "$oid")
+    [ -z "$why" ] || { note "origin/$br: $why, left alone"; continue; }
+    TO_DELETE+=("$br"); LEASES+=("--force-with-lease=refs/heads/$br:$oid")
+  done < <(cut -f1 <<<"$MERGED_PRS" | sort -u)
 
   if [ ${#TO_DELETE[@]} -gt 0 ]; then
     if [ "$DRY_RUN" -eq 1 ]; then
       for br in "${TO_DELETE[@]}"; do act "would delete origin/$br"; done
-    elif git push origin --delete "${TO_DELETE[@]}" >/dev/null 2>&1; then
-      for br in "${TO_DELETE[@]}"; do act "deleted origin/$br"; done
+    else
+      while IFS=$'\t' read -r flag ref summary; do
+        br=${ref##*:refs/heads/}
+        case "$flag" in
+          -)    act "deleted origin/$br" ;;
+          '!')  note "origin/$br: $summary, left alone" ;;
+        esac
+      done < <(git push --porcelain "${LEASES[@]}" origin --delete "${TO_DELETE[@]}" 2>/dev/null)
     fi
   fi
 fi
@@ -192,18 +247,23 @@ fi
 # whether the shared list still claims a merged branch, and the answer must not
 # depend on which branch some checkout happens to be parked on.
 #
-# A notice, never an edit. What to file and when is a person's call, and a
-# branch name reused after its first pull request merged would read as stale
-# here while being perfectly in flight.
+# A notice, never an edit. What to file and when is a person's call. It goes by
+# the same identity as the reaping above, judged on origin for the same reason
+# the list is: a name reused after its first pull request merged — one with a
+# pull request open again, or on origin at a commit that never merged — is in
+# flight, and naming its item here would be the list lying the other way.
 STALE=""
 while read -r item; do
   [ -n "$item" ] || continue
   br=$(git show "origin/$DEFAULT:$item" 2>/dev/null \
          | sed -n 's/^Branch:[[:space:]]*`\([^`]*\)`[[:space:]]*$/\1/p' | head -1)
   [ -n "$br" ] || continue
-  is_merged "$br" || continue
-  line=$(printf '%s\n' "$MERGED_PRS" \
-           | awk -F'\t' -v b="$br" '$1==b { print "Merged: " $3 " in #" $2; exit }')
+  named_merged "$br" || continue
+  has_open "$br" && continue
+  oid=$(tip "refs/remotes/origin/$br")
+  [ -n "$oid" ] && ! merged_at "$br" "$oid" && continue
+  line=$(awk -F'\t' -v b="$br" -v o="$oid" \
+           '$1 == b && (o == "" || $4 == o) { print "Merged: " $3 " in #" $2; exit }' <<<"$MERGED_PRS")
   if [ -n "$line" ]; then
     STALE="${STALE}  $(basename "$item") — $br merged; file it as \"$line\""$'\n'
   else

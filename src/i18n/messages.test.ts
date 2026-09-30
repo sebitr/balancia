@@ -125,11 +125,10 @@ describe("message catalogues", () => {
   it("ships a language as soon as its catalogue is finished", () => {
     // A finished translation nobody wired up is invisible: no switcher entry,
     // no negotiation, no email in it. Registering one means naming the code in
-    // six places — LOCALES and LOCALE_LABELS in src/i18n/locales.ts, then the
+    // five places — LOCALES and LOCALE_LABELS in src/i18n/locales.ts, then the
     // catalogue maps in src/i18n/request.ts, src/i18n/emails.ts,
-    // src/components/pwa/offline-notice.tsx,
     // src/components/i18n/language-switcher.tsx and tests/helpers/intl.tsx.
-    // The last five are `Record<AppLocale, …>`, so `pnpm typecheck` names them
+    // The last four are `Record<AppLocale, …>`, so `pnpm typecheck` names them
     // one at a time once this test has said the language is ready.
     const ready = [...CATALOGUES.keys()].filter(
       (code) => !isAppLocale(code) && untranslated(code).length === 0,

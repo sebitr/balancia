@@ -24,9 +24,10 @@ interface EditableBackup {
   participants: { displayName: string }[];
   expenses: {
     direction?: string;
+    expenseDate: string;
     amount: string;
     currency: string;
-    payers: { displayName: string }[];
+    payers: { participantId?: string; displayName: string; amount?: string }[];
     shares: { displayName: string; amount: string }[];
   }[];
   settlements: unknown[];
@@ -247,6 +248,44 @@ describe("Balancia backup adapter", () => {
     expect(tampered.rows).toHaveLength(3);
     expect(tampered.warnings.map((warning) => warning.message)).toContainEqual(
       expect.stringContaining("unreadable total"),
+    );
+  });
+
+  it("skips a date that has the shape of one but is not a day", () => {
+    // PostgreSQL refuses 30 February at commit; the preview says so first.
+    const tampered = balanciaJsonAdapter.parse(
+      edited((data) => {
+        data.expenses[0].expenseDate = "2024-02-30";
+      }),
+    );
+    expect(tampered.rows).toHaveLength(3);
+    expect(tampered.warnings.map((warning) => warning.message)).toContainEqual(
+      expect.stringContaining("unreadable date"),
+    );
+  });
+
+  it("skips an expense that records a negative payment", () => {
+    // The payers still add up to the total, so only the sign gives it away —
+    // and the database refuses a negative payment outright.
+    const tampered = balanciaJsonAdapter.parse(
+      edited((data) => {
+        data.expenses[0].payers = [
+          {
+            participantId: "aaaaaaaa-0000-4000-8000-000000000001",
+            displayName: "Ada",
+            amount: "84000",
+          },
+          {
+            participantId: "aaaaaaaa-0000-4000-8000-000000000002",
+            displayName: "Blaise",
+            amount: "-42000",
+          },
+        ];
+      }),
+    );
+    expect(tampered.rows).toHaveLength(3);
+    expect(tampered.warnings.map((warning) => warning.message)).toContainEqual(
+      expect.stringContaining("negative payment"),
     );
   });
 

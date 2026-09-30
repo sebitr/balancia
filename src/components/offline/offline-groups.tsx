@@ -7,7 +7,7 @@ import { AddEntryForm } from "@/components/entries/add-entry-form";
 import {
   ENTRY_SHEET_CLASS,
   openOnAmount,
-} from "@/components/entries/add-entry-drawer";
+} from "@/components/entries/entry-sheet";
 import { listSnapshots, type GroupSnapshot } from "@/lib/offline/snapshot";
 import type en from "../../../messages/en.json";
 

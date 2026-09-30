@@ -58,6 +58,19 @@ describe("TimezoneSelect", () => {
     expect(container.querySelector("select")).toBeNull();
   });
 
+  /**
+   * The search row is the popover's top edge and its field draws no box, so
+   * the row shows the focus — inside its own edge, where the popover cannot
+   * cut it off.
+   */
+  it("rings the search row while the field has focus", async () => {
+    const { user } = renderSelect();
+    await openPicker(user);
+
+    const row = screen.getByPlaceholderText("Search timezones").parentElement;
+    expect(row?.className).toContain("has-[input:focus-visible]:inset-ring-2");
+  });
+
   it("narrows the list as you type", async () => {
     const { user } = renderSelect();
     const listbox = await openPicker(user);

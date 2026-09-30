@@ -373,8 +373,10 @@ sanitised, is that a stack frame's arguments and a bundled build's inlined
 values are not something a regular expression can be trusted to clean: one
 `at handleExpense (…description="Dinner at Chez Marie"…)` is a leak that no
 apology fixes. The cost is real — a class name and a component is much less to
-debug from than a trace — and it is accepted. The full error, with its stack,
-is written to this instance's own log where an administrator can read it.
+debug from than a trace — and it is accepted. The error, with its stack, is
+written to this instance's own log where an administrator can read it — less
+the values bound to a failed query, which do not belong in a log either
+(`src/lib/error-for-log.ts`).
 
 Throttling: at most one report per error class per component per hour, and no
 more than 24 per instance per day. An application in a crash loop must not turn
@@ -408,10 +410,14 @@ for the person who runs the server, looking at their own server.
 | `balancia_build_info`                                                                                            | gauge     | `version`                                                            |
 | `process_resident_memory_bytes`, `nodejs_heap_used_bytes`, `process_cpu_seconds_total`, `process_uptime_seconds` | gauge     | —                                                                    |
 
-Recurring-expense failures, Splitwise import duration and failures, and
+Recurring-expense runs, Splitwise import duration and failures, and
 notification delivery are covered by the job metrics: the queue label
 distinguishes `recurring.generate`, `import.commit`, `notifications.deliver`
-and the rest.
+and the rest. A single recurring template that fails does not fail its run —
+every other template still generates — so it is not a `failed` job here. It
+is logged with its id and its group's, counted as `templatesFailed` in the
+run's summary line (logged as a warning when it is not zero), and sent as a
+`scheduler` crash report where those are switched on.
 
 The onboarding funnel is `balancia_onboarding_steps_total`. The flow between
 arriving and standing on a group is one URL, so page views cannot see it; this
@@ -440,17 +446,17 @@ Two rules keep this endpoint from becoming the leak that telemetry is not:
    hook is handed the SQL _and its parameters_ — amounts, descriptions,
    addresses. What is recorded is a duration and nothing else.
 
-Protect it: the app's port is published by `compose.yaml`, so set
-`METRICS_TOKEN` unless that port is on a private network. Requests without a
-matching `Authorization: Bearer` are refused when the token is set; with
-metrics off, the route answers 404.
+Protect it: a reverse proxy forwards `/api/metrics` like any other path, so set
+`METRICS_TOKEN` unless nothing but your scraper can reach the app. Requests
+without a matching `Authorization: Bearer` are refused when the token is set;
+with metrics off, the route answers 404.
 
 `scripts/bootstrap.sh` asks about this one too, defaulting to no, and generates
 a token when the answer is yes. Because `METRICS_ENABLED` is more often set by
 hand afterwards than answered in the wizard, a re-run also checks for the
 combination the schema has to allow but rarely means — metrics on, token empty
 — and offers to generate one. Declining is a valid answer, and the only one
-that is right when the port is on a private network.
+that is right when the app can be reached only from a private network.
 
 Balancia does not ship an OpenTelemetry exporter. An operator who runs a
 collector can scrape this endpoint, or add an exporter in a fork — but nothing

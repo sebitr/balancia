@@ -163,8 +163,8 @@ describe("CreateGroupSheet", () => {
 
     // The name field is bound to the same state across both views.
     expect(screen.getByLabelText("Group name")).toHaveValue("Ski");
-    await user.click(screen.getByRole("radio", { name: "tent" }));
-    await user.click(screen.getByRole("radio", { name: "blue" }));
+    await user.click(screen.getByRole("radio", { name: "Tent" }));
+    await user.click(screen.getByRole("radio", { name: "Blue" }));
     await user.click(screen.getByRole("button", { name: "Done" }));
 
     await user.click(screen.getByRole("button", { name: "Create group" }));
@@ -172,6 +172,91 @@ describe("CreateGroupSheet", () => {
     const form = submitted();
     expect(form.get("icon")).toBe("tent");
     expect(form.get("iconColor")).toBe("blue");
+  });
+
+  /**
+   * Each tile is named in the reader's language. They were named by their
+   * slugs, so a French screen reader read "cart" in English for a trolley.
+   */
+  it("names the icons and colours in the reader's language", async () => {
+    createGroupAction.mockReset();
+    const user = userEvent.setup();
+    renderWithIntl(
+      <CreateGroupSheet
+        open
+        onOpenChange={vi.fn()}
+        defaultName="Seb"
+        defaultTimezone="UTC"
+        defaultCurrency="CHF"
+      />,
+      { locale: "fr" },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Choisir une icône" }));
+
+    expect(screen.getByRole("radio", { name: "Chariot" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Prune" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "cart" })).toBeNull();
+  });
+
+  /**
+   * The picker's two groups are one Tab stop each, and the arrows move
+   * through them — up and down by a row in the five-wide icon grid.
+   */
+  it("moves through the icons and colours with the arrow keys", async () => {
+    const { user } = renderSheet();
+
+    await user.click(screen.getByRole("button", { name: "Choose an icon" }));
+
+    const coral = screen.getByRole("radio", { name: "Coral" });
+    expect(coral).toHaveAttribute("tabindex", "0");
+    coral.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Emerald" })).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "Emerald" })).toBeChecked();
+
+    // Nothing is chosen yet, so the grid is entered at its first icon.
+    const plane = screen.getByRole("radio", { name: "Plane" });
+    expect(plane).toHaveAttribute("tabindex", "0");
+    plane.focus();
+    await user.keyboard("{ArrowDown}");
+    // Five to a row: straight down from the plane is the sixth icon.
+    expect(
+      screen.getByRole("radio", { name: "Shopping trolley" }),
+    ).toHaveFocus();
+    expect(
+      screen.getByRole("radio", { name: "Shopping trolley" }),
+    ).toBeChecked();
+  });
+
+  it("moves between the two currency answers with the arrow keys", async () => {
+    const { user } = renderSheet();
+
+    const shared = screen.getByRole("radio", { name: /One shared balance/ });
+    expect(shared).toBeChecked();
+    shared.focus();
+    await user.keyboard("{ArrowDown}");
+
+    const separate = screen.getByRole("radio", {
+      name: /A balance per currency/,
+    });
+    expect(separate).toHaveFocus();
+    expect(separate).toBeChecked();
+    expect(
+      screen.getByRole("radiogroup", {
+        name: "If someone pays in another currency",
+      }),
+    ).toContainElement(separate);
+  });
+
+  /** The add-a-person row is the field's edge, so the row shows its focus. */
+  it("rings the add-a-person row while its field has focus", () => {
+    renderSheet();
+
+    const row = screen.getByRole("textbox", {
+      name: "Add a person",
+    }).parentElement;
+    expect(row?.className).toContain("has-[input:focus-visible]:ring-3");
   });
 
   /**
