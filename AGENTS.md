@@ -37,17 +37,26 @@ twenty remote branches had piled up, every one of them merged, plus a
 stranded checkout of a worktree somebody had deleted by hand that was still
 holding 1.1 GB.
 
-It removes something only when the pull request reads MERGED, the worktree is
-clean, and no session that is still running holds its lock. **A branch that
-never had a pull request is never touched**, however abandoned it looks —
-that is the rule protecting work in flight, and it is why the reaper walked
-straight past `docs/shallow-clone-install` on its first run. It throttles
-itself to once a half hour, and `--dry-run` says what it would take without
-taking it.
+It removes something only when the pull request reads MERGED, the branch is
+still at the very commit that pull request merged at, no pull request of the
+same name is open, the worktree is clean, and no session that is still running
+holds its lock. **A branch that never had a pull request is never touched**,
+however abandoned it looks — that is the rule protecting work in flight, and it
+is why the reaper walked straight past `docs/shallow-clone-install` on its first
+run. Without `gh` to ask, it touches nothing at all. It throttles itself to
+once a half hour, and `--dry-run` says what it would take without taking it.
+
+The commit is the part that is easy to leave out, because a name looks like an
+identity and is not one. Weblate opens every translation pull request from the
+same branch, `weblate-balancia-messages`, and while the reaper matched on names,
+#188 having merged under it once was enough to delete each new one at the next
+session start: six pull requests between #349 and #362 closed unmerged before
+anybody saw why. `src/lib/reap-merged.test.ts` runs the script against a
+throwaway repository and a stand-in `gh` to keep it that way.
 
 While it has the merged set in hand it also reads `todo/now/` off
 `origin/main`, and names any item still pointing at a branch that has merged,
-with the `Merged:` line to write. That half is a notice and never an edit — a
+by the same rule, with the `Merged:` line to write. That half is a notice and never an edit — a
 `now/` that has stopped saying what is in flight is the failure this repository
 keeps having, and the one thing that runs after a merge is the only thing left
 placed to catch it.
