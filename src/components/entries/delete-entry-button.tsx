@@ -39,9 +39,11 @@ import { cn } from "@/lib/utils";
  * import, and the sentence the reader is shown is the same either way.
  *
  * The confirmation is not the last word. Deletion is soft, so the toast that
- * follows carries an Undo for as long as it is on screen. The dialog still
- * asks first — recalculating a group's balances without an entry is a change
- * worth agreeing to — but it no longer calls that change irreversible.
+ * follows carries an Undo for as long as it is on screen, and the group's
+ * Activity carries a Restore for as long as the entry stays deleted. The
+ * dialog still asks first — recalculating a group's balances without an entry
+ * is a change worth agreeing to — but it no longer calls that change
+ * irreversible, and it says where the way back is.
  */
 export function DeleteEntryButton({
   groupId,

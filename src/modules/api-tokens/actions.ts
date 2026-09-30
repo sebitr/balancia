@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
+import { z } from "zod";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { createApiToken, revokeApiToken } from "./service";
 import { serializeApiToken, type MintedApiToken } from "./serialize";
-import type { TokenScope } from "./scope";
+import { TOKEN_SCOPES, type TokenScope } from "./scope";
 
 /**
  * Minting and revoking a key.
@@ -21,6 +22,21 @@ import type { TokenScope } from "./scope";
  * simply no path.
  */
 
+/**
+ * What the minting form sends, checked at runtime: the TypeScript signature
+ * binds the form and nothing else, and an action is an endpoint.
+ *
+ * `scope` is a closed list, and anything outside it used to reach the insert
+ * and fail there as a server error. The name gets only a ceiling on what is
+ * read at all, far above the real one: `createApiToken` owns the length rule,
+ * after trimming, and says it in the reader's language.
+ */
+const createApiTokenSchema = z.object({
+  name: z.string().max(1_000),
+  scope: z.enum(TOKEN_SCOPES),
+  groupId: z.uuid().nullish(),
+});
+
 export async function createApiTokenAction(input: {
   name: string;
   scope: TokenScope;
@@ -31,20 +47,24 @@ export async function createApiTokenAction(input: {
   const user = await getCurrentUser();
   if (!user) return actionError(t("signedInRequired"));
 
+  const parsed = createApiTokenSchema.safeParse(input);
+  if (!parsed.success) return actionError(t("malformedRequest"));
+  const { name, scope, groupId } = parsed.data;
+
   return runAction("createApiToken", async () => {
     // A pin is only meaningful against a group this account is actually in,
     // and the check is `authorizeGroup` rather than a membership query of its
     // own — so a group somebody is not in fails here exactly as it would fail
     // on every route the key would later be pointed at, with the same
     // indistinguishable-from-missing answer.
-    if (input.groupId) {
-      await authorizeGroup({ ...user }, input.groupId);
+    if (groupId) {
+      await authorizeGroup({ ...user }, groupId);
     }
 
     const minted = await createApiToken(user.userId, {
-      name: input.name,
-      scope: input.scope,
-      groupId: input.groupId ?? null,
+      name,
+      scope,
+      groupId: groupId ?? null,
     });
     revalidatePath("/settings/security");
     return {

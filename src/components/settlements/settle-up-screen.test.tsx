@@ -800,6 +800,18 @@ describe("opening the provider", () => {
     ).toBeVisible();
   });
 
+  it("puts no PayPal button on a saved link that goes somewhere else", () => {
+    // Saved before the field was held to PayPal's own hosts. A button reading
+    // "Open PayPal" in front of a look-alike page is the thing to avoid, so
+    // the detail is shown as text to copy and nothing names PayPal as its
+    // destination.
+    render(...showing("paypal", "paypa1.me/amelie"));
+
+    expect(screen.queryByRole("link", { name: /^Open/ })).toBeNull();
+    expect(screen.getByText("paypa1.me/amelie")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
   it("opens Revolut on the person, and says the amount is still to type", () => {
     render(...showing("revolut", "@amelie"));
 

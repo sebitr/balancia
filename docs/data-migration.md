@@ -14,6 +14,9 @@ Restore it into a group you create for it. The import writes into whichever
 group you run it from; it does not create one, and it never edits the group's
 name, currency mode or timezone.
 
+A backup restores through the import screen only up to 1 MB — about nine
+hundred entries of a three-person group. See _How large a file_ below.
+
 ### What comes back, and what does not
 
 | In the file             | On restore                                              |
@@ -71,14 +74,22 @@ the interesting decisions — who is who, what will be skipped — need a human.
    amount.
 2. Open **Settings → Import data**, or `/groups/<id>/import`.
 3. **Upload the file.** It is parsed on your own server. Nothing is sent
-   anywhere.
+   anywhere. One file can be up to 1 MB — see _How large a file_ below.
 4. **Read the preview.** It reports how many expenses and repayments were found,
    which currencies appear, which people the file names, and every row that will
    be skipped along with the reason.
 5. **Map the people.** Each name from the export becomes either an existing
    participant or a new one. Exact name matches are pre-selected; check them.
-6. **Import.** Everything commits in one transaction.
+6. **Import.** Everything commits in one transaction, and each row inside it
+   in a savepoint of its own: a row that fails — whether the importer or the
+   database refuses it — is rolled back alone and recorded as failed, and the
+   rest still land.
 7. **Read the report**: imported, skipped, failed.
+
+The people you match are checked against the file before anything is written:
+every name must be one the file named, and every person one who is still in
+the group. A preview left open while somebody was removed from the group is
+refused with a message saying to read the file again.
 
 ### Re-running an import is safe
 
@@ -100,6 +111,7 @@ This is checked by an integration test and an end-to-end journey, because
 | ------------------------------- | ------------------------------------------------ |
 | Expense                         | Expense, with per-person shares as exact amounts |
 | Payment / "Settle all balances" | Repayment, not spending                          |
+| Negative cost (a refund)        | Income, filed under _Refunds_                    |
 | Category                        | Category (free text)                             |
 | Date                            | Expense date                                     |
 | Currency                        | Currency, kept as-is                             |
@@ -111,10 +123,20 @@ split whose totals match the source exactly. Balances are identical; only the
 "split equally" label is lost. Expenses you create in Balancia afterwards keep
 their method.
 
+**A negative cost comes across as income.** Splitwise records money that came
+back — a refund — as an expense with a negative cost, and each person's column
+is still their net for the row. Balancia never stores a negative amount; it has
+income for money coming in, so the row is imported as income of the same size,
+filed under _Refunds_, with every sign turned round. The balances come out
+exactly as the export's columns say. Splitwise's JSON backup is read the same
+way, and a payment with a negative amount there becomes the same payment in the
+other direction.
+
 **Imported expenses keep their original currency and carry no exchange rate.**
 Inventing a historical rate would be worse than leaving it unset. In a
-converted-currency group, review imported foreign-currency expenses and re-enter
-them with the rate you want if you need them folded into the base currency.
+converted-currency group they are balanced in that currency, beside the base —
+see _Currency handling_ below — and re-entering one with the rate you want is
+what folds it into the base currency.
 
 ### What gets skipped, and why
 
@@ -123,7 +145,11 @@ The preview lists every skipped row. Common reasons:
 - **Unrecognised date.** Splitwise's own exports use ISO dates; some locales
   produce ambiguous `DD/MM/YYYY`. Unambiguous forms are converted; genuinely
   ambiguous ones are read as `MM/DD/YYYY` (Splitwise's US default) and shown in
-  the preview so you can check.
+  the preview so you can check. A date that has the right shape but is not a
+  day — `2024-02-30`, or `31/31/2024` read either way — is skipped here, in
+  every format, rather than refused by the database at commit.
+- **An amount too large to record.** Anything past 10¹⁸ minor units, the same
+  ceiling the expense form has, is skipped.
 - **Unsupported currency.** Only active ISO 4217 codes are accepted.
 - **Unreadable amount.** Both `1,234.56` and `1.234,56` are understood;
   anything else is skipped rather than guessed.
@@ -133,10 +159,34 @@ The preview lists every skipped row. Common reasons:
   do not both add up to the expense cost, the row is skipped rather than
   imported unbalanced.
 - **Deleted expenses** (JSON only) are ignored.
+- **Shares that pull in different directions** (JSON only). A row where some
+  paid or owed shares are negative and others positive describes neither
+  spending nor income, and is skipped.
 
 Export layouts vary by year and locale, so nothing is read positionally:
 columns are found by name with several aliases, the separator (`,`, `;` or tab)
 is detected, and the trailing "Total balance" summary row is dropped.
+
+### Text longer than Balancia keeps
+
+Some rows are kept but shortened, and the preview lists each one. A
+description is cut to 200 characters, a note to 2,000 and a category to 60 —
+what the forms accept, so an imported entry can be edited like any other. A
+name longer than 120 characters is shortened when the person is added. Nothing
+is dropped for being long: a description is not worth losing an expense from
+the balances over. Shortening does not change the row's fingerprint, so a file
+imported before these limits existed is still recognised on a second run.
+
+### How large a file
+
+One file can be up to 1 MB. The file travels to the server in a single request
+whose size the framework caps, so a larger one is refused as it is chosen, with
+the limit named, rather than failing on the way. For a three-person group that
+is some fifteen thousand rows of a Splitwise CSV, but only about nine hundred
+entries of a Balancia backup, whose JSON spells out every payer and share; a
+Splitwise JSON backup is wordier still. A Splitwise history too long for its
+JSON backup can come across as per-group CSV exports instead. A Balancia backup
+past the limit cannot be restored through the import screen yet.
 
 ### Currency handling
 
@@ -144,17 +194,26 @@ Balancia never converts during an import. If a Splitwise group mixed
 currencies:
 
 - In a **separate** group, each currency gets its own balance. Nothing to do.
-- In a **converted** group, imported foreign expenses stay in their original
-  currency with no rate, so they contribute to their own currency's balance
-  until you re-enter them.
+- In a **converted** group, imported foreign expenses and payments stay in their
+  original currency with no rate, so they contribute to their own currency's
+  balance until you re-enter them. The group then shows its base-currency
+  balances first and one more list per such currency — `€` and `¥` side by side,
+  exactly as a separate group would — and each list sums to zero on its own.
+  Statistics count those rows under their own currency too; a yen amount with no
+  rate is never added into a euro total.
+
+Re-entering an expense with a rate is what moves it into the base. A repayment
+you record in Balancia afterwards is converted into the base currency like any
+other, so it settles the base list rather than the imported one.
 
 The simplest path for a mixed-currency Splitwise group is to import into a
 `separate` group.
 
 The same holds for a restored backup. A `converted` group's export carries the
-rate each expense was converted at, but the staging model has nowhere to put a
-historical rate, so a restored row comes back in the currency it was entered in
-and the preview warns how many rows that affects.
+rate each expense and payment was converted at, but the staging model has
+nowhere to put a historical rate, so a restored row comes back in the currency
+it was entered in, is balanced there, and the preview warns how many rows that
+affects.
 
 ---
 

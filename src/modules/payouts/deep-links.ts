@@ -1,4 +1,5 @@
 import { money, toMajorString } from "@/modules/currencies/money";
+import { isPayPalHost } from "./fields";
 
 /**
  * Opening the app the money is actually paid in, with the payment already
@@ -142,21 +143,20 @@ export function payoutDeepLink(
  * PayPal.Me, which is the one that takes any currency.
  *
  * The stored detail is a link the owner typed, so it is used rather than
- * rebuilt — but the amount is only appended to a genuine `paypal.me` address.
- * The field accepts any payment link, and appending `/83.34EUR` to somebody's
- * personal site would produce a 404 out of a link that worked.
+ * rebuilt — but only when it is PayPal's. The screen labels this link "Open
+ * PayPal", and the field once accepted any payment link, so a detail on
+ * another host would have put PayPal's name on a button to somewhere else: a
+ * look-alike page, one tap from the row that says how much you owe. Saving now
+ * refuses such a link (`isPayPalHost`), and one saved before that gets no
+ * link at all here — the detail is still on screen as text to copy, which
+ * promises nothing about where it leads.
  */
 function paypal(
   detail: string,
   request: PayoutLinkRequest,
 ): PayoutDeepLink | null {
   const url = asUrl(detail);
-  if (!url) return null;
-
-  const host = url.hostname.toLowerCase().replace(/^www\./, "");
-  if (host !== "paypal.me" && host !== "paypal.com") {
-    return { href: url.toString(), kind: "universal", carriesAmount: false };
-  }
+  if (!url || !isPayPalHost(url.hostname)) return null;
 
   // `<amount><CURRENCY>`, no separator, exactly as the FAQ writes it.
   const path = url.pathname.replace(/\/+$/, "");

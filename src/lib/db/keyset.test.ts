@@ -25,6 +25,20 @@ describe("cursor encoding", () => {
     expect(decodeCursor(read)).toEqual(KEY);
   });
 
+  it("carries the amount a largest-first list is ranked by, and only then", () => {
+    const ranked = { ...KEY, amount: "150000" };
+    expect(encodeCursor(ranked)).toBe(`${encodeCursor(KEY)}|150000`);
+    expect(decodeCursor(encodeCursor(ranked))).toEqual(ranked);
+    // A chronological cursor says nothing about amounts, not "amount: 0".
+    expect(decodeCursor(encodeCursor(KEY))).not.toHaveProperty("amount");
+  });
+
+  it("refuses an amount it could not have written", () => {
+    expect(decodeCursor(`${encodeCursor(KEY)}|-5`)).toBeNull();
+    expect(decodeCursor(`${encodeCursor(KEY)}|12.50`)).toBeNull();
+    expect(decodeCursor(`${encodeCursor(KEY)}|1|2`)).toBeNull();
+  });
+
   it("refuses anything it did not write", () => {
     // Every one of these would otherwise reach the database as a parameter.
     expect(decodeCursor(null)).toBeNull();
@@ -37,6 +51,22 @@ describe("cursor encoding", () => {
     ).toBeNull();
     expect(decodeCursor(`${KEY.date}|${KEY.time}|not-a-uuid`)).toBeNull();
     expect(decodeCursor(`02/07/2019|${KEY.time}|${KEY.id}`)).toBeNull();
+  });
+
+  it("refuses a day or an hour that does not exist", () => {
+    // Right shape, wrong calendar: PostgreSQL throws casting either half,
+    // which answered 500 where a fiddled cursor should start the list over.
+    expect(decodeCursor(`2019-02-30|${KEY.time}|${KEY.id}`)).toBeNull();
+    expect(decodeCursor(`0000-01-01|${KEY.time}|${KEY.id}`)).toBeNull();
+    expect(
+      decodeCursor(`${KEY.date}|2019-04-31T10:00:00.123456Z|${KEY.id}`),
+    ).toBeNull();
+    expect(
+      decodeCursor(`${KEY.date}|2019-07-02T24:00:00.123456Z|${KEY.id}`),
+    ).toBeNull();
+    expect(
+      decodeCursor(`${KEY.date}|2019-07-02T10:61:00.123456Z|${KEY.id}`),
+    ).toBeNull();
   });
 });
 

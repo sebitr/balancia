@@ -258,6 +258,44 @@ describe("the group statistics island", () => {
   });
 
   /**
+   * The two switchers are real tab lists: one Tab stop each, the arrows to
+   * move, and a panel named by the chosen tab. They were buttons marked as
+   * tabs, which a screen reader announced as tabs that the arrows then did
+   * not move between, pointing at no panel at all.
+   */
+  it("moves between the ranges and the metrics with the arrow keys", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<GroupStatistics stats={stats()} />);
+
+    const year = screen.getByRole("tab", { name: "1y" });
+    expect(year).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "3m" })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+    year.focus();
+    await user.keyboard("{ArrowRight}");
+    const all = screen.getByRole("tab", { name: "All" });
+    expect(all).toHaveFocus();
+    expect(all).toHaveAttribute("aria-selected", "true");
+    expect(all).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel", { name: "All" }).id,
+    );
+
+    const net = screen.getByRole("tab", { name: "Net" });
+    net.focus();
+    await user.keyboard("{End}");
+    const open = screen.getByRole("tab", { name: "Open" });
+    expect(open).toHaveFocus();
+    expect(open).toHaveAttribute("aria-selected", "true");
+    // The rows are what the metric tabs switch.
+    expect(
+      within(screen.getByRole("tabpanel", { name: "Open" })).getByText("Nora"),
+    ).toBeInTheDocument();
+  });
+
+  /**
    * A five-figure balance is wider than a fixed amount column, and what a
    * fixed one does with it is put it outside the card and break the smaller
    * amounts over two lines. So the amounts sit on one `auto` track declared

@@ -11,6 +11,7 @@ import {
   type RowView,
 } from "./transactions";
 import { EXPENSE_CATEGORY_IDS } from "@/modules/categorization";
+import { sortableByAmount } from "./list-filter";
 
 /**
  * The spine, the kind chips and the search are the filters, so these tests
@@ -155,6 +156,8 @@ function sheetProps(rows: readonly RowView[] = ROWS) {
       (category) => counts[category] !== undefined,
     ),
     counts,
+    // Measured over the whole group on the server; here the rows are it.
+    byAmount: sortableByAmount(rows),
     firstDate: "2019-07-02",
     today: "2026-08-14",
   };
@@ -679,17 +682,114 @@ describe("Transactions beyond the first page", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("reads the rest of the list as soon as a filter is on", async () => {
-    fetchMock.mockResolvedValue(page([OLDER]));
+  /** Every request the list made, as the URL it asked for. */
+  const asked = () =>
+    fetchMock.mock.calls.map(
+      ([url]) => new URL(url as string, "http://test").searchParams,
+    );
+
+  it("asks the server for a page of matches as soon as a filter is on", async () => {
+    fetchMock.mockResolvedValue(page([OLDER], "next-page"));
     renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
 
-    // Typed, never scrolled: a search that only knew the rows already on
+    // Pasted, never scrolled: a search that only knew the rows already on
     // screen would answer "nothing matches" about a hotel it has not read yet.
-    await userEvent.type(screen.getByRole("searchbox"), "hôtel");
+    await userEvent.click(screen.getByRole("searchbox"));
+    await userEvent.paste("hôtel");
 
     expect(await screen.findByText("Hôtel du Lac")).toBeVisible();
-    const asked = new URL(fetchMock.mock.calls[0][0] as string, "http://test");
-    expect(asked.searchParams.get("limit")).toBe("500");
+    // One request, carrying the filter, from the top, at the server's own
+    // page size. It used to be a 500-row page, and another, and another,
+    // until the group's whole history was on the phone.
+    expect(asked()).toHaveLength(1);
+    const [search] = asked();
+    expect(search.get("q")).toBe("hôtel");
+    expect(search.has("cursor")).toBe(false);
+    expect(search.has("limit")).toBe(false);
+  });
+
+  it("reads further matches a page at a time, as the reader reaches them", async () => {
+    fetchMock.mockResolvedValue(page([OLDER], "next-page"));
+    renderList(
+      ROWS,
+      "?q=h%C3%B4tel",
+      "2026-08-12|2026-08-12T09:00:00.000000Z|s1",
+    );
+    await screen.findByText("Hôtel du Lac");
+
+    // More matches exist, and nothing asks for them until they are needed.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockResolvedValue(
+      page([row({ id: "hotel2", title: "Hôtel de la Gare" })]),
+    );
+    await reachBottom();
+
+    expect(await screen.findByText("Hôtel de la Gare")).toBeVisible();
+    const next = asked()[1];
+    expect(next.get("cursor")).toBe("next-page");
+    // The next page of the same search, not the next page of everything.
+    expect(next.get("q")).toBe("hôtel");
+    expect(next.has("limit")).toBe(false);
+  });
+
+  it("filters the rows in hand without asking, when they are the whole group", async () => {
+    renderList(ROWS, "", null);
+
+    await userEvent.type(screen.getByRole("searchbox"), "airbnb");
+
+    expect(screen.getByText("Airbnb refund")).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the matches it already holds while the server looks further", async () => {
+    // Never answers: the server is still looking.
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    await userEvent.click(screen.getByRole("searchbox"));
+    await userEvent.paste("airbnb");
+
+    // Newest first, the matches among the newest rows are the start of the
+    // answer whatever else the server finds, so they are not held back.
+    expect(screen.getByText("airbnb")).toBeVisible();
+    expect(screen.getByText("Airbnb refund")).toBeVisible();
+    expect(screen.queryByText("Migros")).toBeNull();
+    expect(
+      screen.getByText("Searching earlier transactions…"),
+    ).toBeInTheDocument();
+  });
+
+  it("drops a search the reader has typed past", async () => {
+    const signals: AbortSignal[] = [];
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      signals.push(init.signal!);
+      return new Promise(() => {});
+    });
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    await userEvent.type(screen.getByRole("searchbox"), "hô");
+
+    // One request per keystroke, and every one but the last cancelled rather
+    // than left to land on a list that has moved on.
+    expect(asked().map((params) => params.get("q"))).toEqual(["h", "hô"]);
+    expect(signals.map((signal) => signal.aborted)).toEqual([true, false]);
+  });
+
+  it("keeps what it holds on screen when the server cannot be reached", async () => {
+    fetchMock.mockRejectedValue(new Error("offline"));
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    await userEvent.click(screen.getByRole("searchbox"));
+    await userEvent.paste("migros");
+
+    // The rows already read are still searched, and the line below them says
+    // that is not everything.
+    expect(
+      await screen.findByText("Earlier transactions could not be loaded."),
+    ).toBeVisible();
+    expect(screen.getByText("Migros")).toBeVisible();
+    expect(screen.queryByText("airbnb")).toBeNull();
   });
 
   it("says nothing matches only once there is nothing left to read", async () => {
@@ -700,6 +800,15 @@ describe("Transactions beyond the first page", () => {
     await screen.findByText("Hôtel du Lac");
 
     expect(screen.queryByText("No transaction matches that")).toBeNull();
+  });
+
+  it("says nothing matches when the server found nothing", async () => {
+    fetchMock.mockResolvedValue(page([]));
+    renderList(ROWS, "?q=zzz", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    expect(
+      await screen.findByText("No transaction matches that"),
+    ).toBeVisible();
   });
 
   it("stops after a failure, and waits to be told to try again", async () => {
@@ -903,7 +1012,9 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>) {
  * category, and any of those would answer to a looser pattern.
  */
 const apply = (sheet: ReturnType<typeof within>) =>
-  sheet.getByRole("button", { name: /^(Show \d|No transactions)/ });
+  sheet.getByRole("button", {
+    name: /^(Show \d|Show transactions$|No transactions)/,
+  });
 
 /**
  * A category's own row, told apart from the chips inside it.
@@ -1096,6 +1207,95 @@ describe("Transactions filter sheet", () => {
     // what the list already says can only be switched off.
     expect(sheet.queryByRole("group", { name: "Type" })).toBeNull();
     expect(sheet.getByRole("group", { name: "Amount" })).toBeVisible();
+  });
+});
+
+describe("Transactions filter sheet, over a list not yet read to the end", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    watchers.clear();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("IntersectionObserver", StubObserver);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** A server that counts, and answers pages with nothing. */
+  function counting(count: (params: URLSearchParams) => number) {
+    fetchMock.mockImplementation(async (url: string) => {
+      const params = new URL(url, "http://test").searchParams;
+      return params.has("count")
+        ? ({
+            ok: true,
+            json: async () => ({ count: count(params) }),
+          } as Response)
+        : page([]);
+    });
+  }
+
+  it("asks the server how many a draft would show, since the rows here are not all", async () => {
+    counting((params) => (params.getAll("only").includes("series") ? 3 : 214));
+    const user = userEvent.setup();
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    let sheet = await openSheet(user);
+    // Seven rows are in hand; the group holds 214, and the button says so.
+    expect(
+      await sheet.findByRole("button", { name: "Show 214 transactions" }),
+    ).toBeVisible();
+
+    await user.click(sheet.getByRole("button", { name: "From a series" }));
+    sheet = within(screen.getByRole("dialog"));
+    expect(
+      await sheet.findByRole("button", { name: "Show 3 transactions" }),
+    ).toBeVisible();
+
+    const counts = fetchMock.mock.calls
+      .map(([url]) => new URL(url as string, "http://test").searchParams)
+      .filter((params) => params.has("count"));
+    expect(counts.map((params) => params.getAll("only"))).toEqual([
+      [],
+      ["series"],
+    ]);
+  });
+
+  it("promises no number until it has one", async () => {
+    // The count never arrives: offline, or still counting.
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderList(ROWS, "", "2026-08-12|2026-08-12T09:00:00.000000Z|s1");
+
+    const sheet = await openSheet(user);
+
+    // Not "Show 7", which is only the rows that happen to be loaded.
+    expect(apply(sheet)).toHaveAccessibleName("Show transactions");
+  });
+
+  it("offers Largest amount only when the whole group is in one currency", async () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    // Every row in hand is in euros, but the group — which the server has
+    // measured — is not.
+    window.history.replaceState(null, "", "/groups/g1/expenses");
+    renderWithIntl(
+      <Transactions
+        groupId="g1"
+        eyebrow={<h1>Transactions</h1>}
+        bands={BANDS}
+        kinds={kindsOf(ROWS)}
+        rows={ROWS}
+        cursor="2026-08-12|2026-08-12T09:00:00.000000Z|s1"
+        {...sheetProps()}
+        byAmount={false}
+      />,
+    );
+
+    const sheet = await openSheet(user);
+    expect(sheet.queryByRole("radio", { name: "Largest amount" })).toBeNull();
   });
 });
 

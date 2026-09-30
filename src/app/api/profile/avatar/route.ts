@@ -76,10 +76,7 @@ async function handleGet() {
     if (error instanceof ObjectNotFoundError) {
       return NextResponse.json({ error: t("notFound") }, { status: 404 });
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Avatar could not be read",
-    );
+    logger.error({ err: error }, "Avatar could not be read");
     return NextResponse.json({ error: t("unavailable") }, { status: 500 });
   }
 }
@@ -137,10 +134,7 @@ async function handlePost(request: Request) {
         { status: error.code === "fileTooLarge" ? 413 : 400 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Avatar upload failed",
-    );
+    logger.error({ err: error }, "Avatar upload failed");
     return NextResponse.json({ error: t("pictureNotSaved") }, { status: 500 });
   }
 }
@@ -153,10 +147,7 @@ async function handleDelete() {
     await removeAvatar(user.userId);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Avatar removal failed",
-    );
+    logger.error({ err: error }, "Avatar removal failed");
     const t = await getTranslations("serverErrors");
     return NextResponse.json(
       { error: t("pictureNotRemoved") },

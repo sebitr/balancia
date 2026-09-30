@@ -96,8 +96,13 @@ COMPOSE_FILE=compose.demo.yaml
 DEMO_APP_URL=https://demo.example.com
 DEMO_AUTH_SECRET=<openssl rand -hex 32>
 DEMO_EXIT_URL=https://balancia.example.com
-DEMO_PORT=3001
+DEMO_PORT=127.0.0.1:3001
 ```
+
+`DEMO_PORT` is Compose's `address:port`, and `127.0.0.1:3001` is also its
+default — written out here because the address is the part that matters. A
+bare `3001` would publish the demo on every interface, where a caller could
+skip the proxy below and write their own `X-Forwarded-For`.
 
 `DEMO_EXIT_URL` is the way back to your real instance. A demo has no homepage
 of its own — opening `/` goes straight to the sign-in screen, since anyone
@@ -125,7 +130,7 @@ change:
 
 ```caddyfile
 demo.example.com {
-    reverse_proxy localhost:3001
+    reverse_proxy 127.0.0.1:3001
 }
 ```
 
@@ -133,7 +138,10 @@ A subdomain rather than a path on the main site is deliberate: session cookies
 are host-only, so the demo's cookie and a real session's cannot collide in the
 same browser. Somebody can be signed into both at once and neither notices.
 `X-Forwarded-For` matters here as much as on the real instance — it is what the
-rate limit in front of the demo button keys on.
+rate limit in front of the demo button keys on, which is why the demo is
+published on `127.0.0.1` only and the proxy is the one way in. A proxy on
+another machine needs `DEMO_PORT=0.0.0.0:3001`, and then nothing else should be
+able to reach that port.
 
 ### The link, on the real instance
 

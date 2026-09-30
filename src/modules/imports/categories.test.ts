@@ -241,6 +241,46 @@ describe("categorizing a row", () => {
   });
 });
 
+describe("money coming in", () => {
+  it("keeps the income category the row already carries", () => {
+    // A Splitwise refund arrives filed as one; so does a backup's own income.
+    expect(
+      categorizeImportedExpense(
+        expense({
+          direction: "in",
+          description: "Dinner",
+          category: "refunds",
+        }),
+      ),
+    ).toEqual({ category: "refunds", subcategory: null });
+    expect(
+      categorizeImportedExpense(
+        expense({
+          direction: "in",
+          description: "Flat",
+          category: "rent",
+          subcategory: "monthly_rent",
+        }),
+      ),
+    ).toEqual({ category: "rent", subcategory: "monthly_rent" });
+  });
+
+  it("never gives an incoming row a spending category", () => {
+    // Every one of these would be named by the spending tables — Splitwise's
+    // "Dining out", the museum rule — and every one is money that came back.
+    for (const staged of [
+      expense({ direction: "in", category: "Dining out" }),
+      expense({ direction: "in", category: "restaurants" }),
+      expense({ direction: "in", description: "Museum tickets" }),
+    ]) {
+      expect(categorizeImportedExpense(staged)).toEqual({
+        category: null,
+        subcategory: null,
+      });
+    }
+  });
+});
+
 describe("a group label rather than a leaf", () => {
   it("lets the description overrule it", () => {
     // Splitwise files hotel nights under Transportation. The description knows

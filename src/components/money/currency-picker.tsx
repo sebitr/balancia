@@ -140,7 +140,8 @@ function SearchField({
   const t = useTranslations("currencyPicker");
 
   return (
-    <div className="flex h-11 items-center gap-2.5 rounded-[14px] bg-wash-2 px-3 inset-ring inset-ring-foreground/10">
+    // The pill is the field's edge, so the pill shows where the caret is.
+    <div className="flex h-11 items-center gap-2.5 rounded-[14px] bg-wash-2 px-3 inset-ring inset-ring-foreground/10 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50">
       <Search
         aria-hidden="true"
         className="size-4 shrink-0 text-muted-foreground"
