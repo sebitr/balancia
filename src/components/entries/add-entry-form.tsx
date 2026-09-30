@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -808,6 +809,18 @@ export function AddEntryForm({
     }
   }, [refusal, errorId]);
 
+  /*
+   * The key a repayment, or an entry changing kind, is written under.
+   *
+   * An expense mints a key per press because the queue carries it from there:
+   * an answer that never came back is replayed by the outbox under the key the
+   * attempt used. Nothing queues these, so the form has to remember instead —
+   * one key, held from the first press until a save lands, so that pressing
+   * again after a lost answer replays that attempt rather than paying twice.
+   */
+  const heldKey = useRef<string | null>(null);
+  const heldClientKey = () => (heldKey.current ??= randomKey());
+
   const country = countryForTimezone(timezone);
   const countryMethods = useMemo(() => methodsForCountry(country), [country]);
   /** The chosen method, when the picker has a chip for it. */
@@ -1596,6 +1609,9 @@ export function AddEntryForm({
         return;
       }
 
+      // Spent. Whatever is saved from this form next is a new entry.
+      heldKey.current = null;
+
       // The entry exists now, so the draft of it does not.
       void discardDraft(groupId);
 
@@ -1719,6 +1735,7 @@ export function AddEntryForm({
       groupId,
       editing.id,
       input,
+      heldClientKey(),
     );
     return {
       result,
@@ -1796,7 +1813,9 @@ export function AddEntryForm({
       notes,
     };
     if (!editing) {
-      return { result: await createSettlementAction(groupId, input) };
+      return {
+        result: await createSettlementAction(groupId, input, heldClientKey()),
+      };
     }
     if (!converting) {
       return {
@@ -1807,6 +1826,7 @@ export function AddEntryForm({
       groupId,
       editing.id,
       input,
+      heldClientKey(),
     );
     return {
       result,

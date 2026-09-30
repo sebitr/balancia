@@ -318,7 +318,12 @@ export const entryClientKeys = pgTable(
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
     clientKey: text("client_key").notNull(),
-    /** `expense` today; the column is here so a repayment can join later. */
+    /**
+     * `expense` or `settlement` — which table `entityId` is in. The unique
+     * index below ignores it, so a key is spent on whichever kind it wrote
+     * first; the lookups read it, so a key is never answered with the other
+     * kind's id.
+     */
     entityType: text("entity_type").notNull(),
     entityId: uuid("entity_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
