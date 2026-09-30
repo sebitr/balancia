@@ -296,10 +296,7 @@ async function verifyRegistration(
       requireUserVerification: false,
     });
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey registration verification failed",
-    );
+    logger.warn({ err: error }, "Passkey registration verification failed");
     throw new AuthError(
       "That passkey could not be verified.",
       "passkeyUnverified",
@@ -576,10 +573,7 @@ export async function finishPasskeyAuthentication(
       },
     });
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey authentication verification failed",
-    );
+    logger.warn({ err: error }, "Passkey authentication verification failed");
     throw new AuthError(
       "That passkey could not be verified.",
       "passkeyUnverified",

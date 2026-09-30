@@ -53,7 +53,9 @@ import {
 } from "@/modules/expenses/service";
 import {
   currencyCodeSchema,
+  exchangeRateSchema,
   isoDateSchema,
+  isPositiveMinorUnits,
   minorUnitsString,
   payerSchema,
   splitEntrySchema,
@@ -96,12 +98,7 @@ export const recurringInputSchema = z
     subcategory: z.string().trim().max(60).optional().or(z.literal("")),
     amount: minorUnitsString,
     currency: currencyCodeSchema,
-    exchangeRate: z
-      .string()
-      .trim()
-      .regex(/^\d+(\.\d+)?$/)
-      .optional()
-      .or(z.literal("")),
+    exchangeRate: exchangeRateSchema,
     payers: z.array(payerSchema).min(1, "Add at least one payer"),
     splitMethod: z.enum(SPLIT_METHODS),
     splitEntries: z.array(splitEntrySchema).min(1),
@@ -116,7 +113,7 @@ export const recurringInputSchema = z
     /** The other way a series ends. Mutually exclusive with `endDate`. */
     count: z.coerce.number().int().min(1).max(520).optional(),
   })
-  .refine((value) => BigInt(value.amount) > 0n, {
+  .refine((value) => isPositiveMinorUnits(value.amount), {
     path: ["amount"],
     message: "The amount must be greater than zero",
   })

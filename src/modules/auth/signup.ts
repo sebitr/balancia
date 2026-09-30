@@ -484,10 +484,7 @@ async function mailCode(
     // then wait for a mail that is not coming — where there is still a screen
     // to say it to. A sign-in code is mailed after the answer has gone, and
     // this ends in the log `afterResponse` writes instead.
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), purpose },
-      "Could not send a sign-in code",
-    );
+    logger.error({ err: error, purpose }, "Could not send a sign-in code");
     throw new AuthError(
       "The code could not be sent. Try again in a moment.",
       "codeSendFailed",

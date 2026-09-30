@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { apiActor } from "@/app/api/mobile";
+import { apiActor, isUuid } from "@/app/api/mobile";
 import { decodeCursor } from "@/lib/db/keyset";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
@@ -48,6 +48,11 @@ async function handleGet(
   context: RouteContext<"/api/groups/[groupId]/transactions">,
 ) {
   const { groupId } = await context.params;
+  // Before any query: PostgreSQL throws on a malformed UUID, which would
+  // answer 500 for what is only a group that does not exist.
+  if (!isUuid(groupId)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   const params = new URL(request.url).searchParams;
   // A cursor this server did not write reads as no cursor at all, which starts
   // the list again from the top. There is nothing to report: the value is
@@ -102,10 +107,7 @@ async function handleGet(
     if (error instanceof Error && error.name === "TokenScopeError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Transactions page failed",
-    );
+    logger.error({ err: error, groupId }, "Transactions page failed");
     return NextResponse.json({ error: "Unavailable." }, { status: 500 });
   }
 }

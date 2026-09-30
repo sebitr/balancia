@@ -254,7 +254,16 @@ Not conventionally "security", but it is what the application is for:
 - No telemetry, no analytics, no error reporting, no update check. Balancia
   contacts no external service at runtime.
 - Imported files are parsed in-process and never sent anywhere.
-- Logs redact secrets, tokens, passwords and connection strings.
+- Logs redact secrets, tokens, passwords and connection strings by key,
+  wherever they sit in a logged object.
+- A failed database statement is logged with its error class, SQLSTATE,
+  statement text and stack frames, and never with the values bound to it:
+  Drizzle's parameter list, PostgreSQL's `detail`, and any database message
+  that can quote a value are dropped before the line is written. That holds for
+  errors the application logs and for those Next.js prints itself after one
+  escapes a page. It does not reach a value the code writes into a log message
+  of its own; a rule test refuses the commonest way of doing that, logging an
+  error's `.message` or `.stack` in place of the error.
 - Activity metadata is validated against a deny-list of secret-ish keys and
   refuses to store anything that looks like a token.
 

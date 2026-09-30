@@ -6,6 +6,7 @@ import {
   AuthorizationError,
 } from "@/lib/security/authorization";
 import { getCurrentActor } from "@/lib/security/actor";
+import { isIdempotencyKey } from "@/lib/idempotency";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import { resolveApiToken } from "@/modules/api-tokens/service";
 import {
@@ -192,9 +193,10 @@ export function noStore(data: unknown, init: { status?: number } = {}) {
 
 /**
  * The refusals a caller is meant to see, mapped to statuses; anything else is
- * logged in full and reported as an anonymous 500. Mirrors the Server Action
- * funnel in `lib/actions.ts`, minus translation — this API answers in English
- * and leaves presentation to the client.
+ * logged (less a failed query's values; see `lib/error-for-log.ts`) and
+ * reported as an anonymous 500. Mirrors the Server Action funnel in
+ * `lib/actions.ts`, minus translation — this API answers in English and
+ * leaves presentation to the client.
  */
 export function mobileApiError(
   error: unknown,
@@ -245,14 +247,7 @@ export function mobileApiError(
     return noStore({ error: error.message }, { status: 422 });
   }
 
-  logger.error(
-    {
-      err:
-        error instanceof Error ? (error.stack ?? error.message) : String(error),
-      ...context,
-    },
-    `${route} failed`,
-  );
+  logger.error({ err: error, ...context }, `${route} failed`);
   return noStore({ error: "Unavailable." }, { status: 500 });
 }
 
@@ -304,7 +299,7 @@ export function isUuid(value: string): boolean {
  */
 export function idempotencyKey(request: Request): string | undefined {
   const header = request.headers.get("Idempotency-Key")?.trim();
-  return header && isUuid(header) ? header : undefined;
+  return isIdempotencyKey(header) ? header : undefined;
 }
 
 function iso(value: Date | null): string | null {

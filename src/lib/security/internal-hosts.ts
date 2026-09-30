@@ -71,19 +71,102 @@ function parseIpv4(value: string): number[] | null {
   return octets;
 }
 
-function isInternalIpv6(value: string): boolean {
-  const address = value.toLowerCase();
+/**
+ * Parses an IPv6 literal into its eight 16-bit groups, or null if `value` is
+ * not one.
+ *
+ * Read as numbers rather than matched as text, because the same address has
+ * many spellings and the one that arrives here is not the one anybody typed.
+ * `new URL()` rewrites an IPv6 host into its own canonical form before this
+ * ever sees it: `https://[::ffff:127.0.0.1]/` reaches us as `[::ffff:7f00:1]`,
+ * and a pattern written for the dotted spelling waves that straight through.
+ */
+function parseIpv6(value: string): number[] | null {
+  // A zone ("%eth0") says which interface to use, not which address.
+  const address = value.replace(/%.*$/, "");
 
-  // An IPv4-mapped or -compatible address is an IPv4 address wearing a hat.
-  const mapped = /^::(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/.exec(address);
-  if (mapped?.[1]) {
-    const parts = parseIpv4(mapped[1]);
-    return parts ? isInternalIpv4(parts) : true;
+  const halves = address.split("::");
+  if (halves.length > 2) return null;
+  const [head = "", tail] = halves;
+  const left = head === "" ? [] : head.split(":");
+  const right = tail === undefined || tail === "" ? [] : tail.split(":");
+
+  // A trailing dotted quad stands for the last two groups.
+  const last = tail === undefined ? left : right;
+  const quad = last.at(-1);
+  if (quad?.includes(".")) {
+    const octets = parseIpv4(quad);
+    if (!octets) return null;
+    const [a = 0, b = 0, c = 0, d = 0] = octets;
+    const high = ((a << 8) | b).toString(16);
+    const low = ((c << 8) | d).toString(16);
+    last.splice(-1, 1, high, low);
   }
 
-  if (address === "::" || address === "::1") return true;
-  // fc00::/7 unique-local, fe80::/10 link-local.
-  return /^f[cd]/.test(address) || /^fe[89ab]/.test(address);
+  const toGroups = (parts: readonly string[]): number[] | null => {
+    const groups: number[] = [];
+    for (const part of parts) {
+      if (!/^[0-9a-f]{1,4}$/.test(part)) return null;
+      groups.push(Number.parseInt(part, 16));
+    }
+    return groups;
+  };
+  const leftGroups = toGroups(left);
+  const rightGroups = toGroups(right);
+  if (!leftGroups || !rightGroups) return null;
+
+  // Without "::" all eight groups are spelled out; with it, "::" stands for
+  // at least one group of zeros.
+  if (tail === undefined) return leftGroups.length === 8 ? leftGroups : null;
+  const missing = 8 - leftGroups.length - rightGroups.length;
+  if (missing < 1) return null;
+  return [...leftGroups, ...new Array<number>(missing).fill(0), ...rightGroups];
+}
+
+function isInternalIpv6(value: string): boolean {
+  const groups = parseIpv6(value.toLowerCase());
+  if (!groups) return true;
+  const [g0 = 0, g1 = 0, g2 = 0] = groups;
+  const [g5 = 0, g6 = 0, g7 = 0] = groups.slice(5);
+  /** Whether groups `from` up to but not including `to` are all zero. */
+  const zeros = (from: number, to: number) =>
+    groups.slice(from, to).every((group) => group === 0);
+
+  // :: unspecified and ::1 loopback.
+  if (zeros(0, 7) && g7 <= 1) return true;
+
+  /*
+   * An IPv4 address wearing a hat.
+   *
+   * These ranges carry an IPv4 address in their last 32 bits, and reaching
+   * one reaches that IPv4 address: `::ffff:0:0/96` is how a dual-stack socket
+   * spells IPv4 itself, `::/96` is the deprecated IPv4-compatible form, and
+   * `64:ff9b::/96` is the well-known NAT64 prefix, which a translator on the
+   * path turns back into the IPv4 address inside. Each is judged by the
+   * address it carries, so `::ffff:8.8.8.8` is as public as 8.8.8.8 and
+   * `64:ff9b::a9fe:a9fe` as internal as the metadata service it names.
+   */
+  const mapped = zeros(0, 5) && g5 === 0xffff;
+  const compatible = zeros(0, 6);
+  const nat64 = g0 === 0x64 && g1 === 0xff9b && zeros(2, 6);
+  if (mapped || compatible || nat64) {
+    return isInternalIpv4([g6 >> 8, g6 & 0xff, g7 >> 8, g7 & 0xff]);
+  }
+
+  /*
+   * `64:ff9b:1::/48` is NAT64 for a network's own use (RFC 8215), and there
+   * the IPv4 address need not sit in the last 32 bits: where it goes depends
+   * on the prefix length that network chose. A push service never lives
+   * behind somebody's private translator, so the whole range is refused
+   * rather than guessed at.
+   */
+  if (g0 === 0x64 && g1 === 0xff9b && g2 === 1) return true;
+
+  return (
+    (g0 & 0xfe00) === 0xfc00 || // fc00::/7 unique-local
+    (g0 & 0xffc0) === 0xfe80 || // fe80::/10 link-local
+    (g0 & 0xff00) === 0xff00 // ff00::/8 multicast
+  );
 }
 
 /**
