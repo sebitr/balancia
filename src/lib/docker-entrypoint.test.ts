@@ -188,11 +188,12 @@ describe("configuration reaches the entrypoint", () => {
 
   /**
    * compose.demo.yaml builds the same image and runs the same entrypoint, and
-   * forwards none of this on purpose. It has no database for the POSTGRES_
-   * settings to describe, and it fixes DEMO_MODE on — which the entrypoint
-   * checks before RUN_MIGRATIONS, and which skips the migration step
-   * whatever that says. That stays true only while DEMO_MODE is a literal
-   * there rather than something `.env` could turn off.
+   * takes none of this from `.env`, on purpose. It has no database for the
+   * POSTGRES_ settings to describe; it leaves both model switches off, so the
+   * warnings they drive have nothing to say; and it fixes DEMO_MODE on —
+   * which the entrypoint checks before RUN_MIGRATIONS, and which skips the
+   * migration step whatever that says. That last holds only while DEMO_MODE
+   * is a literal there rather than something `.env` could turn off.
    */
   it("keeps the demo off the migration step whatever .env says", () => {
     const demo = composeServices("compose.demo.yaml").app;
