@@ -811,8 +811,12 @@ export async function removeParticipant(
         )
         .limit(1);
       if (membership?.role === "owner") {
+        // Ownership passes on only when the owner closes their account, so
+        // the refusal points at what they can do with the group from here:
+        // archive it, or delete it.
         throw new AuthorizationError(
-          "Transfer ownership before removing the group owner.",
+          "The group owner cannot be removed from the group. Archive it or delete it instead.",
+          "ownerNotRemovable",
         );
       }
     }
@@ -977,7 +981,8 @@ export async function createInvitation(
     }
     if (participant.userId) {
       throw new AuthorizationError(
-        "This participant already has an account; guest links are for people without one.",
+        "This person already signs in with their own account, so they do not need a guest link.",
+        "participantHasAccount",
       );
     }
 

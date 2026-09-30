@@ -136,6 +136,7 @@ export async function assertParticipantsInGroup(
   if (rows.length !== unique.length) {
     throw new AuthorizationError(
       "One or more of those people are not part of this group.",
+      "participantNotInGroup",
     );
   }
   return new Map(rows.map((row) => [row.id, row.displayName]));
