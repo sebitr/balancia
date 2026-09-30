@@ -967,7 +967,13 @@ safe — the runner holds a PostgreSQL advisory lock, so the second waits and
 then finds the schema current.
 
 Set to `false` to take that over yourself, e.g. to apply migrations once and
-confirm before rolling the app:
+confirm before rolling the app. Under Compose it goes in `.env`, and
+`compose.yaml` passes it to the app and the worker alike; each says in its log
+that it skipped the step. For a single one-off command rather than the whole
+stack, pass it to that command instead —
+`docker compose run --rm -e RUN_MIGRATIONS=false app sh` starts a shell without
+migrating first. Only the word `false` turns the step off. The migrations are
+then yours to apply:
 
 ```bash
 docker compose run --rm --entrypoint "node dist/migrate.js" app

@@ -1985,6 +1985,14 @@ summary() {
   if is_enabled ALLOW_NEWER_SCHEMA; then
     row 'Older releases' 'allowed to start on a newer database'
   fi
+  # The same for the step that refusal belongs to: an instance that migrates
+  # itself has nothing to report, and one that does not has an operator who
+  # must remember to on every upgrade. Exactly `false`, because that is the
+  # one value the entrypoint skips on. Never asked above — it is a way of
+  # running upgrades, not something an installation is set up with.
+  if [ "$(value_of RUN_MIGRATIONS)" = false ]; then
+    row 'Migrations' 'yours to apply (RUN_MIGRATIONS=false)'
+  fi
 }
 
 # An empty APP_URL means nothing has been answered yet — an unattended run, or
@@ -2054,7 +2062,13 @@ if [ "$interactive" -eq 1 ] && command -v docker > /dev/null 2>&1; then
     if (cd "$root_dir" && docker compose up -d); then
       printf '\n'
       done_line "Balancia is starting — $(app_address)"
-      printf '  %s·%s  First boot applies migrations before it serves anything.\n' "$dim" "$reset"
+      if [ "$(value_of RUN_MIGRATIONS)" = false ]; then
+        printf '  %s·%s  RUN_MIGRATIONS=false, so nothing migrates until you run\n' "$dim" "$reset"
+        printf '     %sdocker compose run --rm --entrypoint "node dist/migrate.js" app%s\n' \
+          "$cyan" "$reset"
+      else
+        printf '  %s·%s  First boot applies migrations before it serves anything.\n' "$dim" "$reset"
+      fi
       if [ "$root_dir" != "$(pwd)" ]; then
         printf '  %s·%s  It lives in %s — Compose reads .env from there.\n' \
           "$dim" "$reset" "$root_dir"

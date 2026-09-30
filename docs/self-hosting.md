@@ -138,12 +138,17 @@ already held on this host fails after the build.
 Migrations are not a separate service. The image's entrypoint applies any
 pending ones before the app starts, on every boot. Two containers doing it at
 once is safe as well — the runner takes a PostgreSQL advisory lock, so the
-second waits and then finds the schema already current. To take that over yourself, set
-`RUN_MIGRATIONS=false` and run them explicitly:
+second waits and then finds the schema already current. To take that over
+yourself, set `RUN_MIGRATIONS=false` in `.env` — `compose.yaml` passes it to
+the app and the worker alike — and run them explicitly:
 
 ```bash
 docker compose run --rm --entrypoint "node dist/migrate.js" app
 ```
+
+With it set, nothing migrates by itself on any upgrade. To skip the step for a
+single `docker compose run` instead, see
+[`RUN_MIGRATIONS`](environment.md#run_migrations).
 
 Two named volumes hold everything that matters:
 
