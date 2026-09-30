@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
   LAYOUT_HEIGHT,
   fakeViewport,
@@ -22,7 +23,7 @@ import { Sheet, SheetContent, SheetTitle } from "./sheet";
 afterEach(releaseViewport);
 
 function renderSheet() {
-  render(
+  renderWithIntl(
     <Sheet open>
       <SheetContent side="bottom" className="max-h-[86vh]">
         <SheetTitle>Currency</SheetTitle>
@@ -90,7 +91,7 @@ describe("a bottom sheet with the keyboard open", () => {
   /** A side sheet is not anchored to the edge the keyboard comes from. */
   it("leaves a side sheet alone", () => {
     const viewport = fakeViewport(LAYOUT_HEIGHT);
-    render(
+    renderWithIntl(
       <Sheet open>
         <SheetContent side="right">
           <SheetTitle>Filters</SheetTitle>
@@ -105,6 +106,26 @@ describe("a bottom sheet with the keyboard open", () => {
 });
 
 /**
+ * The ✕ is named in the reader's language. It was a literal English "Close",
+ * the one English word a French screen reader met on every sheet in the app.
+ */
+describe("a sheet's close button", () => {
+  it("is named in French for a French reader", () => {
+    renderWithIntl(
+      <Sheet open>
+        <SheetContent side="right">
+          <SheetTitle>Filtres</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+      { locale: "fr" },
+    );
+
+    expect(screen.getByRole("button", { name: "Fermer" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+});
+
+/**
  * Pushing a sheet away, and not pushing it away by accident.
  *
  * The interesting case is the tall sheet, which keeps its header and footer
@@ -115,7 +136,7 @@ describe("a bottom sheet with the keyboard open", () => {
  */
 describe("pushing a bottom sheet away", () => {
   function renderTallSheet() {
-    render(
+    renderWithIntl(
       <Sheet open>
         {/* The shape the add-entry drawer and the group sheet both take. */}
         <SheetContent side="bottom" className="overflow-hidden">
@@ -186,7 +207,7 @@ describe("pushing a bottom sheet away", () => {
  */
 describe("a sheet that scrolls itself", () => {
   it("reads its own scroll position", () => {
-    render(
+    renderWithIntl(
       <Sheet open>
         <SheetContent side="bottom" className="overflow-y-auto">
           <SheetTitle>Currency</SheetTitle>
@@ -276,7 +297,7 @@ function openingTags(source: string): string[] {
 
 describe("the grabber", () => {
   it("is drawn once on a bottom sheet, and not at all on a side one", () => {
-    const { unmount } = render(
+    const { unmount } = renderWithIntl(
       <Sheet open>
         <SheetContent side="bottom">
           <SheetTitle>Your position</SheetTitle>
@@ -289,7 +310,7 @@ describe("the grabber", () => {
     ).toHaveLength(1);
     unmount();
 
-    render(
+    renderWithIntl(
       <Sheet open>
         <SheetContent side="right">
           <SheetTitle>Filters</SheetTitle>

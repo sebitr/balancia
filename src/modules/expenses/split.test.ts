@@ -85,6 +85,47 @@ describe("resolveSplit — exact", () => {
       }),
     ).toThrow(AllocationError);
   });
+
+  it("rejects a part too large to store, even when the parts add up", () => {
+    // Only the sum is held to the total, so these two passed and the first
+    // then overflowed the `bigint` column it was written to — a 500.
+    const huge = (10n ** 30n).toString();
+    const refusal = (() => {
+      try {
+        resolveSplit(1000n, {
+          method: "exact",
+          entries: [
+            { participantId: "a", value: huge },
+            {
+              participantId: "b",
+              value: `-${(10n ** 30n - 1000n).toString()}`,
+            },
+          ],
+        });
+      } catch (error) {
+        return error;
+      }
+      return null;
+    })();
+    expect(refusal).toBeInstanceOf(AllocationError);
+    expect((refusal as AllocationError).code).toBe("valueTooLarge");
+  });
+
+  it("still carries a credit, as a receipt with a discount produces", () => {
+    // The sign is left alone on purpose: a discount larger than one person's
+    // items leaves them owed, and the receipt split hands the engine that.
+    const result = resolveSplit(1000n, {
+      method: "exact",
+      entries: [
+        { participantId: "a", value: "1200" },
+        { participantId: "b", value: "-200" },
+      ],
+    });
+    expect(result.allocations.map((entry) => entry.amount)).toEqual([
+      1200n,
+      -200n,
+    ]);
+  });
 });
 
 describe("resolveSplit — percentage", () => {
@@ -325,5 +366,39 @@ describe("convertAllocations", () => {
       ),
       { numRuns: 300 },
     );
+  });
+
+  it("refuses a credit whose converted parts no longer fit", () => {
+    // Parts of both signs each outgrow the total they cancel down to, so a
+    // converted total inside the line says nothing about them.
+    const allocations = [
+      { participantId: "a", amount: 10n ** 17n + 1000n },
+      { participantId: "b", amount: -(10n ** 17n) },
+    ];
+    expect(() => convertAllocations(allocations, 1_000_000n, 1000n)).toThrow(
+      AllocationError,
+    );
+  });
+
+  it("rounds each part of a credit once, at the true product", () => {
+    // Each part is its share of the converted total rounded half-even —
+    // here 5260560 × 98507471701259340 / 6018312 and so on, which land on
+    // whole units with nothing left over. At decimal.js's twenty digits the
+    // products were rounded first, and two of the three came out a unit off.
+    const allocations = [
+      { participantId: "a", amount: 5_260_560n },
+      { participantId: "b", amount: 846_765n },
+      { participantId: "c", amount: -89_013n },
+    ];
+    const converted = convertAllocations(
+      allocations,
+      98_507_471_701_259_340n,
+      6_018_312n,
+    );
+    expect(converted.map((entry) => entry.amount)).toEqual([
+      86_104_619_589_808_045n,
+      13_859_813_063_051_046n,
+      -1_456_960_951_599_751n,
+    ]);
   });
 });

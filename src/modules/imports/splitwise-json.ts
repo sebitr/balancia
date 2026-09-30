@@ -1,8 +1,10 @@
 import Decimal from "decimal.js";
+import type { IncomeCategory } from "@/modules/categorization";
 import {
   currencyExponent,
   isSupportedCurrency,
 } from "@/modules/currencies/iso-4217";
+import { isCalendarDate } from "./limits";
 import {
   ImportParseError,
   type ImportAdapter,
@@ -74,7 +76,21 @@ function toMinorUnits(value: string, currency: string): string | null {
 function normalizeDate(value: string | undefined): string | null {
   if (!value) return null;
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
-  return match ? match[1] : null;
+  // The shape is not enough: `2024-02-30` has it, and PostgreSQL refuses it.
+  return match && isCalendarDate(match[1]) ? match[1] : null;
+}
+
+/**
+ * Where an expense with a negative cost is filed — money coming back, which is
+ * what the income category for a reversed purchase says.
+ */
+const REFUND_CATEGORY: IncomeCategory = "refunds";
+
+function negate(entries: readonly StagedShare[]): StagedShare[] {
+  return entries.map((entry) => ({
+    sourceName: entry.sourceName,
+    amount: (-BigInt(entry.amount)).toString(),
+  }));
 }
 
 function extractExpenses(payload: unknown): SplitwiseExpense[] | null {
@@ -246,27 +262,58 @@ export const splitwiseJsonAdapter: ImportAdapter = {
         return;
       }
 
+      // A negative cost is money that came back, and its paid and owed shares
+      // come negative with it. Balancia keeps every amount positive and says
+      // which way the money went instead, so the entry is read from the other
+      // side: every sign flipped, an expense recorded as income, a payment
+      // with its two people swapped. Either way the balances end where
+      // Splitwise's did.
+      const reversed = BigInt(total) < 0n;
+      const amount = reversed ? (-BigInt(total)).toString() : total;
+      const paidBy = reversed ? negate(payers) : payers;
+      const owedBy = reversed ? negate(shares) : shares;
+      if ([...paidBy, ...owedBy].some((entry) => BigInt(entry.amount) < 0n)) {
+        // Some shares one way and some the other: no single direction
+        // describes it, and a negative payment is refused by the database.
+        warnings.push({
+          rowNumber,
+          message:
+            "Skipped an entry whose shares do not all go the same way as its cost",
+        });
+        return;
+      }
+      if (paidBy.length === 0 || owedBy.length === 0) {
+        warnings.push({
+          rowNumber,
+          message: "Skipped an entry that names nobody as paying or owing",
+        });
+        return;
+      }
+
       // Splitwise flags repayments; they become settlements, not expenses.
       if (expense.payment) {
-        if (payers.length !== 1 || shares.length !== 1) {
+        if (paidBy.length !== 1 || owedBy.length !== 1) {
           warnings.push({
             rowNumber,
             message: "Skipped a payment that does not have exactly two parties",
           });
           return;
         }
+        // In a Splitwise payment the person with `paid_share` hands the money
+        // over, and the person carrying the `owed_share` is the one whose
+        // balance it clears — the other way round when the cost is negative.
+        const [from, to] = reversed
+          ? [owedBy[0], paidBy[0]]
+          : [paidBy[0], owedBy[0]];
         rows.push({
           rowNumber,
           row: {
             kind: "settlement",
             date,
-            amount: total,
+            amount,
             currency,
-            // In a Splitwise payment the person with `paid_share` hands the
-            // money over, and the person carrying the `owed_share` is the one
-            // whose balance it clears.
-            fromSourceName: payers[0].sourceName,
-            toSourceName: shares[0].sourceName,
+            fromSourceName: from.sourceName,
+            toSourceName: to.sourceName,
             notes: expense.description ?? null,
           },
         });
@@ -277,14 +324,17 @@ export const splitwiseJsonAdapter: ImportAdapter = {
         rowNumber,
         row: {
           kind: "expense",
+          ...(reversed ? { direction: "in" as const } : {}),
           description: expense.description?.trim() || "Imported expense",
-          category: expense.category?.name ?? null,
+          category: reversed
+            ? REFUND_CATEGORY
+            : (expense.category?.name ?? null),
           notes: expense.details ?? null,
           date,
-          amount: total,
+          amount,
           currency,
-          payers,
-          shares,
+          payers: paidBy,
+          shares: owedBy,
         },
       });
     });

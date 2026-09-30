@@ -78,15 +78,7 @@ Seed data ready.
 
 main()
   .catch((error: unknown) => {
-    logger.error(
-      {
-        err:
-          error instanceof Error
-            ? (error.stack ?? error.message)
-            : String(error),
-      },
-      "Seed failed",
-    );
+    logger.error({ err: error }, "Seed failed");
     process.exitCode = 1;
   })
   .finally(() => {

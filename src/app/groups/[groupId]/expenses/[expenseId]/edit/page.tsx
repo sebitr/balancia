@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { EntryScreen } from "../../../entry-screen";
 
 /**
@@ -8,6 +10,13 @@ import { EntryScreen } from "../../../entry-screen";
  * and no way to say that what had been filed as an expense was really income
  * or a repayment. It is the same drawer now, with the entry already in it.
  */
+
+/** Titled here and not on the intercepted route — see `expenses/new`. */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("addEntry");
+  return { title: t("editTitles.expense") };
+}
+
 export default async function EditExpensePage({
   params,
 }: PageProps<"/groups/[groupId]/expenses/[expenseId]/edit">) {

@@ -2,9 +2,10 @@ import Link from "next/link";
 import { SplittingWordmark } from "@/components/brand/splitting-wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UmamiScript } from "@/components/analytics/umami-script";
+import { AreaMessages } from "@/i18n/area-messages";
 
 export default function AuthLayout({ children }: LayoutProps<"/">) {
-  return (
+  const page = (
     <div className="flex min-h-dvh flex-col">
       {/* Covers /sign-in, /register and /register/done. Two of those carry a
           group identifier in the query string, which is why the tracker is
@@ -26,4 +27,8 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       </main>
     </div>
   );
+
+  // The sign-in form's server errors and the password screens' copy, which
+  // no other page asks for.
+  return <AreaMessages area="auth">{page}</AreaMessages>;
 }

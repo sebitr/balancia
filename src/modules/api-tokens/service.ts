@@ -205,6 +205,31 @@ export async function revokeApiToken(
 }
 
 /**
+ * Revokes every key the account holds.
+ *
+ * For the moments an account is taken back rather than tidied: a password
+ * reset, an email change, and the first time an address is proved. Minting a
+ * key needs nothing but a live session, and a key never expires, so a session
+ * held for five minutes by the wrong person is enough to leave something
+ * behind that outlasts every session the owner then ends. A key revoked here
+ * breaks whatever script was holding it, which is the price of the owner
+ * being able to say "nothing I did not do is still signed in" and mean it.
+ */
+export async function revokeAllApiTokensForUser(
+  userId: string,
+  options: { db?: Database; now?: Date } = {},
+): Promise<number> {
+  const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+  const revoked = await db
+    .update(apiTokens)
+    .set({ revokedAt: now })
+    .where(and(eq(apiTokens.userId, userId), isNull(apiTokens.revokedAt)))
+    .returning({ id: apiTokens.id });
+  return revoked.length;
+}
+
+/**
  * Turns a bearer value into the key it names, or null.
  *
  * Shaped like `resolveSession`, and refusing on the same grounds: malformed

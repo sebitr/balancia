@@ -98,10 +98,7 @@ async function handlePost(request: Request) {
       );
     }
     // Never log the endpoint: it is a capability to send to someone's device.
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Could not store a push subscription",
-    );
+    logger.error({ err: error }, "Could not store a push subscription");
     return NextResponse.json(
       { error: t("deviceNotRegistered") },
       { status: 500 },

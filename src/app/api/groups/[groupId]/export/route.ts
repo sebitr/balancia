@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isUuid } from "@/app/api/mobile";
 import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
@@ -44,6 +45,11 @@ async function handleGet(
   context: RouteContext<"/api/groups/[groupId]/export">,
 ) {
   const { groupId } = await context.params;
+  // Before any query: PostgreSQL throws on a malformed UUID, which would
+  // answer 500 for what is only a group that does not exist.
+  if (!isUuid(groupId)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   const format = formatSchema.parse(
     new URL(request.url).searchParams.get("format"),
   );
@@ -90,10 +96,7 @@ async function handleGet(
         { status: 401 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error), groupId },
-      "Group export failed",
-    );
+    logger.error({ err: error, groupId }, "Group export failed");
     return NextResponse.json({ error: "Unavailable." }, { status: 500 });
   }
 }

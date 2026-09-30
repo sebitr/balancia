@@ -27,9 +27,10 @@ export interface StagedShare {
 export interface StagedExpense {
   readonly kind: "expense";
   /**
-   * Which way the money went. Only a Balancia backup carries one; absent means
-   * `out`, which is what every other source records and what an entry written
-   * before income existed was.
+   * Which way the money went. A Balancia backup carries one, and a Splitwise
+   * row with a negative cost — a refund — is read as `in`. Absent means `out`,
+   * which is what every other row records and what an entry written before
+   * income existed was.
    */
   readonly direction?: EntryDirection;
   readonly description: string;
