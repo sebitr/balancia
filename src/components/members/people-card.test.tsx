@@ -264,6 +264,12 @@ describe("PeopleCard", () => {
 
     const sheet = screen.getByRole("dialog");
     expect(within(sheet).getByText("Remove Cyril?")).toBeVisible();
+    // The toast is the fast way back, not the only one.
+    expect(
+      within(sheet).getByText(
+        /undo this right after, or restore them later from Activity\./,
+      ),
+    ).toBeVisible();
     expect(removeParticipantAction).not.toHaveBeenCalled();
 
     await user.click(within(sheet).getByRole("button", { name: "Remove" }));
