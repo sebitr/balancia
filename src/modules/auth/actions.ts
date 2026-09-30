@@ -7,7 +7,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getClientIp, getCurrentUser } from "@/lib/security/actor";
-import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
+import {
+  consumeRateLimit,
+  enforcePasswordSignInLimits,
+  RateLimitedError,
+} from "@/lib/security/rate-limit";
 import { guardSignUp } from "@/lib/security/signup-guard";
 import {
   AuthError,
@@ -21,6 +25,7 @@ import {
   unlinkAppleIdentity,
 } from "./service";
 import { revokeSession } from "./sessions";
+import { afterResponse } from "./deliver";
 import {
   clearSessionCookie,
   readSessionCookie,
@@ -164,10 +169,8 @@ export async function signInAction(input: unknown): Promise<ActionResult> {
 
   const context = await requestContext();
   return runAction("auth.signIn", async () => {
-    const limit = await consumeRateLimit("signIn", context.ipAddress);
-    if (!limit.allowed) {
-      throw new RateLimitedError(limit.retryAfterSeconds);
-    }
+    // Per caller and per address typed; see `enforcePasswordSignInLimits`.
+    await enforcePasswordSignInLimits(context.ipAddress, parsed.data.email);
 
     const result = await signInWithPassword(parsed.data, context);
     await setSessionCookie(result.session.token, result.session.expiresAt);
@@ -204,7 +207,10 @@ export async function requestPasswordResetAction(
     if (!limit.allowed) {
       throw new RateLimitedError(limit.retryAfterSeconds);
     }
-    await requestPasswordReset(parsed.data.email, { locale: context.locale });
+    await requestPasswordReset(parsed.data.email, {
+      locale: context.locale,
+      deliver: afterResponse,
+    });
   });
 }
 
@@ -304,6 +310,12 @@ export async function changePasswordAction(
     const user = await getCurrentUser();
     if (!user) {
       throw new AuthError("Sign in to change your password.", "signInRequired");
+    }
+    // Keyed by account, before the current password is checked: a session is
+    // all this needs, and a stolen one must not be a way to guess with.
+    const limit = await consumeRateLimit("passwordChange", user.userId);
+    if (!limit.allowed) {
+      throw new RateLimitedError(limit.retryAfterSeconds);
     }
     // The cookie this request arrived with is the one session the change
     // keeps; see `revokeOtherSessionsForUser`.
@@ -497,7 +509,9 @@ export async function requestSignInCodeAction(
       throw new RateLimitedError(limit.retryAfterSeconds);
     }
 
-    await requestSignInCode(parsed.data.email, context);
+    await requestSignInCode(parsed.data.email, context, {
+      deliver: afterResponse,
+    });
   });
 }
 

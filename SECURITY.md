@@ -120,6 +120,37 @@ Implemented in this repository — there is no third-party auth service.
   held until then; a sign-in code also drops a password set before the proof.
   Whoever proves the inbox starts with only what the proof handed them.
 
+### Rate limiting
+
+A fixed-window limiter backed by PostgreSQL stands in front of every door that
+costs something to knock on. What a limit is keyed on matters as much as its
+number, because a limit keyed only on the caller is one an attacker with many
+addresses never reaches:
+
+- **Password sign-in is counted twice**: per client (10 per 5 minutes) and per
+  address typed (20 per hour), so guessing at one account cannot be spread
+  across a botnet. The second is spent for every address, registered or not,
+  before any account is looked up, so the refusal comes on the same attempt and
+  in the same words either way. A stranger can spend it and close the password
+  door on somebody for up to an hour; codes, passkeys and Apple are counted
+  separately, so spending this one does not lock the account.
+- **Changing a password** is limited per account (10 per hour), so a stolen
+  session cannot guess the current one at leisure.
+- **Reset links and sign-in codes** are limited per client and per recipient
+  inbox (3 per hour). Past the inbox's share the request is answered exactly as
+  one that went out, and nothing is issued, so the newest link or code already
+  in that inbox stays the live one. The token and the mail are only made after
+  the response has gone, so an account's trip to the mail server does not make
+  its answer slower than an unknown address's.
+- **Registration** is limited per client, per recipient and across the
+  instance; **six-digit codes** per address; **API keys** per key.
+- **The client address** is read from the right of `X-Forwarded-For`, counting
+  back `TRUSTED_PROXY_HOPS` proxies; everything left of that is the caller's to
+  invent. An IPv6 client is counted by its /64, because a subscriber holds at
+  least that many addresses and would otherwise take a fresh allowance per
+  request, and `::ffff:a.b.c.d` counts as the IPv4 address it is. Sessions and
+  logs keep the full address.
+
 ### Guest access
 
 - Invitation tokens carry **256 bits** of CSPRNG entropy.
@@ -248,6 +279,9 @@ Not conventionally "security", but it is what the application is for:
   does unless told otherwise. A client that reaches the app's port directly
   skips the proxy and writes its own `X-Forwarded-For`; a database on the
   network has only its password in front of it.
+- **Set `TRUSTED_PROXY_HOPS` to the number of proxies in front of Balancia**,
+  and no higher. Each hop too many lets a client write its own address into
+  the header and take a fresh allowance on every limit that counts clients.
 - **Back up `.env`** along with the database and receipts. It holds the only
   copy of `AUTH_SECRET` and `POSTGRES_PASSWORD`.
 - **Keep `ALLOW_REGISTRATION=false`** on a private instance.

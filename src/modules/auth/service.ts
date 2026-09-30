@@ -35,6 +35,8 @@ import {
   type CreatedSession,
 } from "./sessions";
 import { sendMail } from "./mailer";
+import type { Deliver } from "./deliver";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
   renderEmailChangeEmail,
   renderEmailChangeNoticeEmail,
@@ -1147,7 +1149,10 @@ export async function verifyEmail(
  * Starts a password reset.
  *
  * Always resolves successfully, whether or not the address is registered —
- * otherwise this endpoint becomes a way to enumerate accounts.
+ * otherwise this endpoint becomes a way to enumerate accounts. That goes for
+ * the time it takes as well as for what it says: the token and the mail are
+ * only ever made for an account, so they go through `deliver`, which the
+ * request paths set to run after the answer has gone (see `deliver.ts`).
  */
 export async function requestPasswordReset(
   email: string,
@@ -1155,6 +1160,7 @@ export async function requestPasswordReset(
     db?: Database;
     /** Language the person was reading when they asked. */
     locale?: string | null;
+    deliver?: Deliver;
   } = {},
 ): Promise<void> {
   const env = getEnv();
@@ -1167,6 +1173,23 @@ export async function requestPasswordReset(
 
   const db = options.db ?? getDb();
   const normalized = normalizeEmail(email);
+
+  /*
+   * One inbox's share, spent here rather than at the boundary because what
+   * it decides is not a refusal but whether anything is issued at all. Past
+   * it the answer is the ordinary one and no token is minted — minting one
+   * would supersede the link the owner may be about to open, which is the
+   * attack this stops. Spent for every address, before the lookup, so it
+   * behaves the same whether anybody is there or not.
+   */
+  const recipient = await consumeRateLimit("passwordResetEmail", normalized);
+  if (!recipient.allowed) {
+    logger.info(
+      { reason: "recipient-limit" },
+      "Password reset not mailed; this address has had its share for now",
+    );
+    return;
+  }
 
   const [row] = await db
     .select({ id: users.id, email: users.email, locale: users.locale })
@@ -1182,23 +1205,27 @@ export async function requestPasswordReset(
     return;
   }
 
-  const token = await issueVerificationToken(
-    row.id,
-    "password_reset",
-    PASSWORD_RESET_TTL_MS,
-    { db },
-  );
+  const deliver: Deliver = options.deliver ?? ((work) => work());
+  await deliver(async () => {
+    const token = await issueVerificationToken(
+      row.id,
+      "password_reset",
+      PASSWORD_RESET_TTL_MS,
+      { db },
+    );
 
-  await sendMail({
-    to: row.email,
-    ...renderPasswordResetEmail({
-      // The account's own language, so a reset mail reads the same as the app —
-      // falling back to the language the request was made in, which for an
-      // account that has never touched the switcher is the only signal there is.
-      locale: row.locale ?? options.locale,
-      origin: env.appOrigin,
-      url: `${env.appOrigin}/reset-password?token=${token}`,
-    }),
+    await sendMail({
+      to: row.email,
+      ...renderPasswordResetEmail({
+        // The account's own language, so a reset mail reads the same as the
+        // app — falling back to the language the request was made in, which
+        // for an account that has never touched the switcher is the only
+        // signal there is.
+        locale: row.locale ?? options.locale,
+        origin: env.appOrigin,
+        url: `${env.appOrigin}/reset-password?token=${token}`,
+      }),
+    });
   });
 }
 
