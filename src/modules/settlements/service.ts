@@ -316,6 +316,7 @@ export async function updateSettlement(
     ) {
       throw new AuthorizationError(
         "One or more of those people are not part of this group.",
+        "participantNotInGroup",
       );
     }
 

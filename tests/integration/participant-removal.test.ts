@@ -358,6 +358,12 @@ describe("an entry that names somebody who has left", () => {
       repayment(carol, group.ownerParticipantId, "1500"),
     );
     await removeParticipant(group.access, bob);
+    // The refusal a stranger's name gets, so it reads as one and not as "You
+    // do not have access to this group".
+    const notInGroup = {
+      name: "AuthorizationError",
+      code: "participantNotInGroup",
+    };
 
     await expect(
       updateExpense(
@@ -365,17 +371,17 @@ describe("an entry that names somebody who has left", () => {
         withoutBob,
         dinner(group.ownerParticipantId, [carol, bob]),
       ),
-    ).rejects.toThrow(AuthorizationError);
+    ).rejects.toMatchObject(notInGroup);
     await expect(
       updateSettlement(
         group.access,
         carolPaid,
         repayment(bob, group.ownerParticipantId, "1500"),
       ),
-    ).rejects.toThrow(AuthorizationError);
+    ).rejects.toMatchObject(notInGroup);
     await expect(
       createExpense(group.access, dinner(group.ownerParticipantId, [bob])),
-    ).rejects.toThrow(AuthorizationError);
+    ).rejects.toMatchObject(notInGroup);
   });
 });
 
