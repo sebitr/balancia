@@ -167,7 +167,7 @@ is off, which is the default.
 | GET    | `/api/groups/:groupId/categories`                        | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                                                                                                                                        |
 | POST   | `/api/groups/:groupId/categorize`                        | What a description is about: `classifyTransactionSync` against this group's learned mappings. Body `{description, note?, recurring?}`; answers `{classification}` or `{classification: null}` with nothing to go on.                                                                                                              |
 | GET    | `/api/groups/:groupId/join-link`                         | The newest group-wide link — `{status, url, prefix, createdAt, expiresAt, lastUsedAt}` — or `{link: null}`. Owner only, like the card it draws. `url` is null for a link minted before the token gained a sealed copy, or under a since-rotated `AUTH_SECRET`: it still works for everyone holding it, but cannot be shown again. |
-| GET    | `/api/groups/:groupId/transactions?cursor&limit`         | One page of the group's history, expenses and repayments in one list, newest first (40 by default, 500 at most). Feed `cursor` back for the next page; a null cursor is the end.                                                                                                                                                  |
+| GET    | `/api/groups/:groupId/transactions?cursor&limit&…`       | One page of the group's history, expenses and repayments in one list, newest first (40 by default, 500 at most). Feed `cursor` back for the next page; a null cursor is the end. Optionally filtered and reordered, and with `count` a count instead of a page — see below the table.                                             |
 | GET    | `/api/groups/:groupId/stats`                             | `loadGroupStats`: all three windows, every currency and the all-time records in one read.                                                                                                                                                                                                                                         |
 | GET    | `/api/groups/:groupId/participants/:participantId/stats` | `loadMemberStats` for one member, removed people included.                                                                                                                                                                                                                                                                        |
 | GET    | `/api/groups/:groupId/settle-up`                         | `loadSettleUp`: the shortest set of transfers that clears the group, split into the reader's own and everybody else's.                                                                                                                                                                                                            |
@@ -239,6 +239,35 @@ and that is structural rather than checked: a recipient reaches the list only
 by appearing in a transfer the group's own balances say the reader owes. There
 is no route that takes a name and answers with an IBAN, and adding one would
 be the mistake.
+
+`transactions` takes the web list's own filters, under the same names its URL
+uses, and answers with pages that are already narrowed and ordered. Every one
+is optional, and a request with none of them is answered exactly as it always
+was — newest first, with the three-part cursor an older client already holds.
+
+| Parameter | Repeats | Meaning                                                                                                                                                                                                                                                          |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `q`       |         | Search, at most 200 characters. Trimmed, compared in lower case and without folding accents, as a plain substring — `%` and `_` are themselves. Matches an expense's description, a repayment's title and note, and the date as the reader's notation writes it. |
+| `kind`    | yes     | `expense`, `revenue`, `settlement`; any of.                                                                                                                                                                                                                      |
+| `cat`     | yes     | A category as stored; the empty string is uncategorised, which takes repayments with it.                                                                                                                                                                         |
+| `sub`     | yes     | A `category.subcategory` pair.                                                                                                                                                                                                                                   |
+| `when`    |         | `month` or `year` (counted from today in the group's timezone), or `custom` with `from` and `to` as `YYYY-MM-DD`, both inclusive. A date that is not one is ignored.                                                                                             |
+| `min`     |         | Lowest magnitude, in major units of each row's own listed currency (`12.50`, `12,50`). Ignored when it is not a number.                                                                                                                                          |
+| `max`     |         | Highest magnitude, likewise.                                                                                                                                                                                                                                     |
+| `by`      | yes     | A participant who paid; any of. A repayment's payer is the person who paid it back.                                                                                                                                                                              |
+| `pos`     | yes     | What the row left the reader holding: `owe`, `back`, `flat`. A repayment is always `flat`.                                                                                                                                                                       |
+| `only`    | yes     | `series`, `foreign`, `receipt`; all of them together.                                                                                                                                                                                                            |
+| `sort`    |         | `oldest`, or `largest` (by magnitude, newest first among equals). A `largest` cursor carries a fourth part, the amount it resumes at.                                                                                                                            |
+
+Unknown values of `kind`, `when`, `pos`, `only` and `sort` are dropped, the way
+the web drops them from a hand-edited link. A filter too large to be a question
+— a `q` over 200 characters, more than 64 categories or payers — is refused
+with 400 rather than quietly shortened. Keep the cursor with the filter it came
+from: a cursor fed back under another `sort` restarts the list from the top.
+
+`count` (any value) answers `{ count }` over the same filter instead of a page,
+ignoring `cursor`, `limit` and `sort`. It is what the web's filter sheet shows
+on its apply button, and it costs two `COUNT`s rather than a list.
 
 ## Writes
 

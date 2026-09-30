@@ -712,6 +712,7 @@
       "open": "Filtrer et trier",
       "openWith": "Filtrer et trier, {count, plural, one {# filtre appliqué} other {# filtres appliqués}}",
       "apply": "{count, plural, =0 {Aucune transaction ne correspond} one {Afficher # transaction} other {Afficher # transactions}}",
+      "applyUncounted": "Afficher les transactions",
       "when": "Quand",
       "when_any": "N’importe quand",
       "when_month": "Ce mois-ci",
