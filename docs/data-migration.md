@@ -175,9 +175,9 @@ Two more kinds of row were misread until then:
   in the transactions list as an expense rather than a settlement.
 
   Nothing needs doing unless you want those figures right. To turn one into
-  the repayment it was, delete the expense and record the payment — **Settle
-  up** → **Record a payment**, Bob as who paid and Carol as who received it,
-  with the same amount and date. Nobody's balance moves.
+  the repayment it was, delete the expense and record a repayment from
+  **Settle up**, Bob as who paid and Carol as who received it, with the same
+  amount and date. Nobody's balance moves.
 
   Importing the same file again is safe for these rows, and does not convert
   them either: the import knows each one as the expense it wrote, and skips
