@@ -187,6 +187,11 @@ interface ResolvedInvitation {
   readonly participantName: string;
   readonly inviterName: string | null;
   readonly expiresAt: Date | null;
+  /**
+   * The account that claimed the seat, when that is what retired the link.
+   * Null for a link that is simply live.
+   */
+  readonly claimedBy: string | null;
 }
 
 /**
@@ -215,6 +220,7 @@ async function resolveInvitation(
       groupArchivedAt: groups.archivedAt,
       participantName: participants.displayName,
       participantRemovedAt: participants.removedAt,
+      participantUserId: participants.userId,
       inviterName: users.name,
     })
     .from(guestInvitations)
@@ -233,7 +239,13 @@ async function resolveInvitation(
   // Matching `resolveJoinLink`: an archived group is closed to newcomers and
   // reads as a link that was turned off, not as a group that exists.
   if (row.groupArchivedAt !== null) throw new JoinLinkRefused("revoked");
-  if (row.revokedAt !== null) throw new JoinLinkRefused("revoked");
+  // Retired by the owner — or by an account claiming the seat, which retires
+  // its links too. That one is left to the caller: to the account holding the
+  // seat now, the link still means it, so a second tap on "Join" lands where
+  // the first did; to anybody else it is a seat that is not on offer.
+  if (row.revokedAt !== null && row.participantUserId === null) {
+    throw new JoinLinkRefused("revoked");
+  }
   // The seat itself is gone. There is nothing left to join.
   if (row.participantRemovedAt !== null) throw new JoinLinkRefused("revoked");
   if (row.expiresAt !== null && row.expiresAt <= now) {
@@ -248,6 +260,7 @@ async function resolveInvitation(
     participantName: row.participantName,
     inviterName: row.inviterName,
     expiresAt: row.expiresAt,
+    claimedBy: row.revokedAt !== null ? row.participantUserId : null,
   };
 }
 
@@ -263,6 +276,10 @@ export async function previewInvitation(
     token,
     options.now ?? new Date(),
   );
+  // Somebody else's claim retired it: a dead link, said as one.
+  if (invitation.claimedBy !== null && invitation.claimedBy !== viewerUserId) {
+    throw new JoinLinkRefused("revoked");
+  }
   const decoration = await decorate(db, invitation.groupId, viewerUserId);
 
   return {

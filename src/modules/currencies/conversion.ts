@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { convertMoney, money, type Money } from "./money";
+import { convertMoney, MAX_MINOR_UNITS, money, type Money } from "./money";
 import { getCurrency } from "./iso-4217";
 
 /**
@@ -47,6 +47,18 @@ export interface FrozenExchangeRate {
 /** Maximum decimal places kept for a stored rate. */
 export const EXCHANGE_RATE_SCALE = 12;
 
+/**
+ * The largest rate a conversion will apply.
+ *
+ * Real ones sit many orders of magnitude below it — the widest pair among the
+ * currencies Balancia knows is a few million to one — so the ceiling refuses
+ * nothing anybody types on purpose. What it refuses is the rate with a dozen
+ * stray zeros, which multiplied a legitimate amount past what a `bigint` column
+ * holds and turned a typo into a 500. With it, the converted amount is bounded
+ * before it is computed, and `resolveConversion` checks the product anyway.
+ */
+export const MAX_EXCHANGE_RATE = new Decimal(1_000_000_000);
+
 export function parseExchangeRate(input: string): Decimal {
   const trimmed = input.trim();
   if (!/^\d+(\.\d+)?$/.test(trimmed)) {
@@ -58,6 +70,11 @@ export function parseExchangeRate(input: string): Decimal {
   if (rate.isZero()) {
     throw new CurrencyConfigurationError(
       "Exchange rate must be greater than zero",
+    );
+  }
+  if (rate.greaterThan(MAX_EXCHANGE_RATE)) {
+    throw new CurrencyConfigurationError(
+      `Exchange rate must be at most ${MAX_EXCHANGE_RATE.toFixed()}`,
     );
   }
   if (rate.decimalPlaces() > EXCHANGE_RATE_SCALE) {
@@ -142,6 +159,16 @@ export function resolveConversion(
 
   const decimalRate = parseExchangeRate(rate);
   const converted = convertMoney(amount, baseCurrency, decimalRate);
+  // A capped rate on an accepted amount can still land past the line — a
+  // billion-to-one rate on anything over a billion minor units does — and the
+  // converted figure is stored in a column of its own.
+  const magnitude =
+    converted.amount < 0n ? -converted.amount : converted.amount;
+  if (magnitude > MAX_MINOR_UNITS) {
+    throw new CurrencyConfigurationError(
+      `That amount is too large once converted to ${baseCurrency}`,
+    );
+  }
 
   return {
     original: amount,

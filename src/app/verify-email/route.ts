@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/lib/security/actor";
+import {
+  clearRegistrationCookie,
+  isRegistrationBrowser,
+} from "@/modules/auth/cookies";
 import { verifyEmail } from "@/modules/auth/service";
 import { settleNewSession } from "@/modules/auth/session-handoff";
 import { createSession } from "@/modules/auth/sessions";
@@ -15,13 +19,20 @@ import { createSession } from "@/modules/auth/sessions";
  * without anybody having clicked. A GET that consumes and then redirects (303)
  * happens once, and leaves the token out of the address bar afterwards.
  *
- * Spending it signs the person in. The link proved control of the inbox, which
- * is the proof a password reset already turns into a session and the proof
- * the six-digit code turns into one on the spot; landing them on an empty
- * sign-in form afterwards asked them to prove it a second time, and to type
- * the address they had just confirmed. The session is settled the same way
- * every other new one is, so a guest cookie in this browser is claimed and the
- * link lands on what that kept.
+ * Spending it always confirms the address. It signs the person in only in the
+ * browser that registered — the one carrying the registration cookie for this
+ * very account. There, the link is the last step of a sign-up already under
+ * way: the proof a password reset turns into a session and the six-digit code
+ * turns into one on the spot, and landing them on an empty sign-in form would
+ * ask for it twice. The session is settled the same way every other new one
+ * is, so a guest cookie in this browser is claimed and the link lands on what
+ * that kept.
+ *
+ * Anywhere else the link is only a URL somebody had, and it may not be the
+ * person who registered: settling a session there would hand the opener's
+ * guest seat to whoever sent it (registration-browser.ts has the whole
+ * attack). So a stranger's browser is told the address is confirmed and asked
+ * to sign in, which only the account's owner can do.
  */
 export async function GET(request: Request) {
   const env = getEnv();
@@ -35,6 +46,17 @@ export async function GET(request: Request) {
       { status: 303 },
     );
   }
+
+  if (!(await isRegistrationBrowser(verified.userId))) {
+    logger.info(
+      "Email verified from a browser that did not register the account; not signing in",
+    );
+    return NextResponse.redirect(
+      new URL("/sign-in?verified=1", env.appOrigin),
+      { status: 303 },
+    );
+  }
+  await clearRegistrationCookie();
 
   const session = await createSession(verified.userId, {
     userAgent: request.headers.get("user-agent"),

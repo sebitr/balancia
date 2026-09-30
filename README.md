@@ -34,7 +34,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sebitr/balancia/actions/workflows/ci.yml"><img src="https://github.com/sebitr/balancia/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/sebitr/balancia/actions/workflows/release.yml?query=branch%3Amain"><img src="https://github.com/sebitr/balancia/actions/workflows/release.yml/badge.svg?branch=main" alt="CI status"></a>
   <a href="https://hub.docker.com/r/sebitro/balancia"><img src="https://img.shields.io/docker/pulls/sebitro/balancia?logo=docker&logoColor=white&label=docker%20pulls&color=5b255f" alt="Docker Hub pulls"></a>
   <a href="https://hub.docker.com/r/sebitro/balancia/tags"><img src="https://img.shields.io/docker/v/sebitro/balancia?sort=semver&logo=docker&logoColor=white&label=image&color=5b255f" alt="Latest published image"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/sebitr/balancia?label=licence&color=5b255f" alt="AGPL-3.0-or-later licence"></a>
@@ -191,8 +191,9 @@ of the two you want. Either answer is a single `COMPOSE_FILE` line in `.env`.
 
 For a public domain, upgrades, reverse proxies and production responsibilities,
 read the **[self-hosting guide](./docs/self-hosting.md)**. Back up `.env`, the
-database and receipt storage together; the
-[backup guide](./docs/backup-and-restore.md) provides exact commands.
+database and receipt storage together: `backup.sh`, installed beside
+`compose.yaml`, takes all three at once, and the
+[backup guide](./docs/backup-and-restore.md) covers restoring them.
 
 Want to offer the same try-before-you-sign-up demo from your own instance?
 `compose.demo.yaml` runs one, with no database and nothing persisted — see

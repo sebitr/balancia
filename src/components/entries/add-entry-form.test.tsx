@@ -2022,6 +2022,26 @@ describe("editing an entry", () => {
     expect(deleteExpense).toHaveBeenCalledWith("g1", "e1");
   });
 
+  /**
+   * It used to say the deletion could not be undone from the app, in a dialog
+   * whose very next act was to raise a toast with an Undo on it — and the
+   * detail screen's dialog, deleting the same entry, said the opposite.
+   */
+  it("tells the truth about the way back", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("button", { name: "Delete this entry" }));
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(within(dialog).queryByText(/cannot be undone/)).toBeNull();
+    expect(
+      within(dialog).getByText(
+        /undo this right after, or restore it later from Activity\./,
+      ),
+    ).toBeVisible();
+  });
+
   it("removes a settlement from its own table", async () => {
     const user = userEvent.setup();
     renderForm({ editing: SETTLEMENT });

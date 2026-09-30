@@ -83,7 +83,11 @@ export function AmountCard({
       : null;
 
   return (
-    <div className="space-y-3 rounded-[17px] bg-card p-4 shadow-hairline">
+    // The figure draws no box of its own — the card is its edge — so the card
+    // is what rings while the figure has focus. Only the figure: the rate
+    // field below is an `Input` and rings itself, and a card lit up around a
+    // second ring would be two answers to one question.
+    <div className="space-y-3 rounded-[17px] bg-card p-4 shadow-hairline has-[[data-entry-amount]:focus-visible]:ring-3 has-[[data-entry-amount]:focus-visible]:ring-ring/50">
       <span className="block text-xs font-medium text-muted-foreground">
         {label}
       </span>

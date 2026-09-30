@@ -120,11 +120,20 @@ Not optional:
 
 - Balance direction is never signalled by colour alone — there is always a word
   and an icon too.
-- Every interactive element is reachable and operable by keyboard.
-- Form inputs have real labels; errors are associated with `aria-describedby`.
+- Every interactive element is reachable and operable by keyboard, and shows
+  where focus is. A borderless field says `outline-none`, so the card or pill
+  that is its edge rings instead (`has-[:focus-visible]:ring-3`).
+- A row of choices drawn by hand as `role="radio"` or `role="tab"` takes its
+  keyboard from `rovingChoice` (`src/components/ui/roving-choice.ts`): one Tab
+  stop, the arrow keys between items. A tab also names its panel.
+- Form inputs have real labels; errors are associated with `aria-describedby`
+  and the field is marked `aria-invalid`.
+- Every screen has a title (`generateMetadata`); `src/app/page-titles.test.ts`
+  holds the group and settings screens to it.
 - Dialogs trap focus and close on Escape (the shadcn/ui primitives handle this
   — do not reimplement them).
-- Contrast meets WCAG 2.2 AA.
+- Contrast meets WCAG 2.2 AA, and the journeys in
+  `tests/e2e/accessibility.spec.ts` pass axe with no serious violation.
 
 ## Pull requests
 

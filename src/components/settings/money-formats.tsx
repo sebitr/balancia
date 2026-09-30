@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { openOnContent, Sheet, SheetContent } from "@/components/ui/sheet";
 import { CurrencyPicker } from "@/components/money/currency-picker";
 import { toastUndoable } from "@/components/ui/sonner";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import { useFormatPreferences } from "@/i18n/format-context";
 import {
@@ -307,9 +308,14 @@ export function MoneyFormats({
  * of the label instead, because a chip reading "suit ton navigateur" would be
  * three times the width of the four it sits beside.
  *
- * Radix is not involved: a chip row is a toolbar of samples rather than a list
- * to arrow through, so it is drawn as a `radiogroup` of buttons with
- * `aria-checked`, which is what it actually is.
+ * Radix is not involved: it is drawn as a `radiogroup` of buttons with
+ * `aria-checked`, which is what it actually is, and `rovingChoice` gives it the
+ * keyboard a radio group owes — one Tab stop, the arrows between the chips.
+ *
+ * While a choice is being written the row refuses another, and says so with
+ * `aria-disabled` rather than `disabled`. A button that is disabled drops the
+ * focus it holds, so an arrow press — which chooses, and so starts a write —
+ * threw the keyboard out of the row after its first step.
  */
 function ChipRow<T extends string>({
   label,
@@ -329,6 +335,13 @@ function ChipRow<T extends string>({
   disabled?: boolean;
   name: string;
 }) {
+  const keys = rovingChoice({
+    values: choices.map((choice) => choice.value),
+    selected: value,
+    onSelect: onChoose,
+    isDisabled: () => Boolean(disabled),
+  });
+
   return (
     <section className="flex shrink-0 flex-col gap-2.25">
       <div className="flex items-baseline justify-between gap-3 px-1.5">
@@ -355,12 +368,15 @@ function ChipRow<T extends string>({
             type="button"
             role="radio"
             aria-checked={choice.value === value}
-            disabled={disabled}
-            onClick={() => onChoose(choice.value)}
+            aria-disabled={disabled || undefined}
+            {...keys(choice.value)}
+            onClick={() => {
+              if (!disabled) onChoose(choice.value);
+            }}
             className={cn(
               "tap-target flex h-8.5 shrink-0 items-center rounded-full px-3.25 text-xs font-medium tabular-nums",
               "transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
-              "focus-visible:outline-none disabled:opacity-50",
+              "focus-visible:outline-none aria-disabled:opacity-50",
               choice.value === value
                 ? "bg-primary/18 text-[color-mix(in_oklch,var(--primary)_62%,var(--foreground))] ring-1 ring-primary/45"
                 : "bg-wash-2 ring-1 ring-foreground/9 hover:bg-wash-3",
