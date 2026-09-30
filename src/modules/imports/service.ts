@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { z } from "zod";
 import { getDb, type Database } from "@/lib/db/client";
 import {
   expensePayers,
@@ -28,6 +29,12 @@ import { dispatchNotifications } from "@/modules/notifications/service";
 import { recordImportNotification } from "@/modules/notifications/events";
 import { telemetry } from "@/lib/telemetry";
 import { categorizeImportedExpense } from "./categories";
+import {
+  IMPORT_TEXT_LIMITS,
+  MAX_IMPORT_BYTES,
+  fitText,
+  fitToImportLimits,
+} from "./limits";
 import { balanciaJsonAdapter } from "./balancia-json";
 import { splitwiseCsvAdapter } from "./splitwise-csv";
 import { splitwiseJsonAdapter } from "./splitwise-json";
@@ -69,13 +76,12 @@ const ADAPTERS: readonly ImportAdapter[] = [
   splitwiseJsonAdapter,
 ];
 
-/** Uploads are capped well below the body limit; exports are text. */
-export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
-
 export class ImportError extends Error {
   constructor(
     message: string,
     readonly detail?: string,
+    /** A key under `serverErrors`, where the refusal has been translated. */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ImportError";
@@ -211,7 +217,9 @@ export async function stageImport(
     throw new ImportError("That file is empty.");
   }
   if (file.bytes.byteLength > MAX_IMPORT_BYTES) {
-    throw new ImportError("That file is too large to import.");
+    throw new ImportError(
+      `That file is larger than ${MAX_IMPORT_BYTES / 1_000_000} MB, the most one import can read.`,
+    );
   }
 
   const content = file.bytes.toString("utf8");
@@ -226,6 +234,11 @@ export async function stageImport(
     }
     throw error;
   }
+
+  // What the database or the forms would refuse is dropped or shortened here,
+  // where the preview can say so, rather than at commit.
+  const fitted = fitToImportLimits(parsed);
+  const warnings = [...parsed.warnings, ...fitted.warnings];
 
   const checksum = createHash("sha256").update(file.bytes).digest("hex");
 
@@ -256,8 +269,10 @@ export async function stageImport(
     }
   }
 
-  const fingerprints = parsed.rows.map((entry) =>
-    fingerprintRow(access.groupId, entry.row),
+  // Taken from the row as the file had it, not as it is staged: see
+  // `FittedRow.source`.
+  const fingerprints = fitted.rows.map((entry) =>
+    fingerprintRow(access.groupId, entry.source),
   );
   const formerFingerprints = parsed.rows.map((entry) =>
     formerFingerprint(access.groupId, entry.row),
@@ -302,16 +317,16 @@ export async function stageImport(
           currencies: parsed.currencies,
           participants: parsed.participants.map((p) => p.sourceName),
         },
-        warnings: parsed.warnings,
-        rowsTotal: parsed.rows.length,
+        warnings,
+        rowsTotal: fitted.rows.length,
         createdByUserId:
           access.actor.kind === "user" ? access.actor.userId : null,
       })
       .returning({ id: importRuns.id });
 
-    if (parsed.rows.length > 0) {
+    if (fitted.rows.length > 0) {
       await tx.insert(importRows).values(
-        parsed.rows.map((entry, index) => ({
+        fitted.rows.map((entry, index) => ({
           importRunId: run.id,
           groupId: access.groupId,
           rowNumber: entry.rowNumber,
@@ -332,16 +347,16 @@ export async function stageImport(
       importRunId: run.id,
       format: parsed.format,
       fileName: file.name,
-      rowsTotal: parsed.rows.length,
-      expenseCount: parsed.rows.filter((entry) => entry.row.kind === "expense")
+      rowsTotal: fitted.rows.length,
+      expenseCount: fitted.rows.filter((entry) => entry.row.kind === "expense")
         .length,
-      settlementCount: parsed.rows.filter(
+      settlementCount: fitted.rows.filter(
         (entry) => entry.row.kind === "settlement",
       ).length,
       duplicateCount: duplicates.size,
       currencies: parsed.currencies,
       sourceParticipants: parsed.participants.map((p) => p.sourceName),
-      warnings: parsed.warnings,
+      warnings,
       detected: parsed.detected,
       groupParticipants: existingParticipants,
       suggestedMapping,
@@ -364,10 +379,29 @@ export async function stageImport(
 }
 
 /**
+ * The refusal for a participant mapping that does not belong to its run —
+ * a name the file never staged, a value that is no participant ID, or a
+ * request the commit action could not read as a mapping at all.
+ */
+export function mappingMismatch(): ImportError {
+  return new ImportError(
+    "That matching does not fit the file that was read. Read the file again.",
+    undefined,
+    "importMappingInvalid",
+  );
+}
+
+/**
  * Step 7: record the user's decision about who is who.
  *
  * `mapping` maps a source name either to an existing participant ID or to the
  * sentinel "__create__", which creates a new participant at commit time.
+ *
+ * The mapping arrives from the browser, and the commit acts on it without
+ * asking again — every `__create__` becomes a person in this group. So it is
+ * held to the run it answers before it is stored: each name must be one the
+ * file actually staged, and each ID a current participant of this group.
+ * Anything else is refused whole, and nothing is written.
  */
 export async function saveParticipantMapping(
   access: GroupAccess,
@@ -377,6 +411,61 @@ export async function saveParticipantMapping(
 ): Promise<void> {
   requirePermission(access, "importData");
   const db = options.db ?? getDb();
+
+  const [run] = await db
+    .select({ summary: importRuns.summary })
+    .from(importRuns)
+    .where(
+      and(
+        eq(importRuns.id, importRunId),
+        eq(importRuns.groupId, access.groupId),
+      ),
+    )
+    .limit(1);
+  if (!run) {
+    throw new AuthorizationError(
+      "That import is not part of this group.",
+      "notInGroup",
+    );
+  }
+
+  const stagedNames = (run.summary as { participants?: unknown } | null)
+    ?.participants;
+  const known = new Set(
+    Array.isArray(stagedNames)
+      ? stagedNames.filter((name): name is string => typeof name === "string")
+      : [],
+  );
+  const targets = [
+    ...new Set(
+      Object.values(mapping).filter((target) => target !== CREATE_PARTICIPANT),
+    ),
+  ];
+  if (
+    Object.keys(mapping).some((name) => !known.has(name)) ||
+    targets.some((target) => !z.uuid().safeParse(target).success)
+  ) {
+    throw mappingMismatch();
+  }
+  if (targets.length > 0) {
+    const found = await db
+      .select({ id: participants.id })
+      .from(participants)
+      .where(
+        and(
+          eq(participants.groupId, access.groupId),
+          isNull(participants.removedAt),
+          inArray(participants.id, targets),
+        ),
+      );
+    if (found.length !== targets.length) {
+      throw new ImportError(
+        "Somebody you matched is not in this group any more. Read the file again and match the people afresh.",
+        undefined,
+        "importParticipantUnknown",
+      );
+    }
+  }
 
   const updated = await db
     .update(importRuns)
@@ -412,8 +501,13 @@ export interface ImportReport {
  *
  * Everything happens in one transaction: participants created by the mapping,
  * expenses, settlements, fingerprints and the activity event either all land
- * or none do. A row that fails validation is marked `error` and the rest still
- * import — a single bad line should not cost the user the whole file.
+ * or none do. A row that fails is marked `error` and the rest still import — a
+ * single bad line should not cost the user the whole file.
+ *
+ * That holds for a row the database refuses as much as for one this code
+ * refuses, which is why each row runs in a savepoint of its own: without one,
+ * PostgreSQL's refusal poisons the whole transaction, and the file that had
+ * one bad line fails on every retry.
  */
 export async function commitImportRun(
   importRunId: string,
@@ -500,9 +594,14 @@ export async function commitImportRun(
 
     for (const [sourceName, target] of Object.entries(mapping)) {
       if (target === CREATE_PARTICIPANT) {
+        // The source name stays whole as the key the rows are matched by; the
+        // person gets no more of it than the form would let them type.
         const [created] = await tx
           .insert(participants)
-          .values({ groupId, displayName: sourceName })
+          .values({
+            groupId,
+            displayName: fitText(sourceName, IMPORT_TEXT_LIMITS.displayName),
+          })
           .returning({ id: participants.id });
         resolved.set(sourceName.trim().toLowerCase(), created.id);
         participantsCreated += 1;
@@ -567,37 +666,51 @@ export async function commitImportRun(
       }
 
       try {
-        const entity =
-          staged.kind === "expense"
-            ? await insertImportedExpense(
-                tx,
-                groupId,
-                staged,
-                resolveName,
-                mappings,
-              )
-            : await insertImportedSettlement(tx, groupId, staged, resolveName);
+        // One savepoint per row. A statement PostgreSQL refuses aborts the
+        // transaction it runs in, and every statement after it is refused in
+        // turn — including the one below that marks the row as failed. Inside
+        // a savepoint the refusal rolls back to the start of this row only,
+        // and the outer transaction carries on with the next one.
+        await tx.transaction(async (rowTx) => {
+          const entity =
+            staged.kind === "expense"
+              ? await insertImportedExpense(
+                  rowTx,
+                  groupId,
+                  staged,
+                  resolveName,
+                  mappings,
+                )
+              : await insertImportedSettlement(
+                  rowTx,
+                  groupId,
+                  staged,
+                  resolveName,
+                );
 
-        await tx.insert(importedFingerprints).values({
-          groupId,
-          fingerprint: row.fingerprint,
-          entityType: entity.type,
-          entityId: entity.id,
-          importRunId,
+          await rowTx.insert(importedFingerprints).values({
+            groupId,
+            fingerprint: row.fingerprint,
+            entityType: entity.type,
+            entityId: entity.id,
+            importRunId,
+          });
+
+          await rowTx
+            .update(importRows)
+            .set({
+              status: "imported",
+              createdEntityType: entity.type,
+              createdEntityId: entity.id,
+              message: null,
+            })
+            .where(eq(importRows.id, row.id));
         });
         committed.add(row.fingerprint);
-
-        await tx
-          .update(importRows)
-          .set({
-            status: "imported",
-            createdEntityType: entity.type,
-            createdEntityId: entity.id,
-            message: null,
-          })
-          .where(eq(importRows.id, row.id));
         imported += 1;
       } catch (error) {
+        // Outside the savepoint, which has already been rolled back: the
+        // failure is recorded on the outer transaction, so it survives.
         const message =
           error instanceof Error ? error.message : "Unknown import error";
         await tx

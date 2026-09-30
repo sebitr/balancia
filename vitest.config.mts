@@ -38,6 +38,15 @@ export default defineConfig({
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
           setupFiles: ["./tests/setup/components.ts"],
+          // Three times the default. The screens that search long lists — the
+          // 165-currency picker, the timezone database, the add-entry form —
+          // type into jsdom and re-render the whole list per keystroke, and at
+          // rest they already spend up to half of 5 s doing it; one takes 2.4 s
+          // alone. Under a loaded machine or a busy CI runner that half becomes
+          // a timeout that says nothing about the code. A test that hangs still
+          // fails, only later. The unit project keeps the default: nothing
+          // there renders, and a slow one is a slow function worth hearing of.
+          testTimeout: 15_000,
         },
       },
       {

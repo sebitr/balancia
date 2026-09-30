@@ -102,7 +102,8 @@ export async function deleteExpenseAction(
 }
 
 /**
- * Undo for a deletion, offered by the toast the deletion raises.
+ * Undo for a deletion, offered by the toast the deletion raises — and, for as
+ * long as the entry stays deleted, by the group's Activity screen.
  *
  * It revalidates the entry's own screen as well as the group's, because the
  * reader may already be looking at the detail page of what they just put back.
@@ -196,7 +197,7 @@ export async function convertExpenseToSettlementAction(
   const result = await runAction("expenses.convertToSettlement", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
     const settlementId = await createSettlement(access, parsed.data);
-    await deleteExpense(access, expenseId);
+    await deleteExpense(access, expenseId, { replacedBy: settlementId });
     return { settlementId };
   });
 
@@ -221,7 +222,7 @@ export async function convertSettlementToExpenseAction(
   const result = await runAction("settlements.convertToExpense", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
     const expenseId = await createExpense(access, parsed.data);
-    await deleteSettlement(access, settlementId);
+    await deleteSettlement(access, settlementId, { replacedBy: expenseId });
     return { expenseId };
   });
 

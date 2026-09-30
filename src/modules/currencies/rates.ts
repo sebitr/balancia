@@ -220,6 +220,36 @@ export async function lookupRate(params: {
 }
 
 /**
+ * The rate `lookupRate` would suggest, with the moment this instance fetched
+ * it — for a write nobody is present to type a rate into.
+ *
+ * The recurring worker is that writer: an occurrence dated the 1st of June is
+ * converted at the 1st of June's rate, and the entry records when that quote
+ * was actually captured rather than when the worker happened to run. Null in
+ * every case `lookupRate` is, which leaves the caller to fall back on a rate
+ * somebody typed.
+ */
+export async function lookupCapturedRate(params: {
+  from: string;
+  to: string;
+  on: string;
+  now?: Date;
+}): Promise<{ rate: string; capturedAt: Date } | null> {
+  const now = params.now ?? new Date();
+  const quote = await lookupRate({ ...params, now });
+  if (!quote) return null;
+
+  // `lookupRate` has either served this row or just written it.
+  const cached = await readCachedQuote({
+    provider: quote.provider,
+    from: params.from,
+    to: params.to,
+    on: params.on,
+  });
+  return { rate: quote.rate, capturedAt: cached?.fetchedAt ?? now };
+}
+
+/**
  * Whether `rate` is one this instance actually fetched for that pair and day.
  *
  * Provenance is recorded server-side rather than taken from the client: a form

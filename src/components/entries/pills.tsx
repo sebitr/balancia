@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { RovingChoiceProps } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import { initialOf } from "./initials";
 
@@ -104,6 +105,7 @@ export function MemberPill({
   disabled = false,
   tone = "primary",
   choice = false,
+  keys,
   guest = false,
 }: {
   name: string;
@@ -115,6 +117,8 @@ export function MemberPill({
   tone?: PillTone;
   /** One of many, rather than an independent toggle. */
   choice?: boolean;
+  /** The group's arrow keys, for a `choice` — see `rovingChoice`. */
+  keys?: RovingChoiceProps;
   /** Draws the dashed ring that says this person has not joined. */
   guest?: boolean;
 }) {
@@ -127,6 +131,7 @@ export function MemberPill({
       aria-checked={choice ? selected : undefined}
       aria-pressed={choice ? undefined : selected}
       aria-label={label}
+      {...keys}
       className={cn(
         "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
         selected

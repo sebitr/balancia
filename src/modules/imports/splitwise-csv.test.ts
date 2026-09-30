@@ -412,6 +412,38 @@ describe("Splitwise CSV adapter — resilience", () => {
     expect(result.warnings[0].message).toMatch(/unreadable amount/);
   });
 
+  it("skips a date that has the right shape but is not a day", () => {
+    // Both would reach PostgreSQL as dates it refuses: 30 February, and a
+    // month 31 whichever of the two numbers is read as the month.
+    const result = splitwiseCsvAdapter.parse(
+      [
+        "Date,Description,Cost,Currency,Ada,Blaise",
+        "2024-02-30,Leap,10.00,EUR,5.00,-5.00",
+        "31/31/2024,Impossible,10.00,EUR,5.00,-5.00",
+        "2024-02-29,Real leap day,10.00,EUR,5.00,-5.00",
+        "",
+      ].join("\n"),
+    );
+    expect(result.rows.map((entry) => entry.row.date)).toEqual(["2024-02-29"]);
+    expect(
+      result.warnings.map((warning) => [warning.rowNumber, warning.message]),
+    ).toEqual([
+      [2, "Skipped a row with an unrecognised date"],
+      [3, "Skipped a row with an unrecognised date"],
+    ]);
+  });
+
+  it("still reads an unambiguous day-first date", () => {
+    const result = splitwiseCsvAdapter.parse(
+      [
+        "Date,Description,Cost,Currency,Ada,Blaise",
+        "31/12/2024,New Year's Eve,10.00,EUR,5.00,-5.00",
+        "",
+      ].join("\n"),
+    );
+    expect(result.rows[0].row.date).toBe("2024-12-31");
+  });
+
   it("keeps a real expense whose description starts like a summary row", () => {
     // Only a blank cost marks the trailing summary; "Total …" with a cost is a
     // genuine expense.
@@ -494,5 +526,67 @@ describe("Splitwise CSV adapter — resilience", () => {
       ].join("\n"),
     );
     expect((result.rows[0].row as StagedExpense).amount).toBe("1050");
+  });
+});
+
+describe("Splitwise CSV adapter — a negative cost", () => {
+  // 30 came back to Ada from a dinner the three of them split. Each column is
+  // still that person's net for the row: Ada holds 20 of the others' money.
+  const refund = splitwiseCsvAdapter.parse(
+    [
+      "Date,Description,Category,Cost,Currency,Ada,Blaise,Grace",
+      "2026-03-02,Dinner refund,Dining out,-30.00,EUR,-20.00,10.00,10.00",
+      "",
+    ].join("\n"),
+  );
+  const row = refund.rows[0].row as StagedExpense;
+
+  it("is imported as income, not dropped and not negative", () => {
+    expect(refund.warnings).toEqual([]);
+    expect(row.direction).toBe("in");
+    expect(row.amount).toBe("3000");
+    expect(row.category).toBe("refunds");
+  });
+
+  it("has Ada receiving the money and everyone entitled to a share of it", () => {
+    expect(row.payers).toEqual([{ sourceName: "Ada", amount: "3000" }]);
+    expect(row.shares).toEqual([
+      { sourceName: "Ada", amount: "1000" },
+      { sourceName: "Blaise", amount: "1000" },
+      { sourceName: "Grace", amount: "1000" },
+    ]);
+    for (const entry of [...row.payers, ...row.shares]) {
+      expect(BigInt(entry.amount)).toBeGreaterThan(0n);
+    }
+  });
+
+  it("moves each balance exactly as the export's columns say", () => {
+    // Income is applied with the opposite sign: whoever received the money
+    // owes the others their share of it.
+    const net = new Map<string, bigint>();
+    for (const payer of row.payers) {
+      net.set(
+        payer.sourceName,
+        (net.get(payer.sourceName) ?? 0n) - BigInt(payer.amount),
+      );
+    }
+    for (const share of row.shares) {
+      net.set(
+        share.sourceName,
+        (net.get(share.sourceName) ?? 0n) + BigInt(share.amount),
+      );
+    }
+    expect(Object.fromEntries(net)).toEqual({
+      Ada: -2000n,
+      Blaise: 1000n,
+      Grace: 1000n,
+    });
+  });
+
+  it("leaves an ordinary expense as spending", () => {
+    const ordinary = splitwiseCsvAdapter.parse(fixture("trip-group.csv"));
+    for (const { row: entry } of ordinary.rows) {
+      if (entry.kind === "expense") expect(entry.direction).toBeUndefined();
+    }
   });
 });

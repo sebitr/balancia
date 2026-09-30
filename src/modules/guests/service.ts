@@ -97,17 +97,32 @@ export async function claimGuestSession(
      * Its creator's seat is a guest like any other, and claiming it is what
      * makes the account the owner: the door — who is let in, whose link is
      * live — is theirs from this moment, and the group gets a creator on
-     * record. Any other seat in any other group joins as a member, as it
-     * always did; the owner row is the tie-breaker, not the creator column.
+     * record. It has to be *that* seat. The creator lets people in through the
+     * group link before making an account, and any of them may make one
+     * first; "no owner yet, so the claimer is it" handed the group, its
+     * people and its delete button to whichever guest that was. Every other
+     * seat joins as a member, as it always did, and so does the creator's
+     * once somebody owns the group.
      */
-    const [owner] = await tx
-      .select({ id: groupMembers.id })
-      .from(groupMembers)
-      .where(
-        and(eq(groupMembers.groupId, groupId), eq(groupMembers.role, "owner")),
+    const [standing] = await tx
+      .select({
+        creatorSeat: groups.createdByParticipantId,
+        ownerId: groupMembers.id,
+      })
+      .from(groups)
+      .leftJoin(
+        groupMembers,
+        and(
+          eq(groupMembers.groupId, groups.id),
+          eq(groupMembers.role, "owner"),
+        ),
       )
+      .where(eq(groups.id, groupId))
       .limit(1);
-    const role = owner ? "member" : "owner";
+    const role =
+      standing?.ownerId === null && standing.creatorSeat === participantId
+        ? "owner"
+        : "member";
 
     await tx
       .insert(groupMembers)
@@ -122,7 +137,8 @@ export async function claimGuestSession(
 
     // The link stood in for an account. Now that the account exists, it is
     // retired — with every session derived from it, which is what makes the
-    // old URL stop opening the group.
+    // old URL stop opening the group. A claim through the join link retires
+    // the seat's links the same way, in `claimMember`.
     await tx
       .update(guestInvitations)
       .set({ revokedAt: now })

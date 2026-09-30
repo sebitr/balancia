@@ -1,3 +1,5 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -37,6 +39,7 @@ import { formatMoney, money } from "@/modules/currencies/money";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { withFragment } from "@/components/entries/drawer-fragment";
 import { PUSH } from "@/components/motion/transitions";
+import { titleAccess } from "../../title-access";
 
 /**
  * One repayment, read back.
@@ -61,6 +64,39 @@ const METHOD_GLYPHS = {
   brand: CreditCard,
 } as const;
 
+/** Read once for the title and the screen — see the expense detail. */
+const findSettlement = cache(getSettlement);
+
+/**
+ * What the repayment is called: its note, or who paid whom.
+ *
+ * The screen's heading and the page's title, so the two cannot drift apart.
+ */
+async function nameOf(
+  settlement: NonNullable<Awaited<ReturnType<typeof getSettlement>>>,
+): Promise<string> {
+  // The same sentence the transactions list titles a repayment with. One
+  // copy, so the list and the screen it opens cannot word it differently.
+  const tList = await getTranslations("expensesList");
+  return (
+    settlement.notes?.trim() ||
+    tList("settlementTitle", {
+      from: settlement.fromName,
+      to: settlement.toName,
+    })
+  );
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/groups/[groupId]/settlements/[settlementId]">): Promise<Metadata> {
+  const { groupId, settlementId } = await params;
+  const access = await titleAccess(groupId);
+  const settlement =
+    access && (await findSettlement(access.groupId, settlementId));
+  return settlement ? { title: await nameOf(settlement) } : {};
+}
+
 export default async function SettlementDetailPage({
   params,
   searchParams,
@@ -72,18 +108,16 @@ export default async function SettlementDetailPage({
      carries it for the same reason and in the same three names. */
   const listFilters = listQuery(await searchParams);
 
-  const settlement = await getSettlement(access.groupId, settlementId);
+  const settlement = await findSettlement(access.groupId, settlementId);
   if (!settlement) {
     notFound();
   }
 
-  const [balances, t, tList, tMethods, tCommon, dates, locale] =
+  const [balances, t, description, tMethods, tCommon, dates, locale] =
     await Promise.all([
       loadGroupBalances(access),
       getTranslations("transactionDetail"),
-      // The same sentence the transactions list titles a repayment with. One
-      // copy, so the list and the screen it opens cannot word it differently.
-      getTranslations("expensesList"),
+      nameOf(settlement),
       getTranslations("paymentMethods"),
       getTranslations("common"),
       getDateFormatter(),
@@ -122,13 +156,6 @@ export default async function SettlementDetailPage({
       delta: -ledger.amount,
     },
   ];
-
-  const description =
-    settlement.notes?.trim() ||
-    tList("settlementTitle", {
-      from: settlement.fromName,
-      to: settlement.toName,
-    });
 
   const method = settlement.paymentMethod
     ? findPaymentMethod(settlement.paymentMethod)

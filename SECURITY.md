@@ -82,6 +82,14 @@ Implemented in this repository — there is no third-party auth service.
   `Secure` whenever the public URL is HTTPS. **Only the SHA-256 hash is
   stored**, so a database leak yields no usable sessions. There is no
   signed-payload cookie whose secret could be stolen to mint arbitrary sessions.
+- **An email confirmation link confirms the address wherever it is opened,
+  and signs in only the browser that registered.** Registration leaves a
+  short-lived `HttpOnly` cookie, sealed under a key derived from
+  `AUTH_SECRET` and scoped to `/verify-email`, naming the account; the link
+  starts a session only where that cookie names the same account. Anywhere
+  else it lands on the sign-in page. A link is only a URL: without this, one
+  forwarded unopened to a guest signed the guest's browser into the sender's
+  account, and took the guest's seat with it.
 - **Passkeys (WebAuthn)** use `@simplewebauthn/server` for the protocol —
   CBOR/COSE parsing and signature verification are not things to hand-roll.
   Balancia owns the state machine around it: challenges are server-issued,
@@ -104,6 +112,19 @@ Implemented in this repository — there is no third-party auth service.
   people, links, settings, ownership or deletion, and no import.
 - Revoking a link, regenerating it, or removing the participant kills every
   session derived from it immediately.
+- **Claiming a seat with an account retires its links**, however the claim
+  happens — from the guest's own browser, from the app with the personal
+  link, or by picking the name from the group-wide link. A seat with an
+  account on it never opens as a guest again: redemption and every session
+  check refuse it, whatever the link row says.
+- **A group started without an account belongs to its creator's seat.** It
+  has no owner until somebody claims a seat, and only a claim of the seat it
+  was started from makes an owner; anybody else joins as a member. The
+  group-wide link does not offer that seat to anybody while the group has no
+  owner.
+- **Closing an account does not delete a group a guest is still using.** A
+  participant holding a live link counts as somebody left in the group, so
+  the group is kept, with no owner, rather than deleted with its expenses.
 
 ### Authorization
 
@@ -177,3 +198,7 @@ Not conventionally "security", but it is what the application is for:
 - **Keep `ALLOW_REGISTRATION=false`** on a private instance.
 - **Do not raise `AUTH_RATE_LIMIT_MAX`** on a public deployment.
 - **Update regularly**; run `pnpm audit:prod` if you build your own images.
+- **Check where a pulled image came from.** Published images are attested by
+  the GitHub Actions workflow that built them, after CI passed on the same
+  commit:
+  `gh attestation verify oci://docker.io/sebitro/balancia:<tag> -R sebitr/balancia`.
