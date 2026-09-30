@@ -74,18 +74,17 @@ message catalogues > ships a language as soon as its catalogue is finished
 ```
 
 The app does not load a catalogue it has not been told about. Registering one
-touches six files — the first is the list itself, and the other five are
+touches five files — the first is the list itself, and the other four are
 `Record<AppLocale, …>` maps, so once the code is in `LOCALES`, `pnpm typecheck`
 names them one at a time until they are all filled in.
 
-| File                                        | What to add                                                                      |
-| ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `src/i18n/locales.ts`                       | the code in `LOCALES`, and the language's own name for itself in `LOCALE_LABELS` |
-| `src/i18n/request.ts`                       | a `MESSAGE_LOADERS` entry importing the new JSON                                 |
-| `src/i18n/emails.ts`                        | the catalogue in `CATALOGUES`, for mail and push sent from the worker            |
-| `src/components/pwa/offline-notice.tsx`     | the offline copy, which the service worker needs without a request               |
-| `src/components/i18n/language-switcher.tsx` | a flag in `LOCALE_FLAGS`                                                         |
-| `tests/helpers/intl.tsx`                    | the catalogue, so tests can render in it                                         |
+| File                                        | What to add                                                                                        |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `src/i18n/locales.ts`                       | the code in `LOCALES`, and the language's own name for itself in `LOCALE_LABELS`                   |
+| `src/i18n/request.ts`                       | a `MESSAGE_LOADERS` entry importing the new JSON — the offline screen reads every language from it |
+| `src/i18n/emails.ts`                        | the catalogue in `CATALOGUES`, for mail and push sent from the worker                              |
+| `src/components/i18n/language-switcher.tsx` | a flag in `LOCALE_FLAGS`                                                                           |
+| `tests/helpers/intl.tsx`                    | the catalogue, so tests can render in it                                                           |
 
 Push those onto the contributor's branch, or land them in a commit of your own
 on top. Then `pnpm test` again: registering the language is what puts it under

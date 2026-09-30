@@ -21,7 +21,8 @@
 # `latest` follows the newest release. Pin it to a version once other people
 # depend on this instance — `sebitro/balancia:0.1.0` — so that an upgrade is
 # something you do rather than something that happens. `preview` is main,
-# rebuilt on every merge, and is not for an instance anybody relies on.
+# rebuilt on every merge that passes CI, and is not for an instance anybody
+# relies on.
 #
 # `!reset` needs Compose 2.24 or newer. It is what removes the build section
 # inherited from compose.yaml; without it, `up --build` would quietly go back

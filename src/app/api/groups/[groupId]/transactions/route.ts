@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { apiActor } from "@/app/api/mobile";
 import { decodeCursor } from "@/lib/db/keyset";
 import { authorizeGroup } from "@/lib/security/authorization";
-import { loadTransactionPage } from "@/modules/expenses/transactions";
+import {
+  countTransactions,
+  loadTransactionPage,
+} from "@/modules/expenses/transactions";
+import { parseTransactionFilter } from "@/modules/expenses/transaction-filter";
 import { logger } from "@/lib/logger";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
- * The next page of a group's transactions.
+ * The next page of a group's transactions — or, with `count`, how many there
+ * are.
  *
  * A route handler rather than a Server Action because this is a read. An
  * action would return the re-rendered page alongside its result — the whole
@@ -15,6 +20,13 @@ import { trackRoute } from "@/lib/metrics/http";
  * every forty rows the reader scrolls past. It would also serialize behind
  * every other action in flight, which is the right thing for writes and the
  * wrong thing for scrolling.
+ *
+ * The list's filters ride along as the same parameters the screen keeps in
+ * its own URL (`q`, `cat`, `kind`, `when`, …), and the page comes back already
+ * narrowed and ordered. Every one of them is optional; a request with none is
+ * the list as it always was, newest first, which is what an older client
+ * still sends. `count` answers `{ count }` over the same filter, for the
+ * filter sheet's `Show 4 transactions`.
  *
  * Authorization runs on every request and the reply is `private, no-store`:
  * these rows are one group's financial history, and the page a reader is on is
@@ -43,6 +55,11 @@ async function handleGet(
   // neither is worth a failed screen.
   const cursor = decodeCursor(params.get("cursor"));
   const limit = pageSize(params.get("limit"));
+  // Unlike a cursor, a filter that is out of bounds is refused rather than
+  // ignored: dropping it would answer a different question than the one asked,
+  // and a list that quietly stopped filtering looks exactly like one that
+  // found every row.
+  const filter = parseTransactionFilter(params);
 
   try {
     const actor = await apiActor(
@@ -51,9 +68,18 @@ async function handleGet(
       "GET",
     );
     const access = await authorizeGroup(actor, groupId);
-    const page = await loadTransactionPage(access, { cursor, limit });
+    if (filter === null) {
+      return NextResponse.json(
+        { error: "That filter is not one this list can apply." },
+        { status: 400 },
+      );
+    }
 
-    return NextResponse.json(page, {
+    const body = params.has("count")
+      ? { count: await countTransactions(access, { filter }) }
+      : await loadTransactionPage(access, { cursor, limit, filter });
+
+    return NextResponse.json(body, {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
@@ -87,10 +113,11 @@ async function handleGet(
 /**
  * How many rows the caller may ask for.
  *
- * Scrolling takes them a screen at a time; searching asks for far more,
- * because a filter that only knows about the rows already scrolled past is a
- * filter that lies. `MAX` is what stops the second case from becoming "send me
- * the group" in one request.
+ * Scrolling takes them a screen at a time, and so does searching now that the
+ * filter is applied here. The one reader who asks for more is one coming back
+ * from an entry to a place far down the list, who needs every row above it
+ * back in one go. `MAX` is what stops that from becoming "send me the group"
+ * in one request.
  */
 const MAX_PAGE = 500;
 

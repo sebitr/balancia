@@ -31,6 +31,14 @@ import {
  * Deleting a group destroys every expense, settlement and receipt in it, so it
  * requires typing the group's name — a confirmation that cannot be clicked
  * through by muscle memory.
+ *
+ * Typing it has to be possible on a phone, though. The keyboard capitalised
+ * the first letter and offered to correct the rest, so "trip to rome" arrived
+ * as "Trip to rome" and the button stayed greyed out with nothing saying why;
+ * a space picked up from autocomplete did the same. So the field asks the
+ * keyboard to leave the text alone, the comparison ignores the spaces around
+ * it, and closing the dialog forgets what was typed — reopening it on a name
+ * half-typed last time is a confirmation already given.
  */
 export function DangerZone({
   groupId,
@@ -128,7 +136,11 @@ export function DangerZone({
               {t("deleteBody")}
             </p>
           </div>
-          <AlertDialog>
+          <AlertDialog
+            onOpenChange={(open) => {
+              if (!open) setConfirmName("");
+            }}
+          >
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" className="shrink-0">
                 <Trash2 aria-hidden="true" />
@@ -155,6 +167,9 @@ export function DangerZone({
                   value={confirmName}
                   onChange={(event) => setConfirmName(event.target.value)}
                   autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
               <AlertDialogFooter>
@@ -163,7 +178,7 @@ export function DangerZone({
                 </AlertDialogCancel>
                 <Button
                   variant="destructive"
-                  disabled={confirmName !== groupName || pending}
+                  disabled={confirmName.trim() !== groupName.trim() || pending}
                   onClick={() => void onDelete()}
                 >
                   {pending && (

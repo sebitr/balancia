@@ -60,6 +60,20 @@ function codeOf(row: HTMLElement): string | undefined {
 }
 
 describe("the currency picker", () => {
+  /**
+   * The search field is borderless inside its pill and said `outline-none`,
+   * so it showed nothing when the keyboard reached it. The pill rings instead.
+   */
+  it("rings the search pill while the field has focus", () => {
+    renderPicker();
+
+    const pill = screen.getByRole("textbox", {
+      name: "Search a currency",
+    }).parentElement;
+    expect(pill?.className).toContain("has-[input:focus-visible]:ring-3");
+    expect(pill?.className).toContain("has-[input:focus-visible]:ring-ring/50");
+  });
+
   it("pins favourites above the list, and does not repeat them in it", () => {
     renderPicker({ favorites: ["THB", "CHF"] });
 

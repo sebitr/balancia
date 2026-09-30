@@ -53,10 +53,12 @@ import {
  * Nothing behind the scrim moves while you are choosing. The draft is owned by
  * the list, not by this component, for the one reason that matters: the apply
  * button previews its own outcome — `Show 4 transactions` — and that number has
- * to be counted by the same predicate over the same rows the list is holding.
- * A count computed in here would be a second opinion, and second opinions
- * drift. So the sheet renders a draft it is handed and reports every change
- * back; the list re-runs `selectRows` and hands the number down.
+ * to be counted the same way the list will be filtered. A count computed in
+ * here would be a second opinion, and second opinions drift. So the sheet
+ * renders a draft it is handed and reports every change back; the list counts
+ * it — with `selectRows` over the rows it holds, or by asking the server when
+ * those are not the whole group — and hands the number down, or null while
+ * there is no number to give.
  *
  * ## Type and Category are not this sheet's
  *
@@ -75,8 +77,11 @@ export interface FilterSheetProps {
   onDraftChange: (draft: ListFilter) => void;
   /** Commits the draft to the list. */
   onApply: () => void;
-  /** How many rows the draft would leave standing, from the list's own predicate. */
-  count: number;
+  /**
+   * How many rows the draft would leave standing, counted the way the list
+   * filters; null while the server is still counting or cannot be reached.
+   */
+  count: number | null;
   /** Which kinds the group holds — the same rule the chip row follows. */
   kinds: readonly EntryKind[];
   members: readonly EntryMember[];
@@ -345,7 +350,9 @@ export function FilterSheet({
             onClick={onApply}
             className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
-            {tf("apply", { count })}
+            {/* No number rather than a stale one: the count for the last
+                draft is not a promise about this one. */}
+            {count === null ? tf("applyUncounted") : tf("apply", { count })}
           </button>
         </div>
       </SheetContent>
