@@ -1903,7 +1903,7 @@
     "paused": "Paused",
     "delete": "Delete",
     "removeTitle": "Remove “{description}”?",
-    "removeBody": "No further expenses will be generated. Expenses it has already created stay in the group. You can undo this right after.",
+    "removeBody": "No further expenses will be generated. Expenses it has already created stay in the group. You can undo this right after, or restore it later from Activity.",
     "keep": "Keep it",
     "remove": "Remove",
     "removed": "Recurring expense removed",

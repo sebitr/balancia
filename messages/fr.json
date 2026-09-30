@@ -1903,7 +1903,7 @@
     "paused": "Suspendue",
     "delete": "Supprimer",
     "removeTitle": "Supprimer « {description} » ?",
-    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe. Tu peux annuler juste après.",
+    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
     "keep": "La conserver",
     "remove": "Supprimer",
     "removed": "Dépense récurrente supprimée",
