@@ -198,3 +198,7 @@ Not conventionally "security", but it is what the application is for:
 - **Keep `ALLOW_REGISTRATION=false`** on a private instance.
 - **Do not raise `AUTH_RATE_LIMIT_MAX`** on a public deployment.
 - **Update regularly**; run `pnpm audit:prod` if you build your own images.
+- **Check where a pulled image came from.** Published images are attested by
+  the GitHub Actions workflow that built them, after CI passed on the same
+  commit:
+  `gh attestation verify oci://docker.io/sebitro/balancia:<tag> -R sebitr/balancia`.

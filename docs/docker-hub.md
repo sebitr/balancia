@@ -15,14 +15,26 @@ the full documentation live at
 
 ## Tags
 
-| Tag       | What it is                                                            |
-| --------- | --------------------------------------------------------------------- |
-| `latest`  | The newest release. Moves under you at every pull.                    |
-| `0.1.0`   | That release, permanently. What to pin an instance you care about to. |
-| `preview` | `main` as it is right now, rebuilt on every merge. Not a release.     |
+| Tag       | What it is                                                                       |
+| --------- | -------------------------------------------------------------------------------- |
+| `latest`  | The newest release. Moves under you at every pull.                               |
+| `0.1.0`   | That release, permanently. What to pin an instance you care about to.            |
+| `preview` | `main` as it is right now, rebuilt on every merge that passes CI. Not a release. |
 
 Every tag is a manifest list covering **linux/amd64** and **linux/arm64**, so
 `docker pull` serves the right one without being asked.
+
+## Where it came from
+
+Images are built by GitHub Actions from the repository, and only once the
+whole test suite has passed on the same commit. Each one carries SLSA build
+provenance and an SPDX SBOM, and the manifest list is attested by GitHub in a
+statement signed through Sigstore — so you can check that a tag was built by
+the repository's own workflow, and not merely pushed under its name:
+
+```bash
+gh attestation verify oci://docker.io/sebitro/balancia:latest -R sebitr/balancia
+```
 
 ## Running it
 

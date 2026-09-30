@@ -19,6 +19,12 @@
 # therefore ships what is merged, not what happens to be in the working tree it
 # was started from, and running it from a feature branch is harmless.
 #
+# Merged is not the same as tested, though: origin's branch moves the moment a
+# pull request merges, well before CI has finished with the result. So before
+# anything changes, the commit the server is about to land is looked up on
+# GitHub, and the deploy stops if any check on it failed or is still running.
+# That needs the GitHub CLI, signed in (`gh auth login`), on this machine.
+#
 #   -H, --host HOST     ssh target: an alias from ~/.ssh/config, or user@host
 #                       (default: ecom-debian, or BALANCIA_DEPLOY_HOST)
 #   -C, --path PATH     the checkout on the server, absolute or relative to the
@@ -26,6 +32,7 @@
 #                       (default: balancia, or BALANCIA_DEPLOY_PATH)
 #       --skip-backup   deploy without taking the database dump first
 #   -n, --dry-run       run every check and print the plan; change nothing
+#       --skip-checks   deploy without asking GitHub whether CI passed
 #   -h, --help          this text
 #
 #   --color, --no-color settle the colour rather than detecting it
@@ -51,6 +58,7 @@ path=${BALANCIA_DEPLOY_PATH:-balancia}
 timeout=${BALANCIA_DEPLOY_TIMEOUT:-180}
 backup=true
 dry_run=false
+check_ci=true
 
 # Colour when stdout is a terminal that wants it — the same rules, in the same
 # precedence, as bootstrap.sh. Read in its own pass because usage() needs the
@@ -144,6 +152,10 @@ while [ $# -gt 0 ]; do
       dry_run=true
       shift
       ;;
+    --skip-checks)
+      check_ci=false
+      shift
+      ;;
     -h | --help) usage ;;
     --color | --colour | --no-color | --no-colour) shift ;;
     *) die "Unknown option: $1" "Run $0 --help for the list." ;;
@@ -234,6 +246,8 @@ echo "BRANCH $branch"
 echo "UPSTREAM $(git rev-parse --abbrev-ref '@{upstream}')"
 echo "HEAD $(git log --format='%h %s' -1)"
 echo "URL $(sed -n 's/^APP_URL=//p' .env | tr -d "\"'" | head -1)"
+echo "TARGET $(git rev-parse '@{upstream}')"
+echo "ORIGIN $(git remote get-url origin)"
 git log --format='LOG %h %s' 'HEAD..@{upstream}'
 REMOTE
 ); then
@@ -244,6 +258,8 @@ branch=$(printf '%s\n' "$survey" | sed -n 's/^BRANCH //p')
 upstream=$(printf '%s\n' "$survey" | sed -n 's/^UPSTREAM //p')
 head_line=$(printf '%s\n' "$survey" | sed -n 's/^HEAD //p')
 url=$(printf '%s\n' "$survey" | sed -n 's/^URL //p')
+target=$(printf '%s\n' "$survey" | sed -n 's/^TARGET //p')
+origin_url=$(printf '%s\n' "$survey" | sed -n 's/^ORIGIN //p')
 incoming=$(printf '%s\n' "$survey" | sed -n 's/^LOG //p')
 
 done_line "$branch is clean, at $head_line"
@@ -261,6 +277,78 @@ else
   note "Already at $upstream."
   note 'The images are rebuilt anyway — a deploy that changes nothing is still'
   note 'the cheapest way to be sure the server runs what origin says it does.'
+fi
+
+# ── asking CI ───────────────────────────────────────────────────────────────
+
+# The commit asked about is the upstream one, not the server's HEAD: it is what
+# the pull below is about to check out, and it is the one checked even when
+# there is nothing to pull, because a rebuild ships it all the same.
+#
+# On an instance that builds, a commit whose CI has not passed is code nothing
+# has tested. On one that pulls :preview it is worse than that: release.yml
+# publishes the image only once CI has passed, so the server would come back
+# on the previous image with the new commit's compose files beside it.
+#
+# Every check run GitHub holds for the commit has to have finished, and each
+# as a success — or skipped, or neutral, which is how a job that does not
+# apply to this ref reports (the installer, on anything but a tag). Anything
+# else stops here, and --skip-checks is the way past for whoever has decided
+# to own it: GitHub being down, or a fork with no CI of its own.
+step 'Checking CI'
+
+short=$(printf '%s\n' "$target" | cut -c1-7)
+
+if [ "$check_ci" = false ]; then
+  note "Not asked: --skip-checks. $short goes out whatever its checks say."
+else
+  case $origin_url in
+    *github.com[:/]*) ;;
+    *)
+      die "Cannot check CI: origin on the server is not a GitHub repository." \
+        "$origin_url" \
+        'Pass --skip-checks to deploy without asking.'
+      ;;
+  esac
+  repo=${origin_url#*github.com[:/]}
+  repo=${repo%/}
+  repo=${repo%.git}
+
+  command -v gh >/dev/null 2>&1 || die \
+    'Cannot check CI: the GitHub CLI (gh) is not installed on this machine.' \
+    "Install it and run \`gh auth login\`, or pass --skip-checks to deploy $short" \
+    'without asking.'
+
+  # One `name|status|conclusion` line per check run. A hundred is far more
+  # than one commit collects here: CI's seven jobs and the publish jobs.
+  if ! runs=$(gh api "repos/$repo/commits/$target/check-runs?per_page=100" \
+    --jq '.check_runs[] | [.name, .status, (.conclusion // "")] | join("|")' 2>&1); then
+    die "Could not read the checks on $short from GitHub ($repo)." \
+      "$runs" \
+      'Pass --skip-checks to deploy without asking.'
+  fi
+
+  [ -n "$runs" ] || die "Nothing has reported on $short yet." \
+    'CI has probably not started. Wait for it, or pass --skip-checks.'
+
+  failed=$(printf '%s\n' "$runs" | awk -F'|' '
+    $2 == "completed" && $3 != "success" && $3 != "skipped" && $3 != "neutral" {
+      print $1 " (" $3 ")"
+    }
+  ')
+  pending=$(printf '%s\n' "$runs" | awk -F'|' '
+    $2 != "completed" { print $1 " (" $2 ")" }
+  ')
+
+  [ -z "$failed" ] || die "CI did not pass on $short, so it is not deployed." \
+    "$failed" \
+    'Fix it and merge again, or pass --skip-checks to deploy it anyway.'
+  [ -z "$pending" ] || die "CI is still running on $short." \
+    "$pending" \
+    'Try again once it has finished, or pass --skip-checks.'
+
+  count=$(printf '%s\n' "$runs" | wc -l | tr -d ' ')
+  done_line "All $count checks passed on $short."
 fi
 
 if [ "$dry_run" = true ]; then
