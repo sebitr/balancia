@@ -7,6 +7,7 @@ import {
 import { expenseInputSchema } from "@/modules/expenses/schemas";
 import {
   apiActor,
+  ifMatchVersion,
   invalidInput,
   isUuid,
   mobileApiError,
@@ -14,6 +15,7 @@ import {
   readJsonBody,
   serializeExpense,
   serializeSplitInput,
+  versionTag,
 } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
@@ -22,6 +24,10 @@ import { trackRoute } from "@/lib/metrics/http";
  * at what was typed), replaced wholesale by PATCH, or soft-deleted. PATCH
  * takes the full `expenseInputSchema` rather than a partial — that is what
  * `updateExpense` means, and partial merges are where splits go stale.
+ *
+ * GET answers with the entry's version as an `ETag`; PATCH honours it as
+ * `If-Match` and answers 409 when somebody else changed the entry in between.
+ * The header is optional — see `ifMatchVersion`.
  */
 
 const ROUTE = "/api/groups/[groupId]/expenses/[expenseId]";
@@ -48,12 +54,16 @@ async function handleGet(request: Request, context: Context) {
     if (!expense) {
       return noStore({ error: "Not found." }, { status: 404 });
     }
-    return noStore({
-      expense: {
-        ...serializeExpense(expense),
-        splitInput: serializeSplitInput(expense.splitInput),
+    return noStore(
+      {
+        expense: {
+          ...serializeExpense(expense),
+          splitInput: serializeSplitInput(expense.splitInput),
+          version: expense.version,
+        },
       },
-    });
+      { headers: { ETag: versionTag(expense.version) } },
+    );
   } catch (error) {
     return mobileApiError(error, `${ROUTE} GET`, { groupId, expenseId });
   }
@@ -86,8 +96,15 @@ async function handlePatch(request: Request, context: Context) {
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
-    await updateExpense(access, expenseId, parsed.data);
-    return noStore({ ok: true });
+    const version = await updateExpense(access, expenseId, parsed.data, {
+      expectedVersion: ifMatchVersion(request),
+    });
+    // The new version comes back too, so a client can edit again without
+    // reading the entry first.
+    return noStore(
+      { ok: true, version },
+      { headers: { ETag: versionTag(version) } },
+    );
   } catch (error) {
     return mobileApiError(error, `${ROUTE} PATCH`, { groupId, expenseId });
   }
