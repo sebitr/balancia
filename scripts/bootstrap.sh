@@ -67,8 +67,11 @@ version=${BALANCIA_VERSION:-$version}
 
 # What an installation needs beside this script. compose.image.yaml is fetched
 # even though only one of the two answers uses it, because that answer lives in
-# .env and changing your mind later should not need the network.
-companions='compose.yaml compose.image.yaml .env.example'
+# .env and changing your mind later should not need the network. backup.sh is
+# there so that the backup docs/backup-and-restore.md describes is a command to
+# run, not a listing to paste — and so that it is on the host before the first
+# upgrade that needs a restore point, rather than looked for after it.
+companions='compose.yaml compose.image.yaml .env.example scripts/backup.sh'
 
 # Where this script is, and where the installation it is setting up lives.
 #
@@ -807,13 +810,14 @@ download() {
 fetch_companions() {
   _into=$1
   for _file in $companions; do
-    # bootstrap.sh lives under scripts/ in the repository; the rest sit at the
-    # top. Only the destination is flattened — this directory is the install,
-    # not a copy of the tree.
-    if ! download "$raw_base/$version/$_file" "$_into/$_file"; then
+    # backup.sh lives under scripts/ in the repository, as this script does;
+    # the rest sit at the top. Only the destination is flattened — this
+    # directory is the install, not a copy of the tree.
+    if ! download "$raw_base/$version/$_file" "$_into/${_file##*/}"; then
       return 1
     fi
   done
+  chmod +x "$_into/backup.sh" 2> /dev/null || :
 }
 
 # Picks somewhere to install, fetches the Compose files into it, and leaves a
@@ -1784,6 +1788,29 @@ TEXT
         'Bearer token for /api/metrics. Clear it only if the port is on a private network.'
     fi
   fi
+
+  # The override for one rollback, still on. It is there so that somebody who
+  # has decided to run an older release against a database a newer one has
+  # migrated can do so — and left in place, it waves the next such mismatch
+  # through as well, unasked, which is exactly what the refusal is for. Never a
+  # question above: it is not something an installation chooses, and a wizard
+  # that offered it would be a wizard that left it on.
+  if is_enabled ALLOW_NEWER_SCHEMA; then
+    heading 'Older releases are allowed to start on a newer database'
+    prose <<'TEXT'
+ALLOW_NEWER_SCHEMA is on. Balancia refuses to start a release older than
+its database, because that release would run against a schema it was never
+written for — and this lets it start anyway. That is what it is for during
+a rollback somebody decided to accept, and for no longer.
+
+Once this instance is back on a current release, it should be off.
+
+TEXT
+    if ask_yes_no 'Back on a current release — turn it off?' y; then
+      write_setting ALLOW_NEWER_SCHEMA false \
+        'Refuse to start a release older than the database. Supersedes the line above — last one wins.'
+    fi
+  fi
 fi
 
 chmod 600 "$env_file"
@@ -1952,6 +1979,11 @@ summary() {
     fi
   else
     row 'Metrics' 'off'
+  fi
+  # Only when on, like demo mode: the ordinary state is a refusal nobody sees
+  # until the day it matters.
+  if is_enabled ALLOW_NEWER_SCHEMA; then
+    row 'Older releases' 'allowed to start on a newer database'
   fi
 }
 

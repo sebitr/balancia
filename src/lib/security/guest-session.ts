@@ -120,13 +120,12 @@ export async function describeInvitation(
   if (
     !invitation ||
     invitation.revokedAt !== null ||
+    invitation.participantUserId !== null ||
     invitation.participantRemovedAt !== null ||
     (invitation.expiresAt !== null && invitation.expiresAt <= now)
   ) {
     throw new InvalidInvitationError(
-      invitation?.revokedAt !== null && invitation?.participantUserId
-        ? "claimed"
-        : "invalid",
+      invitation?.participantUserId ? "claimed" : "invalid",
     );
   }
 
@@ -177,19 +176,25 @@ export async function redeemInvitation(
     .where(eq(guestInvitations.tokenHash, invitationHash))
     .limit(1);
 
+  /*
+   * A seat with an account on it is not a guest's to open, whatever the link
+   * row says. Both claims retire the seat's links as they link it, so this is
+   * the belt to their braces: a link that somehow outlived its claim — one
+   * left live before the join link's claim began retiring them — would
+   * otherwise mint sessions acting as somebody's account.
+   */
   if (
     !invitation ||
     invitation.revokedAt !== null ||
+    invitation.participantUserId !== null ||
     invitation.participantRemovedAt !== null ||
     (invitation.expiresAt !== null && invitation.expiresAt <= now)
   ) {
-    // A retired link whose participant has an account was retired by the
-    // claim itself. Saying so costs nothing: the account is already known to
+    // A link whose participant has an account was retired by the claim
+    // itself. Saying so costs nothing: the account is already known to
     // whoever holds the link, and the link no longer opens anything.
     throw new InvalidInvitationError(
-      invitation?.revokedAt !== null && invitation?.participantUserId
-        ? "claimed"
-        : "invalid",
+      invitation?.participantUserId ? "claimed" : "invalid",
     );
   }
 
@@ -252,6 +257,7 @@ export async function resolveGuestSession(
       displayName: participants.displayName,
       invitationRevokedAt: guestInvitations.revokedAt,
       participantRemovedAt: participants.removedAt,
+      participantUserId: participants.userId,
     })
     .from(guestSessions)
     .innerJoin(participants, eq(participants.id, guestSessions.participantId))
@@ -268,10 +274,13 @@ export async function resolveGuestSession(
     )
     .limit(1);
 
+  // A session on a seat an account has since claimed is over, for the reason
+  // `redeemInvitation` refuses the link: the seat is the account's now.
   if (
     !session ||
     session.invitationRevokedAt !== null ||
-    session.participantRemovedAt !== null
+    session.participantRemovedAt !== null ||
+    session.participantUserId !== null
   ) {
     return null;
   }

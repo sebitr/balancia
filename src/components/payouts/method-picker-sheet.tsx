@@ -134,7 +134,8 @@ export function MethodPickerSheet({
         </header>
 
         <div className="shrink-0 px-4 pb-2">
-          <div className="flex h-10 items-center gap-2.5 rounded-xl bg-wash-2 px-3 inset-ring inset-ring-foreground/10">
+          {/* The pill is the field's edge, so the pill shows the caret. */}
+          <div className="flex h-10 items-center gap-2.5 rounded-xl bg-wash-2 px-3 inset-ring inset-ring-foreground/10 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50">
             <Search
               aria-hidden="true"
               className="size-4 shrink-0 text-muted-foreground"

@@ -1,9 +1,11 @@
 import { parse } from "csv-parse/sync";
 import Decimal from "decimal.js";
+import type { IncomeCategory } from "@/modules/categorization";
 import {
   currencyExponent,
   isSupportedCurrency,
 } from "@/modules/currencies/iso-4217";
+import { isCalendarDate } from "./limits";
 import {
   ImportParseError,
   type ImportAdapter,
@@ -95,6 +97,13 @@ function findHeader(
   );
 }
 
+/**
+ * Where a negative cost is filed. Money coming back is what a negative cost
+ * is, and a refund — a purchase reversed — is the income category that says
+ * so; Splitwise's own label names what the money was originally spent on.
+ */
+const REFUND_CATEGORY: IncomeCategory = "refunds";
+
 /** Splitwise marks repayments with this description. */
 const SETTLEMENT_DESCRIPTIONS = new Set([
   "payment",
@@ -175,7 +184,19 @@ function detectDelimiter(content: string): string {
   return ",";
 }
 
+/**
+ * The row's date as `YYYY-MM-DD`, or null.
+ *
+ * Every answer is checked against the calendar last: `2024-02-30` has the
+ * right shape and is not a day, and neither is whatever `31/31/2024` reads as
+ * in either order. PostgreSQL would refuse both at commit.
+ */
 function normalizeDate(value: string): string | null {
+  const date = readDate(value);
+  return date !== null && isCalendarDate(date) ? date : null;
+}
+
+function readDate(value: string): string | null {
   const trimmed = value.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   // Splitwise also emits DD/MM/YYYY and MM/DD/YYYY depending on locale. Without
@@ -402,6 +423,26 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         continue;
       }
 
+      // A negative cost is money that came back: a refund. Balancia records
+      // that as income rather than as a negative expense, which the database
+      // refuses — and income is the same row read from the other side. So the
+      // cost and every net are flipped, the row is rebuilt like any expense,
+      // and it is marked `in`; the balance engine flips it back, and everyone
+      // ends exactly where the export's own columns put them.
+      const refund = cost.isNegative();
+      const spent = refund ? cost.negated() : cost;
+      const netOf = refund
+        ? new Map([...nets].map(([name, net]) => [name, net.negated()]))
+        : nets;
+      const filing = refund
+        ? { direction: "in" as const, category: REFUND_CATEGORY }
+        : {
+            category:
+              categoryIndex === -1
+                ? null
+                : (record[categoryIndex] ?? "").trim() || null,
+          };
+
       // For an expense: owed share = paid − net, and paid is only non-zero for
       // the people who actually put money in. Splitwise gives us the net, so
       // reconstruct shares as (equal-cost split implied by the net) — concretely,
@@ -413,7 +454,7 @@ export const splitwiseCsvAdapter: ImportAdapter = {
       // that share_i = paid_i − net_i. We know net_i; we recover paid_i by
       // assigning the total cost to those with positive net proportionally to
       // their surplus, which is exactly how Splitwise's export encodes it.
-      const positiveSum = [...nets.values()]
+      const positiveSum = [...netOf.values()]
         .filter((value) => value.greaterThan(0))
         .reduce((sum, value) => sum.plus(value), new Decimal(0));
 
@@ -422,12 +463,12 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         // export records no split, but any split where paid equals owed has the
         // same (nil) effect on the balances — so keep the expense rather than
         // losing it, split evenly, and say so in the preview.
-        const evenShare = cost.dividedBy(personColumns.length);
+        const evenShare = spent.dividedBy(personColumns.length);
         const even = personColumns.map((column) => ({
           sourceName: column.name,
           amount: toMinorUnits(evenShare, currency),
         }));
-        const total = BigInt(toMinorUnits(cost, currency));
+        const total = BigInt(toMinorUnits(spent, currency));
         const settled = balanceToTotal(even, total);
 
         warnings.push({
@@ -441,10 +482,7 @@ export const splitwiseCsvAdapter: ImportAdapter = {
           row: {
             kind: "expense",
             description: description || "Imported expense",
-            category:
-              categoryIndex === -1
-                ? null
-                : (record[categoryIndex] ?? "").trim() || null,
+            ...filing,
             date,
             amount: total.toString(),
             currency,
@@ -455,9 +493,9 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         continue;
       }
 
-      for (const [name, net] of nets) {
+      for (const [name, net] of netOf) {
         const paid = net.greaterThan(0)
-          ? cost.times(net).dividedBy(positiveSum)
+          ? spent.times(net).dividedBy(positiveSum)
           : new Decimal(0);
         const share = paid.minus(net);
         if (paid.greaterThan(0)) {
@@ -476,7 +514,7 @@ export const splitwiseCsvAdapter: ImportAdapter = {
 
       // Rounding can leave the parts a minor unit off the total; nudge the
       // largest share so the expense is internally consistent.
-      const totalMinor = BigInt(toMinorUnits(cost, currency));
+      const totalMinor = BigInt(toMinorUnits(spent, currency));
       const balanced = balanceToTotal(shares, totalMinor);
       const balancedPayers = balanceToTotal(payers, totalMinor);
 
@@ -485,10 +523,7 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         row: {
           kind: "expense",
           description: description || "Imported expense",
-          category:
-            categoryIndex === -1
-              ? null
-              : (record[categoryIndex] ?? "").trim() || null,
+          ...filing,
           date,
           amount: totalMinor.toString(),
           currency,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import type { EntryType } from "./entry-logic";
 
@@ -29,10 +30,26 @@ export const ALL_ENTRY_TYPES: readonly EntryType[] = [
   "settle",
 ];
 
+/**
+ * The id a tab goes by, so the panel it controls can be named after it.
+ *
+ * The panel is the form below, which lives in another component, so the
+ * scheme is written once here and read from both sides.
+ */
+export function entryTypeTabId(panelId: string, type: EntryType): string {
+  return `${panelId}-${type}`;
+}
+
+/**
+ * These are real tabs, and behave like them: one stop on the Tab key, the
+ * arrows to move between the three, and each tab pointing at the form it
+ * switches — `panelId` names it, and the form carries `role="tabpanel"`.
+ */
 export function EntryTypeTabs({
   value,
   onChange,
   types = ALL_ENTRY_TYPES,
+  panelId,
 }: {
   value: EntryType;
   onChange: (next: EntryType) => void;
@@ -46,8 +63,15 @@ export function EntryTypeTabs({
    * now") does not fit on a pill.
    */
   types?: readonly EntryType[];
+  /** The id of the form these tabs switch between. */
+  panelId: string;
 }) {
   const t = useTranslations("addEntry.types");
+  const keys = rovingChoice({
+    values: types,
+    selected: value,
+    onSelect: onChange,
+  });
 
   // One tab is not a choice, and a segmented control drawn around it reads as
   // a button that does nothing.
@@ -66,7 +90,10 @@ export function EntryTypeTabs({
             key={type}
             type="button"
             role="tab"
+            id={entryTypeTabId(panelId, type)}
             aria-selected={active}
+            aria-controls={panelId}
+            {...keys(type)}
             onClick={() => onChange(type)}
             className={cn(
               "tap-target h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",

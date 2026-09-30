@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Check, ChevronRight, Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import {
   PAYMENT_METHODS,
@@ -235,6 +236,13 @@ function PairSide({
   /** Somebody this side cannot be — the payer, in the receiving group. */
   disabledId?: string | null;
 }) {
+  const keys = rovingChoice({
+    values: members.map((member) => member.id),
+    selected: selectedId,
+    onSelect,
+    isDisabled: (id) => id === disabledId,
+  });
+
   return (
     <section className="space-y-2">
       <h2 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
@@ -255,6 +263,7 @@ function PairSide({
             tone={tone}
             disabled={member.id === disabledId}
             choice
+            keys={keys(member.id)}
           />
         ))}
       </div>

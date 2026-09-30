@@ -159,6 +159,30 @@ describe("the statistics island", () => {
     expect(screen.queryByText("96")).not.toBeInTheDocument();
   });
 
+  /**
+   * The range switcher is a real tab list — one Tab stop, the arrows, and a
+   * panel named by the chosen range — as the group's own statistics are.
+   */
+  it("moves between the ranges with the arrow keys", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <MemberStatistics name="Nora" viewingSelf stats={stats()} />,
+    );
+
+    const year = screen.getByRole("tab", { name: "1y" });
+    expect(year).toHaveAttribute("tabindex", "0");
+    year.focus();
+    await user.keyboard("{ArrowLeft}");
+
+    const quarter = screen.getByRole("tab", { name: "3m" });
+    expect(quarter).toHaveFocus();
+    expect(quarter).toHaveAttribute("aria-selected", "true");
+    expect(quarter).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel", { name: "3m" }).id,
+    );
+  });
+
   it("speaks to the reader about themselves, and about anyone else in the third person", () => {
     const { unmount } = renderWithIntl(
       <MemberStatistics name="Nora" viewingSelf stats={stats()} />,
