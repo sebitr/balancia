@@ -1,9 +1,18 @@
+import Decimal from "decimal.js";
 import { z } from "zod";
+import {
+  isCalendarDate,
+  isInCalendarRange,
+  MAX_CALENDAR_YEAR,
+  MIN_CALENDAR_YEAR,
+} from "@/lib/calendar-date";
 import {
   isCategoryOfOppositeDirection,
   isValidSubcategoryFor,
 } from "@/modules/categorization";
+import { MAX_EXCHANGE_RATE } from "@/modules/currencies/conversion";
 import { SUPPORTED_CURRENCY_CODES } from "@/modules/currencies/iso-4217";
+import { MAX_MINOR_UNITS } from "@/modules/currencies/money";
 import { PAYMENT_METHOD_MAX_LENGTH } from "@/modules/settlements/payment-methods";
 import { ENTRY_DIRECTIONS } from "./direction";
 import { SPLIT_METHODS } from "./split";
@@ -16,11 +25,52 @@ import { SPLIT_METHODS } from "./split";
  * reached the money domain.
  */
 
+const DIGITS = /^\d+$/;
+
+/**
+ * Whether a string of minor units is above zero — and true for one that is not
+ * digits at all, which the field's own check has already refused.
+ *
+ * zod carries on through the refinements after a failed `regex`, and so do the
+ * object-level ones below, so `BigInt` is handed whatever was sent. `"abc"`
+ * made it throw, the throw escaped `safeParse`, and a malformed amount answered
+ * 500 where it should have been told to enter one.
+ */
+export function isPositiveMinorUnits(value: string): boolean {
+  const trimmed = value.trim();
+  return !DIGITS.test(trimmed) || BigInt(trimmed) > 0n;
+}
+
 export const minorUnitsString = z
   .string()
   .trim()
-  .regex(/^\d+$/, "Enter a valid amount")
-  .refine((value) => BigInt(value) <= 10n ** 18n, "That amount is too large");
+  .regex(DIGITS, "Enter a valid amount")
+  .refine(
+    (value) => !DIGITS.test(value) || BigInt(value) <= MAX_MINOR_UNITS,
+    "That amount is too large",
+  );
+
+const RATE = /^\d+(\.\d+)?$/;
+
+/**
+ * An exchange rate as typed: a plain positive decimal, and no larger than a
+ * conversion will apply. The ceiling is checked here as well as in
+ * `parseExchangeRate` because a recurring template stores its rate without
+ * converting anything — refused only when the first occurrence came due, a
+ * rate with stray zeros would have failed every morning instead of once, at
+ * the form.
+ */
+export const exchangeRateSchema = z
+  .string()
+  .trim()
+  .regex(RATE, "Enter a valid exchange rate")
+  .refine(
+    (value) =>
+      !RATE.test(value) || !new Decimal(value).greaterThan(MAX_EXCHANGE_RATE),
+    "That exchange rate is too large",
+  )
+  .optional()
+  .or(z.literal(""));
 
 export const currencyCodeSchema = z
   .string()
@@ -31,14 +81,20 @@ export const currencyCodeSchema = z
     "Choose a supported currency",
   );
 
-/** ISO calendar date, kept as a string so no timezone shifts it. */
+/**
+ * ISO calendar date, kept as a string so no timezone shifts it.
+ *
+ * A day the calendar actually has, inside the years Balancia accepts — see
+ * `lib/calendar-date.ts` for why the shape was never enough on its own.
+ */
 export const isoDateSchema = z
   .string()
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD")
+  .refine(isCalendarDate, "Not a real date")
   .refine(
-    (value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)),
-    "Not a real date",
+    (value) => !isCalendarDate(value) || isInCalendarRange(value),
+    `Choose a date between ${MIN_CALENDAR_YEAR} and ${MAX_CALENDAR_YEAR}`,
   );
 
 export const payerSchema = z.object({
@@ -46,9 +102,23 @@ export const payerSchema = z.object({
   amount: minorUnitsString,
 });
 
+/**
+ * The longest split value accepted, in characters.
+ *
+ * Far more than any share, percentage or exact amount anybody types. The
+ * allocator scales every weight by one shared power of ten to work in whole
+ * numbers, so a single value with ten thousand decimal places would make every
+ * share in the split ten thousand digits long; this keeps them to a few dozen.
+ */
+export const SPLIT_VALUE_MAX_LENGTH = 40;
+
 export const splitEntrySchema = z.object({
   participantId: z.uuid(),
-  value: z.string().trim().optional(),
+  value: z
+    .string()
+    .trim()
+    .max(SPLIT_VALUE_MAX_LENGTH, "That split value is too long")
+    .optional(),
 });
 
 export const expenseInputSchema = z
@@ -76,12 +146,7 @@ export const expenseInputSchema = z
     amount: minorUnitsString,
     currency: currencyCodeSchema,
     /** Required in converted groups when currency differs from the base. */
-    exchangeRate: z
-      .string()
-      .trim()
-      .regex(/^\d+(\.\d+)?$/, "Enter a valid exchange rate")
-      .optional()
-      .or(z.literal("")),
+    exchangeRate: exchangeRateSchema,
     expenseDate: isoDateSchema,
     payers: z.array(payerSchema).min(1, "Add at least one payer"),
     splitMethod: z.enum(SPLIT_METHODS),
@@ -90,7 +155,7 @@ export const expenseInputSchema = z
       .min(1, "Split between at least one participant"),
     attachmentIds: z.array(z.uuid()).max(10).optional(),
   })
-  .refine((value) => BigInt(value.amount) > 0n, {
+  .refine((value) => isPositiveMinorUnits(value.amount), {
     path: ["amount"],
     message: "The amount must be greater than zero",
   })
@@ -136,12 +201,7 @@ export const settlementInputSchema = z
     toParticipantId: z.uuid(),
     amount: minorUnitsString,
     currency: currencyCodeSchema,
-    exchangeRate: z
-      .string()
-      .trim()
-      .regex(/^\d+(\.\d+)?$/, "Enter a valid exchange rate")
-      .optional()
-      .or(z.literal("")),
+    exchangeRate: exchangeRateSchema,
     settledOn: isoDateSchema,
     /**
      * How the money moved. Free text, because the picker's list is a
@@ -159,7 +219,7 @@ export const settlementInputSchema = z
     path: ["toParticipantId"],
     message: "Choose two different people",
   })
-  .refine((value) => BigInt(value.amount) > 0n, {
+  .refine((value) => isPositiveMinorUnits(value.amount), {
     path: ["amount"],
     message: "The amount must be greater than zero",
   });

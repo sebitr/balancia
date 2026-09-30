@@ -18,7 +18,6 @@ describe("environment validation", () => {
     const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
     expect(env.APP_URL).toBe("http://localhost:3000");
     expect(env.webAuthnRpId).toBe("localhost");
-    expect(env.trustedOrigins).toEqual(["http://localhost:3000"]);
     expect(env.smtpEnabled).toBe(false);
     expect(env.STORAGE_DRIVER).toBe("local");
   });
@@ -363,28 +362,154 @@ describe("environment validation", () => {
     });
   });
 
-  it("collects extra trusted origins", () => {
+  /**
+   * It was parsed, forwarded and documented as the way to admit a second front
+   * door, and nothing read it. It cannot be made to mean that: a second host
+   * that forwards its own `Host` already passes both origin checks untouched,
+   * and the case that would need it — a proxy that rewrites `Host` — is
+   * refused by Next's Server Action check, whose allow-list is compiled into
+   * the standalone server at build time and out of reach of anything set at
+   * runtime. So it is gone rather than half-honoured.
+   */
+  it("has no trusted-origins setting, and boots on an .env that still sets one", () => {
+    expect(ENV_VARIABLE_NAMES).not.toContain("TRUSTED_ORIGINS");
+
     const env = parseEnv({
       ...base,
       APP_URL: "https://balancia.example.com",
-      TRUSTED_ORIGINS: "https://alt.example.com, https://other.example.com",
+      TRUSTED_ORIGINS: "https://alt.example.com",
     } as unknown as NodeJS.ProcessEnv);
-    expect(env.trustedOrigins).toEqual([
-      "https://balancia.example.com",
-      "https://alt.example.com",
-      "https://other.example.com",
-    ]);
+    expect(env).not.toHaveProperty("TRUSTED_ORIGINS");
+    expect(env).not.toHaveProperty("trustedOrigins");
   });
 
-  it("rejects placeholder secrets in production", () => {
-    expect(() =>
-      parseEnv({
-        ...base,
-        NODE_ENV: "production",
-        APP_URL: "https://balancia.example.com",
-        AUTH_SECRET: "change-me-change-me-change-me-change-me",
-      } as unknown as NodeJS.ProcessEnv),
-    ).toThrow(/placeholder/);
+  describe("AUTH_SECRET in production", () => {
+    const production = {
+      ...base,
+      NODE_ENV: "production",
+      APP_URL: "https://balancia.example.com",
+    };
+
+    it("rejects placeholder secrets", () => {
+      expect(() =>
+        parseEnv({
+          ...production,
+          AUTH_SECRET: "change-me-change-me-change-me-change-me",
+        } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(/placeholder/);
+    });
+
+    it("rejects a secret typed rather than generated", () => {
+      for (const AUTH_SECRET of [
+        "a".repeat(48),
+        "ab".repeat(24),
+        "1234".repeat(12),
+      ]) {
+        expect(() =>
+          parseEnv({
+            ...production,
+            AUTH_SECRET,
+          } as unknown as NodeJS.ProcessEnv),
+        ).toThrow(/placeholder/);
+      }
+    });
+
+    it("accepts what the generators hand out", () => {
+      // bootstrap.sh's 64 alphanumerics, `openssl rand -base64 48`, and the
+      // shortest of them all: `openssl rand -hex 16`, sixteen symbols over
+      // thirty-two characters.
+      for (const AUTH_SECRET of [
+        "Qm7ZkT2rVx9bLp4NcW8sHd1YfG6jRa3EuK5oXi0qMn2tBv7yCz4wSe9gJh1lPd8u",
+        "3q2+7wX9mK1pL0vB4nR8tY6uI5oP2aS7dF9gH3jK1lZ0xC4vB8nM6qW2eR5tY9uI",
+        "9f86d081884c7d659a2feaa0c55ad015",
+      ]) {
+        expect(() =>
+          parseEnv({
+            ...production,
+            AUTH_SECRET,
+          } as unknown as NodeJS.ProcessEnv),
+        ).not.toThrow();
+      }
+    });
+
+    /**
+     * Every secret the repository commits, and where. Each is at least 32
+     * characters, so the length rule alone passed all of them.
+     */
+    const COMMITTED = [
+      [
+        "compose.dev.yaml",
+        "dev-only-insecure-secret-0123456789abcdef0123456789abcdef",
+      ],
+      ["Dockerfile", "build-time-placeholder-not-used-at-runtime-0123456789"],
+      [
+        ".github/workflows/ci.yml",
+        "ci-only-secret-0123456789abcdef0123456789abcdef",
+      ],
+      [
+        "playwright.config.ts",
+        "e2e-only-secret-0123456789abcdef0123456789abcdef",
+      ],
+      [
+        "docs/environment.md",
+        "dev-only-secret-0123456789abcdef0123456789abcdef",
+      ],
+      [
+        "docs/development.md",
+        "dev-only-secret-0123456789abcdef0123456789abcdef",
+      ],
+      [
+        "src/lib/apple-app-site-association.test.ts",
+        "test-secret-0123456789abcdef0123456789abcdef",
+      ],
+    ] as const;
+
+    it("names secrets the repository really commits", () => {
+      // The list above is only worth something while it is true. A value that
+      // changes in its file changes here too, and the tests below then say
+      // whether the new one is still refused.
+      for (const [file, secret] of COMMITTED) {
+        expect(
+          readFileSync(path.join(process.cwd(), file), "utf8"),
+          `${file} no longer contains ${secret}`,
+        ).toContain(secret);
+      }
+    });
+
+    it.each(COMMITTED)(
+      "refuses the secret committed in %s on a public instance",
+      (_file, AUTH_SECRET) => {
+        expect(() =>
+          parseEnv({
+            ...production,
+            AUTH_SECRET,
+          } as unknown as NodeJS.ProcessEnv),
+        ).toThrow(/committed to the Balancia repository/);
+      },
+    );
+
+    it.each(COMMITTED)(
+      "still runs the secret committed in %s on localhost",
+      (_file, AUTH_SECRET) => {
+        // CI's end-to-end job and Playwright serve a production build at
+        // http://localhost:3100, and the Dockerfile builds with APP_URL at
+        // http://localhost:3000. Refusing these there would refuse the suite
+        // and the image, and protect nobody.
+        for (const APP_URL of [
+          "http://localhost:3000",
+          "http://localhost:3100",
+          "http://127.0.0.1:3000",
+        ]) {
+          expect(() =>
+            parseEnv({
+              ...production,
+              APP_URL,
+              AUTH_SECRET,
+            } as unknown as NodeJS.ProcessEnv),
+          ).not.toThrow();
+        }
+      },
+    );
   });
 
   describe("telemetry", () => {
@@ -524,6 +649,49 @@ describe("configuration reaches the containers", () => {
 });
 
 /**
+ * What a Compose file publishes on an `.env` that says nothing: every entry
+ * under a `ports:` key, with each `${VAR:-default}` replaced by its default.
+ *
+ * Text again, for the reason `forwardedByCompose` gives. The entries are
+ * always written as one quoted string per line, which is all this reads.
+ */
+function defaultPublishedPorts(file: string): string[] {
+  const source = readFileSync(path.join(process.cwd(), file), "utf8");
+  return [...source.matchAll(/^\s*ports:\n((?:\s*(?:#.*|- ".*")\n)+)/gm)]
+    .flatMap((block) => [...block[1].matchAll(/- "(.*)"/g)])
+    .map((entry) => entry[1].replace(/\$\{[A-Z][A-Z0-9_]*:-([^}]*)\}/g, "$1"));
+}
+
+describe("published ports", () => {
+  /**
+   * Docker opens a published port with rules of its own, ahead of ufw, so an
+   * entry that names no address is on the network whatever the host firewall
+   * says. For the database that left the generated password as the one thing
+   * in front of it. For the app it let a caller skip the reverse proxy and
+   * write their own X-Forwarded-For, which every per-address rate limit then
+   * believed.
+   */
+  it("keeps the production stack on this host unless told otherwise", () => {
+    expect(defaultPublishedPorts("compose.yaml")).toEqual([
+      "127.0.0.1:5458:5432",
+      "127.0.0.1:3000:3000",
+    ]);
+  });
+
+  it("keeps the demo on this host too — it sits behind a proxy as well", () => {
+    expect(defaultPublishedPorts("compose.demo.yaml")).toEqual([
+      "127.0.0.1:3001:3000",
+    ]);
+  });
+
+  it("lets the published image inherit those ports rather than restate them", () => {
+    // compose.image.yaml is an overlay: a `ports:` of its own would be merged
+    // with compose.yaml's, and could only ever add an address.
+    expect(defaultPublishedPorts("compose.image.yaml")).toEqual([]);
+  });
+});
+
+/**
  * The wizard, read as text: the list it counts with, and the blocks it asks.
  *
  * Every question is written the same way — the guard that decides whether to
@@ -579,6 +747,28 @@ describe("the setup wizard", () => {
     const known = new Set<string>(ENV_VARIABLE_NAMES);
 
     expect(counted.filter((key) => !known.has(key))).toEqual([]);
+  });
+
+  /**
+   * DB_PORT and APP_PORT are Compose's `[address:]port`, and a bare number is
+   * not the careful reading of one: it is every interface. The wizard used to
+   * answer a busy port with exactly that, so a host whose 5458 was taken got
+   * its database put on the network by the step meant to fix a collision.
+   * Every value it writes into either one says where, out loud.
+   */
+  it("writes an address into every published port", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "scripts", "bootstrap.sh"),
+      "utf8",
+    );
+    const writes = [
+      ...source.matchAll(/write_setting (APP_PORT|DB_PORT|"\$key") "([^"]*)"/g),
+    ].map((match) => match[2]);
+
+    expect(writes.length, "found no port the wizard writes").toBeGreaterThan(0);
+    for (const value of writes) {
+      expect(value).toMatch(/^(127\.0\.0\.1|0\.0\.0\.0):\$/);
+    }
   });
 });
 
@@ -664,11 +854,7 @@ const READ_AS_DERIVED_FIELD: Readonly<Record<string, string>> = {
  * decision. Fixing one means deleting its line — and each fix is its own
  * branch, so this list is where they wait rather than being forgotten.
  */
-const NOT_YET_READ = new Set<string>([
-  // Derived into `trustedOrigins`, which no production code reads. Adding an
-  // origin therefore does not trust it; the setting is inert.
-  "TRUSTED_ORIGINS",
-]);
+const NOT_YET_READ = new Set<string>([]);
 
 describe("configuration reaches the code", () => {
   /**

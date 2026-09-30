@@ -50,10 +50,7 @@ async function main(): Promise<void> {
       logger.info("Worker stopped cleanly");
       process.exit(0);
     } catch (error) {
-      logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
-        "Error during worker shutdown",
-      );
+      logger.error({ err: error }, "Error during worker shutdown");
       process.exit(1);
     }
   };
@@ -63,12 +60,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  logger.error(
-    {
-      err:
-        error instanceof Error ? (error.stack ?? error.message) : String(error),
-    },
-    "Worker failed to start",
-  );
+  logger.error({ err: error }, "Worker failed to start");
   process.exit(1);
 });

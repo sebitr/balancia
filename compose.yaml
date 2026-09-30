@@ -37,7 +37,6 @@ x-app-environment: &app-environment
   AUTH_SECRET: ${AUTH_SECRET:?run bootstrap.sh first}
   WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Balancia}
-  TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
   TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
   STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
   STORAGE_LOCAL_PATH: /data/uploads
@@ -110,8 +109,8 @@ x-app-environment: &app-environment
   # its own. Off here, and the routes answer 404 while it is.
   TELEMETRY_RECEIVER: ${TELEMETRY_RECEIVER:-false}
   # Prometheus metrics at /api/metrics, for your own monitoring. Local always:
-  # Balancia never transmits them. Set a token unless the published port is on
-  # a private network — the app port below is reachable by whoever can reach it.
+  # Balancia never transmits them. Set a token unless nothing but your scraper
+  # can reach the app: the reverse proxy forwards /api/metrics like any path.
   METRICS_ENABLED: ${METRICS_ENABLED:-false}
   METRICS_TOKEN: ${METRICS_TOKEN:-}
   # The web container runs the background jobs itself, which is what makes this
@@ -157,13 +156,17 @@ services:
       # refuse to start at all if anything is mounted at the old .../data path.
       - db-data:/var/lib/postgresql
     # Published, so that psql, a GUI client, drizzle-kit or a backup job can
-    # reach the database from outside the stack. On every interface the host
-    # has: whoever can reach this machine can open a connection, and the
-    # password bootstrap generated is the only thing in front of it. An
-    # operator who wants it on this host alone writes the bind address into
-    # the setting — DB_PORT=127.0.0.1:5458 — and tunnels in over SSH.
+    # reach the database from outside the stack — on this host only. Anywhere
+    # else, the generated password would be the one thing in front of it:
+    # Docker opens a published port with packet-filter rules of its own, ahead
+    # of a host firewall such as ufw, so that firewall never gets a say. Reach
+    # it from elsewhere over an SSH tunnel.
+    #
+    # DB_PORT is Compose's own `[address:]port`, so the address is part of the
+    # setting. An operator who means the database to be on the network writes
+    # it out — DB_PORT=0.0.0.0:5458 — and a bare number means the same thing.
     ports:
-      - "${DB_PORT:-5458}:5432"
+      - "${DB_PORT:-127.0.0.1:5458}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U balancia -d balancia"]
       interval: 5s
@@ -197,8 +200,19 @@ services:
       # of models is mounted rather than baked into the image — otherwise they
       # are rebuilt away and have to be reinstalled before every `up --build`.
       # - ./public/models:/app/public/models:ro
+    # On this host only, for a reverse proxy on this host to reach at
+    # 127.0.0.1:3000. Not merely tidier: the proxy is what writes the client
+    # address into X-Forwarded-For, and rate limiting believes the rightmost
+    # entry. A caller who reaches this port directly writes that entry
+    # themselves, and every per-address limit is then keyed on a value they
+    # choose. A proxy running as a container on this project's network needs
+    # no published port at all — it reaches the app as app:3000.
+    #
+    # APP_PORT is `[address:]port`, like DB_PORT. APP_PORT=0.0.0.0:3000 puts
+    # the app on every interface, for a proxy on another machine; a bare
+    # number means the same.
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_PORT:-127.0.0.1:3000}:3000"
     healthcheck:
       test:
         - CMD-SHELL

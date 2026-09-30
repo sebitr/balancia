@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
+import { z } from "zod";
 import { actionError, runAction, type ActionResult } from "@/lib/actions";
 import { getCurrentActor } from "@/lib/security/actor";
 import { requireInstanceAdmin } from "@/lib/security/admin";
@@ -14,7 +15,7 @@ import {
   getEffectiveTelemetry,
   setTelemetrySetting,
 } from "@/lib/telemetry/settings";
-import type { ScanOutcome } from "@/lib/telemetry/events";
+import { SCAN_OUTCOMES, type ScanOutcome } from "@/lib/telemetry/events";
 
 /**
  * The writes behind the administration page.
@@ -117,6 +118,11 @@ export async function sendTestReportAction(): Promise<
  * still happens so that the browser does not have to be told whether the
  * instance is recording, which would be a fact about the operator sent to
  * every visitor.
+ *
+ * The word is checked against the list here, at runtime. The type says three
+ * words, but the caller is a browser, guests included, and the word becomes
+ * part of a counter key — held back before this only by the key pattern, which
+ * would have let any visitor open as many counters as it had words to send.
  */
 export async function recordReceiptScanAction(
   outcome: ScanOutcome,
@@ -125,7 +131,10 @@ export async function recordReceiptScanAction(
   const actor = await getCurrentActor();
   if (!actor) return actionError(t("signedInRequired"));
 
+  const parsed = z.enum(SCAN_OUTCOMES).safeParse(outcome);
+  if (!parsed.success) return actionError(t("malformedRequest"));
+
   return runAction("recordReceiptScan", async () => {
-    await telemetry.receiptScanUsed({ outcome });
+    await telemetry.receiptScanUsed({ outcome: parsed.data });
   });
 }

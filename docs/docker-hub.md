@@ -62,7 +62,7 @@ To run the container yourself against a database you already have:
 
 ```bash
 docker run -d --name balancia \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   -v balancia-uploads:/data/uploads \
   -e APP_URL=https://balancia.example.com \
   -e DATABASE_URL=postgres://balancia:secret@db:5432/balancia \
@@ -71,6 +71,11 @@ docker run -d --name balancia \
 ```
 
 **Back up `AUTH_SECRET`.** Losing it signs everyone out.
+
+The port is published on `127.0.0.1` for a reverse proxy on the same host,
+which is the only thing that should reach it: rate limiting trusts the
+`X-Forwarded-For` the proxy writes, and a caller who reaches the container
+directly writes their own.
 
 ## What the image does on start
 

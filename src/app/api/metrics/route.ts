@@ -12,12 +12,13 @@ import { trackRoute } from "@/lib/metrics/http";
  * leave the server is an operator pointing their own scraper at this path.
  * They are not telemetry and share none of its code.
  *
- * Off by default. When switched on it answers only over the app's own port —
- * which `compose.yaml` publishes, so an instance on the public internet would
- * otherwise be handing its request rates to anyone who asked. Hence
- * `METRICS_TOKEN`: set it unless the port is on a private network. Without the
- * variable *and* without such a network, this is readable by strangers, which
- * is why the absence of both is logged loudly at startup of the route.
+ * Off by default. When switched on it answers on the app's own port — which
+ * the reverse proxy forwards like any other path, so an instance on the public
+ * internet would otherwise be handing its request rates to anyone who asked.
+ * Hence `METRICS_TOKEN`: set it unless the app is reachable only from a
+ * private network. Without the variable *and* without such a network, this is
+ * readable by strangers, which is why the absence of both is logged loudly at
+ * startup of the route.
  */
 export const dynamic = "force-dynamic";
 

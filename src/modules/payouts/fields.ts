@@ -21,7 +21,7 @@ import {
  *  - `iban` — checked with the mod-97 checksum, which is what it is for.
  *  - `email` — an address on an account somewhere.
  *  - `handle` — a name inside one service: a Revtag, a $cashtag, a UPI id.
- *  - `link` — a page that collects the money, PayPal.me being the one.
+ *  - `link` — a page that collects the money: PayPal.me, and only on PayPal.
  *  - `text` — everything whose format is the provider's business, not ours.
  *
  * The `text` fallback is deliberate and matches the rule the method list
@@ -93,7 +93,7 @@ export function needsDetail(method: string): boolean {
 }
 
 export type PayoutFieldError =
-  "required" | "tooLong" | "phone" | "iban" | "email" | "link";
+  "required" | "tooLong" | "phone" | "iban" | "email" | "link" | "paypalHost";
 
 /**
  * Checks one detail against its method, returning a catalogue key or null.
@@ -121,7 +121,10 @@ export function validatePayoutDetail(
     case "email":
       return isEmail(value) ? null : "email";
     case "link":
-      return isLink(value) ? null : "link";
+      if (!isLink(value)) return "link";
+      return method === "paypal" && !isPayPalHost(hostOfLink(value))
+        ? "paypalHost"
+        : null;
     default:
       // A handle or a free-text detail: the provider owns its shape, and
       // guessing at it would reject valid ones.
@@ -171,6 +174,32 @@ function isEmail(value: string): boolean {
 function isLink(value: string): boolean {
   const withoutScheme = value.replace(/^https?:\/\//i, "");
   return /^[a-z0-9.-]+\.[a-z]{2,}\/[^\s]+$/i.test(withoutScheme);
+}
+
+/** The host of a detail `isLink` has already accepted: everything before the path. */
+function hostOfLink(value: string): string {
+  const withoutScheme = value.replace(/^https?:\/\//i, "");
+  return withoutScheme.slice(0, withoutScheme.indexOf("/"));
+}
+
+/**
+ * Whether a host is PayPal's own: `paypal.me` or `paypal.com`, with or without
+ * `www.`, and nothing else.
+ *
+ * The settle screen draws a PayPal detail as a button that says "Open PayPal",
+ * and a button naming a provider is a promise about where it goes. The field
+ * used to take any payment link, which let a member send everybody who owed
+ * them to a look-alike page from a button that named PayPal. So the PayPal
+ * method now stores PayPal's links only, and `payoutDeepLink` makes no button
+ * from a detail saved before this rule that points anywhere else.
+ *
+ * Exact hosts rather than a suffix: `paypal.me.example` ends in nothing
+ * PayPal owns, and a subdomain nobody has checked is a subdomain nobody can
+ * vouch for.
+ */
+export function isPayPalHost(host: string): boolean {
+  const bare = host.toLowerCase().replace(/^www\./, "");
+  return bare === "paypal.me" || bare === "paypal.com";
 }
 
 /**

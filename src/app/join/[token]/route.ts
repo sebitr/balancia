@@ -108,10 +108,7 @@ export async function GET(
         { status: 303 },
       );
     }
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Guest invitation redemption failed",
-    );
+    logger.error({ err: error }, "Guest invitation redemption failed");
     return NextResponse.redirect(
       new URL("/join/error?reason=unavailable", env.appOrigin),
       { status: 303 },

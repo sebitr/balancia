@@ -14,6 +14,11 @@ sh bootstrap.sh
 
 Open <http://localhost:3000> and create the first account.
 
+That address is the host's own: Compose publishes the app on `127.0.0.1` only.
+On a remote server, reach it through a tunnel —
+`ssh -L 3000:127.0.0.1:3000 you@host` — until the reverse proxy in [Running on
+a domain](#running-on-a-domain) is in front of it.
+
 ### What those commands set up
 
 `bootstrap.sh` is one file that does the whole installation. Downloaded on its
@@ -73,7 +78,7 @@ flag is the one that fetches the files. It re-checks on every run, in case a
 download failed after the flag was written.
 
 The port question appears only when it has to. Compose publishes the app on
-`${APP_PORT:-3000}`, and if something on this host is already listening there,
+`127.0.0.1:3000`, and if something on this host is already listening there,
 `docker compose up` fails with `address already in use` — after the images have
 been built. So the port is checked while it can still be changed: the script
 offers the next free one, and checks every port you propose in turn. A
@@ -84,7 +89,10 @@ question; on a host with none of them nothing is checked and nothing is asked.
 
 The database's published port is checked in the same breath, and asked about
 the same way. Nothing is written while `5458` is free, because that is the
-number Compose defaults to anyway.
+number Compose defaults to anyway. Whatever is written keeps `127.0.0.1` in
+front of the number: a bare number is Compose for every interface. An `.env`
+that already holds one — which this script used to write — is asked about
+once on the next run.
 
 The telemetry question is the one that cannot switch a feature on. Balancia
 sends nothing until an administrator turns it on inside the application, and
@@ -94,10 +102,11 @@ operator who is never told the feature exists has not decided anything about
 it. [Telemetry](telemetry.md) is the long version.
 
 The metrics question is the opposite — it switches an endpoint on — so it
-defaults to no, and answering yes generates a `METRICS_TOKEN` because the app's
-port is published. If `METRICS_ENABLED` is set later by hand and no token is
-set, a re-run offers to generate one; declining leaves it open, which is the
-right answer only when that port is on a private network.
+defaults to no, and answering yes generates a `METRICS_TOKEN`, because your
+reverse proxy forwards `/api/metrics` like any other path. If
+`METRICS_ENABLED` is set later by hand and no token is set, a re-run offers to
+generate one; declining leaves it open, which is the right answer only when
+nothing but your monitoring can reach the app.
 
 Nothing has to be answered interactively. With no terminal on stdin — CI, a
 pipe — or with `--defaults`, it writes the secrets and leaves every optional
@@ -106,24 +115,18 @@ it goes with it.
 
 Compose then starts two services:
 
-| Service | Role                                                                               |
-| ------- | ---------------------------------------------------------------------------------- |
-| `db`    | PostgreSQL 18. Published on `${DB_PORT:-5458}` — see below.                        |
-| `app`   | The web application **and its background jobs**. Published on `${APP_PORT:-3000}`. |
+| Service | Role                                                                            |
+| ------- | ------------------------------------------------------------------------------- |
+| `db`    | PostgreSQL 18. Published on `127.0.0.1:5458` — see below.                       |
+| `app`   | The web application **and its background jobs**. Published on `127.0.0.1:3000`. |
 
 A third service, `worker`, is defined but not started: the app does that work
 itself. See [Background jobs](#background-jobs) below.
 
-The database port is published on every interface this host has, so that
-`psql`, a GUI client, `drizzle-kit` or a backup job can reach it directly. What
-stands between it and anyone who can reach this machine is the password
-`bootstrap.sh` generated — so on a host with a public address, put the bind
-address in the setting and tunnel in instead:
-
-```bash
-# .env
-DB_PORT=127.0.0.1:5458
-```
+Both ports are published on this host only. The app is meant to be reached
+through a reverse proxy — see [Running on a domain](#running-on-a-domain) —
+and the database is published so that `psql`, a GUI client, `drizzle-kit` or a
+backup job on this host can reach it directly. From anywhere else, tunnel in:
 
 ```bash
 ssh -L 5458:127.0.0.1:5458 you@host
@@ -134,6 +137,13 @@ The user and the database are both `balancia`; the password is
 `POSTGRES_PASSWORD` from `.env`. Like the app's port, this one is checked
 before the images are built rather than at `docker compose up`, where a port
 already held on this host fails after the build.
+
+Putting the database on the network is possible, and has to be said out loud:
+`DB_PORT=0.0.0.0:5458`. Then the generated password is the only thing between
+it and anyone who can reach this machine — Docker opens a published port with
+rules of its own, ahead of a host firewall such as ufw, so that firewall is not
+consulted. `DB_PORT` and `APP_PORT` are Compose's own `address:port`, and a
+bare number means every interface, the same as `0.0.0.0`.
 
 Migrations are not a separate service. The image's entrypoint applies any
 pending ones before the app starts, on every boot. Two containers doing it at
@@ -162,8 +172,10 @@ same host needs names of its own, which is what `compose.drill.yaml` gives a
 
 ### About the generated secrets
 
-Nothing in this repository contains a usable production secret. `bootstrap.sh`
-writes two random values into `.env`, both alphanumeric:
+Nothing in this repository contains a usable production secret: the ones it
+does carry, for development, CI and the image build, are refused at startup on
+any public address. `bootstrap.sh` writes two random values into `.env`, both
+alphanumeric:
 
 - `AUTH_SECRET` — 64 characters (~381 bits)
 - `POSTGRES_PASSWORD` — 40 characters (~238 bits)
@@ -269,9 +281,6 @@ APP_URL=https://balancia.example.com
 # Optional: only when passkeys should span subdomains.
 # WEBAUTHN_RP_ID=example.com
 
-# Optional: additional origins allowed to call the app.
-# TRUSTED_ORIGINS=https://alt.example.com
-
 # Optional: email verification and password recovery.
 # SMTP_HOST=smtp.example.com
 # SMTP_PORT=587
@@ -303,17 +312,39 @@ APP_URL=https://balancia.example.com
 
 Full details in [environment.md](environment.md).
 
-### Only bind to localhost when proxied
+### The app is published on this host only
 
-If the proxy runs on the same host, do not publish Balancia on `0.0.0.0`. Add a
-`compose.override.yaml`:
+`compose.yaml` publishes the app on `127.0.0.1:3000`, not on every interface,
+and that is load-bearing rather than tidy. The proxy is what writes the
+client's address into `X-Forwarded-For`, and rate limiting believes the entry
+it wrote. A caller who could reach port 3000 directly would skip the proxy and
+write that entry themselves — a fresh address per request, and the limits on
+sign-in, registration, password reset and join links would count none of them.
 
-```yaml
-services:
-  app:
-    ports:
-      - "127.0.0.1:3000:3000"
-```
+Where the proxy runs decides how it reaches the app:
+
+- **On the same host** — Caddy, nginx or Traefik installed on the machine
+  itself. It talks to `127.0.0.1:3000`, as in the examples below. Nothing to
+  change.
+- **In a container on the same Compose network** — a Traefik or Caddy service
+  added to this project, or one attached to its network, `balancia_default`.
+  It reaches the app by service name, `app:3000`, and needs no published port
+  at all.
+- **On another machine.** Only this case needs the app on the network, and the
+  address says so, in `.env`. Name the address of the interface the proxy
+  reaches it through, and the port is published there alone:
+
+  ```bash
+  APP_PORT=10.0.0.5:3000
+  ```
+
+  `APP_PORT=0.0.0.0:3000` is every interface. Then make sure nothing but the
+  proxy can reach the port some other way: Docker opens a published port with
+  rules of its own, ahead of a host firewall such as ufw.
+
+`APP_PORT` is Compose's own `address:port`, and a bare number means every
+interface, the same as `0.0.0.0` — see
+[`APP_PORT`](environment.md#app_port).
 
 ### The proxy must forward these headers
 
@@ -321,7 +352,10 @@ Whichever proxy you use, it has to pass:
 
 - `X-Forwarded-Proto: https` — so Balancia knows the request was secure
 - `X-Forwarded-For` — the client IP, which rate limiting depends on
-- `Host` — matching `APP_URL`'s host, which WebAuthn depends on
+- `Host` — matching `APP_URL`'s host, which WebAuthn depends on. The
+  cross-origin check compares a state-changing request's `Origin` against it
+  too, so behind a proxy that rewrites `Host` every form a browser submits is
+  refused with a 403.
 
 Getting `X-Forwarded-For` wrong means every request looks like it comes from the
 proxy, and rate limits then apply to all your users collectively.
@@ -339,7 +373,7 @@ Caddy gets certificates automatically and sets the forwarded headers by default:
 
 ```caddyfile
 balancia.example.com {
-    reverse_proxy localhost:3000
+    reverse_proxy 127.0.0.1:3000
 }
 ```
 
@@ -362,7 +396,10 @@ services:
 ```
 
 Traefik sets the forwarded headers itself. Make sure the container is on the
-Traefik network and remove the `ports:` mapping.
+Traefik network: Traefik reaches it there, on port 3000, and never uses the
+published one. That one is on `127.0.0.1` and can stay; to drop it anyway, add
+`ports: !reset []` to the app service in the same override (Compose 2.24 or
+newer).
 
 ### nginx
 
@@ -844,7 +881,10 @@ docker compose logs -f app
 docker compose logs -f app   # or `worker`, where the jobs have their own container
 ```
 
-Secrets, tokens and passwords are redacted before anything is written.
+Secrets, tokens and passwords are redacted before anything is written, and a
+failed database statement is logged with its SQLSTATE and statement text but
+without the values bound to it — no address, amount or description rides along
+with a constraint violation into your log collector.
 
 **The database is deliberately not exposed.** To inspect it:
 
@@ -871,8 +911,9 @@ complete field list and what is deliberately not collected:
 **Metrics, if you want them.** `METRICS_ENABLED=true` exposes Prometheus text at
 `/api/metrics` for your own monitoring: request and job durations, error rates,
 database latency and pool usage, memory and CPU. Exact, local, and never
-transmitted by Balancia. Set `METRICS_TOKEN` unless the published port is on a
-private network.
+transmitted by Balancia. Set `METRICS_TOKEN` unless nothing but your scraper
+can reach the app — the reverse proxy forwards `/api/metrics` like any other
+path.
 
 **Stopping cleanly:**
 

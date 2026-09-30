@@ -88,6 +88,10 @@ documentation.
 | **Monzo**    | `monzo.me/<user>`                  | No                        |
 | **Wise**     | `wise.com/pay/me/<wisetag>`        | No — see below            |
 
+PayPal is built only from a link on PayPal's own hosts — `paypal.me` or
+`paypal.com`, with or without `www.` — for the reason given under
+[Privacy](#privacy).
+
 Wise documents `?amount=`, `?currency=` and `?description=` on the **business**
 open link and says nothing about the personal one. None is written, because an
 unverified parameter that silently did nothing would make the screen's "the
@@ -174,6 +178,29 @@ permission is structural rather than checked, and adding such an endpoint would
 be the mistake. Codes are built on the server because only the server holds the
 creditor's address; the payload never contains anything the payer was not
 already entitled to see.
+
+Who that someone can be:
+
+- **A member or the owner** who owes the payee sees every method, its detail
+  and its code.
+- **A guest** who owes the payee sees the same. That is deliberate: a group
+  whose people are not all on the app still has to pay each other, and the
+  detail to pay into is the whole of what a guest needs. It has a cost the
+  owner accepted: anybody on a link can record "paid by X, split on me", and
+  that debt is enough to read X's details.
+- **An API key** sees none of it, at any scope. The settle-up route answers a
+  key with the transfers and an empty `payoutHints`.
+
+The postal address is never sent as a field, to anybody. The Swiss QR-bill
+cannot be built without the creditor's address, so it is inside that code —
+and a banking app that scans it will show it, as the standard intends — but
+nothing on the screen or in the API spells it out beside the IBAN.
+
+A PayPal detail only ever becomes a button when it is PayPal's: `paypal.me` or
+`paypal.com`, with or without `www.`. The button says "Open PayPal", and a
+field that took any link let a member put that name on a look-alike page.
+Saving refuses another host, and a link saved before that rule is shown as
+text to copy, with no button at all.
 
 ## Verification status
 

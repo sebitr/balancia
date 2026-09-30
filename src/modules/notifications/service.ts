@@ -211,7 +211,7 @@ export async function dispatchNotifications(
   } catch (error) {
     logger.warn(
       {
-        err: error instanceof Error ? error.message : String(error),
+        err: error,
         count: notificationIds.length,
       },
       "Could not queue push delivery; the sweep will retry",

@@ -46,10 +46,7 @@ export async function claimGuestIdentity(
     }
     return null;
   } catch (error) {
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Guest claim failed after authentication",
-    );
+    logger.error({ err: error }, "Guest claim failed after authentication");
     return null;
   }
 }

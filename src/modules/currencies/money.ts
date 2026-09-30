@@ -51,6 +51,37 @@ export class InvalidAmountError extends Error {
 /** Rounding mode used for every monetary rounding decision in Balancia. */
 export const MONEY_ROUNDING = Decimal.ROUND_HALF_EVEN;
 
+/**
+ * The largest amount Balancia accepts or stores, in minor units, either sign.
+ *
+ * Nine times short of what the `bigint` columns can hold, which is the point:
+ * an amount under this line can never be the value PostgreSQL refuses, and a
+ * refusal there is a 500 where the person should have been told the number
+ * was too large.
+ */
+export const MAX_MINOR_UNITS = 10n ** 18n;
+
+/**
+ * The decimal.js constructor money arithmetic goes through.
+ *
+ * decimal.js rounds the result of each operation to `precision` significant
+ * digits, and its default is twenty — fewer than one product Balancia makes.
+ * An amount is up to nineteen digits of minor units and a rate up to
+ * twenty-two, so a conversion was rounded once in the middle, before the one
+ * rounding it is documented to make, and came out a unit off.
+ *
+ * Sixty-four digits holds that product exactly, and still leaves some
+ * forty-five places below the point when a part is scaled by the ratio of two
+ * totals. A split's shares do not come through here at all:
+ * `allocateByWeights` works in whole numbers. A clone rather than
+ * `Decimal.set`, so nothing else that imports decimal.js has its arithmetic
+ * changed underneath it.
+ *
+ * Every operation is rounded at the precision of the instance it is called
+ * on, not of its argument, so a `MoneyDecimal` goes on the left.
+ */
+export const MoneyDecimal = Decimal.clone({ precision: 64 });
+
 export function money(amount: bigint, currency: string): Money {
   // Validates the currency code; throws UnknownCurrencyError otherwise.
   getCurrency(currency);
@@ -195,7 +226,7 @@ export function convertMoney(
   targetCurrency: string,
   rate: Decimal | string,
 ): Money {
-  const decimalRate = rate instanceof Decimal ? rate : new Decimal(rate);
+  const decimalRate = new MoneyDecimal(rate);
   if (decimalRate.isNegative() || decimalRate.isZero()) {
     throw new InvalidAmountError(
       `Exchange rate must be strictly positive, got ${decimalRate.toString()}`,
@@ -204,8 +235,8 @@ export function convertMoney(
   const targetExponent = currencyExponent(targetCurrency);
   const sourceExponent = currencyExponent(value.currency);
   // minorTarget = minorSource * rate * 10^(targetExponent - sourceExponent)
-  const scale = new Decimal(10).pow(targetExponent - sourceExponent);
-  const converted = new Decimal(value.amount.toString())
+  const scale = new MoneyDecimal(10).pow(targetExponent - sourceExponent);
+  const converted = new MoneyDecimal(value.amount.toString())
     .times(decimalRate)
     .times(scale)
     .toDecimalPlaces(0, MONEY_ROUNDING);

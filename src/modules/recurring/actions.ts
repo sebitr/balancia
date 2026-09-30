@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
+import { z } from "zod";
 import {
   actionError,
   requireGroupAccess,
@@ -34,14 +36,41 @@ export async function createRecurringAction(
   return result;
 }
 
+/**
+ * Checked at runtime rather than trusted from the signature, like the group's
+ * archive switch: `"false"` is truthy, so a caller sending the word paused the
+ * series it asked to resume, and a malformed id reached PostgreSQL.
+ */
+const setRecurringPausedSchema = z.object({
+  groupId: z.uuid(),
+  templateId: z.uuid(),
+  paused: z.boolean(),
+});
+
 export async function setRecurringPausedAction(
   groupId: string,
   templateId: string,
   paused: boolean,
 ): Promise<ActionResult> {
+  const parsed = setRecurringPausedSchema.safeParse({
+    groupId,
+    templateId,
+    paused,
+  });
+  if (!parsed.success) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
+
   const result = await runAction("recurring.pause", async () => {
-    const access = await requireGroupAccess(groupId, { requireActive: true });
-    await setRecurringPaused(access, templateId, paused);
+    const access = await requireGroupAccess(parsed.data.groupId, {
+      requireActive: true,
+    });
+    await setRecurringPaused(
+      access,
+      parsed.data.templateId,
+      parsed.data.paused,
+    );
   });
 
   if (result.ok) revalidatePath(`/groups/${groupId}/recurring`);
