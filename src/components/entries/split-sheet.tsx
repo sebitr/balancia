@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import type { SplitMethod } from "@/modules/expenses/split";
 import type {
@@ -150,6 +151,12 @@ export function SplitSheet({
       ? preview.allocations.find((entry) => entry.participantId === id)
       : undefined;
 
+  const payerKeys = rovingChoice({
+    values: everyone,
+    selected: several ? null : payerId,
+    onSelect: onPayerChange,
+  });
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -167,40 +174,50 @@ export function SplitSheet({
         </h3>
         {/* Wrapping pills rather than a row of equal columns: a group of ten
             would otherwise divide the width ten ways and truncate every name
-            to its first letter. */}
-        <div
-          role="radiogroup"
-          aria-label={t(received ? "receivedBy" : "paidBy")}
-          className="flex flex-wrap gap-2"
-        >
-          {members.map((member) => (
-            <MemberPill
-              key={member.id}
-              name={member.displayName}
-              // Both halves of this sheet carry a control per person. The
-              // colours tell them apart on screen; these names do it for
-              // anyone who is not looking at the screen.
-              label={t(received ? "receiverOption" : "payerOption", {
-                name: member.displayName,
-              })}
-              selected={!several && member.id === payerId}
-              onToggle={() => onPayerChange(member.id)}
-              tone="payer"
-              guest={member.guest}
-              choice
-            />
-          ))}
+            to its first letter.
+
+            The radio group is `contents`, so the faces and the "several"
+            pill after it still wrap as one line of pills, while only the
+            faces are the group — "several" is a switch of its own, and inside
+            a radio group it was announced as one more person to choose. */}
+        <div className="flex flex-wrap gap-2">
+          <div
+            role="radiogroup"
+            aria-label={t(received ? "receivedBy" : "paidBy")}
+            className="contents"
+          >
+            {members.map((member) => (
+              <MemberPill
+                key={member.id}
+                name={member.displayName}
+                // Both halves of this sheet carry a control per person. The
+                // colours tell them apart on screen; these names do it for
+                // anyone who is not looking at the screen.
+                label={t(received ? "receiverOption" : "payerOption", {
+                  name: member.displayName,
+                })}
+                selected={!several && member.id === payerId}
+                onToggle={() => onPayerChange(member.id)}
+                tone="payer"
+                guest={member.guest}
+                choice
+                keys={payerKeys(member.id)}
+              />
+            ))}
+          </div>
           {/*
            * The last option, and dashed like every other "not one of these":
            * two people splitting a deposit at the counter is real, and it was
            * a permanent segmented control above these faces for a choice that
            * goes the other way ninety-five times in a hundred.
+           *
+           * A toggle rather than a radio, because it is one: pressing it
+           * again turns it back off, which no radio does.
            */}
           {onSeveralChange && (
             <button
               type="button"
-              role="radio"
-              aria-checked={several}
+              aria-pressed={several}
               onClick={() => onSeveralChange(!several)}
               className={cn(
                 "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",

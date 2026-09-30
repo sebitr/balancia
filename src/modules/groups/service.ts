@@ -22,6 +22,7 @@ import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
 import { telemetry } from "@/lib/telemetry";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import { DEFAULT_JOIN_LINK_EXPIRY, expiryDate } from "@/modules/join/expiry";
+import { rescheduleAfterUnarchive } from "@/modules/recurring/service";
 import type {
   AddParticipantInput,
   CreateGroupInput,
@@ -338,11 +339,13 @@ export interface GuestCreatedGroup {
  * their own.
  *
  * What is different is that nobody owns the group yet. `createdByUserId` is
- * null and there is no owner row; the first account to claim the creator's
- * seat becomes the owner (see `claimGuestSession`). Until then the guest
- * runs the money side of the group as any guest does, and the shared link
- * minted here — on the group's behalf, with the default expiry — is how the
- * others arrive.
+ * null and there is no owner row; `createdByParticipantId` records the
+ * creator's seat, and the account that claims *that* seat becomes the owner
+ * (see `claimGuestSession`). Anybody else who makes an account first joins as
+ * a member, and the join link will not hand the creator's seat to them either
+ * (see `reservedForCreator` in the join module). Until then the guest runs the
+ * money side of the group as any guest does, and the shared link minted here
+ * — on the group's behalf, with the default expiry — is how the others arrive.
  */
 export async function createGroupAsGuest(
   input: {
@@ -376,6 +379,13 @@ export async function createGroupAsGuest(
         userId: null,
       })
       .returning({ id: participants.id });
+
+    // The seat whose claim makes the owner. The group row had to exist before
+    // the participant could, so it is written back rather than inserted.
+    await tx
+      .update(groups)
+      .set({ createdByParticipantId: participant.id })
+      .where(eq(groups.id, group.id));
 
     const inviteExpiresAt = expiryDate(DEFAULT_JOIN_LINK_EXPIRY, now);
     const invite = await createJoinLink(group.id, {
@@ -489,16 +499,31 @@ export async function setGroupSplitDefault(
 export async function setGroupArchived(
   access: GroupAccess,
   archived: boolean,
-  options: { db?: Database } = {},
+  options: { db?: Database; now?: Date } = {},
 ): Promise<void> {
   requirePermission(access, "manageGroupSettings");
   const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
 
   await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ archivedAt: groups.archivedAt })
+      .from(groups)
+      .where(eq(groups.id, access.groupId))
+      .limit(1);
+
     await tx
       .update(groups)
-      .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
+      .set({ archivedAt: archived ? now : null, updatedAt: now })
       .where(eq(groups.id, access.groupId));
+
+    // Coming out of the archive, recurring templates pick up at their next
+    // occurrence rather than back-filling the months the group spent there.
+    // Only when it really was archived: un-archiving a group that never was
+    // must not drop what an outage had left its templates owing.
+    if (!archived && before?.archivedAt) {
+      await rescheduleAfterUnarchive(tx, access.groupId, now);
+    }
 
     await recordActivity(tx, {
       groupId: access.groupId,

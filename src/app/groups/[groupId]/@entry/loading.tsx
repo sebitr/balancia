@@ -1,6 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ENTRY_SHEET_CLASS } from "@/components/entries/add-entry-drawer";
+import {
+  ENTRY_SHEET_CLASS,
+  EntryFormSkeleton,
+} from "@/components/entries/entry-sheet";
 import { cn } from "@/lib/utils";
 
 /**
@@ -39,11 +41,7 @@ export default async function EntryLoading() {
         "fixed inset-x-0 bottom-0 z-50 flex flex-col gap-5 border-t px-4 pt-6",
       )}
     >
-      {/* The three things at the top of the form, in their own proportions:
-          the tab row, the amount card, and the description block under it. */}
-      <Skeleton className="h-10 w-full rounded-full" />
-      <Skeleton className="h-24 w-full rounded-2xl" />
-      <Skeleton className="h-28 w-full rounded-2xl" />
+      <EntryFormSkeleton />
     </div>
   );
 }

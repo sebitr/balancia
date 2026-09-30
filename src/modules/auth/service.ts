@@ -1,10 +1,11 @@
 import "server-only";
-import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
 import {
   groupMembers,
   groups,
+  guestInvitations,
   oauthIdentities,
   participants,
   passkeys,
@@ -1515,6 +1516,37 @@ export async function confirmEmailChange(
 }
 
 /**
+ * Whether somebody is still in a group through a guest link.
+ *
+ * Live the way `redeemInvitation` reads it: not revoked, not lapsed, on a seat
+ * that is still in the group and has no account on it. The closing account's
+ * own seat has one until the DELETE, so it never counts as its own survivor.
+ */
+async function hasLiveGuest(db: Database, groupId: string): Promise<boolean> {
+  const [live] = await db
+    .select({ id: guestInvitations.id })
+    .from(guestInvitations)
+    .innerJoin(
+      participants,
+      eq(participants.id, guestInvitations.participantId),
+    )
+    .where(
+      and(
+        eq(guestInvitations.groupId, groupId),
+        isNull(guestInvitations.revokedAt),
+        or(
+          isNull(guestInvitations.expiresAt),
+          gt(guestInvitations.expiresAt, new Date()),
+        ),
+        isNull(participants.removedAt),
+        isNull(participants.userId),
+      ),
+    )
+    .limit(1);
+  return live !== undefined;
+}
+
+/**
  * Closing an account for good.
  *
  * A real `DELETE`, not a flag. The schema was already built for it: everything
@@ -1538,9 +1570,13 @@ export async function confirmEmailChange(
  *    a crash but is a group nobody can rename, archive or manage. The
  *    longest-standing remaining member is promoted.
  *  - **A group with no other member at all** has just lost the only person who
- *    could open it. Its remaining participants are names on a list, not
- *    accounts, so there is no one to promote and no way back in. It goes with
- *    the account rather than becoming unreachable rows.
+ *    could open it — unless a guest still can. A participant holding a live
+ *    invitation link is somebody using the group, with every financial power
+ *    a member has, and the screen promised their expenses stay put; that
+ *    group is kept, with no owner. Otherwise its remaining participants are
+ *    names on a list, not accounts, so there is no one to promote and no way
+ *    back in, and it goes with the account rather than becoming unreachable
+ *    rows.
  *
  * The avatar object is swept afterwards, outside the transaction: a bucket
  * that keeps one orphan is a smaller problem than a deletion that fails
@@ -1580,6 +1616,13 @@ export async function deleteAccount(
         .orderBy(groupMembers.joinedAt);
 
       if (survivors.length === 0) {
+        if (await hasLiveGuest(tx, membership.groupId)) {
+          // Nobody left with an account, but somebody still using the group
+          // through their link. It stays, with nobody owning it — the state a
+          // group started by a guest is in until its creator makes an account
+          // — and the closing account's membership goes with the account.
+          continue;
+        }
         // Nobody left who could ever open it.
         await tx.delete(groups).where(eq(groups.id, membership.groupId));
         continue;

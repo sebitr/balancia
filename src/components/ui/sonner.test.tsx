@@ -53,6 +53,19 @@ function glyph() {
   return element;
 }
 
+describe("the toaster", () => {
+  /**
+   * The region the toasts live in is a landmark, and a screen reader lists it
+   * by name. Sonner's own was an English "Notifications" on every page.
+   */
+  it("names its region in the reader's language", () => {
+    renderWithIntl(<Toaster />, { locale: "fr" });
+
+    const region = document.querySelector("section[aria-label]");
+    expect(region?.getAttribute("aria-label")).toMatch(/^Messages d’état\b/);
+  });
+});
+
 describe("a toast", () => {
   it("leads a confirmation with the positive tone and a check", async () => {
     renderWithIntl(<Toaster />);

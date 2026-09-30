@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { after } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import {
 } from "@/modules/groups/overview";
 import { listRemindRecipients } from "@/modules/reminders/service";
 import { cn } from "@/lib/utils";
+import { titleAccess } from "./title-access";
 
 /**
  * Group overview — where I stand, what this group is, who owes whom, and what
@@ -39,6 +41,22 @@ import { cn } from "@/lib/utils";
  * expense list is likewise gone: it has a tab of its own, and repeating five
  * rows of it here only competed with the position.
  */
+
+/**
+ * The group's own name, as the tab's and the history's.
+ *
+ * Every screen of every group used to be called "Balancia", so a reader with
+ * two groups open — or a screen reader announcing where a link had landed —
+ * could not tell one from the other. The overview is the group, so it takes
+ * the group's name; the screens under it name what they are.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/groups/[groupId]">): Promise<Metadata> {
+  const { groupId } = await params;
+  const access = await titleAccess(groupId);
+  return access ? { title: access.group.name } : {};
+}
 
 /** The balance list stops here and hands the rest to the balances screen. */
 const BALANCE_ROWS = 5;

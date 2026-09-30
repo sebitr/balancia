@@ -138,6 +138,7 @@ export async function apiActor(
     userId: token.userId,
     email: token.email,
     name: token.name,
+    viaApiToken: true,
     ...(token.groupId === null ? {} : { tokenGroupId: token.groupId }),
   };
 }
@@ -335,18 +336,49 @@ export function serializeAccess(access: GroupAccess) {
   };
 }
 
-export function serializeParticipant(participant: ParticipantSummary) {
-  return {
-    id: participant.id,
-    displayName: participant.displayName,
-    email: participant.email,
-    userId: participant.userId,
+/**
+ * One person in the group, as this reader may see them.
+ *
+ * A guest reads less than a member does. An invitation link is a bearer
+ * credential that gets forwarded, and two things on a participant row are no
+ * business of whoever it was forwarded to: the email address — which for the
+ * owner is the address they sign in with, copied onto their row when the group
+ * was made — and the id of the account behind a name. So a guest's copy
+ * carries neither. The keys are absent rather than null, and `hasAccount`
+ * answers the one question the id was read for: whether this is somebody who
+ * signs in, or a name somebody typed.
+ *
+ * A signed-in reader gets the row exactly as before, which is the shape the
+ * native client decodes.
+ */
+export function serializeParticipant(
+  participant: ParticipantSummary,
+  reader: Pick<GroupAccess, "actor">,
+) {
+  const rest = {
     role: participant.role,
     createdAt: participant.createdAt.toISOString(),
     hasActiveInvitation: participant.hasActiveInvitation,
     invitationCreatedAt: iso(participant.invitationCreatedAt),
     invitationExpiresAt: iso(participant.invitationExpiresAt),
     invitationLastUsedAt: iso(participant.invitationLastUsedAt),
+  };
+
+  if (reader.actor.kind === "guest") {
+    return {
+      id: participant.id,
+      displayName: participant.displayName,
+      hasAccount: participant.userId !== null,
+      ...rest,
+    };
+  }
+
+  return {
+    id: participant.id,
+    displayName: participant.displayName,
+    email: participant.email,
+    userId: participant.userId,
+    ...rest,
   };
 }
 
