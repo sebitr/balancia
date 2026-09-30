@@ -444,17 +444,17 @@ Two rules keep this endpoint from becoming the leak that telemetry is not:
    hook is handed the SQL _and its parameters_ — amounts, descriptions,
    addresses. What is recorded is a duration and nothing else.
 
-Protect it: the app's port is published by `compose.yaml`, so set
-`METRICS_TOKEN` unless that port is on a private network. Requests without a
-matching `Authorization: Bearer` are refused when the token is set; with
-metrics off, the route answers 404.
+Protect it: a reverse proxy forwards `/api/metrics` like any other path, so set
+`METRICS_TOKEN` unless nothing but your scraper can reach the app. Requests
+without a matching `Authorization: Bearer` are refused when the token is set;
+with metrics off, the route answers 404.
 
 `scripts/bootstrap.sh` asks about this one too, defaulting to no, and generates
 a token when the answer is yes. Because `METRICS_ENABLED` is more often set by
 hand afterwards than answered in the wizard, a re-run also checks for the
 combination the schema has to allow but rarely means — metrics on, token empty
 — and offers to generate one. Declining is a valid answer, and the only one
-that is right when the port is on a private network.
+that is right when the app can be reached only from a private network.
 
 Balancia does not ship an OpenTelemetry exporter. An operator who runs a
 collector can scrape this endpoint, or add an exporter in a fork — but nothing

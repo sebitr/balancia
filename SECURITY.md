@@ -193,6 +193,10 @@ Not conventionally "security", but it is what the application is for:
   to start with a non-localhost HTTP `APP_URL`.
 - **Make sure your proxy sets `X-Forwarded-For`.** Without it, rate limiting
   sees every request as one client.
+- **Keep the published ports on `127.0.0.1`**, which is what `compose.yaml`
+  does unless told otherwise. A client that reaches the app's port directly
+  skips the proxy and writes its own `X-Forwarded-For`; a database on the
+  network has only its password in front of it.
 - **Back up `.env`** along with the database and receipts. It holds the only
   copy of `AUTH_SECRET` and `POSTGRES_PASSWORD`.
 - **Keep `ALLOW_REGISTRATION=false`** on a private instance.
