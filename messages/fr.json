@@ -781,6 +781,7 @@
     "signOut": "Se déconnecter",
     "signOutTitle": "Se déconnecter de Balancia ?",
     "signOutBody": "Tes groupes restent exactement tels quels. Il te faudra ta clé d’accès ou ton mot de passe pour revenir.",
+    "signOutUnsent": "{count, plural, one {# transaction de cet appareil n’a pas encore été synchronisée, et la déconnexion la supprime. Sans te déconnecter, elle partira dès que tu retrouveras une connexion.} other {# transactions de cet appareil n’ont pas encore été synchronisées, et la déconnexion les supprime. Sans te déconnecter, elles partiront dès que tu retrouveras une connexion.}}",
     "keepIt": "Garder",
     "photoAdd": "Ajouter une photo",
     "photoChange": "Changer de photo",

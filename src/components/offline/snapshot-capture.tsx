@@ -10,7 +10,9 @@ import { saveSnapshot, type GroupSnapshot } from "@/lib/offline/snapshot";
  * Mounted by `EntryScreen` and nowhere else, which is the point: the snapshot
  * is not a second description of a group assembled for offline use — it is
  * literally the props the online form was just handed. There is no shape here
- * that can drift from what the form reads, because it is the same shape.
+ * that can drift from what the form reads, because it is the same shape — plus
+ * `userId`, which the form does not read and the offline screen does: it is
+ * how an entry queued there knows whose it is.
  *
  * The cost of that placement is the one thing worth knowing about this
  * feature: a group can only be added to offline once its add-entry screen has

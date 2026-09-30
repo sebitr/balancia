@@ -63,7 +63,7 @@ answered_ below.
 | POST   | `/api/auth/code`    | `{email}` → `{ok: true}`, always, whether or not the address has an account. Mails a sign-in code under the `signInCode` bucket; 422 on an instance without SMTP.       |
 | GET    | `/api/auth/options` | Anonymous: `{password, code, passkey, apple}` — which ways in this instance offers, so a client hides a button before offering one that cannot work.                    |
 | GET    | `/api/auth/session` | Who am I: `{user, guest}` — `guest` names the one group a guest cookie is pinned to; `user.accentColor` is an accent _name_ (see `docs/appearance.md`). 401 signed out. |
-| DELETE | `/api/auth/session` | Revokes the session and clears the cookie.                                                                                                                              |
+| DELETE | `/api/auth/session` | Revokes the session and clears the cookie. Answers `Clear-Site-Data: "cache"`, which a browser acts on and a native client can ignore.                                  |
 
 Guests are not signed in here: the `/join/[token]` and `/join/g/[token]`
 routes are already plain HTTP and set the guest cookie themselves — see

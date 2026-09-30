@@ -11,6 +11,7 @@ import { ENTRY_SHEET_CLASS, openOnAmount } from "./entry-sheet";
 import { settleIntentOf, settlePrefill } from "./settle-intent";
 import { useFragmentParams } from "./use-fragment-params";
 import { loadDraft } from "@/lib/offline/drafts";
+import { useDeviceActor } from "@/components/offline/device-actor";
 
 /**
  * The add-entry screen, as a drawer over the group it belongs to.
@@ -155,17 +156,20 @@ export function AddEntryDrawer({
     undefined,
   );
   const memberKey = form.members.map((member) => member.id).join(",");
+  // Only the reader's own draft comes back; see `loadDraft`.
+  const actor = useDeviceActor();
   useEffect(() => {
     if (!resuming) return;
     let cancelled = false;
-    void loadDraft(form.groupId).then((found) => {
+    const reading = actor ? loadDraft(actor) : Promise.resolve(null);
+    void reading.then((found) => {
       if (cancelled) return;
       setStored(found ? draftFields(found.fields, memberKey.split(",")) : null);
     });
     return () => {
       cancelled = true;
     };
-  }, [resuming, form.groupId, memberKey]);
+  }, [resuming, actor, memberKey]);
   // Seeded into the form, or `undefined` for as long as that is unknown: until
   // the fragment has been read, and then — only when it asks for the draft —
   // until the store has answered.

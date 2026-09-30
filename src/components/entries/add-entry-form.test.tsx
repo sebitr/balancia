@@ -3,6 +3,8 @@ import { act, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { DeviceActorProvider } from "@/components/offline/device-actor";
+import type { DeviceActor } from "@/lib/offline/owner";
 import { AddEntryDrawer } from "./add-entry-drawer";
 import { forgetCloudConsent, writeCloudConsent } from "./voice-consent";
 
@@ -147,6 +149,8 @@ function renderForm(
   overrides: Partial<Parameters<typeof AddEntryDrawer>[0]> = {},
   /** The route the drawer was opened at, when a test cares which list it was. */
   url = "/groups/g1/expenses/e1/edit",
+  /** Who the group layout says is typing, when a test cares. */
+  actor?: DeviceActor,
 ) {
   window.history.replaceState(null, "", url);
   // Module mocks are shared across the file; without this a "was not called"
@@ -196,7 +200,7 @@ function renderForm(
   // browser reports unless a test says otherwise.
   setOnline(true);
 
-  return renderWithIntl(
+  const drawer = (
     <AddEntryDrawer
       dismissTo="back"
       groupId="g1"
@@ -208,7 +212,14 @@ function renderForm(
       timezone="Europe/Zurich"
       outstanding={OUTSTANDING}
       {...overrides}
-    />,
+    />
+  );
+  return renderWithIntl(
+    actor ? (
+      <DeviceActorProvider {...actor}>{drawer}</DeviceActorProvider>
+    ) : (
+      drawer
+    ),
   );
 }
 
@@ -2625,6 +2636,49 @@ describe("with no network", () => {
     expect(sentKey).toEqual(CLIENT_KEY);
     expect(enqueue).toHaveBeenCalledWith(
       expect.objectContaining({ clientKey: sentKey }),
+    );
+  });
+
+  it("stamps the entry with whoever typed it", async () => {
+    // The queue outlives the session. If somebody else signs in on this phone
+    // before a network turns up, this is what stops the flush sending Seb's
+    // dinner as theirs.
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new", {
+      userId: "user-seb",
+      groupId: "g1",
+      participantId: "seb",
+    });
+    setOnline(false);
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner: { kind: "user", userId: "user-seb" },
+      }),
+    );
+  });
+
+  it("stamps a guest's entry with their seat in the group", async () => {
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new", {
+      userId: null,
+      groupId: "g1",
+      participantId: "herve",
+    });
+    setOnline(false);
+
+    await enterAmount(user, "12");
+    await user.type(screen.getByLabelText("Description"), "Coffee");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner: { kind: "participant", groupId: "g1", participantId: "herve" },
+      }),
     );
   });
 

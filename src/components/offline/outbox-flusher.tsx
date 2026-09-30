@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { flushOutbox } from "@/lib/offline/flush";
+import { useDeviceActor } from "./device-actor";
 
 /**
  * Sends what is waiting, whenever there is a reason to think it might work.
@@ -25,10 +26,15 @@ import { flushOutbox } from "@/lib/offline/flush";
  * answer and is unavailable in Safari — that is, on the iPhones this feature
  * exists for. A queue that drained on Android and quietly did not on iOS would
  * be worse than no queue.
+ *
+ * What it sends is only ever the reader's own: the queue belongs to the
+ * device, and the device may have changed hands since it was filled. See
+ * `flushOutbox`.
  */
 export function OutboxFlusher() {
   const router = useRouter();
   const t = useTranslations("outbox");
+  const actor = useDeviceActor();
   /*
    * What to do about a successful flush, kept in a ref that is refreshed after
    * every render.
@@ -53,10 +59,12 @@ export function OutboxFlusher() {
   });
 
   useEffect(() => {
+    // Nobody known, nothing of theirs to send.
+    if (!actor) return;
     let live = true;
 
     const drain = () => {
-      void flushOutbox().then((summary) => {
+      void flushOutbox({ actor }).then((summary) => {
         if (live) announce.current?.(summary.written);
       });
     };
@@ -73,7 +81,12 @@ export function OutboxFlusher() {
       window.removeEventListener("online", drain);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+    // The actor is one object per person and group (see
+    // `DeviceActorProvider`), so this re-attaches when the reader moves to
+    // another group — an entry stamped with a seat is only recognised inside
+    // that seat's group, so there may be something new to send — and not on
+    // every render.
+  }, [actor]);
 
   return null;
 }

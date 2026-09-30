@@ -4,6 +4,7 @@ import {
   removeQueued,
   type QueuedEntry,
 } from "./outbox";
+import { belongsTo, type DeviceActor } from "./owner";
 import { classifyStatus, isDue, type ReplayVerdict } from "./replay";
 
 /**
@@ -71,15 +72,23 @@ async function send(entry: QueuedEntry): Promise<ReplayVerdict> {
 let running = false;
 
 /**
- * Drains the queue, and answers with what happened.
+ * Drains the reader's own part of the queue, and answers with what happened.
+ *
+ * Only entries typed by `actor` are sent. The request carries whatever session
+ * cookie this browser holds, so an entry sent on anybody else's behalf would
+ * be written as theirs — the second person to sign in on a shared phone
+ * posting the first one's dinner. Anybody else's entries are not counted and
+ * not touched: they wait, unchanged, for their author to come back or for a
+ * sign-out to clear them.
  *
  * Never throws: a caller is a lifecycle event — a mount, an `online` event —
  * and there is nothing at either of those to catch. Anything that goes wrong
  * leaves the entry queued, which is the safe direction.
  */
-export async function flushOutbox(
-  options: { now?: number } = {},
-): Promise<FlushSummary> {
+export async function flushOutbox(options: {
+  actor: DeviceActor;
+  now?: number;
+}): Promise<FlushSummary> {
   if (running) return NOTHING;
   running = true;
 
@@ -90,6 +99,7 @@ export async function flushOutbox(
   try {
     const now = options.now ?? Date.now();
     for (const entry of await listQueued()) {
+      if (!belongsTo(entry.owner, options.actor)) continue;
       // A blocked entry is waiting on a person, not on the network. Retrying
       // it would only re-earn the refusal it already carries.
       if (entry.status === "blocked") {

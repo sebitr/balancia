@@ -56,9 +56,18 @@ export default async function GroupLayout({
    * and rendered by `AppShell`, and context follows where a thing is
    * rendered — which is what lets the bar's "Add" open the local drawer
    * when a routed one could not load.
+   *
+   * It also says who is here, to everything below that reads or writes the
+   * device's own store — so the queue sends only this person's entries and
+   * the drawer offers back only their draft. Resolved above already, so it
+   * costs nothing. See `DeviceActorProvider`.
    */
   const shell = (
-    <OfflineEntryProvider groupId={access.groupId}>
+    <OfflineEntryProvider
+      groupId={access.groupId}
+      userId={access.actor.kind === "user" ? access.actor.userId : null}
+      participantId={access.participantId}
+    >
       <AppShell
         actor={{
           label:
@@ -82,7 +91,7 @@ export default async function GroupLayout({
           group is showing — including the balances it is not in. It renders
           nothing at all with an empty queue and a network. */}
         <div className="mb-4 empty:mb-0">
-          <PendingStrip groupId={access.groupId} />
+          <PendingStrip />
         </div>
         {children}
         {/* The add-entry drawer, when a navigation into it was intercepted. It
