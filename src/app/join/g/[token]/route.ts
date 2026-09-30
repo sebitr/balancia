@@ -129,10 +129,7 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof InvalidJoinLinkError) return fail(error.reason);
-    logger.error(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Group join link resolution failed",
-    );
+    logger.error({ err: error }, "Group join link resolution failed");
     return fail("unavailable");
   }
 }

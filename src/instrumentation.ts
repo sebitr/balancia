@@ -15,6 +15,7 @@
  */
 import type { Instrumentation } from "next";
 import { getEnv } from "@/lib/env";
+import { guardConsoleErrors } from "@/lib/error-for-log";
 import { logger } from "@/lib/logger";
 
 /**
@@ -30,6 +31,9 @@ import { logger } from "@/lib/logger";
  * no values in it. Only the last is passed on, as a coarse component — and
  * only when an administrator switched crash reports on, which is off by
  * default. The error itself never leaves in any form but its class name.
+ *
+ * Nothing is logged here: Next.js prints the error itself as soon as this
+ * returns, through the `console.error` that `register` guards below.
  */
 export const onRequestError: Instrumentation.onRequestError = async (
   error,
@@ -59,7 +63,12 @@ export async function register(): Promise<void> {
   // no queue. The worker is Node-only.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  // First, ahead of anything below that can fail. The Docker image sets
+  // Before anything can fail: an error that escapes a page is printed by
+  // Next.js itself, not by the logger, and a failed query's values would go
+  // with it. See `guardConsoleErrors`.
+  guardConsoleErrors();
+
+  // Then, still ahead of anything below that can fail. The Docker image sets
   // NEXT_MANUAL_SIG_HANDLE, so Next registers no signal handler of its own,
   // and without this one SIGTERM would end the process on the spot — running
   // jobs, requests in flight and all. See src/worker/shutdown.ts.

@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { MAX_MINOR_UNITS, MoneyDecimal } from "@/modules/currencies/money";
 import {
   AllocationError,
   allocateByWeights,
@@ -126,7 +127,21 @@ function parseMinorUnits(value: string | undefined, label: string): bigint {
       "valueNotInteger",
     );
   }
-  return BigInt(trimmed);
+  const amount = BigInt(trimmed);
+  /*
+   * Only the sum of exact parts is held to the total, so without this a part
+   * of 10^30 balanced by one of −10^30 passed — and then overflowed the
+   * `bigint` column it was written to. The sign is left alone on purpose: a
+   * receipt whose discount outweighs one person's items gives that person a
+   * credit, and the receipt tests hold that such a split reaches the engine.
+   */
+  if ((amount < 0n ? -amount : amount) > MAX_MINOR_UNITS) {
+    throw new AllocationError(
+      `${label} is larger than any amount Balancia accepts`,
+      "valueTooLarge",
+    );
+  }
+  return amount;
 }
 
 /**
@@ -283,11 +298,14 @@ function distributeResidue(
   convertedTotal: bigint,
   originalTotal: bigint,
 ): AllocationEntry[] {
-  const ratio = new Decimal(convertedTotal.toString()).dividedBy(
-    new Decimal(originalTotal.toString()),
+  const ratio = new MoneyDecimal(convertedTotal.toString()).dividedBy(
+    new MoneyDecimal(originalTotal.toString()),
   );
+  // `MoneyDecimal` on the left as well as in the ratio: decimal.js rounds a
+  // product at the precision of the instance it is called on, and a plain
+  // `Decimal` here cut it back to twenty digits.
   const scaled = allocations.map((allocation) => {
-    const value = new Decimal(allocation.amount.toString())
+    const value = new MoneyDecimal(allocation.amount.toString())
       .times(ratio)
       .toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN);
     return BigInt(value.toFixed(0));
@@ -311,6 +329,14 @@ function distributeResidue(
     }
     scaled[targetIndex] = target + residue;
     residue = 0n;
+  }
+  // Parts of both signs can each be larger than the total they cancel down
+  // to, so a converted total inside the line says nothing about its parts.
+  if (scaled.some((value) => (value < 0n ? -value : value) > MAX_MINOR_UNITS)) {
+    throw new AllocationError(
+      "A converted part of this split is larger than any amount Balancia accepts",
+      "valueTooLarge",
+    );
   }
   return pairWithAmounts(allocations, scaled);
 }

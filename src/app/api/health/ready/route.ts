@@ -72,10 +72,7 @@ async function handleGet() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Readiness check failed",
-    );
+    logger.warn({ err: error }, "Readiness check failed");
     return NextResponse.json(
       { status: "unavailable", worker },
       { status: 503, headers: { "Cache-Control": "no-store" } },

@@ -64,7 +64,7 @@ describe("runAction", () => {
    */
   it("translates a coded error rather than passing its message through", async () => {
     const result = await runAction("test", async () => {
-      throw new AuthorizationError("Not your group.");
+      throw new AuthorizationError("Not your group.", "noGroupAccess");
     });
 
     expect(result).toEqual({
@@ -101,5 +101,42 @@ describe("runAction", () => {
       "Something went wrong on the server. Nothing was changed.",
     );
     expect(result.error).not.toContain("users");
+  });
+});
+
+/**
+ * A refusal from inside a group the reader is in says what went wrong there.
+ *
+ * Each of these used to be built with its own English sentence and no code, so
+ * the funnel — which translates by code — answered every one of them with the
+ * outsider's "You do not have access to this group": to the owner trying to
+ * remove themselves, and to somebody who picked a person removed a minute ago.
+ */
+describe("a refusal inside the group", () => {
+  it.each([
+    ["participantNotInGroup"],
+    ["ownerNotRemovable"],
+    ["participantHasAccount"],
+    ["groupArchived"],
+    ["noPermission"],
+    ["importParticipantUnknown"],
+  ] as const)("answers %s with its own sentence", async (code) => {
+    const result = await runAction("test", async () => {
+      throw new AuthorizationError("An English sentence.", code);
+    });
+
+    expect(result).toEqual({ ok: false, error: messages.serverErrors[code] });
+    expect(result.error).not.toBe(messages.serverErrors.noGroupAccess);
+  });
+
+  it("still answers an outsider with no more than that", async () => {
+    const result = await runAction("test", async () => {
+      throw new AuthorizationError();
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: messages.serverErrors.noGroupAccess,
+    });
   });
 });

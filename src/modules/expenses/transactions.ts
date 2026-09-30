@@ -1,23 +1,53 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import { and, eq, isNull, min } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  isNull,
+  min,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { getDb, type Database } from "@/lib/db/client";
 import { expenses, settlements } from "@/lib/db/schema";
 import {
   compareKeysDesc,
   encodeCursor,
+  keysetAfter,
+  keysetBefore,
+  keysetBeforeAmount,
   type ListCursor,
 } from "@/lib/db/keyset";
 import type { GroupAccess } from "@/lib/security/authorization";
+import { getDateFormatter } from "@/i18n/preferences";
 import {
   allocationForGroup,
   moneyForGroup,
 } from "@/modules/currencies/display";
+import { todayIn } from "@/modules/recurring/schedule";
 import { listSettlements } from "@/modules/settlements/service";
-import type { RowView } from "@/components/expenses/list-filter";
+import {
+  NO_FILTER,
+  searchNeedle,
+  type ListFilter,
+  type RowView,
+  type SortChoice,
+} from "@/components/expenses/list-filter";
 import { isSpending, signOf } from "./direction";
 import { listExpenses, type ListedExpense } from "./service";
 import { categoryKeyOf } from "./spread";
+import {
+  displayMoneySql,
+  narrowing,
+  searchableDays,
+  settlementTitleSql,
+  type FilterScope,
+  type Narrowing,
+} from "./transaction-filter";
 
 /**
  * One page of the transactions list.
@@ -41,6 +71,18 @@ import { categoryKeyOf } from "./spread";
  * one of them sorts below the cursor this page ends on, so the next call asks
  * for them again. Over-fetching a page is the price of never having to hold a
  * per-table cursor pair, which is the version of this that gets subtly wrong.
+ *
+ * ## Filtered, and in the other two orders
+ *
+ * A filter narrows both queries before either is paged, so a page of a search
+ * is a page of matches rather than a page of history with the matches picked
+ * out of it — see `transaction-filter.ts`. The merge does not change: two
+ * lists, each already in order and each already narrowed, are still merged in
+ * one pass, and the cursor still continues whatever list it came from.
+ *
+ * Oldest first and largest first are the same merge in another order. Each
+ * table is walked by that order's own key, the two runs are merged by the same
+ * comparison, and the cursor carries the amount when the order leads with it.
  */
 
 /**
@@ -63,24 +105,78 @@ interface Keyed {
   readonly row: RowView;
 }
 
+/** What to read, beyond "the next page of everything, newest first". */
+export interface TransactionQuery {
+  readonly cursor?: ListCursor | null;
+  readonly limit?: number;
+  /** The list's filters and its order. Absent is everything, newest first. */
+  readonly filter?: ListFilter;
+  /**
+   * A day written the way the reader sees it, which is what a search matches.
+   * This request's own notation when absent; tests hand one in.
+   */
+  readonly dateText?: (date: string) => string;
+  /** Today in the group's timezone, which `This month` counts from. */
+  readonly today?: string;
+  readonly db?: Database;
+}
+
 export async function loadTransactionPage(
   access: GroupAccess,
-  options: { cursor?: ListCursor | null; limit?: number } = {},
+  options: TransactionQuery = {},
 ): Promise<TransactionPage> {
   const limit = options.limit ?? TRANSACTION_PAGE_SIZE;
-  const before = options.cursor ?? null;
+  const sort = (options.filter ?? NO_FILTER).sort;
+  const t = await getTranslations("expensesList");
+  // The same sentence the rows below are titled with, so a search reads the
+  // title the reader sees.
+  const where = await narrowingFor(
+    access,
+    (names) => t("settlementTitle", names),
+    options,
+  );
+  const group = access.group;
+
+  // A cursor written for another order names no position in this one, and is
+  // read like any other cursor this server did not write: from the top.
+  const cursor = options.cursor ?? null;
+  const before =
+    sort === "largest" && cursor?.amount === undefined ? null : cursor;
 
   const [expenses, settlements] = await Promise.all([
-    listExpenses(access.groupId, { limit, before }),
-    listSettlements(access.groupId, { limit, before }),
+    where.expenses === null
+      ? []
+      : listExpenses(access.groupId, {
+          db: options.db,
+          limit,
+          ...expenseSeek(sort, before, group, where.expenses),
+        }),
+    where.settlements === null
+      ? []
+      : listSettlements(access.groupId, {
+          db: options.db,
+          limit,
+          ...settlementSeek(sort, before, group, where.settlements),
+        }),
   ]);
 
-  const t = await getTranslations("expensesList");
   const self = access.participantId;
   const display = {
     mode: access.group.currencyMode,
     baseCurrency: access.group.baseCurrency,
   };
+
+  /** The key a row is ordered and resumed by, in this list's order. */
+  function keyOf(
+    date: string,
+    time: string,
+    id: string,
+    amount: bigint,
+  ): ListCursor {
+    return sort === "largest"
+      ? { date, time, id, amount: (amount < 0n ? -amount : amount).toString() }
+      : { date, time, id };
+  }
 
   /*
    * Whether this was recorded in a currency the group does not keep its books
@@ -129,11 +225,12 @@ export async function loadTransactionPage(
     ...expenses.map((expense): Keyed => {
       const money = moneyForGroup(expense, display);
       return {
-        key: {
-          date: expense.expenseDate,
-          time: expense.cursorKey,
-          id: expense.id,
-        },
+        key: keyOf(
+          expense.expenseDate,
+          expense.cursorKey,
+          expense.id,
+          money.amount,
+        ),
         row: {
           kind: "expense",
           id: expense.id,
@@ -161,11 +258,12 @@ export async function loadTransactionPage(
     ...settlements.map((settlement): Keyed => {
       const money = moneyForGroup(settlement, display);
       return {
-        key: {
-          date: settlement.settledOn,
-          time: settlement.cursorKey,
-          id: settlement.id,
-        },
+        key: keyOf(
+          settlement.settledOn,
+          settlement.cursorKey,
+          settlement.id,
+          money.amount,
+        ),
         row: {
           kind: "settlement",
           id: settlement.id,
@@ -199,7 +297,7 @@ export async function loadTransactionPage(
         },
       };
     }),
-  ].sort((a, b) => compareKeysDesc(a.key, b.key));
+  ].sort((a, b) => compareIn(sort, a.key, b.key));
 
   const taken = keyed.slice(0, limit);
 
@@ -219,6 +317,185 @@ export async function loadTransactionPage(
     rows: taken.map((entry) => entry.row),
     cursor: more && last ? encodeCursor(last.key) : null,
   };
+}
+
+/**
+ * How many transactions a filter leaves standing, over the whole group.
+ *
+ * What the filter sheet's apply button promises — `Show 4 transactions` —
+ * when the browser does not hold enough of the list to count it there. The
+ * same conditions as a page, so the number and the list it opens cannot
+ * disagree; only the paging and the order are left out, since neither changes
+ * how many rows there are.
+ */
+export async function countTransactions(
+  access: GroupAccess,
+  options: Omit<TransactionQuery, "cursor" | "limit"> = {},
+): Promise<number> {
+  const db = options.db ?? getDb();
+  const t = await getTranslations("expensesList");
+  const where = await narrowingFor(
+    access,
+    (names) => t("settlementTitle", names),
+    options,
+  );
+
+  const [expenseCount, settlementCount] = await Promise.all([
+    where.expenses === null
+      ? 0
+      : db
+          .select({ total: count() })
+          .from(expenses)
+          .where(
+            and(
+              eq(expenses.groupId, access.groupId),
+              isNull(expenses.deletedAt),
+              where.expenses,
+            ),
+          )
+          .then(([row]) => row?.total ?? 0),
+    where.settlements === null
+      ? 0
+      : db
+          .select({ total: count() })
+          .from(settlements)
+          .where(
+            and(
+              eq(settlements.groupId, access.groupId),
+              isNull(settlements.deletedAt),
+              where.settlements,
+            ),
+          )
+          .then(([row]) => row?.total ?? 0),
+  ]);
+  return expenseCount + settlementCount;
+}
+
+/**
+ * The filter's conditions on each table, with everything they are read
+ * against gathered first — which, for a search, includes writing out every
+ * day the group has an entry on.
+ */
+async function narrowingFor(
+  access: GroupAccess,
+  settlementTitle: (names: { from: string; to: string }) => string,
+  options: Omit<TransactionQuery, "cursor" | "limit">,
+): Promise<Narrowing> {
+  const filter = options.filter ?? NO_FILTER;
+  const searching = searchNeedle(filter) !== "";
+  const dateText = searching
+    ? (options.dateText ?? (await getDateFormatter()).plain)
+    : null;
+
+  const scope: FilterScope = {
+    group: access.group,
+    participantId: access.participantId,
+    today: options.today ?? todayIn(access.group.timezone),
+    settlementTitle: settlementTitleSql(settlementTitle),
+    days:
+      dateText === null
+        ? new Map()
+        : await searchableDays(options.db ?? getDb(), access.groupId, dateText),
+  };
+  return narrowing(filter, scope);
+}
+
+/** A table's order and keyset condition for one of the list's three orders. */
+function seek(
+  sort: SortChoice,
+  columns: {
+    readonly date: AnyPgColumn;
+    readonly time: AnyPgColumn;
+    readonly id: AnyPgColumn;
+    readonly amount: SQL;
+  },
+  cursor: ListCursor | null,
+): { where: SQL | undefined; orderBy: SQL[] } {
+  switch (sort) {
+    case "oldest":
+      return {
+        where: cursor ? keysetAfter(columns, cursor) : undefined,
+        orderBy: [asc(columns.date), asc(columns.time), asc(columns.id)],
+      };
+    case "largest": {
+      // Magnitude, as the browser ranks it. Amounts are stored positive, so
+      // this is the amount — but the rule is the one the sort states.
+      const magnitude = sql`abs(${columns.amount})`;
+      return {
+        where:
+          cursor?.amount === undefined
+            ? undefined
+            : keysetBeforeAmount(magnitude, columns, {
+                ...cursor,
+                amount: cursor.amount,
+              }),
+        orderBy: [
+          desc(magnitude),
+          desc(columns.date),
+          desc(columns.time),
+          desc(columns.id),
+        ],
+      };
+    }
+    case "newest":
+      return {
+        where: cursor ? keysetBefore(columns, cursor) : undefined,
+        orderBy: [desc(columns.date), desc(columns.time), desc(columns.id)],
+      };
+  }
+}
+
+function expenseSeek(
+  sort: SortChoice,
+  cursor: ListCursor | null,
+  group: GroupAccess["group"],
+  filter: SQL,
+): { where: SQL | undefined; orderBy: SQL[] } {
+  const order = seek(
+    sort,
+    {
+      date: expenses.expenseDate,
+      time: expenses.createdAt,
+      id: expenses.id,
+      amount: displayMoneySql(expenses, group).amount,
+    },
+    cursor,
+  );
+  return { where: and(filter, order.where), orderBy: order.orderBy };
+}
+
+function settlementSeek(
+  sort: SortChoice,
+  cursor: ListCursor | null,
+  group: GroupAccess["group"],
+  filter: SQL,
+): { where: SQL | undefined; orderBy: SQL[] } {
+  const order = seek(
+    sort,
+    {
+      date: settlements.settledOn,
+      time: settlements.createdAt,
+      id: settlements.id,
+      amount: displayMoneySql(settlements, group).amount,
+    },
+    cursor,
+  );
+  return { where: and(filter, order.where), orderBy: order.orderBy };
+}
+
+/**
+ * The merge's comparison, in the same order the two queries were read in —
+ * which for oldest first is newest first backwards, and for largest first is
+ * the magnitude and then newest first among equals, as `sortRows` ranks them.
+ */
+function compareIn(sort: SortChoice, a: ListCursor, b: ListCursor): number {
+  if (sort === "oldest") return compareKeysDesc(b, a);
+  if (sort === "largest") {
+    const left = BigInt(a.amount ?? "0");
+    const right = BigInt(b.amount ?? "0");
+    if (left !== right) return left > right ? -1 : 1;
+  }
+  return compareKeysDesc(a, b);
 }
 
 /**

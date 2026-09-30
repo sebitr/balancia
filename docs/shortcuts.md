@@ -229,7 +229,9 @@ bulk export are all refused at any scope. The full table is in
 
 **Keys do not expire.** They work until revoked. The list on Settings → Security
 prints when each was last used, which is what makes a forgotten one visible —
-check it now and then, and revoke what you no longer recognise.
+check it now and then, and revoke what you no longer recognise. Resetting your
+password or changing your email address revokes every key at once, so a
+Shortcut that stops answering after either needs a new one.
 
 ## What this is not
 

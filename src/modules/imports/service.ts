@@ -87,6 +87,20 @@ export class ImportError extends Error {
 }
 
 /**
+ * What a row that failed for any reason but an `ImportError` records.
+ *
+ * Only an `ImportError` is written for a person to read. Anything else is a
+ * fault, and the one most likely here is the database refusing an insert —
+ * whose message is Drizzle's, carrying the statement and every value bound to
+ * it: the row's description, amount and participants. The reason is in the log
+ * (without those values; see `lib/error-for-log.ts`), and this stays generic.
+ *
+ * English, like every other message in `import_rows`, none of which any
+ * screen shows yet.
+ */
+const ROW_NOT_WRITTEN = "This row could not be saved.";
+
+/**
  * The separator between the fields that make up a fingerprint.
  *
  * NUL is the one character that cannot appear in any of them: Postgres refuses
@@ -572,11 +586,14 @@ export async function commitImportRun(
         resolved.set(sourceName.trim().toLowerCase(), created.id);
         participantsCreated += 1;
       } else {
-        // Only accept IDs that really belong to this group.
+        // Only accept IDs that really belong to this group. Saving the mapping
+        // already held it to that, so the reader who gets here — somebody was
+        // removed since — is told what the saving step would tell them.
         const belongs = existing.some((p) => p.id === target);
         if (!belongs) {
           throw new AuthorizationError(
             "The import maps someone onto a participant from another group.",
+            "importParticipantUnknown",
           );
         }
         resolved.set(sourceName.trim().toLowerCase(), target);
@@ -671,14 +688,14 @@ export async function commitImportRun(
         // Outside the savepoint, which has already been rolled back: the
         // failure is recorded on the outer transaction, so it survives.
         const message =
-          error instanceof Error ? error.message : "Unknown import error";
+          error instanceof ImportError ? error.message : ROW_NOT_WRITTEN;
         await tx
           .update(importRows)
           .set({ status: "error", message: message.slice(0, 500) })
           .where(eq(importRows.id, row.id));
         failed += 1;
         logger.warn(
-          { importRunId, rowNumber: row.rowNumber, err: message },
+          { importRunId, rowNumber: row.rowNumber, err: error },
           "Import row failed",
         );
       }

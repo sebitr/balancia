@@ -19,6 +19,37 @@ const MIGRATION_LOCK_ID = 4_207_331_101;
 export interface MigrationResult {
   readonly applied: string[];
   readonly skipped: string[];
+  /**
+   * Recorded as applied in the database and not among this build's files:
+   * what a newer build left behind. Only ever non-empty when
+   * `allowNewerSchema` let the run go ahead regardless.
+   */
+  readonly unknown: string[];
+}
+
+/**
+ * The database has been migrated by a build this one does not know about.
+ *
+ * Almost always an image rolled back on its own: the upgrade applied its
+ * migrations, something went wrong, and the previous image was started again
+ * without the database going back with it. Every migration is forward-only,
+ * so the older code now runs against a schema it was never written for — and
+ * the failures that causes are not all loud ones. A column it does not know to
+ * fill, a table whose rows it does not know to read, is money that is quietly
+ * wrong rather than an error in a log.
+ */
+export class NewerSchemaError extends Error {
+  constructor(readonly migrations: readonly string[]) {
+    super(
+      `The database has ${migrations.length} migration(s) applied that this build does not include: ` +
+        `${migrations.join(", ")}. A newer release has upgraded it, and this older one would run ` +
+        "against a schema it was never written for. Restore the dump taken before that upgrade " +
+        "and start this release again, or go back to the newer image (docs/self-hosting.md, " +
+        '"Rolling back"). To run this build against the newer schema anyway, having decided to ' +
+        "accept that, set ALLOW_NEWER_SCHEMA=true.",
+    );
+    this.name = "NewerSchemaError";
+  }
 }
 
 export interface MigrationFile {
@@ -69,6 +100,13 @@ export function splitStatements(sql: string): string[] {
 export async function runMigrations(options: {
   databaseUrl: string;
   migrationsDir?: string;
+  /**
+   * Go ahead, with a warning, when the database holds migrations this build
+   * does not — rather than refusing with a {@link NewerSchemaError}. Off
+   * unless the caller says otherwise; `scripts/migrate.ts` decides from
+   * `ALLOW_NEWER_SCHEMA` and `NODE_ENV`.
+   */
+  allowNewerSchema?: boolean;
 }): Promise<MigrationResult> {
   const migrationsDir = options.migrationsDir ?? migrationsDirectory();
   const migrations = loadMigrations(migrationsDir);
@@ -78,6 +116,7 @@ export async function runMigrations(options: {
 
   const applied: string[] = [];
   const skipped: string[] = [];
+  let unknown: string[] = [];
 
   try {
     await client.query(`
@@ -95,6 +134,25 @@ export async function runMigrations(options: {
       'SELECT name, checksum FROM "__balancia_migrations"',
     );
     const alreadyApplied = new Map(rows.map((row) => [row.name, row.checksum]));
+
+    // The loop below only ever looks at this build's own files, so without
+    // this an older image started against a newer database found nothing to
+    // do, logged "already up to date" and served. Checked before anything is
+    // applied: a build that is refused must not have half-migrated first.
+    const bundled = new Set(migrations.map((migration) => migration.name));
+    unknown = rows
+      .map((row) => row.name)
+      .filter((name) => !bundled.has(name))
+      .sort();
+    if (unknown.length > 0) {
+      if (!options.allowNewerSchema) {
+        throw new NewerSchemaError(unknown);
+      }
+      logger.warn(
+        { migrations: unknown },
+        `Running against a newer schema: the database has ${unknown.length} migration(s) this build does not include`,
+      );
+    }
 
     for (const migration of migrations) {
       const previousChecksum = alreadyApplied.get(migration.name);
@@ -138,5 +196,5 @@ export async function runMigrations(options: {
     await client.end();
   }
 
-  return { applied, skipped };
+  return { applied, skipped, unknown };
 }

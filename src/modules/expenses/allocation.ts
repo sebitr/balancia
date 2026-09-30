@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { MoneyDecimal } from "@/modules/currencies/money";
 
 /**
  * Deterministic money allocation.
@@ -31,6 +32,7 @@ export type AllocationErrorCode =
   | "valueRequired"
   | "valueNotDecimal"
   | "valueNotInteger"
+  | "valueTooLarge"
   | "exactSumMismatch"
   | "percentageNegative"
   | "percentageSumMismatch"
@@ -52,6 +54,28 @@ export class AllocationError extends Error {
     this.code = code;
     this.params = params;
   }
+}
+
+/**
+ * The weights as whole numbers, every one scaled by the same power of ten.
+ *
+ * A share is then `total × weight ÷ sum` in bigint: its floor is the integer
+ * quotient and what it leaves over is the integer remainder, both exact at any
+ * size, and every remainder is over the same sum — so two parts owed the same
+ * fraction of a unit tie exactly, and the caller's order settles it as the
+ * note at the top promises. Worked in decimal.js instead, each quotient was cut
+ * to a fixed number of significant digits: remainders that were equal came out
+ * unequal whenever their shares had different numbers of whole digits, and the
+ * rounding unit went by the length of a figure rather than by who came first.
+ */
+function wholeWeights(weights: readonly Decimal[]): bigint[] {
+  const places = weights.reduce(
+    (most, weight) => Math.max(most, weight.decimalPlaces()),
+    0,
+  );
+  return weights.map((weight) =>
+    BigInt(weight.toFixed(places).replace(".", "")),
+  );
 }
 
 /**
@@ -84,11 +108,9 @@ export function allocateByWeights(
     }
   }
 
-  const weightSum = weights.reduce(
-    (sum, weight) => sum.plus(weight),
-    new Decimal(0),
-  );
-  if (weightSum.isZero()) {
+  const whole = wholeWeights(weights);
+  const weightSum = whole.reduce((sum, weight) => sum + weight, 0n);
+  if (weightSum === 0n) {
     throw new AllocationError(
       "Allocation weights must not all be zero — nothing would receive the total",
     );
@@ -96,20 +118,19 @@ export function allocateByWeights(
 
   const negative = total < 0n;
   const magnitude = negative ? -total : total;
-  const decimalTotal = new Decimal(magnitude.toString());
 
-  // Floor each exact share; track the fractional remainder for the second pass.
+  // Floor each exact share; keep what the floor left over, as a numerator over
+  // the same sum for every part, for the second pass.
   const floors: bigint[] = [];
-  const remainders: { index: number; remainder: Decimal }[] = [];
+  const remainders: { index: number; remainder: bigint }[] = [];
   let allocated = 0n;
 
-  for (const [index, weight] of weights.entries()) {
-    const exact = decimalTotal.times(weight).dividedBy(weightSum);
-    const floor = exact.floor();
-    const floorBig = BigInt(floor.toFixed(0));
-    floors.push(floorBig);
-    allocated += floorBig;
-    remainders.push({ index, remainder: exact.minus(floor) });
+  for (const [index, weight] of whole.entries()) {
+    const share = magnitude * weight;
+    const floor = share / weightSum;
+    floors.push(floor);
+    allocated += floor;
+    remainders.push({ index, remainder: share % weightSum });
   }
 
   let leftover = magnitude - allocated;
@@ -119,10 +140,13 @@ export function allocateByWeights(
   }
 
   // Largest remainder first; ties resolved by original index for determinism.
-  const ranked = [...remainders].sort((a, b) => {
-    const comparison = b.remainder.comparedTo(a.remainder);
-    return comparison !== 0 ? comparison : a.index - b.index;
-  });
+  const ranked = [...remainders].sort((a, b) =>
+    a.remainder === b.remainder
+      ? a.index - b.index
+      : a.remainder > b.remainder
+        ? -1
+        : 1,
+  );
 
   let cursor = 0;
   while (leftover > 0n) {
@@ -176,22 +200,18 @@ export function describeRounding(
       "Weights and allocation must have the same length",
     );
   }
-  const weightSum = weights.reduce(
-    (sum, weight) => sum.plus(weight),
-    new Decimal(0),
-  );
-  if (weightSum.isZero()) {
+  const whole = wholeWeights(weights);
+  const weightSum = whole.reduce((sum, weight) => sum + weight, 0n);
+  if (weightSum === 0n) {
     return { adjustedCount: 0, adjustedUnits: 0n };
   }
   const negative = total < 0n;
   const magnitude = negative ? -total : total;
-  const decimalTotal = new Decimal(magnitude.toString());
 
   let adjustedCount = 0;
   let adjustedUnits = 0n;
-  for (const [index, weight] of weights.entries()) {
-    const exact = decimalTotal.times(weight).dividedBy(weightSum);
-    const floorBig = BigInt(exact.floor().toFixed(0));
+  for (const [index, weight] of whole.entries()) {
+    const floorBig = (magnitude * weight) / weightSum;
     const part = allocation[index];
     if (part === undefined) {
       throw new AllocationError("Allocation is shorter than its weights");
@@ -242,7 +262,7 @@ export function validatePercentages(percentages: readonly Decimal[]): void {
   }
   const sum = percentages.reduce(
     (accumulator, percentage) => accumulator.plus(percentage),
-    new Decimal(0),
+    new MoneyDecimal(0),
   );
   if (!sum.equals(100)) {
     throw new AllocationError(
@@ -264,7 +284,7 @@ export function validateShares(shares: readonly Decimal[]): void {
   }
   const sum = shares.reduce(
     (accumulator, share) => accumulator.plus(share),
-    new Decimal(0),
+    new MoneyDecimal(0),
   );
   if (sum.isZero()) {
     throw new AllocationError(

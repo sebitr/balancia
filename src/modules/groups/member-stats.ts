@@ -191,7 +191,7 @@ export interface MemberStats {
   readonly records: readonly MemberRecords[];
   /** The day their first entry landed, or null when they have none. */
   readonly firstEntry: string | null;
-  /** Currencies they have any spending in, busiest first. */
+  /** Currencies they have any spending in, busiest first after the lead. */
   readonly currencies: readonly string[];
 }
 
@@ -205,6 +205,8 @@ export interface MemberStatsInput {
   readonly memberCount: number;
   readonly timezone: string;
   readonly now: Date;
+  /** A converted group's base currency, which `leadingWith` puts first. */
+  readonly leadCurrency?: string | null;
 }
 
 /**
@@ -508,6 +510,23 @@ function currenciesOf(
       b[1] > a[1] ? 1 : b[1] < a[1] ? -1 : a[0].localeCompare(b[0]),
     )
     .map(([currency]) => currency);
+}
+
+/**
+ * The currencies in order, with the lead one first when it is among them.
+ *
+ * The lead is a converted group's base currency — the one it keeps its books
+ * in — and it heads the screen whatever its volume. Busiest-first compares
+ * minor units, so a single yen row imported without a rate outweighs years of
+ * euros, and the statistics of a group that counts in euros would open on the
+ * one currency it does not count in.
+ */
+export function leadingWith(
+  currencies: readonly string[],
+  lead: string | null | undefined,
+): string[] {
+  if (!lead || !currencies.includes(lead)) return [...currencies];
+  return [lead, ...currencies.filter((currency) => currency !== lead)];
 }
 
 /** Whole months a window spans, for the chart's caption. */
@@ -818,7 +837,10 @@ function recordsFor(input: MemberStatsInput, currency: string): MemberRecords {
 }
 
 export function computeMemberStats(input: MemberStatsInput): MemberStats {
-  const currencies = currenciesOf(input.facts, input.participantId);
+  const currencies = leadingWith(
+    currenciesOf(input.facts, input.participantId),
+    input.leadCurrency,
+  );
   const spending = input.facts.filter(
     (fact) =>
       isSpending(fact.direction) &&

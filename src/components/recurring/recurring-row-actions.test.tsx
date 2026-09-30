@@ -95,7 +95,9 @@ describe("removing a recurring expense", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Remove “Rent”?")).toBeVisible();
     expect(
-      within(dialog).getByText(/You can undo this right after/),
+      within(dialog).getByText(
+        /You can undo this right after, or restore it later from Activity/,
+      ),
     ).toBeVisible();
     expect(deleteRecurringAction).not.toHaveBeenCalled();
   });

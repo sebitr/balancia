@@ -12,9 +12,13 @@ import { ActivityFeed } from "./activity-feed";
  * stands — the way back that does not run out after eight seconds.
  *
  * The feed renders on the server; here it is awaited and its output mounted,
- * with the real English catalogue behind both halves. The server is the
- * boundary: the restores are mocked, and what is asserted is what the row does
- * with their answer.
+ * with the real English catalogue behind both halves — the whole of it for the
+ * server's, and for the browser's only what the group area's provider carries,
+ * which is all the Restore button is handed on the Activity screen. Given the
+ * whole catalogue, these tests passed while that provider did not carry
+ * `activity.restore`, and the button printed its keys in the app. The server
+ * is the boundary: the restores are mocked, and what is asserted is what the
+ * row does with their answer.
  */
 
 // The feed asks for exactly one namespace, which is all this answers.
@@ -134,13 +138,16 @@ async function feed(restorable: readonly string[]) {
   });
 }
 
+/** Where the Activity screen renders: under the group layout's provider. */
+const GROUP = { area: "group" } as const;
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("restoring from the activity feed", () => {
   it("offers a restore only on deletions that still stand", async () => {
-    renderWithIntl(await feed(["a1", "a2", "a3"]));
+    renderWithIntl(await feed(["a1", "a2", "a3"]), GROUP);
 
     // Each one named for what it puts back, starting with the word it shows.
     expect(
@@ -163,7 +170,7 @@ describe("restoring from the activity feed", () => {
 
   it("calls the restore for the kind and the entry the row names", async () => {
     const user = userEvent.setup();
-    renderWithIntl(await feed(["a1", "a2", "a3"]));
+    renderWithIntl(await feed(["a1", "a2", "a3"]), GROUP);
 
     await user.click(
       screen.getByRole("button", { name: "Restore the repayment of €20.00" }),
@@ -185,7 +192,7 @@ describe("restoring from the activity feed", () => {
 
   it("can be reached and pressed from the keyboard", async () => {
     const user = userEvent.setup();
-    renderWithIntl(await feed(["a1"]));
+    renderWithIntl(await feed(["a1"]), GROUP);
 
     await user.tab();
     const button = screen.getByRole("button", {
@@ -204,7 +211,7 @@ describe("restoring from the activity feed", () => {
    */
   it("goes quiet once it has worked, and leaves the focus on the row", async () => {
     const user = userEvent.setup();
-    const { rerender } = renderWithIntl(await feed(["a1"]));
+    const { rerender } = renderWithIntl(await feed(["a1"]), GROUP);
 
     await user.click(
       screen.getByRole("button", { name: "Restore the expense “Dinner”" }),
@@ -229,7 +236,7 @@ describe("restoring from the activity feed", () => {
       error: "That expense is not part of this group.",
     });
     const user = userEvent.setup();
-    renderWithIntl(await feed(["a1"]));
+    renderWithIntl(await feed(["a1"]), GROUP);
 
     const button = screen.getByRole("button", {
       name: "Restore the expense “Dinner”",
@@ -248,6 +255,29 @@ describe("restoring from the activity feed", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  /**
+   * The button's name is written on the server, from the whole catalogue, and
+   * would read correctly with nothing in the browser at all. Its three words —
+   * the one it shows, the refusal it falls back on, the one it turns into —
+   * are read in the browser, from the group's provider.
+   */
+  it("finds its own words in what the group's provider carries", async () => {
+    restoreExpenseAction.mockResolvedValueOnce({ ok: false });
+    const user = userEvent.setup();
+    renderWithIntl(await feed(["a1"]), GROUP);
+
+    const button = screen.getByRole("button", {
+      name: "Restore the expense “Dinner”",
+    });
+    expect(button).toHaveTextContent(/^Restore$/);
+
+    await user.click(button);
+    expect(error).toHaveBeenCalledWith("It could not be put back. Try again.");
+
+    await user.click(button);
+    await waitFor(() => expect(screen.getByText("Restored")).toHaveFocus());
+  });
+
   it("does not send a second restore while the first is out", async () => {
     let settle: (value: { ok: boolean }) => void = () => {};
     restoreExpenseAction.mockReturnValueOnce(
@@ -256,7 +286,7 @@ describe("restoring from the activity feed", () => {
       }),
     );
     const user = userEvent.setup();
-    renderWithIntl(await feed(["a1"]));
+    renderWithIntl(await feed(["a1"]), GROUP);
 
     const button = screen.getByRole("button", {
       name: "Restore the expense “Dinner”",

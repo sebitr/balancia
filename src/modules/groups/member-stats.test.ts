@@ -192,6 +192,28 @@ describe("what a member put in against what was theirs", () => {
     expect(all?.currencies[1].paid).toBe(6000n);
   });
 
+  // A converted group's yen row imported without a rate outweighs its euros in
+  // minor units. The euros are still what the group counts in, so they lead.
+  it("puts the lead currency first, whatever its volume", () => {
+    const stats = computeMemberStats(
+      input({
+        leadCurrency: "EUR",
+        facts: [split(6000n), split(30000n, { currency: "JPY" })],
+      }),
+    );
+    const all = stats.ranges.find((range) => range.key === "all");
+
+    expect(stats.currencies).toEqual(["EUR", "JPY"]);
+    expect(all?.currencies.map((entry) => entry.currency)).toEqual([
+      "EUR",
+      "JPY",
+    ]);
+    expect(stats.records.map((record) => record.currency)).toEqual([
+      "EUR",
+      "JPY",
+    ]);
+  });
+
   it("drops entries that fall outside the window", () => {
     const stats = computeMemberStats(
       input({
