@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ChevronRight, Repeat2, Upload, type LucideIcon } from "lucide-react";
@@ -28,6 +29,12 @@ import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
  * used to be a card here; it cannot be changed, so it is a line at the foot of
  * Details instead.
  */
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("settingsPage");
+  return { title: t("title") };
+}
+
 export default async function GroupSettingsPage({
   params,
 }: PageProps<"/groups/[groupId]/settings">) {

@@ -5,6 +5,7 @@ import { GroupSwitcher } from "@/components/layout/group-switcher";
 import { OfflineEntryProvider } from "@/components/offline/offline-entry";
 import { OutboxFlusher } from "@/components/offline/outbox-flusher";
 import { PendingStrip } from "@/components/offline/pending-strip";
+import { AreaMessages } from "@/i18n/area-messages";
 import { getCurrentActor } from "@/lib/security/actor";
 import {
   AuthenticationRequiredError,
@@ -49,19 +50,19 @@ export default async function GroupLayout({
   const { groupId } = await params;
   const access = await resolveAccess(groupId);
 
-  return (
-    /*
-     * Wrapping the shell rather than sitting inside it, so that the bottom
-     * bar is under the provider too. `bottomNav` is an element created here
-     * and rendered by `AppShell`, and context follows where a thing is
-     * rendered — which is what lets the bar's "Add" open the local drawer
-     * when a routed one could not load.
-     *
-     * It also says who is here, to everything below that reads or writes the
-     * device's own store — so the queue sends only this person's entries and
-     * the drawer offers back only their draft. Resolved above already, so it
-     * costs nothing. See `DeviceActorProvider`.
-     */
+  /*
+   * Wrapping the shell rather than sitting inside it, so that the bottom
+   * bar is under the provider too. `bottomNav` is an element created here
+   * and rendered by `AppShell`, and context follows where a thing is
+   * rendered — which is what lets the bar's "Add" open the local drawer
+   * when a routed one could not load.
+   *
+   * It also says who is here, to everything below that reads or writes the
+   * device's own store — so the queue sends only this person's entries and
+   * the drawer offers back only their draft. Resolved above already, so it
+   * costs nothing. See `DeviceActorProvider`.
+   */
+  const shell = (
     <OfflineEntryProvider
       groupId={access.groupId}
       userId={access.actor.kind === "user" ? access.actor.userId : null}
@@ -105,4 +106,12 @@ export default async function GroupLayout({
       </AppShell>
     </OfflineEntryProvider>
   );
+
+  /*
+   * The strings only a group's screens ask for — the entry form, the receipt
+   * scanner, the statistics, the reminders — arrive with the group rather
+   * than with every page. Around the whole shell, the drawer slot included:
+   * all of it is the group's.
+   */
+  return <AreaMessages area="group">{shell}</AreaMessages>;
 }

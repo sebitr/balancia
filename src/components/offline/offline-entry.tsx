@@ -2,6 +2,8 @@
 
 import {
   createContext,
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -11,11 +13,11 @@ import {
 import { useTranslations } from "next-intl";
 import { WifiOff } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { AddEntryForm } from "@/components/entries/add-entry-form";
 import {
   ENTRY_SHEET_CLASS,
+  EntryFormSkeleton,
   openOnAmount,
-} from "@/components/entries/add-entry-drawer";
+} from "@/components/entries/entry-sheet";
 import { loadSnapshot, type GroupSnapshot } from "@/lib/offline/snapshot";
 import type { DeviceActor } from "@/lib/offline/owner";
 import { DeviceActorProvider } from "./device-actor";
@@ -40,6 +42,29 @@ interface OfflineEntry {
   /** Opens the local drawer. Safe to call when there is no snapshot. */
   readonly open: () => void;
 }
+
+/**
+ * The form, fetched the first time this drawer shows it rather than with the
+ * group.
+ *
+ * This provider wraps every group screen, and the form is the largest thing in
+ * the app: the receipt scanner and its camera, the category catalogue, the
+ * split and recurrence sheets. Imported at the top of this file, all of it was
+ * in the code the first group screen an invited guest opens had to download
+ * and parse on a phone — for a drawer that only ever opens after a tap, with
+ * no network. The routed drawer needs none of this: it is a route of its own,
+ * and its code arrives when it is navigated to.
+ *
+ * Lazy is safe offline because the service worker precaches every build chunk
+ * under `maximumFileSizeToCacheInBytes` in `serwist.config.mjs`, this one
+ * included, so a device that has opened the group once already holds it. The
+ * build names any chunk that grows past that line.
+ */
+const AddEntryForm = lazy(() =>
+  import("@/components/entries/add-entry-form").then((module) => ({
+    default: module.AddEntryForm,
+  })),
+);
 
 const OfflineEntryContext = createContext<OfflineEntry | null>(null);
 
@@ -124,7 +149,9 @@ function OfflineEntrySheet({
         onOpenAutoFocus={openOnAmount}
       >
         {snapshot === "loading" ? null : snapshot ? (
-          <OfflineEntryForm snapshot={snapshot} onClose={onClose} />
+          <Suspense fallback={<FormArriving />}>
+            <OfflineEntryForm snapshot={snapshot} onClose={onClose} />
+          </Suspense>
         ) : (
           <NothingSaved />
         )}
@@ -172,6 +199,25 @@ function OfflineEntryForm({
       onClose={onClose}
       onSaved={onClose}
     />
+  );
+}
+
+/**
+ * The form's outline while its code is read from the device — the same
+ * skeleton the routed drawer shows while the server answers, so the two
+ * drawers arrive the same way.
+ */
+function FormArriving() {
+  const t = useTranslations("common");
+
+  return (
+    <div
+      role="status"
+      aria-label={t("loading")}
+      className="flex flex-col gap-5 px-4 pt-6"
+    >
+      <EntryFormSkeleton />
+    </div>
   );
 }
 

@@ -42,8 +42,10 @@ const CLASS_NAME = /^[A-Za-z][A-Za-z0-9_]{2,63}$/;
  * Worth keeping: it is the difference between "the database said no" and "the
  * database was unreachable", it is defined by the standard rather than by any
  * data in the row, and it cannot contain a value from a query.
+ *
+ * Exported for `lib/error-for-log.ts`, which keeps the same codes in the log.
  */
-const SQLSTATE = /^[0-9A-Z]{5}$/;
+export const SQLSTATE = /^[0-9A-Z]{5}$/;
 
 /**
  * Node's own error codes, e.g. `ECONNREFUSED`, `ENOSPC`.
@@ -53,7 +55,7 @@ const SQLSTATE = /^[0-9A-Z]{5}$/;
  * connection are the two most useful diagnoses a self-hosted install produces,
  * and neither is describable without this.
  */
-const SYSTEM_CODE = /^E[A-Z0-9_]{2,20}$/;
+export const SYSTEM_CODE = /^E[A-Z0-9_]{2,20}$/;
 
 function codeOf(error: unknown): string | null {
   if (typeof error !== "object" || error === null) return null;

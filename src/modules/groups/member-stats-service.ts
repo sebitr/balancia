@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
+import { ledgerCurrencyOf } from "@/modules/currencies/display";
 import {
   computeMemberStats,
   type MemberStats,
@@ -31,6 +32,11 @@ import {
  * the frozen converted figure, a separate one reads what was actually typed.
  * Getting it wrong here would put a chart in a different currency from the
  * position above it.
+ *
+ * That includes the one exception to it: a foreign row a converted group holds
+ * no rate for — an import, a restored backup — has no base figure, so it stays
+ * out of the base currency's figures and is counted under its own, where
+ * `ledgerCurrencyOf` puts its balance too.
  */
 export async function loadMemberStats(
   access: Pick<GroupAccess, "groupId" | "group">,
@@ -58,6 +64,7 @@ export async function loadMemberStats(
           expenseDate: expenses.expenseDate,
           createdAt: expenses.createdAt,
           currency: expenses.currency,
+          convertedCurrency: expenses.convertedCurrency,
         })
         .from(expenses)
         .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
@@ -88,6 +95,7 @@ export async function loadMemberStats(
           createdAt: settlements.createdAt,
           currency: settlements.currency,
           convertedAmount: settlements.convertedAmount,
+          convertedCurrency: settlements.convertedCurrency,
           amount: settlements.amount,
           fromParticipantId: settlements.fromParticipantId,
           toParticipantId: settlements.toParticipantId,
@@ -107,10 +115,14 @@ export async function loadMemberStats(
         .orderBy(asc(participants.createdAt), asc(participants.id)),
     ]);
 
+  // A row's allocations carry a converted amount exactly when the row does, so
+  // the amount picked always matches the currency `currencyOf` names.
   const pick = (original: bigint, converted: bigint | null): bigint =>
     converts ? (converted ?? original) : original;
-  const currencyOf = (original: string): string =>
-    converts ? (group.baseCurrency as string) : original;
+  const currencyOf = (row: {
+    currency: string;
+    convertedCurrency: string | null;
+  }): string => ledgerCurrencyOf(row, group.currencyMode);
 
   const payersByEntry = new Map<
     string,
@@ -145,7 +157,7 @@ export async function loadMemberStats(
     direction: row.direction,
     expenseDate: row.expenseDate,
     createdAt: row.createdAt,
-    currency: currencyOf(row.currency),
+    currency: currencyOf(row),
     payers: payersByEntry.get(row.id) ?? [],
     shares: sharesByEntry.get(row.id) ?? [],
   }));
@@ -154,7 +166,7 @@ export async function loadMemberStats(
     id: row.id,
     settledOn: row.settledOn,
     createdAt: row.createdAt,
-    currency: currencyOf(row.currency),
+    currency: currencyOf(row),
     fromParticipantId: row.fromParticipantId,
     toParticipantId: row.toParticipantId,
     amount: pick(row.amount, row.convertedAmount),
@@ -170,5 +182,6 @@ export async function loadMemberStats(
     memberCount: memberRows.filter((row) => row.removedAt === null).length,
     timezone: group.timezone,
     now: options.now ?? new Date(),
+    leadCurrency: converts ? group.baseCurrency : null,
   });
 }

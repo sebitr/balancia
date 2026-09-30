@@ -15,7 +15,9 @@
     "optional": "facultatif",
     "retry": "Réessayer",
     "undo": "Annuler",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "close": "Fermer",
+    "toastRegion": "Messages d’état"
   },
   "nav": {
     "language": "Langue",
@@ -710,6 +712,7 @@
       "open": "Filtrer et trier",
       "openWith": "Filtrer et trier, {count, plural, one {# filtre appliqué} other {# filtres appliqués}}",
       "apply": "{count, plural, =0 {Aucune transaction ne correspond} one {Afficher # transaction} other {Afficher # transactions}}",
+      "applyUncounted": "Afficher les transactions",
       "when": "Quand",
       "when_any": "N’importe quand",
       "when_month": "Ce mois-ci",
@@ -916,6 +919,15 @@
     "empty": "Il ne s’est encore rien passé dans ce groupe.",
     "someone": "Quelqu’un",
     "withDescription": "{action} : {description}",
+    "restore": {
+      "action": "Rétablir",
+      "expense": "Rétablir la dépense « {description} »",
+      "settlement": "Rétablir le remboursement de {amount}",
+      "recurring": "Rétablir la dépense récurrente « {description} »",
+      "unnamed": "Rétablir ce qui a été supprimé",
+      "done": "Rétabli",
+      "failed": "Le rétablissement n’a pas abouti. Réessaie."
+    },
     "actions": {
       "expense": {
         "created": "a ajouté une dépense",
@@ -979,7 +991,7 @@
     "descriptionPlaceholder": "Loyer",
     "amount": "Montant",
     "currency": "Devise",
-    "rateHint": "Réutilisé pour chaque occurrence générée.",
+    "rateHint": "Utilisé pour chaque occurrence, sauf si le taux du jour peut être récupéré.",
     "repeats": "Répétition",
     "weekly": "Chaque semaine",
     "monthly": "Chaque mois",
@@ -1486,13 +1498,13 @@
   "resetPassword": {
     "metaTitle": "Choisir un nouveau mot de passe",
     "title": "Choisis un nouveau mot de passe",
-    "subtitle": "Choisis le mot de passe de ton compte. Tous tes appareils connectés seront déconnectés.",
+    "subtitle": "Choisis le mot de passe de ton compte. Tous tes appareils connectés seront déconnectés, et tes clés d’API cesseront de fonctionner.",
     "password": "Nouveau mot de passe",
     "passwordHint": "Au moins 10 caractères.",
     "confirmPassword": "Confirme le mot de passe",
     "submit": "Enregistrer le nouveau mot de passe",
     "doneTitle": "Mot de passe modifié",
-    "doneBody": "Ton nouveau mot de passe est enregistré, et tous tes appareils connectés ont été déconnectés.",
+    "doneBody": "Ton nouveau mot de passe est enregistré. Tous tes appareils connectés ont été déconnectés, et tes clés d’API ont été révoquées.",
     "goToSignIn": "Aller à la connexion",
     "noTokenTitle": "Ce lien est incomplet",
     "noTokenBody": "Cette page a besoin du lien reçu par e-mail. Demandes-en un nouveau et ouvre-le depuis ta boîte mail.",
@@ -1892,7 +1904,7 @@
     "paused": "Suspendue",
     "delete": "Supprimer",
     "removeTitle": "Supprimer « {description} » ?",
-    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe. Tu peux annuler juste après.",
+    "removeBody": "Aucune nouvelle dépense ne sera générée. Les dépenses déjà créées restent dans le groupe. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
     "keep": "La conserver",
     "remove": "Supprimer",
     "removed": "Dépense récurrente supprimée",
@@ -1938,7 +1950,31 @@
     "chooseIcon": "Choisir une icône",
     "iconColorLabel": "Couleur",
     "iconLabel": "Icône",
-    "done": "Terminé"
+    "done": "Terminé",
+    "iconNames": {
+      "plane": "Avion",
+      "luggage": "Valise",
+      "house": "Maison",
+      "tent": "Tente",
+      "car": "Voiture",
+      "cart": "Chariot",
+      "coffee": "Café",
+      "meal": "Repas",
+      "party": "Fête",
+      "gift": "Cadeau",
+      "music": "Musique",
+      "sport": "Sport",
+      "bike": "Vélo",
+      "heart": "Cœur",
+      "star": "Étoile"
+    },
+    "colorNames": {
+      "coral": "Corail",
+      "emerald": "Émeraude",
+      "amber": "Ambre",
+      "plum": "Prune",
+      "blue": "Bleu"
+    }
   },
   "groupSettings": {
     "details": "Détails",
@@ -2031,9 +2067,10 @@
   },
   "importWizard": {
     "fileLabel": "Sauvegarde ou export",
-    "fileHelp": "Un export JSON Balancia, un CSV de groupe Splitwise, ou une sauvegarde JSON Splitwise. Le fichier est analysé sur ce serveur et n’est jamais transmis ailleurs.",
+    "fileHelp": "Un export JSON Balancia, un CSV de groupe Splitwise, ou une sauvegarde JSON Splitwise, jusqu’à {limit} Mo. Le fichier est analysé sur ce serveur et n’est jamais transmis ailleurs.",
     "read": "Lire le fichier",
     "readFailed": "Ce fichier n’a pas pu être lu.",
+    "tooLarge": "Ce fichier dépasse {limit} Mo, le maximum qu’un import peut lire.",
     "commitFailed": "L’import n’a pas pu être finalisé.",
     "finished": "Import terminé",
     "completeTitle": "Import terminé",
@@ -2046,7 +2083,7 @@
     "expenseCount": "{count, plural, one {# dépense} other {# dépenses}}",
     "settlementCount": "{count, plural, one {# paiement} other {# paiements}}",
     "duplicateCount": "{count, plural, one {# déjà importée} other {# déjà importées}}",
-    "warningsTitle": "{count, plural, one {# ligne sera ignorée} other {# lignes seront ignorées}}",
+    "warningsTitle": "{count, plural, one {# point à vérifier avant d’importer} other {# points à vérifier avant d’importer}}",
     "warningRow": "Ligne {row} : ",
     "andMore": "…et {count} de plus.",
     "matchTitle": "Associer les personnes",
@@ -2410,7 +2447,7 @@
     "delete": {
       "trigger": "Supprimer",
       "title": "Supprimer cette transaction ?",
-      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après.",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
       "keep": "La conserver",
       "confirm": "Supprimer",
       "deleted": "Transaction supprimée",
@@ -2509,9 +2546,16 @@
     "notInGroup": "Cet élément ne fait pas partie de ce groupe.",
     "notYourAccount": "Seule cette personne peut modifier le nom et l’e-mail de son compte.",
     "authRequired": "Connecte-toi pour continuer.",
+    "participantNotInGroup": "Une personne que tu as choisie ne fait plus partie de ce groupe. Recharge la page et choisis parmi celles qui en font partie.",
+    "ownerNotRemovable": "Le propriétaire du groupe ne peut pas en être retiré. Archive ou supprime plutôt le groupe.",
+    "participantHasAccount": "Cette personne se connecte déjà avec son propre compte, elle n’a donc pas besoin de lien d’invitation.",
+    "groupArchived": "Ce groupe est archivé. Restaure-le avant d’y apporter des modifications.",
+    "noPermission": "Tu ne peux pas faire cela dans ce groupe. Demande à son propriétaire.",
     "fileEmpty": "Ce fichier est vide.",
     "fileTooLarge": "Ce fichier dépasse la limite d’envoi de {limit} Mo.",
     "fileType": "Les reçus doivent être une image JPEG, PNG, WebP, GIF, HEIC ou un PDF.",
+    "importMappingInvalid": "Cette association ne correspond pas au fichier lu. Relis le fichier.",
+    "importParticipantUnknown": "Une personne que tu as associée ne fait plus partie de ce groupe. Relis le fichier et associe à nouveau les personnes.",
     "signedInRequired": "Il faut être connecté.",
     "unknownCurrency": "Balancia ne connaît pas cette devise.",
     "reminderEmpty": "Une relance doit contenir un message.",
@@ -2541,6 +2585,7 @@
     "passkeyNotRegistered": "Cette clé d’accès n’a pas pu être enregistrée.",
     "passkeyUnverified": "Cette clé d’accès n’a pas pu être vérifiée.",
     "passkeyUnverifiedRepeatedly": "Cette clé d’accès n’a pas pu être vérifiée. Si cela se reproduit, supprime-la et enregistre-la à nouveau.",
+    "passkeyUserVerificationRequired": "Cette clé d’accès n’a pas vérifié que c’était bien toi avec un code PIN, une empreinte ou ton visage. Un compte sans mot de passe a besoin d’une clé d’accès qui le fait.",
     "passkeyChallengeExpired": "Cette demande de clé d’accès a expiré. Réessaie.",
     "passkeySignInExpired": "Cette demande de connexion a expiré. Réessaie.",
     "passkeyAlreadyRegistered": "Cette clé d’accès est déjà enregistrée.",
@@ -3208,7 +3253,7 @@
     "delete": {
       "trigger": "Supprimer cette transaction",
       "title": "Supprimer cette transaction ?",
-      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Cette action est irréversible depuis l’application.",
+      "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
       "keep": "La conserver",
       "confirm": "Supprimer"
     },
@@ -3319,6 +3364,7 @@
       "iban": "Cet IBAN ne tombe pas juste — c’est presque toujours un caractère.",
       "email": "Cela ne ressemble pas à une adresse e-mail.",
       "link": "Écris le lien en entier, comme paypal.me/toi.",
+      "paypalHost": "Ce lien n’est pas un lien PayPal. Indique ton propre lien paypal.me, comme paypal.me/toi.",
       "unknownMethod": "Ce moyen de paiement n’est pas connu de Balancia.",
       "invalid": "Ce détail ne peut pas être enregistré tel quel.",
       "address": "Indique au moins un code postal, une localité et un code pays à deux lettres."

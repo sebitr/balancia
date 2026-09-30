@@ -263,7 +263,7 @@ export async function deleteAttachment(
       // The row is already marked deleted; a stuck blob is a cleanup problem,
       // not a reason to fail the user's action.
       logger.warn(
-        { err: error instanceof Error ? error.message : String(error) },
+        { err: error },
         "Failed to remove stored receipt; it will be swept later",
       );
     });

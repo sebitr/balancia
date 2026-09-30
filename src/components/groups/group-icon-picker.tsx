@@ -10,6 +10,7 @@ import {
   type GroupIconColor,
 } from "@/modules/groups/icons";
 import { GROUP_ICON_GLYPHS, groupAccent } from "@/components/groups/group-icon";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,8 +24,11 @@ import { cn } from "@/lib/utils";
  * Every choice applies immediately. There is nothing to confirm and so no
  * cancel: `Terminé` and the back arrow do the same thing.
  *
- * The catalogue below is provisional — see `@/modules/groups/icons`. Until it
- * settles, each tile is named by its slug rather than by translated copy.
+ * The catalogue below is provisional — see `@/modules/groups/icons`. Each tile
+ * is still named in the reader's language: a slug read aloud is English to a
+ * French screen reader, and "cart" is not the word anybody would use for the
+ * trolley it draws. A new icon needs a name in `groupForm.iconNames`, and the
+ * compiler says so if it is missing.
  */
 export function GroupIconPicker({
   name,
@@ -47,6 +51,18 @@ export function GroupIconPicker({
   const tCommon = useTranslations("common");
   const accent = groupAccent(color);
   const Chosen = icon ? GROUP_ICON_GLYPHS[icon] : null;
+  const colorKeys = rovingChoice({
+    values: GROUP_ICON_COLORS,
+    selected: color,
+    onSelect: onColor,
+  });
+  const iconKeys = rovingChoice({
+    values: GROUP_ICONS,
+    selected: icon,
+    onSelect: onIcon,
+    // The grid's own width, so up and down move a row.
+    columns: 5,
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in-0 motion-safe:slide-in-from-right-3">
@@ -115,13 +131,15 @@ export function GroupIconPicker({
           >
             {GROUP_ICON_COLORS.map((swatch) => {
               const selected = swatch === color;
+              const swatchName = t(`colorNames.${swatch}`);
               return (
                 <button
                   key={swatch}
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  aria-label={swatch}
+                  aria-label={swatchName}
+                  {...colorKeys(swatch)}
                   onClick={() => onColor(swatch)}
                   className={cn(
                     "tap-target size-9 rounded-full transition-transform duration-150",
@@ -151,13 +169,15 @@ export function GroupIconPicker({
             {GROUP_ICONS.map((slug) => {
               const Glyph = GROUP_ICON_GLYPHS[slug];
               const selected = slug === icon;
+              const iconName = t(`iconNames.${slug}`);
               return (
                 <button
                   key={slug}
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  aria-label={slug}
+                  aria-label={iconName}
+                  {...iconKeys(slug)}
                   onClick={() => onIcon(slug)}
                   className={cn(
                     "flex aspect-square items-center justify-center rounded-[14px] transition-colors duration-150",

@@ -200,3 +200,12 @@ the recipient's language rather than the actor's.
 A subscription the push service reports as gone (404/410) is deleted rather
 than retried; one that keeps failing temporarily is retired after ten
 consecutive failures.
+
+The endpoint is chosen by the browser, which is to say by whoever is signed in,
+so the server at the other end is not trusted to behave. Each send has ten
+seconds, reply included, and one that runs out counts as a temporary failure;
+of a rejection's body only the first few hundred bytes are read, for the log. An
+endpoint inside the network — loopback, a private or link-local range, the
+cloud metadata address, multicast, or any of those written as IPv6, NAT64
+included — is refused when the subscription is saved and again before every
+send (`src/lib/security/internal-hosts.ts`).

@@ -34,6 +34,16 @@ import {
  *
  * Everything here is pure, works on plain strings, and knows nothing about
  * React — so the interesting cases are unit tests rather than clicks.
+ *
+ * ## And its one translation
+ *
+ * A group whose history the browser has not read to the end is filtered by the
+ * server instead, because answering a search from the rows in hand would be
+ * answering it about the newest forty. `modules/expenses/transaction-filter.ts`
+ * says the same predicate in SQL, reading the filter through `readFilter`,
+ * `dateBounds` and `amountBound` below so the parts that can be shared are.
+ * The two are held to each other by `tests/integration/transaction-filters`,
+ * which runs every axis both ways over one seeded group and compares.
  */
 
 /**
@@ -157,7 +167,9 @@ export const NO_FILTER: ListFilter = {
  * Values that name a choice — the period, the order, the kinds, the positions,
  * the properties — are checked against the vocabulary and dropped when they do
  * not match, because a hand-edited or outdated link must not be able to put
- * the screen into a state its own controls cannot reach or undo.
+ * the screen into a state its own controls cannot reach or undo. The ends of a
+ * custom range are held to the same rule: the date fields can only write a
+ * real calendar day, and `from=soon` is not one they could show or clear.
  *
  * Values that name *data* — categories, subcategory pairs, payers — are taken
  * as they come. A category the group has never used is a legitimate filter
@@ -171,8 +183,8 @@ export function readFilter(source: ParamSource): ListFilter {
     kinds: only(valuesOf(source, KIND_PARAM), KINDS),
     query: first(source, QUERY_PARAM),
     when: one(first(source, WHEN_PARAM), WHEN_CHOICES, "any"),
-    from: first(source, FROM_PARAM),
-    to: first(source, TO_PARAM),
+    from: calendarDay(first(source, FROM_PARAM)),
+    to: calendarDay(first(source, TO_PARAM)),
     min: first(source, MIN_PARAM),
     max: first(source, MAX_PARAM),
     payers: valuesOf(source, PAYER_PARAM),
@@ -311,9 +323,8 @@ export function selectRows(
   const positions = new Set<string>(filter.positions);
   const properties = new Set<string>(filter.properties);
   const byCategory = categories.size > 0 || pairs.size > 0;
-  const needle = filter.query.trim().toLowerCase();
-  const from = periodStart(filter, context.today);
-  const to = filter.when === "custom" ? filter.to : "";
+  const needle = searchNeedle(filter);
+  const { from, to } = dateBounds(filter, context.today);
 
   const kept = rows.filter((row) => {
     if (kinds.size > 0 && !kinds.has(kindOf(row))) return false;
@@ -352,6 +363,15 @@ export function selectRows(
 }
 
 /**
+ * What the search field is looking for, as it is compared: trimmed, and in
+ * lower case, against a haystack lowered the same way. No accent folding —
+ * "hotel" does not find "Hôtel", on either side of the wire.
+ */
+export function searchNeedle(filter: ListFilter): string {
+  return filter.query.trim().toLowerCase();
+}
+
+/**
  * What the row left the reader holding, read the same way the row draws it.
  *
  * Not a second formula: the list prints `row.position` through `toneFor`, and
@@ -368,13 +388,24 @@ function positionOf(row: RowView): PositionChoice {
 }
 
 /**
- * The earliest date a row may carry, or "" when the period has no floor.
+ * The first and last dates a row may carry, inclusive; "" where the period
+ * has no end on that side.
  *
  * `This month` and `This year` are measured from today *in the group's
  * timezone*, which is the same clock the expense dates were written against —
  * a group in Auckland must not lose the 1st of the month because the server
  * is in UTC.
  */
+export function dateBounds(
+  filter: ListFilter,
+  today: string,
+): { from: string; to: string } {
+  return {
+    from: periodStart(filter, today),
+    to: filter.when === "custom" ? filter.to : "",
+  };
+}
+
 function periodStart(filter: ListFilter, today: string): string {
   switch (filter.when) {
     case "month":
@@ -398,9 +429,9 @@ function periodStart(filter: ListFilter, today: string): string {
  */
 function withinAmount(row: RowView, filter: ListFilter): boolean {
   const amount = magnitude(row.amount);
-  const min = bound(filter.min, row.currency);
+  const min = amountBound(filter.min, row.currency);
   if (min !== null && amount < min) return false;
-  const max = bound(filter.max, row.currency);
+  const max = amountBound(filter.max, row.currency);
   return max === null || amount <= max;
 }
 
@@ -415,7 +446,7 @@ function withinAmount(row: RowView, filter: ListFilter): boolean {
  * silently switched itself off at the third digit would look like the filter
  * had broken.
  */
-function bound(input: string, currency: string): bigint | null {
+export function amountBound(input: string, currency: string): bigint | null {
   const text = input.trim().replace(",", ".");
   if (!/^\d*\.?\d*$/.test(text) || text === "" || text === ".") return null;
   const [whole, fraction = ""] = text.split(".");
@@ -479,6 +510,21 @@ function valuesOf(source: ParamSource, name: string): string[] {
 
 function first(source: ParamSource, name: string): string {
   return valuesOf(source, name)[0] ?? "";
+}
+
+/**
+ * `value` when it is a day that exists, written `YYYY-MM-DD`; otherwise "".
+ *
+ * Checked by building the day and reading it back, so `2026-02-30` — which
+ * has the right shape and names no day at all — is dropped with the rest.
+ */
+function calendarDay(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  const day = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(day.getTime()) &&
+    day.toISOString().slice(0, 10) === value
+    ? value
+    : "";
 }
 
 /** The values that name something in `vocabulary`, in the vocabulary's order. */
