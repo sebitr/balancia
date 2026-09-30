@@ -29,6 +29,7 @@ import { afterResponse } from "./deliver";
 import {
   clearSessionCookie,
   readSessionCookie,
+  setRegistrationCookie,
   setSessionCookie,
 } from "./cookies";
 import {
@@ -138,6 +139,11 @@ export async function registerAction(
     if (result.session) {
       await setSessionCookie(result.session.token, result.session.expiresAt);
       claimedGroupId = await claimGuestIdentity(result.user.userId);
+    }
+    if (result.verificationRequired) {
+      // The link in that mail signs in this browser and no other one; see
+      // registration-browser.ts.
+      await setRegistrationCookie(result.user.userId);
     }
     return {
       verificationRequired: result.verificationRequired,

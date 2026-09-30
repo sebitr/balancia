@@ -25,6 +25,7 @@ import {
   renderVerifyCodeEmail,
 } from "./emails/templates";
 import { issueCode, consumeCode } from "./verification-codes";
+import { proveAddress } from "./address-proof";
 import type { Deliver } from "./deliver";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
@@ -215,15 +216,20 @@ export async function finishPasskeySignup(
       // insert stood in for it.
       name: identity.name ?? provisionalNameFor(identity.email),
       /*
-       * The address has not been confirmed and does not gate anything here.
+       * The address has not been confirmed and does not gate the arrival.
        *
-       * The confirmation link exists because a password account's address is
-       * its recovery route, so an unconfirmed one is a way in for whoever ends
-       * up owning it. A passkey account's way in is the authenticator, which
-       * this person has just proved they hold. Asking them to go and find an
-       * email before they may see their own balance would buy nothing — so the
-       * address is collected, left unverified, and asked for again from the
-       * checklist, where it costs nobody their arrival.
+       * A passkey account's way in is the authenticator, which this person
+       * has just proved they hold, so asking them to go and find an email
+       * before they may see their own balance would buy nothing. The address
+       * is collected and left unverified.
+       *
+       * What it does gate is what survives the inbox. Nothing here stops
+       * somebody typing an address that is not theirs, and the real owner's
+       * way in is recovery: a reset link or a sign-in code. The first time
+       * either proves the address, every passkey, Apple link, API key and
+       * session made before it is removed — the one made just now included,
+       * because nothing on the server can tell the owner's signup from a
+       * squatter's. See `proveAddress`.
        */
       emailVerified: false,
     },
@@ -302,10 +308,16 @@ export async function verifySignupCode(
     );
   }
 
-  await db
-    .update(users)
-    .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
-    .where(eq(users.id, row.id));
+  /*
+   * Ordinarily nothing is there to remove: a code signup's row has no
+   * credential until this session. But a password signup can reclaim the row
+   * while this code is still live, and the person spending the code need not
+   * be the one who typed that password — so it goes, with anything else that
+   * got in first. See `proveAddress`.
+   */
+  await db.transaction((tx) =>
+    proveAddress(row.id, { db: tx, password: "drop" }),
+  );
 
   const session = await createSession(row.id, context, { db });
   return {
@@ -417,11 +429,17 @@ export async function signInWithCode(
     );
   }
 
+  /*
+   * On an address that was never proved, this is the owner of the inbox
+   * arriving at an account somebody else may have made — with a passkey, or
+   * with a password they could not use until now. Everything that got in
+   * before this code is removed, the password with it, before the session
+   * below is created; see `proveAddress`. On a proved address it does nothing.
+   */
   if (row.emailVerifiedAt === null) {
-    await db
-      .update(users)
-      .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
-      .where(eq(users.id, row.id));
+    await db.transaction((tx) =>
+      proveAddress(row.id, { db: tx, password: "drop" }),
+    );
   }
 
   const session = await createSession(row.id, context, { db });

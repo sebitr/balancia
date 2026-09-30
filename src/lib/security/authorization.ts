@@ -44,6 +44,19 @@ export interface UserActor {
    * produces one, so no Server Component and no Server Action can see it.
    */
   readonly tokenGroupId?: string;
+  /**
+   * True when this actor arrived on an API key rather than on a session.
+   *
+   * A key authenticates as its owner, and nearly every route answers it
+   * exactly as it would answer them. This is for the few that answer it with
+   * less: the settle-up route leaves out the payout details of the people its
+   * owner owes, because a key is a credential that gets pasted into other
+   * people's software and nothing a script does needs somebody's IBAN.
+   *
+   * Set only by `apiActor`, beside `tokenGroupId` and for the same reason: it
+   * is a fact about who is asking, and the actor is where such facts travel.
+   */
+  readonly viaApiToken?: true;
 }
 
 export interface GuestActor {

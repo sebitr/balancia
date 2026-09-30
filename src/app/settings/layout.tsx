@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/security/actor";
 import { Screen } from "@/components/motion/screen";
+import { SerwistRegister } from "@/components/pwa/serwist-register";
 
 /**
  * Settings is a surface, not a page inside the app shell.
@@ -29,6 +30,10 @@ export default async function SettingsLayout({
   return (
     <main data-slot="app-screen" className="min-h-dvh bg-background">
       <Screen className="max-w-md px-0 py-0">{children}</Screen>
+      {/* Outside the app shell, so it registers the service worker itself —
+          a signed-in surface like any other, reached straight from a link in
+          an email as often as from the app. */}
+      <SerwistRegister />
     </main>
   );
 }

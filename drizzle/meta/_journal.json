@@ -267,6 +267,13 @@
       "when": 1789115244280,
       "tag": "0037_recurring_generation_hour",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790683444576,
+      "tag": "0038_guest_creator_seat",
+      "breakpoints": true
     }
   ]
 }

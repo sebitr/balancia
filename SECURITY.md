@@ -58,6 +58,11 @@ Anything that lets someone:
     the link can be revoked and regenerated at any time.
   - Members can edit and delete each other's expenses. Groups are built on
     mutual trust; the append-only activity log is the accountability mechanism.
+  - **A guest who owes someone sees how to pay them** — the IBAN or handle and
+    the payment code — and a guest can create that debt by recording an
+    expense "paid by X, split on me". Guests keep this so that a group whose
+    people are not all on the app can still pay each other. What a guest does
+    not get is described under _Guest access_ below.
 - Reports from automated scanners with no proof of exploitability.
 
 ---
@@ -82,12 +87,38 @@ Implemented in this repository — there is no third-party auth service.
   `Secure` whenever the public URL is HTTPS. **Only the SHA-256 hash is
   stored**, so a database leak yields no usable sessions. There is no
   signed-payload cookie whose secret could be stolen to mint arbitrary sessions.
+- **An email confirmation link confirms the address wherever it is opened,
+  and signs in only the browser that registered.** Registration leaves a
+  short-lived `HttpOnly` cookie, sealed under a key derived from
+  `AUTH_SECRET` and scoped to `/verify-email`, naming the account; the link
+  starts a session only where that cookie names the same account. Anywhere
+  else it lands on the sign-in page. A link is only a URL: without this, one
+  forwarded unopened to a guest signed the guest's browser into the sender's
+  account, and took the guest's seat with it.
 - **Passkeys (WebAuthn)** use `@simplewebauthn/server` for the protocol —
   CBOR/COSE parsing and signature verification are not things to hand-roll.
   Balancia owns the state machine around it: challenges are server-issued,
   stored, single-use and expire in five minutes; origin and relying-party ID
   come from validated configuration; the signature counter is checked and a
   counter that fails to advance is refused as a possible cloned authenticator.
+  Where the passkey is the only credential — a passkey signup, and any sign-in
+  to an account with no password — the authenticator must have verified its
+  holder with a PIN, fingerprint or face. Beside a password, a key that only
+  proves somebody touched it is still accepted.
+- **Recovery takes the account back, not only the password.** A password reset
+  ends every session, revokes every API key and spends any email change still
+  waiting for its link. Confirming an email change ends every session and
+  revokes every API key. A reset leaves the account's passkeys and its Apple
+  link in place: they are the owner's own in the ordinary case, and each can be
+  removed from Settings → Security. Changing a password while signed in ends
+  every other session and nothing else.
+- **The first proof of an address removes everything from before it.** A
+  passkey signup takes its address on trust, so an account can exist, with
+  credentials, before anybody has shown they read its inbox. The first reset
+  link, sign-in code or confirmation link that proves the address removes every
+  passkey, Apple link, API key, pending email change and session the account
+  held until then; a sign-in code also drops a password set before the proof.
+  Whoever proves the inbox starts with only what the proof handed them.
 
 ### Rate limiting
 
@@ -133,8 +164,40 @@ addresses never reaches:
   different group ID cannot widen it; it fails.
 - Guests can do everything financial and nothing administrative: no managing
   people, links, settings, ownership or deletion, and no import.
+- A guest is sent **no email address and no account id** for anybody in the
+  group — not the owner's sign-in address, not one typed for a person without
+  an account — on the web or over the API. They learn whether each person has
+  an account, and nothing that identifies it.
+
+### Payout details
+
+How somebody wants to be paid back belongs to their account, not to a group.
+
+- It is read only by people the group's balances say owe them money, guests
+  included — see _What is out of scope_ above. There is no way to ask for a
+  named person's details.
+- What such a reader gets is the detail to pay into and its payment code. A
+  postal address is never sent as a field; the Swiss QR-bill carries the
+  creditor's address inside its payload, because the standard requires it.
+- **API keys read none of it**, at any scope. The settle-up route answers a key
+  with the transfers and an empty list of payout hints.
+- A PayPal detail must be a `paypal.me` or `paypal.com` link, and only such a
+  link is ever drawn as the "Open PayPal" button.
 - Revoking a link, regenerating it, or removing the participant kills every
   session derived from it immediately.
+- **Claiming a seat with an account retires its links**, however the claim
+  happens — from the guest's own browser, from the app with the personal
+  link, or by picking the name from the group-wide link. A seat with an
+  account on it never opens as a guest again: redemption and every session
+  check refuse it, whatever the link row says.
+- **A group started without an account belongs to its creator's seat.** It
+  has no owner until somebody claims a seat, and only a claim of the seat it
+  was started from makes an owner; anybody else joins as a member. The
+  group-wide link does not offer that seat to anybody while the group has no
+  owner.
+- **Closing an account does not delete a group a guest is still using.** A
+  participant holding a live link counts as somebody left in the group, so
+  the group is kept, with no owner, rather than deleted with its expenses.
 
 ### Authorization
 
@@ -203,6 +266,10 @@ Not conventionally "security", but it is what the application is for:
   to start with a non-localhost HTTP `APP_URL`.
 - **Make sure your proxy sets `X-Forwarded-For`.** Without it, rate limiting
   sees every request as one client.
+- **Keep the published ports on `127.0.0.1`**, which is what `compose.yaml`
+  does unless told otherwise. A client that reaches the app's port directly
+  skips the proxy and writes its own `X-Forwarded-For`; a database on the
+  network has only its password in front of it.
 - **Set `TRUSTED_PROXY_HOPS` to the number of proxies in front of Balancia**,
   and no higher. Each hop too many lets a client write its own address into
   the header and take a fresh allowance on every limit that counts clients.
@@ -211,3 +278,7 @@ Not conventionally "security", but it is what the application is for:
 - **Keep `ALLOW_REGISTRATION=false`** on a private instance.
 - **Do not raise `AUTH_RATE_LIMIT_MAX`** on a public deployment.
 - **Update regularly**; run `pnpm audit:prod` if you build your own images.
+- **Check where a pulled image came from.** Published images are attested by
+  the GitHub Actions workflow that built them, after CI passed on the same
+  commit:
+  `gh attestation verify oci://docker.io/sebitro/balancia:<tag> -R sebitr/balancia`.

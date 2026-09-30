@@ -25,6 +25,20 @@ describe("cursor encoding", () => {
     expect(decodeCursor(read)).toEqual(KEY);
   });
 
+  it("carries the amount a largest-first list is ranked by, and only then", () => {
+    const ranked = { ...KEY, amount: "150000" };
+    expect(encodeCursor(ranked)).toBe(`${encodeCursor(KEY)}|150000`);
+    expect(decodeCursor(encodeCursor(ranked))).toEqual(ranked);
+    // A chronological cursor says nothing about amounts, not "amount: 0".
+    expect(decodeCursor(encodeCursor(KEY))).not.toHaveProperty("amount");
+  });
+
+  it("refuses an amount it could not have written", () => {
+    expect(decodeCursor(`${encodeCursor(KEY)}|-5`)).toBeNull();
+    expect(decodeCursor(`${encodeCursor(KEY)}|12.50`)).toBeNull();
+    expect(decodeCursor(`${encodeCursor(KEY)}|1|2`)).toBeNull();
+  });
+
   it("refuses anything it did not write", () => {
     // Every one of these would otherwise reach the database as a parameter.
     expect(decodeCursor(null)).toBeNull();

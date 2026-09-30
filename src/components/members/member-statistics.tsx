@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CalendarOff } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { rovingChoice } from "@/components/ui/roving-choice";
 import { Amount } from "@/components/money/amount";
 import { CurrencyHeading } from "@/components/money/currency-heading";
 import {
@@ -172,6 +173,12 @@ export function MemberStatistics({
 }) {
   const t = useTranslations("memberStats");
   const [range, setRange] = useState<StatsRange>("1y");
+  const rangePanel = useId();
+  const rangeKeys = rovingChoice({
+    values: RANGES,
+    selected: range,
+    onSelect: setRange,
+  });
 
   const selected =
     stats.ranges.find((candidate) => candidate.key === range) ??
@@ -202,7 +209,10 @@ export function MemberStatistics({
                 key={candidate}
                 type="button"
                 role="tab"
+                id={`${rangePanel}-${candidate}`}
                 aria-selected={active}
+                aria-controls={rangePanel}
+                {...rangeKeys(candidate)}
                 onClick={() => setRange(candidate)}
                 className={cn(
                   "rounded-full px-2.5 py-1 text-xs font-semibold transition-colors active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0",
@@ -218,24 +228,34 @@ export function MemberStatistics({
         </div>
       </div>
 
-      {!selected || selected.currencies.length === 0 ? (
-        <EmptyState
-          icon={CalendarOff}
-          title={t("emptyTitle")}
-          description={t(viewingSelf ? "emptyYou" : "emptyThem", { name })}
-        />
-      ) : (
-        selected.currencies.map((entry) => (
-          <CurrencyBlock
-            key={entry.currency}
-            entry={entry}
-            range={selected}
-            name={name}
-            viewingSelf={viewingSelf}
-            showCurrency={selected.currencies.length > 1}
+      {/* What the range tabs switch, and nothing below it: the activity and
+          the records are not windowed. Spaced as the section is, so the panel
+          adds no spacing of its own. */}
+      <div
+        id={rangePanel}
+        role="tabpanel"
+        aria-labelledby={`${rangePanel}-${range}`}
+        className="flex flex-col gap-3.5"
+      >
+        {!selected || selected.currencies.length === 0 ? (
+          <EmptyState
+            icon={CalendarOff}
+            title={t("emptyTitle")}
+            description={t(viewingSelf ? "emptyYou" : "emptyThem", { name })}
           />
-        ))
-      )}
+        ) : (
+          selected.currencies.map((entry) => (
+            <CurrencyBlock
+              key={entry.currency}
+              entry={entry}
+              range={selected}
+              name={name}
+              viewingSelf={viewingSelf}
+              showCurrency={selected.currencies.length > 1}
+            />
+          ))
+        )}
+      </div>
 
       <ActivityCard
         days={stats.activity.days}

@@ -254,6 +254,15 @@ E2E_DATABASE_URL=postgres://balancia:balancia@localhost:5432/balancia_e2e pnpm t
 Playwright starts a **production** build, so the journeys exercise what a
 self-hoster actually runs.
 
+`tests/e2e/accessibility.spec.ts` runs axe (`@axe-core/playwright`) over the
+screens every reader passes through — sign-in, the dashboard, a group, adding
+an expense, settling up — and fails on any **serious** or **critical**
+violation of WCAG 2.2 AA. The unit rules (field sizes, type scale, tap
+targets, token contrast) all read source; this is the one check that reads
+the page the browser built, which is where a button with no name or an
+`aria-controls` pointing at nothing shows up. Moderate and minor findings are
+not gated; the failure message lists the rule and the first elements it hit.
+
 Passkey tests drive Chrome's WebAuthn virtual authenticator over CDP: the
 browser produces a genuine attestation and assertion, and the server verifies
 signature, origin, relying-party ID and challenge. Nothing is stubbed
@@ -273,6 +282,19 @@ to do the same.
 The service worker and the install experience are separate concerns. Serwist
 owns the former (see `serwist.config.mjs`); everything about _offering_ the
 install lives in `src/components/pwa/`.
+
+**The worker is registered by the app, not by the root layout.** Registering
+it installs a precache of every build chunk under the size line in
+`serwist.config.mjs` — a few megabytes, fetched in the background — which is
+right for somebody using the app and wrong for a visitor reading the homepage,
+or for somebody who has opened a join link and not joined yet. `SerwistRegister`
+is mounted by `AppShell`, which every signed-in screen and every group screen
+renders in (guests' included), and by the settings layout; turning push on
+registers it on demand, which the onboarding checklist needs. Once registered
+it controls every page at the origin, the homepage included, so a cold start
+with no signal still lands on the offline screen.
+`src/components/pwa/serwist-register.test.tsx` fails if anything the homepage
+or a join link renders mounts it.
 
 `use-install-prompt.ts` is the single source of truth. It is a module-level
 store rather than React state, because `beforeinstallprompt` fires exactly
@@ -365,6 +387,23 @@ No business logic lives in an action or a component.
 **TanStack Query** is used only where a client workflow genuinely benefits —
 currently just passkey management, whose list changes after a browser-only
 ceremony. Page data comes from Server Components.
+
+**Client Components get a list of messages, not the catalogue.** A Server
+Component sends the browser its rendered strings; only what a Client Component
+asks for with `useTranslations` has to travel as messages, and until this was
+split every page carried every string the app has. `src/i18n/client-messages.ts`
+lists what does: the root provider carries `ROOT_NAMESPACES`, and each area —
+the homepage, the `(auth)` screens, onboarding, a group — adds its own through
+`AreaMessages`, mounted where that area begins. A new namespace in a Client
+Component needs listing where that component renders.
+`src/i18n/client-messages.test.ts` follows the imports the way the bundler
+does, and names the file, the namespace and the provider it is missing from;
+it fails as well on a listed path nothing reads any more, and on a namespace
+that is not written out as a literal, which no reading of the code can check.
+A component test hands its provider the whole catalogue unless it says
+otherwise; `renderWithIntl(ui, { area: "group" })` (`tests/helpers/intl.tsx`)
+hands it only what that area carries, so a string missing from the list shows
+up as its key in the test and not only in the browser.
 
 **The service worker** never caches authentication endpoints, receipts or
 mutations, and there is no offline data entry. That is deliberate: queueing

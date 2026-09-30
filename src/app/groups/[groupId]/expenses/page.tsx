@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Plus, Receipt } from "lucide-react";
@@ -10,7 +11,8 @@ import {
   firstTransactionDate,
   loadTransactionPage,
 } from "@/modules/expenses/transactions";
-import { hasSettlements } from "@/modules/settlements/service";
+import { settlementTotals } from "@/modules/settlements/service";
+import { moneyForGroup } from "@/modules/currencies/display";
 import { isSpending } from "@/modules/expenses/direction";
 import { todayIn } from "@/modules/recurring/schedule";
 import {
@@ -50,25 +52,36 @@ import {
  * off without saying so — a group holding entries back to 2019 showed nothing
  * before 2022.
  *
- * The two things that describe the *whole* group rather than the page — the
- * category spread, and which kind chips exist — are measured over all of it,
- * from their own queries. A proportion or a chip counted over the pages read
- * so far would redraw itself under the reader as they scrolled.
+ * The things that describe the *whole* group rather than the page — the
+ * category spread, which kind chips exist, and whether amounts can be ranked —
+ * are measured over all of it, from their own queries. A proportion or a chip
+ * counted over the pages read so far would redraw itself under the reader as
+ * they scrolled. Those queries return sums rather than rows: the database adds
+ * the group's history up, and the page reads tens of totals instead of every
+ * expense ever recorded.
+ *
+ * A filter is not applied here. The island asks the transactions endpoint for
+ * the filtered pages, or filters the rows it holds when it holds them all.
  */
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("expensesList");
+  return { title: t("eyebrow") };
+}
+
 export default async function ExpensesPage({
   params,
 }: PageProps<"/groups/[groupId]/expenses">) {
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [page, spending, settlementsExist, people, firstDate] =
-    await Promise.all([
-      loadTransactionPage(access),
-      listSpreadEntries(access.groupId),
-      hasSettlements(access.groupId),
-      listParticipants(access.groupId),
-      firstTransactionDate(access.groupId),
-    ]);
+  const [page, spending, repaid, people, firstDate] = await Promise.all([
+    loadTransactionPage(access),
+    listSpreadEntries(access.groupId),
+    settlementTotals(access.groupId),
+    listParticipants(access.groupId),
+    firstTransactionDate(access.groupId),
+  ]);
 
   const t = await getTranslations("expensesList");
 
@@ -98,8 +111,9 @@ export default async function ExpensesPage({
   /*
    * The spread, per currency and never across them.
    *
-   * A converted group resolves to exactly one currency, which is the screen
-   * the design draws. A `separate` group — the default — can hold several, and
+   * A converted group resolves to one currency, which is the screen the design
+   * draws — unless it holds foreign rows that arrived with no rate, which stay
+   * in their own. A `separate` group — the default — can hold several, and
    * there is no honest way to rank categories across them: the comparison the
    * spine invites would need an exchange rate nobody chose. So the spine
    * appears only when there is one currency to measure in, and simply is not
@@ -111,10 +125,11 @@ export default async function ExpensesPage({
    * a filter whose only setting is the list already on screen. So it stays out
    * until there is a division to draw, and the list takes the width back.
    */
-  const spreads = categoryTotals(spending, {
+  const display = {
     mode: access.group.currencyMode,
     baseCurrency: access.group.baseCurrency,
-  });
+  };
+  const spreads = categoryTotals(spending, display);
   const single = spreads.length === 1 ? spreads[0] : null;
   const bands: BandView[] | null =
     single && isCategorised(single)
@@ -139,7 +154,21 @@ export default async function ExpensesPage({
   if (spending.some((entry) => !isSpending(entry.direction))) {
     kinds.push("revenue");
   }
-  if (settlementsExist) kinds.push("settlement");
+  if (repaid.length > 0) kinds.push("settlement");
+
+  /*
+   * Whether `Largest amount` ranks anything, asked of every row the group has
+   * in the currency each is listed in. It used to be read off the rows in the
+   * browser, which was only the whole group because opening the sheet used to
+   * download it; now the browser holds a page, and a page in one currency says
+   * nothing about the next.
+   */
+  const listedIn = new Set(
+    [...spending, ...repaid].map(
+      (entry) => moneyForGroup(entry, display).currency,
+    ),
+  );
+  const byAmount = listedIn.size <= 1;
 
   /*
    * What the filter sheet's Category list opens on, and the counts beside it.
@@ -157,7 +186,9 @@ export default async function ExpensesPage({
   const counts: Record<string, number> = {};
   for (const entry of spending) {
     const category = normalizeLegacyCategory(entry.category);
-    if (category !== null) counts[category] = (counts[category] ?? 0) + 1;
+    if (category !== null) {
+      counts[category] = (counts[category] ?? 0) + entry.count;
+    }
   }
   const used = EXPENSE_CATEGORY_IDS.filter(
     (category: ExpenseCategory) => counts[category] !== undefined,
@@ -177,6 +208,7 @@ export default async function ExpensesPage({
       }))}
       used={used}
       counts={counts}
+      byAmount={byAmount}
       firstDate={firstDate}
       // The group's own calendar day, not the server's: `This month` has to
       // mean the month the expense dates were written against.

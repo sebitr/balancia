@@ -15,7 +15,9 @@
     "optional": "optional",
     "retry": "Try again",
     "undo": "Undo",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "close": "Close",
+    "toastRegion": "Status messages"
   },
   "nav": {
     "language": "Language",
@@ -710,6 +712,7 @@
       "open": "Filter and sort",
       "openWith": "Filter and sort, {count, plural, one {# filter} other {# filters}} applied",
       "apply": "{count, plural, =0 {No transactions match} one {Show # transaction} other {Show # transactions}}",
+      "applyUncounted": "Show transactions",
       "when": "When",
       "when_any": "Any time",
       "when_month": "This month",
@@ -915,6 +918,15 @@
     "empty": "Nothing has happened in this group yet.",
     "someone": "Someone",
     "withDescription": "{action}: {description}",
+    "restore": {
+      "action": "Restore",
+      "expense": "Restore the expense “{description}”",
+      "settlement": "Restore the repayment of {amount}",
+      "recurring": "Restore the recurring expense “{description}”",
+      "unnamed": "Restore what was deleted",
+      "done": "Restored",
+      "failed": "It could not be put back. Try again."
+    },
     "actions": {
       "expense": {
         "created": "added an expense",
@@ -978,7 +990,7 @@
     "descriptionPlaceholder": "Rent",
     "amount": "Amount",
     "currency": "Currency",
-    "rateHint": "Reused for each generated occurrence.",
+    "rateHint": "Used for each occurrence, unless that day's rate can be looked up.",
     "repeats": "Repeats",
     "weekly": "Weekly",
     "monthly": "Monthly",
@@ -1485,13 +1497,13 @@
   "resetPassword": {
     "metaTitle": "Set a new password",
     "title": "Set a new password",
-    "subtitle": "Choose the password for your account. Everywhere you are signed in will be signed out.",
+    "subtitle": "Choose the password for your account. Everywhere you are signed in will be signed out, and your API keys will stop working.",
     "password": "New password",
     "passwordHint": "At least 10 characters.",
     "confirmPassword": "Confirm password",
     "submit": "Save the new password",
     "doneTitle": "Password changed",
-    "doneBody": "Your new password is set, and every device you were signed in on has been signed out.",
+    "doneBody": "Your new password is set. Every device you were signed in on has been signed out, and your API keys have been revoked.",
     "goToSignIn": "Go to sign in",
     "noTokenTitle": "That link is incomplete",
     "noTokenBody": "This page needs the link from the reset email. Ask for a new one and open it from your inbox.",
@@ -1937,7 +1949,31 @@
     "chooseIcon": "Choose an icon",
     "iconColorLabel": "Colour",
     "iconLabel": "Icon",
-    "done": "Done"
+    "done": "Done",
+    "iconNames": {
+      "plane": "Plane",
+      "luggage": "Luggage",
+      "house": "House",
+      "tent": "Tent",
+      "car": "Car",
+      "cart": "Shopping trolley",
+      "coffee": "Coffee",
+      "meal": "Meal",
+      "party": "Party",
+      "gift": "Gift",
+      "music": "Music",
+      "sport": "Sport",
+      "bike": "Bike",
+      "heart": "Heart",
+      "star": "Star"
+    },
+    "colorNames": {
+      "coral": "Coral",
+      "emerald": "Emerald",
+      "amber": "Amber",
+      "plum": "Plum",
+      "blue": "Blue"
+    }
   },
   "groupSettings": {
     "details": "Details",
@@ -2030,9 +2066,10 @@
   },
   "importWizard": {
     "fileLabel": "Backup or export",
-    "fileHelp": "A Balancia JSON export, a Splitwise group CSV, or a Splitwise JSON backup. The file is parsed on this server and never sent anywhere else.",
+    "fileHelp": "A Balancia JSON export, a Splitwise group CSV, or a Splitwise JSON backup, up to {limit} MB. The file is parsed on this server and never sent anywhere else.",
     "read": "Read the file",
     "readFailed": "That file could not be read.",
+    "tooLarge": "That file is larger than {limit} MB, the most one import can read.",
     "commitFailed": "The import could not be completed.",
     "finished": "Import finished",
     "completeTitle": "Import complete",
@@ -2045,7 +2082,7 @@
     "expenseCount": "{count, plural, one {# expense} other {# expenses}}",
     "settlementCount": "{count, plural, one {# payment} other {# payments}}",
     "duplicateCount": "{count, plural, one {# already imported} other {# already imported}}",
-    "warningsTitle": "{count, plural, one {# row will be skipped} other {# rows will be skipped}}",
+    "warningsTitle": "{count, plural, one {# thing to check before importing} other {# things to check before importing}}",
     "warningRow": "Row {row}: ",
     "andMore": "…and {count} more.",
     "matchTitle": "Match the people",
@@ -2409,7 +2446,7 @@
     "delete": {
       "trigger": "Delete",
       "title": "Delete this entry?",
-      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after.",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after, or restore it later from Activity.",
       "keep": "Keep it",
       "confirm": "Delete",
       "deleted": "Entry deleted",
@@ -2511,6 +2548,8 @@
     "fileEmpty": "That file is empty.",
     "fileTooLarge": "That file is larger than the {limit} MB upload limit.",
     "fileType": "Receipts must be a JPEG, PNG, WebP, GIF, HEIC image or a PDF.",
+    "importMappingInvalid": "That matching does not fit the file that was read. Read the file again.",
+    "importParticipantUnknown": "Somebody you matched is not in this group any more. Read the file again and match the people afresh.",
     "signedInRequired": "You need to be signed in.",
     "unknownCurrency": "That is not a currency Balancia knows.",
     "reminderEmpty": "A reminder needs something to say.",
@@ -2540,6 +2579,7 @@
     "passkeyNotRegistered": "That passkey could not be registered.",
     "passkeyUnverified": "That passkey could not be verified.",
     "passkeyUnverifiedRepeatedly": "That passkey could not be verified. If this keeps happening, remove and register it again.",
+    "passkeyUserVerificationRequired": "That passkey did not check it was you with a PIN, fingerprint or face. An account without a password needs one that does.",
     "passkeyChallengeExpired": "That passkey request expired. Try again.",
     "passkeySignInExpired": "That sign-in request expired. Try again.",
     "passkeyAlreadyRegistered": "That passkey is already registered.",
@@ -3207,7 +3247,7 @@
     "delete": {
       "trigger": "Delete this entry",
       "title": "Delete this entry?",
-      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. This cannot be undone from the app.",
+      "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after, or restore it later from Activity.",
       "keep": "Keep it",
       "confirm": "Delete"
     },
@@ -3318,6 +3358,7 @@
       "iban": "That IBAN does not check out — one character is usually the culprit.",
       "email": "That does not look like an email address.",
       "link": "Write the whole link, like paypal.me/you.",
+      "paypalHost": "That link is not PayPal's. Use your own paypal.me link, like paypal.me/you.",
       "unknownMethod": "That is not a payment method Balancia knows.",
       "invalid": "That detail cannot be saved as it is.",
       "address": "Enter at least a postcode, a town and a two-letter country."

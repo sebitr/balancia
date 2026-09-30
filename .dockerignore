@@ -11,6 +11,9 @@ test-results
 .env.*
 !.env.example
 data
+# scripts/backup.sh's default destination: dumps of the database and copies of
+# .env, which `COPY . .` would otherwise put in a builder layer.
+backups
 
 .git
 .github

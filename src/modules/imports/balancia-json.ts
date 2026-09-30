@@ -3,6 +3,7 @@ import {
   DEFAULT_DIRECTION,
   isEntryDirection,
 } from "@/modules/expenses/direction";
+import { isCalendarDate } from "./limits";
 import {
   ImportParseError,
   type ImportAdapter,
@@ -112,7 +113,9 @@ function asMinorUnits(value: unknown): string | null {
 function asDate(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
-  return match ? match[1] : null;
+  // The exporter only ever writes real days, but a backup is a file somebody
+  // can edit, and `2024-02-30` has the shape while PostgreSQL refuses it.
+  return match && isCalendarDate(match[1]) ? match[1] : null;
 }
 
 function envelope(payload: unknown): BackupEnvelope | null {
@@ -305,6 +308,15 @@ export const balanciaJsonAdapter: ImportAdapter = {
         warnings.push({
           rowNumber,
           message: "Skipped an expense that names nobody",
+        });
+        continue;
+      }
+      // The database refuses a negative payment, so the exporter never wrote
+      // one; a file that holds one has been edited since.
+      if (payers.shares.some((payer) => BigInt(payer.amount) < 0n)) {
+        warnings.push({
+          rowNumber,
+          message: "Skipped an expense with a negative payment",
         });
         continue;
       }
