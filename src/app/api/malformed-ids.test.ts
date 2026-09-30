@@ -31,6 +31,9 @@ vi.mock("next-intl/server", () => ({
     const entries = messages[namespace] as Record<string, string>;
     return (key: string) => entries[key] ?? key;
   },
+  // Evaluated on import: the transactions route reaches the reader's date
+  // notation, which reaches the request's locale. Nothing here calls it.
+  getRequestConfig: (create: unknown) => create,
 }));
 vi.mock("@/lib/security/actor", () => {
   const user = {
