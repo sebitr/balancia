@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { apiActor } from "@/app/api/mobile";
+import { apiActor, isUuid } from "@/app/api/mobile";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { downloadAttachment } from "@/modules/attachments/service";
 import { ObjectNotFoundError } from "@/lib/storage";
@@ -30,6 +30,11 @@ async function handleGet(
   context: RouteContext<"/api/groups/[groupId]/attachments/[attachmentId]">,
 ) {
   const { groupId, attachmentId } = await context.params;
+  // Before any query: PostgreSQL throws on a malformed UUID, which would
+  // answer 500 for what is only a receipt that does not exist.
+  if (!isUuid(groupId) || !isUuid(attachmentId)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   try {
     const actor = await apiActor(

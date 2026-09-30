@@ -6,6 +6,7 @@ import {
   AuthorizationError,
 } from "@/lib/security/authorization";
 import { getCurrentActor } from "@/lib/security/actor";
+import { isIdempotencyKey } from "@/lib/idempotency";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import { resolveApiToken } from "@/modules/api-tokens/service";
 import {
@@ -304,7 +305,7 @@ export function isUuid(value: string): boolean {
  */
 export function idempotencyKey(request: Request): string | undefined {
   const header = request.headers.get("Idempotency-Key")?.trim();
-  return header && isUuid(header) ? header : undefined;
+  return isIdempotencyKey(header) ? header : undefined;
 }
 
 function iso(value: Date | null): string | null {

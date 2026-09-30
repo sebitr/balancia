@@ -4,6 +4,7 @@ import fc from "fast-check";
 import {
   CurrencyMismatchError,
   InvalidAmountError,
+  MAX_MINOR_UNITS,
   addMoney,
   convertMoney,
   deserializeMoney,
@@ -182,6 +183,71 @@ describe("convertMoney", () => {
     expect(() => convertMoney(money(100n, "EUR"), "USD", "-1")).toThrow(
       InvalidAmountError,
     );
+  });
+});
+
+/**
+ * A conversion worked in whole numbers: the amount times the rate's digits,
+ * shifted for the two exponents, and rounded half-even exactly once. What
+ * `convertMoney` has to agree with, digit for digit.
+ */
+function exactConversion(amount: bigint, rate: string, shift: number): bigint {
+  const [whole, fraction = ""] = rate.split(".");
+  let numerator = (amount < 0n ? -amount : amount) * BigInt(whole + fraction);
+  let denominator = 10n ** BigInt(fraction.length);
+  if (shift >= 0) numerator *= 10n ** BigInt(shift);
+  else denominator *= 10n ** BigInt(-shift);
+  const quotient = numerator / denominator;
+  const twice = (numerator % denominator) * 2n;
+  const rounded =
+    twice > denominator || (twice === denominator && quotient % 2n === 1n)
+      ? quotient + 1n
+      : quotient;
+  return amount < 0n ? -rounded : rounded;
+}
+
+describe("convertMoney at the accepted bounds (property-based)", () => {
+  // Any rate `parseExchangeRate` lets through: up to a billion, twelve places.
+  const rateArbitrary = fc
+    .tuple(
+      fc.integer({ min: 0, max: 999_999_999 }),
+      fc.bigInt({ min: 0n, max: 10n ** 12n - 1n }),
+    )
+    .filter(([whole, fraction]) => whole > 0 || fraction > 0n)
+    .map(
+      ([whole, fraction]) =>
+        `${whole}.${fraction.toString().padStart(12, "0")}`,
+    );
+
+  it("rounds once, whatever the size of the amount and the rate", () => {
+    fc.assert(
+      fc.property(
+        fc.bigInt({ min: -MAX_MINOR_UNITS, max: MAX_MINOR_UNITS }),
+        rateArbitrary,
+        fc.constantFrom(
+          ["EUR", "USD"] as const,
+          ["EUR", "JPY"] as const,
+          ["JPY", "KWD"] as const,
+        ),
+        (amount, rate, [from, to]) => {
+          const shift = currencyExponent(to) - currencyExponent(from);
+          expect(convertMoney(money(amount, from), to, rate).amount).toBe(
+            exactConversion(amount, rate, shift),
+          );
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+
+  it("does not round the product before the rounding it documents", () => {
+    // Found at decimal.js's default twenty digits: the product was cut to
+    // twenty places first, and the one rounding that followed came out a
+    // cent short.
+    expect(
+      convertMoney(money(31508292346484045n, "EUR"), "USD", "3.424951230535")
+        .amount,
+    ).toBe(107914364644147053n);
   });
 });
 
