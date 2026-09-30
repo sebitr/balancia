@@ -748,6 +748,41 @@ describe("a payment an older import took for an expense", () => {
     expect(await countEntries(group)).toEqual({ expenses: 7, settlements: 0 });
   });
 
+  it("is recognised in the preview when the limits drop a row before it", async () => {
+    // The row too large to record is dropped before anything is fingerprinted.
+    // The older readings were once taken from every parsed row, the dropped
+    // one included, and matched up by position with the rows kept — so the
+    // payment was checked against the row before it, and the preview offered
+    // to import a payment the commit then skipped.
+    const bytes = Buffer.from(
+      [
+        "Date,Description,Category,Cost,Currency,Bob,Carol",
+        "2025-05-16,Yacht,General,99999999999999999999.00,USD,50000000000000000000.00,-50000000000000000000.00",
+        "2025-05-17,Bob paid Carol,Payment,10.00,USD,10.00,-10.00",
+        "",
+      ].join("\n"),
+    );
+    const stage = (group: Group) =>
+      stageImport(group.access, { name: "payment.csv", bytes });
+
+    const group = await newGroup();
+    const older = await stage(group);
+    expect(older.rowsTotal).toBe(1);
+    await getDb()
+      .update(importRows)
+      .set({
+        kind: "expense",
+        staged: olderReading,
+        fingerprint: fingerprintRow(group.groupId, olderReading),
+      })
+      .where(eq(importRows.importRunId, older.importRunId));
+    expect((await commit(group, older)).imported).toBe(1);
+
+    const preview = await stage(group);
+    expect(preview.duplicateCount).toBe(1);
+    expect((await commit(group, preview)).imported).toBe(0);
+  });
+
   it("imports as a payment into a group that never had the file", async () => {
     const group = await newGroup();
     const report = await commit(group, await stageNow(group));
