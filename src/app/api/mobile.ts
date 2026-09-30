@@ -34,6 +34,7 @@ import type { GroupOverview } from "@/modules/groups/overview";
 import type { GroupPosition, HomeOverview } from "@/modules/balances/overview";
 import type {
   Actor,
+  AuthorizationCode,
   GroupAccess,
   UserActor,
 } from "@/lib/security/authorization";
@@ -64,7 +65,9 @@ import type {
  *  - Calendar dates stay `YYYY-MM-DD` strings; instants are ISO 8601.
  *  - An authorization failure is a 404, indistinguishable from a group that
  *    does not exist, so group IDs are not probeable (same rule as the export
- *    route). Missing authentication is the one 401.
+ *    route). A refusal given to somebody already in the group is the
+ *    exception, and says what it is — see `IN_GROUP_STATUS`. Missing
+ *    authentication is the one 401.
  *  - Everything is `Cache-Control: private, no-store`: each response is one
  *    person's financial data and must not sit in a shared cache.
  */
@@ -216,10 +219,13 @@ export function mobileApiError(
     return noStore({ error: "Sign in to continue." }, { status: 401 });
   }
   if (error instanceof AuthorizationError) {
-    return noStore({ error: "Not found." }, { status: 404 });
+    const status = IN_GROUP_STATUS[error.code];
+    return status === undefined
+      ? noStore({ error: "Not found." }, { status: 404 })
+      : noStore({ error: error.message, code: error.code }, { status });
   }
-  // The one refusal that is *not* answered 404. A key that is read-only, or
-  // pinned, or pointed at the account is being told something about itself,
+  // Not answered 404 either. A key that is read-only, or pinned, or pointed
+  // at the account is being told something about itself,
   // and the holder needs it in order to mint a better one — see the note on
   // `TokenScopeError`. Nothing about the group is disclosed either way.
   if (error instanceof TokenScopeError) {
@@ -254,6 +260,50 @@ export function mobileApiError(
   );
   return noStore({ error: "Unavailable." }, { status: 500 });
 }
+
+/**
+ * The refusals given to somebody already in the group, and the status each
+ * answers with instead of 404. The body is `{error, code}`: the English
+ * sentence, and the code a client branches on.
+ *
+ * Every other `AuthorizationError` stays the anonymous 404, and two of them
+ * must: the bare refusal an outsider gets (`noGroupAccess`) and "that item is
+ * not in this group" (`notInGroup`) are what keep a group id or an entry id
+ * from being probed. A code left out of this table falls to that 404 as well,
+ * so a refusal added later discloses nothing until somebody decides it may —
+ * `mobile.test.ts` finds every code the services throw and fails until each
+ * one has been decided.
+ *
+ * Each of these is thrown only after `authorizeGroup` has let the caller in,
+ * so its status tells them nothing they could not already read: that the
+ * group exists, and what their role in it allows, come back on every group
+ * read. The 404 cost the other way. A client told "Not found." about its own
+ * group has every reason to think the group has gone — the web's own offline
+ * queue did, and told somebody whose entry named a person removed while they
+ * were offline that they had lost the group.
+ */
+const IN_GROUP_STATUS: Partial<Record<AuthorizationCode, 403 | 409 | 422>> = {
+  // The request names somebody it may not: removed from the group, or never
+  // in it. A made-up id and another group's participant get the same answer,
+  // so nothing outside the group is disclosed. It is the same kind of refusal
+  // as a bad split — the entry is fine but for who is on it, and a person has
+  // to pick again — so it is the same 422.
+  participantNotInGroup: 422,
+  importParticipantUnknown: 422,
+  // The group's own state forbids it, whoever asks and however often: the
+  // owner cannot be taken out of their own group, a person who signs in has
+  // no use for a guest link, and an archived group takes no changes until it
+  // is restored.
+  ownerNotRemovable: 409,
+  participantHasAccount: 409,
+  groupArchived: 409,
+  // Somebody may do this, and it is not the caller: an owner-only action asked
+  // for by a member or a guest, another person's own name and address, an
+  // instance setting.
+  noPermission: 403,
+  notYourAccount: 403,
+  adminRequired: 403,
+};
 
 /** 422 with the schema's own message — they are written as user-facing prose. */
 export function invalidInput(error: z.ZodError): NextResponse {

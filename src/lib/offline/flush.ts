@@ -56,7 +56,27 @@ async function send(entry: QueuedEntry): Promise<ReplayVerdict> {
   } catch {
     return { kind: "retry" };
   }
-  return classifyStatus(response.status);
+  return classifyStatus(response.status, await refusalCode(response));
+}
+
+/**
+ * The `code` a refusal carries, when it carries one.
+ *
+ * Never throws. A body that is not the API's JSON — a proxy's error page, a
+ * captive portal — is a refusal with no code, and not a reason for the flush
+ * to lose its place.
+ */
+async function refusalCode(response: Response): Promise<string | undefined> {
+  if (response.ok) return undefined;
+  try {
+    const body: unknown = await response.json();
+    if (typeof body !== "object" || body === null || !("code" in body)) {
+      return undefined;
+    }
+    return typeof body.code === "string" ? body.code : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
