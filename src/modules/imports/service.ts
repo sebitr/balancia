@@ -572,11 +572,14 @@ export async function commitImportRun(
         resolved.set(sourceName.trim().toLowerCase(), created.id);
         participantsCreated += 1;
       } else {
-        // Only accept IDs that really belong to this group.
+        // Only accept IDs that really belong to this group. Saving the mapping
+        // already held it to that, so the reader who gets here — somebody was
+        // removed since — is told what the saving step would tell them.
         const belongs = existing.some((p) => p.id === target);
         if (!belongs) {
           throw new AuthorizationError(
             "The import maps someone onto a participant from another group.",
+            "importParticipantUnknown",
           );
         }
         resolved.set(sourceName.trim().toLowerCase(), target);
