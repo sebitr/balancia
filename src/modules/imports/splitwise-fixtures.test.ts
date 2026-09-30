@@ -112,4 +112,52 @@ describe("a Splitwise payment", () => {
       });
     }
   });
+
+  it("is read the same way from either export when Splitwise writes 'Bob paid Carol'", () => {
+    // The CSV row is Bob +10, Carol −10: paid − owed. A JSON backup of the
+    // same payment carries the two halves of that subtraction separately,
+    // and flags the entry as a payment outright.
+    const backup = splitwiseJsonAdapter.parse(
+      JSON.stringify({
+        expenses: [
+          {
+            id: 2001,
+            description: "Bob paid Carol",
+            payment: true,
+            cost: "10.0",
+            currency_code: "USD",
+            date: "2025-05-17T12:00:00Z",
+            deleted_at: null,
+            category: { name: "Payment" },
+            users: [
+              {
+                user: { id: 2, first_name: "Bob", last_name: null },
+                user_id: 2,
+                paid_share: "10.0",
+                owed_share: "0.0",
+              },
+              {
+                user: { id: 3, first_name: "Carol", last_name: null },
+                user_id: 3,
+                paid_share: "0.0",
+                owed_share: "10.0",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const expected = {
+      kind: "settlement",
+      fromSourceName: "Bob",
+      toSourceName: "Carol",
+      amount: "1000",
+      currency: "USD",
+      date: "2025-05-17",
+    };
+    expect(settlementIn("bob-paid-carol.csv")).toMatchObject(expected);
+    expect(backup.rows.map((entry) => entry.row)).toEqual([
+      expect.objectContaining(expected),
+    ]);
+  });
 });

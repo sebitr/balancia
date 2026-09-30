@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
 import {
@@ -19,7 +19,9 @@ import {
   fingerprintRow,
   saveParticipantMapping,
   stageImport,
+  type ImportPreview,
 } from "@/modules/imports/service";
+import type { StagedExpense } from "@/modules/imports/types";
 import { MAX_IMPORT_BYTES } from "@/modules/imports/limits";
 import { splitwiseCsvAdapter } from "@/modules/imports/splitwise-csv";
 import { loadGroupBalances } from "@/modules/balances/service";
@@ -619,5 +621,176 @@ describe("retry safety", () => {
 
     expect(rows).toHaveLength(5);
     expect(rows.every((row) => row.status === "skipped_duplicate")).toBe(true);
+  });
+});
+
+// Until the importer recognised "Bob paid Carol" under Payment as a payment,
+// it wrote that line as an expense, and a group imported then holds it under an
+// expense's fingerprint. The same file imported now reads the line as a
+// payment, whose fingerprint is a different one — so unless the old one is
+// known as well, the repayment goes in a second time beside the expense and
+// Carol is paid back twice.
+describe("a payment an older import took for an expense", () => {
+  // Spelled out rather than taken from the adapter, because the fingerprint
+  // this expense was stored under is the thing being tested.
+  const olderReading: StagedExpense = {
+    kind: "expense",
+    description: "Bob paid Carol",
+    category: "Payment",
+    date: "2025-05-17",
+    amount: "1000",
+    currency: "USD",
+    payers: [{ sourceName: "Bob", amount: "1000" }],
+    shares: [{ sourceName: "Carol", amount: "1000" }],
+  };
+
+  async function newGroup() {
+    const actor = await createTestUser();
+    return createTestGroup(actor, { currencyMode: "separate" });
+  }
+  type Group = Awaited<ReturnType<typeof newGroup>>;
+
+  function stageNow(group: Group) {
+    return stageImport(group.access, {
+      name: "bob-paid-carol.csv",
+      bytes: fixture("bob-paid-carol.csv"),
+    });
+  }
+
+  /** Stages the file the way the importer staged it before. */
+  async function stageAsBefore(group: Group) {
+    const preview = await stageNow(group);
+    const db = getDb();
+    const updated = await db
+      .update(importRows)
+      .set({
+        kind: "expense",
+        staged: olderReading,
+        fingerprint: fingerprintRow(group.groupId, olderReading),
+      })
+      .where(
+        and(
+          eq(importRows.importRunId, preview.importRunId),
+          eq(importRows.kind, "settlement"),
+        ),
+      )
+      .returning({ id: importRows.id });
+    expect(updated).toHaveLength(1);
+    return preview;
+  }
+
+  /** Commits onto whoever of the file's people the group already has. */
+  async function commit(group: Group, preview: ImportPreview) {
+    const people = new Map(
+      (await listParticipants(group.groupId)).map((person) => [
+        person.displayName,
+        person.id,
+      ]),
+    );
+    await saveParticipantMapping(
+      group.access,
+      preview.importRunId,
+      Object.fromEntries(
+        preview.sourceParticipants.map((name) => [
+          name,
+          people.get(name) ?? CREATE_PARTICIPANT,
+        ]),
+      ),
+    );
+    return commitImportRun(preview.importRunId, group.groupId);
+  }
+
+  async function countEntries(group: Group) {
+    const db = getDb();
+    const [expenseRows, settlementRows] = await Promise.all([
+      db.select().from(expenses).where(eq(expenses.groupId, group.groupId)),
+      db
+        .select()
+        .from(settlements)
+        .where(eq(settlements.groupId, group.groupId)),
+    ]);
+    return {
+      expenses: expenseRows.length,
+      settlements: settlementRows.length,
+    };
+  }
+
+  it("is recognised in the preview and not written again", async () => {
+    const group = await newGroup();
+    const older = await commit(group, await stageAsBefore(group));
+    expect(older.imported).toBe(7);
+    expect(await countEntries(group)).toEqual({ expenses: 7, settlements: 0 });
+    const balancesBefore = await loadGroupBalances(group.access);
+
+    const preview = await stageNow(group);
+    expect(preview.settlementCount).toBe(1);
+    expect(preview.duplicateCount).toBe(7);
+
+    const report = await commit(group, preview);
+    expect(report.imported).toBe(0);
+    expect(report.skipped).toBe(7);
+    expect(await countEntries(group)).toEqual({ expenses: 7, settlements: 0 });
+    expect(await loadGroupBalances(group.access)).toEqual(balancesBefore);
+  });
+
+  it("is not written again when both were staged before either committed", async () => {
+    // The preview found nothing to skip, so it is the commit that has to.
+    const group = await newGroup();
+    const older = await stageAsBefore(group);
+    const newer = await stageNow(group);
+    expect(newer.duplicateCount).toBe(0);
+
+    expect((await commit(group, older)).imported).toBe(7);
+    const report = await commit(group, newer);
+
+    expect(report.imported).toBe(0);
+    expect(report.skipped).toBe(7);
+    expect(await countEntries(group)).toEqual({ expenses: 7, settlements: 0 });
+  });
+
+  it("is recognised in the preview when the limits drop a row before it", async () => {
+    // The row too large to record is dropped before anything is fingerprinted.
+    // The older readings were once taken from every parsed row, the dropped
+    // one included, and matched up by position with the rows kept — so the
+    // payment was checked against the row before it, and the preview offered
+    // to import a payment the commit then skipped.
+    const bytes = Buffer.from(
+      [
+        "Date,Description,Category,Cost,Currency,Bob,Carol",
+        "2025-05-16,Yacht,General,99999999999999999999.00,USD,50000000000000000000.00,-50000000000000000000.00",
+        "2025-05-17,Bob paid Carol,Payment,10.00,USD,10.00,-10.00",
+        "",
+      ].join("\n"),
+    );
+    const stage = (group: Group) =>
+      stageImport(group.access, { name: "payment.csv", bytes });
+
+    const group = await newGroup();
+    const older = await stage(group);
+    expect(older.rowsTotal).toBe(1);
+    await getDb()
+      .update(importRows)
+      .set({
+        kind: "expense",
+        staged: olderReading,
+        fingerprint: fingerprintRow(group.groupId, olderReading),
+      })
+      .where(eq(importRows.importRunId, older.importRunId));
+    expect((await commit(group, older)).imported).toBe(1);
+
+    const preview = await stage(group);
+    expect(preview.duplicateCount).toBe(1);
+    expect((await commit(group, preview)).imported).toBe(0);
+  });
+
+  it("imports as a payment into a group that never had the file", async () => {
+    const group = await newGroup();
+    const report = await commit(group, await stageNow(group));
+    expect(report.imported).toBe(7);
+    expect(await countEntries(group)).toEqual({ expenses: 6, settlements: 1 });
+    // 290.00 went through the file, and 10.00 of it was Bob paying Carol
+    // back: the group spent 280.00.
+    const balances = await loadGroupBalances(group.access);
+    expect(balances.totalSpend.get("USD")).toBe(28000n);
   });
 });

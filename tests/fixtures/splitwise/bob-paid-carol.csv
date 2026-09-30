@@ -1,0 +1,11 @@
+Date,Description,Category,Cost,Currency,Alice,Bob,Carol,Dave
+
+2025-05-16,Altruist payment,General,20.00,USD,20.00,-10.00,-10.00,0.00
+2025-05-16,By amount,General,40.00,USD,20.00,-10.00,-10.00,0.00
+2025-05-16,By percentage,General,40.00,USD,-20.00,30.00,-10.00,0.00
+2025-05-16,By shares,General,50.00,USD,-10.00,-30.00,40.00,0.00
+2025-05-17,Income,General,30.00,USD,-20.00,10.00,10.00,0.00
+2025-05-17,Bob paid Carol,Payment,10.00,USD,0.00,10.00,-10.00,0.00
+2025-05-17,Self-payment,General,100.00,USD,0.00,0.00,0.00,0.00
+
+2025-05-17,Total balance, , ,USD,-10.00,0.00,10.00,0.00

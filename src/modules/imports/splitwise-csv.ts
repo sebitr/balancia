@@ -11,6 +11,7 @@ import {
   type ImportAdapter,
   type ImportWarning,
   type ParsedImport,
+  type StagedExpense,
   type StagedParticipant,
   type StagedRow,
   type StagedShare,
@@ -111,6 +112,23 @@ const SETTLEMENT_DESCRIPTIONS = new Set([
   "pago",
   "zahlung",
 ]);
+
+/**
+ * The category Splitwise files a payment under.
+ *
+ * A payment recorded in Splitwise's own app is exported with a description
+ * like "Bob paid Carol", this category, and its amount as the cost — so it
+ * passes neither of the older tests above, and was imported as an expense in a
+ * "Payment" category: the right balances, but a repayment counted as group
+ * spending.
+ *
+ * Only the English label is here, because only the English label has been
+ * seen in an export (spliit-app/spliit#342). A localised export's word goes in
+ * when one turns up; until then such a row may still be recognised by its
+ * description, and a row recognised by nothing imports as an expense that
+ * leaves every balance where Splitwise had it.
+ */
+const PAYMENT_CATEGORIES = new Set(["payment"]);
 
 /**
  * Labels of the balance summary Splitwise appends after the transactions.
@@ -218,6 +236,85 @@ function readDate(value: string): string | null {
     return `${year}-${first.padStart(2, "0")}-${second.padStart(2, "0")}`;
   }
   return null;
+}
+
+/** Money one person handed another, in major units. */
+interface Transfer {
+  readonly from: string;
+  readonly to: string;
+  readonly amount: Decimal;
+}
+
+/**
+ * The repayments a row's nets describe: one for each pair, until every net on
+ * the row is covered.
+ *
+ * The positive net is the person who handed the money over. Splitwise stores a
+ * payment as an expense the payer paid in full and the recipient owes in full,
+ * so the net is paid − owed as on every other row. It is also the only reading
+ * under which the file's own "Total balance" row comes out: in the trip-group
+ * fixture, Ada's expenses leave her on +81.67, the payment row gives her −25,
+ * and the file ends her on +56.67 — so she received it. Taking the negative
+ * net for the payer, as this once did, reversed every repayment and put both
+ * people out by twice its amount; splitwise-fixtures.test.ts now holds every
+ * fixture to that row.
+ *
+ * A payment between two people comes back as a single transfer. One that names
+ * more — a "Settle all balances" across a group of four — gives each person's
+ * net and nothing else, so which of them paid whom is not in the file. Any
+ * pairing that covers every net leaves each balance exactly where Splitwise
+ * had it; this one walks the payers and the recipients in column order. Taking
+ * only the first positive and the first negative, as this once did, recorded
+ * one payment of the wrong size and left everyone else's share of the row out.
+ *
+ * Null when the nets do not add up to zero, which no set of payments can
+ * reproduce. `lessThan(0)` rather than `isNegative()`, which is true of −0 too.
+ */
+function pairTransfers(nets: ReadonlyMap<string, Decimal>): Transfer[] | null {
+  const total = [...nets.values()].reduce(
+    (sum, value) => sum.plus(value),
+    new Decimal(0),
+  );
+  if (!total.isZero()) return null;
+
+  const payers = [...nets]
+    .filter(([, value]) => value.greaterThan(0))
+    .map(([name, value]) => ({ name, left: value }));
+  const recipients = [...nets]
+    .filter(([, value]) => value.lessThan(0))
+    .map(([name, value]) => ({ name, left: value.negated() }));
+
+  const transfers: Transfer[] = [];
+  let payer = 0;
+  let recipient = 0;
+  while (payer < payers.length && recipient < recipients.length) {
+    const amount = Decimal.min(payers[payer].left, recipients[recipient].left);
+    transfers.push({
+      from: payers[payer].name,
+      to: recipients[recipient].name,
+      amount,
+    });
+    payers[payer].left = payers[payer].left.minus(amount);
+    recipients[recipient].left = recipients[recipient].left.minus(amount);
+    if (payers[payer].left.isZero()) payer += 1;
+    if (recipients[recipient].left.isZero()) recipient += 1;
+  }
+  return transfers;
+}
+
+/**
+ * Whether a description reads "<payer> paid <recipient>", naming the two people
+ * the row moves money between, in that order and spelled as their columns are.
+ *
+ * That is how Splitwise describes a payment in its export. A name that is not
+ * a column, or the two the other way round, is somebody's own description of
+ * something else and proves nothing.
+ */
+function describesTransfer(description: string, transfer: Transfer): boolean {
+  return (
+    normalizeLabel(description) ===
+    normalizeLabel(`${transfer.from} paid ${transfer.to}`)
+  );
 }
 
 export const splitwiseCsvAdapter: ImportAdapter = {
@@ -378,159 +475,94 @@ export const splitwiseCsvAdapter: ImportAdapter = {
         continue;
       }
 
-      const isSettlement =
-        SETTLEMENT_DESCRIPTIONS.has(description.toLowerCase()) || cost.isZero();
+      const category =
+        categoryIndex === -1
+          ? null
+          : (record[categoryIndex] ?? "").trim() || null;
+      const readAsExpense = () =>
+        readExpense({
+          description,
+          category,
+          date,
+          cost,
+          currency,
+          nets,
+          people: personColumns.map((column) => column.name),
+        });
 
-      if (isSettlement) {
-        // A repayment shows one positive and one negative net of equal size,
-        // and the positive one is the person who handed the money over.
-        // Splitwise stores a payment as an expense the payer paid in full and
-        // the recipient owes in full, so the net is paid − owed as on every
-        // other row. It is also the only reading under which the file's own
-        // "Total balance" row comes out: in the trip-group fixture, Ada's
-        // expenses leave her on +81.67, the payment row gives her −25, and the
-        // file ends her on +56.67 — so she received it. Taking the negative
-        // net for the payer, as this once did, reversed every repayment and
-        // put both people out by twice its amount; splitwise-fixtures.test.ts
-        // now holds every fixture to that row.
-        //
-        // `lessThan(0)` rather than `isNegative()`, which is true of −0 too.
-        const payer = [...nets.entries()].find(([, value]) =>
-          value.greaterThan(0),
-        );
-        const recipient = [...nets.entries()].find(([, value]) =>
-          value.lessThan(0),
-        );
-        if (!payer || !recipient) {
+      // A row is a repayment on either of two kinds of evidence. The first is
+      // what the importer always went by: Splitwise's own word for one in the
+      // description, or a cost of zero — nothing was spent, so there is no
+      // expense to record — and a row like that is a repayment whatever its
+      // nets say. The second is how a payment recorded in Splitwise is
+      // actually exported: "Bob paid Carol" under the Payment category, with a
+      // cost. That only counts when the nets agree, moving one amount from one
+      // person to one other, because a Payment row that splits a cost between
+      // three people is an expense somebody filed oddly, and imported as one
+      // it still leaves every balance right.
+      const transfers = pairTransfers(nets);
+      const labelled =
+        SETTLEMENT_DESCRIPTIONS.has(description.toLowerCase()) || cost.isZero();
+      const lookalike =
+        transfers?.length === 1 &&
+        (PAYMENT_CATEGORIES.has(normalizeLabel(category ?? "")) ||
+          describesTransfer(description, transfers[0]));
+
+      if (labelled || lookalike) {
+        if (transfers === null || transfers.length === 0) {
           warnings.push({
             rowNumber,
-            message: "Skipped a payment row that names no payer or recipient",
+            message:
+              transfers === null
+                ? "Skipped a payment row where what was paid and what was received differ"
+                : "Skipped a payment row that names no payer or recipient",
           });
           continue;
         }
-        rows.push({
-          rowNumber,
-          row: {
-            kind: "settlement",
-            date,
-            amount: toMinorUnits(payer[1], currency),
-            currency,
-            fromSourceName: payer[0],
-            toSourceName: recipient[0],
-            notes: description || null,
-          },
-        });
+        if (transfers.length > 1) {
+          const exponent = currencyExponent(currency);
+          warnings.push({
+            rowNumber,
+            message:
+              "Recorded a payment between more than two people as one payment for each pair",
+            detail: transfers
+              .map(
+                (transfer) =>
+                  `${transfer.from} to ${transfer.to} ${transfer.amount.toFixed(exponent)}`,
+              )
+              .join(", ")
+              .slice(0, 200),
+          });
+        }
+        // Until the importer looked past the description, a lookalike came in
+        // as an expense, under an expense's fingerprint. A group imported then
+        // still holds it, and the commit step has to know it by that
+        // fingerprint too, or importing the file again writes the payment a
+        // second time beside it.
+        const formerlyReadAs = labelled ? undefined : readAsExpense().row;
+        for (const transfer of transfers) {
+          rows.push({
+            rowNumber,
+            row: {
+              kind: "settlement",
+              date,
+              amount: toMinorUnits(transfer.amount, currency),
+              currency,
+              fromSourceName: transfer.from,
+              toSourceName: transfer.to,
+              notes: description || null,
+              ...(formerlyReadAs ? { formerlyReadAs } : {}),
+            },
+          });
+        }
         continue;
       }
 
-      // A negative cost is money that came back: a refund. Balancia records
-      // that as income rather than as a negative expense, which the database
-      // refuses — and income is the same row read from the other side. So the
-      // cost and every net are flipped, the row is rebuilt like any expense,
-      // and it is marked `in`; the balance engine flips it back, and everyone
-      // ends exactly where the export's own columns put them.
-      const refund = cost.isNegative();
-      const spent = refund ? cost.negated() : cost;
-      const netOf = refund
-        ? new Map([...nets].map(([name, net]) => [name, net.negated()]))
-        : nets;
-      const filing = refund
-        ? { direction: "in" as const, category: REFUND_CATEGORY }
-        : {
-            category:
-              categoryIndex === -1
-                ? null
-                : (record[categoryIndex] ?? "").trim() || null,
-          };
-
-      // For an expense: owed share = paid − net, and paid is only non-zero for
-      // the people who actually put money in. Splitwise gives us the net, so
-      // reconstruct shares as (equal-cost split implied by the net) — concretely,
-      // share = paid − net where the positives are the payers' surplus.
-      const payers: StagedShare[] = [];
-      const shares: StagedShare[] = [];
-
-      // Everyone's share is their cost contribution: cost is distributed such
-      // that share_i = paid_i − net_i. We know net_i; we recover paid_i by
-      // assigning the total cost to those with positive net proportionally to
-      // their surplus, which is exactly how Splitwise's export encodes it.
-      const positiveSum = [...netOf.values()]
-        .filter((value) => value.greaterThan(0))
-        .reduce((sum, value) => sum.plus(value), new Decimal(0));
-
-      if (positiveSum.isZero()) {
-        // Every net is zero, so each person paid exactly their own share. The
-        // export records no split, but any split where paid equals owed has the
-        // same (nil) effect on the balances — so keep the expense rather than
-        // losing it, split evenly, and say so in the preview.
-        const evenShare = spent.dividedBy(personColumns.length);
-        const even = personColumns.map((column) => ({
-          sourceName: column.name,
-          amount: toMinorUnits(evenShare, currency),
-        }));
-        const total = BigInt(toMinorUnits(spent, currency));
-        const settled = balanceToTotal(even, total);
-
-        warnings.push({
-          rowNumber,
-          message:
-            "Imported with an equal split: the export shows nobody owing anything on this row, so it records no payer",
-          detail: description.slice(0, 60),
-        });
-        rows.push({
-          rowNumber,
-          row: {
-            kind: "expense",
-            description: description || "Imported expense",
-            ...filing,
-            date,
-            amount: total.toString(),
-            currency,
-            payers: settled,
-            shares: settled,
-          },
-        });
-        continue;
+      const expense = readAsExpense();
+      if (expense.warning) {
+        warnings.push({ rowNumber, ...expense.warning });
       }
-
-      for (const [name, net] of netOf) {
-        const paid = net.greaterThan(0)
-          ? spent.times(net).dividedBy(positiveSum)
-          : new Decimal(0);
-        const share = paid.minus(net);
-        if (paid.greaterThan(0)) {
-          payers.push({
-            sourceName: name,
-            amount: toMinorUnits(paid, currency),
-          });
-        }
-        if (!share.isZero()) {
-          shares.push({
-            sourceName: name,
-            amount: toMinorUnits(share, currency),
-          });
-        }
-      }
-
-      // Rounding can leave the parts a minor unit off the total; nudge the
-      // largest share so the expense is internally consistent.
-      const totalMinor = BigInt(toMinorUnits(spent, currency));
-      const balanced = balanceToTotal(shares, totalMinor);
-      const balancedPayers = balanceToTotal(payers, totalMinor);
-
-      rows.push({
-        rowNumber,
-        row: {
-          kind: "expense",
-          description: description || "Imported expense",
-          ...filing,
-          date,
-          amount: totalMinor.toString(),
-          currency,
-          payers: balancedPayers,
-          shares: balanced,
-        },
-      });
+      rows.push({ rowNumber, row: expense.row });
     }
 
     const participants: StagedParticipant[] = personColumns.map((column) => ({
@@ -551,6 +583,130 @@ export const splitwiseCsvAdapter: ImportAdapter = {
     };
   },
 };
+
+/**
+ * A row read as an expense: who paid and who owes, rebuilt from the nets.
+ *
+ * Also what the importer once made of a payment it did not recognise, which is
+ * why a recognised one keeps a copy of it: the fingerprint of this reading is
+ * what a group imported back then holds for that line.
+ */
+function readExpense(input: {
+  readonly description: string;
+  readonly category: string | null;
+  readonly date: string;
+  readonly cost: Decimal;
+  readonly currency: string;
+  readonly nets: ReadonlyMap<string, Decimal>;
+  /** Every person column, for the equal split of a row where nobody owes. */
+  readonly people: readonly string[];
+}): {
+  row: StagedExpense;
+  warning: Omit<ImportWarning, "rowNumber"> | null;
+} {
+  const { description, category, date, cost, currency, nets, people } = input;
+
+  // A negative cost is money that came back: a refund. Balancia records that
+  // as income rather than as a negative expense, which the database refuses —
+  // and income is the same row read from the other side. So the cost and every
+  // net are flipped, the row is rebuilt like any expense, and it is marked
+  // `in`; the balance engine flips it back, and everyone ends exactly where the
+  // export's own columns put them.
+  const refund = cost.isNegative();
+  const spent = refund ? cost.negated() : cost;
+  const netOf = refund
+    ? new Map([...nets].map(([name, net]) => [name, net.negated()]))
+    : nets;
+  const filing = refund
+    ? { direction: "in" as const, category: REFUND_CATEGORY }
+    : { category };
+
+  // For an expense: owed share = paid − net, and paid is only non-zero for
+  // the people who actually put money in. Splitwise gives us the net, so
+  // reconstruct shares as (equal-cost split implied by the net) — concretely,
+  // share = paid − net where the positives are the payers' surplus.
+  const payers: StagedShare[] = [];
+  const shares: StagedShare[] = [];
+
+  // Everyone's share is their cost contribution: cost is distributed such
+  // that share_i = paid_i − net_i. We know net_i; we recover paid_i by
+  // assigning the total cost to those with positive net proportionally to
+  // their surplus, which is exactly how Splitwise's export encodes it.
+  const positiveSum = [...netOf.values()]
+    .filter((value) => value.greaterThan(0))
+    .reduce((sum, value) => sum.plus(value), new Decimal(0));
+
+  if (positiveSum.isZero()) {
+    // Every net is zero, so each person paid exactly their own share. The
+    // export records no split, but any split where paid equals owed has the
+    // same (nil) effect on the balances — so keep the expense rather than
+    // losing it, split evenly, and say so in the preview.
+    const evenShare = spent.dividedBy(people.length);
+    const even = people.map((name) => ({
+      sourceName: name,
+      amount: toMinorUnits(evenShare, currency),
+    }));
+    const total = BigInt(toMinorUnits(spent, currency));
+    const settled = balanceToTotal(even, total);
+
+    return {
+      row: {
+        kind: "expense",
+        description: description || "Imported expense",
+        ...filing,
+        date,
+        amount: total.toString(),
+        currency,
+        payers: settled,
+        shares: settled,
+      },
+      warning: {
+        message:
+          "Imported with an equal split: the export shows nobody owing anything on this row, so it records no payer",
+        detail: description.slice(0, 60),
+      },
+    };
+  }
+
+  for (const [name, net] of netOf) {
+    const paid = net.greaterThan(0)
+      ? spent.times(net).dividedBy(positiveSum)
+      : new Decimal(0);
+    const share = paid.minus(net);
+    if (paid.greaterThan(0)) {
+      payers.push({
+        sourceName: name,
+        amount: toMinorUnits(paid, currency),
+      });
+    }
+    if (!share.isZero()) {
+      shares.push({
+        sourceName: name,
+        amount: toMinorUnits(share, currency),
+      });
+    }
+  }
+
+  // Rounding can leave the parts a minor unit off the total; nudge the
+  // largest share so the expense is internally consistent.
+  const totalMinor = BigInt(toMinorUnits(spent, currency));
+  const balanced = balanceToTotal(shares, totalMinor);
+  const balancedPayers = balanceToTotal(payers, totalMinor);
+
+  return {
+    row: {
+      kind: "expense",
+      description: description || "Imported expense",
+      ...filing,
+      date,
+      amount: totalMinor.toString(),
+      currency,
+      payers: balancedPayers,
+      shares: balanced,
+    },
+    warning: null,
+  };
+}
 
 /** Adjusts the largest entry so the parts sum exactly to `total`. */
 function balanceToTotal(
