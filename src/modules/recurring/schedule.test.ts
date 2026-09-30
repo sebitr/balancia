@@ -4,6 +4,7 @@ import {
   RecurrenceError,
   dueThrough,
   firstOccurrence,
+  firstOccurrenceDueAfter,
   nextOccurrence,
   occurrenceInstant,
   occurrencesUpTo,
@@ -423,6 +424,98 @@ describe("a series that ends after a number of times", () => {
     expect(() => firstOccurrence(monthly({ count: 1.5 }))).toThrow(
       RecurrenceError,
     );
+  });
+});
+
+/**
+ * Picking a series up again after it stood still — paused, or in an archived
+ * group. What fell due meanwhile is skipped, not back-filled.
+ */
+describe("resuming a series", () => {
+  it("starts at the first occurrence that has not yet come due", () => {
+    // Paused after 1 March, resumed on 20 June at noon in Paris: April, May
+    // and June have gone, and July is next.
+    expect(
+      firstOccurrenceDueAfter(monthly(), new Date("2026-06-20T10:00:00Z"), {
+        from: "2026-03-01",
+      }),
+    ).toBe("2026-07-01");
+  });
+
+  it("keeps today when it is resumed before nine, and drops it after", () => {
+    // 06:30 and 07:30 UTC are 08:30 and 09:30 in Paris (CEST, UTC+2).
+    expect(
+      firstOccurrenceDueAfter(daily(), new Date("2026-07-01T06:30:00Z"), {
+        from: "2026-06-01",
+      }),
+    ).toBe("2026-07-01");
+    expect(
+      firstOccurrenceDueAfter(daily(), new Date("2026-07-01T07:30:00Z"), {
+        from: "2026-06-01",
+      }),
+    ).toBe("2026-07-02");
+  });
+
+  it("stays on the series' own days rather than jumping to the resume date", () => {
+    // Every other month from January: March, May, July — never June or August.
+    expect(
+      firstOccurrenceDueAfter(
+        monthly({ interval: 2 }),
+        new Date("2026-06-20T10:00:00Z"),
+        { from: "2026-03-01" },
+      ),
+    ).toBe("2026-07-01");
+    // A fortnightly Monday series keeps its fortnight.
+    expect(
+      firstOccurrenceDueAfter(
+        weekly({ interval: 2 }),
+        new Date("2026-02-10T10:00:00Z"),
+        { from: "2026-01-05" },
+      ),
+    ).toBe("2026-02-16");
+  });
+
+  it("walks from the start when nothing has been generated yet", () => {
+    expect(
+      firstOccurrenceDueAfter(monthly(), new Date("2026-06-20T10:00:00Z")),
+    ).toBe("2026-07-01");
+    // A series that has not begun yet is not moved.
+    expect(
+      firstOccurrenceDueAfter(
+        monthly({ startDate: "2026-09-01" }),
+        new Date("2026-06-20T10:00:00Z"),
+      ),
+    ).toBe("2026-09-01");
+  });
+
+  it("is null for a series that ended while it stood still", () => {
+    expect(
+      firstOccurrenceDueAfter(
+        monthly({ endDate: "2026-05-31" }),
+        new Date("2026-06-20T10:00:00Z"),
+        { from: "2026-03-01" },
+      ),
+    ).toBeNull();
+  });
+
+  it("lets a catch-up walk past what a pause skipped, without counting it", () => {
+    // The worker's side of the same decision: from the last occurrence, but
+    // not before the marker a resume set.
+    expect(
+      occurrencesUpTo(monthly({ count: 4 }), "2026-12-31", {
+        from: "2026-02-01",
+        alreadyGenerated: 2,
+        notBefore: "2026-07-01",
+      }),
+    ).toEqual(["2026-07-01", "2026-08-01"]);
+    // And the cap counts only what it returns.
+    expect(
+      occurrencesUpTo(daily(), "2026-12-31", {
+        from: "2026-01-01",
+        notBefore: "2026-12-30",
+        maxOccurrences: 2,
+      }),
+    ).toEqual(["2026-12-30", "2026-12-31"]);
   });
 });
 

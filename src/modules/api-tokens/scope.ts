@@ -27,7 +27,8 @@
  */
 
 /** Read-only, or read and write. See `apiTokenScopeEnum`. */
-export type TokenScope = "read" | "write";
+export const TOKEN_SCOPES = ["read", "write"] as const;
+export type TokenScope = (typeof TOKEN_SCOPES)[number];
 
 /**
  * Why a token is refused a route it will never be allowed on.
@@ -77,6 +78,13 @@ type RouteEntry = RouteRule | Readonly<Record<string, RouteRule>>;
  * it, or unsubscribe somebody's phone. The auth routes are also where
  * credentials are *made*, and a credential resolver standing in front of one
  * would be circular.
+ *
+ * Nor does a key read anybody *else's* payout details. `settle-up` is open, so
+ * a script can see what clears the group, but it answers a key with an empty
+ * `payoutHints` where it would give a person the IBAN and payment code of each
+ * debt — see the route. This table cannot say that, because it decides whether
+ * a key gets in and not what it is shown; the route reads `viaApiToken` off
+ * the actor instead.
  *
  * **`door`** — who is in a group and who can get in. Participants, personal
  * invitations, the group-wide join link, and the group's own DELETE. A token
@@ -154,6 +162,7 @@ export const API_ROUTES = {
   "/api/groups/[groupId]/recurring/[templateId]": "open",
   "/api/groups/[groupId]/recurring/[templateId]/restore": "open",
   "/api/groups/[groupId]/reminders": "open",
+  // Open, minus the payout hints: a key is answered with the transfers alone.
   "/api/groups/[groupId]/settle-up": "open",
   "/api/groups/[groupId]/settlements": "open",
   "/api/groups/[groupId]/settlements/[settlementId]": "open",

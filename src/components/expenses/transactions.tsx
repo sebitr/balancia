@@ -46,8 +46,8 @@ import {
   KINDS,
   NO_FILTER,
   readFilter,
+  searchNeedle,
   selectRows,
-  sortableByAmount,
   type EntryKind,
   type ListFilter,
   type RowView,
@@ -209,6 +209,7 @@ export function Transactions({
   members,
   used,
   counts,
+  byAmount,
   firstDate,
   today,
 }: {
@@ -228,6 +229,11 @@ export function Transactions({
   used: readonly ExpenseCategory[];
   /** Transactions per category, counted over the whole group. */
   counts: Readonly<Record<string, number>>;
+  /**
+   * Whether every row the group holds is listed in one currency, so that
+   * `Largest amount` ranks something. Measured over the whole group.
+   */
+  byAmount: boolean;
   /** The group's earliest transaction date; null when it has none. */
   firstDate: string | null;
   /** Today, in the group's timezone. */
@@ -385,9 +391,11 @@ export function Transactions({
    *
    * The draft is held here rather than in the sheet because the apply button
    * previews the outcome — `Show 4 transactions` — and that number has to be
-   * counted by the same predicate over the same rows the list is holding.
-   * Owned by the sheet, it would be a second answer to the question the list
-   * is already answering, and the two would eventually differ.
+   * counted the same way the list is filtered: here, over the rows in hand,
+   * when those are the whole group, and by the endpoint the filtered pages
+   * come from when they are not. Owned by the sheet, it would be a second
+   * answer to the question the list is already answering, and the two would
+   * eventually differ.
    *
    * Open is separate from it, and the draft is not cleared on closing, so the
    * sheet has something to draw while it slides back down. Nothing survives
@@ -399,18 +407,19 @@ export function Transactions({
 
   /*
    * A filter narrows the whole list, not the part of it that happens to be
-   * loaded. Rows arrive a screenful at a time while the reader scrolls, but
-   * the moment any filter is on, the rest of the history is fetched in bulk
-   * behind it — otherwise a search for a 2019 hotel would come back empty on a
-   * screen that simply had not read that far yet, which is a worse answer than
-   * no search at all.
+   * loaded — a search for a 2019 hotel must not come back empty on a screen
+   * that simply had not read that far yet, which is a worse answer than no
+   * search at all.
    *
-   * An open sheet counts as filtering even before anything is chosen. Its
-   * button promises a number over the whole history, and a number counted over
-   * the forty rows read so far would be a promise the list could not keep.
+   * It used to get there by fetching the rest of the history in bulk the
+   * moment any filter was on, five hundred rows a request, and filtering it
+   * here: the first letter typed into the search field downloaded the group's
+   * whole past to the phone and rendered every match at once. Now the filter
+   * travels to the server instead, and comes back as pages of matches that
+   * arrive a screenful at a time like any other — see `usePages`.
    */
   const filtering =
-    open || applied.query !== "" || filterDimensions(applied) > 0;
+    searchNeedle(applied) !== "" || filterDimensions(applied) > 0;
 
   /*
    * The place the reader left from, read on the first render because the
@@ -438,6 +447,13 @@ export function Transactions({
    * covers the server sending a fresh first page from under the reader — a
    * list that snapped back to forty rows would take their position with it.
    */
+  const paging = usePages(
+    groupId,
+    rows,
+    cursor,
+    filtering ? filterParams(applied).toString() : "",
+    place?.rows ?? 0,
+  );
   const {
     rows: loaded,
     cursor: unread,
@@ -445,7 +461,7 @@ export function Transactions({
     failed,
     retry,
     sentinelRef,
-  } = usePages(groupId, rows, cursor, filtering, place?.rows ?? 0);
+  } = paging;
 
   /*
    * Back down to where they were, once there is enough list to stand on.
@@ -477,15 +493,40 @@ export function Transactions({
   };
 
   /*
-   * The one predicate, run twice over the same rows: once for what is on
-   * screen, and once for what the sheet is promising. Nothing else in the app
-   * decides which transactions a filter leaves standing.
+   * What is on screen, and what the sheet is promising.
+   *
+   * When the rows in hand are the whole group, the one predicate runs over
+   * them twice, here, and no request is made at all — most groups fit in the
+   * first page, and a filter there is as instant as it always was. When they
+   * are not, the list is the server's pages of matches, and the count is the
+   * server's too.
+   *
+   * Until a filtered list's first page lands, the rows in hand stand in for
+   * it: newest first, the matches among the newest rows read are exactly the
+   * start of the answer, so the list fills in rather than blanking and
+   * reappearing under every keystroke. The same rows are what a reader with
+   * no connection is left with, and the failure line under them says that is
+   * all there is.
    */
   const context = { today, dateText: dates.plain };
-  const shown = selectRows(loaded, applied, context);
+  const shown =
+    paging.narrowed === null
+      ? selectRows(loaded, applied, context)
+      : paging.narrowed.started
+        ? paging.narrowed.rows
+        : applied.sort === "newest" || failed
+          ? selectRows(paging.base, applied, context)
+          : [];
+  const draftQuery = filterParams(draft).toString();
+  const counted = useCount(groupId, draftQuery, open && !paging.complete);
   // Counted even while the sheet is shut, so the button it is pinned to does
-  // not change its mind about what it was promising on the way down.
-  const preview = selectRows(loaded, draft, context).length;
+  // not change its mind about what it was promising on the way down. Null
+  // while the server is still counting, or cannot be reached, and the button
+  // then promises the list without a number rather than a number it has not
+  // got.
+  const preview = paging.complete
+    ? selectRows(paging.base, draft, context).length
+    : counted;
 
   /** Which colour a row's rail takes, from the band its category sits in. */
   const railOf = (category: string | null): string => {
@@ -767,10 +808,7 @@ export function Transactions({
         counts={counts}
         firstDate={firstDate}
         today={today}
-        // Measured over the rows in hand rather than asked of the server:
-        // opening the sheet reads the whole history in, so by the time the
-        // Sort section is on screen this has seen every currency there is.
-        byAmount={sortableByAmount(loaded)}
+        byAmount={byAmount}
       />
     </div>
   );
@@ -829,23 +867,58 @@ function FilterButton({
 }
 
 /**
- * Rows fetched at once when a filter is on.
- *
- * Large enough that reaching 2019 from 2026 is a handful of requests rather
- * than a hundred, and capped again on the server, which is where the real
- * limit belongs.
+ * The most rows one request may ask for, when a reader coming back from an
+ * entry needs every row above their old place back at once. Capped again on
+ * the server, which is where the real limit belongs.
  */
-const BULK_PAGE_SIZE = 500;
+const CATCH_UP_PAGE_SIZE = 500;
+
+/** A list's cursor before its first page has been asked for: from the top. */
+const FROM_TOP = "";
 
 interface PageResponse {
   readonly rows: readonly RowView[];
   readonly cursor: string | null;
 }
 
-interface Paging {
+/** One list being read a page at a time. */
+interface List {
+  /** The filter it was read under, as the endpoint's query string; "" for none. */
+  readonly query: string;
   readonly rows: readonly RowView[];
-  /** Null once the whole list has been read. */
+  /** Where the next page starts; `FROM_TOP` before the first; null at the end. */
   readonly cursor: string | null;
+}
+
+interface PagingState {
+  /** The server's first page, which the unfiltered list starts from. */
+  readonly first: readonly RowView[];
+  /** Everything, newest first, as far as the reader has scrolled it. */
+  readonly base: List;
+  /** The last filtered list read from the server, kept until another replaces it. */
+  readonly narrow: List | null;
+  /** The query of whichever of the two is on screen. */
+  readonly active: string;
+}
+
+interface Paging {
+  /** The rows of the list being read. */
+  readonly rows: readonly RowView[];
+  /** Null once that list has been read to the end. */
+  readonly cursor: string | null;
+  /** Everything, unfiltered, as far as it has been read. */
+  readonly base: readonly RowView[];
+  /** Whether `base` is the group's whole history, so a filter can run here. */
+  readonly complete: boolean;
+  /**
+   * The server's filtered list, when the filter is one this browser cannot
+   * answer from the rows it holds; null when it can.
+   */
+  readonly narrowed: {
+    readonly rows: readonly RowView[];
+    /** Whether its first page has landed. */
+    readonly started: boolean;
+  } | null;
   /** A page is on its way, or is about to be. */
   readonly busy: boolean;
   readonly failed: boolean;
@@ -856,12 +929,21 @@ interface Paging {
 /**
  * The rest of the list, fetched as the reader needs it.
  *
+ * Two lists, in fact, and one on screen at a time. The unfiltered one starts
+ * from the page the server rendered and grows as the reader scrolls. A filter
+ * gets a list of its own, read from the top by the endpoint with the filter
+ * attached, so each page of it is a page of matches — unless the unfiltered
+ * list has already been read to the end, in which case the rows are all here
+ * and the filter runs over them without asking anyone (`complete`).
+ *
  * Three things ask for a page: the sentinel below the list coming into view, a
- * filter being on, and a reader returning to a place further down than the
- * first page reaches. The first takes a screenful at a time; the other two ask
- * for what they need in one request and stop. All of them go through one
- * request at a time, because the cursor for the next page is only known once
- * the current one has landed.
+ * filtered list that has not read its first page yet, and a reader returning
+ * to a place further down than the first page reaches. The first two take a
+ * screenful at a time; the last asks for what it needs in one request and
+ * stops. Within a list, pages go one request at a time, because the cursor
+ * for the next page is only known once the current one has landed. Across
+ * lists they do not wait: a request for a filter the reader has typed past is
+ * cancelled, not waited out, so the search follows the keyboard.
  *
  * There is no `loading` flag, because there is nothing for one to remember.
  * Wanting more rows and there being more to give is the whole condition, and
@@ -878,40 +960,72 @@ function usePages(
   groupId: string,
   first: readonly RowView[],
   firstCursor: string | null,
-  eager: boolean,
+  /** The filter as the endpoint's query string; "" when nothing is filtered. */
+  query: string,
   /**
    * Rows to read in without being asked twice, for a reader coming back to a
    * position the first page does not reach. Zero on an ordinary arrival.
    */
   atLeast: number,
 ): Paging {
-  const [state, setState] = useState({
+  const [state, setState] = useState<PagingState>(() => ({
     first,
-    rows: first,
-    cursor: firstCursor,
-  });
+    base: { query: "", rows: first, cursor: firstCursor },
+    narrow: null,
+    active: "",
+  }));
   const [failed, setFailed] = useState(false);
   const [atEnd, setAtEnd] = useState(false);
-  const inFlight = useRef(false);
+  const request = useRef<{
+    readonly key: string;
+    readonly controller: AbortController;
+  } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   /*
-   * The server sent a different first page — something was added, edited or
-   * deleted and the route revalidated — so every page read after it describes
-   * a list that no longer exists. Start again from what it just sent.
-   *
    * Adjusted during render rather than in an effect: React re-runs the
    * component immediately with the new state and before anything paints, so
    * the stale rows never reach the screen.
+   *
+   * The server sent a different first page — something was added, edited or
+   * deleted and the route revalidated — so every page read after it, filtered
+   * or not, describes a list that no longer exists. Start again from what it
+   * just sent.
    */
-  if (state.first !== first) {
-    setState({ first, rows: first, cursor: firstCursor });
+  let current = state;
+  if (current.first !== first) {
+    current = {
+      first,
+      base: { query: "", rows: first, cursor: firstCursor },
+      narrow: null,
+      active: "",
+    };
+  }
+  // A filter the rows in hand can answer is answered from them; one they
+  // cannot gets its own list, read from the top.
+  const active = query !== "" && current.base.cursor !== null ? query : "";
+  if (current.active !== active) {
+    current = {
+      ...current,
+      active,
+      narrow:
+        active === "" || current.narrow?.query === active
+          ? current.narrow
+          : { query: active, rows: [], cursor: FROM_TOP },
+    };
+  }
+  if (current !== state) {
+    setState(current);
     setFailed(false);
   }
 
-  const { cursor } = state;
-  const shortfall = Math.max(0, atLeast - state.rows.length);
-  const busy = cursor !== null && !failed && (eager || shortfall > 0 || atEnd);
+  const list = active === "" ? current.base : current.narrow!;
+  const { cursor } = list;
+  const shortfall = Math.max(0, atLeast - list.rows.length);
+  const busy =
+    cursor !== null &&
+    !failed &&
+    (cursor === FROM_TOP || shortfall > 0 || atEnd);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -929,49 +1043,145 @@ function usePages(
   }, []);
 
   useEffect(() => {
-    if (!busy || cursor === null || inFlight.current) return;
-    inFlight.current = true;
+    if (!busy || cursor === null) return;
+    // This very page is already on its way.
+    const key = `${active}\n${cursor}`;
+    if (request.current?.key === key) return;
+    // A page of a list nobody is looking at any more.
+    request.current?.controller.abort();
+    const controller = new AbortController();
+    request.current = { key, controller };
     const from = cursor;
 
     void (async () => {
       try {
-        const params = new URLSearchParams({ cursor: from });
-        // A filter has to reach the end of the list and takes the largest page
-        // it is allowed. Catching up to a remembered position knows exactly how
-        // far it has to go, so it asks for that and no more.
-        const bulk = eager
-          ? BULK_PAGE_SIZE
-          : Math.min(shortfall, BULK_PAGE_SIZE);
-        if (bulk > 0) params.set("limit", String(bulk));
+        const params = new URLSearchParams(active);
+        if (from !== FROM_TOP) params.set("cursor", from);
+        // Catching up to a remembered position knows exactly how far it has
+        // to go, so it asks for that and no more. Everything else takes the
+        // server's own page.
+        if (shortfall > 0) {
+          params.set("limit", String(Math.min(shortfall, CATCH_UP_PAGE_SIZE)));
+        }
         const response = await fetch(
           `/api/groups/${groupId}/transactions?${params}`,
-          { headers: { Accept: "application/json" } },
+          {
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          },
         );
         if (!response.ok) throw new Error(`Transactions: ${response.status}`);
         const page = (await response.json()) as PageResponse;
-        setState((prev) =>
-          // Not the page we were reading any more: the list reset underneath
-          // this request while it was in the air, and these rows belong to the
-          // list it replaced.
-          prev.cursor === from
-            ? {
-                first: prev.first,
-                rows: [...prev.rows, ...page.rows],
-                cursor: page.cursor,
-              }
-            : prev,
-        );
+        setState((prev) => withPage(prev, active, from, page));
       } catch {
-        setFailed(true);
+        // Cancelled on purpose is not a failure: the reader moved on.
+        if (!controller.signal.aborted) setFailed(true);
       } finally {
-        inFlight.current = false;
+        if (request.current?.controller === controller) {
+          request.current = null;
+        }
       }
     })();
-  }, [busy, cursor, eager, shortfall, groupId]);
+  }, [busy, active, cursor, shortfall, groupId]);
+
+  // Leaving the screen cancels what it was waiting for — and forgets it, so a
+  // remount (Strict Mode rehearses one) asks again rather than waiting on a
+  // request that will never answer.
+  useEffect(
+    () => () => {
+      request.current?.controller.abort();
+      request.current = null;
+    },
+    [],
+  );
 
   const retry = useCallback(() => setFailed(false), []);
 
-  return { rows: state.rows, cursor, busy, failed, retry, sentinelRef };
+  return {
+    rows: list.rows,
+    cursor,
+    base: current.base.rows,
+    complete: current.base.cursor === null,
+    narrowed:
+      active === ""
+        ? null
+        : { rows: list.rows, started: list.cursor !== FROM_TOP },
+    busy,
+    failed,
+    retry,
+    sentinelRef,
+  };
+}
+
+/**
+ * `page`, added to the list it was asked for — if that list is still the one
+ * it was asked for, and still waiting at the same place. Otherwise the list
+ * was reset or replaced while the request was in the air, and these rows
+ * belong to a list that no longer exists.
+ */
+function withPage(
+  state: PagingState,
+  query: string,
+  from: string,
+  page: PageResponse,
+): PagingState {
+  const list = query === "" ? state.base : state.narrow;
+  if (list === null || list.query !== query || list.cursor !== from) {
+    return state;
+  }
+  const next: List = {
+    query,
+    rows: [...list.rows, ...page.rows],
+    cursor: page.cursor,
+  };
+  return query === "" ? { ...state, base: next } : { ...state, narrow: next };
+}
+
+/**
+ * How many transactions a filter would leave, asked of the server.
+ *
+ * Only asked while `enabled` — the sheet is open and the rows in hand are not
+ * the whole group — but the last answer is kept, so the sheet does not lose
+ * its number while it slides away. Null until there is an answer for exactly
+ * this filter: a count for the previous draft is not a count for this one.
+ */
+function useCount(
+  groupId: string,
+  query: string,
+  enabled: boolean,
+): number | null {
+  const [answer, setAnswer] = useState<{
+    readonly query: string;
+    readonly count: number;
+  } | null>(null);
+  const known = answer !== null && answer.query === query;
+
+  useEffect(() => {
+    if (!enabled || known) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams(query);
+    params.set("count", "1");
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/groups/${groupId}/transactions?${params}`,
+          {
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          },
+        );
+        if (!response.ok) return;
+        const body = (await response.json()) as { count: number };
+        setAnswer({ query, count: body.count });
+      } catch {
+        // Offline, or cancelled by the next tap. The button says what it
+        // would do without a number, which is still true.
+      }
+    })();
+    return () => controller.abort();
+  }, [enabled, known, query, groupId]);
+
+  return known ? answer.count : null;
 }
 
 function BandGlyph({ category }: { category: string }) {

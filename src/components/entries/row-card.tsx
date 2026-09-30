@@ -16,6 +16,16 @@ import { cn } from "@/lib/utils";
  * Rows are a fixed height whatever they hold: a text field, a value with a
  * chevron, a switch. A card whose rows changed height with their contents
  * would ripple every time a category was picked.
+ *
+ * The card is also where focus shows. Its fields are borderless on purpose —
+ * the card is their edge — and the `overflow-hidden` that rounds its corners
+ * clips any outline a row draws around itself, so a keyboard user tabbing
+ * down the form could not see where they were. The card rings instead,
+ * whenever something inside it has visible focus: `:focus-visible` rather
+ * than `focus-within`, so a tap on a row that opens a sheet does not leave
+ * the card lit up after the sheet hands focus back. A row that opens
+ * something also washes the way it does under a finger, which says *which*
+ * row the ring is about.
  */
 
 /** Every row in these cards, so nothing sets its own height. */
@@ -29,7 +39,7 @@ export function RowCard({
   return (
     <div
       className={cn(
-        "divide-y divide-border overflow-hidden rounded-[17px] bg-card shadow-hairline",
+        "divide-y divide-border overflow-hidden rounded-[17px] bg-card shadow-hairline has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
         className,
       )}
       {...props}
@@ -94,7 +104,7 @@ export function RowButton({
       onClick={onClick}
       className={cn(
         ROW,
-        "text-left transition-colors active:bg-accent",
+        "text-left transition-colors focus-visible:bg-accent focus-visible:outline-none active:bg-accent",
         className,
       )}
     >

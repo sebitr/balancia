@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
+import { isStorableDate } from "@/lib/calendar-date";
 
 /**
  * Keyset paging over a list ordered by (date, created_at, id) descending.
@@ -28,6 +29,15 @@ import { z } from "zod";
  * a fixed-width UTC string instead — six fractional digits, always — which
  * survives the trip in both directions and compares lexicographically in the
  * same order it compares chronologically.
+ *
+ * ## The other two orders
+ *
+ * The transactions list can also be read oldest first, and largest first.
+ * Oldest first is the same key walked from the other end (`keysetAfter`).
+ * Largest first puts the amount in front of it (`keysetBeforeAmount`), and the
+ * cursor then carries that amount as a fourth part — the date, the clock and
+ * the id still follow it, because two rows of the same amount are the common
+ * case, not the corner one.
  */
 
 export interface ListCursor {
@@ -36,14 +46,33 @@ export interface ListCursor {
   /** Creation instant, UTC, microsecond precision — see above. */
   readonly time: string;
   readonly id: string;
+  /**
+   * The row's magnitude in minor units, for a list ranked by amount first.
+   * Absent from every cursor over a chronological list.
+   */
+  readonly amount?: string;
 }
 
 const TIME_FORMAT = 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"';
 
+/**
+ * Both halves are cast by PostgreSQL, which refuses a day or an hour that does
+ * not exist — so the shape is not enough here either, and a cursor fiddled to
+ * `2025-02-30` would otherwise fail the query rather than read as no cursor.
+ */
 const cursorSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  time: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/),
+  date: z.string().refine(isStorableDate),
+  time: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{6}Z$/)
+    .refine((value) => isStorableDate(value.slice(0, 10))),
   id: z.uuid(),
+  // Nineteen digits is the whole of a bigint; anything longer is not an
+  // amount this server could have written.
+  amount: z
+    .string()
+    .regex(/^\d{1,19}$/)
+    .optional(),
 });
 
 /** The creation instant as the cursor spells it, for `select()`. */
@@ -70,16 +99,47 @@ export function keysetBefore(
   return sql`(${columns.date}, ${columns.time}, ${columns.id}) < (${cursor.date}::date, ${cursor.time}::timestamptz, ${cursor.id}::uuid)`;
 }
 
+/** Everything strictly after `cursor` in an ascending list: oldest first. */
+export function keysetAfter(
+  columns: {
+    readonly date: AnyPgColumn;
+    readonly time: AnyPgColumn;
+    readonly id: AnyPgColumn;
+  },
+  cursor: ListCursor,
+): SQL {
+  return sql`(${columns.date}, ${columns.time}, ${columns.id}) > (${cursor.date}::date, ${cursor.time}::timestamptz, ${cursor.id}::uuid)`;
+}
+
+/**
+ * Everything strictly after `cursor` in a list ranked by `amount` descending,
+ * and newest first among equal amounts. One row constructor again, with the
+ * amount leading it.
+ */
+export function keysetBeforeAmount(
+  amount: SQL,
+  columns: {
+    readonly date: AnyPgColumn;
+    readonly time: AnyPgColumn;
+    readonly id: AnyPgColumn;
+  },
+  cursor: ListCursor & { readonly amount: string },
+): SQL {
+  return sql`(${amount}, ${columns.date}, ${columns.time}, ${columns.id}) < (${cursor.amount}::bigint, ${cursor.date}::date, ${cursor.time}::timestamptz, ${cursor.id}::uuid)`;
+}
+
 /**
  * The cursor as one URL-safe token.
  *
  * Opaque by convention rather than by encryption: it names a position in a
  * list the caller is already authorized to read, and every request carrying
  * one is authorized again from scratch. `|` is the separator because no part
- * can contain it — two fixed formats and a UUID.
+ * can contain it — two fixed formats, a UUID and, when there is one, a run of
+ * digits.
  */
 export function encodeCursor(cursor: ListCursor): string {
-  return `${cursor.date}|${cursor.time}|${cursor.id}`;
+  const key = `${cursor.date}|${cursor.time}|${cursor.id}`;
+  return cursor.amount === undefined ? key : `${key}|${cursor.amount}`;
 }
 
 /** Null for anything this did not write; the caller then starts at the top. */
@@ -87,9 +147,13 @@ export function decodeCursor(
   raw: string | null | undefined,
 ): ListCursor | null {
   if (!raw) return null;
-  const [date, time, id] = raw.split("|");
-  const parsed = cursorSchema.safeParse({ date, time, id });
-  return parsed.success ? parsed.data : null;
+  const parts = raw.split("|");
+  if (parts.length !== 3 && parts.length !== 4) return null;
+  const [date, time, id, amount] = parts;
+  const parsed = cursorSchema.safeParse({ date, time, id, amount });
+  if (!parsed.success) return null;
+  const { amount: magnitude, ...key } = parsed.data;
+  return magnitude === undefined ? key : { ...key, amount: magnitude };
 }
 
 /** Descending by date, then by creation, then by id — the order it all pages in. */

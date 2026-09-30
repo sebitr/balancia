@@ -6,6 +6,7 @@ import {
   AuthorizationError,
 } from "@/lib/security/authorization";
 import { getCurrentActor } from "@/lib/security/actor";
+import { isIdempotencyKey } from "@/lib/idempotency";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import { resolveApiToken } from "@/modules/api-tokens/service";
 import {
@@ -139,6 +140,7 @@ export async function apiActor(
     userId: token.userId,
     email: token.email,
     name: token.name,
+    viaApiToken: true,
     ...(token.groupId === null ? {} : { tokenGroupId: token.groupId }),
   };
 }
@@ -195,9 +197,10 @@ export function noStore(
 
 /**
  * The refusals a caller is meant to see, mapped to statuses; anything else is
- * logged in full and reported as an anonymous 500. Mirrors the Server Action
- * funnel in `lib/actions.ts`, minus translation — this API answers in English
- * and leaves presentation to the client.
+ * logged (less a failed query's values; see `lib/error-for-log.ts`) and
+ * reported as an anonymous 500. Mirrors the Server Action funnel in
+ * `lib/actions.ts`, minus translation — this API answers in English and
+ * leaves presentation to the client.
  */
 export function mobileApiError(
   error: unknown,
@@ -254,14 +257,7 @@ export function mobileApiError(
     return noStore({ error: error.message }, { status: 422 });
   }
 
-  logger.error(
-    {
-      err:
-        error instanceof Error ? (error.stack ?? error.message) : String(error),
-      ...context,
-    },
-    `${route} failed`,
-  );
+  logger.error({ err: error, ...context }, `${route} failed`);
   return noStore({ error: "Unavailable." }, { status: 500 });
 }
 
@@ -313,7 +309,7 @@ export function isUuid(value: string): boolean {
  */
 export function idempotencyKey(request: Request): string | undefined {
   const header = request.headers.get("Idempotency-Key")?.trim();
-  return header && isUuid(header) ? header : undefined;
+  return isIdempotencyKey(header) ? header : undefined;
 }
 
 /**
@@ -384,18 +380,49 @@ export function serializeAccess(access: GroupAccess) {
   };
 }
 
-export function serializeParticipant(participant: ParticipantSummary) {
-  return {
-    id: participant.id,
-    displayName: participant.displayName,
-    email: participant.email,
-    userId: participant.userId,
+/**
+ * One person in the group, as this reader may see them.
+ *
+ * A guest reads less than a member does. An invitation link is a bearer
+ * credential that gets forwarded, and two things on a participant row are no
+ * business of whoever it was forwarded to: the email address — which for the
+ * owner is the address they sign in with, copied onto their row when the group
+ * was made — and the id of the account behind a name. So a guest's copy
+ * carries neither. The keys are absent rather than null, and `hasAccount`
+ * answers the one question the id was read for: whether this is somebody who
+ * signs in, or a name somebody typed.
+ *
+ * A signed-in reader gets the row exactly as before, which is the shape the
+ * native client decodes.
+ */
+export function serializeParticipant(
+  participant: ParticipantSummary,
+  reader: Pick<GroupAccess, "actor">,
+) {
+  const rest = {
     role: participant.role,
     createdAt: participant.createdAt.toISOString(),
     hasActiveInvitation: participant.hasActiveInvitation,
     invitationCreatedAt: iso(participant.invitationCreatedAt),
     invitationExpiresAt: iso(participant.invitationExpiresAt),
     invitationLastUsedAt: iso(participant.invitationLastUsedAt),
+  };
+
+  if (reader.actor.kind === "guest") {
+    return {
+      id: participant.id,
+      displayName: participant.displayName,
+      hasAccount: participant.userId !== null,
+      ...rest,
+    };
+  }
+
+  return {
+    id: participant.id,
+    displayName: participant.displayName,
+    email: participant.email,
+    userId: participant.userId,
+    ...rest,
   };
 }
 

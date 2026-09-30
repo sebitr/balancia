@@ -3,7 +3,8 @@ import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { NextIntlClientProvider } from "next-intl";
 import { headers } from "next/headers";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { clientMessages } from "@/i18n/client-messages";
 import { FormatPreferencesProvider } from "@/i18n/format-context";
 import {
   resolveAccentColor,
@@ -16,7 +17,6 @@ import { accentTokens } from "@/modules/profile/accent";
 import { surfaceAttributes, themeColorFor } from "@/modules/profile/surface";
 import { getEnv } from "@/lib/env";
 import { Toaster } from "@/components/ui/sonner";
-import { SerwistRegister } from "@/components/pwa/serwist-register";
 import { Providers } from "@/components/providers";
 import { SwipeBack } from "@/components/motion/swipe-back";
 import "./globals.css";
@@ -106,6 +106,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // The theme provider's pre-paint script runs before anything is drawn, and
   // under the strict CSP it needs the nonce.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  // Only what Client Components ask for, and only what more than one part of
+  // the app asks for — each area adds its own. See `client-messages.ts`.
+  const messages = clientMessages(await getMessages());
 
   return (
     <html
@@ -118,10 +121,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       {...surfaceAttributes(surfaces)}
     >
       <body className="flex min-h-full flex-col">
-        <SerwistRegister />
-        {/* Locale and messages are inherited from the server render; Client
-            Components below can call useTranslations without prop drilling. */}
-        <NextIntlClientProvider>
+        {/* No service worker here: registering one downloads the app into its
+            precache, which the homepage and a join link have no business
+            doing. The app's own shells register it — see `SerwistRegister`. */}
+        {/* Locale is inherited from the server render, and the messages are
+            the root's list: Client Components below call useTranslations
+            without prop drilling, for what `client-messages.ts` sends them. */}
+        <NextIntlClientProvider messages={messages}>
           {/* Only what the browser needs: the resolved number locale is
               derived from these, so sending it too would be sending the same
               choice twice. */}

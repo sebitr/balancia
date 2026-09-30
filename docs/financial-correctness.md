@@ -19,6 +19,13 @@ PostgreSQL stores these values as `bigint`, TypeScript uses `bigint`, and JSON
 boundaries carry them as strings. JavaScript floating-point numbers never
 represent money.
 
+The largest amount Balancia accepts is 10¹⁸ minor units, either sign
+(`MAX_MINOR_UNITS`) — about a ninth of what a `bigint` column holds, so an amount
+that passes validation can never be one PostgreSQL refuses. The line is held
+wherever an amount is made, not only where it is typed: each exact split part
+on its own (a credit may be negative, but no larger), and every amount a
+conversion produces.
+
 ## Splits add up exactly
 
 Equal, percentage and share-based splits can leave indivisible minor units. For
@@ -35,6 +42,14 @@ Balancia uses a deterministic largest-remainder allocation:
 The interface tells the user when one or more people receive the rounding unit.
 It never hides the adjustment.
 
+The proportional shares are worked in whole numbers: every weight is scaled by
+the same power of ten, and each share is a `bigint` quotient and remainder.
+Nothing is rounded before the floor is taken, and two people owed the same
+fraction of a unit tie exactly and are settled by their order. Worked in
+decimal.js, as they used to be, each result was first cut to a fixed number of
+significant digits, and the rounding unit could go to somebody it was not owed
+to.
+
 ## Balances sum to zero
 
 For every currency in a group, the sum of all participant balances must equal
@@ -46,15 +61,62 @@ Suggested settlement payments are deterministic. The same balances produce
 the same transfer list, which makes behavior testable and avoids a result that
 appears to change randomly between page loads.
 
+## Recurring expenses are held to the same rules
+
+A recurring template is checked when it is saved exactly as the entries it
+will generate are checked: everybody on it belongs to the group, the payers
+add up to the amount, the split resolves, and a foreign currency in a
+converting group carries a rate. A template that could never produce a valid
+entry is refused then, with the same error a one-off expense would get.
+
+Generation treats each template as its own unit. One that still fails—say, a
+template saved before these checks existed—is logged by its id and its
+group's, counted in the worker's report and retried on the next run, while
+every other template carries on. An occurrence whose payer or participant has
+since left the group is skipped rather than written unbalanced.
+
+Occurrences that fell due while a template was paused, or while its group was
+archived, are skipped rather than back-filled. On resume the series picks up
+at its first occurrence still to come, at the usual 09:00 in the group's
+timezone; a series that ends after a number of times still gets all of them.
+Occurrences missed because the worker itself was down are different—nobody
+chose that gap—and they are caught up.
+
 ## Exchange rates are historical facts
 
 Converted groups store a decimal exchange rate with each foreign-currency
 expense. Multiplication uses decimal arithmetic and rounds once using the
-documented rule. A later rate update never rewrites a historical expense.
+documented rule. That arithmetic runs at 64 significant digits (`MoneyDecimal`
+in `src/modules/currencies/money.ts`) rather than decimal.js's default of 20,
+which rounded the product of a large amount and a rate once before the
+documented rounding. A later rate update never rewrites a historical expense.
+
+A rate is at most 1,000,000,000 to one (`MAX_EXCHANGE_RATE`), with at most
+twelve decimal places. Real rates sit orders of magnitude below the cap; what
+it refuses is a rate with stray zeros, which used to multiply an ordinary
+amount past what the converted column holds. A conversion whose result would
+still pass the largest amount is refused as well.
+
+A foreign-currency expense or repayment that reaches a converted group without
+a rate — an import, or a restored backup — has no base-currency value, and none
+is invented for it. It is never counted in the base at face value, which would
+read ¥30,000 as €30,000. It is balanced in its own currency instead, in a list
+of its own that sums to zero like any other, and statistics leave it out of
+base-currency totals, until somebody re-enters it with a rate.
 
 Daily rate suggestions are optional and off by default. The server—not the
 browser—records whether a saved rate matches a rate the instance fetched, so
 the provenance is verified rather than trusted from client input.
+
+A recurring expense is converted at the rate of each occurrence's own date,
+not the rate typed when the template was set up. When a rate provider is
+configured, the worker looks that day's rate up through the same cache the
+form's suggestion uses, and records it as fetched (`api`) with the time the
+instance fetched it. With no provider, or no quote for that day, or a provider
+that fails, the occurrence keeps the template's typed rate, recorded as typed
+(`manual`) and dated to when the template was created. A missing quote never
+costs an occurrence: a template in a foreign currency cannot be saved without
+a rate to fall back on.
 
 ## Tests focus on invariants
 
@@ -65,7 +127,9 @@ random inputs to exercise the rules repeatedly:
 - balances always sum to zero;
 - the result is deterministic for the same inputs;
 - zero-, two- and three-decimal currencies behave correctly;
-- large values remain exact across database and JSON boundaries; and
+- large values remain exact across database and JSON boundaries;
+- allocations and conversions agree with whole-number arithmetic across the
+  whole accepted range of amounts; and
 - conversions round once and preserve the stored rate.
 
 The relevant implementation lives in `src/modules/expenses`,

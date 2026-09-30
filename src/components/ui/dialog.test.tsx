@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
   LAYOUT_HEIGHT,
   fakeViewport,
   releaseViewport,
 } from "../../../tests/helpers/viewport";
 import { AlertDialog, AlertDialogContent } from "./alert-dialog";
-import { Dialog, DialogContent, DialogTitle } from "./dialog";
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "./dialog";
 
 /**
  * That a dialog gets out from under the keyboard.
@@ -27,7 +28,7 @@ afterEach(releaseViewport);
 describe("a dialog with the keyboard open", () => {
   it("centres itself in the room the keyboard has left", () => {
     const viewport = fakeViewport(LAYOUT_HEIGHT);
-    render(
+    renderWithIntl(
       <Dialog open>
         <DialogContent>
           <DialogTitle>Settle up</DialogTitle>
@@ -48,7 +49,7 @@ describe("a dialog with the keyboard open", () => {
 
   it("goes back to the middle when the keyboard goes away", () => {
     const viewport = fakeViewport(LAYOUT_HEIGHT);
-    render(
+    renderWithIntl(
       <Dialog open>
         <DialogContent>
           <DialogTitle>Settle up</DialogTitle>
@@ -71,7 +72,7 @@ describe("a dialog with the keyboard open", () => {
    */
   it("does the same for the confirm dialog", () => {
     const viewport = fakeViewport(LAYOUT_HEIGHT);
-    render(
+    renderWithIntl(
       <AlertDialog open>
         <AlertDialogContent aria-label="Delete group" />
       </AlertDialog>,
@@ -91,7 +92,7 @@ describe("a dialog with the keyboard open", () => {
    */
   it("does not count a scrolled visual viewport as more keyboard", () => {
     const viewport = fakeViewport(LAYOUT_HEIGHT);
-    render(
+    renderWithIntl(
       <Dialog open>
         <DialogContent>
           <DialogTitle>Settle up</DialogTitle>
@@ -104,5 +105,29 @@ describe("a dialog with the keyboard open", () => {
     viewport.keyboard(336);
 
     expect(dialog.style.top).toBe("calc(50dvh - 108px)");
+  });
+});
+
+/**
+ * The close controls are named in the reader's language.
+ *
+ * Both were a literal English "Close" — the ✕ in the corner as screen-reader
+ * text, the footer's as the visible label — so a French reader met one English
+ * word on every dialog in the app.
+ */
+describe("a dialog's close controls", () => {
+  it("name themselves in French for a French reader", () => {
+    renderWithIntl(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Régler</DialogTitle>
+          <DialogFooter showCloseButton />
+        </DialogContent>
+      </Dialog>,
+      { locale: "fr" },
+    );
+
+    expect(screen.getAllByRole("button", { name: "Fermer" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
   });
 });

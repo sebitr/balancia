@@ -98,6 +98,12 @@ describe("deleting the entry on screen", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("alertdialog");
     expect(within(dialog).getByText(/“Dinner” will be removed/)).toBeVisible();
+    // Both ways back, since both exist: the toast's Undo, and Activity after.
+    expect(
+      within(dialog).getByText(
+        /undo this right after, or restore it later from Activity\./,
+      ),
+    ).toBeVisible();
     expect(deleteExpenseAction).not.toHaveBeenCalled();
 
     await user.click(within(dialog).getByRole("button", { name: "Keep it" }));
