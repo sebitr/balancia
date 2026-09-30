@@ -373,8 +373,10 @@ sanitised, is that a stack frame's arguments and a bundled build's inlined
 values are not something a regular expression can be trusted to clean: one
 `at handleExpense (…description="Dinner at Chez Marie"…)` is a leak that no
 apology fixes. The cost is real — a class name and a component is much less to
-debug from than a trace — and it is accepted. The full error, with its stack,
-is written to this instance's own log where an administrator can read it.
+debug from than a trace — and it is accepted. The error, with its stack, is
+written to this instance's own log where an administrator can read it — less
+the values bound to a failed query, which do not belong in a log either
+(`src/lib/error-for-log.ts`).
 
 Throttling: at most one report per error class per component per hour, and no
 more than 24 per instance per day. An application in a crash loop must not turn

@@ -77,6 +77,7 @@ async function assertParticipants(
   if (rows.length !== new Set(ids).size) {
     throw new AuthorizationError(
       "One or more of those people are not part of this group.",
+      "participantNotInGroup",
     );
   }
 }

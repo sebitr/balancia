@@ -21,12 +21,21 @@ lands here first:
 
 - **Money is a decimal string of integer minor units** (`"6390"` for €63.90),
   never a JSON number. Currency exponents vary (JPY 0, KWD 3) — see
-  `src/modules/currencies/iso-4217.ts`.
-- **Exchange rates are decimal strings**, `1 source = rate target`.
+  `src/modules/currencies/iso-4217.ts`. The largest amount is 10¹⁸ minor
+  units, either sign; a larger total, an exact split part larger than that
+  (a credit may be negative, not bigger), or a conversion that lands past it
+  is a 422.
+- **Exchange rates are decimal strings**, `1 source = rate target`, plain and
+  positive. A rate above 1,000,000,000 to one is a 422, and so is one with
+  more than twelve decimal places wherever it is applied.
 - **Calendar dates are `YYYY-MM-DD` strings** with no timezone; instants are
-  ISO 8601.
+  ISO 8601. A date is a day the calendar has, between `1900-01-01` and
+  `2999-12-31`: `2025-02-30` on a write is a 422 saying so, and on
+  `/api/rates?on` a 400. The inbox's `before` instant is held to the same
+  years.
 - **Authorization failures are 404**, indistinguishable from a group that does
-  not exist (same rule as the export route). Missing authentication is 401.
+  not exist (same rule as the export route). A path id that is not a UUID is
+  the same 404, answered before any lookup. Missing authentication is 401.
   Refusals a person should read (a bad split, a rate limit) are 422 / 429 with
   `{"error": "..."}`.
 - Every response is `Cache-Control: private, no-store`.
@@ -630,7 +639,7 @@ emit nothing else:
 | `taken`        | 409  | The seat is held by another account — see below                                                         | **`POST` only**        |
 | `authRequired` | 401  | No session. Answered before the token is read, so it never spends one                                   | **`POST` only**        |
 | `rateLimited`  | 429  | Bucket exhausted; carries `Retry-After` in seconds                                                      | both, `GET` and `POST` |
-| `unavailable`  | 500  | A fault on this side; logged in full, reported anonymously                                              | both, `GET` and `POST` |
+| `unavailable`  | 500  | A fault on this side; logged (less any query values), reported anonymously                              | both, `GET` and `POST` |
 
 The split a client needs: **404 and 410 mean the link is dead** and only a new
 one helps; **409** means this account cannot have that particular seat, but the

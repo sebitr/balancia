@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
+import { isStorableDate } from "@/lib/calendar-date";
 
 /**
  * Keyset paging over a list ordered by (date, created_at, id) descending.
@@ -54,9 +55,17 @@ export interface ListCursor {
 
 const TIME_FORMAT = 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"';
 
+/**
+ * Both halves are cast by PostgreSQL, which refuses a day or an hour that does
+ * not exist — so the shape is not enough here either, and a cursor fiddled to
+ * `2025-02-30` would otherwise fail the query rather than read as no cursor.
+ */
 const cursorSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  time: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/),
+  date: z.string().refine(isStorableDate),
+  time: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{6}Z$/)
+    .refine((value) => isStorableDate(value.slice(0, 10))),
   id: z.uuid(),
   // Nineteen digits is the whole of a bigint; anything longer is not an
   // amount this server could have written.

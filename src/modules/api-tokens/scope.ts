@@ -27,7 +27,8 @@
  */
 
 /** Read-only, or read and write. See `apiTokenScopeEnum`. */
-export type TokenScope = "read" | "write";
+export const TOKEN_SCOPES = ["read", "write"] as const;
+export type TokenScope = (typeof TOKEN_SCOPES)[number];
 
 /**
  * Why a token is refused a route it will never be allowed on.

@@ -56,10 +56,7 @@ async function handleGet() {
      * the feature is designed to be invisible.
      */
     if (!(error instanceof AuthError)) {
-      logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
-        "Passkey upgrade options failed",
-      );
+      logger.error({ err: error }, "Passkey upgrade options failed");
     }
     return new NextResponse(null, { status: 204 });
   }
