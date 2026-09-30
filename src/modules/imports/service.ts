@@ -270,12 +270,14 @@ export async function stageImport(
   }
 
   // Taken from the row as the file had it, not as it is staged: see
-  // `FittedRow.source`.
+  // `FittedRow.source`. Both lists come from the rows the limits kept, so
+  // that the two are matched up by position below; a row dropped from one
+  // and not the other would check every later row against its neighbour's.
   const fingerprints = fitted.rows.map((entry) =>
     fingerprintRow(access.groupId, entry.source),
   );
-  const formerFingerprints = parsed.rows.map((entry) =>
-    formerFingerprint(access.groupId, entry.row),
+  const formerFingerprints = fitted.rows.map((entry) =>
+    formerFingerprint(access.groupId, entry.source),
   );
   const lookedUp = [
     ...fingerprints,
