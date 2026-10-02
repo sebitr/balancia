@@ -226,7 +226,8 @@ services:
     environment: *dev-environment
     volumes: *dev-volumes
     command: ["pnpm", "dev:worker"]
-    stop_grace_period: 20s
+    # Covers the job drain on SIGTERM; see SHUTDOWN_DRAIN_MS.
+    stop_grace_period: 30s
 
   # Not started by `up`. Run on demand:
   #   docker compose -f compose.dev.yaml run --rm seed

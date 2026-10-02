@@ -880,8 +880,11 @@ is not collecting should not advertise that the endpoint would exist.
 
 Default `false`. Exposes Prometheus metrics at `/api/metrics`: HTTP request
 durations and status classes by route template, Server Action durations and
-outcomes, background-job durations and failures by queue, database query
-latency, connection-pool usage, memory, CPU and uptime.
+outcomes, background-job durations and failures by queue, whether the
+background worker is running and when the nightly maintenance sweep last
+finished, database query latency, connection-pool usage, memory, CPU and
+uptime. The alert to set up first is in
+[self-hosting.md](self-hosting.md#alerting-on-the-background-jobs).
 
 These are **exact, local and never transmitted**. They are not telemetry and
 share none of its code; the only way they leave the server is an operator
@@ -920,6 +923,12 @@ nightly housekeeping sweep.
 On by default so that one container is the whole application. The image needs
 no companion service — behind a reverse proxy, or as the single `app` service
 of the Compose stack, it does all of its own work.
+
+A worker that cannot reach its queue at startup does not stop the app serving
+pages. It retries, from five seconds apart up to every five minutes, and says
+where it stands in the `worker` field of `/api/health/ready` and in the
+`balancia_worker_up` metric. On SIGTERM the app gives the jobs it is running up
+to twenty seconds to finish before it exits.
 
 Set it to `false` only when something else is running those jobs, which under
 Compose means enabling the `worker` service. That takes a second line, because
@@ -1034,6 +1043,10 @@ then yours to apply:
 ```bash
 docker compose run --rm --entrypoint "node dist/migrate.js" app
 ```
+
+An app started before its image's migrations have been applied answers
+`/api/health/ready` with 503 — `pendingMigrations` in the body says how many
+are missing — and becomes ready by itself as soon as they are.
 
 ### `ALLOW_NEWER_SCHEMA`
 
