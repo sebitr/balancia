@@ -4,12 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { createTranslator } from "use-intl/core";
 import en from "../../../messages/en.json";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { createDateFormatter } from "@/i18n/format";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { ActivityFeed } from "./activity-feed";
 
 /**
- * The group's history, and the Restore it carries on a deletion that still
- * stands — the way back that does not run out after eight seconds.
+ * The group's history: the clock it tells the time on, and the Restore it
+ * carries on a deletion that still stands — the way back that does not run
+ * out after eight seconds.
  *
  * The feed renders on the server; here it is awaited and its output mounted,
  * with the real English catalogue behind both halves — the whole of it for the
@@ -27,8 +29,18 @@ vi.mock("next-intl/server", () => ({
     createTranslator({ locale: "en", messages: en, namespace }),
 }));
 
+/*
+ * The server's formatter, UTC and all. The app's own zone is the server's —
+ * UTC unless an operator set `TZ` — which is exactly the situation the feed
+ * has to correct for by telling each time on the group's clock.
+ */
 vi.mock("@/i18n/preferences", () => ({
-  getDateFormatter: async () => ({ at: (date: Date) => date.toISOString() }),
+  getDateFormatter: async () =>
+    createDateFormatter({
+      dateFormat: "dmy",
+      formatLocale: "en-GB",
+      timeZone: "UTC",
+    }),
   getNumberLocale: async () => "en-GB",
 }));
 
@@ -135,6 +147,7 @@ async function feed(restorable: readonly string[]) {
     entries: ENTRIES,
     groupId: "g1",
     restorable: new Set(restorable),
+    timeZone: "UTC",
   });
 }
 
@@ -143,6 +156,52 @@ const GROUP = { area: "group" } as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("the activity feed's clock", () => {
+  const ADDED = event({
+    id: "a1",
+    action: "expense.created",
+    entityType: "expense",
+    entityId: "e1",
+    metadata: { description: "Groceries" },
+    // Five past two in the afternoon in UTC; five past four in Paris, which is
+    // on summer time in August.
+    createdAt: new Date("2026-08-13T14:05:00Z"),
+  });
+
+  it("tells the time on the group's clock, not the server's", async () => {
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [ADDED],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "Europe/Paris",
+      }),
+      GROUP,
+    );
+
+    const time = screen.getByText(/16:05/);
+    expect(time).toHaveTextContent("13/08/2026, 16:05");
+    // The machine-readable instant is still the instant.
+    expect(time).toHaveAttribute("datetime", "2026-08-13T14:05:00.000Z");
+    expect(screen.queryByText(/14:05/)).not.toBeInTheDocument();
+  });
+
+  it("moves the day with the clock", async () => {
+    // A quarter to midnight in UTC is already tomorrow in Auckland.
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [{ ...ADDED, createdAt: new Date("2026-08-13T23:45:00Z") }],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "Pacific/Auckland",
+      }),
+      GROUP,
+    );
+
+    expect(screen.getByText(/11:45/)).toHaveTextContent("14/08/2026, 11:45");
+  });
 });
 
 describe("restoring from the activity feed", () => {

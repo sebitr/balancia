@@ -59,7 +59,13 @@ export default async function ImportPage({
                     {run.fileName}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {dates.at(run.createdAt, { time: "short" })} ·{" "}
+                    {dates.at(run.createdAt, {
+                      time: "short",
+                      // The group's clock, as in its activity feed, rather
+                      // than the server's.
+                      timeZone: access.group.timezone,
+                    })}{" "}
+                    ·{" "}
                     {t("runSummary", {
                       imported: run.rowsImported,
                       skipped: run.rowsSkipped,

@@ -656,8 +656,11 @@ describe("configuration reaches the containers", () => {
 
   it("names nothing the app does not read", () => {
     const known = new Set<string>(ENV_VARIABLE_NAMES);
-    // Consumed by the entrypoint to assemble DATABASE_URL, not by the schema.
+    // Consumed by the entrypoint, not by the schema: the first to assemble
+    // DATABASE_URL, the second to decide whether to migrate. That they reach
+    // it is docker-entrypoint.test.ts's to check.
     known.add("POSTGRES_PASSWORD");
+    known.add("RUN_MIGRATIONS");
 
     const unknown = [...forwardedByCompose()].filter(
       (name) => !known.has(name),

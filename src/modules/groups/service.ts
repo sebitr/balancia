@@ -25,6 +25,8 @@ import {
   removeStoredReceipts,
   storageKeysOfGroup,
 } from "@/modules/attachments/service";
+import { loadGroupBalances } from "@/modules/balances/service";
+import { OpenBalanceError } from "@/modules/balances/open-balance";
 import { DEFAULT_JOIN_LINK_EXPIRY, expiryDate } from "@/modules/join/expiry";
 import { rescheduleAfterUnarchive } from "@/modules/recurring/service";
 import type {
@@ -780,6 +782,12 @@ export async function updateParticipant(
 /**
  * Soft-removes a participant. Their history stays intact — deleting someone who
  * appears in past expenses would silently rewrite balances.
+ *
+ * Only once they are square. A removed person is still in every balance their
+ * history touches, but no new entry can name them, so a debt they left behind
+ * would sit on the settle screen with no way to record it. The People screen
+ * disables the button for somebody with money outstanding; this is the rule
+ * behind it, for the API and for the screen that was rendered a minute ago.
  */
 export async function removeParticipant(
   access: GroupAccess,
@@ -790,6 +798,23 @@ export async function removeParticipant(
   const db = options.db ?? getDb();
 
   await db.transaction(async (tx) => {
+    /*
+     * Locked before the balance is read, and that lock is what makes the check
+     * true at commit rather than only when it ran.
+     *
+     * Every write that names a person — an expense, a repayment, a recurring
+     * occurrence, an import — takes FOR SHARE on that person's row while it
+     * confirms they are still in the group. FOR NO KEY UPDATE conflicts with
+     * it, so whichever arrives second waits for the other to finish. If the
+     * entry was first, this waits for it to commit and the balance below, read
+     * by a later statement with a fresh snapshot, includes it. If the removal
+     * was first, the entry waits, re-reads the row, finds `removed_at` set and
+     * is refused. Never both.
+     *
+     * One person's row rather than a lock on the group: entries that do not
+     * name them never wait, and neither do rows that only reference them by
+     * foreign key, which take KEY SHARE and do not conflict with this.
+     */
     const [target] = await tx
       .select({
         id: participants.id,
@@ -804,7 +829,8 @@ export async function removeParticipant(
           isNull(participants.removedAt),
         ),
       )
-      .limit(1);
+      .limit(1)
+      .for("no key update");
 
     if (!target) {
       throw new AuthorizationError(
@@ -834,6 +860,22 @@ export async function removeParticipant(
           "ownerNotRemovable",
         );
       }
+    }
+
+    // Every currency the group keeps, from the same engine as the screen: a
+    // person square in euros and owed in francs is not square.
+    const balances = await loadGroupBalances(access, {
+      db: tx,
+      inTransaction: true,
+    });
+    const outstanding = balances.currencies.some((entry) =>
+      entry.balances.some(
+        (balance) =>
+          balance.participantId === participantId && balance.amount !== 0n,
+      ),
+    );
+    if (outstanding) {
+      throw new OpenBalanceError("participantHasBalance", target.displayName);
     }
 
     await tx

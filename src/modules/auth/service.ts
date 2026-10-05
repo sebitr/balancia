@@ -156,8 +156,8 @@ export interface RegisterResult {
  * Separate from `registerUser` because a password is only one of three ways to
  * arrive at an account: a passkey signup writes a row with no password hash at
  * all, and a code signup writes one that is waiting for its address to be
- * confirmed. All three want the same INSERT, the same rule about who
- * administers the instance, and the same reading of a duplicate email.
+ * confirmed. All three want the same INSERT and the same reading of a
+ * duplicate email.
  */
 export async function insertUser(
   input: {
@@ -199,17 +199,9 @@ export async function insertUser(
         ...(input.webauthnUserHandle
           ? { webauthnUserHandle: input.webauthnUserHandle }
           : {}),
-        /*
-         * The first account on an instance is its administrator: on a
-         * self-hosted deployment, whoever registers first is the person who
-         * just ran `docker compose up`. Decided inside the INSERT so it cannot
-         * be a read-then-write race against a second registration, and so
-         * there is no separate "claim the instance" step to forget.
-         *
-         * It grants exactly one thing today — the telemetry settings — and
-         * nothing about anybody's groups. See src/lib/security/admin.ts.
-         */
-        isAdmin: sql<boolean>`NOT EXISTS (SELECT 1 FROM ${users})`,
+        // Nothing about `isAdmin`: whether this is the first account, and so
+        // the administrator, is decided by a trigger on the table, for every
+        // path that writes a user. See drizzle/0039_first_account_is_admin.sql.
       })
       .returning({ id: users.id });
     return created.id;

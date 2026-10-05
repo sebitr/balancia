@@ -235,6 +235,18 @@ the background jobs [their own container](#background-jobs), that is a second
 app-sized pool as well — plan for roughly `2 × DATABASE_POOL_MAX` against
 PostgreSQL's `max_connections` in that shape.
 
+Every connection in the app's pool is opened with two limits, which are not
+environment variables: PostgreSQL cancels a statement that runs for more than
+30 seconds, and ends a transaction left idle inside for more than a minute. The
+longest statements Balancia sends take seconds, and without the limits one
+runaway query held its connection for as long as it liked — enough of them and
+the pool ran dry for everybody. An installation that genuinely needs longer can
+say so in the connection string: `?statement_timeout=120000` (milliseconds) at
+the end of [`DATABASE_URL`](#database_url) overrides the default, which under
+Compose means setting that variable yourself. Migrations connect on their own
+and pg-boss keeps its own pool, so neither is bound by the defaults — though
+both read `DATABASE_URL` too, and would take an override written there.
+
 ---
 
 ## Receipt storage
@@ -890,8 +902,11 @@ is not collecting should not advertise that the endpoint would exist.
 
 Default `false`. Exposes Prometheus metrics at `/api/metrics`: HTTP request
 durations and status classes by route template, Server Action durations and
-outcomes, background-job durations and failures by queue, database query
-latency, connection-pool usage, memory, CPU and uptime.
+outcomes, background-job durations and failures by queue, whether the
+background worker is running and when the nightly maintenance sweep last
+finished, database query latency, connection-pool usage, memory, CPU and
+uptime. The alert to set up first is in
+[self-hosting.md](self-hosting.md#alerting-on-the-background-jobs).
 
 These are **exact, local and never transmitted**. They are not telemetry and
 share none of its code; the only way they leave the server is an operator
@@ -930,6 +945,12 @@ nightly housekeeping sweep.
 On by default so that one container is the whole application. The image needs
 no companion service — behind a reverse proxy, or as the single `app` service
 of the Compose stack, it does all of its own work.
+
+A worker that cannot reach its queue at startup does not stop the app serving
+pages. It retries, from five seconds apart up to every five minutes, and says
+where it stands in the `worker` field of `/api/health/ready` and in the
+`balancia_worker_up` metric. On SIGTERM the app gives the jobs it is running up
+to twenty seconds to finish before it exits.
 
 Set it to `false` only when something else is running those jobs, which under
 Compose means enabling the `worker` service. That takes a second line, because
@@ -1033,11 +1054,21 @@ safe — the runner holds a PostgreSQL advisory lock, so the second waits and
 then finds the schema current.
 
 Set to `false` to take that over yourself, e.g. to apply migrations once and
-confirm before rolling the app:
+confirm before rolling the app. Under Compose it goes in `.env`, and
+`compose.yaml` passes it to the app and the worker alike; each says in its log
+that it skipped the step. For a single one-off command rather than the whole
+stack, pass it to that command instead —
+`docker compose run --rm -e RUN_MIGRATIONS=false app sh` starts a shell without
+migrating first. Only the word `false` turns the step off. The migrations are
+then yours to apply:
 
 ```bash
 docker compose run --rm --entrypoint "node dist/migrate.js" app
 ```
+
+An app started before its image's migrations have been applied answers
+`/api/health/ready` with 503 — `pendingMigrations` in the body says how many
+are missing — and becomes ready by itself as soon as they are.
 
 ### `ALLOW_NEWER_SCHEMA`
 

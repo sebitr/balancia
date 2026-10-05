@@ -7,6 +7,7 @@ import {
   normaliseSearchText,
   timezoneCity,
   timezoneOptions,
+  todayInZone,
 } from "./timezones";
 
 /**
@@ -134,6 +135,46 @@ describe("detectTimezone", () => {
       timeZone: "Mars/Olympus",
     } as Intl.ResolvedDateTimeFormatOptions);
     expect(detectTimezone()).toBeNull();
+  });
+});
+
+describe("todayInZone", () => {
+  it("is the day on the group's clock, not on Greenwich's", () => {
+    // Half past eleven at night in New York, on summer time since the 9th;
+    // already the 15th in UTC.
+    const lateInNewYork = new Date("2025-03-15T03:30:00Z");
+    expect(todayInZone("America/New_York", lateInNewYork)).toBe("2025-03-14");
+    // Nine in the morning in Auckland; still the 14th in UTC.
+    const morningInAuckland = new Date("2025-03-14T20:00:00Z");
+    expect(todayInZone("Pacific/Auckland", morningInAuckland)).toBe(
+      "2025-03-15",
+    );
+    // Half past midnight in Paris on summer time.
+    expect(todayInZone("Europe/Paris", new Date("2025-07-31T22:30:00Z"))).toBe(
+      "2025-08-01",
+    );
+  });
+
+  describe("with no zone it can use", () => {
+    const original = process.env.TZ;
+
+    afterEach(() => {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    });
+
+    it("reads the device's own clock rather than UTC", () => {
+      // Node re-reads its zone when TZ is assigned, which is the only way to
+      // put this device somewhere UTC disagrees with.
+      process.env.TZ = "Pacific/Auckland";
+      const morningInAuckland = new Date("2025-03-14T20:00:00Z");
+
+      expect(todayInZone(null, morningInAuckland)).toBe("2025-03-15");
+      expect(todayInZone(undefined, morningInAuckland)).toBe("2025-03-15");
+      // An old snapshot, or a zone this runtime has never heard of.
+      expect(todayInZone("", morningInAuckland)).toBe("2025-03-15");
+      expect(todayInZone("Mars/Olympus", morningInAuckland)).toBe("2025-03-15");
+    });
   });
 });
 

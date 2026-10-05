@@ -53,6 +53,11 @@ elif [ "${RUN_MIGRATIONS:-true}" != "false" ]; then
     echo "Migrations failed — not starting. Fix the error above, then: docker compose up -d" >&2
     exit 1
   }
+else
+  # Said, because this is the one way a new release comes up on the schema the
+  # last one left, and the log is where anybody would look for why.
+  echo "RUN_MIGRATIONS is false: skipping migrations. Any pending ones wait for" >&2
+  echo "you to run node dist/migrate.js. See docs/environment.md." >&2
 fi
 
 # A feature that is switched on but cannot find its files, said out loud.

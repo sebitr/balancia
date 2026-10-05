@@ -357,6 +357,85 @@ describe("French copy", () => {
   });
 });
 
+/**
+ * One name for the money one person sends another to square up.
+ *
+ * The code calls it a settlement, and the screens used to call it four things
+ * at once: a "Settlement" badge in the transactions list, "recorded a payment"
+ * in the activity feed, "Edit payment" over the form that edits one, and a
+ * "Settle" tab beside Expense and Income. Somebody who had recorded a payment
+ * went looking for it under a word they had never typed, and every translator
+ * inherited the choice between the four. It is a repayment on every screen now
+ * — a remboursement in French — and "Settle up" is left to name the action and
+ * the screen of suggestions it opens. The code and the API keep `settlement`;
+ * the reader never meets it.
+ */
+describe("the name of a repayment", () => {
+  it("never shows the reader the code's word for it", () => {
+    const leaked = [...english]
+      .filter(([, message]) => /\bsettlements?\b/i.test(message))
+      .map(([key]) => key);
+
+    expect(leaked).toEqual([]);
+  });
+
+  it("calls it a repayment wherever a screen names one", () => {
+    // The strings that name the record itself, as a label or as the thing a
+    // sentence is about. One that only mentions paying — "Pay Hervé back", a
+    // payment method, who paid for an expense — does not belong here.
+    const NAMES_IT = [
+      "expensesList.paymentBadge",
+      "expensesList.kind_settlement",
+      "transactionDetail.types.settlement",
+      "addEntry.types.settle",
+      "addEntry.editTitles.settle",
+      "addEntry.actions.recordPayment",
+      "addEntry.saved.paymentRecorded",
+      "activity.actions.settlement.created",
+      "activity.actions.settlement.updated",
+      "activity.actions.settlement.deleted",
+      "activity.actions.settlement.restored",
+      "notifications.settlementIncoming",
+      "notifications.settlementOutgoing",
+      "notifications.settlementUpdatedIncoming",
+      "notifications.settlementUpdatedOutgoing",
+      "notifications.settlementDeletedIncoming",
+      "notifications.settlementDeletedOutgoing",
+      "notificationSettings.settlements",
+      "importWizard.settlementCount",
+      "group.suggestedSettlements",
+      "group.recordPayment",
+    ];
+    const WORD: [string, Map<string, string>, RegExp][] = [
+      ["en", english, /\brepayments?\b/i],
+      ["fr", french, /\bremboursements?\b/i],
+    ];
+
+    const elsewhere = WORD.flatMap(([locale, catalogue, word]) =>
+      NAMES_IT.filter((key) => !word.test(catalogue.get(key) ?? "")).map(
+        (key) => `${locale}: ${key}`,
+      ),
+    );
+
+    expect(elsewhere).toEqual([]);
+  });
+});
+
+describe("English copy", () => {
+  it("says they of a person, never (s)he", () => {
+    // Everywhere else the catalogue already did. Three strings on the People
+    // screen were the exception, and a slashed pronoun is the kind of thing
+    // that gets copied from the nearest string into the next one.
+    const slashed = [...english]
+      .filter(([, message]) =>
+        /\(s\)he\b|\bs\/he\b|\bhe\/she\b|\bhe or she\b/i.test(message),
+      )
+      .map(([key]) => key);
+
+    expect(slashed).toEqual([]);
+  });
+});
+
 describe("locale negotiation", () => {
   it("honours the highest-quality supported language", () => {
     expect(negotiateLocale("fr-CA,fr;q=0.9,en;q=0.8")).toBe("fr");

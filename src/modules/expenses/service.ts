@@ -111,36 +111,52 @@ export interface ListedExpense extends ExpenseSummary {
 }
 
 /**
- * Step 1 above. Exported for recurring templates, which name the same people
- * and are held to the same rule when they are saved.
+ * Step 1 above: everyone the entry names, confirmed to be in the group and
+ * held there until the transaction ends. Exported for recurring templates,
+ * which name the same people and are held to the same rule when they are
+ * saved.
+ *
+ * FOR SHARE is the half of the lock `removeParticipant` waits on: nobody named
+ * here can be removed until this entry has committed, and a removal that got
+ * there first makes this re-read the row and refuse. See the note there.
+ *
+ * `alreadyOnEntry` is for an edit. Somebody removed since the entry was written
+ * is still on it, and correcting its description or its date is no reason to
+ * drop them from a split they were part of — that would rewrite the history the
+ * removal promised to keep. They may stay; they may not be added anywhere new.
  */
 export async function assertParticipantsInGroup(
   tx: Database,
   groupId: string,
   participantIds: readonly string[],
+  alreadyOnEntry: readonly string[] = [],
 ): Promise<Map<string, string>> {
   const unique = [...new Set(participantIds)];
   if (unique.length === 0) {
     throw new AllocationError("An expense needs at least one participant");
   }
   const rows = await tx
-    .select({ id: participants.id, displayName: participants.displayName })
+    .select({
+      id: participants.id,
+      displayName: participants.displayName,
+      removedAt: participants.removedAt,
+    })
     .from(participants)
     .where(
-      and(
-        eq(participants.groupId, groupId),
-        inArray(participants.id, unique),
-        isNull(participants.removedAt),
-      ),
-    );
+      and(eq(participants.groupId, groupId), inArray(participants.id, unique)),
+    )
+    .for("share");
 
-  if (rows.length !== unique.length) {
+  const allowed = rows.filter(
+    (row) => row.removedAt === null || alreadyOnEntry.includes(row.id),
+  );
+  if (allowed.length !== unique.length) {
     throw new AuthorizationError(
       "One or more of those people are not part of this group.",
       "participantNotInGroup",
     );
   }
-  return new Map(rows.map((row) => [row.id, row.displayName]));
+  return new Map(allowed.map((row) => [row.id, row.displayName]));
 }
 
 interface PreparedExpense {
@@ -535,21 +551,26 @@ export async function updateExpense(
       );
     }
 
+    // Captured before the allocations are replaced: someone dropped from the
+    // split needs to hear that their share is gone just as much as someone
+    // added to it. It is also who the edit may keep after they have left.
+    const previousParticipants = await participantsOfExpense(tx, expenseId);
+
     const referenced = [
       ...input.payers.map((payer) => payer.participantId),
       ...input.splitEntries.map((entry) => entry.participantId),
     ];
-    await assertParticipantsInGroup(tx, access.groupId, referenced);
+    await assertParticipantsInGroup(
+      tx,
+      access.groupId,
+      referenced,
+      previousParticipants,
+    );
 
     const prepared = prepareExpense(access, input, {
       now: options.now,
       rateSource,
     });
-
-    // Captured before the allocations are replaced: someone dropped from the
-    // split needs to hear that their share is gone just as much as someone
-    // added to it.
-    const previousParticipants = await participantsOfExpense(tx, expenseId);
 
     await tx
       .update(expenses)

@@ -73,8 +73,12 @@ async function stillThere(userId: string): Promise<boolean> {
 }
 
 describe("pruneUnclaimedAccounts", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     withSmtp(true);
+    // Whoever set the instance up, verified and so never swept. Without them
+    // the first unclaimed account would be the first account, which the
+    // database makes the administrator — and the sweep spares.
+    await createTestUser({ name: "Operator" });
   });
 
   it("frees an address somebody claimed and never proved", async () => {

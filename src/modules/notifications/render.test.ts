@@ -423,7 +423,7 @@ describe("a payment being changed or deleted", () => {
       "en",
     );
 
-    expect(rendered.sentence).toBe("Adrien removed a payment to you");
+    expect(rendered.sentence).toBe("Adrien removed a repayment to you");
   });
 
   it("names the counterpart when the reader was the one paying", () => {
@@ -433,7 +433,7 @@ describe("a payment being changed or deleted", () => {
       "en",
     );
 
-    expect(rendered.sentence).toBe("Adrien removed your payment to Chloé");
+    expect(rendered.sentence).toBe("Adrien removed your repayment to Chloé");
   });
 
   it("says a change touched money that was coming to the reader", () => {
@@ -443,7 +443,7 @@ describe("a payment being changed or deleted", () => {
       "en",
     );
 
-    expect(rendered.sentence).toBe("Adrien changed a payment to you");
+    expect(rendered.sentence).toBe("Adrien changed a repayment to you");
   });
 
   it("names the counterpart when a change was to the reader's own payment", () => {
@@ -453,6 +453,6 @@ describe("a payment being changed or deleted", () => {
       "en",
     );
 
-    expect(rendered.sentence).toBe("Adrien changed your payment to Chloé");
+    expect(rendered.sentence).toBe("Adrien changed your repayment to Chloé");
   });
 });
