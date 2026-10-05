@@ -24,6 +24,13 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-dom"
         update-types: ["version-update:semver-major"]
+      # jsdom 30.1 stopped keeping a Blob's implementation under an own
+      # Symbol(impl), and Vitest 5.0.2's jsdom environment finds it there to
+      # hand URL.createObjectURL a Node Blob — so every test that previews a
+      # picked file throws. Held at 30.0 (`~30.0.1` in package.json) until a
+      # Vitest release reads it the new way; lift both then.
+      - dependency-name: "jsdom"
+        versions: [">=30.1.0"]
     labels:
       - dependencies
 

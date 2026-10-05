@@ -138,7 +138,7 @@ test("records a settlement and clears the balance", async ({ page }) => {
     .click();
 
   await page.getByLabel("Paying back").fill("10.00");
-  await page.getByRole("button", { name: "Record payment" }).click();
+  await page.getByRole("button", { name: "Record repayment" }).click();
 
   // Back on the settle-up screen, which now reads as a state: one card saying
   // the group is settled, with the repayment just recorded listed under it.

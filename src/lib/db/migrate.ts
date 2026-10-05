@@ -63,11 +63,19 @@ export function migrationsDirectory(): string {
   return path.join(process.cwd(), "drizzle");
 }
 
-export function loadMigrations(directory: string): MigrationFile[] {
-  const entries = readdirSync(directory)
+/**
+ * The committed migrations' names, in the order they apply — which is also
+ * what `/api/health/ready` compares the database against, so the two can
+ * never disagree about what counts as a migration.
+ */
+export function migrationNames(directory: string): string[] {
+  return readdirSync(directory)
     .filter((entry) => entry.endsWith(".sql"))
     .sort();
-  return entries.map((name) => {
+}
+
+export function loadMigrations(directory: string): MigrationFile[] {
+  return migrationNames(directory).map((name) => {
     const sql = readFileSync(path.join(directory, name), "utf8");
     return {
       name,

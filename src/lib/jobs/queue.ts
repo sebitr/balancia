@@ -49,6 +49,27 @@ export interface NotificationsDeliverPayload {
   readonly notificationIds: readonly string[];
 }
 
+/**
+ * How long a stopping process gives the jobs it has in hand to finish.
+ *
+ * Stated once, because the grace periods in the Compose files are sized
+ * around it: `compose.yaml` gives the app thirty seconds between SIGTERM and
+ * SIGKILL (`stop_grace_period`), and the dedicated worker forty. Inside that,
+ * pg-boss stops fetching at once, waits up to this long for running jobs, then
+ * fails whatever is still running back to the queue — where it is retried,
+ * which the jobs are written to survive — and closes its pool.
+ * `STOP_SLACK_MS` bounds that last part. Twenty plus five leaves five of the
+ * app's thirty seconds for the process to exit, and `queue.test.ts` fails the
+ * build if a grace period stops covering both.
+ *
+ * Long enough for a recurring-expense run or a typical import commit. A very
+ * large import that overruns is cut and retried, which costs delay, not data.
+ */
+export const SHUTDOWN_DRAIN_MS = 20_000;
+
+/** What pg-boss is allowed after the drain to fail the stragglers and close. */
+export const STOP_SLACK_MS = 5_000;
+
 let boss: PgBoss | undefined;
 let starting: Promise<PgBoss> | undefined;
 
@@ -76,34 +97,69 @@ async function start(): Promise<PgBoss> {
     logger.error({ err: error }, "Job queue error");
   });
 
-  await instance.start();
-  for (const queue of Object.values(QUEUES)) {
-    await instance.createQueue(queue);
+  try {
+    await instance.start();
+    for (const queue of Object.values(QUEUES)) {
+      await instance.createQueue(queue);
+    }
+  } catch (error) {
+    // A half-started instance still holds a pool and timers. Let them go
+    // before the next attempt makes another, or every retry leaks one.
+    await instance.stop({ graceful: false, close: true }).catch(() => {});
+    throw error;
   }
   return instance;
 }
 
 export async function getBoss(): Promise<PgBoss> {
   if (boss) return boss;
-  starting ??= start().then((instance) => {
-    boss = instance;
-    return instance;
-  });
+  if (!starting) {
+    const attempt: Promise<PgBoss> = start().then(
+      (instance) => {
+        boss = instance;
+        return instance;
+      },
+      (error: unknown) => {
+        // Forget a failed start. Cached, it was handed to every later caller
+        // until the process restarted, so one database blip at boot meant no
+        // job was ever published or served again. Only this attempt is
+        // forgotten: a newer one may already be under way.
+        if (starting === attempt) starting = undefined;
+        throw error;
+      },
+    );
+    starting = attempt;
+  }
   return starting;
 }
 
-export async function stopBoss(): Promise<void> {
+/**
+ * Stops the queue: no more fetching, running jobs given `drainMs` to finish.
+ *
+ * pg-boss's `stop()` resolves only once all of that is done, jobs failed back
+ * to the queue and pool closed. This used to wait for a `stopped` event
+ * afterwards as well — an event `stop()` had already emitted before it
+ * resolved, so every shutdown sat through the whole fallback timer for
+ * nothing. The timer that remains is the one worth having: a queue that never
+ * settles must not hold the process past its grace period.
+ */
+export async function stopBoss(drainMs = SHUTDOWN_DRAIN_MS): Promise<void> {
   const instance = boss;
   boss = undefined;
   starting = undefined;
-  if (instance) {
-    // Graceful: let in-flight handlers finish, then close the pool.
-    await instance.stop({ graceful: true, close: true, timeout: 30_000 });
-    await new Promise<void>((resolve) => {
-      instance.once("stopped", () => resolve());
-      // Never hang shutdown on a queue that refuses to settle.
-      setTimeout(resolve, 35_000).unref();
-    });
+  if (!instance) return;
+
+  let giveUp: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      instance.stop({ graceful: true, close: true, timeout: drainMs }),
+      new Promise<void>((resolve) => {
+        giveUp = setTimeout(resolve, drainMs + STOP_SLACK_MS);
+        giveUp.unref();
+      }),
+    ]);
+  } finally {
+    clearTimeout(giveUp);
   }
 }
 
