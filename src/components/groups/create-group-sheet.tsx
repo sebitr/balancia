@@ -316,7 +316,9 @@ export function CreateGroupSheet({
           <GroupReady
             groupId={created.groupId}
             groupName={name.trim()}
-            people={members.map((member) => member.name)}
+            others={members
+              .filter((member) => !member.you)
+              .map((member) => member.name)}
             invite={created.invite}
             onSkip={() => leave(created.groupId)}
             // The sheet has to keep naming itself, and this view's own title

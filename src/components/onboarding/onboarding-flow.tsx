@@ -709,7 +709,8 @@ export function OnboardingFlow({
           <GroupReady
             groupId={startedGroup.groupId}
             groupName={startedGroup.groupName}
-            people={[name.trim()]}
+            // Started from a name and a group name, with nobody else typed in.
+            others={[]}
             invite={startedGroup.invite}
             onSkip={leave}
             heading="h1"

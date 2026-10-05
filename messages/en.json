@@ -2169,10 +2169,10 @@
     "revokeFailed": "The link could not be revoked.",
     "ready": {
       "title": "Your group is ready!",
-      "lede": "Share the same link with everyone. {people} can choose their existing name when they open it.",
-      "ledeAlone": "Share the same link with everyone. They can choose their existing name in the group or join as a new member.",
-      "peopleTwo": "{first} and {second}",
-      "peopleMany": "{first}, {second} and {count, plural, one {1 other} other {# others}}"
+      "ledeNobody": "Share the same link with everyone. Each person who opens it joins the group under their own name.",
+      "ledeOne": "Share the same link with everyone. {first} can choose their existing name when they open it.",
+      "ledeTwo": "Share the same link with everyone. {first} and {second} can choose their existing names when they open it.",
+      "ledeMany": "Share the same link with everyone. {first}, {second} and {count, plural, one {# other} other {# others}} can choose their existing names when they open it."
     }
   },
   "guestWidget": {
