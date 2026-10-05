@@ -968,9 +968,7 @@ describe("a split that does not add up", () => {
     const split = await exactSplit(user, { Seb: "25" });
     await user.click(split.getByRole("button", { name: "Done" }));
 
-    expect(row()).toHaveTextContent(
-      "Exact amounts · CHF 5.00 left to assign",
-    );
+    expect(row()).toHaveTextContent("Exact amounts · CHF 5.00 left to assign");
   });
 
   it("says it of percentages that do not make 100", async () => {
@@ -1101,9 +1099,7 @@ describe("the rest of an exact split", () => {
       }),
     );
 
-    expect(split.getByLabelText("Exact amount for Cyril")).toHaveValue(
-      "35.00",
-    );
+    expect(split.getByLabelText("Exact amount for Cyril")).toHaveValue("35.00");
     expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("25");
     expect(split.queryByText(/still to assign/)).not.toBeInTheDocument();
     expect(
@@ -1153,7 +1149,9 @@ describe("the share steppers", () => {
     const user = userEvent.setup();
     renderForm();
     const split = await shares(user);
-    const fewer = split.getByRole("button", { name: "One share fewer for Seb" });
+    const fewer = split.getByRole("button", {
+      name: "One share fewer for Seb",
+    });
 
     await user.click(fewer);
     expect(split.getByLabelText("Shares for Seb")).toHaveValue("0");

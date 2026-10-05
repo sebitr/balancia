@@ -34,18 +34,18 @@ describe("remainingCandidate", () => {
   });
 
   it("is the first one at zero once every field has been touched", () => {
-    expect(
-      candidate({ seb: "50", herve: "", cyril: "30" }, THREE),
-    ).toBe("herve");
-    expect(
-      candidate({ seb: "50", herve: "0.00", cyril: "" }, THREE),
-    ).toBe("herve");
+    expect(candidate({ seb: "50", herve: "", cyril: "30" }, THREE)).toBe(
+      "herve",
+    );
+    expect(candidate({ seb: "50", herve: "0.00", cyril: "" }, THREE)).toBe(
+      "herve",
+    );
   });
 
   it("falls back to the last person, as a guess one tap undoes", () => {
-    expect(
-      candidate({ seb: "25", herve: "30", cyril: "30" }, THREE),
-    ).toBe("cyril");
+    expect(candidate({ seb: "25", herve: "30", cyril: "30" }, THREE)).toBe(
+      "cyril",
+    );
   });
 
   it("is nobody when there is nobody in the split", () => {

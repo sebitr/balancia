@@ -179,8 +179,7 @@ export function summariseSplit(input: {
   if (participantCount === 0) {
     return { key: "nobody", params: {}, warning: true };
   }
-  const warning =
-    problem?.tone === "error" ? WARNINGS[problem.key] : undefined;
+  const warning = problem?.tone === "error" ? WARNINGS[problem.key] : undefined;
   if (warning) {
     return {
       key: warning,
