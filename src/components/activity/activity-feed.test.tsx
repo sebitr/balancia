@@ -401,6 +401,7 @@ async function people(restorable: readonly string[]) {
     entries: [BOB_REMOVED, CAROL_REMOVED, DAN_ADDED],
     groupId: "g1",
     restorable: new Set(restorable),
+    timeZone: "UTC",
   });
 }
 
@@ -500,6 +501,7 @@ describe("putting a removed person back from the activity feed", () => {
         entries: [{ ...BOB_REMOVED, metadata: null }],
         groupId: "g1",
         restorable: new Set(["b1"]),
+        timeZone: "UTC",
       }),
       GROUP,
     );
