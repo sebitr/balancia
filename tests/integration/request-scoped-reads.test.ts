@@ -108,50 +108,66 @@ vi.mock("next-intl/server", () => ({
 const { requireGroupAccess } = await import("@/lib/actions");
 
 /**
- * Every statement sent through the pool while `body` runs — on the pool itself
- * and on any connection taken from it, which is where a transaction's go.
+ * Every statement sent through the pool while `body` runs.
+ *
+ * All of them end up on a connection taken from the pool — `pool.query` takes
+ * one itself, and a transaction holds one — so each connection is watched for
+ * as long as it is lent out, once however many times the pool hands it back.
  */
 async function statementsDuring(body: () => Promise<unknown>) {
   const pool = getPool();
   const statements: string[] = [];
-  const record = (first: unknown) =>
-    statements.push(
-      typeof first === "string" ? first : (first as { text: string }).text,
-    );
+  const watched = new Map<{ query: unknown }, unknown>();
 
-  const originalQuery = pool.query;
-  pool.query = ((...args: Parameters<typeof originalQuery>) => {
-    record(args[0]);
-    return originalQuery.apply(pool, args);
-  }) as typeof pool.query;
-
-  // A connection is reused, so what is patched on it is put back afterwards.
-  const originalConnect = pool.connect;
-  const patched: { restore: () => void }[] = [];
-  pool.connect = (async (...args: unknown[]) => {
-    const client = await (
-      originalConnect as (...a: unknown[]) => Promise<never>
-    ).apply(pool, args);
-    const connection = client as { query: (...a: unknown[]) => unknown };
-    const originalClientQuery = connection.query;
-    connection.query = (...queryArgs: unknown[]) => {
-      record(queryArgs[0]);
-      return originalClientQuery.apply(connection, queryArgs);
+  const watch = (client: unknown) => {
+    const connection = client as {
+      query: (...args: unknown[]) => unknown;
     };
-    patched.push({
-      restore: () => {
-        connection.query = originalClientQuery;
-      },
+    if (watched.has(connection)) return;
+    const original = connection.query;
+    watched.set(connection, original);
+    connection.query = (...args: unknown[]) => {
+      const [first] = args;
+      statements.push(
+        typeof first === "string" ? first : (first as { text: string }).text,
+      );
+      return original.apply(connection, args);
+    };
+  };
+
+  const originalConnect = pool.connect;
+  pool.connect = ((...args: unknown[]) => {
+    const connect = originalConnect as (...a: unknown[]) => unknown;
+    const last = args[args.length - 1];
+    // `pool.query` asks for its connection with a callback, a transaction with
+    // a promise.
+    if (typeof last === "function") {
+      const callback = last as (
+        error: unknown,
+        client?: unknown,
+        release?: unknown,
+      ) => void;
+      return connect.apply(pool, [
+        ...args.slice(0, -1),
+        (error: unknown, client?: unknown, release?: unknown) => {
+          if (client) watch(client);
+          callback(error, client, release);
+        },
+      ]);
+    }
+    return (connect.apply(pool, args) as Promise<unknown>).then((client) => {
+      watch(client);
+      return client;
     });
-    return client;
   }) as typeof pool.connect;
 
   try {
     await body();
   } finally {
-    pool.query = originalQuery;
     pool.connect = originalConnect;
-    for (const entry of patched) entry.restore();
+    for (const [connection, original] of watched) {
+      (connection as { query: unknown }).query = original;
+    }
   }
   return statements;
 }
