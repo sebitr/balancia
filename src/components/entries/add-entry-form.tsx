@@ -162,8 +162,9 @@ import type { EntryMember } from "./pills";
  * description, add — three taps — and everything else is collapsed until it is
  * needed. Paid-by and split are one summary row that opens a sheet. Category
  * is a chip. Recurrence is a pill. None of them cost vertical space until
- * somebody disagrees with the default, which is what keeps the primary button
- * on screen without scrolling.
+ * somebody disagrees with the default. The primary button does not depend on
+ * that, though: it is pinned under the body, so it is on screen whatever the
+ * body holds and wherever it is scrolled to.
  *
  * Type is a segmented control rather than three routes because the three share
  * almost every field, and someone who picked wrong should not lose what they
@@ -842,9 +843,9 @@ export function AddEntryForm({
   /*
    * A refused save, brought to where the reader is.
    *
-   * The alert is the first thing in the body and Save is the last, so somebody
-   * who had scrolled down to save saw the button do nothing at all: the
-   * sentence saying why had appeared a screen above them. So a refusal scrolls
+   * The alert is the first thing in the body and Save sits below the body, so
+   * somebody scrolled down the form would see the button do nothing at all:
+   * the sentence saying why appears a screen above them. So a refusal scrolls
    * the alert into view and, where the mistake is one field, puts the caret in
    * it. A fresh count on every refusal, so pressing Save twice on the same
    * mistake brings the sentence back twice — and remounts the alert, which is
@@ -2227,14 +2228,18 @@ export function AddEntryForm({
 
           It is also the panel the type tabs above switch between: the form
           is one body whichever of the three it is, so it is one panel, named
-          by whichever tab is chosen. */}
+          by whichever tab is chosen.
+
+          No safe-area padding at its foot: the footer below is the bottom
+          edge now, and it carries that room itself. */}
       <div
         id={typePanelId}
+        data-slot="sheet-body"
         {...(entryTypes.length > 1 && {
           role: "tabpanel",
           "aria-labelledby": entryTypeTabId(typePanelId, type),
         })}
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [&>*]:shrink-0"
+        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 [&>*]:shrink-0"
       >
         {error && (
           <Alert key={refusal?.count} id={errorId} variant="destructive">
@@ -2701,15 +2706,39 @@ export function AddEntryForm({
             </AlertDialogContent>
           </AlertDialog>
         )}
+      </div>
 
-        {/* The end of the form, not a bar pinned over it. A footer that
-            follows the reader down covers the row it is sitting on — on a
-            short phone, with the keyboard up, that row is the one being
-            typed into — and it promises a button that is often disabled
-            anyway. Reaching it by scrolling is also the only reading of
-            "done" that is true: the form has been seen to its end. Cancel
-            is the scrim, the X and a downward swipe, none of which cost
-            any room. */}
+      {/*
+       * Pinned under the body rather than left at the end of it.
+       *
+       * At the end of the form it was the one thing a phone could not show.
+       * On a 375×812 screen with nothing typed it already sat half below the
+       * bottom edge, and the drawer opens with the caret in the amount, so the
+       * keyboard covered the rest of it before the first digit. The rows below
+       * the fold are the optional ones by construction — the body runs from
+       * what has to be filled in to what rarely is — so the three-tap path
+       * this screen is built around ended in a scroll to find the button.
+       *
+       * It sits beside the body, not over it, which is what answers the
+       * reason it was not pinned before: a bar laid over the form covers the
+       * row it is sitting on, and on a short phone with the keyboard up that
+       * row is the one being typed into. This one covers nothing: it shortens
+       * the body instead, so a row can be scrolled out of sight but never sits
+       * underneath the button. With the keyboard up the sheet rides on it
+       * (`SheetContent`), carrying the footer along, and the room kept for the
+       * home indicator is handed back, the keyboard being over the indicator.
+       *
+       * Delete stays where it was, last in the body: it is not the way
+       * forward, and pinning it next to the button that is would put the
+       * destructive press a slip away from the one pressed every time.
+       *
+       * Cancel is still the scrim, the X and a downward swipe, none of which
+       * cost any room.
+       */}
+      <div
+        data-slot="sheet-actions"
+        className="shrink-0 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] in-data-[keyboard]:pb-3"
+      >
         <Button
           type="button"
           size="lg"
@@ -2740,11 +2769,16 @@ export function AddEntryForm({
             // The currency list is the one sheet here that is a whole screen
             // rather than a card: it fills the height it is given, scrolls its
             // own list inside a fixed header and search field, and lays out its
-            // own padding. The others are as tall as they need to be and scroll
-            // as one piece.
+            // own padding. The others are as tall as they need to be, up to a
+            // limit. Past it, the ones with a button to press — split, pair,
+            // repeat — scroll a body and keep the button pinned under it, and
+            // the tap-to-pick ones scroll their list.
+            //
+            // The foot clears the home indicator, except on the keyboard,
+            // which is over the indicator and leaves nothing to clear.
             sheet === "currency"
               ? "h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] overflow-hidden p-0"
-              : "max-h-[86vh] overflow-y-auto px-4 pb-5",
+              : "max-h-[86vh] overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] data-[keyboard]:pb-5",
           )}
         >
           {sheet === "split" && (

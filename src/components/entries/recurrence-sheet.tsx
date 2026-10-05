@@ -12,6 +12,7 @@ import {
   type RovingChoiceProps,
 } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
+import { PinnedActions, PinnedBody } from "./entry-sheet";
 import {
   RECURRENCE_FREQUENCIES,
   WEEKS_OF_MONTH,
@@ -265,12 +266,12 @@ export function RecurrenceSheet({
   });
 
   return (
-    <div className="flex min-h-0 flex-col gap-4">
-      <SheetTitle className="shrink-0 text-lg font-semibold tracking-[-0.02em]">
+    <div className="flex min-h-0 flex-col">
+      <SheetTitle className="mb-4 shrink-0 text-lg font-semibold tracking-[-0.02em]">
         {t("title")}
       </SheetTitle>
 
-      <div className="flex min-h-0 flex-col gap-4 overflow-y-auto [&>*]:shrink-0">
+      <PinnedBody>
         {/* The outcome, before the controls that produce it. */}
         <div className="rounded-2xl bg-primary/8 p-4">
           <p className="text-lg font-semibold tracking-[-0.02em]">
@@ -590,9 +591,9 @@ export function RecurrenceSheet({
         <p className="text-xs text-muted-foreground">
           {t("timezoneNote", { timezone })}
         </p>
-      </div>
+      </PinnedBody>
 
-      <div className="shrink-0 space-y-2 pt-1">
+      <PinnedActions>
         <Button
           type="button"
           size="lg"
@@ -618,7 +619,7 @@ export function RecurrenceSheet({
         >
           {t("dontRepeat")}
         </button>
-      </div>
+      </PinnedActions>
     </div>
   );
 }
