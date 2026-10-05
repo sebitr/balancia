@@ -299,8 +299,8 @@ export function PositionHero({
           <SheetTitle className="mt-4 text-xl font-semibold tracking-[-0.02em]">
             {t("positionSheetTitle")}
           </SheetTitle>
-          {/* The three subtotals explain the sheet now; this stays for the
-              screen reader, which Radix requires to have something to name. */}
+          {/* The sentences below explain the sheet; this stays for the screen
+              reader, which Radix requires to have something to name. */}
           <SheetDescription className="sr-only">
             {t("positionSheetDescription")}
           </SheetDescription>

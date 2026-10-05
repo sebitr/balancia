@@ -3,55 +3,59 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import type { AppLocale } from "@/i18n/locales";
+import { TONE } from "@/components/money/balance-tone";
 import { formatMoney, money } from "@/modules/currencies/money";
-import {
-  compareToShare,
-  PositionBreakdown,
-  type PositionView,
-} from "./position-breakdown";
+import { PositionBreakdown, type PositionView } from "./position-breakdown";
 
 /**
- * What the ledger says, as opposed to what it adds up to.
+ * What the sheet behind "How this is calculated" says.
  *
- * The arithmetic is held by the two sheet tests beside this one. What is held
- * here is the reading: that a signed figure appears only where a sign means
- * "this is what the group did to your balance", that the six totals behind
- * those figures are stated plainly, and that every difference the reader would
- * otherwise have to work out from two numbers and a minus sign is written out
- * in a sentence instead.
+ * Somebody opens it because the figure in the hero made no sense to them, so
+ * what is held here is the reading: that it opens on sentences rather than on
+ * ledger accounts, that the sentences add up to the figure, that it ends on
+ * the result with its word and in its tone, and that nothing whose amount is
+ * zero is said at all. The figures themselves are still there, one tap away,
+ * for whoever wants the arithmetic.
+ *
+ * Every position below is built by `view`, which works its balance out from
+ * its ledger — so a sentence that did not add up to the result would show up
+ * as a test asserting the wrong result.
  *
  * Amounts are compared against `formatMoney` rather than against literal
- * strings: the question is whether the right figure reached the right row, not
- * how Intl writes a Swiss franc this month.
+ * strings: the question is whether the right figure reached the right
+ * sentence, not how Intl writes a Swiss franc this month.
  */
 
-/** The chalet group from the design: paid less than their share, collected
- *  rent that was mostly not theirs, and has repaid nearly all of it. */
-const CHALET: PositionView = {
-  currency: "CHF",
-  minorUnits: "-115000",
-  counterparties: [{ participantId: "p2", name: "Hervé", minorUnits: "0" }],
-  breakdown: {
-    paid: "29000",
-    share: "43667",
-    revenueReceived: "300000",
-    revenueCredited: "100000",
-    settlementsPaid: "99667",
-    settlementsReceived: "0",
-    otherAdjustments: "0",
-  },
+const NOTHING: PositionView["breakdown"] = {
+  paid: "0",
+  share: "0",
+  revenueReceived: "0",
+  revenueCredited: "0",
+  settlementsPaid: "0",
+  settlementsReceived: "0",
+  otherAdjustments: "0",
 };
 
+/** A position whose balance is exactly what its ledger adds up to. */
 function view(
-  breakdown: Partial<PositionView["breakdown"]>,
-  minorUnits = "0",
-  currency = "CHF",
+  ledger: Partial<PositionView["breakdown"]>,
+  currency = "EUR",
 ): PositionView {
+  const breakdown = { ...NOTHING, ...ledger };
+  const n = (key: keyof PositionView["breakdown"]) => BigInt(breakdown[key]);
+  const balance =
+    n("paid") -
+    n("share") +
+    n("revenueCredited") -
+    n("revenueReceived") +
+    n("settlementsPaid") -
+    n("settlementsReceived") +
+    n("otherAdjustments");
   return {
     currency,
-    minorUnits,
+    minorUnits: balance.toString(),
     counterparties: [],
-    breakdown: { ...CHALET.breakdown, ...breakdown },
+    breakdown,
   };
 }
 
@@ -60,9 +64,9 @@ function view(
  * relaxed — Testing Library normalizes whitespace on what it finds in the DOM
  * but not on what it is handed to look for.
  */
-function amount(
+function figure(
   minorUnits: bigint,
-  currency = "CHF",
+  currency = "EUR",
   signDisplay?: "exceptZero",
 ): string {
   // The sign is the app's own, not Intl's: `Amount` writes a real minus for
@@ -76,269 +80,472 @@ function amount(
     formatMoney(money(magnitude, currency), {
       locale: "en",
       display: "code",
-    }).replace(/\u00a0/g, " ")
+    }).replace(/ /g, " ")
   );
 }
 
-/** The signed figure a section header states: its effect on the balance. */
-function impact(minorUnits: bigint, currency = "CHF"): string {
-  return amount(minorUnits, currency, "exceptZero");
-}
-
-async function show(
-  position: PositionView = CHALET,
-  locale: AppLocale = "en",
-): Promise<ReturnType<typeof userEvent.setup>> {
+function show(
+  position: PositionView,
+  options: { locale?: AppLocale; showCurrency?: boolean } = {},
+): ReturnType<typeof userEvent.setup> {
   const user = userEvent.setup();
   renderWithIntl(
-    <PositionBreakdown position={position} showCurrency={false} />,
-    {
-      locale,
-    },
+    <PositionBreakdown
+      position={position}
+      showCurrency={options.showCurrency ?? false}
+    />,
+    { locale: options.locale ?? "en" },
   );
   return user;
 }
 
-/** Opens a section and hands back the card that holds its rows. */
-async function expand(
-  user: ReturnType<typeof userEvent.setup>,
-  name: RegExp,
-): Promise<HTMLElement> {
-  const header = screen.getByRole("button", { name });
-  await user.click(header);
-  const card = header.closest("section");
-  if (!card) throw new Error(`No section card around ${String(name)}`);
-  return card;
+/** Every sentence the sheet says, in the order it says them. */
+function sentences(): string[] {
+  return screen
+    .getAllByRole("paragraph")
+    .map((paragraph) => paragraph.textContent?.replace(/\s+/g, " ") ?? "");
 }
 
-describe("comparing a total against a share", () => {
-  it("names the gap and which way it ran", () => {
-    expect(compareToShare(29000n, 43667n)).toEqual({
-      side: "less",
-      gap: 14667n,
-    });
-    expect(compareToShare(300000n, 100000n)).toEqual({
-      side: "more",
-      gap: 200000n,
-    });
+const FIGURES = /The figures, line by line/;
+
+/** Opens the figures and hands back the panel that holds them. */
+async function openFigures(
+  user: ReturnType<typeof userEvent.setup>,
+  name: RegExp = FIGURES,
+): Promise<HTMLElement> {
+  const toggle = screen.getByRole("button", { name });
+  await user.click(toggle);
+  const panelId = toggle.getAttribute("aria-controls");
+  const panel = panelId ? document.getElementById(panelId) : null;
+  if (!panel) throw new Error("The figures did not open");
+  return panel;
+}
+
+describe("the opening sentence, about expenses", () => {
+  it("states what the reader paid and their share, then that they get the difference back", () => {
+    show(view({ paid: "9000", share: "3000" }));
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(9000n)}. Your share was ${figure(3000n)}.`,
+      `So you get back ${figure(6000n)}.`,
+    ]);
   });
 
-  /**
-   * The sentence "you paid 0.00 less than your share" is the reason this
-   * returns three answers rather than a signed difference.
-   */
-  it("calls a match level rather than a gap of nothing", () => {
-    expect(compareToShare(43667n, 43667n)).toEqual({ side: "equal", gap: 0n });
-    expect(compareToShare(0n, 0n)).toEqual({ side: "equal", gap: 0n });
+  it("says the same the other way round when they paid less than their share", () => {
+    show(view({ paid: "1000", share: "4000" }));
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(1000n)}. Your share was ${figure(4000n)}.`,
+      `So you owe ${figure(3000n)}.`,
+    ]);
   });
 
-  it("keeps the gap unsigned whichever total is larger", () => {
-    expect(compareToShare(0n, 999999999999n).gap).toBe(999999999999n);
-    expect(compareToShare(999999999999n, 0n).gap).toBe(999999999999n);
+  it("calls a match exactly their share, and names no gap", () => {
+    show(view({ paid: "3000", share: "3000" }));
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(3000n)}, exactly your share.`,
+      "So you are settled up.",
+    ]);
+    expect(screen.queryByText(/EUR\s0\.00/)).not.toBeInTheDocument();
+  });
+
+  /** "You paid EUR 0.00" is a figure the reader has to parse to read nothing. */
+  it("says the reader paid nothing rather than naming a zero", () => {
+    show(view({ share: "4000" }));
+
+    expect(sentences()).toEqual([
+      `You paid nothing. Your share was ${figure(4000n)}.`,
+      `So you owe ${figure(4000n)}.`,
+    ]);
+  });
+
+  it("says when everything the reader paid was for the others", () => {
+    show(view({ paid: "5000" }));
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(5000n)}, all of it for the others.`,
+      `So you get back ${figure(5000n)}.`,
+    ]);
+  });
+
+  it("says so when nothing has been recorded for the reader yet", () => {
+    show(view({}));
+
+    expect(sentences()).toEqual([
+      "You are not part of any expense yet.",
+      "So you are settled up.",
+    ]);
   });
 });
 
-describe("a section header", () => {
-  it("signs its subtotal, so the sign reads as the effect on the balance", async () => {
-    await show();
+describe("income", () => {
+  it("says what the reader received and what their share of it was", () => {
+    show(
+      view({
+        paid: "9000",
+        share: "3000",
+        revenueReceived: "2000",
+        revenueCredited: "1000",
+      }),
+    );
 
-    expect(screen.getByText(impact(-14667n))).toBeInTheDocument();
-    expect(screen.getByText(impact(-200000n))).toBeInTheDocument();
-    expect(screen.getByText(impact(99667n))).toBeInTheDocument();
+    expect(sentences()).toEqual([
+      `You paid ${figure(9000n)}. Your share was ${figure(3000n)}.`,
+      `You received ${figure(2000n)} of the group's income. Your share of its income was ${figure(1000n)}.`,
+      `So you get back ${figure(5000n)}.`,
+    ]);
   });
-});
 
-describe("the rows behind a subtotal", () => {
-  it("states the two expense totals plainly, with no sign on either", async () => {
-    const user = await show();
-    const section = await expand(user, /Expenses/);
+  it("says when none of what they received was theirs", () => {
+    show(view({ paid: "9000", share: "3000", revenueReceived: "2000" }));
 
-    expect(within(section).getByText("You paid")).toBeInTheDocument();
-    expect(within(section).getByText("Your share")).toBeInTheDocument();
-    expect(within(section).getByText(amount(29000n))).toBeInTheDocument();
-    expect(within(section).getByText(amount(43667n))).toBeInTheDocument();
     expect(
-      within(section).queryByText(impact(-43667n)),
+      screen.getByText(
+        `You received ${figure(2000n)} of the group's income, all of it for the others.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${figure(4000n)}.`),
+    ).toBeInTheDocument();
+  });
+
+  it("says when the others received it and the reader had a share", () => {
+    show(view({ paid: "9000", share: "3000", revenueCredited: "1000" }));
+
+    expect(
+      screen.getByText(
+        `Others received the group's income. Your share of it was ${figure(1000n)}.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${figure(7000n)}.`),
+    ).toBeInTheDocument();
+  });
+
+  /** A group that never took a cent in: the commonest case of all. */
+  it("is not mentioned in a group that has none", () => {
+    show(view({ paid: "9000", share: "3000" }));
+
+    expect(screen.queryByText(/income/)).not.toBeInTheDocument();
+  });
+});
+
+describe("repayments", () => {
+  it("says what the reader has paid back", () => {
+    show(view({ paid: "1000", share: "4000", settlementsPaid: "2000" }));
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(1000n)}. Your share was ${figure(4000n)}.`,
+      `You have paid back ${figure(2000n)}.`,
+      `So you owe ${figure(1000n)}.`,
+    ]);
+  });
+
+  it("says what the reader has been paid back", () => {
+    show(view({ paid: "9000", share: "3000", settlementsReceived: "6000" }));
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(9000n)}. Your share was ${figure(3000n)}.`,
+      `You have been paid back ${figure(6000n)}.`,
+      "So you are settled up.",
+    ]);
+  });
+
+  it("says both when money went both ways", () => {
+    show(
+      view({
+        paid: "9000",
+        share: "3000",
+        settlementsPaid: "500",
+        settlementsReceived: "2500",
+      }),
+    );
+
+    expect(
+      screen.getByText(`You have paid back ${figure(500n)}.`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`You have been paid back ${figure(2500n)}.`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${figure(4000n)}.`),
+    ).toBeInTheDocument();
+  });
+
+  it("are not mentioned when there have been none", () => {
+    show(view({ paid: "9000", share: "3000" }));
+
+    expect(screen.queryByText(/paid back/)).not.toBeInTheDocument();
+  });
+});
+
+describe("a remainder the three cannot explain", () => {
+  it("is said in words, whichever way it runs", () => {
+    const { unmount } = renderWithIntl(
+      <PositionBreakdown
+        position={view({
+          paid: "9000",
+          share: "3000",
+          otherAdjustments: "500",
+        })}
+        showCurrency={false}
+      />,
+    );
+    expect(
+      screen.getByText(
+        `Other adjustments raise your balance by ${figure(500n)}.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${figure(6500n)}.`),
+    ).toBeInTheDocument();
+    unmount();
+
+    show(view({ paid: "9000", share: "3000", otherAdjustments: "-500" }));
+    expect(
+      screen.getByText(
+        `Other adjustments lower your balance by ${figure(500n)}.`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("is not mentioned when there is none, which is always today", () => {
+    show(view({ paid: "9000", share: "3000" }));
+
+    expect(screen.queryByText(/adjustments/)).not.toBeInTheDocument();
+  });
+});
+
+describe("the result", () => {
+  it("is in the tone of the side it names", () => {
+    const { unmount } = renderWithIntl(
+      <PositionBreakdown
+        position={view({ paid: "9000", share: "3000" })}
+        showCurrency={false}
+      />,
+    );
+    expect(screen.getByText(`So you get back ${figure(6000n)}.`)).toHaveClass(
+      TONE.positive.ink,
+    );
+    unmount();
+
+    const second = renderWithIntl(
+      <PositionBreakdown
+        position={view({ paid: "1000", share: "4000" })}
+        showCurrency={false}
+      />,
+    );
+    expect(screen.getByText(`So you owe ${figure(3000n)}.`)).toHaveClass(
+      TONE.negative.ink,
+    );
+    second.unmount();
+
+    show(view({ paid: "3000", share: "3000" }));
+    expect(screen.getByText("So you are settled up.")).toHaveClass(
+      TONE.neutral.ink,
+    );
+  });
+
+  /** The thing the sheet used to lead with, and what nobody could read. */
+  it("never states a bare signed figure until the figures are asked for", () => {
+    show(
+      view({
+        paid: "9000",
+        share: "3000",
+        revenueReceived: "2000",
+        revenueCredited: "1000",
+        settlementsReceived: "1500",
+      }),
+    );
+
+    expect(screen.queryByText(/[+−]\s*EUR/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Expenses")).not.toBeInTheDocument();
+  });
+
+  it("survives a balance far larger than the design was drawn against", () => {
+    show(view({ share: "9876543210" }));
+
+    expect(
+      screen.getByText(`So you owe ${figure(9876543210n)}.`),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the figures", () => {
+  const LEDGER = view({
+    paid: "9000",
+    share: "3000",
+    revenueReceived: "2000",
+    revenueCredited: "1000",
+    settlementsReceived: "1500",
+  });
+
+  it("arrive shut, under a result that has already been said", () => {
+    show(LEDGER);
+
+    expect(screen.getByRole("button", { name: FIGURES })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByText("You were paid back")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${figure(3500n)}.`),
+    ).toBeInTheDocument();
+  });
+
+  it("open on each section's effect, signed, over the totals behind it, unsigned", async () => {
+    const user = show(LEDGER);
+    const panel = await openFigures(user);
+
+    expect(screen.getByRole("button", { name: FIGURES })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(within(panel).getByText("Expenses")).toBeInTheDocument();
+    expect(
+      within(panel).getByText(figure(6000n, "EUR", "exceptZero")),
+    ).toBeInTheDocument();
+    expect(within(panel).getByText("You paid")).toBeInTheDocument();
+    expect(within(panel).getByText(figure(9000n))).toBeInTheDocument();
+    expect(within(panel).getAllByText("Your share")).toHaveLength(2);
+    expect(within(panel).getByText(figure(3000n))).toBeInTheDocument();
+
+    expect(within(panel).getByText("Income")).toBeInTheDocument();
+    expect(within(panel).getByText(figure(-1000n))).toBeInTheDocument();
+    expect(within(panel).getByText("You received")).toBeInTheDocument();
+    expect(within(panel).getByText(figure(2000n))).toBeInTheDocument();
+
+    expect(within(panel).getByText("Repayments")).toBeInTheDocument();
+    expect(within(panel).getByText(figure(-1500n))).toBeInTheDocument();
+    expect(within(panel).getByText("You were paid back")).toBeInTheDocument();
+  });
+
+  it("call income Income, as the form that records it does", async () => {
+    const user = show(LEDGER);
+    const panel = await openFigures(user);
+
+    expect(within(panel).queryByText(/Revenue/)).not.toBeInTheDocument();
+  });
+
+  it("leave out every row whose amount is zero, and a section left empty", async () => {
+    const user = show(view({ share: "4000", settlementsPaid: "1000" }));
+    const panel = await openFigures(user);
+
+    // Expenses: a share, and nothing paid.
+    expect(within(panel).getByText("Your share")).toBeInTheDocument();
+    expect(within(panel).queryByText("You paid")).not.toBeInTheDocument();
+    // Repayments: one way only.
+    expect(within(panel).getByText("You paid back")).toBeInTheDocument();
+    expect(
+      within(panel).queryByText("You were paid back"),
+    ).not.toBeInTheDocument();
+    // Income: none at all, so no section.
+    expect(within(panel).queryByText("Income")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("You received")).not.toBeInTheDocument();
+    expect(within(panel).queryByText(/EUR\s0\.00/)).not.toBeInTheDocument();
+  });
+
+  it("list a remainder on a line of its own", async () => {
+    const user = show(
+      view({ paid: "9000", share: "3000", otherAdjustments: "500" }),
+    );
+    const panel = await openFigures(user);
+
+    expect(within(panel).getByText("Other adjustments")).toBeInTheDocument();
+    expect(
+      within(panel).getByText(figure(500n, "EUR", "exceptZero")),
+    ).toBeInTheDocument();
+  });
+
+  it("put themselves away again", async () => {
+    const user = show(LEDGER);
+    await openFigures(user);
+    await user.click(screen.getByRole("button", { name: FIGURES }));
+
+    expect(screen.getByRole("button", { name: FIGURES })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByText("You were paid back")).not.toBeInTheDocument();
+  });
+
+  it("are not offered when there are none", () => {
+    show(view({}));
+
+    expect(
+      screen.queryByRole("button", { name: FIGURES }),
     ).not.toBeInTheDocument();
   });
-
-  it("states the two revenue totals the same way", async () => {
-    const user = await show();
-    const section = await expand(user, /Revenue/);
-
-    expect(within(section).getByText("You received")).toBeInTheDocument();
-    expect(within(section).getByText("Your share")).toBeInTheDocument();
-    expect(within(section).getByText(amount(300000n))).toBeInTheDocument();
-    expect(within(section).getByText(amount(100000n))).toBeInTheDocument();
-  });
-
-  it("states repayments in both directions, zero included", async () => {
-    const user = await show();
-    const section = await expand(user, /Repayments/);
-
-    expect(within(section).getByText("You paid back")).toBeInTheDocument();
-    expect(within(section).getByText("You were paid back")).toBeInTheDocument();
-    expect(within(section).getByText(amount(99667n))).toBeInTheDocument();
-    expect(within(section).getByText(amount(0n))).toBeInTheDocument();
-    expect(
-      within(section).getByText("Repayments already made."),
-    ).toBeInTheDocument();
-  });
 });
 
-describe("the sentence under a pair of expense totals", () => {
-  it("says how far under their share the reader paid", async () => {
-    const user = await show();
-    const section = await expand(user, /Expenses/);
+describe("one currency among several", () => {
+  /**
+   * In a group kept in separate currencies the sheet holds one of these per
+   * currency, each fed its own ledger and headed by its code. The amounts
+   * already carry the code; the one sentence with no amount in it names it.
+   */
+  it("heads the sentences with the currency, and names it where no amount does", () => {
+    show(view({}, "USD"), { showCurrency: true });
+
+    expect(screen.getByRole("heading", { name: "USD" })).toBeInTheDocument();
+    expect(sentences()).toEqual([
+      "You are not part of any expense in USD.",
+      "So you are settled up.",
+    ]);
+  });
+
+  it("writes every amount in that currency", () => {
+    show(view({ paid: "9000", share: "3000" }, "CHF"), { showCurrency: true });
+
+    expect(sentences()).toEqual([
+      `You paid ${figure(9000n, "CHF")}. Your share was ${figure(3000n, "CHF")}.`,
+      `So you get back ${figure(6000n, "CHF")}.`,
+    ]);
+  });
+
+  it("shows no heading when it is the only one", () => {
+    show(view({ paid: "9000", share: "3000" }));
+
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+  });
+
+  /** Yen has no minor unit, so nothing in a sentence may invent one. */
+  it("keeps a currency without decimals free of them", () => {
+    show(view({ paid: "29000", share: "43667" }, "JPY"));
 
     expect(
-      within(section).getByText(
-        `You paid ${amount(14667n)} less than your share.`,
-      ),
+      screen.getByText(`So you owe ${figure(14667n, "JPY")}.`),
     ).toBeInTheDocument();
-  });
-
-  it("says how far over it, when they carried the group", async () => {
-    const user = await show(view({ paid: "43667", share: "29000" }));
-    const section = await expand(user, /Expenses/);
-
-    expect(
-      within(section).getByText(
-        `You paid ${amount(14667n)} more than your share.`,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  /** The absurd sentence this replaces: "you paid 0.00 less than your share". */
-  it("names no figure at all when the two match", async () => {
-    const user = await show(view({ paid: "43667", share: "43667" }));
-    const section = await expand(user, /Expenses/);
-
-    expect(
-      within(section).getByText("You paid exactly your share."),
-    ).toBeInTheDocument();
-    expect(within(section).queryByText(/0\.00 less/)).not.toBeInTheDocument();
-  });
-
-  /** A group with no expenses at all lands on the same sentence. */
-  it("treats an empty ledger as a match rather than a gap", async () => {
-    const user = await show(view({ paid: "0", share: "0" }));
-    const section = await expand(user, /Expenses/);
-
-    expect(
-      within(section).getByText("You paid exactly your share."),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("the sentence under a pair of revenue totals", () => {
-  it("says how much of what came in was not the reader's", async () => {
-    const user = await show();
-    const section = await expand(user, /Revenue/);
-
-    expect(
-      within(section).getByText(
-        `You received ${amount(200000n)} more than your share.`,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("says the other direction when the group collected for them", async () => {
-    const user = await show(
-      view({ revenueReceived: "100000", revenueCredited: "300000" }),
-    );
-    const section = await expand(user, /Revenue/);
-
-    expect(
-      within(section).getByText(
-        `You received ${amount(200000n)} less than your share.`,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  /** A group that never took a franc in: the commonest case of all. */
-  it("says nothing about a figure in a group with no revenue", async () => {
-    const user = await show(
-      view({ revenueReceived: "0", revenueCredited: "0" }),
-    );
-    const section = await expand(user, /Revenue/);
-
-    expect(
-      within(section).getByText("You received exactly your share."),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("the final balance", () => {
-  it("signs the figure negative when the reader is behind", async () => {
-    await show(view({}, "-115000"));
-
-    expect(screen.getByText("Final balance")).toBeInTheDocument();
-    expect(screen.getByText(impact(-115000n))).toBeInTheDocument();
-  });
-
-  it("signs it the other way round when the group is behind", async () => {
-    await show(view({}, "115000"));
-
-    expect(screen.getByText(impact(115000n))).toBeInTheDocument();
-  });
-
-  /** Zero is the one balance `signDisplay: "exceptZero"` leaves bare. */
-  it("carries no sign when there is nothing outstanding", async () => {
-    await show(view({}, "0"));
-
-    expect(screen.getByText(amount(0n))).toBeInTheDocument();
-  });
-
-  it("survives a balance far larger than the design was drawn against", async () => {
-    await show(view({}, "-9876543210"));
-
-    expect(screen.getByText(impact(-9876543210n))).toBeInTheDocument();
-  });
-});
-
-describe("currencies other than the one it was drawn in", () => {
-  it("writes euros the way the reader's notation does", async () => {
-    const user = await show(view({}, "-4500", "EUR"));
-    const section = await expand(user, /Expenses/);
-
-    expect(
-      within(section).getByText(
-        `You paid ${amount(14667n, "EUR")} less than your share.`,
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText(impact(-4500n, "EUR"))).toBeInTheDocument();
-  });
-
-  /** Yen has no minor unit, so nothing in the sentence may invent one. */
-  it("keeps a currency without decimals free of them", async () => {
-    const user = await show(
-      view({ paid: "29000", share: "43667" }, "-14667", "JPY"),
-    );
-    const section = await expand(user, /Expenses/);
-
-    expect(
-      within(section).getByText(
-        `You paid ${amount(14667n, "JPY")} less than your share.`,
-      ),
-    ).toBeInTheDocument();
-    expect(amount(14667n, "JPY")).not.toMatch(/[.,]\d\d$/);
+    expect(figure(14667n, "JPY")).not.toMatch(/[.,]\d\d$/);
   });
 });
 
 describe("in French", () => {
-  it("puts the sheet in the reader's own language", async () => {
-    const user = await show(CHALET, "fr");
+  it("tells the same story in the reader's own language", async () => {
+    const user = show(
+      view({ paid: "9000", share: "3000", settlementsReceived: "1500" }),
+      { locale: "fr" },
+    );
 
-    expect(screen.getByText("Solde final")).toBeInTheDocument();
+    expect(sentences()).toEqual([
+      `Tu as payé ${figure(9000n)}. Ta part était de ${figure(3000n)}.`,
+      `On t’a remboursé ${figure(1500n)}.`,
+      `Tu récupères donc ${figure(4500n)}.`,
+    ]);
 
-    const section = await expand(user, /Dépenses/);
-    expect(within(section).getByText("Tu as payé")).toBeInTheDocument();
-    expect(within(section).getByText("Ta part")).toBeInTheDocument();
-    expect(
-      within(section).getByText(
-        `Tu as payé ${amount(14667n)} de moins que ta part.`,
-      ),
-    ).toBeInTheDocument();
+    const panel = await openFigures(user, /Les montants, ligne par ligne/);
+    expect(within(panel).getByText("Dépenses")).toBeInTheDocument();
+    expect(within(panel).getByText("Tu as payé")).toBeInTheDocument();
+    expect(within(panel).getByText("Ta part")).toBeInTheDocument();
+  });
+
+  it("says a settled reader is à jour", () => {
+    show(view({ paid: "3000", share: "3000" }), { locale: "fr" });
+
+    expect(sentences()).toEqual([
+      `Tu as payé ${figure(3000n)}, exactement ta part.`,
+      "Tu es donc à jour.",
+    ]);
   });
 });
