@@ -1406,6 +1406,7 @@
     "sheetBody": "These are kept on this device until your server can be reached. They are not in the group's balances yet.",
     "synced": "{count, plural, one {# entry synced} other {# entries synced}}",
     "blockedNoAccess": "This group is no longer available to you, so this entry cannot be saved.",
+    "blockedArchived": "This group has been archived, so this entry cannot be saved.",
     "blockedRefused": "Your server refused this entry. Somebody on it may have been removed from the group.",
     "discard": "Discard",
     "notSavedTitle": "Nothing saved for this group yet",

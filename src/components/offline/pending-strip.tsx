@@ -19,6 +19,7 @@ import {
   subscribeToOutbox,
   type QueuedEntry,
 } from "@/lib/offline/outbox";
+import type { BlockReason } from "@/lib/offline/replay";
 import { useDeviceActor } from "./device-actor";
 import { useOnline } from "./use-online";
 
@@ -112,6 +113,13 @@ export function PendingStrip() {
   );
 }
 
+/** What a held-back entry says about why, one sentence per reason. */
+const BLOCKED_BECAUSE = {
+  noAccess: "blockedNoAccess",
+  archived: "blockedArchived",
+  refused: "blockedRefused",
+} as const satisfies Record<BlockReason, string>;
+
 function PendingRow({ entry }: { entry: QueuedEntry }) {
   const t = useTranslations("outbox");
   const locale = useNumberLocale();
@@ -136,11 +144,7 @@ function PendingRow({ entry }: { entry: QueuedEntry }) {
       {entry.status === "blocked" && (
         <>
           <p className="text-xs text-pretty text-destructive">
-            {t(
-              entry.blockedFor === "noAccess"
-                ? "blockedNoAccess"
-                : "blockedRefused",
-            )}
+            {t(BLOCKED_BECAUSE[entry.blockedFor ?? "refused"])}
           </p>
           {/*
            * Discarding is the only destructive thing this feature offers, and

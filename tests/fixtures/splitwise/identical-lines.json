@@ -1,0 +1,142 @@
+{
+  "expenses": [
+    {
+      "id": 3001,
+      "description": "Coffee",
+      "payment": false,
+      "cost": "6.0",
+      "currency_code": "EUR",
+      "date": "2026-04-01T08:30:00Z",
+      "deleted_at": null,
+      "category": { "name": "Food and drink" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "6.0",
+          "owed_share": "2.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "0.0",
+          "owed_share": "2.0"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "0.0",
+          "owed_share": "2.0"
+        }
+      ]
+    },
+    {
+      "id": 3002,
+      "description": "Taxi",
+      "payment": false,
+      "cost": "30.0",
+      "currency_code": "EUR",
+      "date": "2026-04-01T12:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Transportation" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "0.0",
+          "owed_share": "10.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "30.0",
+          "owed_share": "10.0"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "0.0",
+          "owed_share": "10.0"
+        }
+      ]
+    },
+    {
+      "id": 3003,
+      "description": "Coffee",
+      "payment": false,
+      "cost": "6.0",
+      "currency_code": "EUR",
+      "date": "2026-04-01T16:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Food and drink" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "6.0",
+          "owed_share": "2.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "0.0",
+          "owed_share": "2.0"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "0.0",
+          "owed_share": "2.0"
+        }
+      ]
+    },
+    {
+      "id": 3004,
+      "description": "Blaise paid Ada",
+      "payment": true,
+      "cost": "5.0",
+      "currency_code": "EUR",
+      "date": "2026-04-02T09:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Payment" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "0.0",
+          "owed_share": "5.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "5.0",
+          "owed_share": "0.0"
+        }
+      ]
+    },
+    {
+      "id": 3005,
+      "description": "Blaise paid Ada",
+      "payment": true,
+      "cost": "5.0",
+      "currency_code": "EUR",
+      "date": "2026-04-02T18:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Payment" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "0.0",
+          "owed_share": "5.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "5.0",
+          "owed_share": "0.0"
+        }
+      ]
+    }
+  ]
+}

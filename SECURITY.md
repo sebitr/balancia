@@ -181,6 +181,11 @@ write:
 "Not a member" and "does not exist" both produce a 404. Membership is not
 something an outsider should be able to probe for.
 
+A refusal given to a member — an owner-only action, an archived group, a
+person removed from it — says what it is instead, on the mobile API with its
+own status and `code`. It is only reachable once the membership check has
+passed, so it tells nobody anything they could not already read.
+
 A group page and the layout around it both authorize, and within one server
 render the second is answered from the first rather than with another query.
 Nothing remembered outlives that render: the one that follows a Server Action
