@@ -3571,6 +3571,8 @@
       "changesSaved": "Modifications enregistrées",
       "deleted": "Transaction supprimée",
       "restored": "Transaction rétablie",
+      "paymentUndone": "Remboursement supprimé",
+      "paymentUndoneNote": "Les soldes sont revenus à ce qu’ils étaient.",
       "queued": "Enregistré sur cet appareil",
       "queuedNote": "La synchronisation se fera dès le retour du réseau.",
       "paidBy": "{name} a payé",
@@ -3588,7 +3590,8 @@
       "descriptionRequired": "Donne une description à cette transaction.",
       "choosePair": "Choisis qui rembourse qui.",
       "saveFailed": "Impossible d’enregistrer. Réessaie.",
-      "restoreFailed": "Impossible de rétablir cette transaction. Réessaie."
+      "restoreFailed": "Impossible de rétablir cette transaction. Réessaie.",
+      "undoRecordFailed": "Le remboursement est toujours enregistré. Supprime-le depuis Transactions."
     },
     "sheetTitles": {
       "split": "Paiement et partage",

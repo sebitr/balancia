@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Toaster as Sonner, toast, type ToasterProps } from "sonner";
@@ -241,11 +241,17 @@ export function toastUndoable(
    * card writing itself as it is edited — passes one, and each confirmation
    * then replaces the one already on screen, with its eight seconds starting
    * again, rather than stacking a column of them.
+   *
+   * `description` is the line under the message, for a confirmation whose
+   * facts are what the reader decides on: a recorded repayment says who paid
+   * whom back and how much, which is exactly what tells the right one from
+   * the one recorded against the wrong person.
    */
-  options?: { id?: string | number },
+  options?: { id?: string | number; description?: ReactNode },
 ) {
   return toast.success(message, {
     id: options?.id,
+    description: options?.description,
     duration: UNDO_WINDOW,
     action: {
       label: undo.label,

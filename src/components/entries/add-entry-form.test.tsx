@@ -65,6 +65,7 @@ const {
   upload,
   enqueue,
   success,
+  failure,
   push,
   replace,
   back,
@@ -83,6 +84,7 @@ const {
   upload: vi.fn(),
   enqueue: vi.fn(),
   success: vi.fn(),
+  failure: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
   back: vi.fn(),
@@ -119,7 +121,10 @@ vi.mock("next/navigation", () => ({
 // somewhere above it to render. What matters here is that it was raised, and
 // with what.
 vi.mock("sonner", () => ({
-  toast: { success: (...args: unknown[]) => success(...args), error: vi.fn() },
+  toast: {
+    success: (...args: unknown[]) => success(...args),
+    error: (...args: unknown[]) => failure(...args),
+  },
 }));
 // The classifier reaches for a web worker and WebAssembly; neither exists in
 // jsdom, and none of these tests are about categorisation.
@@ -170,6 +175,7 @@ function renderForm(
     upload,
     enqueue,
     success,
+    failure,
     push,
     replace,
     back,
@@ -1808,6 +1814,158 @@ describe("after saving", () => {
   });
 });
 
+/**
+ * A repayment recorded against the wrong person, taken back from its toast.
+ *
+ * The outstanding rows read alike — "Hervé pays you back", "Cyril pays you
+ * back" — and one arrives already chosen, so the slip is a real debt cleared
+ * in one press. The confirmation names who paid whom back, which is the moment
+ * the slip is noticed, and the Undo beside it removes that repayment the way
+ * Delete would.
+ */
+describe("taking a repayment back", () => {
+  type Confirmation = [
+    string,
+    { description?: unknown; action?: { label: string; onClick: () => void } },
+  ];
+
+  /** Records the outstanding debt as it stands, and hands back its toast. */
+  async function record(
+    user: ReturnType<typeof userEvent.setup>,
+  ): Promise<Confirmation> {
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
+    return success.mock.calls.at(-1) as Confirmation;
+  }
+
+  it("offers an undo beside the sentence that says who paid whom", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const [message, options] = await record(user);
+
+    expect(message).toBe("Repayment recorded");
+    expect(String(options.description)).toContain("Hervé paid you back");
+    expect(options.action?.label).toBe("Undo");
+  });
+
+  it("takes it back out through the repayment's own delete, and says so", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const [, options] = await record(user);
+
+    options.action?.onClick();
+
+    // The one way a repayment is removed, so the group is revalidated as a
+    // deletion revalidates it and Activity keeps a Restore on the line.
+    expect(deleteSettlement).toHaveBeenCalledWith("g1", "s1");
+    expect(deleteExpense).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(success).toHaveBeenLastCalledWith("Repayment deleted", {
+        description: "Balances are back as they were.",
+      }),
+    );
+    expect(failure).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The key a repayment is recorded under is spent for good, deletion
+   * included: sent again, it is answered with the repayment just taken back
+   * and nothing new is written. So the next one has to go out under a key of
+   * its own, or recording it again after an Undo would silently do nothing.
+   */
+  it("records it again afresh after an undo", async () => {
+    const user = userEvent.setup();
+    const first = renderForm();
+    const [, firstToast] = await record(user);
+    const firstKey = createSettlement.mock.calls[0]?.[2];
+
+    firstToast.action?.onClick();
+    await vi.waitFor(() =>
+      expect(success).toHaveBeenLastCalledWith(
+        "Repayment deleted",
+        expect.anything(),
+      ),
+    );
+
+    // The drawer closed on saving; recording again is Settle up opening it
+    // anew.
+    first.unmount();
+    renderForm();
+    createSettlement.mockResolvedValueOnce({
+      ok: true,
+      data: { settlementId: "s2" },
+    });
+    const [message, secondToast] = await record(user);
+
+    expect(message).toBe("Repayment recorded");
+    const secondKey = createSettlement.mock.calls[0]?.[2];
+    expect(secondKey).toEqual(CLIENT_KEY);
+    expect(secondKey).not.toBe(firstKey);
+
+    // And its own Undo takes back this one, not the one before it.
+    secondToast.action?.onClick();
+    expect(deleteSettlement).toHaveBeenCalledTimes(1);
+    expect(deleteSettlement).toHaveBeenCalledWith("g1", "s2");
+  });
+
+  /**
+   * The toast that offered the Undo has gone by now, and whoever pressed it
+   * believes the repayment went with it. Being wrong about that is worse than
+   * the slip, so a failure says where the repayment still is.
+   */
+  it("says the repayment is still there when it was not taken back", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    deleteSettlement.mockResolvedValueOnce({ ok: false });
+    const [, options] = await record(user);
+
+    options.action?.onClick();
+
+    await vi.waitFor(() =>
+      expect(failure).toHaveBeenCalledWith(
+        "The repayment is still recorded. Delete it from Transactions.",
+      ),
+    );
+    expect(success).not.toHaveBeenCalledWith(
+      "Repayment deleted",
+      expect.anything(),
+    );
+  });
+
+  it("says the same when the connection dropped on the way", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    deleteSettlement.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const [, options] = await record(user);
+
+    options.action?.onClick();
+
+    await vi.waitFor(() =>
+      expect(failure).toHaveBeenCalledWith(
+        "The repayment is still recorded. Delete it from Transactions.",
+      ),
+    );
+  });
+
+  /**
+   * An expense keeps its plain confirmation. Its toast already links to the
+   * sheet that fixes who paid and how it was split, which is what goes wrong
+   * with an expense; it is a repayment that is wrong as a whole.
+   */
+  it("leaves an expense's confirmation as it was", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    const [, options] = success.mock.calls.at(-1) as Confirmation;
+    expect(options.action).toBeUndefined();
+  });
+});
+
 describe("the amount field", () => {
   /**
    * The native keyboard will happily offer a fourth character after "1.23";
@@ -2434,6 +2592,43 @@ describe("editing an entry", () => {
     // `pointer-events: none` on the body, and the toaster hangs off the body
     // too — an Undo offered underneath one takes no taps at all.
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  /**
+   * Only a new repayment can be taken back from its toast. Undoing an edit
+   * would mean putting the old fields back, which is not what deleting the
+   * repayment does — an Undo there would destroy the entry it claimed to
+   * restore.
+   */
+  it("confirms an edited repayment without offering to take it back", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await save(user);
+
+    const [message, options] = success.mock.calls.at(-1) as [
+      string,
+      { action?: unknown },
+    ];
+    expect(message).toBe("Changes saved");
+    expect(options.action).toBeUndefined();
+  });
+
+  /** Nor one that was an expense a moment ago: that expense went with it. */
+  it("offers no undo for an expense moved over as a repayment", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+    await user.click(screen.getByRole("radio", { name: "To: Seb" }));
+    await save(user);
+
+    expect(toSettlement).toHaveBeenCalledTimes(1);
+    const [, options] = success.mock.calls.at(-1) as [
+      string,
+      { action?: unknown },
+    ];
+    expect(options.action).toBeUndefined();
   });
 
   it("has no delete and no update when the entry is new", () => {

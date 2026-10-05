@@ -3571,6 +3571,8 @@
       "changesSaved": "Changes saved",
       "deleted": "Entry deleted",
       "restored": "Entry restored",
+      "paymentUndone": "Repayment deleted",
+      "paymentUndoneNote": "Balances are back as they were.",
       "queued": "Saved on this device",
       "queuedNote": "It will sync as soon as you are back online.",
       "paidBy": "{name} paid",
@@ -3588,7 +3590,8 @@
       "descriptionRequired": "Give this entry a description.",
       "choosePair": "Choose who is paying whom.",
       "saveFailed": "That could not be saved. Try again.",
-      "restoreFailed": "That entry could not be put back. Try again."
+      "restoreFailed": "That entry could not be put back. Try again.",
+      "undoRecordFailed": "The repayment is still recorded. Delete it from Transactions."
     },
     "sheetTitles": {
       "split": "Payment and split",
