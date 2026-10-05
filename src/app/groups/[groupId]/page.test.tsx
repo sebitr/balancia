@@ -169,6 +169,7 @@ function event(
     metadata: null,
     actorLabel: "Ada",
     actorType: "user",
+    actorParticipantId: "p-ada",
     createdAt: new Date("2026-09-01T10:00:00Z"),
     ...fields,
   };
