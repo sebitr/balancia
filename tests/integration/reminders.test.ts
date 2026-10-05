@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/lib/db/client";
 import {
   activityEvents,
+  groupJoinLinks,
   groupMembers,
   notificationGroupMutes,
   notificationPreferences,
@@ -11,6 +12,7 @@ import {
   reminders,
 } from "@/lib/db/schema";
 import { authorizeGroup, type UserActor } from "@/lib/security/authorization";
+import { createJoinLink, joinLinkUrl } from "@/lib/security/join-link";
 import { createExpense } from "@/modules/expenses/service";
 import { listNotifications } from "@/modules/notifications/service";
 import { replacePayoutMethods } from "@/modules/payouts/service";
@@ -272,6 +274,113 @@ describe("how the debt could be paid", () => {
 
     expect(recipient.name).toBe("Jonas");
     expect(recipient.payWith).toEqual([]);
+  });
+});
+
+/**
+ * The address a reminder that leaves the app ends with.
+ *
+ * Somebody with no account who opened the group's page met a sign-in form, so
+ * their message carries the group's invite link instead — but only from a
+ * sender who may read that link already, only while it works, and never by
+ * making one. `links.test.ts` holds the rule; this is the read behind it.
+ */
+describe("where the message points", () => {
+  /** `payer` paid for themselves and `participantId`, who now owes half. */
+  async function owedBy(
+    participantId: string,
+    payer = fixture.group.ownerParticipantId,
+    access = fixture.group.access,
+  ): Promise<void> {
+    await createExpense(access, {
+      description: "Dinner",
+      notes: "",
+      category: "",
+      amount: "4800",
+      currency: "EUR",
+      exchangeRate: "",
+      payers: [{ participantId: payer, amount: "4800" }],
+      splitMethod: "equal" as const,
+      splitEntries: [{ participantId: payer }, { participantId }],
+      expenseDate: isoToday(),
+    });
+  }
+
+  /** Every link the group has ever had, as it stands. */
+  const linksOf = (groupId: string) =>
+    getDb()
+      .select({
+        id: groupJoinLinks.id,
+        expiresAt: groupJoinLinks.expiresAt,
+        revokedAt: groupJoinLinks.revokedAt,
+      })
+      .from(groupJoinLinks)
+      .where(eq(groupJoinLinks.groupId, groupId));
+
+  it("gives somebody with no account the group's invite link", async () => {
+    const padi = await addTestParticipant(fixture.group.groupId, "Padi");
+    await owedBy(padi);
+    const { token } = await createJoinLink(fixture.group.groupId, {
+      createdByUserId: fixture.owner.userId,
+    });
+
+    const [recipient] = await listRemindRecipients(fixture.group.access);
+
+    expect(recipient.name).toBe("Padi");
+    expect(recipient.link).toEqual({
+      kind: "invite",
+      url: joinLinkUrl(token),
+    });
+  });
+
+  it("keeps the group's page for somebody with an account", async () => {
+    await spend("4800");
+    await createJoinLink(fixture.group.groupId);
+
+    const [recipient] = await listRemindRecipients(fixture.group.access);
+
+    expect(recipient.name).toBe("Jonas");
+    expect(recipient.link).toEqual({ kind: "group" });
+  });
+
+  /** A member is never shown the link, so their reminders never carry it. */
+  it("never puts the link in a member's reminder", async () => {
+    const padi = await addTestParticipant(fixture.group.groupId, "Padi");
+    const member = await authorizeGroup(
+      fixture.debtor.actor,
+      fixture.group.groupId,
+    );
+    await owedBy(padi, fixture.debtor.participantId, member);
+    await createJoinLink(fixture.group.groupId);
+
+    const [recipient] = await listRemindRecipients(member);
+
+    expect(recipient.name).toBe("Padi");
+    expect(recipient.link).toEqual({ kind: "group" });
+  });
+
+  it("never sends an expired link, nor brings it back to life", async () => {
+    const padi = await addTestParticipant(fixture.group.groupId, "Padi");
+    await owedBy(padi);
+    await createJoinLink(fixture.group.groupId, {
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    const before = await linksOf(fixture.group.groupId);
+
+    const [recipient] = await listRemindRecipients(fixture.group.access);
+
+    expect(recipient.link).toEqual({ kind: "group" });
+    expect(await linksOf(fixture.group.groupId)).toEqual(before);
+  });
+
+  it("makes no link for a group that has none", async () => {
+    const padi = await addTestParticipant(fixture.group.groupId, "Padi");
+    await owedBy(padi);
+
+    const [recipient] = await listRemindRecipients(fixture.group.access);
+
+    expect(recipient.link).toEqual({ kind: "group" });
+    expect(await linksOf(fixture.group.groupId)).toEqual([]);
   });
 });
 

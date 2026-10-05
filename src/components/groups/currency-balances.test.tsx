@@ -121,6 +121,7 @@ function renderList(
           lastRemindedAt: null,
           locked: false,
           muted: false,
+          link: { kind: "group" },
         },
       ]}
       participantCount={3}

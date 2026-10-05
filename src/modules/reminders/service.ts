@@ -9,6 +9,7 @@ import {
   reminders,
 } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
+import { describeJoinLink } from "@/lib/security/join-link";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/modules/notifications/service";
 import { getPayoutAddress, listPayoutMethods } from "@/modules/payouts/service";
 import { compareDebts, sumByCurrency } from "./debts";
+import { attachableInviteUrl, maySendInviteLink, reminderLink } from "./links";
 import { payWithOptions } from "./pay-with";
 import {
   REMIND_LOCK_HOURS,
@@ -80,9 +82,16 @@ export function isLocked(
  * instruction is made of a debt, and the debts are already in hand: the two
  * extra reads are the reader's *own* methods and address, which is one pair
  * for the whole list however long it is.
+ *
+ * And each row carries the address its message would end with — see
+ * `links.ts`. The group's invite link is read once, and only when it could be
+ * used: the sender may hand it out and somebody on the list has no account.
  */
 export async function listRemindRecipients(
-  access: Pick<GroupAccess, "groupId" | "group" | "participantId" | "actor">,
+  access: Pick<
+    GroupAccess,
+    "groupId" | "group" | "participantId" | "actor" | "permissions"
+  >,
   options: { db?: Database; now?: Date } = {},
 ): Promise<RemindRecipient[]> {
   const db = options.db ?? getDb();
@@ -167,6 +176,8 @@ export async function listRemindRecipients(
     preferences.filter((row) => !row.remindersEnabled).map((row) => row.userId),
   );
 
+  const nameOf = new Map(rows.map((row) => [row.id, row]));
+
   /*
    * How the reader themself wants to be paid back.
    *
@@ -174,14 +185,27 @@ export async function listRemindRecipients(
    * here, which is exactly what distinguishes this from `listPayoutsOwed`. A
    * guest asks for nothing: they have no account, so there is nothing to read
    * and no method to offer.
+   *
+   * Beside it, the group's invite link, for the people on the list it would
+   * let in. Read through `describeJoinLink`, which only reads — opening the
+   * sheet never mints, extends or replaces a link — and not read at all for a
+   * sender who may not hand it out, or a list where everybody has an account.
    */
   const creditor = access.actor.kind === "user" ? access.actor : null;
-  const [payoutMethodList, payoutAddress] = creditor
-    ? await Promise.all([
-        listPayoutMethods(creditor.userId, { db }),
-        getPayoutAddress(creditor.userId, { db }),
-      ])
-    : [[], null];
+  const accountless = debtorIds.some(
+    (participantId) => (nameOf.get(participantId)?.userId ?? null) === null,
+  );
+  const [payoutMethodList, payoutAddress, joinLink] = await Promise.all([
+    creditor ? listPayoutMethods(creditor.userId, { db }) : [],
+    creditor ? getPayoutAddress(creditor.userId, { db }) : null,
+    accountless && maySendInviteLink(access)
+      ? describeJoinLink(access.groupId, { db, now })
+      : null,
+  ]);
+  const inviteUrl = attachableInviteUrl(joinLink, {
+    now,
+    groupArchived: access.group.archivedAt !== null,
+  });
 
   const lastSent = new Map<string, Date>();
   for (const row of sent) {
@@ -189,7 +213,6 @@ export async function listRemindRecipients(
       lastSent.set(row.toParticipantId, row.sentAt);
     }
   }
-  const nameOf = new Map(rows.map((row) => [row.id, row]));
 
   const owedBy = new Map<string, RemindDebt[]>();
   for (const debt of debts) {
@@ -231,6 +254,7 @@ export async function listRemindRecipients(
             debts,
           })
         : [],
+      link: reminderLink(userId !== null, inviteUrl),
     } satisfies RemindRecipient;
   });
 

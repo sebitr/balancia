@@ -85,6 +85,7 @@
     "signIn": {
       "title": "Back to your groups",
       "subtitle": "Sign in to access your groups and track your balances.",
+      "privateGroup": "This group is private. If someone sent you this link, ask them for an invite link.",
       "email": "Email address",
       "password": "Password",
       "forgotPassword": "Forgot password?",
@@ -2874,6 +2875,7 @@
     "toneCheeky": "Cheeky",
     "shuffle": "Another wording",
     "groupLink": "Group link",
+    "inviteLink": "Invite link",
     "payWith": "How to pay",
     "payWithLine": "{method}: {detail}",
     "payWithChoose": "Which way to pay",

@@ -77,6 +77,35 @@ beforeEach(() => {
   signInWithPasskey.mockResolvedValue(undefined);
 });
 
+/**
+ * Somebody who followed a group's address with no account to sign in with.
+ * The page decides whether they did (`sign-in/page.test.tsx`); the form only
+ * says it, above everything it asks for.
+ */
+describe("arriving from a group's page", () => {
+  it("says the group is private and what to ask for", () => {
+    renderWithIntl(<SignInForm mailEnabled={false} privateGroup />);
+
+    const line = screen.getByText(en.auth.signIn.privateGroup);
+    expect(line).toBeInTheDocument();
+    // Above the form, so it is read before the password field is.
+    expect(
+      line.compareDocumentPosition(screen.getByLabelText("Email address")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Information, not a failure: nothing is announced as an alert.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says nothing of the kind otherwise", () => {
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    expect(
+      screen.queryByText(en.auth.signIn.privateGroup),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("on a real instance", () => {
   it("offers no way into a demo", () => {
     renderWithIntl(<SignInForm mailEnabled={false} />);

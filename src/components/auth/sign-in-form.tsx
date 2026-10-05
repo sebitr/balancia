@@ -92,6 +92,11 @@ export function SignInForm({
   initialError = null,
   /** The same, for something that went right — a confirmed address. */
   initialNotice = null,
+  /**
+   * The reader was sent here from a group's page. Say that the group is
+   * private and what to ask for — never which group, or whether it exists.
+   */
+  privateGroup = false,
   /** This instance is a public demo: offer the way in, and say what it is. */
   demoMode = false,
 }: {
@@ -99,6 +104,7 @@ export function SignInForm({
   appleEnabled?: boolean;
   initialError?: string | null;
   initialNotice?: string | null;
+  privateGroup?: boolean;
   demoMode?: boolean;
 }) {
   const router = useRouter();
@@ -344,6 +350,12 @@ export function SignInForm({
         </h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
+
+      {/* For somebody who followed a group's address and has no account to
+          sign in with: the one thing this page can tell them that helps.
+          Plain text in the reading colour rather than an alert — nothing went
+          wrong, and the form below is still the way in for a member. */}
+      {privateGroup && <p className="text-sm">{t("privateGroup")}</p>}
 
       {demoMode && (
         <div className="space-y-3 rounded-lg border border-dashed p-4">
