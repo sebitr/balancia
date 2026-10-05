@@ -14,9 +14,9 @@ import {
  * The overview shows the last four events and hands the rest here, so "what
  * changed while I was away" stays a glance rather than a scroll.
  *
- * It is also where a deleted entry comes back from once the Undo toast has
- * gone. The overview's short list offers no such button: it is a summary of
- * news, and this is the page that answers "where did it go".
+ * It is also where a deleted entry, or a removed person, comes back from once
+ * the Undo toast has gone. The overview's short list offers no such button: it
+ * is a summary of news, and this is the page that answers "where did it go".
  */
 
 /** Deep enough to cover a long trip, short enough to stay one request. */
@@ -51,6 +51,7 @@ export default async function GroupActivityPage({
         entries={entries}
         groupId={access.groupId}
         restorable={restorable}
+        timeZone={access.group.timezone}
       />
     </div>
   );

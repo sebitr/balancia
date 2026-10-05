@@ -81,7 +81,7 @@ describe("SettlementList", () => {
     await openDetailSheet();
 
     expect(
-      screen.getByRole("link", { name: "Record payment" }),
+      screen.getByRole("link", { name: "Record repayment" }),
     ).toHaveAttribute(
       "href",
       "/groups/g1/expenses/new#settleFrom=p-blaise&settleTo=p-ada&settleIn=EUR",
@@ -91,7 +91,7 @@ describe("SettlementList", () => {
   it("closes the sheet on the way into the drawer", async () => {
     const user = await openDetailSheet();
 
-    await user.click(screen.getByRole("link", { name: "Record payment" }));
+    await user.click(screen.getByRole("link", { name: "Record repayment" }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

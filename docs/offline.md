@@ -13,7 +13,9 @@ falls where it does.
 
 **Adding an expense or an income.** The full form — amount, currency,
 description, category, who paid, how it splits — from the group's own people
-and categories. Saving keeps the entry on the device and says so, in those
+and categories. It is dated today in the group's timezone, worked out from this
+device's clock when the form opens, which is the same day the online form
+would have picked. Saving keeps the entry on the device and says so, in those
 words rather than "Expense added": the group's balances have not moved yet and
 the confirmation should not claim they have.
 
@@ -90,7 +92,9 @@ two exports of one transaction have nothing else in common. Here the client is
 the same device that queued the entry, so it mints a random key and keeps it
 with the payload — which is the only way two genuinely identical entries can
 both land. Four people splitting the same €3 coffee twice in one afternoon is
-two expenses, and a content hash would silently eat the second.
+two expenses, and a content hash would silently eat the second. An import can
+count the copies of a line within one file; a queue sends entries one at a
+time, with nothing to count them against.
 
 The key is carried on the online path too, not only from the queue. That is
 where it earns most of its keep: a save over a live connection can still lose
@@ -115,6 +119,7 @@ mistaken for the ones that are not.
 | 401, session expired                | Kept, retried after signing in                            |
 | 429, or a 5xx                       | Kept, retried with a backoff capped at two minutes        |
 | 404 — group gone, or access lost    | Held back and shown to the reader                         |
+| 409 — the group was archived        | Held back and shown to the reader, as archived            |
 | 422 — refused, e.g. a removed payer | Held back and shown to the reader                         |
 
 A queued entry is never dropped except by the server accepting it or by the

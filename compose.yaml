@@ -137,6 +137,12 @@ x-app-environment: &app-environment
   # for that long only. The way back that loses nothing is restoring the dump
   # taken before the upgrade; see docs/self-hosting.md, "Rolling back".
   ALLOW_NEWER_SCHEMA: ${ALLOW_NEWER_SCHEMA:-false}
+  # Pending migrations are applied by the image's entrypoint, before either
+  # container starts its process — the step the check above belongs to. false
+  # hands it to you, to run on its own before the app rolls; see
+  # docs/self-hosting.md. Read by the entrypoint rather than the app, which is
+  # why src/lib/env.ts does not list it.
+  RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 
 services:
@@ -222,6 +228,11 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    # On SIGTERM the app lets the jobs it is running finish — up to twenty
+    # seconds, SHUTDOWN_DRAIN_MS in src/lib/jobs/queue.ts — then hands any
+    # straggler back to the queue and exits. Below twenty-five, a straggler is
+    # killed where it stands instead, and waits for its job to expire before
+    # anything retries it.
     stop_grace_period: 30s
 
   # Optional. Off unless COMPOSE_PROFILES=worker is set, because the app above
@@ -249,10 +260,18 @@ services:
       - uploads:/data/uploads
     command: ["node", "dist/worker.js"]
     # The image's HEALTHCHECK curls the web server, which this container does
-    # not run — inheriting it would leave the worker permanently "unhealthy"
-    # however well it is working. Liveness here is simply the process running.
+    # not run. Instead the worker rewrites a heartbeat file every thirty
+    # seconds for as long as it is subscribed and its database answers
+    # (src/worker/heartbeat.ts), and ninety seconds without one — three missed
+    # beats — is unhealthy.
     healthcheck:
-      disable: true
+      test:
+        - CMD-SHELL
+        - "test -f /tmp/balancia-worker.heartbeat && [ $$(( $$(date +%s) - $$(stat -c %Y /tmp/balancia-worker.heartbeat) )) -lt 90 ]"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
     # The worker finishes in-flight jobs on SIGTERM before exiting.
     stop_grace_period: 40s

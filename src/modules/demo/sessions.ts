@@ -111,8 +111,9 @@ export async function startDemoSession(
       // cannot sign in on an instance with mail configured.
       emailVerifiedAt: now,
       /*
-       * `insertUser` makes the first account on an instance the administrator,
-       * which is right for a self-hosted deployment and wrong here: on a demo
+       * The database makes the first account on an instance the
+       * administrator (drizzle/0039_first_account_is_admin.sql), which is
+       * right for a self-hosted deployment and wrong here: on a demo
        * it would hand the telemetry settings to whichever stranger arrived
        * first after a restart.
        */

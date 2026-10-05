@@ -67,6 +67,12 @@ vi.mock("@/modules/balances/service", () => ({
   loadGroupBalances: async () => ({
     currencies: [],
     suggestionsByCurrency: new Map(),
+    // Everyone the group has had, removed people included. Only Seb is still
+    // in it — see `listParticipants` above.
+    participantNames: new Map([
+      ["seb", "Seb"],
+      ["grace", "Grace"],
+    ]),
   }),
 }));
 vi.mock("@/modules/auth/service", () => ({
@@ -105,6 +111,27 @@ function editingOf(screen: unknown): EditingEntry {
     if (candidate?.props?.editing) return candidate.props.editing;
   }
   throw new Error("the screen drew no drawer carrying an `editing`");
+}
+
+/** The people each child of the screen was handed, by the child's props. */
+function membersOf(screen: unknown): {
+  drawer: readonly { id: string; displayName: string }[];
+  snapshot: readonly { id: string; displayName: string }[];
+} {
+  const root = screen as ReactElement<{ children?: unknown }>;
+  const children = root.props.children;
+  const found: { id: string; displayName: string }[][] = [];
+  for (const child of Array.isArray(children) ? children : [children]) {
+    const candidate = child as ReactElement<{
+      members?: { id: string; displayName: string }[];
+    }> | null;
+    if (candidate?.props?.members) found.push(candidate.props.members);
+  }
+  const [snapshot, drawer] = found;
+  if (!snapshot || !drawer) {
+    throw new Error("the screen drew no snapshot and drawer with members");
+  }
+  return { drawer, snapshot };
 }
 
 beforeEach(() => {
@@ -222,6 +249,61 @@ describe("an entry that is no longer there", () => {
     expect(editingOf(screen).payers).toEqual([
       { participantId: "seb", amountText: "60.00" },
       { participantId: "grace", amountText: "30.00" },
+    ]);
+  });
+});
+
+/**
+ * Somebody removed from the group since the entry was written.
+ *
+ * The server lets an edit keep them and refuses only adding them anywhere new,
+ * so the form has to be able to show them. Before, they rode along unseen: the
+ * split counted a person nobody could see or untick, and saving it was refused
+ * over a name that was nowhere on screen.
+ */
+describe("an entry naming somebody who has left", () => {
+  it("offers them to the edit, and to nothing else", async () => {
+    getExpense.mockResolvedValue({
+      id: "e1",
+      direction: "out",
+      amount: 9000n,
+      currency: "CHF",
+      exchangeRate: null,
+      expenseDate: "2026-08-12",
+      description: "Boat",
+      category: null,
+      notes: null,
+      payers: [{ participantId: "grace", amount: 9000n }],
+      shares: [
+        { participantId: "seb", amount: 4500n },
+        { participantId: "grace", amount: 4500n },
+      ],
+      splitMethod: "equal",
+      splitInput: null,
+    });
+
+    const screen = await EntryScreen({
+      groupId: "g1",
+      dismissTo: "back",
+      edit: { kind: "expense", id: "e1" },
+      whenGone: "nothing",
+    });
+
+    const { drawer, snapshot } = membersOf(screen);
+    expect(drawer.map((member) => member.displayName)).toEqual([
+      "Seb",
+      "Grace",
+    ]);
+    // The copy kept for offline entry is the group as it is today: a new
+    // entry naming Grace would be refused the moment it synced.
+    expect(snapshot.map((member) => member.displayName)).toEqual(["Seb"]);
+  });
+
+  it("leaves a new entry to the people still in the group", async () => {
+    const screen = await EntryScreen({ groupId: "g1", dismissTo: "back" });
+
+    expect(membersOf(screen).drawer.map((member) => member.id)).toEqual([
+      "seb",
     ]);
   });
 });

@@ -617,7 +617,7 @@
     "positionRevenueMore": "You received {amount} more than your share.",
     "positionRevenueLess": "You received {amount} less than your share.",
     "positionRevenueEqual": "You received exactly your share.",
-    "positionSectionSettlements": "Settlements",
+    "positionSectionSettlements": "Repayments",
     "positionSettlementsPaid": "You paid back",
     "positionSettlementsReceived": "You were paid back",
     "positionSettlementsCaption": "Repayments already made.",
@@ -628,7 +628,7 @@
     "spendingPeriods": {
       "thisMonth": "This month",
       "lastMonth": "Last month",
-      "sinceLastSettlement": "Since last settlement",
+      "sinceLastSettlement": "Since last repayment",
       "allTime": "All time"
     },
     "groupSpending": "Group spending",
@@ -648,7 +648,7 @@
     "balancesByCurrency": "Balances by currency",
     "currencyPeopleMeta": "{currencies, plural, one {# currency} other {# currencies}} · {people, plural, one {# person} other {# people}}",
     "currencySpent": "{amount} spent",
-    "currencySpentPayments": "{amount} spent · {count, plural, one {# payment} other {# payments}}",
+    "currencySpentPayments": "{amount} spent · {count, plural, one {# repayment} other {# repayments}}",
     "settledUpRow": "Settled up",
     "youGetBackWord": "get back",
     "youOweWord": "owe",
@@ -656,19 +656,19 @@
     "owesWord": "owes",
     "youLower": "you",
     "payTransfer": "Pay",
-    "viewSuggestedSettlement": "View suggested settlement",
-    "settlementPlanMeta": "{payments, plural, one {# payment clears} other {# payments clear}} all {currencies, plural, one {# currency} other {# currencies}}",
+    "viewSuggestedSettlement": "View suggested repayments",
+    "settlementPlanMeta": "{payments, plural, one {# repayment clears} other {# repayments clear}} all {currencies, plural, one {# currency} other {# currencies}}",
     "shareBarCaption": "Bar shows your share of each total.",
     "everyoneBalances": "Balances",
     "viewAllPeople": "View all {count} people",
     "balanceReceives": "should receive",
     "balanceOwes": "owes money",
     "balanceSettled": "is settled",
-    "suggestedSettlements": "Suggested settlements",
+    "suggestedSettlements": "Suggested repayments",
     "viewAll": "View all",
     "settlementDetailTitle": "{from} pays {to}",
-    "settlementDetailDescription": "Record the payment when the money changes hands, or send a reminder.",
-    "recordPayment": "Record payment",
+    "settlementDetailDescription": "Record the repayment when the money changes hands, or send a reminder.",
+    "recordPayment": "Record repayment",
     "sendReminder": "Send reminder",
     "archiveGroup": "Archive group",
     "remind": "Send a reminder"
@@ -678,7 +678,7 @@
     "emptyTitle": "Nothing recorded yet",
     "emptyDescription": "Add your first expense to start tracking who paid for what. The spread appears once there is something to divide.",
     "addExpense": "Add an expense",
-    "paymentBadge": "Settlement",
+    "paymentBadge": "Repayment",
     "revenueBadge": "Revenue",
     "recurringBadge": "Recurring",
     "settlementTitle": "{from} paid {to}",
@@ -689,7 +689,7 @@
     "kindFilterLabel": "Filter by kind",
     "kind_expense": "Expenses",
     "kind_revenue": "Revenue",
-    "kind_settlement": "Settlements",
+    "kind_settlement": "Repayments",
     "filterBy": "Show only {category}",
     "removeFilter": "Stop filtering by {category}",
     "searchLabel": "Search transactions",
@@ -880,7 +880,7 @@
     "groupOwner": "Owner",
     "groupArchived": "archived",
     "exportTitle": "Export a group",
-    "exportHelp": "Every expense, payment and share, as a file you keep.",
+    "exportHelp": "Every expense, repayment and share, as a file you keep.",
     "exportGroup": "Group",
     "exportFormat": "Format",
     "exportAction": "Export",
@@ -923,6 +923,8 @@
       "expense": "Restore the expense “{description}”",
       "settlement": "Restore the repayment of {amount}",
       "recurring": "Restore the recurring expense “{description}”",
+      "participant": "Restore {name} to the group",
+      "unnamedParticipant": "Restore the person who was removed",
       "unnamed": "Restore what was deleted",
       "done": "Restored",
       "failed": "It could not be put back. Try again."
@@ -935,10 +937,10 @@
         "restored": "restored an expense"
       },
       "settlement": {
-        "created": "recorded a payment",
-        "updated": "edited a payment",
-        "deleted": "deleted a payment",
-        "restored": "restored a payment"
+        "created": "recorded a repayment",
+        "updated": "edited a repayment",
+        "deleted": "deleted a repayment",
+        "restored": "restored a repayment"
       },
       "member": {
         "added": "added a member",
@@ -1013,8 +1015,8 @@
   },
   "settlement": {
     "settleUp": "Settle up",
-    "title": "Record a payment",
-    "description": "A payment moves balances between two people. It is not counted as group spending.",
+    "title": "Record a repayment",
+    "description": "A repayment moves balances between two people. It is not counted as group spending.",
     "whoPaid": "Who paid",
     "whoReceived": "Who received it",
     "amount": "Amount",
@@ -1022,24 +1024,24 @@
     "date": "Date",
     "notes": "Notes",
     "rateHint": "Frozen with the repayment, like an expense's rate.",
-    "submit": "Record payment",
-    "recorded": "Payment recorded",
+    "submit": "Record repayment",
+    "recorded": "Repayment recorded",
     "errors": {
       "samePerson": "Choose two different people.",
       "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
-      "saveFailed": "The payment could not be recorded."
+      "saveFailed": "The repayment could not be recorded."
     }
   },
   "settleUp": {
     "title": "Settle up",
-    "clearsGroup": "{count, plural, one {# payment clears the group} other {# payments clear the group}}",
-    "clearsCurrency": "{count, plural, one {# payment clears this currency} other {# payments clear this currency}}",
+    "clearsGroup": "{count, plural, one {# repayment clears the group} other {# repayments clear the group}}",
+    "clearsCurrency": "{count, plural, one {# repayment clears this currency} other {# repayments clear this currency}}",
     "betweenOthers": "Between others",
     "settledUp": "Settled up",
     "paysSentence": "{from} pays {to}",
     "paidSentence": "{from} paid {to} back",
     "record": "Record",
-    "recordFor": "Record {from}'s payment to {to}",
+    "recordFor": "Record {from}'s repayment to {to}",
     "remindPerson": "Remind {name}",
     "remindedWhen": "Reminded {when}",
     "allSettledTitle": "The group is settled",
@@ -1048,7 +1050,7 @@
     "settledOnVia": "{when} · {method}",
     "backToGroup": "Back to the group",
     "iPaid": "I paid {name}",
-    "iWasPaid": "I got the payment",
+    "iWasPaid": "I was paid back",
     "recordForThem": "Record for them",
     "heroOwing": "You owe",
     "heroReceiving": "You get back",
@@ -1132,7 +1134,7 @@
       "getsBack": "gets back",
       "owes": "owes",
       "settledUp": "settled up",
-      "settledIn": "Settled in {count, plural, one {# payment} other {# payments}}",
+      "settledIn": "Settled in {count, plural, one {# repayment} other {# repayments}}",
       "everyoneSettled": "Everyone is settled up",
       "transfer": "{from} pays {to} {amount}"
     },
@@ -1165,8 +1167,8 @@
           "body": "Rent, subscriptions, the shared internet bill. Generated on schedule in your group's own timezone."
         },
         "repayments": {
-          "title": "Revenue and settlements, not only spending",
-          "body": "Add income — a deposit returned, a refund, a shared payout — and split it the same four ways, on a schedule if it repeats. Repayments are recorded as settlements, and the group's suggested payments are worked out for you."
+          "title": "Revenue and repayments, not only spending",
+          "body": "Add income — a deposit returned, a refund, a shared payout — and split it the same four ways, on a schedule if it repeats. Repayments are kept apart from spending, and the ones that clear the group are worked out for you."
         }
       }
     },
@@ -1177,7 +1179,7 @@
       "items": {
         "trip": {
           "title": "Organising a trip with friends",
-          "body": "Flights booked months ago, a villa deposit one person fronted, dinners paid by whoever's card was closest, half of it in another currency. Add each cost as it happens and Balancia keeps every currency straight, then suggests the payments that clear the whole trip when you get home."
+          "body": "Flights booked months ago, a villa deposit one person fronted, dinners paid by whoever's card was closest, half of it in another currency. Add each cost as it happens and Balancia keeps every currency straight, then suggests the repayments that clear the whole trip when you get home."
         },
         "flat": {
           "title": "Sharing a flat",
@@ -1299,7 +1301,7 @@
         },
         "splitwise": {
           "question": "Can I import my data from Splitwise?",
-          "answer": "Yes. Balancia accepts a Splitwise group CSV export or JSON backup. It previews the import before bringing in expenses, settlements, currencies and people. Final shares are preserved as exact amounts, but the original split-method label and historical exchange rates are not recreated."
+          "answer": "Yes. Balancia accepts a Splitwise group CSV export or JSON backup. It previews the import before bringing in expenses, repayments, currencies and people. Final shares are preserved as exact amounts, but the original split-method label and historical exchange rates are not recreated."
         },
         "openSource": {
           "question": "Is Balancia open source?",
@@ -1357,7 +1359,7 @@
       "alternateName": "Balancia — shared expenses, fairly balanced",
       "applicationSubCategory": "Shared expense splitting",
       "operatingSystem": "Web browser, self-hostable via Docker",
-      "description": "Balancia is free, open-source software for splitting shared expenses in a group. It handles equal, exact, percentage and share-based splits, several payers on one bill, multiple currencies, recurring expenses, income and settlements. It can be used on a hosted instance with a free account, or self-hosted on your own server under the AGPL-3.0-or-later licence.",
+      "description": "Balancia is free, open-source software for splitting shared expenses in a group. It handles equal, exact, percentage and share-based splits, several payers on one bill, multiple currencies, recurring expenses, income and repayments. It can be used on a hosted instance with a free account, or self-hosted on your own server under the AGPL-3.0-or-later licence.",
       "offerDescription": "Free account on the hosted instance. No paid tier, no feature held back.",
       "keywords": "split expenses with friends, share costs on a trip, roommate expense splitting, open source Splitwise alternative, self-hosted expense splitter, group holiday costs, shared household bills",
       "audience": "Groups sharing costs: friends travelling together, flatmates, couples, families, clubs and teams, and people who prefer to self-host their own tools",
@@ -1367,7 +1369,7 @@
         "currency": "Split costs on a trip in multiple currencies",
         "recurring": "Recurring expenses such as rent, utilities and subscriptions",
         "income": "Record income, refunds and shared payouts, not only spending",
-        "settlements": "Settle up with deterministic suggested payments that clear the group",
+        "settlements": "Settle up with deterministic suggested repayments that clear the group",
         "guests": "Invite people without accounts through revocable guest links",
         "import": "Import an existing Splitwise CSV export or JSON backup",
         "export": "Export any group as JSON, CSV or an Excel workbook",
@@ -1405,6 +1407,7 @@
     "sheetBody": "These are kept on this device until your server can be reached. They are not in the group's balances yet.",
     "synced": "{count, plural, one {# entry synced} other {# entries synced}}",
     "blockedNoAccess": "This group is no longer available to you, so this entry cannot be saved.",
+    "blockedArchived": "This group has been archived, so this entry cannot be saved.",
     "blockedRefused": "Your server refused this entry. Somebody on it may have been removed from the group.",
     "discard": "Discard",
     "notSavedTitle": "Nothing saved for this group yet",
@@ -1999,10 +2002,10 @@
     "archived": "Group archived",
     "restored": "Group restored",
     "deleteTitle": "Delete this group",
-    "deleteBody": "Removes every expense, payment and receipt. Cannot be undone.",
+    "deleteBody": "Removes every expense, repayment and receipt. Cannot be undone.",
     "delete": "Delete",
     "confirmTitle": "Delete “{name}”?",
-    "confirmBody": "Every expense, payment, receipt and invitation in this group is permanently removed. This cannot be undone.",
+    "confirmBody": "Every expense, repayment, receipt and invitation in this group is permanently removed. This cannot be undone.",
     "typeToConfirm": "Type <name></name> to confirm",
     "deletePermanently": "Delete permanently",
     "deleteFailed": "The group could not be deleted.",
@@ -2080,7 +2083,7 @@
     "another": "Import another file",
     "previewTitle": "Preview: {fileName}",
     "expenseCount": "{count, plural, one {# expense} other {# expenses}}",
-    "settlementCount": "{count, plural, one {# payment} other {# payments}}",
+    "settlementCount": "{count, plural, one {# repayment} other {# repayments}}",
     "duplicateCount": "{count, plural, one {# already imported} other {# already imported}}",
     "warningsTitle": "{count, plural, one {# thing to check before importing} other {# things to check before importing}}",
     "warningRow": "Row {row}: ",
@@ -2141,9 +2144,9 @@
     "access": "Access",
     "account": "{name} signs in with their own account.",
     "accountEmail": "{name} signs in with {email}.",
-    "accountOwner": "{name} signs in with their own account. As the group owner (s)he always has full access.",
-    "accountOwnerEmail": "{name} signs in with {email}. As the group owner (s)he always has full access.",
-    "noAccessBlurb": "{name} has no account. With a one-time link, (s)he can take part without signing up.",
+    "accountOwner": "{name} signs in with their own account. As the group owner they always have full access.",
+    "accountOwnerEmail": "{name} signs in with {email}. As the group owner they always have full access.",
+    "noAccessBlurb": "{name} has no account. With a one-time link, they can take part without signing up.",
     "expires": "Expires",
     "expiry_never": "Never",
     "expiry_week": "In 7 days",
@@ -2159,7 +2162,7 @@
     "revoked": "Invite link revoked",
     "revokeFailed": "The link could not be revoked.",
     "copyNow": "Copy this link now",
-    "copyWarning": "Shown once — Balancia only keeps a fingerprint. Anyone holding it can act as {name}: see the group, add expenses, record payments.",
+    "copyWarning": "Shown once — Balancia only keeps a fingerprint. Anyone holding it can act as {name}: see the group, add expenses, record repayments.",
     "copyLink": "Copy invite link",
     "copiedIt": "I’ve copied it",
     "linkCopied": "Invite link copied",
@@ -2170,7 +2173,7 @@
     "removeBlockedOwed": "{name} is still owed {amounts}. Settle up first, then remove them.",
     "removeBlockedMixed": "{name} still has {amounts} outstanding. Settle up first, then remove them.",
     "removeTitle": "Remove {name}?",
-    "removeBody": "Past expenses keep their name, so the group history stays intact. Any live invite link stops working straight away. You can undo this right after.",
+    "removeBody": "Past expenses keep their name, so the group history stays intact. Any live invite link stops working straight away. You can undo this right after, or restore them later from Activity.",
     "keepThem": "Keep them",
     "remove": "Remove",
     "removed": "{name} removed from the group",
@@ -2267,7 +2270,7 @@
     "recordQuietestSub": "{month} · {count, plural, =0 {no entries} one {# entry} other {# entries}}",
     "days": "{count, plural, one {# day} other {# days}}",
     "hours": "{hours} h",
-    "method": "Shares use the split ratios recorded on each entry, not today's. Settlements are excluded from spend. Amounts in other currencies are listed separately and never summed."
+    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments are excluded from spend. Amounts in other currencies are listed separately and never summed."
   },
   "groupStats": {
     "metaTitle": "Statistics",
@@ -2293,10 +2296,10 @@
     "flowExpensesSub": "{count, plural, =0 {nothing spent} one {# entry} other {# entries}}",
     "flowRevenue": "Revenue",
     "flowRevenueSub": "{count, plural, =0 {nothing came in} one {# entry recorded as money in} other {# entries recorded as money in}}",
-    "flowSettlements": "Settlements",
+    "flowSettlements": "Repayments",
     "flowSettlementsSub": "{count, plural, =0 {no repayments yet} one {# repayment between members} other {# repayments between members}}",
-    "flowsFootnoteGross": "The total spent above is gross of revenue. Settlements only move money between members and never count as spend.",
-    "flowsFootnoteNet": "Revenue is subtracted from the total spent above. Settlements only move money between members and never count as spend.",
+    "flowsFootnoteGross": "The total spent above is gross of revenue. Repayments only move money between members and never count as spend.",
+    "flowsFootnoteNet": "Revenue is subtracted from the total spent above. Repayments only move money between members and never count as spend.",
     "chartTitle": "Group spend",
     "granularity": {
       "week": "{count, plural, one {# week} other {# weeks}} · weekly",
@@ -2345,7 +2348,7 @@
     "recordSquareSub": "Everyone at zero, {from} to {to}",
     "days": "{count, plural, one {# day} other {# days}}",
     "percent": "{percent, number, ::.0}%",
-    "method": "Shares use the split ratios recorded on each entry, not today's. Settlements move money between members and are never counted as spend. Amounts in other currencies are listed separately and never summed."
+    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between members and are never counted as spend. Amounts in other currencies are listed separately and never summed."
   },
   "recurringPage": {
     "title": "Recurring expenses",
@@ -2401,7 +2404,7 @@
     "types": {
       "expense": "Expense",
       "revenue": "Revenue",
-      "settlement": "Settlement"
+      "settlement": "Repayment"
     },
     "attachments": "{count, plural, one {# file attached} other {# files attached}}",
     "date": "Date",
@@ -2561,6 +2564,8 @@
     "reminderEmpty": "A reminder needs something to say.",
     "reminderNotOwed": "That person does not owe you anything in this group.",
     "reminderTooSoon": "That person was reminded in the last 24 hours. Give them a day.",
+    "participantHasBalance": "{name} still has money outstanding in this group. Settle up first, then remove them.",
+    "removedParticipantSettlement": "{name} is no longer in this group. A repayment can include them only to settle what is still outstanding, and for no more than that.",
     "appleNoEmail": "Apple did not share an email address with this instance, so there is nothing to create an account from.",
     "appleEmailTaken": "An account already uses that email address. Sign in with your password or passkey, then link Apple from the security page.",
     "appleLinkedElsewhere": "That Apple account is already linked to a different Balancia account.",
@@ -2636,12 +2641,12 @@
     "expenseCreated": "{actor} added {description}",
     "expenseUpdated": "{actor} edited {description}",
     "expenseDeleted": "{actor} deleted {description}",
-    "settlementIncoming": "{actor} recorded a payment to you",
-    "settlementOutgoing": "{actor} recorded your payment to {counterpart}",
-    "settlementUpdatedIncoming": "{actor} changed a payment to you",
-    "settlementUpdatedOutgoing": "{actor} changed your payment to {counterpart}",
-    "settlementDeletedIncoming": "{actor} removed a payment to you",
-    "settlementDeletedOutgoing": "{actor} removed your payment to {counterpart}",
+    "settlementIncoming": "{actor} recorded a repayment to you",
+    "settlementOutgoing": "{actor} recorded your repayment to {counterpart}",
+    "settlementUpdatedIncoming": "{actor} changed a repayment to you",
+    "settlementUpdatedOutgoing": "{actor} changed your repayment to {counterpart}",
+    "settlementDeletedIncoming": "{actor} removed a repayment to you",
+    "settlementDeletedOutgoing": "{actor} removed your repayment to {counterpart}",
     "recurringGenerated": "{description} was added automatically",
     "importCompleted": "Import finished: {imported} added, {skipped} skipped, {failed} not imported",
     "reminderTitle": "{amount} from {group}"
@@ -2707,7 +2712,7 @@
     "categoriesTitle": "Tell me about",
     "expenses": "Expenses I am in",
     "expensesHelp": "Something I paid for, or owe a share of, is added or changed.",
-    "settlements": "Payments",
+    "settlements": "Repayments",
     "settlementsHelp": "Someone records money paid to or from me.",
     "recurring": "Repeating expenses",
     "recurringHelp": "A recurring expense lands in one of my groups.",
@@ -2963,19 +2968,19 @@
     "titles": {
       "expense": "Add expense",
       "income": "Add income",
-      "settle": "Settle up"
+      "settle": "Record repayment"
     },
     "editTitles": {
       "expense": "Edit expense",
       "income": "Edit income",
-      "settle": "Edit payment"
+      "settle": "Edit repayment"
     },
     "close": "Close",
     "types": {
       "label": "What kind of entry",
       "expense": "Expense",
       "income": "Income",
-      "settle": "Settle"
+      "settle": "Repayment"
     },
     "labels": {
       "amount": "Amount",
@@ -3193,14 +3198,14 @@
       "outcomeZero": "Enter how much changed hands.",
       "outcomeAwaitingRate": "Enter the rate, so this can count against what is owed.",
       "outcomeCustom": "No balance was owed — {from} will owe {to} {amount}.",
-      "outcomeUnder": "Part payment — {from} will still owe {to} {amount}.",
+      "outcomeUnder": "Partial repayment — {from} will still owe {to} {amount}.",
       "outcomeOver": "More than owed — {from} will owe {to} {amount}.",
       "outcomeExact": "{from} and {to} will be settled.",
       "outcomeOtherCurrency": "Paid in {currency} — {from} still owes {to} {amount}.",
       "someoneElse": "Someone else",
       "changeWhoPays": "Change who pays",
       "pairTitle": "Pay someone else",
-      "pairSubtitle": "No balance is owed — this records the payment anyway.",
+      "pairSubtitle": "No balance is owed — this records the repayment anyway.",
       "whoPays": "Who pays",
       "whoReceives": "Who receives it",
       "pairPickBoth": "Pick who pays, then who receives it",
@@ -3216,14 +3221,14 @@
       "addIncome": "Add income",
       "saveRecurringExpense": "Save recurring expense",
       "saveRecurringIncome": "Save recurring income",
-      "recordPayment": "Record payment",
+      "recordPayment": "Record repayment",
       "saveChanges": "Save changes"
     },
     "saved": {
       "expenseAdded": "Expense added",
       "incomeAdded": "Income added",
       "recurringSaved": "Recurring entry saved",
-      "paymentRecorded": "Payment recorded",
+      "paymentRecorded": "Repayment recorded",
       "changesSaved": "Changes saved",
       "deleted": "Entry deleted",
       "restored": "Entry restored",
@@ -3530,7 +3535,7 @@
     "lastSentLabel": "Last sent",
     "neverSent": "never",
     "notCollectedTitle": "Never collected",
-    "notCollectedAmounts": "Amounts, currencies of individual expenses, balances and settlements.",
+    "notCollectedAmounts": "Amounts, currencies of individual expenses, balances and repayments.",
     "notCollectedNames": "Names, email addresses, group names, descriptions, notes and comments.",
     "notCollectedReceipts": "Receipt images, the text read from them and attachment file names.",
     "notCollectedIdentifiers": "User, group and expense identifiers, session tokens and passkeys.",

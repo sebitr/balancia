@@ -33,6 +33,7 @@ import {
 } from "@/modules/receipts";
 import { isLiveCameraSupported } from "@/lib/doc-scan/engine";
 import { looksLikePdf } from "@/lib/pdf/read-pdf";
+import { todayInZone } from "@/lib/timezones";
 import { recordReceiptScanAction } from "@/modules/telemetry/actions";
 import { ItemAssignmentView, type Participant } from "./item-assignment";
 import { DocumentCamera } from "./document-camera";
@@ -108,6 +109,7 @@ export function ScanReceiptDialog({
   groupId,
   participants,
   defaultCurrency,
+  timezone,
   onApply,
   trigger,
   localAvailable,
@@ -120,6 +122,11 @@ export function ScanReceiptDialog({
   provider?: string;
   participants: readonly Participant[];
   defaultCurrency: string;
+  /**
+   * The group's. A receipt with no date on it is dated today, and today is
+   * the group's, the same day the form it fills in would have started on.
+   */
+  timezone: string;
   onApply: (result: ScannedExpense) => void;
   /**
    * Replaces the default pair of buttons. It is rendered with the two pickers
@@ -283,7 +290,7 @@ export function ScanReceiptDialog({
       setDraft(
         toDraft(parsed, {
           fallbackCurrency: defaultCurrency,
-          fallbackDate: new Date().toISOString().slice(0, 10),
+          fallbackDate: todayInZone(timezone),
         }),
       );
       setStep("review");

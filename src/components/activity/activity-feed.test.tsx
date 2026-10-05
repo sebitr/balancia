@@ -4,12 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { createTranslator } from "use-intl/core";
 import en from "../../../messages/en.json";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { createDateFormatter } from "@/i18n/format";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { ActivityFeed } from "./activity-feed";
 
 /**
- * The group's history, and the Restore it carries on a deletion that still
- * stands — the way back that does not run out after eight seconds.
+ * The group's history: the clock it tells the time on, and the Restore it
+ * carries on a deletion that still stands — the way back that does not run
+ * out after eight seconds.
  *
  * The feed renders on the server; here it is awaited and its output mounted,
  * with the real English catalogue behind both halves — the whole of it for the
@@ -27,8 +29,18 @@ vi.mock("next-intl/server", () => ({
     createTranslator({ locale: "en", messages: en, namespace }),
 }));
 
+/*
+ * The server's formatter, UTC and all. The app's own zone is the server's —
+ * UTC unless an operator set `TZ` — which is exactly the situation the feed
+ * has to correct for by telling each time on the group's clock.
+ */
 vi.mock("@/i18n/preferences", () => ({
-  getDateFormatter: async () => ({ at: (date: Date) => date.toISOString() }),
+  getDateFormatter: async () =>
+    createDateFormatter({
+      dateFormat: "dmy",
+      formatLocale: "en-GB",
+      timeZone: "UTC",
+    }),
   getNumberLocale: async () => "en-GB",
 }));
 
@@ -46,10 +58,12 @@ const {
   restoreExpenseAction,
   restoreSettlementAction,
   restoreRecurringAction,
+  restoreParticipantAction,
 } = vi.hoisted(() => ({
   restoreExpenseAction: vi.fn<ById>(async () => ({ ok: true })),
   restoreSettlementAction: vi.fn<ById>(async () => ({ ok: true })),
   restoreRecurringAction: vi.fn<ById>(async () => ({ ok: true })),
+  restoreParticipantAction: vi.fn<ById>(async () => ({ ok: true })),
 }));
 
 vi.mock("@/modules/expenses/actions", () => ({
@@ -57,6 +71,7 @@ vi.mock("@/modules/expenses/actions", () => ({
   restoreSettlementAction,
 }));
 vi.mock("@/modules/recurring/actions", () => ({ restoreRecurringAction }));
+vi.mock("@/modules/groups/actions", () => ({ restoreParticipantAction }));
 
 const success = vi.fn();
 const error = vi.fn();
@@ -135,6 +150,7 @@ async function feed(restorable: readonly string[]) {
     entries: ENTRIES,
     groupId: "g1",
     restorable: new Set(restorable),
+    timeZone: "UTC",
   });
 }
 
@@ -143,6 +159,52 @@ const GROUP = { area: "group" } as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("the activity feed's clock", () => {
+  const ADDED = event({
+    id: "a1",
+    action: "expense.created",
+    entityType: "expense",
+    entityId: "e1",
+    metadata: { description: "Groceries" },
+    // Five past two in the afternoon in UTC; five past four in Paris, which is
+    // on summer time in August.
+    createdAt: new Date("2026-08-13T14:05:00Z"),
+  });
+
+  it("tells the time on the group's clock, not the server's", async () => {
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [ADDED],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "Europe/Paris",
+      }),
+      GROUP,
+    );
+
+    const time = screen.getByText(/16:05/);
+    expect(time).toHaveTextContent("13/08/2026, 16:05");
+    // The machine-readable instant is still the instant.
+    expect(time).toHaveAttribute("datetime", "2026-08-13T14:05:00.000Z");
+    expect(screen.queryByText(/14:05/)).not.toBeInTheDocument();
+  });
+
+  it("moves the day with the clock", async () => {
+    // A quarter to midnight in UTC is already tomorrow in Auckland.
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [{ ...ADDED, createdAt: new Date("2026-08-13T23:45:00Z") }],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "Pacific/Auckland",
+      }),
+      GROUP,
+    );
+
+    expect(screen.getByText(/11:45/)).toHaveTextContent("14/08/2026, 11:45");
+  });
 });
 
 describe("restoring from the activity feed", () => {
@@ -301,5 +363,153 @@ describe("restoring from the activity feed", () => {
 
     settle({ ok: true });
     await waitFor(() => expect(screen.getByText("Restored")).toHaveFocus());
+  });
+});
+
+const BOB_REMOVED = event({
+  id: "b1",
+  action: "participant.removed",
+  entityType: "participant",
+  entityId: "p-bob",
+  metadata: { displayName: "Bob" },
+});
+
+/** Removed, and put back since: the server no longer lists it. */
+const CAROL_REMOVED = event({
+  id: "b2",
+  action: "participant.removed",
+  entityType: "participant",
+  entityId: "p-carol",
+  metadata: { displayName: "Carol" },
+});
+
+/**
+ * About a person, but not a removal. Listed as restorable all the same, which
+ * the server never does, to show that the row's own action decides whether a
+ * button can go on it at all.
+ */
+const DAN_ADDED = event({
+  id: "b3",
+  action: "participant.created",
+  entityType: "participant",
+  entityId: "p-dan",
+  metadata: { displayName: "Dan" },
+});
+
+async function people(restorable: readonly string[]) {
+  return ActivityFeed({
+    entries: [BOB_REMOVED, CAROL_REMOVED, DAN_ADDED],
+    groupId: "g1",
+    restorable: new Set(restorable),
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * A person taken out of the group comes back from the line that took them
+ * out, through the same restore the People screen's toast offers — the way
+ * back that does not run out after eight seconds.
+ */
+describe("putting a removed person back from the activity feed", () => {
+  it("offers it only on a removal whose person is still removed", async () => {
+    renderWithIntl(await people(["b1", "b3"]), GROUP);
+
+    // Named for who it puts back, starting with the word it shows.
+    const button = screen.getByRole("button", {
+      name: "Restore Bob to the group",
+    });
+    expect(button).toBeVisible();
+    expect(button).toHaveTextContent(/^Restore$/);
+
+    // Carol is back already, and adding Dan is nothing to undo.
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /Carol/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Dan/ })).toBeNull();
+  });
+
+  it("offers nothing where the server lists nothing — a reader who may not restore", async () => {
+    renderWithIntl(await people([]), GROUP);
+
+    // The removal is still told; only the button is not there.
+    expect(screen.getByText("removed Bob from the group")).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("can be reached from the keyboard, and puts back the person the row names", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(await people(["b1"]), GROUP);
+
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Restore Bob to the group" }),
+    ).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    expect(restoreParticipantAction).toHaveBeenCalledWith("g1", "p-bob");
+    expect(restoreExpenseAction).not.toHaveBeenCalled();
+  });
+
+  /**
+   * No toast: the row says so, under the finger that pressed it, which is the
+   * doctrine at `toastUndoable`. The People screen's own Undo does still toast,
+   * from the toast it lives on; that one is not this.
+   */
+  it("goes quiet once they are back, and leaves the focus on the row", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithIntl(await people(["b1"]), GROUP);
+
+    await user.click(
+      screen.getByRole("button", { name: "Restore Bob to the group" }),
+    );
+
+    await waitFor(() => expect(screen.getByText("Restored")).toHaveFocus());
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(refresh).toHaveBeenCalled();
+    expect(success).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+
+    // The refresh comes back with Bob no longer removed.
+    rerender(await people([]));
+    expect(screen.getByText("Restored")).toHaveFocus();
+  });
+
+  it("says why when putting them back is refused, and keeps the button", async () => {
+    restoreParticipantAction.mockResolvedValueOnce({
+      ok: false,
+      error: "That item is not part of this group.",
+    });
+    const user = userEvent.setup();
+    renderWithIntl(await people(["b1"]), GROUP);
+
+    await user.click(
+      screen.getByRole("button", { name: "Restore Bob to the group" }),
+    );
+
+    expect(error).toHaveBeenCalledWith("That item is not part of this group.");
+    expect(success).not.toHaveBeenCalled();
+    expect(screen.queryByText("Restored")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Restore Bob to the group" }),
+    ).toBeVisible();
+    // Somebody may have put Bob back first; the refresh shows what is true.
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("still says what it does for a removal that recorded no name", async () => {
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [{ ...BOB_REMOVED, metadata: null }],
+        groupId: "g1",
+        restorable: new Set(["b1"]),
+        timeZone: "UTC",
+      }),
+      GROUP,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Restore the person who was removed",
+      }),
+    ).toBeVisible();
   });
 });

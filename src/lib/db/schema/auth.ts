@@ -166,6 +166,10 @@ export const users = pgTable(
      * same reason. It is granted nowhere else, and there is no way to ask for
      * it: an operator promotes a second administrator with one UPDATE
      * (docs/telemetry.md).
+     *
+     * Who is first is decided by a trigger on this table, not by whatever
+     * code wrote the row — drizzle/0039_first_account_is_admin.sql, which
+     * drizzle-kit does not model and will not show in a generated diff.
      */
     isAdmin: boolean("is_admin").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })

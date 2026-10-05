@@ -174,7 +174,7 @@ describe("the rows behind a subtotal", () => {
 
   it("states repayments in both directions, zero included", async () => {
     const user = await show();
-    const section = await expand(user, /Settlements/);
+    const section = await expand(user, /Repayments/);
 
     expect(within(section).getByText("You paid back")).toBeInTheDocument();
     expect(within(section).getByText("You were paid back")).toBeInTheDocument();
