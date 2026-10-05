@@ -1,4 +1,4 @@
-<!-- @dsCard group="Overview" name="Balancia" subtitle="What the system is for and the rules that hold it together" -->
+<!-- @dsCard group="Patterns" name="Recurring expenses" subtitle="One way to set one up, edited for the entries to come, found from Transactions" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<title>Balancia — Balancia</title>
+<title>Recurring expenses — Balancia</title>
 <style>
 /*
  * Balancia design-system kit.
@@ -1337,104 +1337,326 @@ a[aria-current="page"] .nav-icon--primary {
 <button data-theme-toggle class="btn btn--outline btn--sm" style="position:fixed;top:1rem;right:1rem;z-index:50">Dark</button>
 <div class="page">
   <header class="page-head">
-    <span class="wordmark">
-      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <g transform="translate(2.4 2.6) scale(0.85)">
-          <circle cx="16" cy="4.5" r="4.4" style="fill: var(--primary)" />
-          <rect
-            x="0"
-            y="14.75"
-            width="32"
-            height="4.5"
-            rx="2.25"
-            fill="currentColor"
-          />
-          <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
-        </g>
-      </svg>
-      <span class="wordmark-text">Balancia</span>
-    </span>
-    <h1>Design system</h1>
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Recurring expenses</h1>
     <p class="lede">
-      Balancia is self-hosted shared expense tracking. People open it to answer
-      one question —
-      <em>where do I stand?</em> — so the system optimises for a fast,
-      unambiguous, trustworthy answer on a phone, and for nothing else.
+      A recurring expense is a property of an entry, not a kind of its own: it
+      is set up in the entry form by turning Repeats on, changed there too, and
+      listed on a screen of its own that Transactions leads to. Its schedule
+      reads one way everywhere it is shown.
     </p>
   </header>
 
   <section>
-    <h2>Principles</h2>
-    <div class="grid-2">
-      <div class="spec">
-        <div class="spec-label">01 — Money is never ambiguous</div>
-        <p>
-          Every balance carries three redundant cues: a word (<strong
-            >owes</strong
+    <h2>The list</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Rent</span>
+              <span class="list-sub" style="font-size: 0.875rem"
+                >CHF 2,400.00 · Every month on the 1st</span
+              >
+              <span class="list-sub"
+                >Next: 1 Nov 2026 · 10 generated so far</span
+              >
+            </span>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Actions for Rent"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title"
+                >Cleaning
+                <span class="badge badge--secondary">Paused</span></span
+              >
+              <span class="list-sub" style="font-size: 0.875rem"
+                >CHF 120.00 · Every 2 weeks on Friday</span
+              >
+              <span class="list-sub"
+                >Paused — nothing will be generated · 4 generated so far</span
+              >
+            </span>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Actions for Cleaning"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
+          </div>
+        </li>
+      </ul>
+      <div style="margin-top: 1.5rem">
+        <button class="btn btn--default" style="width: 100%">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
           >
-          / <strong>gets back</strong> / <strong>settled up</strong>), an icon,
-          and a colour. The meaning survives greyscale, colour blindness, and a
-          screen reader. Colour alone is never the signal.
-        </p>
-      </div>
-      <div class="spec">
-        <div class="spec-label">02 — Calm, not financial</div>
-        <p>
-          Deep plum on cream, with coral held back for the one thing to do next.
-          Friendly and trustworthy without reading as banking software — this is
-          a trip with friends, not a ledger review.
-        </p>
-      </div>
-      <div class="spec">
-        <div class="spec-label">03 — Phone first</div>
-        <p>
-          Content caps at <code>max-w-3xl</code>. Group pages get a fixed bottom
-          bar with <strong>Add</strong> centred and filled, because recording an
-          expense is the thing people came to do. Safe-area padding is not
-          optional.
-        </p>
-      </div>
-      <div class="spec">
-        <div class="spec-label">04 — Digits line up</div>
-        <p>
-          Tabular lining figures are on globally via
-          <code>font-feature-settings</code>. Amounts are formatted through
-          <code>Intl</code> from minor units as strings — never JavaScript
-          numbers.
-        </p>
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
+          </svg>
+          Add a recurring expense
+        </button>
       </div>
     </div>
-  </section>
-
-  <section>
-    <h2>Contents</h2>
-    <dl class="dl">
-      <dt>Foundations</dt>
+    <dl class="dl" style="margin-top: 0.75rem">
+      <dt>subtitle</dt>
       <dd>
-        The brand and its mark, colour and balance semantics, typography,
-        spacing &amp; radius, motion.
+        "Added on their day, automatically. Days follow the group's time zone,
+        Europe/Zurich." — said to a person, not a log line.
       </dd>
-      <dt>Components</dt>
+      <dt>row menu</dt>
       <dd>
-        The shadcn/ui primitives as Balancia has them tuned — button, badge,
-        card, forms, lists, navigation, feedback.
+        <em>Edit</em>, then <em>Pause</em> or <em>Resume</em>, then
+        <em>Delete</em>. Edit first, because changing the rent or the split is
+        what a rule is opened for most often. Pause and Delete raise an Undo;
+        Edit opens a form.
       </dd>
-      <dt>Patterns</dt>
+      <dt>add</dt>
       <dd>
-        The domain compositions that only exist here — money display, the
-        expense timeline, the balance summary, settle up, recurring expenses.
+        One primary button under the list, and the empty state's action when
+        there is no list. It opens the entry form with Repeats already on — the
+        screen has no form of its own.
+      </dd>
+      <dt>back</dt>
+      <dd>
+        To Transactions, the way in; to group settings when the settings
+        shortcut was the way in.
       </dd>
     </dl>
   </section>
 
   <section>
-    <h2>Where this lives</h2>
+    <h2>One sentence per schedule</h2>
     <p class="note">
-      Source of truth is the app: <code>src/app/globals.css</code> for tokens,
-      <code>src/components/ui/*</code> for primitives. These pages are
-      transcriptions built by <code>design-system/build.mjs</code>. Change the
-      app and rebuild — don't let the two drift.
+      The repeat sheet's hero and presets, the entry form's Repeat row and the
+      list above all say a rule with one family of messages,
+      <code>recurring.schedule</code>. The day of the month is an ordinal in
+      English and plain in French; the interval is a plural; the weekday is the
+      locale's own name for it.
     </p>
+    <div class="spec scroll-x">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Rule</th>
+            <th>English</th>
+            <th>French</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>monthly, day 1</td>
+            <td>Every month on the 1st</td>
+            <td>Tous les mois, le 1er</td>
+          </tr>
+          <tr>
+            <td>every 3 months, day 22</td>
+            <td>Every 3 months on the 22nd</td>
+            <td>Tous les 3 mois, le 22</td>
+          </tr>
+          <tr>
+            <td>monthly, 2nd Tuesday</td>
+            <td>Every month on the second Tuesday</td>
+            <td>Tous les mois, le deuxième mardi</td>
+          </tr>
+          <tr>
+            <td>every 2 weeks, Friday</td>
+            <td>Every 2 weeks on Friday</td>
+            <td>Toutes les 2 semaines, le vendredi</td>
+          </tr>
+          <tr>
+            <td>yearly</td>
+            <td>Every year on 15 Oct</td>
+            <td>Tous les ans, le 15 oct.</td>
+          </tr>
+          <tr>
+            <td>daily</td>
+            <td>Every day</td>
+            <td>Tous les jours</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Changing one</h2>
+    <dl class="dl">
+      <dt>the form</dt>
+      <dd>
+        The entry form, titled <em>Edit recurring expense</em>, opened on the
+        rule. Expense and Income only; Repeats on and fixed — a rule stays a
+        rule, and the repeat sheet has no <em>Don't repeat</em>. Scan, voice and
+        the duplicate note are for new entries and are not shown.
+      </dd>
+      <dt>the button</dt>
+      <dd>
+        <em>Save for future expenses</em> (<em>…income</em>). It touches the
+        entries still to come and never the ones already added, and says so
+        rather than "Save changes".
+      </dd>
+      <dt>the date row</dt>
+      <dd>
+        Shows the rule's next date. It opens on the start of the period that
+        date falls in — its week, or its month — so an unchanged schedule keeps
+        its date and a moved day moves within that month: never a second entry
+        in the month already paid, never a month skipped. It cannot go earlier
+        than the day after the last entry, nor before today.
+      </dd>
+      <dt>the confirmation</dt>
+      <dd>
+        "Rent updated from 1 Nov 2026. Entries already added stay as they were."
+        A paused rule says it is still paused.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>The way in from Transactions</h2>
+    <div class="spec">
+      <div
+        style="
+          max-width: 358px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.5rem;
+        "
+      >
+        <div style="flex: 1; display: flex; gap: 0.5rem">
+          <button
+            style="
+              flex: 1;
+              height: 34px;
+              padding: 0 0.75rem;
+              border: 0;
+              border-radius: 999px;
+              background: var(--muted);
+              color: var(--muted-foreground);
+              font: inherit;
+              font-size: 0.75rem;
+              font-weight: 600;
+              white-space: nowrap;
+            "
+          >
+            Expenses
+          </button>
+          <button
+            style="
+              flex: 1;
+              height: 34px;
+              padding: 0 0.75rem;
+              border: 0;
+              border-radius: 999px;
+              background: var(--muted);
+              color: var(--muted-foreground);
+              font: inherit;
+              font-size: 0.75rem;
+              font-weight: 600;
+              white-space: nowrap;
+            "
+          >
+            Repayments
+          </button>
+        </div>
+        <a
+          href="#"
+          style="
+            margin-left: auto;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            color: var(--primary-ink);
+            text-decoration: none;
+          "
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
+          </svg>
+          Repeating · 2
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      At the end of the kind chips whenever the group has a recurring expense,
+      paused ones included; the number counts the running ones and drops out
+      when there are none. With no chips — a group of expenses only — it stands
+      on its own under the title. It wraps to a line of its own rather than cut
+      a chip short, which in French at 360px it does.
+    </p>
+    <div class="do-dont" style="margin-top: 0.75rem">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Draw it as the screen's links are — link ink, a chevron, no fill —
+          because it goes somewhere.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Make it a fourth chip. A chip filters the list in place and stays
+          pressed; this leaves the screen.
+        </p>
+      </div>
+    </div>
   </section>
 </div>
 <script>(function () {
