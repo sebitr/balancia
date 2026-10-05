@@ -999,6 +999,13 @@
         "removed": "removed {name} from the group",
         "restored": "put {name} back in the group"
       }
+    },
+    "repaymentRecorded": {
+      "between": "recorded {from}'s repayment of {amount} to {to}",
+      "toYou": "recorded {from}'s repayment of {amount} to you",
+      "yours": "recorded your repayment of {amount} to {to}",
+      "theirs": "recorded their repayment of {amount} to {to}",
+      "theirsToYou": "recorded their repayment of {amount} to you"
     }
   },
   "recurring": {

@@ -19,6 +19,10 @@ vi.mock("next-intl/server", () => ({
     createTranslator({ locale: "en", messages: en, namespace }),
 }));
 
+vi.mock("@/i18n/preferences", () => ({
+  getNumberLocale: async () => "en-GB",
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -46,6 +50,7 @@ const LUNCH_ADDED: ActivityEntry = {
   metadata: { description: "Lunch" },
   actorLabel: "Bob",
   actorType: "user",
+  actorParticipantId: null,
   createdAt: new Date("2026-09-02T12:00:00Z"),
 };
 
@@ -72,5 +77,44 @@ describe("since your last visit", () => {
 
   it("renders nothing when nothing is new, leaving the way in to the overview's own row", async () => {
     expect(await block("2026-09-02T18:00:00Z")).toBeNull();
+  });
+
+  /**
+   * "Bob recorded a repayment" beside "Bob added an expense: Lunch" said
+   * nothing a reader could use. The event knows who paid whom and how much.
+   */
+  it("says who paid whom, and how much, calling the reader you", async () => {
+    const rendered = await SinceLastOpened({
+      entries: [
+        {
+          ...LUNCH_ADDED,
+          id: "a2",
+          action: "settlement.created",
+          entityType: "settlement",
+          entityId: "s1",
+          metadata: {
+            amount: "3000",
+            currency: "EUR",
+            from: "p-sam",
+            to: "p-marta",
+          },
+        },
+      ],
+      lastOpenedAt: "2026-09-01T00:00:00Z",
+      groupId: "g1",
+      now: "2026-09-03T00:00:00Z",
+      people: {
+        you: "p-marta",
+        names: new Map([
+          ["p-sam", "Sam"],
+          ["p-marta", "Marta"],
+        ]),
+      },
+    });
+    renderWithIntl(rendered!);
+
+    expect(
+      screen.getByText("recorded Sam's repayment of €30.00 to you"),
+    ).toBeInTheDocument();
   });
 });

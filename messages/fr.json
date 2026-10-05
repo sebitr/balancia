@@ -999,6 +999,13 @@
         "removed": "a retiré {name} du groupe",
         "restored": "a rétabli {name} dans le groupe"
       }
+    },
+    "repaymentRecorded": {
+      "between": "a enregistré un remboursement de {amount} versé par {from} à {to}",
+      "toYou": "a enregistré un remboursement de {amount} qui t’a été versé par {from}",
+      "yours": "a enregistré un remboursement de {amount} que tu as versé à {to}",
+      "theirs": "a enregistré avoir remboursé {amount} à {to}",
+      "theirsToYou": "a enregistré t’avoir remboursé {amount}"
     }
   },
   "recurring": {

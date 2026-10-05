@@ -22,7 +22,7 @@ import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
 import { requireGroupAccess } from "@/lib/actions";
 import { describeJoinLink } from "@/lib/security/join-link";
 import type { GroupAccess } from "@/lib/security/authorization";
-import { listGroupActivity } from "@/modules/activity/service";
+import { listGroupActivity, namesInActivity } from "@/modules/activity/service";
 import { listParticipants } from "@/modules/groups/service";
 import { countContributions } from "@/modules/guests/service";
 import {
@@ -156,7 +156,12 @@ export default async function GroupOverviewPage({
     ],
   );
 
-  const t = await getTranslations("group");
+  const [t, activityNames] = await Promise.all([
+    getTranslations("group"),
+    // Whom a recorded repayment names, for the line that says who paid whom.
+    // No query at all unless one of these rows is such a repayment.
+    namesInActivity(access.groupId, activity),
+  ]);
 
   // Read during the render, used after it: the value the reader has just been
   // shown is the boundary, and it may only move once they have seen it.
@@ -376,6 +381,7 @@ export default async function GroupOverviewPage({
               lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
               groupId={groupId}
               now={now.toISOString()}
+              people={{ you: access.participantId, names: activityNames }}
             />
           )}
 

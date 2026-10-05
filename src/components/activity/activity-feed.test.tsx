@@ -91,6 +91,7 @@ function event(
     metadata: null,
     actorLabel: "Ada",
     actorType: "user",
+    actorParticipantId: null,
     createdAt: new Date("2026-09-01T10:00:00Z"),
     ...fields,
   };
@@ -204,6 +205,47 @@ describe("the activity feed's clock", () => {
     );
 
     expect(screen.getByText(/11:45/)).toHaveTextContent("14/08/2026, 11:45");
+  });
+});
+
+describe("a repayment in the feed", () => {
+  it("says who paid whom and how much, and calls the reader you", async () => {
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [
+          event({
+            id: "r1",
+            action: "settlement.created",
+            entityType: "settlement",
+            entityId: "s1",
+            actorLabel: "Sam",
+            actorParticipantId: "p-sam",
+            metadata: {
+              amount: "3000",
+              currency: "EUR",
+              from: "p-sam",
+              to: "p-ada",
+            },
+          }),
+        ],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "UTC",
+        people: {
+          you: "p-ada",
+          names: new Map([
+            ["p-sam", "Sam"],
+            ["p-ada", "Ada"],
+          ]),
+        },
+      }),
+      GROUP,
+    );
+
+    expect(screen.getByText("Sam")).toBeVisible();
+    expect(
+      screen.getByText("recorded their repayment of €30.00 to you"),
+    ).toBeVisible();
   });
 });
 
