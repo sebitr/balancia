@@ -402,7 +402,12 @@ describe("Transactions", () => {
   it("says a share that came out even, rather than printing a zero", () => {
     renderList([
       row({ id: "even", title: "Even", position: "0" }),
-      row({ id: "income", title: "Income", position: "0", revenue: true }),
+      row({
+        id: "deposit",
+        title: "Deposit returned",
+        position: "0",
+        revenue: true,
+      }),
     ]);
 
     expect(
@@ -411,7 +416,7 @@ describe("Transactions", () => {
       ),
     ).toBeVisible();
     expect(
-      within(screen.getByText("Income").closest("li")!).getByText(
+      within(screen.getByText("Deposit returned").closest("li")!).getByText(
         "You received your share",
       ),
     ).toBeVisible();
