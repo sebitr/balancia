@@ -7,19 +7,22 @@ import {
 import { settlementInputSchema } from "@/modules/expenses/schemas";
 import {
   apiActor,
+  ifMatchVersion,
   invalidInput,
   isUuid,
   mobileApiError,
   noStore,
   readJsonBody,
   serializeSettlement,
+  versionTag,
 } from "@/app/api/mobile";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * One repayment: read back with its payment method (which the list omits on
  * purpose — see `getSettlement`), replaced wholesale by PATCH, soft-deleted
- * by DELETE.
+ * by DELETE. The version travels as `ETag` and `If-Match` exactly as it does
+ * for one expense.
  */
 
 const ROUTE = "/api/groups/[groupId]/settlements/[settlementId]";
@@ -46,12 +49,16 @@ async function handleGet(request: Request, context: Context) {
     if (!settlement) {
       return noStore({ error: "Not found." }, { status: 404 });
     }
-    return noStore({
-      settlement: {
-        ...serializeSettlement(settlement),
-        paymentMethod: settlement.paymentMethod,
+    return noStore(
+      {
+        settlement: {
+          ...serializeSettlement(settlement),
+          paymentMethod: settlement.paymentMethod,
+          version: settlement.version,
+        },
       },
-    });
+      { headers: { ETag: versionTag(settlement.version) } },
+    );
   } catch (error) {
     return mobileApiError(error, `${ROUTE} GET`, { groupId, settlementId });
   }
@@ -84,8 +91,13 @@ async function handlePatch(request: Request, context: Context) {
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
-    await updateSettlement(access, settlementId, parsed.data);
-    return noStore({ ok: true });
+    const version = await updateSettlement(access, settlementId, parsed.data, {
+      expectedVersion: ifMatchVersion(request),
+    });
+    return noStore(
+      { ok: true, version },
+      { headers: { ETag: versionTag(version) } },
+    );
   } catch (error) {
     return mobileApiError(error, `${ROUTE} PATCH`, { groupId, settlementId });
   }
