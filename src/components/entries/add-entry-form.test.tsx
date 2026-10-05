@@ -1470,7 +1470,8 @@ describe("settlement", () => {
 
     await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
-    expect(screen.getByText("Hervé pays Seb back")).toBeInTheDocument();
+    // Seb is the reader, so the debt is said to him rather than about him.
+    expect(screen.getByText("Hervé pays you back")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
       "128.40",
     );
@@ -1490,7 +1491,7 @@ describe("settlement", () => {
 
     await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
-    const sentence = screen.getByText("Hervé pays Seb back");
+    const sentence = screen.getByText("Hervé pays you back");
     const amount = screen.getByText("CHF 128.40");
 
     // One column beside the avatar, so the sentence has the row's whole
@@ -1716,7 +1717,8 @@ describe("settlement", () => {
    * behind — an old entry of theirs edited since — still names them, and the
    * server takes a repayment that clears it. The confirmation read "→ Seb"
    * with nobody before the arrow, because it looked the name up among the
-   * people still in the group.
+   * people still in the group. It is a sentence to the reader now, Seb, and
+   * still names who paid.
    */
   it("names somebody who has left, from the debt they left", async () => {
     const user = userEvent.setup();
@@ -1742,7 +1744,33 @@ describe("settlement", () => {
     );
     const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
       .container.textContent;
-    expect(line).toContain("Grace → Seb");
+    expect(line).toContain("Grace paid you back");
+    expect(line).not.toContain("→");
+  });
+
+  /** The reader paying somebody back hears it in the first person. */
+  it("confirms a repayment the reader made as You paid", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      outstanding: [
+        {
+          ...OUTSTANDING[0],
+          fromParticipantId: "seb",
+          fromName: "Seb",
+          toParticipantId: "herve",
+          toName: "Hervé",
+        },
+      ],
+    });
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+
+    expect(screen.getByText("You pay Hervé back")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
+
+    const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
+      .container.textContent;
+    expect(line).toContain("You paid Hervé back");
   });
 
   /**
@@ -3301,7 +3329,7 @@ describe("a drawer opened on a stated debt", () => {
     expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
       "128.40",
     );
-    expect(screen.getByText("Hervé pays Seb back")).toBeVisible();
+    expect(screen.getByText("Hervé pays you back")).toBeVisible();
   });
 
   it("records that pair without anybody touching the form", async () => {

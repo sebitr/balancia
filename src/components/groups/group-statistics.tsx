@@ -3,9 +3,9 @@
 import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  ArrowDown,
+  ArrowDownLeft,
   ArrowLeftRight,
-  ArrowUp,
+  ArrowUpRight,
   CalendarOff,
   ChevronDown,
 } from "lucide-react";
@@ -481,7 +481,8 @@ function Flows({
       minorUnits: (-BigInt(flows.spent)).toString(),
       tone: "text-foreground",
       chip: "bg-wash-2 text-foreground",
-      icon: ArrowUp,
+      // The app's one pair of direction arrows: out and up, back down in.
+      icon: ArrowUpRight,
     },
     {
       key: "flowRevenue",
@@ -489,7 +490,7 @@ function Flows({
       minorUnits: flows.revenue,
       tone: "text-positive-ink",
       chip: "bg-positive/15 text-positive-ink",
-      icon: ArrowDown,
+      icon: ArrowDownLeft,
     },
     {
       key: "flowSettlements",

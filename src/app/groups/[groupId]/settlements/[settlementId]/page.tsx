@@ -33,6 +33,7 @@ import { DeleteEntryButton } from "@/components/entries/delete-entry-button";
 import { requireGroupAccess } from "@/lib/actions";
 import { getSettlement } from "@/modules/settlements/service";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
+import { REPAYMENT_TITLE, repaymentSide } from "@/modules/settlements/side";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { moneyForGroup } from "@/modules/currencies/display";
 import { formatMoney, money } from "@/modules/currencies/money";
@@ -74,13 +75,15 @@ const findSettlement = cache(getSettlement);
  */
 async function nameOf(
   settlement: NonNullable<Awaited<ReturnType<typeof getSettlement>>>,
+  self: string | null,
 ): Promise<string> {
-  // The same sentence the transactions list titles a repayment with. One
-  // copy, so the list and the screen it opens cannot word it differently.
+  // The same sentence the transactions list titles a repayment with, from the
+  // same side of it. One copy, so the list and the screen it opens cannot
+  // word it differently.
   const tList = await getTranslations("expensesList");
   return (
     settlement.notes?.trim() ||
-    tList("settlementTitle", {
+    tList(REPAYMENT_TITLE[repaymentSide(settlement, self)], {
       from: settlement.fromName,
       to: settlement.toName,
     })
@@ -94,7 +97,9 @@ export async function generateMetadata({
   const access = await titleAccess(groupId);
   const settlement =
     access && (await findSettlement(access.groupId, settlementId));
-  return settlement ? { title: await nameOf(settlement) } : {};
+  return settlement
+    ? { title: await nameOf(settlement, access?.participantId ?? null) }
+    : {};
 }
 
 export default async function SettlementDetailPage({
@@ -117,7 +122,7 @@ export default async function SettlementDetailPage({
     await Promise.all([
       loadGroupBalances(access),
       getTranslations("transactionDetail"),
-      nameOf(settlement),
+      nameOf(settlement, access.participantId),
       getTranslations("paymentMethods"),
       getTranslations("common"),
       getDateFormatter(),

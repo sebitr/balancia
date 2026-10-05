@@ -90,6 +90,7 @@ import {
   methodsForCountry,
   type PaymentMethodId,
 } from "@/modules/settlements/payment-methods";
+import { repaymentSide } from "@/modules/settlements/side";
 import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
 import { CategorySheet } from "./category-sheet";
@@ -145,7 +146,7 @@ import { heardEntry } from "./heard-entry";
 import { heardPeople } from "./heard-people";
 import { HeardPeopleChips } from "./heard-people-chips";
 import { VoiceButton } from "./voice-button";
-import { savedSummary } from "./saved-summary";
+import { SETTLED_SENTENCE, savedSummary } from "./saved-summary";
 import { worthDrafting, type EntryDraftFields } from "./draft-fields";
 import { SHEET_PARAM, withFragment } from "./drawer-fragment";
 import { discardDraft, saveDraft } from "@/lib/offline/drafts";
@@ -2066,7 +2067,12 @@ export function AddEntryForm({
   const describeEntry = (): string => {
     const parts = [description.trim() || t("labels.description")];
     if (isSettle && selectedPair) {
-      parts[0] = `${selectedPair.fromName} → ${selectedPair.toName}`;
+      // Who paid whom back, from the reader's side, as the toast and the list
+      // say it — not an arrow that named the reader in the third person.
+      parts[0] = t(
+        `saved.${SETTLED_SENTENCE[repaymentSide(selectedPair, selfId)]}` as const,
+        { from: selectedPair.fromName, to: selectedPair.toName },
+      );
     }
     parts.push(amountFormatted);
     if (recurrence.enabled) parts.push(repeatLabel);
@@ -2087,20 +2093,17 @@ export function AddEntryForm({
       amount: amountFormatted,
       payerName,
       participantCount: effectiveIncluded.length,
+      selfId,
       settlement:
         isSettle && selectedPair
-          ? {
-              fromName: selectedPair.fromName,
-              toName: selectedPair.toName,
-              method: methodLabel,
-            }
+          ? { ...selectedPair, method: methodLabel }
           : null,
     });
 
     if (summary.kind === "settled" && summary.settlement) {
       const parts = [
         summary.amount,
-        t("saved.settledPair", {
+        t(`saved.${SETTLED_SENTENCE[summary.settlement.side]}` as const, {
           from: summary.settlement.fromName,
           to: summary.settlement.toName,
         }),
@@ -2353,6 +2356,7 @@ export function AddEntryForm({
               onSelect={selectPair}
               onPickSomeoneElse={() => setSheet("pair")}
               hasCustomPair={customPair !== null}
+              selfId={selfId}
             />
           ))}
 
