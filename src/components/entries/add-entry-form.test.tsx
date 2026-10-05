@@ -1229,6 +1229,7 @@ describe("settlement", () => {
         fromParticipantId: "grace",
         toParticipantId: "seb",
       }),
+      CLIENT_KEY,
     );
     const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
       .container.textContent;
@@ -1245,10 +1246,10 @@ describe("settlement", () => {
     const user = userEvent.setup();
     renderForm();
     createSettlement.mockResolvedValueOnce({ ok: false, error: "Try again." });
-    await user.click(screen.getByRole("tab", { name: "Settle" }));
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
 
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
-    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
 
     expect(createSettlement).toHaveBeenCalledTimes(2);
     const [first, second] = createSettlement.mock.calls.map((call) => call[2]);
