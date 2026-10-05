@@ -1926,6 +1926,7 @@
     "timezoneHelp": "Sert à déterminer quand les dépenses récurrentes sont dues.",
     "timezoneDetected": "Détecté depuis ton appareil. Sert à déterminer quand les dépenses récurrentes sont dues.",
     "submit": "Créer le groupe",
+    "submitIn": "Créer le groupe en {currency}",
     "created": "Groupe créé",
     "failed": "Le groupe n’a pas pu être créé.",
     "sheetTitle": "Nouveau groupe",

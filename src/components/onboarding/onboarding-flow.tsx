@@ -16,6 +16,7 @@ import { usePasskeySupport } from "@/components/auth/use-passkey-support";
 import { GroupReady } from "@/components/groups/group-ready";
 import { useDetectedTimezone } from "@/components/groups/use-detected-timezone";
 import { defaultCurrency } from "@/modules/currencies/default-currency";
+import { currencyOfTimezone } from "@/modules/currencies/device-currency";
 import {
   nextScreen,
   previousScreen,
@@ -401,7 +402,10 @@ export function OnboardingFlow({
       groupName,
       displayName: name.trim(),
       timezone: detectedTimezone ?? "UTC",
-      baseCurrency: defaultCurrency({}),
+      // A guest has no preference to state, so where the device is decides.
+      baseCurrency: defaultCurrency({
+        device: currencyOfTimezone(detectedTimezone),
+      }),
     });
     setJoining(false);
     if (!result.ok || !result.data) {
