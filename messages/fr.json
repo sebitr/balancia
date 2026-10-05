@@ -500,8 +500,7 @@
       "percentageSumMismatch": "Les pourcentages doivent totaliser 100 — ils totalisent actuellement {received}",
       "shareNegative": "Les parts ne peuvent pas être négatives",
       "sharesAllZero": "Au moins une part doit être supérieure à zéro",
-      "invalid": "Ce partage n’est pas valide",
-      "roundingNote": "Le montant ne se divise pas exactement. {count, plural, one {Une personne paie} other {# personnes paient}} {amount} de plus pour que le total corresponde exactement."
+      "invalid": "Ce partage n’est pas valide"
     }
   },
   "dashboard": {
@@ -3363,6 +3362,12 @@
         "exact": "Exact",
         "percentage": "Pourcentage"
       },
+      "methodTabs": {
+        "equal": "Égal",
+        "shares": "Parts",
+        "exact": "Exact",
+        "percentage": "%"
+      },
       "hints": {
         "equal": "Réparti à parts égales entre les personnes sélectionnées.",
         "shares": "Donne un poids à chacun — 2 parts paient le double.",
@@ -3382,17 +3387,24 @@
         "shares": "Par parts · {count} personnes",
         "byItem": "Par article · {count} personnes",
         "justOne": "Tout pour une seule personne",
-        "nobody": "Aucune personne sélectionnée"
+        "nobody": "Aucune personne sélectionnée",
+        "exactLeft": "Montants exacts · il reste {amount} à attribuer",
+        "exactOver": "Montants exacts · {amount} de trop par rapport au total",
+        "percentagesOff": "Pourcentages · {sum} % au total, pas 100 %",
+        "sharesZero": "Parts · toutes les parts sont à zéro",
+        "unreadable": "{method, select, exact {Montants exacts} percentage {Pourcentages} other {Parts}} · une valeur n’est pas un nombre"
       },
       "payerOption": "Payé par {name}",
       "receiverOption": "Reçu par {name}",
       "includeOption": "Inclure {name} dans le partage",
       "notes": {
         "nobody": "Choisis au moins une personne pour ce partage.",
-        "remainderAbsorbed": "{amount} ne se partage pas exactement — {name} l’absorbe.",
+        "roundedUp": "{you, select, yes {{count, plural, =0 {Tu paies} one {Toi et {names} payez} other {Toi, {names} payez}}} other {{count, plural, one {{names} paie} other {{names} paient}}}} {amount} de plus pour que le total fasse {total}.",
         "stillToAssign": "Il reste {amount} à attribuer.",
         "overTheTotal": "{amount} de trop par rapport au total.",
-        "percentagesOff": "Les pourcentages font {sum} %, pas 100 %."
+        "percentagesOff": "Les pourcentages font {sum} %, pas 100 %.",
+        "sharesAllZero": "Donne au moins une part à quelqu’un.",
+        "unreadable": "Une de ces valeurs n’est pas un nombre utilisable."
       },
       "alwaysTitle": "Toujours partager ainsi",
       "alwaysHint": "Enregistré comme paramètre par défaut du groupe",
@@ -3402,6 +3414,9 @@
       "justOnePaid": "Une seule personne a payé",
       "splitPayment": "Partager le paiement à parts égales",
       "giveRest": "Donner le reste à {name}",
+      "giveRemaining": "Donner les {amount} restants à {name}",
+      "shareFewer": "Une part de moins pour {name}",
+      "shareMore": "Une part de plus pour {name}",
       "payerShort": "Il reste {amount} à attribuer à un payeur.",
       "payerOver": "Le total est dépassé de {amount}.",
       "payerNobody": "Indique combien au moins une personne a payé."

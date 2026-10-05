@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Plus, Users } from "lucide-react";
+import { Check, Minus, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetTitle } from "@/components/ui/sheet";
@@ -10,13 +10,11 @@ import { Switch } from "@/components/ui/switch";
 import { rovingChoice } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import type { SplitMethod } from "@/modules/expenses/split";
-import type {
-  SplitMessage,
-  SplitPreview,
-} from "@/components/expenses/expense-form-logic";
+import type { SplitPreview } from "@/components/expenses/expense-form-logic";
 import { PinnedActions, PinnedBody } from "./entry-sheet";
 import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
 import type { SplitNote } from "./split-notes";
+import { hasNoShare, remainingCandidate, stepShare } from "./split-shortcuts";
 
 /**
  * Correcting who put the money in, and how it divides.
@@ -46,6 +44,7 @@ export function SplitSheet({
   members,
   title,
   totalFormatted,
+  currency,
   payerId,
   onPayerChange,
   includedIds,
@@ -54,10 +53,10 @@ export function SplitSheet({
   onMethodChange,
   values,
   onValueChange,
+  onGiveRemaining,
   preview,
   note,
   received = false,
-  splitText,
   alwaysSplit,
   onAlwaysSplitChange,
   onAddGuest,
@@ -74,6 +73,8 @@ export function SplitSheet({
   members: readonly EntryMember[];
   title: string;
   totalFormatted: string;
+  /** The entry's currency, which an exact amount is typed in. */
+  currency: string;
   payerId: string;
   onPayerChange: (id: string) => void;
   includedIds: readonly string[];
@@ -82,13 +83,21 @@ export function SplitSheet({
   onMethodChange: (method: SplitMethod) => void;
   values: Readonly<Record<string, string>>;
   onValueChange: (participantId: string, value: string) => void;
+  /**
+   * Adds what an exact split is still short of to one person's amount.
+   *
+   * Absent hides the shortcut, which is only ever offered for a shortfall: an
+   * overage has no "rest" to hand anybody, and the note already names it.
+   */
+  onGiveRemaining?: (participantId: string) => void;
   preview: SplitPreview;
-  /** What the split does not add up to, if anything. */
+  /**
+   * What the split comes to, in words: what it does not add up to, or who
+   * pays a visible extra cent. Null when there is nothing worth saying.
+   */
   note: SplitNote | null;
   /** Income was received and credited, not paid and owed. */
   received?: boolean;
-  /** Renders a message from the pure split logic. */
-  splitText: (message: SplitMessage) => string;
   /**
    * Whether the group is remembering this split, or null when there is
    * nothing worth remembering.
@@ -151,6 +160,44 @@ export function SplitSheet({
     preview.ok
       ? preview.allocations.find((entry) => entry.participantId === id)
       : undefined;
+
+  /*
+   * The fields typed into since this method was chosen, for "give the
+   * remaining". Kept for this visit to the sheet only: it is a guess at which
+   * figure is still "whatever is left", and a reader who comes back later has
+   * moved on from the order they typed in.
+   */
+  const [edited, setEdited] = useState<ReadonlySet<string>>(() => new Set());
+  const chooseMethod = (next: SplitMethod) => {
+    setEdited(new Set());
+    onMethodChange(next);
+  };
+  const typeValue = (id: string, value: string) => {
+    setEdited((current) => new Set(current).add(id));
+    onValueChange(id, value);
+  };
+
+  /** The people in the split, in the order their rows are drawn. */
+  const rows = members.filter((member) => includedIds.includes(member.id));
+
+  /*
+   * Under the exact amounts when they fall short, the payer panel's "give the
+   * rest" for the split: the subtraction somebody would otherwise do in their
+   * head. Never for an overage, which has no rest to give, and which the
+   * note above already names.
+   */
+  const remainingTo =
+    method === "exact" && note?.key === "stillToAssign" && onGiveRemaining
+      ? remainingCandidate({
+          participantIds: rows.map((member) => member.id),
+          values,
+          edited,
+          currency,
+        })
+      : null;
+  const remainingName = rows.find(
+    (member) => member.id === remainingTo,
+  )?.displayName;
 
   const payerKeys = rovingChoice({
     values: everyone,
@@ -289,21 +336,27 @@ export function SplitSheet({
           </div>
         </section>
 
+        {/* Four to a row at 360px leaves each tab 77px, and "À parts égales"
+            does not fit in that at the phone's 13px: it broke over two lines
+            beside three that did not. So a tab shows a short label where the
+            language needs one — "Égal", "%" — and is still called by the
+            method's whole name, which is what a screen reader says. */}
         <div className="flex gap-1 rounded-xl bg-muted p-1">
           {METHODS.map((candidate) => (
             <button
               key={candidate}
               type="button"
-              onClick={() => onMethodChange(candidate)}
+              onClick={() => chooseMethod(candidate)}
               aria-pressed={candidate === method}
+              aria-label={t(`methods.${candidate}`)}
               className={cn(
-                "tap-target h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs transition-colors",
+                "tap-target h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs whitespace-nowrap transition-colors",
                 candidate === method
                   ? "bg-accent font-semibold text-foreground"
                   : "font-medium text-muted-foreground",
               )}
             >
-              {t(`methods.${candidate}`)}
+              {t(`methodTabs.${candidate}`)}
             </button>
           ))}
         </div>
@@ -315,64 +368,93 @@ export function SplitSheet({
             they must overflow rather than compress: a squashed row is how a
             ten-person split loses its amounts. */}
         <ul className="max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-wash-1 [&>*]:shrink-0">
-          {members
-            .filter((member) => includedIds.includes(member.id))
-            .map((member) => {
-              const allocation = allocationFor(member.id);
-              return (
-                <li
-                  key={member.id}
-                  className="flex h-15 items-center gap-3 border-b border-border p-3 last:border-b-0"
-                >
-                  <MemberAvatar
-                    name={member.displayName}
-                    selected
-                    tone={member.id === payerId ? "payer" : "primary"}
-                    guest={member.guest}
-                  />
-                  <span className="flex-1 truncate text-sm">
-                    {member.displayName}
-                  </span>
+          {rows.map((member) => {
+            const allocation = allocationFor(member.id);
+            const field = method !== "equal" && (
+              <Input
+                inputMode="decimal"
+                aria-label={t(`inputLabels.${method}`, {
+                  name: member.displayName,
+                })}
+                className={cn(
+                  "h-9 tabular-nums",
+                  // An exact split has no allocation column beside it, so the
+                  // field takes that width back rather than leaving a gap: it
+                  // is the one method whose typing is an amount, and amounts
+                  // are the long thing to type. A share is a digit or two
+                  // between its steppers.
+                  method === "exact"
+                    ? "w-[154px] text-right"
+                    : method === "shares"
+                      ? "w-11 px-1 text-center"
+                      : "w-[72px] text-right",
+                )}
+                placeholder={method === "shares" ? "1" : "0"}
+                value={values[member.id] ?? ""}
+                onChange={(event) => typeValue(member.id, event.target.value)}
+              />
+            );
+            return (
+              <li
+                key={member.id}
+                className="flex h-15 items-center gap-3 border-b border-border p-3 last:border-b-0"
+              >
+                <MemberAvatar
+                  name={member.displayName}
+                  selected
+                  tone={member.id === payerId ? "payer" : "primary"}
+                  guest={member.guest}
+                />
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {member.displayName}
+                </span>
 
-                  {method !== "equal" && (
-                    <Input
-                      inputMode="decimal"
-                      aria-label={t(`inputLabels.${method}`, {
-                        name: member.displayName,
-                      })}
-                      className={cn(
-                        "h-9 text-right tabular-nums",
-                        // An exact split has no allocation column beside it, so
-                        // the field takes that width back rather than leaving a
-                        // gap: it is the one method whose typing is an amount,
-                        // and amounts are the long thing to type.
-                        method === "exact" ? "w-[154px]" : "w-[72px]",
-                      )}
-                      placeholder={method === "shares" ? "1" : "0"}
-                      value={values[member.id] ?? ""}
-                      onChange={(event) =>
-                        onValueChange(member.id, event.target.value)
+                {/* A share is 1, 2 or 3 nearly every time, and a keyboard is a
+                    lot of screen for one digit: a step either side, the field
+                    still there for a 1.5. */}
+                {method === "shares" ? (
+                  <span className="flex shrink-0 items-center gap-2">
+                    <StepButton
+                      label={t("shareFewer", { name: member.displayName })}
+                      disabled={hasNoShare(values[member.id])}
+                      onClick={() =>
+                        typeValue(member.id, stepShare(values[member.id], -1))
                       }
-                    />
-                  )}
+                    >
+                      <Minus aria-hidden="true" className="size-3.5" />
+                    </StepButton>
+                    {field}
+                    <StepButton
+                      label={t("shareMore", { name: member.displayName })}
+                      onClick={() =>
+                        typeValue(member.id, stepShare(values[member.id], 1))
+                      }
+                    >
+                      <Plus aria-hidden="true" className="size-3.5" />
+                    </StepButton>
+                  </span>
+                ) : (
+                  field
+                )}
 
-                  {/* Shares and percentages need telling what they came to; an
-                      exact amount is already the number in the field, and
-                      printing it twice per row reads as two different figures
-                      that happen to agree. */}
-                  {method !== "exact" && (
-                    <span className="w-[70px] text-right text-sm tabular-nums">
-                      {allocation?.formatted ?? "—"}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
+                {/* Shares and percentages need telling what they came to; an
+                    exact amount is already the number in the field, and
+                    printing it twice per row reads as two different figures
+                    that happen to agree. */}
+                {method !== "exact" && (
+                  <span className="w-[70px] shrink-0 text-right text-sm tabular-nums">
+                    {allocation?.formatted ?? "—"}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
-        {/* The note says which way the split is out and by how much; the
-            rounding note only has something to add when it does not. */}
-        {note ? (
+        {/* Which way the split is out and by how much, or who pays a cent
+            more than somebody who asked for the same — whichever is true. The
+            row on the form says the first one too, once the sheet is shut. */}
+        {note && (
           <p
             className={cn(
               "text-xs",
@@ -383,13 +465,22 @@ export function SplitSheet({
           >
             {t(`notes.${note.key}`, note.params)}
           </p>
-        ) : (
-          preview.ok &&
-          preview.roundingNote && (
-            <p className="text-xs text-muted-foreground">
-              {splitText(preview.roundingNote)}
-            </p>
-          )
+        )}
+
+        {remainingTo && remainingName && onGiveRemaining && (
+          <div className="-mt-2 flex flex-wrap gap-1.5">
+            <ShortcutButton
+              onClick={() => {
+                setEdited((current) => new Set(current).add(remainingTo));
+                onGiveRemaining(remainingTo);
+              }}
+            >
+              {t("giveRemaining", {
+                amount: String(note?.params?.amount ?? ""),
+                name: remainingName,
+              })}
+            </ShortcutButton>
+          </div>
         )}
 
         {/*
@@ -546,6 +637,42 @@ function ShortcutButton({
       type="button"
       onClick={onClick}
       className="tap-target h-9 rounded-lg border border-border bg-wash-1 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * One share more or fewer.
+ *
+ * Drawn at 28px so two of them and the field between fit a 360px row beside
+ * a name and an amount, and hit at 44px through `tap-target`. The 8px gap
+ * either side of the field is what keeps the two hit areas off it: each one
+ * reaches 8px past its own edge.
+ *
+ * Named for the person and the direction, because a row of "minus" and
+ * "plus" buttons says nothing to somebody who cannot see which row they are
+ * on.
+ */
+function StepButton({
+  label,
+  onClick,
+  disabled = false,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className="tap-target grid size-7 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
     >
       {children}
     </button>

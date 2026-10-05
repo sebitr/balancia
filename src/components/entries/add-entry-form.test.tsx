@@ -894,6 +894,343 @@ describe("the split note", () => {
     await user.type(split.getByLabelText("Exact amount for Cyril"), "40");
     expect(split.getByText("CHF 11.80 over the total.")).toBeInTheDocument();
   });
+
+  /** €100 three ways: one person pays a cent more, and it shows. */
+  it("names who pays the cent that shows", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "100");
+    await openSplit(user);
+
+    expect(
+      sheet("Payment and split").getByText(
+        "You pay CHF 0.01 more so it adds up to CHF 100.00.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * The audit's case: €90 at 33.34 / 33.33 / 33.33 per cent is three people
+   * paying 30.00 each, and the sheet told them two of them paid more.
+   */
+  it("says nothing of rounding nobody can see", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Percent" }));
+    expect(split.getByLabelText("Percentage for Seb")).toHaveValue("33.34");
+    expect(split.getAllByText("CHF 30.00")).toHaveLength(3);
+    expect(split.queryByText(/more so it adds up/)).not.toBeInTheDocument();
+    expect(split.queryByText(/does not divide evenly/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * A split that does not add up can be left — people close the sheet to look at
+ * the total — so the row it closes onto has to keep saying so, in the sheet's
+ * own words, until it is fixed.
+ */
+describe("a split that does not add up", () => {
+  /** €90 between three, exact, with the given people's amounts retyped. */
+  async function exactSplit(
+    user: ReturnType<typeof userEvent.setup>,
+    amounts: Record<string, string>,
+  ) {
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Exact" }));
+    for (const [name, value] of Object.entries(amounts)) {
+      const field = split.getByLabelText(`Exact amount for ${name}`);
+      await user.clear(field);
+      await user.type(field, value);
+    }
+    return split;
+  }
+
+  const row = () => screen.getByRole("button", { name: /^Paid by/ });
+
+  it("says on the row how far over the total it is", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exactSplit(user, { Seb: "50" });
+
+    expect(split.getByText("CHF 20.00 over the total.")).toBeInTheDocument();
+    // Leaving to look at the total is allowed; the row says what is left.
+    const done = split.getByRole("button", { name: "Done" });
+    expect(done).toBeEnabled();
+    await user.click(done);
+
+    expect(row()).toHaveTextContent("Exact amounts · CHF 20.00 over the total");
+    expect(row()).not.toHaveTextContent("3 people");
+  });
+
+  it("says on the row how much is left to assign", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exactSplit(user, { Seb: "25" });
+    await user.click(split.getByRole("button", { name: "Done" }));
+
+    expect(row()).toHaveTextContent("Exact amounts · CHF 5.00 left to assign");
+  });
+
+  it("says it of percentages that do not make 100", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Percent" }));
+    for (const name of ["Seb", "Hervé", "Cyril"]) {
+      const field = split.getByLabelText(`Percentage for ${name}`);
+      await user.clear(field);
+      await user.type(field, "30");
+    }
+    await user.click(split.getByRole("button", { name: "Done" }));
+
+    expect(row()).toHaveTextContent("Percentages · add up to 90%, not 100%");
+  });
+
+  it("says it of shares that are all zero", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Shares" }));
+    for (const name of ["Seb", "Hervé", "Cyril"]) {
+      await user.click(
+        split.getByRole("button", { name: `One share fewer for ${name}` }),
+      );
+    }
+
+    expect(
+      split.getByText("Give at least one person a share."),
+    ).toBeInTheDocument();
+    await user.click(split.getByRole("button", { name: "Done" }));
+    expect(row()).toHaveTextContent("Shares · every share is zero");
+  });
+
+  /**
+   * The refusal used to be "The exact amounts must add up to the total", a
+   * screen above the row that fixes it, and it stayed there after the fix.
+   */
+  it("is refused in the split's own words, and the refusal goes once it is fixed", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    const split = await exactSplit(user, { Seb: "50" });
+    await user.click(split.getByRole("button", { name: "Done" }));
+
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    expect(createExpense).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "CHF 20.00 over the total.",
+    );
+    // The caret goes to the row that opens the fix.
+    expect(row()).toHaveFocus();
+
+    // The alert follows the fields rather than repeating the first sentence.
+    await openSplit(user);
+    const again = sheet("Payment and split");
+    const seb = again.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "25");
+    await user.click(again.getByRole("button", { name: "Done" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "CHF 5.00 still to assign.",
+    );
+
+    await openSplit(user);
+    const fixed = sheet("Payment and split");
+    await user.clear(fixed.getByLabelText("Exact amount for Seb"));
+    await user.type(fixed.getByLabelText("Exact amount for Seb"), "30");
+    await user.click(fixed.getByRole("button", { name: "Done" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(row()).toHaveTextContent("Split by exact amounts · 3 people");
+  });
+
+  it("does not come back on its own after it was fixed", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    const split = await exactSplit(user, { Seb: "50" });
+    await user.click(split.getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+
+    await openSplit(user);
+    const sheetNow = sheet("Payment and split");
+    const seb = sheetNow.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "30");
+    // Broken again before anybody pressed Save: the row says so, the alert
+    // that belonged to the last press does not return.
+    await user.clear(seb);
+    await user.type(seb, "45");
+    await user.click(sheetNow.getByRole("button", { name: "Done" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(row()).toHaveTextContent("Exact amounts · CHF 15.00 over the total");
+  });
+});
+
+/** The payer panel's "give the rest", for the split one section lower. */
+describe("the rest of an exact split", () => {
+  async function exact(user: ReturnType<typeof userEvent.setup>) {
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Exact" }));
+    return split;
+  }
+
+  it("goes to the last person not yet touched, in one tap", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exact(user);
+    const seb = split.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "25");
+
+    // A pattern rather than a string: the amount is spaced from its currency
+    // by a non-breaking space, which an accessible name keeps as it is.
+    await user.click(
+      split.getByRole("button", {
+        name: /^Give the remaining CHF\s5\.00 to Cyril$/,
+      }),
+    );
+
+    expect(split.getByLabelText("Exact amount for Cyril")).toHaveValue("35.00");
+    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("25");
+    expect(split.queryByText(/still to assign/)).not.toBeInTheDocument();
+    expect(
+      split.queryByRole("button", { name: /Give the remaining/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("is not offered for an overage, which has no rest to give", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exact(user);
+    const seb = split.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "50");
+
+    expect(split.getByText("CHF 20.00 over the total.")).toBeInTheDocument();
+    expect(
+      split.queryByRole("button", { name: /Give the remaining/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("the share steppers", () => {
+  async function shares(user: ReturnType<typeof userEvent.setup>) {
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Shares" }));
+    return split;
+  }
+
+  it("adds a share and re-divides", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+
+    await user.click(
+      split.getByRole("button", { name: "One more share for Hervé" }),
+    );
+
+    expect(split.getByLabelText("Shares for Hervé")).toHaveValue("2");
+    expect(split.getByText("CHF 45.00")).toBeInTheDocument();
+    expect(split.getAllByText("CHF 22.50")).toHaveLength(2);
+  });
+
+  it("stops at none", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+    const fewer = split.getByRole("button", {
+      name: "One share fewer for Seb",
+    });
+
+    await user.click(fewer);
+    expect(split.getByLabelText("Shares for Seb")).toHaveValue("0");
+    expect(fewer).toBeDisabled();
+  });
+
+  it("keeps the field for a share nobody can step to", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+    const field = split.getByLabelText("Shares for Cyril");
+
+    await user.clear(field);
+    await user.type(field, "1.5");
+    await user.click(
+      split.getByRole("button", { name: "One more share for Cyril" }),
+    );
+    expect(field).toHaveValue("2.5");
+  });
+
+  it("gives each step a finger-sized target", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+
+    for (const name of ["One more share for Seb", "One share fewer for Seb"]) {
+      expect(split.getByRole("button", { name })).toHaveClass("tap-target");
+    }
+  });
+});
+
+/**
+ * "À parts égales", "Parts", "Exact", "Pourcentage" do not fit four to a row
+ * at 360px, so the tabs show short labels and keep the whole word as their
+ * name.
+ */
+describe("the method tabs in French", () => {
+  it("show short labels and are named in full", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "/groups/g1/expenses/new");
+    renderWithIntl(
+      <AddEntryDrawer
+        dismissTo="back"
+        groupId="g1"
+        members={MEMBERS}
+        selfId="seb"
+        currencyMode="converted"
+        baseCurrency="CHF"
+        defaultCurrency="CHF"
+        timezone="Europe/Zurich"
+        outstanding={OUTSTANDING}
+      />,
+      { locale: "fr" },
+    );
+
+    const amount = document.querySelector<HTMLInputElement>(
+      "input[data-entry-amount]",
+    );
+    if (!amount) throw new Error("no amount field");
+    await user.type(amount, "90");
+    await user.click(screen.getByRole("button", { name: /^Payé par/ }));
+
+    const split = sheet("Paiement et partage");
+    const tabs = [
+      ["À parts égales", "Égal"],
+      ["Parts", "Parts"],
+      ["Exact", "Exact"],
+      ["Pourcentage", "%"],
+    ];
+    for (const [name, shown] of tabs) {
+      expect(split.getByRole("button", { name })).toHaveTextContent(shown);
+    }
+  });
 });
 
 describe("attaching a file", () => {

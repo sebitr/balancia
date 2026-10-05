@@ -3,6 +3,7 @@ import { THRESHOLDS } from "@/modules/categorization";
 import type { CategorySuggestion } from "@/components/expenses/use-category-suggestion";
 import type { EntryDirection } from "@/modules/expenses/direction";
 import type { SplitMethod } from "@/modules/expenses/split";
+import type { SplitNoteKey, SplitNote } from "./split-notes";
 
 /**
  * Pure logic behind the add-entry screen.
@@ -124,12 +125,34 @@ export type SplitSummaryKey =
   | "percentages"
   | "shares"
   | "byItem"
-  | "justOne";
+  | "justOne"
+  | "exactLeft"
+  | "exactOver"
+  | "percentagesOff"
+  | "sharesZero"
+  | "unreadable";
 
 export interface SplitSummary {
   readonly key: SplitSummaryKey;
   readonly params: Readonly<Record<string, string | number>>;
+  /** A split that cannot be saved as it stands. Set only when it is true. */
+  readonly warning?: true;
 }
+
+/**
+ * The sheet's own sentence for what is wrong, as the row says it.
+ *
+ * Keyed by the note rather than worded here, so the row cannot tell a
+ * different story from the sheet it opens: "€20.00 over the total" in one is
+ * "Exact amounts · €20.00 over the total" in the other.
+ */
+const WARNINGS: Partial<Record<SplitNoteKey, SplitSummaryKey>> = {
+  stillToAssign: "exactLeft",
+  overTheTotal: "exactOver",
+  percentagesOff: "percentagesOff",
+  sharesAllZero: "sharesZero",
+  unreadable: "unreadable",
+};
 
 export function summariseSplit(input: {
   method: SplitMethod;
@@ -138,14 +161,33 @@ export function summariseSplit(input: {
   eachFormatted?: string | null;
   /** True once per-item assignment has written exact values. */
   byItem?: boolean;
+  /**
+   * What `describeSplit` says is wrong, if anything.
+   *
+   * The sheet can be closed on a split that does not add up — people leave it
+   * to look at the total — so the row is where that has to stay visible. It
+   * used to read "Split by exact amounts · 3 people" over a split €20 out, and
+   * the first anybody heard of it was a refusal at the top of the form.
+   */
+  problem?: SplitNote | null;
 }): SplitSummary {
-  const { method, participantCount, eachFormatted, byItem } = input;
+  const { method, participantCount, eachFormatted, byItem, problem } = input;
 
   // An empty split is a state somebody chose, and it says so rather than
   // borrowing the one-person wording — "nobody else's balance moves" is true
   // of a split with nobody in it, and completely the wrong thing to tell them.
   if (participantCount === 0) {
-    return { key: "nobody", params: {} };
+    return { key: "nobody", params: {}, warning: true };
+  }
+  const warning = problem?.tone === "error" ? WARNINGS[problem.key] : undefined;
+  if (warning) {
+    return {
+      key: warning,
+      // The one warning that is not about a single method's arithmetic names
+      // the method it happened in.
+      params: warning === "unreadable" ? { method } : { ...problem?.params },
+      warning: true,
+    };
   }
   if (participantCount === 1) {
     return { key: "justOne", params: { count: participantCount } };

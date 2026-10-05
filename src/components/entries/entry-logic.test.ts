@@ -246,6 +246,75 @@ describe("summariseSplit", () => {
       "nobody",
     );
   });
+
+  /**
+   * The sheet can be closed on a split that does not add up, so the row has
+   * to carry the sheet's own sentence — not "Split by exact amounts · 3
+   * people" over a split €20 out.
+   */
+  it("carries what the sheet says is wrong, as a warning", () => {
+    expect(
+      summariseSplit({
+        method: "exact",
+        participantCount: 3,
+        problem: {
+          key: "overTheTotal",
+          params: { amount: "€20.00" },
+          tone: "error",
+        },
+      }),
+    ).toEqual({
+      key: "exactOver",
+      params: { amount: "€20.00" },
+      warning: true,
+    });
+    expect(
+      summariseSplit({
+        method: "exact",
+        participantCount: 1,
+        problem: {
+          key: "stillToAssign",
+          params: { amount: "€5.00" },
+          tone: "error",
+        },
+      }).key,
+    ).toBe("exactLeft");
+    expect(
+      summariseSplit({
+        method: "shares",
+        participantCount: 3,
+        problem: { key: "sharesAllZero", tone: "error" },
+      }).key,
+    ).toBe("sharesZero");
+    expect(
+      summariseSplit({
+        method: "percentage",
+        participantCount: 3,
+        problem: { key: "unreadable", tone: "error" },
+      }),
+    ).toEqual({
+      key: "unreadable",
+      params: { method: "percentage" },
+      warning: true,
+    });
+  });
+
+  it("leaves a rounding note to the sheet", () => {
+    expect(
+      summariseSplit({
+        method: "equal",
+        participantCount: 3,
+        eachFormatted: "28.21",
+        problem: { key: "roundedUp", params: {}, tone: "info" },
+      }),
+    ).toEqual({ key: "equalEach", params: { count: 3, amount: "28.21" } });
+  });
+
+  it("marks an empty split as one that cannot be saved", () => {
+    expect(
+      summariseSplit({ method: "equal", participantCount: 0 }).warning,
+    ).toBe(true);
+  });
 });
 
 describe("directionOf", () => {

@@ -500,8 +500,7 @@
       "percentageSumMismatch": "Percentages must add up to 100 — they currently total {received}",
       "shareNegative": "Shares cannot be negative",
       "sharesAllZero": "At least one share must be greater than zero",
-      "invalid": "That split is not valid",
-      "roundingNote": "This does not divide evenly. {count, plural, one {One person pays} other {# people pay}} {amount} more so the parts add up to the total exactly."
+      "invalid": "That split is not valid"
     }
   },
   "dashboard": {
@@ -3363,6 +3362,12 @@
         "exact": "Exact",
         "percentage": "Percent"
       },
+      "methodTabs": {
+        "equal": "Equally",
+        "shares": "Shares",
+        "exact": "Exact",
+        "percentage": "Percent"
+      },
       "hints": {
         "equal": "Split evenly between everyone selected.",
         "shares": "Give each person a weight — 2 shares pay double.",
@@ -3382,17 +3387,24 @@
         "shares": "Split by shares · {count} people",
         "byItem": "Split by item · {count} people",
         "justOne": "All of it to one person",
-        "nobody": "Nobody selected yet"
+        "nobody": "Nobody selected yet",
+        "exactLeft": "Exact amounts · {amount} left to assign",
+        "exactOver": "Exact amounts · {amount} over the total",
+        "percentagesOff": "Percentages · add up to {sum}%, not 100%",
+        "sharesZero": "Shares · every share is zero",
+        "unreadable": "{method, select, exact {Exact amounts} percentage {Percentages} other {Shares}} · one value is not a number"
       },
       "payerOption": "Paid by {name}",
       "receiverOption": "Received by {name}",
       "includeOption": "Include {name} in the split",
       "notes": {
         "nobody": "Pick at least one person to split this with.",
-        "remainderAbsorbed": "{amount} could not be split evenly — {name} absorbs it.",
+        "roundedUp": "{you, select, yes {{count, plural, =0 {You pay} one {You and {names} pay} other {You, {names} pay}}} other {{count, plural, one {{names} pays} other {{names} pay}}}} {amount} more so it adds up to {total}.",
         "stillToAssign": "{amount} still to assign.",
         "overTheTotal": "{amount} over the total.",
-        "percentagesOff": "Percentages add up to {sum}%, not 100%."
+        "percentagesOff": "Percentages add up to {sum}%, not 100%.",
+        "sharesAllZero": "Give at least one person a share.",
+        "unreadable": "One of these is not a number the split can use."
       },
       "alwaysTitle": "Always split like this",
       "alwaysHint": "Saves it as this group's default",
@@ -3402,6 +3414,9 @@
       "justOnePaid": "Just one person paid",
       "splitPayment": "Split the payment equally",
       "giveRest": "Give the rest to {name}",
+      "giveRemaining": "Give the remaining {amount} to {name}",
+      "shareFewer": "One share fewer for {name}",
+      "shareMore": "One more share for {name}",
       "payerShort": "{amount} still to assign to a payer.",
       "payerOver": "{amount} more than the total was paid.",
       "payerNobody": "Say how much at least one person paid."
