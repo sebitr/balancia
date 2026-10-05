@@ -324,6 +324,15 @@ interface Outcome {
    * and when it adds the next. Only the recurring path has one.
    */
   readonly series?: SavedSeries;
+  /**
+   * The repayment this press has just recorded, when it recorded a new one.
+   *
+   * It is what the confirmation's Undo takes back out, so only a brand-new
+   * repayment carries it. An edit has a row from before to go back to, and a
+   * change of kind removed an entry on its way in — undoing either is not a
+   * deletion, and offering one would destroy more than was just done.
+   */
+  readonly recordedSettlementId?: string;
 }
 
 /**
@@ -1690,7 +1699,7 @@ export function AddEntryForm({
         await queueEntry(clientKey);
         return;
       }
-      const { result, movedTo, series } = outcome;
+      const { result, movedTo, series, recordedSettlementId } = outcome;
 
       if (!result.ok) {
         refuse(result.error ?? t("errors.saveFailed"), null, result.code);
@@ -1740,12 +1749,32 @@ export function AddEntryForm({
       // entry landing in the list, and the toast says the same thing without
       // standing between them and it. A recurring entry's title says whether
       // there is one to see yet, and if not, the day there will be.
-      toast.success(
-        recurrence.enabled
-          ? seriesSaved(series)
-          : t(`saved.${confirmationKey(type, editing !== undefined)}`),
-        { description: describeSaved(createdExpenseId(result) ?? editing?.id) },
-      );
+      const confirmation = recurrence.enabled
+        ? seriesSaved(series)
+        : t(`saved.${confirmationKey(type, editing !== undefined)}`);
+      const facts = describeSaved(createdExpenseId(result) ?? editing?.id);
+      /*
+       * A new repayment can be taken back from its confirmation.
+       *
+       * It is the entry most likely to be recorded in a hurry and the costliest
+       * to get wrong: the outstanding rows read alike, one arrives already
+       * chosen, and marking the wrong person as paid clears a real debt without
+       * a word. Finding the row again in Transactions to delete it is the long
+       * way round for a slip that is noticed the moment the toast names who
+       * paid whom back.
+       */
+      if (recordedSettlementId) {
+        toastUndoable(
+          confirmation,
+          {
+            label: tCommon("undo"),
+            onUndo: () => onUndoRecorded(recordedSettlementId),
+          },
+          { description: facts },
+        );
+      } else {
+        toast.success(confirmation, { description: facts });
+      }
       // A conversion removed the row this drawer was opened on, so it leaves
       // the way a deletion does rather than back onto a detail screen that no
       // longer has anything to show — and it says where the entry went, which
@@ -1919,9 +1948,12 @@ export function AddEntryForm({
       notes,
     };
     if (!editing) {
-      return {
-        result: await createSettlementAction(groupId, input, heldClientKey()),
-      };
+      const result = await createSettlementAction(
+        groupId,
+        input,
+        heldClientKey(),
+      );
+      return { result, recordedSettlementId: result.data?.settlementId };
     }
     if (!converting) {
       return {
@@ -1963,6 +1995,43 @@ export function AddEntryForm({
     }
     router.refresh();
     toast.success(t("saved.restored"));
+  };
+
+  /**
+   * Takes back a repayment this form has just recorded: the Undo on its
+   * confirmation.
+   *
+   * It is the repayment's ordinary deletion, through the same action Delete
+   * uses on its detail screen, so the group is revalidated exactly as a delete
+   * revalidates it, and the group's Activity says what happened — recorded,
+   * then deleted — with a Restore on the second line like any other. By the
+   * time this runs the drawer has gone, so it takes the id rather than reading
+   * anything off the form.
+   *
+   * A repayment never waits in the outbox — `queueable` leaves it out — so
+   * there is no unsent one to drop here: the Undo is only ever offered for a
+   * repayment the server has already written and answered for.
+   *
+   * A failure is said out loud, a lost connection included. The toast that
+   * offered the Undo has gone, and somebody who pressed it believes the
+   * repayment went with it — left to fail in silence, the slip would stand
+   * with the reader sure it had been put right.
+   */
+  const onUndoRecorded = async (settlementId: string) => {
+    let result: { ok: boolean; error?: string };
+    try {
+      result = await deleteSettlementAction(groupId, settlementId);
+    } catch {
+      result = { ok: false };
+    }
+    if (!result.ok) {
+      toast.error(result.error ?? t("errors.undoRecordFailed"));
+      return;
+    }
+    router.refresh();
+    toast.success(t("saved.paymentUndone"), {
+      description: t("saved.paymentUndoneNote"),
+    });
   };
 
   /**

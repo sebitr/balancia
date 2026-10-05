@@ -389,6 +389,7 @@ describe("the name of a repayment", () => {
       "addEntry.editTitles.settle",
       "addEntry.actions.recordPayment",
       "addEntry.saved.paymentRecorded",
+      "addEntry.saved.paymentUndone",
       "activity.actions.settlement.created",
       "activity.actions.settlement.updated",
       "activity.actions.settlement.deleted",
