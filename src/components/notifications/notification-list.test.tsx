@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { readOrigin } from "@/components/settings/settings-origin";
 import { NotificationList, type InboxRow } from "./notification-list";
 
 /**
@@ -367,5 +368,28 @@ describe("the archive", () => {
     await user.click(screen.getByRole("button", { name: "Unread 1" }));
 
     expect(screen.queryByRole("button", { name: /Archive/ })).toBeNull();
+  });
+});
+
+describe("the way to notification settings", () => {
+  /** jsdom cannot navigate; the press is kept on this page once it has run. */
+  const stay = (event: Event) => event.preventDefault();
+
+  afterEach(() => {
+    document.removeEventListener("click", stay, true);
+    sessionStorage.clear();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("remembers this list, so closing settings comes back to it", async () => {
+    window.history.replaceState(null, "", "/notifications");
+    document.addEventListener("click", stay, true);
+    const { user } = renderInbox([row()]);
+
+    await user.click(
+      screen.getByRole("link", { name: "Notification settings" }),
+    );
+
+    expect(readOrigin()).toBe("/notifications");
   });
 });

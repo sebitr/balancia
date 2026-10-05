@@ -75,7 +75,10 @@ export function DangerCard({ email }: { email: string }) {
         onOpenChange={setDeleting}
         title={t("deleteTitle")}
         body={t("deleteBody")}
-        confirmLabel={t("delete")}
+        // Said in full, as the group's own deletion says it: this is the one
+        // press on the screen that cannot be taken back.
+        confirmLabel={t("deletePermanently")}
+        cancelLabel={t("deleteCancel")}
         destructive
         onConfirm={confirmDelete}
       >
