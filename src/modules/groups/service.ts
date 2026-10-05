@@ -851,7 +851,6 @@ export async function removeParticipant(
     // person square in euros and owed in francs is not square.
     const balances = await loadGroupBalances(access, {
       db: tx,
-      inTransaction: true,
     });
     const outstanding = balances.currencies.some((entry) =>
       entry.balances.some(

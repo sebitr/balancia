@@ -79,10 +79,21 @@ export async function createExpenseAction(
   return result;
 }
 
+/**
+ * `version` is the one the edit form was opened on. Somebody else saving the
+ * expense in the meantime refuses this edit with the code `editConflict`, and
+ * nothing is written — see `EditConflictError`.
+ *
+ * A refusal like that still revalidates. The group behind the form has changed
+ * whether or not this edit landed, and the re-render that revalidating ships
+ * with the answer is what hands the form the entry as it now stands, ready for
+ * the reader to reload.
+ */
 export async function updateExpenseAction(
   groupId: string,
   expenseId: string,
   payload: unknown,
+  version?: string,
 ): Promise<ActionResult> {
   const parsed = expenseInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -91,10 +102,12 @@ export async function updateExpenseAction(
 
   const result = await runAction("expenses.update", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    await updateExpense(access, expenseId, parsed.data);
+    await updateExpense(access, expenseId, parsed.data, {
+      expectedVersion: version,
+    });
   });
 
-  if (result.ok) {
+  if (result.ok || result.code === "editConflict") {
     revalidateGroup(groupId);
     revalidatePath(`/groups/${groupId}/expenses/${expenseId}`);
   }
@@ -171,10 +184,12 @@ export async function createSettlementAction(
   return result;
 }
 
+/** The same precondition as `updateExpenseAction`, for a repayment. */
 export async function updateSettlementAction(
   groupId: string,
   settlementId: string,
   payload: unknown,
+  version?: string,
 ): Promise<ActionResult> {
   const parsed = settlementInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -185,10 +200,12 @@ export async function updateSettlementAction(
 
   const result = await runAction("settlements.update", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    await updateSettlement(access, settlementId, parsed.data);
+    await updateSettlement(access, settlementId, parsed.data, {
+      expectedVersion: version,
+    });
   });
 
-  if (result.ok) revalidateGroup(groupId);
+  if (result.ok || result.code === "editConflict") revalidateGroup(groupId);
   return result;
 }
 

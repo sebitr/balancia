@@ -389,6 +389,7 @@ async function loadExpense(
       expense.currency,
     ),
     paymentMethod: "",
+    version: expense.version,
   };
 }
 
@@ -420,5 +421,6 @@ async function loadSettlement(
     splitMethod: "equal",
     splitValues: {},
     paymentMethod: settlement.paymentMethod ?? "",
+    version: settlement.version,
   };
 }

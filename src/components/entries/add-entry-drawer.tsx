@@ -87,6 +87,15 @@ export function AddEntryDrawer({
    */
   const params = useFragmentParams();
   const [exit, setExit] = useState<Exit | null>(null);
+  /*
+   * How many times the reader has asked for the entry again, as the form's key.
+   *
+   * The form seeds every field once, at mount, so that a re-render never
+   * rewrites what somebody is typing — which is also why a new key is the one
+   * way to start it over. An edit refused because somebody else saved first is
+   * what asks: see `onReload` on the form.
+   */
+  const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
     if (exit === null) return;
@@ -199,10 +208,14 @@ export function AddEntryDrawer({
       >
         {draft !== undefined && (
           <AddEntryForm
+            key={reloads}
             {...form}
             draft={draft}
             prefill={prefill}
-            openSheet={openSheet}
+            // What the link asked for belongs to the first look. A reload is
+            // for reading the entry as it now stands, not for replaying it.
+            openSheet={reloads === 0 ? openSheet : undefined}
+            onReload={() => setReloads((count) => count + 1)}
             onClose={() => setExit({ kind: "dismiss" })}
             // A saved entry leaves the same way a dismissed one does — the
             // confirmation is a toast, which outlives the drawer.

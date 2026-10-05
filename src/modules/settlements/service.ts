@@ -34,6 +34,12 @@ import { money, type Money } from "@/modules/currencies/money";
 import { classifyRateSource } from "@/modules/currencies/rates";
 import { telemetry } from "@/lib/telemetry";
 import type { SettlementInput } from "@/modules/expenses/schemas";
+import {
+  EditConflictError,
+  entryVersion,
+  nextVersion,
+  versionIs,
+} from "@/modules/expenses/edit-conflict";
 
 /**
  * Settlement service.
@@ -135,7 +141,6 @@ async function assertClearsRemoved(
 ): Promise<void> {
   const { currencies } = await loadGroupBalances(access, {
     db: tx,
-    inTransaction: true,
   });
   const balances = currencies.find(
     (entry) => entry.currency === effective.currency,
@@ -365,12 +370,21 @@ export async function createSettlement(
   return created.settlementId;
 }
 
+/**
+ * Replaces a repayment with `input`, whole.
+ *
+ * `expectedVersion` works exactly as it does on `updateExpense`: the version
+ * `getSettlement` handed out, refused with an `EditConflictError` if somebody
+ * has changed the repayment since, and no check at all when it is absent.
+ *
+ * Returns the version the repayment has now.
+ */
 export async function updateSettlement(
   access: GroupAccess,
   settlementId: string,
   input: SettlementInput,
-  options: { db?: Database; now?: Date } = {},
-): Promise<void> {
+  options: { db?: Database; now?: Date; expectedVersion?: string } = {},
+): Promise<string> {
   requirePermission(access, "addSettlement");
   const db = options.db ?? getDb();
 
@@ -382,7 +396,7 @@ export async function updateSettlement(
     on: input.settledOn,
   });
 
-  const notificationIds = await db.transaction(async (tx) => {
+  const { notificationIds, version } = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({
         id: settlements.id,
@@ -433,7 +447,7 @@ export async function updateSettlement(
       capturedAt: options.now,
     });
 
-    await tx
+    const updated = await tx
       .update(settlements)
       .set({
         fromParticipantId: input.fromParticipantId,
@@ -455,9 +469,23 @@ export async function updateSettlement(
         // form reported the change as saved.
         paymentMethod: input.paymentMethod || null,
         notes: input.notes || null,
-        updatedAt: new Date(),
+        updatedAt: nextVersion(settlements.updatedAt),
       })
-      .where(eq(settlements.id, settlementId));
+      .where(
+        and(
+          eq(settlements.id, settlementId),
+          eq(settlements.groupId, access.groupId),
+          options.expectedVersion === undefined
+            ? undefined
+            : versionIs(settlements.updatedAt, options.expectedVersion),
+        ),
+      )
+      .returning({ version: entryVersion(settlements.updatedAt) });
+
+    // Empty only when the version moved — see the same check in
+    // `updateExpense`. Nothing has been written that this does not undo.
+    const [written] = updated;
+    if (!written) throw new EditConflictError();
 
     await recordActivity(tx, {
       groupId: access.groupId,
@@ -468,7 +496,7 @@ export async function updateSettlement(
       metadata: { amount: input.amount, currency: input.currency },
     });
 
-    return recordSettlementNotification(tx, access, {
+    const notificationIds = await recordSettlementNotification(tx, access, {
       type: "settlement.updated",
       settlementId,
       fromParticipantId: input.fromParticipantId,
@@ -476,9 +504,12 @@ export async function updateSettlement(
       amount: BigInt(input.amount),
       currency: input.currency,
     });
+    return { notificationIds, version: written.version };
   });
 
   await dispatchNotifications(notificationIds);
+
+  return version;
 }
 
 /**
@@ -789,15 +820,21 @@ export async function mostUsedPaymentMethod(
  * `listSettlements` deliberately does not carry the payment method — a list of
  * repayments is about who and how much — but reopening one has to, or saving an
  * untouched form would quietly restate a TWINT payment as cash.
+ *
+ * `version` is for the same screen: it goes back to `updateSettlement` as
+ * `expectedVersion`, so an edit made from a stale copy is refused.
  */
 export async function getSettlement(
   groupId: string,
   settlementId: string,
   options: { db?: Database } = {},
-): Promise<(SettlementSummary & { paymentMethod: string | null }) | null> {
+): Promise<
+  (SettlementSummary & { paymentMethod: string | null; version: string }) | null
+> {
   const db = options.db ?? getDb();
   const [row] = await db
     .select({
+      version: entryVersion(settlements.updatedAt),
       id: settlements.id,
       fromParticipantId: settlements.fromParticipantId,
       toParticipantId: settlements.toParticipantId,
