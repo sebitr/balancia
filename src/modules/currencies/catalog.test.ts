@@ -110,6 +110,17 @@ describe("searching it", () => {
     expect(codes("portugal")).toContain("EUR");
   });
 
+  /**
+   * Bulgaria adopted the euro on 1 January 2026. Somebody there types their
+   * own country and should find what they pay in now, beside the lev that
+   * older groups still keep their balances in.
+   */
+  it("finds the euro under Bulgaria, and the lev still", () => {
+    expect(codes("bulgarie")).toEqual(expect.arrayContaining(["EUR", "BGN"]));
+    // The flag is the Union's, whichever member is added.
+    expect(currencyFlag("EUR")).toBe("🇪🇺");
+  });
+
   it("returns the whole list for an empty query, and nothing for nonsense", () => {
     expect(codes("   ")).toHaveLength(catalogue.length);
     expect(codes("qqqqq")).toEqual([]);
