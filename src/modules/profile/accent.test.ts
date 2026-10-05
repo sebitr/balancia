@@ -152,7 +152,10 @@ describe("the default", () => {
     for (const theme of THEMES) {
       for (const role of MONEY_ROLES) {
         expect(
-          deltaE(ACCENT_SEEDS[DEFAULT_ACCENT], cssToken(selectorFor(theme), role)),
+          deltaE(
+            ACCENT_SEEDS[DEFAULT_ACCENT],
+            cssToken(selectorFor(theme), role),
+          ),
           `${DEFAULT_ACCENT} vs --${role} in the ${theme} theme`,
         ).toBeGreaterThanOrEqual(MIN_DELTA_E);
       }

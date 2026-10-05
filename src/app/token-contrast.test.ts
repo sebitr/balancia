@@ -289,7 +289,9 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
     const paintedInk = (painted: Record<string, string>): Oklch => {
       const value = tokens.get("primary-ink")!;
       const indirect = value.match(/^var\((--[a-z0-9-]+),\s*(.+)\)$/i);
-      const literal = indirect ? (painted[indirect[1]!] ?? indirect[2]!) : value;
+      const literal = indirect
+        ? (painted[indirect[1]!] ?? indirect[2]!)
+        : value;
       const parsed = parseOklch(literal);
       if (!parsed) throw new Error(`not a plain oklch() colour: ${literal}`);
       return parsed;

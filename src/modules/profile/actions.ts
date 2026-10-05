@@ -159,9 +159,10 @@ export async function setDisplayNameAction(
  *
  * Stored by name, whichever it is. Choosing the default used to clear both,
  * which is why an account made before plum became the default cannot say
- * whether it picked coral or never came here — its null now means coral, for
- * good (`UNCHOSEN_ACCOUNT_ACCENT`). Writing the name keeps every choice made
- * from here on a choice, whatever the default moves to next.
+ * whether it picked coral or never came here — its null now means coral
+ * (`UNCHOSEN_ACCOUNT_ACCENT`). A cleared cookie means plum to a signed-out
+ * reader now, and a null column means coral, so neither can stand for a
+ * choice any more: the name is the only thing that says what was picked.
  */
 export async function setAccentColorAction(
   accent: string,

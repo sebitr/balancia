@@ -6,8 +6,8 @@ import messages from "../../../messages/en.json";
  *
  * It used to store a choice of the default — coral, then — as null, which is
  * why an account from that time cannot say whether it picked coral or never
- * looked. Writing the name keeps every choice made since then a choice, so the
- * next change of default can leave it alone.
+ * looked. Null means coral now and a missing cookie means plum, so a choice
+ * stored as either would come back as something else; the name cannot.
  */
 
 const mocks = vi.hoisted(() => ({
