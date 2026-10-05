@@ -9,13 +9,14 @@ import { PositionCard, type PositionCardView } from "./position-card";
  * The sheet behind "How this is calculated".
  *
  * It makes an arithmetic claim — that the balance in the hero is expenses plus
- * revenue plus repayments, and nothing else — so what these tests hold is that
- * claim: each section's subtotal is the pair inside it, the three subtotals
- * reach the final balance, and income is a named section rather than the
- * unexplained remainder it used to arrive as.
+ * income plus repayments, and nothing else — so what these tests hold is that
+ * claim: the sentences it opens on reach the figure the hero states, each
+ * section of the figures behind them subtotals the pair inside it, and income
+ * is named rather than the unexplained remainder it used to arrive as.
  *
- * How those figures are worded — which of them carry a sign, and the sentences
- * under each pair — is held next door, in position-breakdown.test.tsx.
+ * How each case is worded — which sentence a ledger calls for, and what is
+ * left unsaid when its amount is zero — is held next door, in
+ * position-breakdown.test.tsx.
  *
  * Amounts are compared against `formatMoney` rather than against literal
  * strings: the question here is whether the right figure reached the right
@@ -91,71 +92,88 @@ async function openSheet(
   return user;
 }
 
-/** The card a section header belongs to, which is what holds its rows. */
-function sectionFor(name: RegExp): HTMLElement {
-  const header = screen.getByRole("button", { name });
-  const card = header.closest("section");
-  if (!card) throw new Error(`No section card around ${String(name)}`);
-  return card;
-}
+const FIGURES = /The figures, line by line/;
 
 /**
- * Opens a section. The sheet draws all three shut, so the rows inside one are
- * a click away rather than there on arrival.
+ * Opens the figures under the sentences and hands back the panel that holds
+ * them. The sheet draws them shut: every amount in them has already been said.
  */
-async function expand(
+async function openFigures(
   user: ReturnType<typeof userEvent.setup>,
-  name: RegExp,
 ): Promise<HTMLElement> {
-  await user.click(screen.getByRole("button", { name }));
-  return sectionFor(name);
+  const toggle = screen.getByRole("button", { name: FIGURES });
+  await user.click(toggle);
+  const panelId = toggle.getAttribute("aria-controls");
+  const panel = panelId ? document.getElementById(panelId) : null;
+  if (!panel) throw new Error("The figures did not open");
+  return panel;
 }
 
-describe("the position sheet's ledger", () => {
+describe("the position sheet", () => {
+  it("explains the balance in sentences that reach the figure in the hero", async () => {
+    await openSheet();
+
+    expect(
+      screen.getByText(
+        `You paid ${raw(31634847n)}. Your share was ${raw(12454808n)}.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `You received ${raw(3100000n)} of the group's income. Your share of its income was ${raw(390235n)}.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`You have paid back ${raw(2671n)}.`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`You have been paid back ${raw(15162412n)}.`),
+    ).toBeInTheDocument();
+    expect(31634847n - 12454808n + 390235n - 3100000n + 2671n - 15162412n).toBe(
+      1310533n,
+    );
+    expect(
+      screen.getByText(`So you get back ${raw(1310533n)}.`),
+    ).toBeInTheDocument();
+  });
+
   it("subtotals expenses as what the reader paid, less their share", async () => {
     const user = await openSheet();
-    const section = await expand(user, /Expenses/);
+    const panel = await openFigures(user);
 
-    expect(within(section).getByText(chf(19180039n))).toBeInTheDocument();
-    expect(within(section).getByText(raw(31634847n))).toBeInTheDocument();
-    expect(within(section).getByText(raw(12454808n))).toBeInTheDocument();
+    expect(within(panel).getByText(chf(19180039n))).toBeInTheDocument();
+    expect(within(panel).getByText(raw(31634847n))).toBeInTheDocument();
+    expect(within(panel).getByText(raw(12454808n))).toBeInTheDocument();
   });
 
   /**
-   * The bug this redesign exists to fix. Income used to reach the sheet only
-   * as "Other adjustments", which in this group is a five-figure number with
-   * no name on it.
+   * The bug an earlier redesign fixed. Income used to reach the sheet only as
+   * "Other adjustments", which in this group is a five-figure number with no
+   * name on it.
    */
   it("gives income a section of its own instead of a remainder", async () => {
     const user = await openSheet();
-    const section = await expand(user, /Revenue/);
+    const panel = await openFigures(user);
 
-    expect(within(section).getByText("You received")).toBeInTheDocument();
-    expect(within(section).getByText(raw(3100000n))).toBeInTheDocument();
-    expect(within(section).getByText(raw(390235n))).toBeInTheDocument();
-    expect(within(section).getByText(chf(-2709765n))).toBeInTheDocument();
-    expect(screen.queryByText("Other adjustments")).not.toBeInTheDocument();
+    expect(within(panel).getByText("Income")).toBeInTheDocument();
+    expect(within(panel).getByText("You received")).toBeInTheDocument();
+    expect(within(panel).getByText(raw(3100000n))).toBeInTheDocument();
+    expect(within(panel).getByText(raw(390235n))).toBeInTheDocument();
+    expect(within(panel).getByText(chf(-2709765n))).toBeInTheDocument();
+    expect(screen.queryByText(/adjustments/)).not.toBeInTheDocument();
   });
 
   it("subtotals repayments as what the reader sent, less what they got", async () => {
     const user = await openSheet();
-    const section = await expand(user, /Repayments/);
+    const panel = await openFigures(user);
 
-    expect(within(section).getByText(chf(-15159741n))).toBeInTheDocument();
-    expect(within(section).getByText(raw(2671n))).toBeInTheDocument();
-    expect(within(section).getByText(raw(15162412n))).toBeInTheDocument();
-  });
-
-  it("reaches the balance the hero states, from the three subtotals", async () => {
-    await openSheet();
-
-    expect(19180039n - 2709765n - 15159741n).toBe(1310533n);
-    expect(screen.getByText("Final balance")).toBeInTheDocument();
-    expect(screen.getAllByText(chf(1310533n)).length).toBeGreaterThan(0);
+    expect(within(panel).getByText(chf(-15159741n))).toBeInTheDocument();
+    expect(within(panel).getByText(raw(2671n))).toBeInTheDocument();
+    expect(within(panel).getByText(raw(15162412n))).toBeInTheDocument();
   });
 
   it("shows a remainder the three groups cannot explain", async () => {
-    await openSheet([
+    const user = await openSheet([
       {
         ...CHALET,
         minorUnits: "1320533",
@@ -163,43 +181,46 @@ describe("the position sheet's ledger", () => {
       },
     ]);
 
-    expect(screen.getByText("Other adjustments")).toBeInTheDocument();
-    expect(screen.getByText(chf(10000n))).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `Other adjustments raise your balance by ${raw(10000n)}.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${raw(1320533n)}.`),
+    ).toBeInTheDocument();
+
+    const panel = await openFigures(user);
+    expect(within(panel).getByText("Other adjustments")).toBeInTheDocument();
+    expect(within(panel).getByText(chf(10000n))).toBeInTheDocument();
   });
 });
 
-describe("opening a section", () => {
-  it("arrives shut, with the subtotal already answering", async () => {
+describe("opening the figures", () => {
+  it("arrives shut, with the sentences already answering", async () => {
     await openSheet();
-    const header = screen.getByRole("button", { name: /Expenses/ });
 
-    expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("You paid")).not.toBeInTheDocument();
-    expect(screen.getByText(chf(19180039n))).toBeInTheDocument();
-  });
-
-  it("shows the two rows behind that subtotal, and puts them away again", async () => {
-    const user = await openSheet();
-    const header = screen.getByRole("button", { name: /Expenses/ });
-
-    await user.click(header);
-    expect(header).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("You paid")).toBeInTheDocument();
-
-    await user.click(header);
-    expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("You paid")).not.toBeInTheDocument();
-  });
-
-  it("leaves the other sections alone", async () => {
-    const user = await openSheet();
-    await user.click(screen.getByRole("button", { name: /Expenses/ }));
-
-    expect(screen.getByRole("button", { name: /Revenue/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: FIGURES })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
-    expect(screen.queryByText("You received")).not.toBeInTheDocument();
+    expect(screen.queryByText("Expenses")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(`So you get back ${raw(1310533n)}.`),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the figures, and puts them away again", async () => {
+    const user = await openSheet();
+    const toggle = screen.getByRole("button", { name: FIGURES });
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Expenses")).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Expenses")).not.toBeInTheDocument();
   });
 });
 
@@ -220,17 +241,20 @@ describe("more than one currency", () => {
   };
 
   /**
-   * Two currencies are two ledgers, never one added together — so each keeps
-   * its own three sections and its own final balance, under a heading that
+   * Two currencies are two ledgers, never one added together — so each is
+   * explained on its own and ends on its own result, under a heading that
    * says which currency the figures below it are in.
    */
-  it("heads each ledger with its currency and repeats the sections", async () => {
+  it("heads each explanation with its currency and repeats it", async () => {
     await openSheet([CHALET, EUROS]);
 
     expect(screen.getByRole("heading", { name: "CHF" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "EUR" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Expenses/ })).toHaveLength(2);
-    expect(screen.getAllByText("Final balance")).toHaveLength(2);
+    expect(
+      screen.getByText(`So you get back ${raw(1310533n)}.`),
+    ).toBeInTheDocument();
+    expect(screen.getByText("So you owe EUR 45.00.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: FIGURES })).toHaveLength(2);
   });
 
   it("shows no currency heading when there is only one ledger", async () => {
