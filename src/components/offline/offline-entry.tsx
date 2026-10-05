@@ -19,6 +19,8 @@ import {
   openOnAmount,
 } from "@/components/entries/entry-sheet";
 import { loadSnapshot, type GroupSnapshot } from "@/lib/offline/snapshot";
+import type { DeviceActor } from "@/lib/offline/owner";
+import { DeviceActorProvider } from "./device-actor";
 
 /**
  * The add-entry drawer, opened without going anywhere.
@@ -77,26 +79,39 @@ export function useOfflineEntry(): OfflineEntry | null {
   return useContext(OfflineEntryContext);
 }
 
+/**
+ * The group's offline context: the local drawer, and who is using it.
+ *
+ * The second half is `DeviceActorProvider`, mounted here because this is
+ * already the one provider that wraps everything in a group that touches the
+ * device's store — the pending strip, the flush, the routed drawer and this
+ * sheet — and a second wrapper in the layout would say the same thing twice.
+ */
 export function OfflineEntryProvider({
   groupId,
+  userId,
+  participantId,
   children,
-}: {
-  groupId: string;
-  children: ReactNode;
-}) {
+}: DeviceActor & { children: ReactNode }) {
   const [showing, setShowing] = useState(false);
   const open = useCallback(() => setShowing(true), []);
 
   return (
-    <OfflineEntryContext.Provider value={{ open }}>
-      {children}
-      {showing && (
-        <OfflineEntrySheet
-          groupId={groupId}
-          onClose={() => setShowing(false)}
-        />
-      )}
-    </OfflineEntryContext.Provider>
+    <DeviceActorProvider
+      userId={userId}
+      groupId={groupId}
+      participantId={participantId}
+    >
+      <OfflineEntryContext.Provider value={{ open }}>
+        {children}
+        {showing && (
+          <OfflineEntrySheet
+            groupId={groupId}
+            onClose={() => setShowing(false)}
+          />
+        )}
+      </OfflineEntryContext.Provider>
+    </DeviceActorProvider>
   );
 }
 

@@ -1,5 +1,6 @@
 import { heardEntry } from "@/components/entries/heard-entry";
 import type { EntryDraft } from "@/lib/offline/drafts";
+import type { EntryOwner } from "@/lib/offline/owner";
 import { todayInZone } from "@/lib/timezones";
 
 /**
@@ -28,6 +29,8 @@ import { todayInZone } from "@/lib/timezones";
  */
 export function shareDraft(input: {
   readonly groupId: string;
+  /** Who shared it: the drawer offers the draft back to them alone. */
+  readonly owner: EntryOwner;
   /** What was shared, already reduced to one sentence by `sharedText`. */
   readonly text: string;
   /** The group's own currency, for a sentence that names none. */
@@ -47,6 +50,7 @@ export function shareDraft(input: {
 
   return {
     groupId: input.groupId,
+    owner: input.owner,
     savedAt: now.getTime(),
     fields: {
       type: "expense",

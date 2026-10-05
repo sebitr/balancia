@@ -134,6 +134,46 @@ recipient. The endpoint is never logged.
 Leave the keys unset and Balancia contacts nobody; people still get every
 notification inside the app.
 
+## A device that changes hands
+
+A push subscription belongs to the browser, not to the session. Left alone, it
+outlives a sign-out: the account that turned push on keeps receiving its
+expenses, amounts and names on the lock screen of a phone somebody else is now
+using.
+
+So signing out on the web turns push off for that browser, in two steps and in
+this order:
+
+1. **The server forgets the subscription**, through
+   `DELETE /api/push/subscriptions` with this browser's endpoint — the same
+   request the push switch makes. It is done as the signed-in account, so it
+   runs before the session ends.
+2. **The browser unsubscribes**, which kills the endpoint at the push service.
+   This is the step that actually stops the messages: if the first one failed,
+   the next send to that endpoint is answered 404 or 410 and the row is
+   deleted then, as any gone subscription is.
+
+Deleting an account does the same, except that the account's rows have already
+gone with it and only the browser's half has anything left to do.
+
+The next person to sign in on the device finds push off and can turn it on for
+themselves. The switch reads the browser's own subscription each time the
+screen opens, never a remembered flag, and the permission is still granted, so
+it is one tap.
+
+**Why the browser does it, and not the server.** A subscription row records the
+account, the endpoint and a user-agent label, and no session. When a session
+ends, the server cannot tell which of the account's devices is the one
+signing out, and deleting all of them would silence the account's other phones.
+Only the browser knows its own endpoint.
+
+**What this does not cover.** A session that ends some other way — it expires,
+or is revoked from another device — does not unsubscribe anything, because no
+page on the device is running to do it. The subscription stays with the old
+account until somebody signs out on that device or turns push on there for
+themselves; turning it on moves the row to the new account, since a
+subscription is keyed on its endpoint.
+
 ## Implementation
 
 - `src/lib/push/encrypt.ts` — RFC 8291 payload encryption over the `aes128gcm`
@@ -148,6 +188,8 @@ notification inside the app.
   sectioning, chip dedupe, burst folding and import digesting as pure
   functions over the rows the server rendered, which is why all of it is
   tested as arithmetic rather than by driving a list with a pointer.
+  `use-push-subscription.ts` is the push switch, and `unsubscribe-device.ts`
+  is what sign-out does to push.
 
 The renderer is shared deliberately: the card on a lock screen and the row in
 the inbox are produced by the same function, so they cannot word the same event

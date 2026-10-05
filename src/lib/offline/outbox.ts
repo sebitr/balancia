@@ -1,5 +1,6 @@
 import type { ExpenseInput } from "@/modules/expenses/schemas";
 import { OUTBOX_STORE, idbDelete, idbGetAll, idbPut, randomKey } from "./idb";
+import { belongsTo, type DeviceActor, type EntryOwner } from "./owner";
 import type { BlockReason } from "./replay";
 
 /**
@@ -36,6 +37,16 @@ export interface QueuedEntry {
   readonly groupId: string;
   /** Carried so the pending list can name the group with no network. */
   readonly groupName: string;
+  /**
+   * Who typed it, and so the only person it is ever sent as.
+   *
+   * The queue is the device's, and a device can change hands between an
+   * entry being typed and a network turning up. Without this the flush sent
+   * the entry under whichever session was present by then — see `owner.ts`.
+   * Null only for an entry typed from a form that knew nobody, which is held
+   * rather than sent.
+   */
+  readonly owner: EntryOwner | null;
   readonly payload: ExpenseInput;
   /** When the person pressed the button, not when it was sent. */
   readonly queuedAt: number;
@@ -82,6 +93,7 @@ function announce(): void {
 export async function enqueueEntry(input: {
   groupId: string;
   groupName: string;
+  owner: EntryOwner | null;
   payload: ExpenseInput;
   clientKey?: string;
   now?: number;
@@ -90,6 +102,7 @@ export async function enqueueEntry(input: {
     clientKey: input.clientKey ?? randomKey(),
     groupId: input.groupId,
     groupName: input.groupName,
+    owner: input.owner,
     payload: input.payload,
     queuedAt: input.now ?? Date.now(),
     attempts: 0,
@@ -108,11 +121,21 @@ export async function listQueued(): Promise<QueuedEntry[]> {
   return entries.sort((a, b) => a.queuedAt - b.queuedAt);
 }
 
-/** What waits for a group, oldest first — the group's own pending rows. */
-export async function listQueuedForGroup(
-  groupId: string,
+/**
+ * What this reader has waiting in the group on screen, oldest first — the
+ * group's own pending rows.
+ *
+ * Somebody else's entries are left out even when they are for the same group.
+ * They will not be sent from here (see `flush.ts`), so listing them would be a
+ * line saying "syncing" that never finishes, about an evening this reader did
+ * not type.
+ */
+export async function listQueuedFor(
+  actor: DeviceActor,
 ): Promise<QueuedEntry[]> {
-  return (await listQueued()).filter((entry) => entry.groupId === groupId);
+  return (await listQueued()).filter(
+    (entry) => entry.groupId === actor.groupId && belongsTo(entry.owner, actor),
+  );
 }
 
 export async function countQueued(): Promise<number> {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { QueuedEntry } from "./outbox";
+import type { DeviceActor, EntryOwner } from "./owner";
 
 /**
  * Draining the queue.
@@ -26,11 +27,31 @@ vi.mock("./outbox", () => ({
 
 const { flushOutbox } = await import("./flush");
 
+const LISBON = "22222222-2222-4222-8222-222222222222";
+const FLAT = "33333333-3333-4333-8333-333333333333";
+
+/** Signed in, in Lisbon, on her own seat there. */
+const ADA: DeviceActor = {
+  userId: "aaaaaaaa-0000-4000-8000-000000000001",
+  groupId: LISBON,
+  participantId: "aaaaaaaa-0000-4000-8000-00000000000a",
+};
+
+/** Another account in the same group, on the same phone, later. */
+const BEN: DeviceActor = {
+  userId: "bbbbbbbb-0000-4000-8000-000000000001",
+  groupId: LISBON,
+  participantId: "bbbbbbbb-0000-4000-8000-00000000000b",
+};
+
+const BY_ADA: EntryOwner = { kind: "user", userId: ADA.userId! };
+
 function entry(overrides: Partial<QueuedEntry> = {}): QueuedEntry {
   return {
     clientKey: "11111111-1111-4111-8111-111111111111",
-    groupId: "22222222-2222-4222-8222-222222222222",
+    groupId: LISBON,
     groupName: "Lisbon",
+    owner: BY_ADA,
     payload: {
       description: "Pastéis",
       amount: "640",
@@ -75,7 +96,7 @@ describe("flushOutbox", () => {
     listQueued.mockResolvedValue([entry()]);
     const fetchMock = answers(201);
 
-    await flushOutbox({ now: 10_000 });
+    await flushOutbox({ actor: ADA, now: 10_000 });
 
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(
@@ -96,7 +117,7 @@ describe("flushOutbox", () => {
     listQueued.mockResolvedValue([entry()]);
     answers(201);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(removeQueued).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",
@@ -112,7 +133,7 @@ describe("flushOutbox", () => {
     listQueued.mockResolvedValue([entry()]);
     answers(200);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(removeQueued).toHaveBeenCalledOnce();
     expect(summary.written).toBe(1);
@@ -125,7 +146,7 @@ describe("flushOutbox", () => {
       vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
     );
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(removeQueued).not.toHaveBeenCalled();
     expect(recordAttempt).toHaveBeenCalledWith(
@@ -139,7 +160,7 @@ describe("flushOutbox", () => {
     listQueued.mockResolvedValue([entry()]);
     answers(422);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(removeQueued).not.toHaveBeenCalled();
     expect(recordAttempt).toHaveBeenCalledWith(
@@ -163,7 +184,7 @@ describe("flushOutbox", () => {
         ),
     );
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(recordAttempt).toHaveBeenCalledWith(
       expect.anything(),
@@ -181,7 +202,7 @@ describe("flushOutbox", () => {
       vi.fn().mockResolvedValue(new Response("<html>", { status: 409 })),
     );
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(recordAttempt).toHaveBeenCalledWith(
       expect.anything(),
@@ -194,7 +215,7 @@ describe("flushOutbox", () => {
     listQueued.mockResolvedValue([entry({ status: "blocked" })]);
     const fetchMock = answers(201);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(summary.blocked).toBe(1);
@@ -206,7 +227,7 @@ describe("flushOutbox", () => {
     ]);
     const fetchMock = answers(201);
 
-    const summary = await flushOutbox({ now: 11_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 11_000 });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(summary.retrying).toBe(1);
@@ -223,7 +244,7 @@ describe("flushOutbox", () => {
     ]);
     const fetchMock = answers(500);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(summary).toEqual({ written: 0, retrying: 1, blocked: 0 });
@@ -237,7 +258,7 @@ describe("flushOutbox", () => {
     ]);
     answers(201, 201, 201);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(removeQueued.mock.calls.map(([key]) => key)).toEqual([
       "a",
@@ -256,7 +277,7 @@ describe("flushOutbox", () => {
     ]);
     answers(422, 201);
 
-    const summary = await flushOutbox({ now: 10_000 });
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
 
     expect(removeQueued).toHaveBeenCalledExactlyOnceWith("b");
     expect(summary).toEqual({ written: 1, retrying: 0, blocked: 1 });
@@ -266,11 +287,150 @@ describe("flushOutbox", () => {
     listQueued.mockResolvedValue([]);
     const fetchMock = answers();
 
-    expect(await flushOutbox()).toEqual({
+    expect(await flushOutbox({ actor: ADA })).toEqual({
       written: 0,
       retrying: 0,
       blocked: 0,
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Whose entries go.
+ *
+ * The request carries whichever session cookie the browser holds, so the
+ * flush is the last place that can tell one person's evening from another's.
+ * The case these exist for: Ada queues a dinner with no signal, her session
+ * lapses, Ben signs in on the same phone — and Ben is in the same group, so
+ * the server would have taken Ada's dinner as his.
+ */
+describe("flushOutbox, for whoever is signed in", () => {
+  it("does not send an entry somebody else typed, even in the same group", async () => {
+    listQueued.mockResolvedValue([entry()]);
+    const fetchMock = answers(201);
+
+    const summary = await flushOutbox({ actor: BEN, now: 10_000 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Untouched, too: not dropped, and no attempt recorded against its
+    // backoff. It is waiting for Ada, not for a network.
+    expect(removeQueued).not.toHaveBeenCalled();
+    expect(recordAttempt).not.toHaveBeenCalled();
+    expect(summary).toEqual({ written: 0, retrying: 0, blocked: 0 });
+  });
+
+  it("sends its author's entries once they are back", async () => {
+    listQueued.mockResolvedValue([entry()]);
+    const fetchMock = answers(201);
+
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(summary.written).toBe(1);
+  });
+
+  it("sends an account's entries from whichever group it is in", async () => {
+    // Typed in the flat's group, drained from Lisbon's screen: an account is
+    // the same person everywhere, and the queue drains in the order it was
+    // filled rather than group by group.
+    listQueued.mockResolvedValue([entry({ groupId: FLAT })]);
+    const fetchMock = answers(201);
+
+    await flushOutbox({ actor: ADA, now: 10_000 });
+
+    expect(fetchMock.mock.calls[0]![0]).toBe(`/api/groups/${FLAT}/expenses`);
+  });
+
+  it("sends the reader's own and leaves somebody else's where it is", async () => {
+    listQueued.mockResolvedValue([
+      entry({
+        clientKey: "ben's",
+        owner: { kind: "user", userId: BEN.userId! },
+      }),
+      entry({ clientKey: "ada's" }),
+    ]);
+    answers(201);
+
+    const summary = await flushOutbox({ actor: ADA, now: 10_000 });
+
+    expect(removeQueued).toHaveBeenCalledExactlyOnceWith("ada's");
+    expect(summary).toEqual({ written: 1, retrying: 0, blocked: 0 });
+  });
+
+  it("sends a guest's entry as that guest's seat, and as nobody else's", async () => {
+    const seat: EntryOwner = {
+      kind: "participant",
+      groupId: LISBON,
+      participantId: "cccccccc-0000-4000-8000-00000000000c",
+    };
+    const guest: DeviceActor = {
+      userId: null,
+      groupId: LISBON,
+      participantId: seat.participantId,
+    };
+    listQueued.mockResolvedValue([entry({ owner: seat })]);
+    const fetchMock = answers(201);
+
+    await flushOutbox({ actor: BEN, now: 10_000 });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await flushOutbox({ actor: guest, now: 10_000 });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("still sends a guest's entry once that guest has signed up", async () => {
+    // Signing up claims the seat: the same participant row, now linked to an
+    // account. What the guest typed at dinner is theirs under either name.
+    const seat: EntryOwner = {
+      kind: "participant",
+      groupId: LISBON,
+      participantId: "cccccccc-0000-4000-8000-00000000000c",
+    };
+    listQueued.mockResolvedValue([entry({ owner: seat })]);
+    const fetchMock = answers(201);
+
+    await flushOutbox({
+      actor: {
+        userId: "cccccccc-0000-4000-8000-000000000001",
+        groupId: LISBON,
+        participantId: seat.participantId,
+      },
+      now: 10_000,
+    });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("recognises a seat only inside its own group", async () => {
+    // A participant id means nothing in another group, so an entry stamped
+    // with one waits until its group is on screen.
+    const seat: EntryOwner = {
+      kind: "participant",
+      groupId: FLAT,
+      participantId: ADA.participantId!,
+    };
+    listQueued.mockResolvedValue([entry({ groupId: FLAT, owner: seat })]);
+    const fetchMock = answers(201);
+
+    await flushOutbox({ actor: ADA, now: 10_000 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("holds an entry from before owners were kept, if the upgrade could not adopt it", async () => {
+    // The upgrade stamps every older entry with the seat its group's
+    // snapshot named (see `adoptUnowned`). One it could not place belongs to
+    // nobody: sending it as whoever happens to be signed in is the bug.
+    listQueued.mockResolvedValue([
+      entry({ owner: null }),
+      { ...entry(), owner: undefined } as unknown as QueuedEntry,
+    ]);
+    const fetchMock = answers(201, 201);
+
+    await flushOutbox({ actor: ADA, now: 10_000 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(removeQueued).not.toHaveBeenCalled();
   });
 });
