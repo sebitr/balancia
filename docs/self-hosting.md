@@ -148,12 +148,17 @@ bare number means every interface, the same as `0.0.0.0`.
 Migrations are not a separate service. The image's entrypoint applies any
 pending ones before the app starts, on every boot. Two containers doing it at
 once is safe as well — the runner takes a PostgreSQL advisory lock, so the
-second waits and then finds the schema already current. To take that over yourself, set
-`RUN_MIGRATIONS=false` and run them explicitly:
+second waits and then finds the schema already current. To take that over
+yourself, set `RUN_MIGRATIONS=false` in `.env` — `compose.yaml` passes it to
+the app and the worker alike — and run them explicitly:
 
 ```bash
 docker compose run --rm --entrypoint "node dist/migrate.js" app
 ```
+
+With it set, nothing migrates by itself on any upgrade. To skip the step for a
+single `docker compose run` instead, see
+[`RUN_MIGRATIONS`](environment.md#run_migrations).
 
 Two named volumes hold everything that matters:
 
@@ -571,13 +576,23 @@ service, and why the image works on its own behind a reverse proxy with no
 Compose file at all.
 
 Nothing needs configuring for this. `RUN_WORKER_IN_WEB` defaults to `true`, and
-the app logs `Background worker is running inside the web process` on startup.
-If it cannot reach the queue it says so loudly and carries on serving pages — a
-queue that is down must not take the app with it — so that line's absence from
-the log is the thing to look for when a recurring expense fails to appear. The
-other is `Recurring template failed to generate`, which names the one template
-that could not produce its entry, and its group; every other template carries
-on, and that one is retried each hour until it can.
+the app logs `Background worker is running inside the web process` once the
+worker has started. If it cannot reach the queue it carries on serving pages —
+a queue that is down must not take the app with it — logs the failure, and
+tries again: after five seconds, then ten, twenty, and so on up to every five
+minutes, until it succeeds. Where it stands is the `worker` field of
+[`/api/health/ready`](#health-checks), so that is the first thing to look at
+when a recurring expense fails to appear. The other is
+`Recurring template failed to generate` in the log, which names the one
+template that could not produce its entry, and its group; every other template
+carries on, and that one is retried each hour until it can.
+
+When the app is stopped — `docker compose down`, or a restart during an
+upgrade — it stops taking new jobs and gives the ones it is running up to
+twenty seconds to finish before it exits. One still running after that is
+handed back to the queue and retried by whichever process starts next. The
+app's thirty-second `stop_grace_period` is sized around that; shortening it
+below twenty-five seconds leaves a job to be killed mid-run instead.
 
 ### Giving the jobs their own container
 
@@ -596,7 +611,11 @@ RUN_WORKER_IN_WEB=false
 Then `docker compose up -d --build` starts three containers. The worker runs
 the same image and the same code — `src/worker/run.ts` holds the subscriptions
 and both shapes load it, so a queue is never served by one and not the other —
-and it gets a 40s grace period on shutdown to finish what it has in hand.
+and it gets a 40s grace period on shutdown to finish what it has in hand. It
+serves no HTTP, so its healthcheck is a heartbeat instead: the worker rewrites
+`/tmp/balancia-worker.heartbeat` every thirty seconds while it is subscribed
+and its database answers, and the healthcheck fails once that file is ninety
+seconds old.
 
 Setting one line without the other is the mistake to avoid, and neither half
 fails loudly on its own:
@@ -629,9 +648,70 @@ docker compose up -d --build --remove-orphans
 | Endpoint                | Meaning                                                                                                                                                 |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/health/live`  | The process is up and serving. Does **not** touch the database — a database outage should not cause your orchestrator to restart a healthy web process. |
-| `GET /api/health/ready` | The process can serve real traffic: PostgreSQL answers and migrations have been applied. Returns 503 until then.                                        |
+| `GET /api/health/ready` | The process can serve real traffic: PostgreSQL answers and every migration this image carries has been applied. Returns 503 until then.                 |
 
 Compose already wires these. For an external monitor, watch `/api/health/ready`.
+
+Its body says a little more than its status code:
+
+```json
+{
+  "status": "ok",
+  "migrations": 38,
+  "pendingMigrations": 0,
+  "worker": "running"
+}
+```
+
+`pendingMigrations` counts the migrations this image has that the database
+does not — non-zero only when the entrypoint's migration step was switched off
+(`RUN_MIGRATIONS=false`) and the new image arrived first. That is a 503: the
+code expects the newer schema. A database that is _ahead_ of the image, after
+rolling the image back, is not a 503 either: that is the migration step's to
+refuse, and it does, before the app starts, unless `ALLOW_NEWER_SCHEMA` lets
+it through — see [Rolling back](#rolling-back).
+
+`worker` is where the background jobs stand in this process: `starting`,
+`running`, `failed` (it could not start and is retrying), or `stopping`; or
+`external` when `RUN_WORKER_IN_WEB=false` leaves them to the worker container,
+and `disabled` on a demo. **It never changes the status code.** Readiness is
+what Compose's healthcheck and a reverse proxy gate traffic on, and an app
+whose worker is down still serves every page correctly; failing it would turn
+a stalled queue into an outage. Alert on it instead — see below.
+
+### Alerting on the background jobs
+
+A stalled worker is quiet by nature: every page works, and what is missing is
+a recurring expense that did not appear or a push that never arrived. With
+[metrics](#operating-notes) on, `balancia_worker_up` is `1` while the app's
+worker is serving its queues and `0` while it is starting, retrying or
+stopping, and one Prometheus rule is enough to hear about it:
+
+```yaml
+groups:
+  - name: balancia
+    rules:
+      - alert: BalanciaWorkerDown
+        expr: balancia_worker_up == 0
+        for: 10m
+        annotations:
+          summary: >-
+            Balancia's background worker has not been running for ten minutes:
+            no recurring expenses, push notifications or housekeeping until it is.
+```
+
+Ten minutes rides out a restart, and a database that takes a minute or two to
+come back, without paging anyone for either.
+`balancia_maintenance_last_success_timestamp_seconds` says when the nightly
+sweep last finished, for a slower second opinion —
+`time() - balancia_maintenance_last_success_timestamp_seconds > 26 * 3600`
+means a night was missed.
+
+Both are recorded by the process that runs the jobs, and only the app has a
+metrics endpoint. With the jobs in their [own
+container](#giving-the-jobs-their-own-container), the app reports no
+`balancia_worker_up` at all, and the worker's heartbeat healthcheck is what to
+watch.
 
 ---
 
@@ -721,9 +801,9 @@ app's image with `--ignore-buildable`, which is a no-op where the host builds
 its own and the whole point where it does not: `up --build` has nothing to
 build there, and would otherwise restart the code the server was already
 running. Afterwards it polls
-`docker compose ps` until every service is running — and healthy, for the two
-that have a healthcheck — so a zero exit status means the containers actually
-came back, not merely that Compose accepted the command.
+`docker compose ps` until every service is running and healthy — the worker
+included, where there is one — so a zero exit status means the containers
+actually came back, not merely that Compose accepted the command.
 
 | Flag / variable                         | Default       | What it picks                  |
 | --------------------------------------- | ------------- | ------------------------------ |
@@ -910,10 +990,12 @@ complete field list and what is deliberately not collected:
 
 **Metrics, if you want them.** `METRICS_ENABLED=true` exposes Prometheus text at
 `/api/metrics` for your own monitoring: request and job durations, error rates,
-database latency and pool usage, memory and CPU. Exact, local, and never
-transmitted by Balancia. Set `METRICS_TOKEN` unless nothing but your scraper
-can reach the app — the reverse proxy forwards `/api/metrics` like any other
-path.
+whether the background worker is running, database latency and pool usage,
+memory and CPU. Exact, local, and never transmitted by Balancia. Set
+`METRICS_TOKEN` unless nothing but your scraper can reach the app — the
+reverse proxy forwards `/api/metrics` like any other path. The one alert
+worth setting up first is in
+[Alerting on the background jobs](#alerting-on-the-background-jobs).
 
 **Stopping cleanly:**
 

@@ -43,7 +43,12 @@ import {
 import { COUNTER_RETENTION_DAYS } from "@/lib/telemetry/report";
 import { getEffectiveTelemetry } from "@/lib/telemetry/settings";
 import { reportCrash } from "@/lib/telemetry/crash-reporter";
-import { jobDuration, jobOutcomes, secondsSince } from "@/lib/metrics/metrics";
+import {
+  jobDuration,
+  jobOutcomes,
+  maintenanceLastSuccess,
+  secondsSince,
+} from "@/lib/metrics/metrics";
 
 /** Uploads unattached for longer than this are swept away. */
 const ORPHAN_UPLOAD_GRACE_MS = 24 * 60 * 60 * 1000;
@@ -76,7 +81,7 @@ const MIN_REPORT_INTERVAL_MS = 6 * 24 * 60 * 60 * 1000;
  *
  * Resolves once the worker is serving; throws if the queue cannot be reached,
  * which the caller decides what to do about — a dedicated container exits, the
- * web process logs and carries on serving pages.
+ * web process carries on serving pages and tries again (`./supervise.ts`).
  */
 /**
  * Wraps a job body in the two things every job should do and none of them
@@ -247,6 +252,7 @@ export async function startWorker(): Promise<void> {
       // rebuild exactly the history bucketing exists to avoid.
       pruneCounters(utcDayBefore(now, COUNTER_RETENTION_DAYS)),
     ]);
+    maintenanceLastSuccess().set(Math.floor(Date.now() / 1000));
     jobLogger.info(
       {
         orphans,

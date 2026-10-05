@@ -352,6 +352,11 @@ Check the sheet in both themes, and on a notched iPhone — it pads for
 4. `pnpm db:migrate` to apply locally.
 5. Commit the schema change and the migration together.
 
+What drizzle-kit does not model — a trigger, a function — goes in a custom
+migration: `pnpm db:generate --custom --name <what_it_does>` writes an empty
+SQL file and its journal entry, and the SQL is yours to fill in.
+`drizzle/0039_first_account_is_admin.sql` is one.
+
 Never edit a migration that has already been applied anywhere. The runner
 records a checksum per migration and fails loudly if a file changes, which is
 the behaviour you want when the alternative is silent divergence.

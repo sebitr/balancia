@@ -24,6 +24,11 @@ import {
  * and no UI that sets it — a second administrator is one `UPDATE users SET
  * is_admin = true WHERE …`, run by someone who already has the database.
  *
+ * "First" is the database's call, made by a trigger on `users` for every path
+ * that writes one (drizzle/0039_first_account_is_admin.sql). Two first signups
+ * that overlap are queued one behind the other, so they cannot both see an
+ * empty table and both take the flag.
+ *
  * Group ownership grants nothing here. The owner of a group is not the owner
  * of the server, and on a shared instance those are usually different people.
  */

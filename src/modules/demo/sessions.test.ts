@@ -60,6 +60,19 @@ describe("the demo database", () => {
 });
 
 describe("starting a demo session", () => {
+  it("makes no visitor the administrator, not even the first", async () => {
+    // The first account in this file, so its row is the one the trigger on
+    // `users` makes the administrator — under an advisory lock, which is also
+    // the proof that PGlite runs it — and the demo has to take back.
+    const { sql } = await import("drizzle-orm");
+    await startDemoSession();
+    const result = await getDb().execute(
+      sql`SELECT count(*)::int AS admins FROM "users" WHERE "is_admin"`,
+    );
+
+    expect((result.rows[0] as { admins: number }).admins).toBe(0);
+  }, 60_000);
+
   it("gives each visitor their own populated workspace", async () => {
     const first = await startDemoSession();
     const second = await startDemoSession();
