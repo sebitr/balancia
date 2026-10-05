@@ -86,6 +86,16 @@ names them one at a time until they are all filled in.
 | `src/components/i18n/language-switcher.tsx` | a flag in `LOCALE_FLAGS`                                                                           |
 | `tests/helpers/intl.tsx`                    | the catalogue, so tests can render in it                                                           |
 
+The public pages need two more, and `pnpm test` names them: a folder
+`src/app/<code>/` holding `page.tsx` and `[slug]/page.tsx`, copied from
+`src/app/fr/` with the code changed. They are what serve the homepage and the
+comparison pages at `/<code>` and `/<code>/<english-slug>`; the alternate
+links and sitemap entries follow from `LOCALES` on their own. Giving a page an
+address in the language's own words — `/fr/alternative-splitwise` rather than
+`/fr/splitwise-alternative` — is one optional line in `SLUGS`, in
+`src/lib/public-pages.ts`; the old address then redirects. See
+[seo.md](seo.md).
+
 Push those onto the contributor's branch, or land them in a commit of your own
 on top. Then `pnpm test` again: registering the language is what puts it under
 the rest of the checks in that file, which read every message in it as ICU in

@@ -5,9 +5,17 @@ settle up. The main choice is the operating model: tricount is a managed mobile
 service operated by bunq, while Balancia is open-source software that can be
 used on its free hosted instance or run on your own server.
 
-This comparison was last checked on **17 August 2026**. tricount can change its
+This comparison was last checked on **5 October 2026**. tricount can change its
 product and policies; its official pages linked below are the authority for its
 current service.
+
+The same comparison is a page on the site, in English at
+[balancia.app/tricount-alternative](https://balancia.app/tricount-alternative)
+and in French at
+[balancia.app/fr/alternative-tricount](https://balancia.app/fr/alternative-tricount).
+Its words are in `messages/*.json` under `compare.tricount`; a claim changes in
+both places or in neither, and the date above is `COMPARISON_REVIEWED` in
+`src/components/marketing/comparison-content.ts`.
 
 ## Short answer
 
@@ -106,7 +114,7 @@ The tricount columns above use its official
 [payment-request help](https://help.tricount.com/articles/tricount-request-links),
 [Privacy Policy](https://www.tricount.com/documents/privacy-policy) and
 [Terms and Conditions](https://tricount.com/en-us/documents/terms-conditions),
-reviewed on 17 August 2026.
+reviewed on 5 October 2026.
 
 tricount is a trademark of its respective owner. Balancia is not affiliated
 with, endorsed by or sponsored by tricount or bunq B.V. This comparison is

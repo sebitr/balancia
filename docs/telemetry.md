@@ -725,8 +725,12 @@ all. The trade is stated here rather than smoothed over.
 
 ## 17. Page counts on the public pages
 
-Alongside the weekly report, an opted-in instance counts views of its four
-public pages with [Umami](https://umami.is) at the same address.
+Alongside the weekly report, an opted-in instance counts views of its public
+pages with [Umami](https://umami.is) at the same address: which were opened,
+where the reader came from, which of the page's own buttons they pressed, and
+how long the page took to draw. The public pages are the ones a stranger
+reads before there is an account — the homepage, the comparison pages and the
+sign-in and registration screens.
 
 ### One consent, not two
 
@@ -770,33 +774,147 @@ no tag and widens no policy.
 
 ### Where the tracker runs
 
-| Page             | Tracker              |
-| ---------------- | -------------------- |
-| `/`              | when telemetry is on |
-| `/sign-in`       | when telemetry is on |
-| `/register`      | when telemetry is on |
-| `/register/done` | when telemetry is on |
-| Everything else  | **never**            |
+| Page                                                  | Counted              |
+| ----------------------------------------------------- | -------------------- |
+| `/` and `/fr`                                         | when telemetry is on |
+| `/splitwise-alternative`, `/fr/alternative-splitwise` | when telemetry is on |
+| `/tricount-alternative`, `/fr/alternative-tricount`   | when telemetry is on |
+| `/sign-in`                                            | when telemetry is on |
+| `/register`, `/register/password`, `/register/done`   | when telemetry is on |
+| `/forgot-password`, `/reset-password`                 | when telemetry is on |
+| Everything else                                       | **never**            |
+
+The first three rows are the pages listed in `src/lib/public-pages.ts`, in each
+language; [seo.md](seo.md) describes them. The rest are `COUNTED_SCREENS` in
+`src/lib/analytics/bridge.ts`. Together they are `COUNTED_PATHS`, a list of
+exact addresses, and that list — not this table — is what the code enforces.
 
 The boundary is not a setting either. Balancia's URLs name groups and expenses
 — `/groups/{groupId}/expenses/{expenseId}` — and a page view carries the URL.
 There is no configuration of Umami, or of any analytics product, that makes
-that safe to send anywhere. So the tracker is not on those pages, and
-`src/components/analytics/umami-script.test.tsx` fails the build if the
-component is imported anywhere but the landing page and the auth layout.
+that safe to send anywhere.
 
-Two attributes on the tag are load-bearing rather than decorative:
+It is held in two places, because the first turned out not to be enough.
 
-- **`data-exclude-search`** — two of the four public pages carry a group ID in
-  the query string: `/sign-in?next=/groups/{id}`, written by
+**Where the tracker is loaded.** Only the layouts of the pages above render
+it, and `src/components/analytics/umami-script.test.tsx` fails the build if
+the component is imported anywhere else — or if the public pages' shell is
+wrapped around anything but a public page. This decides who loads a
+third-party script at all.
+
+**What a loaded tracker may say.** Every message passes a hook on its way out
+(`data-before-send`), and the hook sends nothing whose address is not on the
+list, whatever kind of message it is. A referrer from within the site is held
+to the same list.
+
+The second exists because of what the first missed. The tracker hooks the
+browser's history when it loads and counts every navigation after that, and
+signing in is a navigation rather than a page load — so a tracker loaded on
+`/sign-in` went into the application with the reader and reported each screen
+they opened until their next full reload. **From the day page counts shipped
+until this was fixed, an opted-in instance sent the paths of signed-in
+screens, group and expense identifiers included, for any reader who had
+signed in from a counted page.** On the project's own instance that was 96
+distinct such addresses over two months, found by reading the collector's
+page list. No amount, name or description was in them — a path is an
+identifier, not a record — but it is precisely what this section said was
+never sent, and the section was wrong.
+
+Three things were changed so that it cannot be wrong in the same way again.
+The hook decides by address at the moment of sending, so where the tag
+happens to be is no longer the boundary. The tracker's tag is not in the
+page's HTML: the script that defines the hook is the script that loads the
+tracker, so the tracker cannot arrive without it. And the hook fails closed —
+an address it cannot read is an address it does not send.
+`src/lib/analytics/bridge.test.ts` runs the shipped script, as shipped,
+against the addresses of signed-in screens and asserts that nothing is sent
+from any of them.
+
+Four attributes on the tag are load-bearing rather than decorative:
+
+- **`data-exclude-search`** — two of the public pages carry a group ID in the
+  query string: `/sign-in?next=/groups/{id}`, written by
   `groups/[groupId]/layout.tsx` when a signed-out reader opens a group link,
   and `/register/done?group={id}` after registration. Without this the tracker
   would report the whole query.
+- **`data-before-send`** — the hook described above. It is also the one way
+  anything from the query gets back through the door the previous attribute
+  closes, and the next section is about that.
 - **`data-do-not-track`** — honours the browser's signal, at the cost of
   accuracy on a number nothing depends on.
+- **`data-performance`** — sends how long the page took to draw, as the browser
+  measured it: time to first byte, first and largest contentful paint, layout
+  shift and interaction delay. Five numbers and no content. A public page that
+  is slow is one a search engine ranks lower, and the reader's own browser is
+  the only place the real figure exists.
 
-The script tag carries the request nonce, because `'strict-dynamic'` in the CSP
-means host allowlists in `script-src` are ignored entirely. The only directive
+### Campaign labels: the one part of the query that is sent
+
+The query string is dropped whole, and has to be. It is also where a link says
+which link it is — `?utm_source=newsletter` — and an assistant that cites
+Balancia in an answer adds exactly that to the link it shows. For somebody
+reading the answer in an app there is no referrer, so that label is often the
+only trace the answer leaves.
+
+So the tracker is told the label and nothing else from the query. A hook beside
+the tag (`src/lib/analytics/bridge.ts`) starts from the address with its query
+already removed and puts back a parameter only if all of these hold:
+
+- its **name** is one of `utm_source`, `utm_medium`, `utm_campaign`,
+  `utm_content`, `utm_term` or `ref` — a list of names that mean "which link",
+  with `next` and `group`, the two that carry an identifier, not on it;
+- its **value**, lower-cased, is a label: at most 64 characters of `a–z`,
+  `0–9`, `.`, `_` and `-`;
+- and the value contains nothing shaped like the start of a UUID, which is what
+  every Balancia identifier is.
+
+A value that fails is dropped whole, never cleaned up and kept — the reasoning
+in §10, where it is said of error messages. If the hook fails to load, or
+throws, nothing from the query is sent at all: `data-exclude-search` is still
+on the tag, and the hook can only add to what that left.
+
+### Which buttons are counted
+
+A page view says a page was opened. It does not say whether the reader went on
+to create an account or left for the repository, and that is the one thing the
+public pages exist to find out. So a click on one of the page's own buttons is
+counted, by name:
+
+| Event                 | Sent with                                     | When                                         |
+| --------------------- | --------------------------------------------- | -------------------------------------------- |
+| `signup`              | `at` — where on the page                      | "Create your account" is pressed             |
+| `sign-in`             | `at`                                          | "Sign in" is pressed                         |
+| `demo`                | `at`                                          | "Try the demo" is pressed                    |
+| `source`              | `at`                                          | A link to the repository is followed         |
+| `self-hosting-guide`  | `at`                                          | The self-hosting guide is opened             |
+| `install-copied`      | —                                             | The install commands are copied              |
+| `faq`                 | `question` — its key, e.g. `selfHost`         | A question on the homepage is opened         |
+| `language`            | `to` — a language code                        | Another language is chosen from the menu     |
+| `comparison`          | `with` — `splitwise` or `tricount` — and `at` | A link to a comparison page is followed      |
+| `signup-completed`    | —                                             | A cold arrival at `/register` has an account |
+| `guest-group-started` | —                                             | The same arrival started a group as a guest  |
+
+`at` is one of `header`, `hero`, `comparison`, `self-hosting`, `closing` or
+`footer`. That is the complete list, and every value in it is a literal in the
+source: `src/lib/analytics/events.ts` types an event the way §15 describes for
+the weekly report, so there is no `track(name, payload)` to hand a string to.
+Nothing a reader typed and nothing the database holds can be put in one.
+
+The last two are not clicks. The sign-up flow is one address from its first
+screen to its last, so no page view can say that it ended in an account; the
+flow says so itself, once, at the screen after the credential
+(`src/components/onboarding/funnel.ts`). Only for somebody who arrived with no
+invitation: every other arrival's address is a token, the tracker is not on
+those pages, and the hook would drop anything sent from one.
+
+An element is counted only if the source marked it. The script reads the
+`data-track` attributes of the element pressed and nothing else about it — not
+its text, not where it links to. It never holds a click back to wait for the
+collector, so a button goes where it goes whether or not the count arrives.
+
+The inline script carries the request nonce, because `'strict-dynamic'` in the
+CSP means host allowlists in `script-src` are ignored entirely; the tracker it
+goes on to load is trusted for having been created by it. The only directive
 that changes is `connect-src`, and the host it gains is derived from the script
 URL rather than stated separately, so the address the tracker posts to and the
 address the policy admits cannot disagree. That directive is present on any
@@ -812,8 +930,8 @@ derives a visitor ID by hashing the IP address together with the user agent and
 a rotating salt. No cookie is set and no IP is stored, but that hash is a
 pseudonym lasting about a day.
 
-It is a defensible trade for four pages that contain no expenses, no groups and
-no accounts, and it would not be defensible one page further in — which is
+It is a defensible trade for pages that contain no expenses, no groups and no
+accounts, and it would not be defensible one page further in — which is
 exactly why the table above stops where it does. An administrator who wants the
 weekly report but not this should say so; there is currently one switch, and
 splitting it is the obvious next change if anyone asks.
@@ -840,4 +958,6 @@ than leaving a reader to check the network tab.
 | `src/lib/telemetry/settings.ts`  | Deployment ceiling × administrator switch                 |
 | `src/lib/metrics/`               | Local Prometheus metrics — unrelated to the above         |
 | `src/lib/analytics/umami.ts`     | Public-page counts, gated on the same opt-in (§17)        |
+| `src/lib/analytics/bridge.ts`    | The campaign-label allowlist and the click counter (§17)  |
+| `src/lib/analytics/events.ts`    | The buttons that are counted, as literal types (§17)      |
 | `src/app/settings/admin/`        | The administration screen                                 |
