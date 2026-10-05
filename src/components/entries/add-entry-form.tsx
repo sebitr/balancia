@@ -78,6 +78,10 @@ import {
   updateSettlementAction,
 } from "@/modules/expenses/actions";
 import { createRecurringAction } from "@/modules/recurring/actions";
+import {
+  savedSeriesMessage,
+  type SavedSeries,
+} from "@/components/recurring/saved-series";
 import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import {
   PAYMENT_METHOD_IDS,
@@ -313,6 +317,11 @@ interface Outcome {
     readonly data?: unknown;
   };
   readonly movedTo?: string;
+  /**
+   * Where a recurring entry stood once saved — what it added there and then,
+   * and when it adds the next. Only the recurring path has one.
+   */
+  readonly series?: SavedSeries;
 }
 
 /**
@@ -602,6 +611,7 @@ export function AddEntryForm({
   const tWeeks = (week: string) =>
     tWeeksRaw(week as Parameters<typeof tWeeksRaw>[0]);
   const tCommon = useTranslations("common");
+  const tSeries = useTranslations("recurring.saved");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const repeatsId = useId();
 
@@ -1678,7 +1688,7 @@ export function AddEntryForm({
         await queueEntry(clientKey);
         return;
       }
-      const { result, movedTo } = outcome;
+      const { result, movedTo, series } = outcome;
 
       if (!result.ok) {
         refuse(result.error ?? t("errors.saveFailed"), null, result.code);
@@ -1726,11 +1736,12 @@ export function AddEntryForm({
       // The confirmation follows the reader back to the group rather than
       // holding the drawer open in front of it: what they wanted to see is the
       // entry landing in the list, and the toast says the same thing without
-      // standing between them and it.
+      // standing between them and it. A recurring entry's title says whether
+      // there is one to see yet, and if not, the day there will be.
       toast.success(
-        t(
-          `saved.${confirmationKey(type, recurrence.enabled, editing !== undefined)}`,
-        ),
+        recurrence.enabled
+          ? seriesSaved(series)
+          : t(`saved.${confirmationKey(type, editing !== undefined)}`),
         { description: describeSaved(createdExpenseId(result) ?? editing?.id) },
       );
       // A conversion removed the row this drawer was opened on, so it leaves
@@ -1851,8 +1862,8 @@ export function AddEntryForm({
     ],
   });
 
-  const submitRecurring = async (): Promise<Outcome> => ({
-    result: await createRecurringAction(groupId, {
+  const submitRecurring = async (): Promise<Outcome> => {
+    const result = await createRecurringAction(groupId, {
       direction: directionOf(type) ?? "out",
       description: description.trim(),
       notes: "",
@@ -1882,8 +1893,17 @@ export function AddEntryForm({
       startDate: date,
       endDate: recurrence.endDate ?? "",
       count: recurrence.count ?? undefined,
-    }),
-  });
+    });
+    return { result, series: result.data };
+  };
+
+  /** The confirmation's title for a recurring entry. See `savedSeriesMessage`. */
+  const seriesSaved = (series: SavedSeries | undefined): string => {
+    const message = savedSeriesMessage(series, description.trim(), (day) =>
+      dates.plain(day),
+    );
+    return tSeries(message.key, message.values);
+  };
 
   const submitSettlement = async (): Promise<Outcome> => {
     const input = {
@@ -2039,9 +2059,10 @@ export function AddEntryForm({
 
     /*
      * A link only when there is somewhere to go. A queued entry has no id
-     * yet, and a recurring template's first occurrence does not exist until
-     * the worker makes it — in both cases the facts are still worth stating,
-     * they just cannot be tapped.
+     * yet. A recurring one may well have added an entry as it was saved, but
+     * fixing the payer or the split there would fix that one date and leave
+     * the series saying otherwise — the facts are still worth stating, they
+     * just cannot be tapped.
      */
     const href =
       entryId && !recurrence.enabled

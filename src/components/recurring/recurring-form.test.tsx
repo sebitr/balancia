@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { RecurringForm } from "./recurring-form";
 
@@ -16,11 +17,19 @@ import { RecurringForm } from "./recurring-form";
  * waits on a timer.
  */
 
+const { createRecurring, success } = vi.hoisted(() => ({
+  createRecurring: vi.fn(),
+  success: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 vi.mock("@/modules/recurring/actions", () => ({
-  createRecurringAction: vi.fn(),
+  createRecurringAction: createRecurring,
+}));
+vi.mock("sonner", () => ({
+  toast: { success: (...args: unknown[]) => success(...args), error: vi.fn() },
 }));
 
 function renderForm(timezone: string) {
@@ -60,5 +69,49 @@ describe("RecurringForm", () => {
     renderForm("America/New_York");
 
     expect(screen.getByLabelText("Starting")).toHaveValue("2025-03-14");
+  });
+});
+
+/**
+ * What saving is confirmed with.
+ *
+ * "Recurring expense set up" was said the same way whether the first expense
+ * had just been added or was a month off. It says which now — and a series
+ * that took a form to set up is the kind of change a toast is for.
+ */
+describe("RecurringForm, once saved", () => {
+  async function save(series: {
+    added: number;
+    addedFrom: string | null;
+    next: string | null;
+  }) {
+    success.mockClear();
+    createRecurring.mockResolvedValue({
+      ok: true,
+      data: { id: "r1", ...series },
+    });
+    const user = userEvent.setup();
+    renderForm("Europe/Zurich");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+    await user.type(screen.getByLabelText("Amount"), "90");
+    await user.click(
+      screen.getByRole("button", { name: "Create recurring expense" }),
+    );
+  }
+
+  it("says the first expense is in the group, and when the next comes", async () => {
+    await save({ added: 1, addedFrom: "2026-10-05", next: "2026-11-05" });
+
+    expect(success).toHaveBeenCalledWith(
+      "Internet added. The next one is on Nov 5, 2026.",
+    );
+  });
+
+  it("says when the first one will be added, when it was not", async () => {
+    await save({ added: 0, addedFrom: null, next: "2026-11-05" });
+
+    expect(success).toHaveBeenCalledWith(
+      "Internet saved. The first one will be added on Nov 5, 2026.",
+    );
   });
 });

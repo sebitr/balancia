@@ -182,7 +182,10 @@ function renderForm(
     ok: true,
     data: { settlementId: "s1" },
   });
-  createRecurring.mockResolvedValue({ ok: true, data: { id: "r1" } });
+  createRecurring.mockResolvedValue({
+    ok: true,
+    data: { id: "r1", added: 1, addedFrom: "2026-10-05", next: "2026-11-05" },
+  });
   updateExpense.mockResolvedValue({ ok: true, data: undefined });
   updateSettlement.mockResolvedValue({ ok: true, data: undefined });
   toSettlement.mockResolvedValue({ ok: true, data: { settlementId: "s2" } });
@@ -1541,8 +1544,47 @@ describe("recurrence", () => {
       }),
     );
     expect(createExpense).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The series adds what has already come as it is saved, and the title says
+   * so — "saved" alone, with nothing in the list behind it, is what sent
+   * people to add the expense again by hand.
+   */
+  it("says the first one is in the group when it was added as it was saved", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+
     expect(success).toHaveBeenCalledWith(
-      "Recurring entry saved",
+      "Internet added. The next one is on Nov 5, 2026.",
+      expect.anything(),
+    );
+  });
+
+  it("says when the first one will come when its date has not", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    createRecurring.mockResolvedValue({
+      ok: true,
+      data: { id: "r1", added: 0, addedFrom: null, next: "2026-11-05" },
+    });
+    await enterAmount(user, "90");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+
+    expect(success).toHaveBeenCalledWith(
+      "Internet saved. The first one will be added on Nov 5, 2026.",
       expect.anything(),
     );
   });

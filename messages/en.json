@@ -1007,7 +1007,12 @@
     "paidBy": "Paid by",
     "splitEquallyBetween": "Split equally between",
     "submit": "Create recurring expense",
-    "created": "Recurring expense set up",
+    "saved": {
+      "added": "{count, plural, one {{description} added} other {{description} added # times, from {from}}}. The next one is on {next}.",
+      "addedLast": "{count, plural, one {{description} added} other {{description} added # times, from {from}}}. That was the last one.",
+      "firstOn": "{description} saved. The first one will be added on {date}.",
+      "plain": "{description} saved."
+    },
     "errors": {
       "chooseSplit": "Choose who this is split between.",
       "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
@@ -3229,7 +3234,6 @@
     "saved": {
       "expenseAdded": "Expense added",
       "incomeAdded": "Income added",
-      "recurringSaved": "Recurring entry saved",
       "paymentRecorded": "Repayment recorded",
       "changesSaved": "Changes saved",
       "deleted": "Entry deleted",
