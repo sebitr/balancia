@@ -210,7 +210,7 @@ store the browser refuses, a request that fails — each costs what that step wa
 for, and the person is still signed out.
 
 Before anybody confirms, the sheet counts what is still in the outbox and says
-that signing out deletes it, while **Keep it** is still there to press. Those
+that signing out deletes it, while **Stay signed in** is still there to press. Those
 entries exist nowhere else.
 
 The build output, icons and the optional model files stay: they are the same

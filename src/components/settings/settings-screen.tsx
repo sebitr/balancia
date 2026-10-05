@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { PageHeader, PageHeaderClose } from "@/components/ui/page-header";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
+import { SettingsClose } from "./settings-close";
 
 /**
  * The chrome every settings screen shares.
@@ -31,8 +32,12 @@ export function SettingsScreen({
   title: string;
   /** The way back to the hub. Absent on the hub itself, which closes instead. */
   back?: { href: string; label: string };
-  /** The way out of settings. The hub's ✕, and only the hub's. */
-  close?: { href: string; label: string };
+  /**
+   * The way out of settings. The hub's ✕, and only the hub's. It names no
+   * destination: it goes back to wherever settings was opened from, which
+   * only the browser knows — see `SettingsClose`.
+   */
+  close?: { label: string };
   children: ReactNode;
 }) {
   return (
@@ -40,7 +45,7 @@ export function SettingsScreen({
       <PageHeader
         title={title}
         back={back}
-        trailing={close && <PageHeaderClose {...close} />}
+        trailing={close && <SettingsClose label={close.label} />}
         className={cn(
           "sticky top-0 z-10 px-3.5",
           "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",

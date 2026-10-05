@@ -575,7 +575,7 @@ function Participants({
  * The one question left at creation, and the answer that needs a currency.
  *
  * Everything else on this sheet can be changed afterwards; this cannot
- * (`settingsPage.currencyModeFixed`), and it decides what every amount the
+ * (`settingsPage.modeFixed`), and it decides what every amount the
  * group ever records means. So it stays — reduced to the thing a reader has to
  * decide, which is what happens when somebody pays in another currency.
  *
