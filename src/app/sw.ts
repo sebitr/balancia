@@ -2,6 +2,7 @@
 import { Serwist, NetworkFirst, NetworkOnly, CacheFirst } from "serwist";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { applicationServerKey } from "@/lib/push/application-server-key";
+import { PAGES_CACHE } from "@/lib/offline/forget";
 import { saveSharedPayload } from "@/lib/offline/shared";
 
 /**
@@ -14,12 +15,16 @@ import { saveSharedPayload } from "@/lib/offline/shared";
  *  - Authenticated financial views are NetworkFirst: always try the server, so
  *    a balance is never shown from a stale cache when the network is up. The
  *    cached copy exists only so a brief drop-out does not blank the screen.
+ *    Because those copies are somebody's balances, signing out deletes the
+ *    cache that holds them — from the page, not from here; see `forget.ts`.
  *  - Authentication endpoints (/api/auth/**) are NEVER cached. A cached session
  *    response is a security problem, not a performance win.
- *  - Mutations (anything not GET) are never cached, and there is no background
- *    sync: this version does not support offline data entry, deliberately —
- *    queueing financial writes would require conflict resolution the product
- *    was not asked for.
+ *  - Mutations (anything not GET) are never cached or replayed by the worker,
+ *    and there is no Background Sync. Offline entry does exist, but it is the
+ *    page's: new expenses are queued in IndexedDB and sent by the page once it
+ *    is back online, as the person who typed them (`src/lib/offline/`,
+ *    `docs/offline.md`). Nothing already on the server is edited offline,
+ *    which is the conflict a queue of creates never has.
  *  - Anything not matched falls through to the network, with an offline shell
  *    for navigations.
  */
@@ -167,7 +172,7 @@ const serwist = new Serwist({
       // Financial views: network first, cache only as a stop-gap.
       matcher: ({ request }) => request.mode === "navigate",
       handler: new NetworkFirst({
-        cacheName: "balancia-pages",
+        cacheName: PAGES_CACHE,
         networkTimeoutSeconds: 5,
       }),
     },

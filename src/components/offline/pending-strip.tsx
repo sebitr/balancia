@@ -14,11 +14,13 @@ import {
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
 import {
-  listQueuedForGroup,
+  listQueuedFor,
   removeQueued,
   subscribeToOutbox,
   type QueuedEntry,
 } from "@/lib/offline/outbox";
+import type { BlockReason } from "@/lib/offline/replay";
+import { useDeviceActor } from "./device-actor";
 import { useOnline } from "./use-online";
 
 /**
@@ -35,16 +37,21 @@ import { useOnline } from "./use-online";
  * It renders nothing when the queue is empty and there is a network, which is
  * almost always. Being offline alone is worth a line too: it explains why the
  * numbers below are the ones from earlier.
+ *
+ * The group on screen and the reader's own entries in it, both from
+ * `useDeviceActor` — see `listQueuedFor` for why nobody else's are counted.
  */
-export function PendingStrip({ groupId }: { groupId: string }) {
+export function PendingStrip() {
   const t = useTranslations("outbox");
   const online = useOnline();
+  const actor = useDeviceActor();
   const [entries, setEntries] = useState<QueuedEntry[]>([]);
   const [showing, setShowing] = useState(false);
 
   const reload = useCallback(() => {
-    void listQueuedForGroup(groupId).then(setEntries);
-  }, [groupId]);
+    if (!actor) return;
+    void listQueuedFor(actor).then(setEntries);
+  }, [actor]);
 
   useEffect(() => {
     reload();
@@ -106,6 +113,13 @@ export function PendingStrip({ groupId }: { groupId: string }) {
   );
 }
 
+/** What a held-back entry says about why, one sentence per reason. */
+const BLOCKED_BECAUSE = {
+  noAccess: "blockedNoAccess",
+  archived: "blockedArchived",
+  refused: "blockedRefused",
+} as const satisfies Record<BlockReason, string>;
+
 function PendingRow({ entry }: { entry: QueuedEntry }) {
   const t = useTranslations("outbox");
   const locale = useNumberLocale();
@@ -130,11 +144,7 @@ function PendingRow({ entry }: { entry: QueuedEntry }) {
       {entry.status === "blocked" && (
         <>
           <p className="text-xs text-pretty text-destructive">
-            {t(
-              entry.blockedFor === "noAccess"
-                ? "blockedNoAccess"
-                : "blockedRefused",
-            )}
+            {t(BLOCKED_BECAUSE[entry.blockedFor ?? "refused"])}
           </p>
           {/*
            * Discarding is the only destructive thing this feature offers, and

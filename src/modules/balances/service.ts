@@ -149,21 +149,13 @@ export async function loadGroupBalances(
   options: {
     db?: Database;
     contributionsFor?: string | null;
-    /**
-     * Set when `db` is a transaction. A transaction is one connection, and
-     * node-postgres does not support two queries on it at once, so the reads
-     * that are otherwise issued together below go one after another.
-     */
-    inTransaction?: boolean;
   } = {},
 ): Promise<GroupBalances> {
   const { groupId, group } = access;
   const rows =
     options.db === undefined || options.db === getDb()
       ? await readBalanceRowsOnce(groupId)
-      : await readBalanceRows(options.db, groupId, {
-          inTransaction: options.inTransaction,
-        });
+      : await readBalanceRows(options.db, groupId);
 
   return assembleBalances(group, rows, options.contributionsFor ?? null);
 }
@@ -183,88 +175,101 @@ const readBalanceRowsOnce = oncePerRender((groupId: string) =>
   readBalanceRows(getDb(), groupId),
 );
 
-/**
- * The five reads behind one group's balances.
- *
- * `inTransaction` is whatever the caller said about `db`: a transaction is one
- * connection, which node-postgres cannot ask two things of at once, so the last
- * three reads go one after another there instead of together. The memoised
- * read below always holds the pool, and never sets it.
- */
+/** The five reads behind one group's balances. */
 async function readBalanceRows(
   db: Database,
   groupId: string,
-  { inTransaction = false }: { inTransaction?: boolean } = {},
 ): Promise<BalanceRows> {
-  const participantRows = await db
-    .select({
-      id: participants.id,
-      displayName: participants.displayName,
-    })
-    .from(participants)
-    .where(eq(participants.groupId, groupId))
-    // Stable ordering: rounding remainders and repayment tie-breaks depend on it.
-    .orderBy(asc(participants.createdAt), asc(participants.id));
+  /*
+   * The five reads see one snapshot of the group, or the engine can be handed
+   * half an edit.
+   *
+   * Each used to be a statement of its own on the pool, and under PostgreSQL's
+   * default READ COMMITTED every statement sees whatever has committed by the
+   * time it starts. An edit that committed between the payers and the shares
+   * reads left an expense whose old payers met its new shares, and the engine
+   * — rightly — refused to balance it: the page failed to load with "Expense …
+   * is unbalanced" until somebody reloaded it. REPEATABLE READ takes the
+   * snapshot at the first statement and holds it for the rest, and READ ONLY
+   * says there is nothing here to serialize against.
+   *
+   * One after another, not in parallel: a transaction is one connection, and a
+   * connection answers one statement at a time however many are sent at it.
+   *
+   * A caller that passes a transaction of its own gets a savepoint rather than
+   * a new snapshot — Drizzle ignores the isolation settings on a nested call —
+   * and so reads under whatever that transaction already sees.
+   */
+  return db.transaction(
+    async (tx): Promise<BalanceRows> => {
+      const participantRows = await tx
+        .select({
+          id: participants.id,
+          displayName: participants.displayName,
+        })
+        .from(participants)
+        .where(eq(participants.groupId, groupId))
+        // Stable ordering: rounding remainders and repayment tie-breaks depend on it.
+        .orderBy(asc(participants.createdAt), asc(participants.id));
 
-  const expenseRows = await db
-    .select({
-      id: expenses.id,
-      direction: expenses.direction,
-      expenseDate: expenses.expenseDate,
-      currency: expenses.currency,
-      convertedCurrency: expenses.convertedCurrency,
-    })
-    .from(expenses)
-    .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
+      const expenseRows = await tx
+        .select({
+          id: expenses.id,
+          direction: expenses.direction,
+          expenseDate: expenses.expenseDate,
+          currency: expenses.currency,
+          convertedCurrency: expenses.convertedCurrency,
+        })
+        .from(expenses)
+        .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 
-  // Built here and run below: a query is only sent once it is awaited.
-  const reads = [
-    db
-      .select({
-        expenseId: expensePayers.expenseId,
-        participantId: expensePayers.participantId,
-        amount: expensePayers.amount,
-        convertedAmount: expensePayers.convertedAmount,
-      })
-      .from(expensePayers)
-      .innerJoin(expenses, eq(expenses.id, expensePayers.expenseId))
-      .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
-    db
-      .select({
-        expenseId: expenseShares.expenseId,
-        participantId: expenseShares.participantId,
-        amount: expenseShares.amount,
-        convertedAmount: expenseShares.convertedAmount,
-      })
-      .from(expenseShares)
-      .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
-      .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt))),
-    db
-      .select({
-        id: settlements.id,
-        fromParticipantId: settlements.fromParticipantId,
-        toParticipantId: settlements.toParticipantId,
-        amount: settlements.amount,
-        currency: settlements.currency,
-        convertedAmount: settlements.convertedAmount,
-        convertedCurrency: settlements.convertedCurrency,
-      })
-      .from(settlements)
-      .where(
-        and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
-      ),
-  ] as const;
-  const [payerRows, shareRows, settlementRows] = inTransaction
-    ? [await reads[0], await reads[1], await reads[2]]
-    : await Promise.all(reads);
+      const payerRows = await tx
+        .select({
+          expenseId: expensePayers.expenseId,
+          participantId: expensePayers.participantId,
+          amount: expensePayers.amount,
+          convertedAmount: expensePayers.convertedAmount,
+        })
+        .from(expensePayers)
+        .innerJoin(expenses, eq(expenses.id, expensePayers.expenseId))
+        .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 
-  return {
-    participants: participantRows,
-    expenses: expenseRows,
-    payers: payerRows,
-    shares: shareRows,
-    settlements: settlementRows,
-  };
+      const shareRows = await tx
+        .select({
+          expenseId: expenseShares.expenseId,
+          participantId: expenseShares.participantId,
+          amount: expenseShares.amount,
+          convertedAmount: expenseShares.convertedAmount,
+        })
+        .from(expenseShares)
+        .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
+        .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
+
+      const settlementRows = await tx
+        .select({
+          id: settlements.id,
+          fromParticipantId: settlements.fromParticipantId,
+          toParticipantId: settlements.toParticipantId,
+          amount: settlements.amount,
+          currency: settlements.currency,
+          convertedAmount: settlements.convertedAmount,
+          convertedCurrency: settlements.convertedCurrency,
+        })
+        .from(settlements)
+        .where(
+          and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
+        );
+
+      return {
+        participants: participantRows,
+        expenses: expenseRows,
+        payers: payerRows,
+        shares: shareRows,
+        settlements: settlementRows,
+      };
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
 }
 
 /**

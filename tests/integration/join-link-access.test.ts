@@ -121,16 +121,22 @@ describe("the group-wide join link over the mobile API", () => {
     expect(body.link.prefix).toBe(minted.prefix);
   });
 
-  it("answers a member the way it answers a stranger", async () => {
+  it("tells a member the link is the owner's, without showing it", async () => {
+    // 403 and not the stranger's 404: a member knows the group is there, and
+    // "Not found." about their own group reads as the group having gone. The
+    // refusal comes before the link is looked up, so it says nothing about
+    // whether there is one.
     const owner = await createTestUser();
     const group = await createTestGroup(owner);
     await createJoinLink(group.groupId);
     currentActor.value = await addMember(group.groupId);
 
     const response = await GET(request("GET"), context(group.groupId));
+    const body = await response.text();
 
-    expect(response.status).toBe(404);
-    expect(await response.text()).not.toContain("join/g/");
+    expect(response.status).toBe(403);
+    expect(JSON.parse(body)).toMatchObject({ code: "noPermission" });
+    expect(body).not.toContain("join/g/");
   });
 
   it("refuses a guest the link, and refuses them one of their own", async () => {
@@ -140,7 +146,7 @@ describe("the group-wide join link over the mobile API", () => {
     currentActor.value = await addGuest(group);
 
     const read = await GET(request("GET"), context(group.groupId));
-    expect(read.status).toBe(404);
+    expect(read.status).toBe(403);
 
     // The sharper half. A guest is somebody who arrived through a link that
     // was forwarded to them; minting is how they would turn that into a
@@ -149,11 +155,11 @@ describe("the group-wide join link over the mobile API", () => {
       request("POST", { expiresInDays: 30 }),
       context(group.groupId),
     );
-    expect(minted.status).toBe(404);
+    expect(minted.status).toBe(403);
     expect(await minted.text()).not.toContain("join/g/");
 
     const revoked = await DELETE(request("DELETE"), context(group.groupId));
-    expect(revoked.status).toBe(404);
+    expect(revoked.status).toBe(403);
 
     // And the owner's link is untouched by any of it.
     currentActor.value = owner;

@@ -109,7 +109,7 @@ function AddButton() {
 
 function renderGroup() {
   return renderWithIntl(
-    <OfflineEntryProvider groupId="g1">
+    <OfflineEntryProvider groupId="g1" userId="u-seb" participantId="seb">
       <AddButton />
     </OfflineEntryProvider>,
   );

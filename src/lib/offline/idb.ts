@@ -16,8 +16,15 @@
  * guarding is here, once, and a missing store reads as an empty one.
  */
 
+import { ownerFor, snapshotActor } from "./owner";
+
 const DB_NAME = "balancia-offline";
-const DB_VERSION = 3;
+/**
+ * Version 4 added no store. It is the version at which queued entries and
+ * drafts started carrying who wrote them, and the bump is what gets the older
+ * ones adopted, once — see `adoptUnowned`.
+ */
+const DB_VERSION = 4;
 
 /** What the entry form needs to render with no network. See `snapshot.ts`. */
 export const SNAPSHOT_STORE = "group-snapshots";
@@ -73,7 +80,7 @@ function open(): Promise<IDBDatabase | null> {
       return;
     }
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
       if (!db.objectStoreNames.contains(SNAPSHOT_STORE)) {
         db.createObjectStore(SNAPSHOT_STORE, { keyPath: "groupId" });
@@ -87,10 +94,122 @@ function open(): Promise<IDBDatabase | null> {
       if (!db.objectStoreNames.contains(SHARE_STORE)) {
         db.createObjectStore(SHARE_STORE, { keyPath: "id" });
       }
+      if (event.oldVersion > 0 && event.oldVersion < 4 && request.transaction) {
+        adoptUnowned(request.transaction);
+      }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // Another tab deleting the database on sign-out, or opening a newer
+      // version, must not be kept waiting on this connection.
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => resolve(null);
     request.onblocked = () => resolve(null);
+  });
+}
+
+interface UnownedRecord {
+  readonly groupId?: unknown;
+  readonly owner?: unknown;
+}
+
+/**
+ * Stamps every queued entry and draft from before version 4 with its author,
+ * once.
+ *
+ * Version 4 is the one that started recording who typed what (see `owner.ts`).
+ * A record older than that has no author, and working one out later, at flush
+ * time, would mean reading it off a group snapshot that somebody else may have
+ * rewritten since. So it is worked out here, at the one moment the answer is
+ * sound: inside the upgrade, before this version has written anything at all.
+ * Each record's group snapshot was written by the same form that wrote the
+ * record, so the seat it names is the seat of whoever was using that form —
+ * and nobody on this version can have overwritten it yet, because every write
+ * waits on this upgrade first.
+ *
+ * Nothing here may fail the upgrade. An error on a request inside a
+ * versionchange transaction aborts it, and an aborted upgrade leaves the
+ * database unopenable on every visit after — every offline feature quietly
+ * empty. So each request swallows its own error, and a record that cannot be
+ * adopted stays as it was: kept, and never sent as anybody (see `belongsTo`).
+ *
+ * Exported for its test, which drives it with a stand-in transaction; nothing
+ * else calls it.
+ */
+export function adoptUnowned(transaction: IDBTransaction): void {
+  try {
+    const snapshots = transaction.objectStore(SNAPSHOT_STORE);
+    for (const name of [OUTBOX_STORE, DRAFT_STORE]) {
+      const store = transaction.objectStore(name);
+      const all = quietly(store.getAll());
+      all.onsuccess = () => {
+        for (const record of all.result as UnownedRecord[]) {
+          if (record.owner || typeof record.groupId !== "string") continue;
+          try {
+            const found = quietly(snapshots.get(record.groupId));
+            found.onsuccess = () => {
+              const owner = adoptedOwner(found.result);
+              if (owner) quietly(store.put({ ...record, owner }));
+            };
+          } catch {
+            // Left unowned; see above.
+          }
+        }
+      };
+    }
+  } catch {
+    // A store that is not there has nothing in it to adopt.
+  }
+}
+
+function adoptedOwner(snapshot: unknown) {
+  if (typeof snapshot !== "object" || snapshot === null) return null;
+  const { groupId, selfId } = snapshot as {
+    groupId?: unknown;
+    selfId?: unknown;
+  };
+  if (typeof groupId !== "string" || typeof selfId !== "string") return null;
+  // A snapshot this old never has a `userId`, so this is always its seat.
+  return ownerFor(snapshotActor({ groupId, selfId }));
+}
+
+function quietly<T extends IDBRequest>(request: T): T {
+  request.onerror = (event) => {
+    // Handled here, so the transaction it belongs to is not aborted by it.
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  return request;
+}
+
+/**
+ * Deletes the whole database: every snapshot, every queued entry, every draft
+ * and any share waiting to be filed. It is what signing out does to this
+ * device's own store — see `forget.ts`.
+ *
+ * Settles on `blocked` and on `error` as well as on success, and never throws.
+ * Blocked means another tab still holds a connection; the deletion is not
+ * cancelled by that, only queued until the connection closes, which `open`
+ * makes happen at once. An error is a store the browser would not let this
+ * page touch in the first place. Neither is a reason to leave somebody signed
+ * in who asked to sign out.
+ */
+export function deleteOfflineDatabase(): Promise<void> {
+  if (!available()) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    let request: IDBOpenDBRequest;
+    try {
+      request = indexedDB.deleteDatabase(DB_NAME);
+    } catch {
+      resolve();
+      return;
+    }
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
   });
 }
 

@@ -1,4 +1,5 @@
 import { DRAFT_STORE, idbDelete, idbGet, idbPut } from "./idb";
+import { belongsTo, type DeviceActor, type EntryOwner } from "./owner";
 
 /**
  * The entry somebody started and did not finish.
@@ -32,6 +33,12 @@ export const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface EntryDraft {
   readonly groupId: string;
+  /**
+   * Who was typing it. A draft is offered back to them and to nobody else —
+   * a half-typed amount is as private to the next person on the phone as it
+   * is to the rest of the group. See `owner.ts`.
+   */
+  readonly owner: EntryOwner | null;
   /** When it was set aside. Used only to expire it. */
   readonly savedAt: number;
   /**
@@ -63,23 +70,25 @@ export async function saveDraft(draft: EntryDraft): Promise<void> {
 }
 
 /**
- * The group's draft, if it has a fresh one.
+ * The reader's draft for the group on screen, if they have a fresh one.
  *
  * An expired draft is deleted on the way past rather than left to accumulate:
  * this is the only moment anything looks at it, so it is the only moment the
- * sweep can happen.
+ * sweep can happen. Somebody else's is left where it is, unread — it is still
+ * the one draft this group has room for, and the reader's own next draft
+ * replaces it like any other.
  */
 export async function loadDraft(
-  groupId: string,
+  actor: DeviceActor,
   now: number = Date.now(),
 ): Promise<EntryDraft | null> {
-  const draft = await idbGet<EntryDraft>(DRAFT_STORE, groupId);
+  const draft = await idbGet<EntryDraft>(DRAFT_STORE, actor.groupId);
   if (!draft) return null;
   if (!isFresh(draft, now)) {
-    await discardDraft(groupId);
+    await discardDraft(actor.groupId);
     return null;
   }
-  return draft;
+  return belongsTo(draft.owner, actor) ? draft : null;
 }
 
 export async function discardDraft(groupId: string): Promise<void> {

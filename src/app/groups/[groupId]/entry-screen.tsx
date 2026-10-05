@@ -247,6 +247,9 @@ export async function EntryScreen({
         groupName={access.group.name}
         members={members}
         selfId={selfId}
+        // Not a form prop: whose copy this is, so an entry queued from it on
+        // the offline screen is sent as them. See `snapshotActor`.
+        userId={access.actor.kind === "user" ? access.actor.userId : null}
         currencyMode={access.group.currencyMode}
         baseCurrency={access.group.baseCurrency}
         defaultCurrency={defaultEntryCurrency}
@@ -386,6 +389,7 @@ async function loadExpense(
       expense.currency,
     ),
     paymentMethod: "",
+    version: expense.version,
   };
 }
 
@@ -417,5 +421,6 @@ async function loadSettlement(
     splitMethod: "equal",
     splitValues: {},
     paymentMethod: settlement.paymentMethod ?? "",
+    version: settlement.version,
   };
 }

@@ -11,6 +11,7 @@ import { ENTRY_SHEET_CLASS, openOnAmount } from "./entry-sheet";
 import { settleIntentOf, settlePrefill } from "./settle-intent";
 import { useFragmentParams } from "./use-fragment-params";
 import { loadDraft } from "@/lib/offline/drafts";
+import { useDeviceActor } from "@/components/offline/device-actor";
 
 /**
  * The add-entry screen, as a drawer over the group it belongs to.
@@ -86,6 +87,15 @@ export function AddEntryDrawer({
    */
   const params = useFragmentParams();
   const [exit, setExit] = useState<Exit | null>(null);
+  /*
+   * How many times the reader has asked for the entry again, as the form's key.
+   *
+   * The form seeds every field once, at mount, so that a re-render never
+   * rewrites what somebody is typing — which is also why a new key is the one
+   * way to start it over. An edit refused because somebody else saved first is
+   * what asks: see `onReload` on the form.
+   */
+  const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
     if (exit === null) return;
@@ -155,17 +165,20 @@ export function AddEntryDrawer({
     undefined,
   );
   const memberKey = form.members.map((member) => member.id).join(",");
+  // Only the reader's own draft comes back; see `loadDraft`.
+  const actor = useDeviceActor();
   useEffect(() => {
     if (!resuming) return;
     let cancelled = false;
-    void loadDraft(form.groupId).then((found) => {
+    const reading = actor ? loadDraft(actor) : Promise.resolve(null);
+    void reading.then((found) => {
       if (cancelled) return;
       setStored(found ? draftFields(found.fields, memberKey.split(",")) : null);
     });
     return () => {
       cancelled = true;
     };
-  }, [resuming, form.groupId, memberKey]);
+  }, [resuming, actor, memberKey]);
   // Seeded into the form, or `undefined` for as long as that is unknown: until
   // the fragment has been read, and then — only when it asks for the draft —
   // until the store has answered.
@@ -195,10 +208,14 @@ export function AddEntryDrawer({
       >
         {draft !== undefined && (
           <AddEntryForm
+            key={reloads}
             {...form}
             draft={draft}
             prefill={prefill}
-            openSheet={openSheet}
+            // What the link asked for belongs to the first look. A reload is
+            // for reading the entry as it now stands, not for replaying it.
+            openSheet={reloads === 0 ? openSheet : undefined}
+            onReload={() => setReloads((count) => count + 1)}
             onClose={() => setExit({ kind: "dismiss" })}
             // A saved entry leaves the same way a dismissed one does — the
             // confirmation is a toast, which outlives the drawer.

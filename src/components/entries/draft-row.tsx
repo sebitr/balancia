@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { discardDraft, loadDraft, type EntryDraft } from "@/lib/offline/drafts";
+import { useDeviceActor } from "@/components/offline/device-actor";
 import { RESUME_PARAM, withFragment } from "./drawer-fragment";
 
 /**
@@ -24,20 +25,25 @@ import { RESUME_PARAM, withFragment } from "./drawer-fragment";
  * The brief puts it at the top of the entry list; this app's group screen
  * leads with balances and the transactions list is a tab away, and the place a
  * reader lands after dismissing the drawer is here.
+ *
+ * Only the reader's own: a draft left by whoever used this phone before is
+ * not theirs to read. See `loadDraft`.
  */
 export function DraftRow({ groupId }: { groupId: string }) {
   const t = useTranslations("addEntry.draft");
+  const actor = useDeviceActor();
   const [draft, setDraft] = useState<EntryDraft | null>(null);
 
   useEffect(() => {
+    if (!actor) return;
     let cancelled = false;
-    void loadDraft(groupId).then((stored) => {
+    void loadDraft(actor).then((stored) => {
       if (!cancelled) setDraft(stored);
     });
     return () => {
       cancelled = true;
     };
-  }, [groupId]);
+  }, [actor]);
 
   if (!draft) return null;
 

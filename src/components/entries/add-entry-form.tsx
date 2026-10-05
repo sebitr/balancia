@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -107,6 +108,8 @@ import {
 } from "./entry-type-tabs";
 import { enqueueEntry } from "@/lib/offline/outbox";
 import { randomKey } from "@/lib/offline/idb";
+import { ownerFor } from "@/lib/offline/owner";
+import { useDeviceActor } from "@/components/offline/device-actor";
 import { ScanBanner, ScanRow, ReceiptItems } from "./receipt-blocks";
 import {
   RecurrenceSheet,
@@ -274,6 +277,15 @@ export interface EditingEntry {
   readonly splitValues: Readonly<Record<string, string>>;
   /** The stored label, which may predate the picker's list. */
   readonly paymentMethod: string;
+  /**
+   * The version of the entry these fields were read from, as `getExpense` and
+   * `getSettlement` hand it out.
+   *
+   * Sent back with the edit, which is refused if somebody else has saved the
+   * entry since — see `EditConflictError`. The route always fills it in;
+   * absent, the edit applies unconditionally, as every edit once did.
+   */
+  readonly version?: string;
 }
 
 /**
@@ -289,6 +301,8 @@ interface Outcome {
   readonly result: {
     readonly ok: boolean;
     readonly error?: string;
+    /** Why it was refused, when the refusal named a reason — see `onReload`. */
+    readonly code?: string;
     /**
      * What the action created, when it created something.
      *
@@ -485,6 +499,18 @@ export interface AddEntryFormProps {
    */
   onRemoved?: (to?: string) => void;
   /**
+   * Starts the form again from `editing` as it now stands.
+   *
+   * Offered only on an edit refused because somebody else saved the entry
+   * first. Everything this reader typed is still on screen at that point, and
+   * stays there until they press it: the fields are theirs, and whether their
+   * change still stands against the other person's is a decision only they can
+   * make. The shell does the work by remounting the form, which is the one
+   * thing that reseeds every field, and the version sent with the next save,
+   * from the entry the refusal's re-render brought back.
+   */
+  onReload?: () => void;
+  /**
    * A sheet to open with the drawer, named by whoever linked here.
    *
    * Only the confirmation uses it today — see `describeSaved`. Absent for
@@ -545,6 +571,7 @@ export function AddEntryForm({
   onClose,
   onSaved,
   onRemoved,
+  onReload,
   openSheet,
   recentEntries = NO_RECENT,
   defaultSplit = null,
@@ -554,6 +581,16 @@ export function AddEntryForm({
   const router = useRouter();
   const locale = useNumberLocale();
   const dates = useDateFormatter();
+  /*
+   * Who is typing, stamped on anything this form leaves on the device — a
+   * queued entry, a draft — so that it is only ever sent as, or offered back
+   * to, them. See `owner.ts`.
+   */
+  const deviceActor = useDeviceActor();
+  const owner = useMemo(
+    () => (deviceActor ? ownerFor(deviceActor) : null),
+    [deviceActor],
+  );
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tMethods = useTranslations("paymentMethods");
@@ -774,7 +811,31 @@ export function AddEntryForm({
    */
   const [sheet, setSheet] = useState<OpenSheet>(openSheet ?? null);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /*
+   * What the alert says, and the refusal's code when it had one.
+   *
+   * Held together so the Reload offer cannot outlive the sentence it belongs
+   * to: any other message replacing it — a description left empty, a delete
+   * that failed — takes the offer away with the conflict it answered.
+   */
+  const [failure, setFailure] = useState<{
+    readonly message: string;
+    readonly code?: string;
+  } | null>(null);
+  const error = failure?.message ?? null;
+  const setError = (message: string | null, code?: string) =>
+    setFailure(message === null ? null : { message, code });
+  /*
+   * The version these fields were seeded from, held rather than read off
+   * `editing` at save time.
+   *
+   * A refused edit revalidates, and the re-render that comes back with the
+   * refusal hands this form the entry as the other person left it — a newer
+   * version in `editing`, under fields that still hold what this reader typed.
+   * Sending that one would let a second press of Save overwrite exactly the
+   * change the first press was refused for.
+   */
+  const [loadedVersion] = useState(editing?.version);
   /** The body below, which the type tabs name as the panel they switch. */
   const typePanelId = useId();
 
@@ -794,8 +855,12 @@ export function AddEntryForm({
     field: string | null;
     count: number;
   } | null>(null);
-  const refuse = (message: string | null, field: string | null = null) => {
-    setError(message);
+  const refuse = (
+    message: string | null,
+    field: string | null = null,
+    code?: string,
+  ) => {
+    setError(message, code);
     setRefusal((last) => ({ field, count: (last?.count ?? 0) + 1 }));
   };
   useEffect(() => {
@@ -813,6 +878,18 @@ export function AddEntryForm({
         ?.focus({ preventScroll: true });
     }
   }, [refusal, errorId]);
+
+  /*
+   * The key a repayment, or an entry changing kind, is written under.
+   *
+   * An expense mints a key per press because the queue carries it from there:
+   * an answer that never came back is replayed by the outbox under the key the
+   * attempt used. Nothing queues these, so the form has to remember instead —
+   * one key, held from the first press until a save lands, so that pressing
+   * again after a lost answer replays that attempt rather than paying twice.
+   */
+  const heldKey = useRef<string | null>(null);
+  const heldClientKey = () => (heldKey.current ??= randomKey());
 
   const country = countryForTimezone(timezone);
   const countryMethods = useMemo(() => methodsForCountry(country), [country]);
@@ -1401,6 +1478,7 @@ export function AddEntryForm({
     }
     void saveDraft({
       groupId,
+      owner,
       savedAt: Date.now(),
       fields: settledDraft,
       summary: {
@@ -1408,7 +1486,7 @@ export function AddEntryForm({
         description: settledDraft.description,
       },
     });
-  }, [draftable, groupId, settledDraft]);
+  }, [draftable, groupId, owner, settledDraft]);
 
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
@@ -1603,9 +1681,12 @@ export function AddEntryForm({
       const { result, movedTo } = outcome;
 
       if (!result.ok) {
-        refuse(result.error ?? t("errors.saveFailed"));
+        refuse(result.error ?? t("errors.saveFailed"), null, result.code);
         return;
       }
+
+      // Spent. Whatever is saved from this form next is a new entry.
+      heldKey.current = null;
 
       // The entry exists now, so the draft of it does not.
       void discardDraft(groupId);
@@ -1695,6 +1776,7 @@ export function AddEntryForm({
       clientKey,
       groupId,
       groupName,
+      owner,
       payload: expensePayload(),
     });
     // Queued counts as saved for the draft's purposes: the entry is on the
@@ -1724,12 +1806,20 @@ export function AddEntryForm({
       return { result: await createExpenseAction(groupId, input, clientKey) };
     }
     if (!converting) {
-      return { result: await updateExpenseAction(groupId, editing.id, input) };
+      return {
+        result: await updateExpenseAction(
+          groupId,
+          editing.id,
+          input,
+          loadedVersion,
+        ),
+      };
     }
     const result = await convertSettlementToExpenseAction(
       groupId,
       editing.id,
       input,
+      heldClientKey(),
     );
     return {
       result,
@@ -1807,17 +1897,25 @@ export function AddEntryForm({
       notes,
     };
     if (!editing) {
-      return { result: await createSettlementAction(groupId, input) };
+      return {
+        result: await createSettlementAction(groupId, input, heldClientKey()),
+      };
     }
     if (!converting) {
       return {
-        result: await updateSettlementAction(groupId, editing.id, input),
+        result: await updateSettlementAction(
+          groupId,
+          editing.id,
+          input,
+          loadedVersion,
+        ),
       };
     }
     const result = await convertExpenseToSettlementAction(
       groupId,
       editing.id,
       input,
+      heldClientKey(),
     );
     return {
       result,
@@ -2141,6 +2239,20 @@ export function AddEntryForm({
         {error && (
           <Alert key={refusal?.count} id={errorId} variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+            {/* Refused because somebody else saved first: the way on sits
+                beside the reason, over fields still holding what was typed.
+                See `onReload`. */}
+            {failure?.code === "editConflict" && onReload && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-1.5 justify-self-start"
+                onClick={onReload}
+              >
+                {t("reload")}
+              </Button>
+            )}
           </Alert>
         )}
 

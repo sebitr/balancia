@@ -1,12 +1,22 @@
+import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { describe, expect, it } from "vitest";
-import { getPool, schema, type Database } from "@/lib/db/client";
-import type { GroupAccess } from "@/lib/security/authorization";
+import { getDb, getPool, schema, type Database } from "@/lib/db/client";
+import { groupMembers, participants } from "@/lib/db/schema";
+import {
+  AuthorizationError,
+  authorizeGroup,
+  type GroupAccess,
+} from "@/lib/security/authorization";
 import {
   findRestorableDeletions,
   listGroupActivity,
   type ActivityEntry,
 } from "@/modules/activity/service";
+import {
+  removeParticipant,
+  restoreParticipant,
+} from "@/modules/groups/service";
 import {
   createExpense,
   deleteExpense,
@@ -257,5 +267,160 @@ describe("which deletions the Activity screen offers to restore", () => {
     expect(await findRestorableDeletions(other.access, theirs)).toEqual(
       new Set(),
     );
+  });
+});
+
+/** The ids of the removal rows naming `participantId`, newest first. */
+function removalsOf(
+  entries: readonly ActivityEntry[],
+  participantId: string,
+): string[] {
+  return entries
+    .filter(
+      (entry) =>
+        entry.entityId === participantId &&
+        entry.action === "participant.removed",
+    )
+    .map((entry) => entry.id);
+}
+
+/** A second account in the group, joined as a member rather than its owner. */
+async function memberAccess(groupId: string): Promise<GroupAccess> {
+  const actor = await createTestUser({ name: "Mona" });
+  const [seat] = await getDb()
+    .insert(participants)
+    .values({
+      groupId,
+      displayName: actor.name,
+      email: actor.email,
+      userId: actor.userId,
+    })
+    .returning({ id: participants.id });
+  await getDb().insert(groupMembers).values({
+    groupId,
+    userId: actor.userId,
+    participantId: seat!.id,
+    role: "member",
+  });
+  return authorizeGroup(actor, groupId);
+}
+
+/** Somebody in the group through a guest link, with no account behind them. */
+async function guestAccess(groupId: string): Promise<GroupAccess> {
+  const participantId = await addTestParticipant(groupId, "Grace");
+  return authorizeGroup(
+    {
+      kind: "guest",
+      groupId,
+      participantId,
+      displayName: "Grace",
+      sessionId: randomUUID(),
+    },
+    groupId,
+  );
+}
+
+/**
+ * A person taken out of the group, offered back from the line that took them
+ * out. The same choosing as a deletion, and the same ways for it to go wrong,
+ * with one more: the button belongs to the owner, and the Activity screen is
+ * read by everybody in the group.
+ */
+describe("which removed people the Activity screen offers to put back", () => {
+  it("marks the people still removed, beside the deletions, in one query", async () => {
+    const { group, expense } = await setup();
+    const cyril = await addTestParticipant(group.groupId, "Cyril");
+    const dora = await addTestParticipant(group.groupId, "Dora");
+
+    await removeParticipant(group.access, cyril);
+    // Put back since: the line stays in the history, the button does not.
+    await removeParticipant(group.access, dora);
+    await restoreParticipant(group.access, dora);
+
+    const dinner = await expense("Dinner");
+    await deleteExpense(group.access, dinner);
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const { db, statements } = countingDb();
+    const restorable = await findRestorableDeletions(group.access, entries, {
+      db,
+    });
+
+    expect(restorable).toEqual(
+      new Set([...removalsOf(entries, cyril), ...deletionsOf(entries, dinner)]),
+    );
+    expect(removalsOf(entries, dora)).toHaveLength(1);
+    expect(restorable.has(removalsOf(entries, dora)[0]!)).toBe(false);
+    // People and entries together, still one round trip.
+    expect(statements()).toBe(1);
+  });
+
+  it("offers somebody removed twice on the latest removal only", async () => {
+    const { group } = await setup();
+    const cyril = await addTestParticipant(group.groupId, "Cyril");
+    await removeParticipant(group.access, cyril);
+    await restoreParticipant(group.access, cyril);
+    await removeParticipant(group.access, cyril);
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const [latest, earlier] = removalsOf(entries, cyril);
+
+    const restorable = await findRestorableDeletions(group.access, entries);
+
+    expect(restorable).toEqual(new Set([latest]));
+    expect(restorable.has(earlier!)).toBe(false);
+  });
+
+  it("offers no one back to a member or a guest, who could not put them back", async () => {
+    const { group } = await setup();
+    const cyril = await addTestParticipant(group.groupId, "Cyril");
+    const member = await memberAccess(group.groupId);
+    const guest = await guestAccess(group.groupId);
+    await removeParticipant(group.access, cyril);
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+
+    // The owner is offered it…
+    expect(await findRestorableDeletions(group.access, entries)).toEqual(
+      new Set(removalsOf(entries, cyril)),
+    );
+
+    // …and neither of the others is, nor asked anything to find that out:
+    // this page has nothing else either of them could restore.
+    for (const reader of [member, guest]) {
+      const { db, statements } = countingDb();
+      expect(await findRestorableDeletions(reader, entries, { db })).toEqual(
+        new Set(),
+      );
+      expect(statements()).toBe(0);
+      // The screen asks what `restoreParticipant` asks, and gets its answer.
+      await expect(restoreParticipant(reader, cyril)).rejects.toThrow(
+        AuthorizationError,
+      );
+    }
+  });
+
+  /**
+   * The Activity screen's button can be pressed on a page drawn before the
+   * toast's Undo was, or in a second tab. The second press is refused rather
+   * than recorded, so the history does not say somebody came back twice.
+   */
+  it("refuses to put back somebody who is back already, and records nothing", async () => {
+    const { group } = await setup();
+    const cyril = await addTestParticipant(group.groupId, "Cyril");
+    await removeParticipant(group.access, cyril);
+    await restoreParticipant(group.access, cyril);
+
+    await expect(restoreParticipant(group.access, cyril)).rejects.toThrow(
+      AuthorizationError,
+    );
+    // Nor anybody who was never removed at all.
+    await expect(
+      restoreParticipant(group.access, group.ownerParticipantId),
+    ).rejects.toThrow(AuthorizationError);
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    expect(
+      entries.filter((entry) => entry.action === "participant.restored"),
+    ).toHaveLength(1);
   });
 });

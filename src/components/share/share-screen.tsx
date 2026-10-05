@@ -58,7 +58,14 @@ type Stage =
   | { readonly kind: "filing"; readonly payload: SharedPayload }
   | { readonly kind: "failed"; readonly payload: SharedPayload };
 
-export function ShareScreen({ groups }: { groups: readonly ShareableGroup[] }) {
+export function ShareScreen({
+  groups,
+  userId,
+}: {
+  groups: readonly ShareableGroup[];
+  /** Who is filing it, stamped on the draft so it is offered back to them alone. */
+  userId: string;
+}) {
   const t = useTranslations("share");
   const router = useRouter();
   const [stage, setStage] = useState<Stage>({ kind: "reading" });
@@ -96,6 +103,7 @@ export function ShareScreen({ groups }: { groups: readonly ShareableGroup[] }) {
         await saveDraft(
           shareDraft({
             groupId: group.id,
+            owner: { kind: "user", userId },
             text: sharedText(payload),
             fallbackCurrency: group.currency,
             timezone: group.timezone,
@@ -115,7 +123,7 @@ export function ShareScreen({ groups }: { groups: readonly ShareableGroup[] }) {
         setStage({ kind: "failed", payload });
       }
     },
-    [router],
+    [router, userId],
   );
 
   useEffect(() => {
