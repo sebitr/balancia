@@ -1066,7 +1066,7 @@
   },
   "marketing": {
     "meta": {
-      "title": "Shared expenses, fairly balanced",
+      "title": "Balancia · Split shared expenses — free and open source",
       "description": "Balancia is free, open-source software for splitting shared expenses with friends, flatmates, couples, families, clubs and teams — hosted or self-hosted."
     },
     "header": {
@@ -1214,6 +1214,7 @@
         "map": "Map the people to accounts, and import."
       },
       "link": "How the import works",
+      "compareLink": "Balancia and Splitwise, side by side",
       "beforeLabel": "What you're used to",
       "afterLabel": "With Balancia",
       "rows": {
@@ -1239,7 +1240,7 @@
       "eyebrow": "Your instance, your data",
       "title": "Nobody sits between you and your money.",
       "body": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and requires no third-party services. Telemetry exists only to help improve the tool, is off by default on self-hosted instances, and never includes personal data or amounts.",
-      "bodyAnalytics": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and requires no third-party services. Telemetry never includes personal data or amounts. On this instance, an administrator has enabled anonymous counts for the public landing and sign-in screens; no page inside the application is counted.",
+      "bodyAnalytics": "Balancia is free software under the AGPL-3.0-or-later licence. It runs from one Docker Compose file with PostgreSQL and a background worker, and requires no third-party services. Telemetry never includes personal data or amounts. On this instance, an administrator has enabled anonymous counts for the public pages and the sign-in screens: which are opened, which of their buttons are pressed and how quickly they load. No page inside the application is counted.",
       "exportBody": "Leaving is as easy as arriving: every group exports to CSV, Excel or JSON from its settings, and a self-hosted instance keeps its database and receipts on disks you own.",
       "guide": "Self-hosting guide",
       "install": {
@@ -1310,7 +1311,7 @@
         },
         "selfHost": {
           "question": "How hard is it to run myself?",
-          "answer": "Three commands: clone the repository, run the bootstrap script, then bring it up with Docker Compose. PostgreSQL, migrations, the app and its worker all start together. Reverse-proxy examples for Caddy, Traefik and nginx are in the docs."
+          "answer": "Two commands: download the bootstrap script, then run it. It asks what to enable and starts PostgreSQL, the migrations, the app and its worker with Docker Compose. Reverse-proxy examples for Caddy, Traefik and nginx are in the docs."
         },
         "devices": {
           "question": "Does Balancia work on iPhone and Android?",
@@ -1336,6 +1337,7 @@
     "footer": {
       "taglineLine1": "Shared expenses,",
       "taglineLine2": "fairly balanced.",
+      "compareIt": "Compare",
       "runIt": "Run it",
       "buildIt": "Build on it",
       "trustIt": "Trust it",
@@ -1351,7 +1353,9 @@
         "security": "Security",
         "license": "AGPL-3.0 licence",
         "receiptScanning": "Receipt scanning",
-        "source": "Source on GitHub"
+        "source": "Source on GitHub",
+        "splitwise": "Splitwise alternative",
+        "tricount": "tricount alternative"
       },
       "bottomTagline": "Balancia — shared expenses, fairly balanced.",
       "bottomLicense": "AGPL-3.0-or-later. Modified network versions must offer source."
@@ -1377,6 +1381,282 @@
         "receipts": "Attach receipts as photos or PDFs, kept behind authorization",
         "selfHost": "Self-host with Docker Compose and PostgreSQL"
       }
+    }
+  },
+  "compare": {
+    "common": {
+      "checked": "Checked against {name}'s own pages on {date}. {name} can change its product and pricing; its pages, listed at the end, are the authority on what it offers today.",
+      "shortAnswer": "The short answer",
+      "chooseBalancia": "Choose Balancia when",
+      "chooseOther": "Choose {name} when",
+      "tableTitle": "Balancia and {name}, side by side",
+      "question": "Question",
+      "faqTitle": "Questions people ask",
+      "sourcesTitle": "Sources and trademarks",
+      "alsoSee": "Also see"
+    },
+    "splitwise": {
+      "name": "Splitwise",
+      "meta": {
+        "title": "Splitwise alternative: free, open source, self-hosted · Balancia",
+        "description": "Balancia is a free, open-source alternative to Splitwise: no paid tier, guests join without an account, your Splitwise history imports, and you can self-host it."
+      },
+      "eyebrow": "Splitwise alternative",
+      "title": "Balancia vs Splitwise:",
+      "titleAccent": "an open-source alternative you can host yourself.",
+      "lead": "Balancia is a free, open-source alternative to Splitwise. Both work out who owes whom after a group shares costs. The difference is the model: Splitwise is a managed service with a paid Pro tier; Balancia has no paid tier, lets guests join without an account, and can run on your own server.",
+      "verdict": {
+        "balancia": "you want every feature without a subscription, guests who join through a link instead of signing up, exact multi-currency handling, a complete export, or the option of keeping the whole thing on a server you run.",
+        "other": "you want an established managed service with native iOS and Android apps or card-linked transaction import, and would rather not think about where it runs."
+      },
+      "rows": {
+        "operator": {
+          "question": "Who runs it?",
+          "balancia": "Use the free hosted instance, or run it on your own server.",
+          "other": "Splitwise Inc. provides and operates the service."
+        },
+        "openSource": {
+          "question": "Is it open source?",
+          "balancia": "Yes. The complete application is published under AGPL-3.0-or-later.",
+          "other": "No source distribution or self-hosted edition is offered on its service pages."
+        },
+        "price": {
+          "question": "Is there a paid tier?",
+          "balancia": "No. Every feature is in the repository; the hosted instance has no paid plan, no ads and no cap on expenses.",
+          "other": "Yes. Splitwise Pro is a paid subscription; its page lists unlimited expenses, currency conversion, receipt scanning, charts and an ad-free experience among what it adds."
+        },
+        "data": {
+          "question": "Where does a group's data live?",
+          "balancia": "On the Balancia instance you chose. A self-hoster controls its PostgreSQL database and receipt storage.",
+          "other": "In Splitwise's managed service and with its service providers, as its privacy statement describes."
+        },
+        "guests": {
+          "question": "Can someone take part without registering?",
+          "balancia": "Yes, through a revocable link scoped to one participant in one group.",
+          "other": "The standard Splitwise flow is account-based."
+        },
+        "splits": {
+          "question": "Which splits are supported?",
+          "balancia": "Equal, exact amounts, percentages and weighted shares, with several payers on one transaction.",
+          "other": "Splitwise supports shared bills and uneven splits; check its current product for what each plan includes."
+        },
+        "currency": {
+          "question": "How are currencies handled?",
+          "balancia": "Keep each currency balanced separately, or convert into one base currency at a rate frozen with each expense.",
+          "other": "Splitwise lists currency conversion at current exchange rates as a Pro feature."
+        },
+        "importIn": {
+          "question": "Can a Splitwise group be brought across?",
+          "balancia": "Yes. Balancia imports a group's CSV export or the account's JSON backup, with a preview before anything is written and no duplicates on a re-run.",
+          "other": "Its groups export as CSV, which is the file Balancia reads."
+        },
+        "exportOut": {
+          "question": "Can you take your data with you?",
+          "balancia": "Yes. Every group exports to JSON, CSV and Excel, at no charge.",
+          "other": "A group exports as a CSV spreadsheet; Splitwise's support describes the full account backup, in JSON, as a Pro feature."
+        },
+        "receipts": {
+          "question": "Where do receipts go?",
+          "balancia": "Photos and PDFs stay on the instance, behind an authorization check on every request.",
+          "other": "Stored and processed as part of the managed Splitwise service."
+        },
+        "apps": {
+          "question": "Are there native apps?",
+          "balancia": "No. Balancia is an installable web app (PWA) that runs in the browser on iPhone, Android and desktop.",
+          "other": "Yes. Splitwise has web, iOS and Android applications."
+        },
+        "offline": {
+          "question": "Does it work offline?",
+          "balancia": "Partly. Expenses and income can be recorded with no network and are sent on reconnect; editing and repayments need a connection.",
+          "other": "Check the current Splitwise apps for their offline behaviour."
+        }
+      },
+      "sections": {
+        "privacy": {
+          "title": "Privacy and control",
+          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions and receipt scanning run locally and send no expense to an AI provider.",
+          "body2": "That control is also a responsibility: somebody has to apply updates, configure HTTPS, protect the secrets, watch the instance and test the backups. Splitwise takes that work on, and its privacy statement governs how it and its vendors handle what you enter."
+        },
+        "migration": {
+          "title": "Moving from Splitwise to Balancia",
+          "step1": "Export the Splitwise group as a CSV spreadsheet, or download the account's JSON backup if your plan includes it.",
+          "step2": "In Balancia, open the Import page of the group it should land in.",
+          "step3": "Upload the file and read the preview: the people, expenses and repayments it will create.",
+          "step4": "Match the imported people to the group's participants, then confirm.",
+          "note": "Balancia keeps a fingerprint of what it imported, so running the same file again adds nothing twice. Final shares arrive as exact amounts; the name of the original split method and historical exchange rates are not recreated."
+        },
+        "cost": {
+          "title": "What it costs",
+          "body1": "Balancia charges nothing — no licence, no subscription, no feature held back — on the hosted instance or on your own.",
+          "body2": "Running your own copy still has real costs: a server, storage, backups, a domain, perhaps email delivery, and the time to look after them. If all you want is to split a dinner tonight, the hosted instance is the easier choice; self-hosting earns its keep when control is worth the upkeep."
+        }
+      },
+      "faq": {
+        "free": {
+          "question": "Is Balancia a free alternative to Splitwise?",
+          "answer": "Yes. Balancia has no paid tier: every feature, including multi-currency groups, receipts, recurring expenses and exports, is available on a free account and in the open-source code."
+        },
+        "importing": {
+          "question": "Can I import my Splitwise groups into Balancia?",
+          "answer": "Yes. Balancia reads a Splitwise group CSV export or an account JSON backup, shows a preview of every person, expense and repayment it will create, and duplicates nothing if the same file is imported twice."
+        },
+        "limits": {
+          "question": "Does Balancia limit how many expenses I can add?",
+          "answer": "No. Balancia has no paid plan, so there is no free allowance to run out of."
+        },
+        "apps": {
+          "question": "Does Balancia have an iPhone or Android app?",
+          "answer": "Balancia is a progressive web app. It runs in the browser on iPhone, iPad, Android and desktop and can be added to the home screen, but it is not distributed through the App Store or Play Store. If native apps matter most, Splitwise has them."
+        },
+        "accounts": {
+          "question": "Do my friends need a Balancia account?",
+          "answer": "No. Only the person who creates the group needs one. Everyone else can join through a revocable guest link, then add expenses, record repayments and attach receipts."
+        }
+      },
+      "sources": {
+        "intro": "The Splitwise column draws on Splitwise's own pages, reviewed on {date}:",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Statement",
+        "pro": "Splitwise Pro page",
+        "export": "Export guidance"
+      },
+      "trademark": "Splitwise is a trademark of Splitwise Inc. Balancia is not affiliated with, endorsed by or sponsored by Splitwise Inc. This comparison is offered to help people choose a hosting and data-ownership model, not to suggest the two products match feature for feature."
+    },
+    "tricount": {
+      "name": "tricount",
+      "meta": {
+        "title": "tricount alternative: free, open source, full export · Balancia",
+        "description": "Balancia is a free, open-source alternative to tricount: every group exports to JSON, CSV and Excel, guests join in a browser without an account, and you can self-host it."
+      },
+      "eyebrow": "tricount alternative",
+      "title": "Balancia vs tricount:",
+      "titleAccent": "an open-source alternative you can leave with your data.",
+      "lead": "Balancia is a free, open-source alternative to tricount. Both track a group's shared expenses and work out how to settle up. tricount is a managed mobile app operated by bunq; Balancia is software you use on a free hosted instance or run yourself, with a complete export of every group in JSON, CSV and Excel.",
+      "verdict": {
+        "balancia": "you want to be able to leave with your records in reusable formats, read the source, keep the database and receipts on a server you choose, let guests in without an account, or decide exactly how currencies are balanced.",
+        "other": "you want a native mobile app, a managed service with nothing to administer, fuller offline use, or payment requests through your bank where they are offered."
+      },
+      "rows": {
+        "operator": {
+          "question": "Who runs it?",
+          "balancia": "Use the free hosted instance, or run it on your own server.",
+          "other": "bunq B.V. owns and operates the app and the service."
+        },
+        "openSource": {
+          "question": "Is it open source?",
+          "balancia": "Yes. The complete application is published under AGPL-3.0-or-later.",
+          "other": "No source distribution or self-hosted edition is offered; its terms restrict reproducing the service."
+        },
+        "price": {
+          "question": "Is it free?",
+          "balancia": "Yes. No paid tier and no ads, on the hosted instance or on your own.",
+          "other": "Yes. tricount presents the app as free, with no ads or daily cap, and its help centre says Premium was discontinued."
+        },
+        "data": {
+          "question": "Where does a group's data live?",
+          "balancia": "On the Balancia instance you chose. A self-hoster controls its PostgreSQL database and receipt storage.",
+          "other": "In the bunq-operated service and with its providers, under tricount's privacy policy."
+        },
+        "link": {
+          "question": "Can a group be shared by link?",
+          "balancia": "Yes. A revocable link scoped to one participant in one group, with no account and nothing to install.",
+          "other": "Yes. Its help describes opening a shared link on a phone and joining through the app."
+        },
+        "splits": {
+          "question": "Which splits are supported?",
+          "balancia": "Equal, exact amounts, percentages and weighted shares, with several payers on one transaction.",
+          "other": "Equal splits, and uneven ones entered as individual amounts or shares."
+        },
+        "currency": {
+          "question": "How are currencies handled?",
+          "balancia": "Keep each currency balanced separately, or convert at a rate you choose, frozen with each expense.",
+          "other": "A tricount has one default currency; expenses in another are converted into it at a daily exchange rate."
+        },
+        "income": {
+          "question": "Are income and recurring entries supported?",
+          "balancia": "Yes. Income, refunds and payouts are split like expenses, and both can repeat on a schedule.",
+          "other": "Expenses, transfers and income are documented; recurring entries are not."
+        },
+        "exportOut": {
+          "question": "Can your data leave in a reusable format?",
+          "balancia": "Yes. Every group exports to JSON, CSV and Excel at any time.",
+          "other": "Its help centre lists CSV and PDF export among the features discontinued with Premium; the privacy policy still describes a right to portability."
+        },
+        "receipts": {
+          "question": "Can receipts be attached?",
+          "balancia": "Yes. Photos and PDFs stay on the instance, behind an authorization check on every request.",
+          "other": "Yes. Photos, receipts included, are stored and processed by the managed service."
+        },
+        "apps": {
+          "question": "Are there native apps?",
+          "balancia": "No. Balancia is an installable web app (PWA) that runs in the browser on iPhone, Android and desktop.",
+          "other": "Yes. tricount is distributed as a mobile app."
+        },
+        "offline": {
+          "question": "Does it work offline?",
+          "balancia": "Partly. Expenses and income can be recorded with no network and are sent on reconnect; editing and repayments need a connection.",
+          "other": "Yes. tricount advertises adding expenses without signal and syncing later."
+        },
+        "money": {
+          "question": "Does it move money?",
+          "balancia": "No. It records repayments; it is not a bank or a payment processor.",
+          "other": "Payment requests and bank connections are offered under country-specific conditions; its help lists the Netherlands, Germany, France and Belgium."
+        }
+      },
+      "sections": {
+        "both": {
+          "title": "What both do well",
+          "body1": "Both cover the everyday workflow: add the people, record the spending, divide it unevenly when that is fairer, see the balances, record repayments, cope with a second currency and keep a photo of the receipt. Either is a sound choice for a trip, a shared flat, a couple or an event.",
+          "body2": "tricount has the stronger phone-native experience, and its offline support reaches further than Balancia's, which stops at adding expenses and income. Balancia is the stronger fit when a group wants software it can deploy and inspect, a financial model it can audit, and a complete export in formats other tools read."
+        },
+        "leave": {
+          "title": "Leaving with your data",
+          "body1": "Portability is a promise in Balancia, not an upgrade. Any group downloads at any time as JSON, which keeps the complete record and the exact stored amounts; as CSV, for any data tool; or as an Excel workbook, for people who prefer a spreadsheet. Receipts are downloaded one at a time for now, and a self-hoster holds the database and the receipt storage directly.",
+          "body2": "This is a material difference from tricount as it is documented today. Its help centre lists CSV and PDF export among the features that went away with Premium, and its privacy policy describes portability without naming a reusable in-app format. If an exit path matters to your group, confirm the format with tricount's support before entering years of records."
+        },
+        "privacy": {
+          "title": "Privacy and control",
+          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions and receipt scanning run locally and send no expense to an AI provider.",
+          "body2": "tricount is owned and operated by bunq. Its privacy policy sets out the financial, identification, device and usage data used to run and improve the service, and the processing done by its providers. In exchange, nobody in the group has a server, a database, upgrades or backups to look after."
+        },
+        "migration": {
+          "title": "Moving from tricount to Balancia",
+          "body1": "Balancia does not have a tricount importer. Ask tricount's support what machine-readable copy of your data is available before planning a move.",
+          "body2": "Until a compatible export exists, moving a tricount means recreating its people, their opening balances and its expenses by hand. Keep the original until the new group's balances have been checked against it."
+        }
+      },
+      "faq": {
+        "free": {
+          "question": "Is Balancia a free alternative to tricount?",
+          "answer": "Yes. Balancia is free on its hosted instance and free to run yourself, with no paid tier and no ads. tricount is also presented as free; the difference is that Balancia is open source, self-hostable and exports every group in full."
+        },
+        "importing": {
+          "question": "Can I import a tricount into Balancia?",
+          "answer": "Not directly. Balancia has no tricount importer, so a group has to be recreated by hand. It does import Splitwise CSV exports and JSON backups."
+        },
+        "exporting": {
+          "question": "Can I export my data from Balancia?",
+          "answer": "Yes. Every group downloads as JSON, CSV or an Excel workbook from its settings, at any time and at no cost."
+        },
+        "apps": {
+          "question": "Does Balancia work without a mobile app?",
+          "answer": "Yes. Balancia is a progressive web app: it runs in the browser on iPhone, iPad, Android and desktop and can be added to the home screen. It is not in the App Store or Play Store."
+        },
+        "accounts": {
+          "question": "Do participants need an account?",
+          "answer": "No. Only the person who creates the group needs one. Everyone else joins through a revocable guest link, in a browser, with nothing to install."
+        }
+      },
+      "sources": {
+        "intro": "The tricount column draws on tricount's own pages, reviewed on {date}:",
+        "features": "Feature overview",
+        "help": "Expense and currency help",
+        "premium": "Premium and export notice",
+        "requests": "Payment request help",
+        "privacy": "Privacy Policy",
+        "terms": "Terms and Conditions"
+      },
+      "trademark": "tricount is a trademark of its owner. Balancia is not affiliated with, endorsed by or sponsored by tricount or bunq B.V. This comparison is offered to help people choose a hosting and data-ownership model, not to suggest the two products match feature for feature."
     }
   },
   "notFound": {
