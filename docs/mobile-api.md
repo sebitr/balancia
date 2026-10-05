@@ -361,13 +361,14 @@ was — newest first, with the three-part cursor an older client already holds.
 | `min`     |         | Lowest magnitude, in major units of each row's own listed currency (`12.50`, `12,50`). Ignored when it is not a number.                                                                                                                                          |
 | `max`     |         | Highest magnitude, likewise.                                                                                                                                                                                                                                     |
 | `by`      | yes     | A participant who paid; any of. A repayment's payer is the person who paid it back.                                                                                                                                                                              |
+| `with`    | yes     | A participant the row involves at all; any of. An expense they paid or carry a share of, a repayment at either end. What a person's page opens the list on. Each row carries the same as `people`, its participant ids.                                          |
 | `pos`     | yes     | What the row left the reader holding: `owe`, `back`, `flat`. A repayment is always `flat`.                                                                                                                                                                       |
 | `only`    | yes     | `series`, `foreign`, `receipt`; all of them together.                                                                                                                                                                                                            |
 | `sort`    |         | `oldest`, or `largest` (by magnitude, newest first among equals). A `largest` cursor carries a fourth part, the amount it resumes at.                                                                                                                            |
 
 Unknown values of `kind`, `when`, `pos`, `only` and `sort` are dropped, the way
 the web drops them from a hand-edited link. A filter too large to be a question
-— a `q` over 200 characters, more than 64 categories or payers — is refused
+— a `q` over 200 characters, more than 64 categories, payers or people — is refused
 with 400 rather than quietly shortened. Keep the cursor with the filter it came
 from: a cursor fed back under another `sort` restarts the list from the top.
 
