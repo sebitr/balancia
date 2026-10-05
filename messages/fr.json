@@ -1407,6 +1407,7 @@
     "sheetBody": "Ces transactions sont conservées sur cet appareil jusqu’à ce que ton serveur soit joignable. Elles ne figurent pas encore dans les soldes du groupe.",
     "synced": "{count, plural, one {# transaction synchronisée} other {# transactions synchronisées}}",
     "blockedNoAccess": "Ce groupe ne t’est plus accessible : cette transaction ne peut pas être enregistrée.",
+    "blockedArchived": "Ce groupe a été archivé : cette transaction ne peut pas être enregistrée.",
     "blockedRefused": "Ton serveur a refusé cette transaction. Une des personnes concernées a peut-être été retirée du groupe.",
     "discard": "Supprimer",
     "notSavedTitle": "Rien n’est encore enregistré pour ce groupe",

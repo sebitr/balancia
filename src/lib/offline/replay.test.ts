@@ -52,8 +52,8 @@ describe("classifyStatus", () => {
   });
 
   it("blocks when the group is gone or no longer readable", () => {
-    // 404 is also what a removed participant produces, because the mobile API
-    // answers "not found" to every authorization failure on purpose.
+    // The mobile API answers "not found" to "no such group" and "not in it"
+    // alike, on purpose, so the queue cannot tell them apart and need not.
     expect(classifyStatus(404)).toEqual({
       kind: "blocked",
       reason: "noAccess",
@@ -66,6 +66,37 @@ describe("classifyStatus", () => {
 
   it("blocks when the server understood the entry and refused it", () => {
     expect(classifyStatus(422)).toEqual({ kind: "blocked", reason: "refused" });
+  });
+
+  it("says somebody on the entry was removed, not that the group is lost", () => {
+    // Somebody removed from the group while this phone was offline, named as
+    // a payer or in the split. The server used to answer that with the same
+    // 404 as a vanished group, and the entry's author was told they had lost
+    // a group they were still in.
+    expect(classifyStatus(422, "participantNotInGroup")).toEqual({
+      kind: "blocked",
+      reason: "refused",
+    });
+  });
+
+  it("tells a group archived meanwhile apart from one that is gone", () => {
+    // The reader can still open an archived group, so "no longer available
+    // to you" would send them looking for something that is right there.
+    expect(classifyStatus(409, "groupArchived")).toEqual({
+      kind: "blocked",
+      reason: "archived",
+    });
+  });
+
+  it("holds back any other 409 as a refusal, never as a retry", () => {
+    // The group's state refused the entry and will refuse it again. Retrying
+    // would also stall every entry queued behind it, since a flush stops at
+    // the first one it could not send.
+    expect(classifyStatus(409)).toEqual({ kind: "blocked", reason: "refused" });
+    expect(classifyStatus(409, "somethingElse")).toEqual({
+      kind: "blocked",
+      reason: "refused",
+    });
   });
 
   it("never answers anything but written, retry or blocked", () => {
