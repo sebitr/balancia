@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { TONE, toneFor } from "@/components/money/balance-tone";
+import {
+  TONE,
+  toneFor,
+  type BalanceTone,
+} from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 
 /**
  * Everyone's net position, most negative first. The centred comparison bar is
- * deliberately secondary to the signed, locale-formatted amount: it makes the
- * group's shape glanceable without turning a precise debt into a chart guess.
+ * deliberately secondary to the amount and the word under each name: it makes
+ * the group's shape glanceable without turning a precise debt into a chart
+ * guess.
  */
 
 export interface BalanceRowView {
@@ -94,7 +99,7 @@ export function BalanceList({
               className="col-span-3 grid min-h-[52px] grid-cols-subgrid items-center px-3 py-2.5 transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
             >
               <span className="flex min-w-0 items-center gap-2.5">
-                <Avatar className="size-7">
+                <Avatar className="size-7 shrink-0">
                   <AvatarFallback
                     className={cn(
                       "text-2xs font-semibold",
@@ -106,9 +111,7 @@ export function BalanceList({
                     {person.name.trim().charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="truncate text-sm font-medium">
-                  {person.name}
-                </span>
+                <Who person={person} />
               </span>
 
               <span className="flex flex-col gap-2">
@@ -123,7 +126,11 @@ export function BalanceList({
 
               <span className="flex shrink-0 flex-col gap-1 text-right text-sm font-semibold tabular-nums">
                 {person.balances.map((balance) => (
-                  <BalanceValue key={balance.currency} row={balance} />
+                  <BalanceValue
+                    key={balance.currency}
+                    row={balance}
+                    worded={sideOf(person.balances) !== null}
+                  />
                 ))}
               </span>
             </Link>
@@ -149,23 +156,113 @@ export function BalanceList({
   );
 }
 
-function BalanceValue({ row }: { row: BalanceRowView }) {
+/**
+ * The one direction a person's balances agree on, or null when they do not.
+ *
+ * In practice a person here has one balance — this list is the overview of a
+ * group that keeps one currency, and a group with several gets
+ * `CurrencyBalances` instead — but the rows are typed for several, and a
+ * person owed in one currency and owing in another has no single word.
+ */
+function sideOf(balances: readonly BalanceRowView[]): BalanceTone | null {
+  const tones = new Set(balances.map((balance) => toneFor(balance.minorUnits)));
+  return tones.size === 1 ? [...tones][0] : null;
+}
+
+/**
+ * Who the row is about, and which way their money goes, in words.
+ *
+ * Two lines: the name, then the verb under it in the small muted style the
+ * per-currency list uses. The verb used to be read out to a screen reader and
+ * kept from everyone else, so a sighted reader had a sign and a colour to go
+ * on — and the reader's own row printed their own name, cut short, where
+ * every other screen says "You".
+ *
+ * One message per sentence, with the two lines as tags inside it, so "You /
+ * get back" is translated as "Tu / récupères" rather than assembled as
+ * "Toi / récupères". A settled person needs no verb: the amount column says
+ * "Settled up" for them, the way the per-currency list does.
+ */
+function Who({
+  person,
+}: {
+  person: { name: string; isSelf: boolean; balances: BalanceRowView[] };
+}) {
   const t = useTranslations("group");
+  const side = sideOf(person.balances);
+
+  const nameLine = (chunks: React.ReactNode) => (
+    <span className="truncate text-sm font-medium">{chunks}</span>
+  );
+  const verbLine = (chunks: React.ReactNode) => (
+    <span className="truncate text-2xs text-muted-foreground">{chunks}</span>
+  );
+
+  if (side === null || side === "neutral") {
+    return (
+      <span
+        className={cn(
+          "truncate text-sm font-medium",
+          side === "neutral" && "text-muted-foreground",
+        )}
+      >
+        {person.isSelf ? t("you") : person.name}
+      </span>
+    );
+  }
+
+  const tags = { person: nameLine, verb: verbLine };
   return (
-    <span className={TONE[toneFor(row.minorUnits)].ink}>
+    <span className="flex min-w-0 flex-col">
+      {person.isSelf
+        ? t.rich(side === "positive" ? "rowYouGetBack" : "rowYouOwe", tags)
+        : t.rich(side === "positive" ? "rowGetsBack" : "rowOwes", {
+            ...tags,
+            name: person.name,
+          })}
+    </span>
+  );
+}
+
+/**
+ * One balance's figure.
+ *
+ * Unsigned once the word beside the name has said which way it goes — a
+ * minus under "owes" would say it twice and read as a typo — and phrased
+ * rather than printed as a zero when there is nothing to say. Only a person
+ * whose balances disagree, which this list does not produce in practice,
+ * keeps a sign, with the word for a screen reader.
+ */
+function BalanceValue({
+  row,
+  worded,
+}: {
+  row: BalanceRowView;
+  worded: boolean;
+}) {
+  const t = useTranslations("group");
+  const tMoney = useTranslations("money");
+  const tone = toneFor(row.minorUnits);
+
+  if (tone === "neutral") {
+    return (
+      <span className={cn("text-xs font-medium", TONE.neutral.ink)}>
+        {t("settledUpRow")}
+      </span>
+    );
+  }
+
+  return (
+    <span className={TONE[tone].ink}>
       <Amount
         minorUnits={row.minorUnits}
         currency={row.currency}
         display="code"
-        signDisplay="exceptZero"
+        signDisplay={worded ? "never" : "exceptZero"}
       />
-      <span className="sr-only">
-        {BigInt(row.minorUnits) > 0n
-          ? t("balanceReceives")
-          : BigInt(row.minorUnits) < 0n
-            ? t("balanceOwes")
-            : t("balanceSettled")}
-      </span>
+      {!worded && (
+        <span className="sr-only"> {tMoney(TONE[tone].labelKey)}</span>
+      )}
     </span>
   );
 }

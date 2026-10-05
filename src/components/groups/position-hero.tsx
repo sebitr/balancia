@@ -5,8 +5,8 @@ import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Archive,
-  ArrowDown,
-  ArrowUp,
+  ArrowDownLeft,
+  ArrowUpRight,
   ChevronRight,
   HandCoins,
   Plus,
@@ -194,10 +194,14 @@ export function PositionHero({
                     : cn(TONE.positive.tint, TONE.positive.ink),
                 )}
               >
+                {/* The app's one pair: out and up when the reader owes, back
+                    down to them when they are owed — the dashboard, the
+                    per-currency list and the member page point the same
+                    way for the same debt. */}
                 {single && BigInt(single.minorUnits) < 0n ? (
-                  <ArrowUp aria-hidden="true" className="size-3" />
+                  <ArrowUpRight aria-hidden="true" className="size-3" />
                 ) : (
-                  <ArrowDown aria-hidden="true" className="size-3" />
+                  <ArrowDownLeft aria-hidden="true" className="size-3" />
                 )}
               </span>
               <span className="truncate">{subline}</span>

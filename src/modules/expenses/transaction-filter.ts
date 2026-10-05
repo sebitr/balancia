@@ -25,6 +25,7 @@ import {
 } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import { SUPPORTED_CURRENCIES } from "@/modules/currencies/iso-4217";
+import type { RepaymentSide } from "@/modules/settlements/side";
 import {
   amountBound,
   dateBounds,
@@ -69,8 +70,9 @@ import { UNCATEGORISED } from "./spread";
  *    the days the group has entries on are written out here, in JavaScript,
  *    once per request, and the search matches a day by membership — including
  *    a search that runs off the end of a title and into the date after it.
- *  - **A repayment's title** is a translated sentence around two names. It is
- *    rebuilt in SQL from the same message, with the names as columns.
+ *  - **A repayment's title** is a translated sentence around two names, or
+ *    one name and "you" when the reader is a party to it. It is rebuilt in
+ *    SQL from the same three messages, with the names as columns.
  *
  * `tests/integration/transaction-filters.test.ts` runs each axis both ways
  * over one seeded group and requires the same rows back.
@@ -498,21 +500,39 @@ const FROM_MARK = "";
 const TO_MARK = "";
 
 /**
- * A repayment's title in SQL, built from the message the row prints.
+ * A repayment's title in SQL, built from the messages the row prints.
  *
- * The message is rendered once with two private-use characters standing in
+ * Each message is rendered once with two private-use characters standing in
  * for the names, and cut around them: what is left are the translator's own
- * words, which go in as parameters, and the two holes are filled with the
- * names looked up the way `listSettlements` looks them up — within the group,
- * and "Unknown" when there is no such person.
+ * words, which go in as parameters, and the holes are filled with the names
+ * looked up the way `listSettlements` looks them up — within the group, and
+ * "Unknown" when there is no such person.
+ *
+ * There are three of them, because the row names the reader as "you": a
+ * repayment they made or received is titled from their side, and only one
+ * between two other people names both. The row picks with `repaymentSide`,
+ * and this picks the same way, by comparing the two ids with the reader's.
  */
 export function settlementTitleSql(
-  render: (names: { from: string; to: string }) => string,
+  render: (side: RepaymentSide, names: { from: string; to: string }) => string,
+  self: string | null,
 ): SQL {
+  const sentence = (side: RepaymentSide) =>
+    titleSql(render(side, { from: FROM_MARK, to: TO_MARK }));
+
+  // No reader in the group, so nobody to call "you": every row is between
+  // two other people.
+  if (self === null) return sentence("between");
+
+  return sql`(CASE WHEN ${settlements.fromParticipantId} = ${self} THEN ${sentence("paid")} WHEN ${settlements.toParticipantId} = ${self} THEN ${sentence("received")} ELSE ${sentence("between")} END)`;
+}
+
+/** One rendered title, cut around its markers and rebuilt with the names. */
+function titleSql(rendered: string): SQL {
   const nameOf = (id: AnyPgColumn) =>
     sql`coalesce((SELECT ${participants.displayName} FROM ${participants} WHERE ${participants.id} = ${id} AND ${participants.groupId} = ${settlements.groupId}), ${"Unknown"}::text)`;
 
-  const pieces = render({ from: FROM_MARK, to: TO_MARK })
+  const pieces = rendered
     .split(/(|)/)
     .filter((piece) => piece !== "")
     .map((piece) =>

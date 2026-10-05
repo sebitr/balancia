@@ -252,10 +252,12 @@ function CurrencyRow({
           >
             <DirectionArrow tone={tone} className="size-[14px]" />
             {/* The section heading names no side, so every amount under it
-                    carries its own word — hidden here only because the arrow
-                    and the colour already say it to anyone who can see them. */}
+                carries its own words — hidden here only because the arrow and
+                the colour already say it to anyone who can see them, and the
+                row has no room left beside the spend. A whole sentence, not a
+                verb: read out after the meta line, "owe" alone named nobody. */}
             <span className="sr-only">
-              {tone === "positive" ? t("youGetBackWord") : t("youOweWord")}
+              {tone === "positive" ? t("youGetBack") : t("youOwe")}
             </span>
             <Amount
               minorUnits={magnitude.toString()}
@@ -349,7 +351,15 @@ function DirectionArrow({
   return <Glyph aria-hidden="true" className={cn("shrink-0", className)} />;
 }
 
-/** One person's standing in this currency. No currency code: the row named it. */
+/**
+ * One person's standing in this currency. No currency code: the row named it.
+ *
+ * The name and the verb beside it are one message with two tags, not a name
+ * followed by a verb. Put together from parts, the reader's own line came out
+ * "Toi récupères" in French — the name the avatar uses, then a verb that
+ * wanted a subject pronoun — and only a whole sentence lets a translator say
+ * "Tu récupères".
+ */
 function MemberLine({
   member,
   currency,
@@ -363,13 +373,16 @@ function MemberLine({
   const magnitude = value < 0n ? -value : value;
 
   const name = member.isSelf ? t("you") : member.name;
-  const direction = member.isSelf
-    ? tone === "positive"
-      ? t("youGetBackWord")
-      : t("youOweWord")
-    : tone === "positive"
-      ? t("getsBackWord")
-      : t("owesWord");
+  const tags = {
+    person: (chunks: React.ReactNode) => (
+      <span className="truncate text-sm font-medium">{chunks}</span>
+    ),
+    verb: (chunks: React.ReactNode) => (
+      <span className="shrink-0 text-2xs font-normal text-muted-foreground">
+        {chunks}
+      </span>
+    ),
+  };
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -386,18 +399,17 @@ function MemberLine({
             {name.trim().charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <span
-          className={cn(
-            "truncate text-sm font-medium",
-            tone === "neutral" && "text-muted-foreground",
-          )}
-        >
-          {name}
-        </span>
-        {tone !== "neutral" && (
-          <span className="shrink-0 text-2xs font-normal text-muted-foreground">
-            {direction}
+        {tone === "neutral" ? (
+          <span className="truncate text-sm font-medium text-muted-foreground">
+            {name}
           </span>
+        ) : member.isSelf ? (
+          t.rich(tone === "positive" ? "rowYouGetBack" : "rowYouOwe", tags)
+        ) : (
+          t.rich(tone === "positive" ? "rowGetsBack" : "rowOwes", {
+            ...tags,
+            name: member.name,
+          })
         )}
       </span>
 
@@ -448,23 +460,25 @@ function TransferLine({
   recipients: readonly RemindRecipient[];
 }) {
   const t = useTranslations("group");
+  const tSettle = useTranslations("settleUp");
   const debtor = recipients.filter(
     (recipient) => recipient.participantId === transfer.fromParticipantId,
   );
 
+  // The settle-up screen's own sentences, so a repayment is worded the same
+  // here, in the overview's list and on the screen that records it — and an
+  // arrow between two names no longer leaves the reader to work out which
+  // way it points, or that "you" is one of them.
+  const sentence = transfer.fromIsSelf
+    ? tSettle("youPayBack", { name: transfer.toName })
+    : transfer.toIsSelf
+      ? tSettle("personRepaysYou", { name: transfer.fromName })
+      : tSettle("paysBack", { from: transfer.fromName, to: transfer.toName });
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
       <span className="flex min-w-0 items-center gap-2 text-xs font-medium">
-        <span className="truncate">
-          {transfer.fromIsSelf ? t("youLower") : transfer.fromName}
-        </span>
-        <ArrowRight
-          aria-hidden="true"
-          className="size-[14px] shrink-0 text-muted-foreground"
-        />
-        <span className="truncate">
-          {transfer.toIsSelf ? t("youLower") : transfer.toName}
-        </span>
+        <span className="truncate">{sentence}</span>
         <Amount
           minorUnits={transfer.minorUnits}
           currency={currency}

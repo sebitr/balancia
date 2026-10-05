@@ -200,10 +200,60 @@ describe("CurrencyBalances", () => {
   it("states the side in words on a row amount, where the heading does not", () => {
     renderList();
 
-    // The arrow and the colour carry it on screen; the word carries it to
-    // everyone else. Both rows have one, and they differ.
-    expect(within(row("CHF")).getByText("get back")).toBeInTheDocument();
-    expect(within(row("USD")).getByText("owe")).toBeInTheDocument();
+    // The arrow and the colour carry it on screen; the words carry it to
+    // everyone else — a whole sentence, since a bare "owe" read out after
+    // the spend named nobody. Both rows have one, and they differ.
+    expect(within(row("CHF")).getByText("You get back")).toBeInTheDocument();
+    expect(within(row("USD")).getByText("You owe")).toBeInTheDocument();
+  });
+
+  it("says each person's side beside their name, and You for the reader", () => {
+    renderList();
+
+    const opened = body("CHF");
+    expect(within(opened).getByText("Hervé")).toBeVisible();
+    expect(within(opened).getByText("owes")).toBeVisible();
+    expect(within(opened).getByText("You")).toBeVisible();
+    expect(within(opened).getByText("get back")).toBeVisible();
+  });
+
+  /**
+   * The reader's line used to be the name the avatar uses, then a verb: "Toi
+   * récupères" in French, which no French speaker would write. It is one
+   * message now, so it says "Tu récupères".
+   */
+  it("says the reader's line in French as one sentence", () => {
+    renderWithIntl(
+      <CurrencyBalances
+        currencies={[CHF, USD]}
+        groupId="g1"
+        groupName="Chalet"
+        senderName="Seb"
+        recipients={[]}
+        participantCount={3}
+        defaultOpen="CHF"
+      />,
+      { locale: "fr" },
+    );
+
+    const opened = body("CHF");
+    expect(within(opened).getByText("Tu")).toBeVisible();
+    expect(within(opened).getByText("récupères")).toBeVisible();
+    expect(opened).not.toHaveTextContent(/Toi\s*récupères/);
+    expect(within(opened).getByText("doit")).toBeVisible();
+  });
+
+  it("writes each transfer as a sentence from the reader's side", async () => {
+    const user = userEvent.setup();
+    renderList([CHF, USD, EUR], "CHF");
+
+    expect(within(body("CHF")).getByText("Hervé pays you back")).toBeVisible();
+
+    await user.click(row("USD"));
+    expect(within(body("USD")).getByText("You pay Hervé back")).toBeVisible();
+
+    await user.click(row("EUR"));
+    expect(within(body("EUR")).getByText("Hervé pays Vera back")).toBeVisible();
   });
 
   it("phrases a settled currency instead of printing a zero", () => {
@@ -260,9 +310,12 @@ describe("CurrencyBalances", () => {
   it("attaches no action to a debt between two other people", () => {
     renderList([EUR], "EUR");
 
-    // Named twice: once as a balance, once as the payer of the transfer.
+    // Named twice: once as a balance, once in the sentence of the transfer.
     const opened = body("EUR");
-    expect(within(opened).getAllByText("Hervé")).toHaveLength(2);
+    expect(within(opened).getByText("Hervé")).toBeInTheDocument();
+    expect(
+      within(opened).getByText("Hervé pays Vera back"),
+    ).toBeInTheDocument();
     expect(within(opened).queryByRole("button", { name: "Remind" })).toBeNull();
     expect(within(opened).queryByRole("link", { name: "Pay" })).toBeNull();
 

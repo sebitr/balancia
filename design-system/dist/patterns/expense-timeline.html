@@ -1349,6 +1349,8 @@ a[aria-current="page"] .nav-icon--primary {
   <section>
     <h2>The list</h2>
     <div class="spec">
+      <!-- Read as Ravi. Under each total, what the row left him holding, in
+           words: no sign, the tone's ink, nothing on a row he is not in. -->
       <ul class="list">
         <li>
           <a class="list-row" href="#">
@@ -1356,20 +1358,62 @@ a[aria-current="page"] .nav-icon--primary {
               <span class="list-title">Dinner at Trattoria Il Ponte</span>
               <span class="list-sub">2026-08-12 · Amélie · 2 receipts</span>
             </span>
-            <span class="tabular-nums" style="font-weight: 500">€128.40</span>
+            <span
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 3px;
+              "
+            >
+              <span class="tabular-nums" style="font-weight: 500">€128.40</span>
+              <span
+                class="tabular-nums"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  white-space: nowrap;
+                  color: var(--negative-ink);
+                "
+                >You owe €32.10</span
+              >
+            </span>
           </a>
         </li>
         <li>
-          <div class="list-row">
+          <a class="list-row" href="#">
             <span class="list-main">
               <span class="list-title">
-                Amélie paid Ravi
-                <span class="badge badge--outline">Payment</span>
+                Amélie paid you back
+                <span class="badge badge--outline">Repayment</span>
               </span>
               <span class="list-sub">2026-08-11 · Settling the taxi</span>
             </span>
-            <span class="tabular-nums" style="font-weight: 500">€120.00</span>
-          </div>
+            <span
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 3px;
+              "
+            >
+              <span
+                class="tabular-nums"
+                style="font-weight: 500; color: var(--muted-foreground)"
+                >€120.00</span
+              >
+              <span
+                class="tabular-nums"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  white-space: nowrap;
+                  color: var(--neutral-balance-ink);
+                "
+                >You received €120.00</span
+              >
+            </span>
+          </a>
         </li>
         <li>
           <a class="list-row" href="#">
@@ -1380,14 +1424,35 @@ a[aria-current="page"] .nav-icon--primary {
               </span>
               <span class="list-sub">2026-08-09 · Ravi</span>
             </span>
-            <span class="tabular-nums" style="font-weight: 500">€65.00</span>
+            <span
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 3px;
+              "
+            >
+              <span class="tabular-nums" style="font-weight: 500">€65.00</span>
+              <span
+                class="tabular-nums"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  white-space: nowrap;
+                  color: var(--positive-ink);
+                "
+                >You get back €48.75</span
+              >
+            </span>
           </a>
         </li>
         <li>
           <a class="list-row" href="#">
             <span class="list-main">
               <span class="list-title">Airport transfer</span>
-              <span class="list-sub">2026-08-08 · Jonas, Ravi · 1 receipt</span>
+              <span class="list-sub"
+                >2026-08-08 · Jonas, Chloé · 1 receipt</span
+              >
             </span>
             <span class="tabular-nums" style="font-weight: 500">CHF 96.00</span>
           </a>
@@ -1401,8 +1466,22 @@ a[aria-current="page"] .nav-icon--primary {
     <dl class="dl">
       <dt>title</dt>
       <dd>
-        The expense description, or <em>"X paid Y"</em> for a settlement.
-        Truncates before the badges do.
+        The expense description, or who paid whom for a repayment — from the
+        reader's side when they are one of the two:
+        <em>"You paid Marta back"</em>, <em>"Sam paid you back"</em>, and
+        <em>"Sam paid Marta"</em>
+        only between two others. The repayment's own screen and the search use
+        the same sentence. Truncates before the badges do.
+      </dd>
+      <dt>your line</dt>
+      <dd>
+        Under the total, what the row left the reader holding, as a sentence in
+        <code>text-xs</code>: <em>"You get back €60.00"</em>,
+        <em>"You owe €30.00"</em>, <em>"You paid your share"</em>. On a
+        repayment, which way the money went — <em>"You received €30.00"</em>,
+        <em>"You paid €30.00"</em> — in the neutral ink. No sign: the words
+        carry the direction, the colour comes from <code>TONE</code>. Nothing at
+        all on a row the reader is not in.
       </dd>
       <dt>Payment badge</dt>
       <dd>
@@ -1418,7 +1497,8 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>amount</dt>
       <dd>
         Right, tabular, font-medium. Plain <code>Amount</code> — a cost has no
-        direction, so it takes no balance tone.
+        direction, so it takes no balance tone. The reader's line sits under it,
+        never in place of it.
       </dd>
       <dt>sort</dt>
       <dd>
