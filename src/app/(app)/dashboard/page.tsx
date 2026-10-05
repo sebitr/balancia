@@ -244,16 +244,19 @@ export default async function DashboardPage() {
             nudge on its first load. */}
           <InstallPrompt />
 
-          {/* This label has to stay neutral about direction, in every
-              language. `directionOf` files a group holding a debt in one
-              currency and a credit in another under this section on purpose —
-              without a rate it has no single sign, and prompting someone to
-              look is the harmless mistake. Its row still shows both figures,
-              so a heading that says "you owe money" is contradicted by the
-              green number underneath it. "Needs you" is not; the French said
-              "Tu dois de l'argent" and was. */}
+          {/* "You owe", the twin of "You're owed" below it. This used to say
+              "Needs you", to stay neutral about direction: `directionOf` files
+              a group holding a debt in one currency and a credit in another
+              here when there is no rate to net them, and its row shows both
+              figures. But every group it files here holds a debt of the
+              reader's — that is the rule — so "You owe" is true of each row,
+              the green figure beside one included; it is a second fact about
+              that group, not a contradiction of the first. What did contradict
+              it was "Tu dois de l'argent", which claims a net; the label is
+              the bare verb in every language, and the sibling sections are
+              named for where the reader stands, as this one now is. */}
           {buckets.needsYou.length > 0 && (
-            <Section label={t("sectionNeedsYou")}>
+            <Section label={t("sectionYouOwe")}>
               <GroupList groups={buckets.needsYou.map(toRow)} now={nowIso} />
             </Section>
           )}

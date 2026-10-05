@@ -94,7 +94,7 @@ async function groupWhereOwing(
 }
 
 describe("loadHomeOverview", () => {
-  it("puts a group the user owes in under Needs you, largest debt first", async () => {
+  it("puts a group the user owes in under You owe, largest debt first", async () => {
     const actor = await createTestUser({ name: "Amélie" });
     await groupWhereOwing(actor, "Small", ["Mika"], "2000");
     await groupWhereOwing(actor, "Large", ["Mika"], "20000");
