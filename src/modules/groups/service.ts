@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
 import {
   activityEvents,
@@ -906,7 +906,14 @@ export async function removeParticipant(
 
 /**
  * Puts a removed participant back — the Undo behind the People screen's
- * removal toast.
+ * removal toast, and the Restore on the removal's line in the group's
+ * Activity once that toast has gone.
+ *
+ * Only somebody who is removed. Both of those buttons can be pressed on a
+ * screen that is a minute old, after the person is back already; restoring
+ * them again would write a second "put back in the group" about somebody who
+ * never left, so it is refused like every other restore of something that is
+ * not gone.
  *
  * What comes back is the person, not their access. Removal revokes any live
  * invitation and kills the sessions derived from it, and neither is recoverable
@@ -932,6 +939,7 @@ export async function restoreParticipant(
         and(
           eq(participants.id, participantId),
           eq(participants.groupId, access.groupId),
+          isNotNull(participants.removedAt),
         ),
       )
       .returning({
