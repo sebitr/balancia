@@ -149,6 +149,47 @@ describe("flushOutbox", () => {
     expect(summary).toEqual({ written: 0, retrying: 0, blocked: 1 });
   });
 
+  it("says a group archived meanwhile is archived, by the refusal's code", async () => {
+    listQueued.mockResolvedValue([entry()]);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { error: "This group is archived.", code: "groupArchived" },
+            { status: 409 },
+          ),
+        ),
+    );
+
+    const summary = await flushOutbox({ now: 10_000 });
+
+    expect(recordAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "blocked", blockedFor: "archived" }),
+    );
+    expect(summary).toEqual({ written: 0, retrying: 0, blocked: 1 });
+  });
+
+  it("holds a refusal back even when its body is not the API's", async () => {
+    // A proxy's own error page in place of the JSON. No code to read, and
+    // still no reason to retry an entry the server has refused.
+    listQueued.mockResolvedValue([entry()]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("<html>", { status: 409 })),
+    );
+
+    const summary = await flushOutbox({ now: 10_000 });
+
+    expect(recordAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: "blocked", blockedFor: "refused" }),
+    );
+    expect(summary.blocked).toBe(1);
+  });
+
   it("does not keep asking about an entry that is already blocked", async () => {
     listQueued.mockResolvedValue([entry({ status: "blocked" })]);
     const fetchMock = answers(201);
