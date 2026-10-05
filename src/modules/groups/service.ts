@@ -21,6 +21,10 @@ import { createJoinLink, joinLinkUrl } from "@/lib/security/join-link";
 import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
 import { telemetry } from "@/lib/telemetry";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import {
+  removeStoredReceipts,
+  storageKeysOfGroup,
+} from "@/modules/attachments/service";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { OpenBalanceError } from "@/modules/balances/open-balance";
 import { DEFAULT_JOIN_LINK_EXPIRY, expiryDate } from "@/modules/join/expiry";
@@ -564,14 +568,25 @@ export async function countUnclaimedParticipants(
   return row?.count ?? 0;
 }
 
-/** Permanently deletes a group. Owner only; cascades to all group data. */
+/**
+ * Permanently deletes a group. Owner only; cascades to all group data.
+ *
+ * The receipts' files are the one part of the group the cascade cannot reach,
+ * so their keys are read before the rows go and the files removed once the
+ * deletion has committed. See `storageKeysOfGroup`.
+ */
 export async function deleteGroup(
   access: GroupAccess,
   options: { db?: Database } = {},
 ): Promise<void> {
   requirePermission(access, "deleteGroup");
   const db = options.db ?? getDb();
-  await db.delete(groups).where(eq(groups.id, access.groupId));
+  const receipts = await db.transaction(async (tx) => {
+    const keys = await storageKeysOfGroup(tx, access.groupId);
+    await tx.delete(groups).where(eq(groups.id, access.groupId));
+    return keys;
+  });
+  await removeStoredReceipts(receipts);
 }
 
 export interface ParticipantSummary {

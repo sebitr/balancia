@@ -16,6 +16,10 @@ import {
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { getStorage } from "@/lib/storage";
+import {
+  removeStoredReceipts,
+  storageKeysOfGroup,
+} from "@/modules/attachments/service";
 import { provisionalNameFor } from "@/modules/profile/provisional-name";
 import {
   generateToken,
@@ -1588,6 +1592,9 @@ export async function deleteAccount(
 
   if (!account) return;
 
+  // Filled in by the groups deleted below; see `storageKeysOfGroup`.
+  const receipts: string[] = [];
+
   await db.transaction(async (tx) => {
     // Every group this account belongs to, with the role it holds there.
     const memberships = await tx
@@ -1616,6 +1623,7 @@ export async function deleteAccount(
           continue;
         }
         // Nobody left who could ever open it.
+        receipts.push(...(await storageKeysOfGroup(tx, membership.groupId)));
         await tx.delete(groups).where(eq(groups.id, membership.groupId));
         continue;
       }
@@ -1633,6 +1641,10 @@ export async function deleteAccount(
     // against.
     await tx.delete(users).where(eq(users.id, userId));
   });
+
+  // The receipts of a group that went with the account, swept the same way as
+  // the avatar and for the same reason.
+  await removeStoredReceipts(receipts);
 
   if (account.avatarKey) {
     try {

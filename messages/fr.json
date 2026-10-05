@@ -2560,6 +2560,7 @@
     "fileType": "Les reçus doivent être une image JPEG, PNG, WebP, GIF, HEIC ou un PDF.",
     "importMappingInvalid": "Cette association ne correspond pas au fichier lu. Relis le fichier.",
     "importParticipantUnknown": "Une personne que tu as associée ne fait plus partie de ce groupe. Relis le fichier et associe à nouveau les personnes.",
+    "groupStorageFull": "Ce groupe n’a plus de place pour les reçus, celui-ci n’a donc pas été conservé.",
     "signedInRequired": "Il faut être connecté.",
     "unknownCurrency": "Balancia ne connaît pas cette devise.",
     "reminderEmpty": "Une relance doit contenir un message.",
