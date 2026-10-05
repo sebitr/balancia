@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Check, Copy } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { track } from "@/lib/analytics/events";
 import { cn } from "@/lib/utils";
 import { INSTALL_COMMANDS } from "./install-commands";
 import {
@@ -418,6 +419,7 @@ export function InstallCopyButton() {
       type="button"
       onClick={copy}
       className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-white/18 px-2.5 text-xs font-medium text-marketing-cream transition-colors hover:bg-white/8"
+      {...track({ name: "install-copied" })}
     >
       {copied ? (
         <Check aria-hidden="true" className="size-3.5" />

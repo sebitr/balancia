@@ -60,6 +60,24 @@ describe("a bottom sheet with the keyboard open", () => {
   });
 
   /**
+   * And says so, for the footers inside it. A button pinned to the foot of a
+   * sheet pads itself clear of the home indicator; on the keyboard the
+   * indicator is underneath the keys, and that padding is only a gap.
+   */
+  it("marks itself while it rides on the keyboard, and only then", () => {
+    const viewport = fakeViewport(LAYOUT_HEIGHT);
+    const sheet = renderSheet();
+
+    expect(sheet).not.toHaveAttribute("data-keyboard");
+
+    viewport.keyboard(336);
+    expect(sheet).toHaveAttribute("data-keyboard");
+
+    viewport.keyboard(0);
+    expect(sheet).not.toHaveAttribute("data-keyboard");
+  });
+
+  /**
    * iOS scrolls the visual viewport within the layout one to keep the focused
    * field in sight. That part of the gap is not keyboard, and counting it
    * would push the sheet up past the keyboard by however far the page moved.

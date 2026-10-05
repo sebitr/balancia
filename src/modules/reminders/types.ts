@@ -62,6 +62,26 @@ export interface RemindPayOption {
   readonly code: RemindPayCode | null;
 }
 
+/**
+ * The address a reminder that leaves the app ends with.
+ *
+ * `group` is the group's own page. It opens for anybody already let in — an
+ * account in the group, a guest whose browser still holds their session — and
+ * for anybody else it is a sign-in page asking for a password they do not
+ * have. Which is exactly who a reminder through the share sheet is most often
+ * for: somebody added by name, who never made an account.
+ *
+ * `invite` is the group's invite link instead, for that person. It opens on
+ * "Which one of these is you?" with their name and their balance on the list,
+ * which is the way in a reminder needs to carry. Only a sender who may read
+ * that link anyway ever gets one here, and only while it still works —
+ * `links.ts` says who and when. The URL is filled in on the server, because
+ * the link's token is opened there and nowhere else.
+ */
+export type RemindLink =
+  | { readonly kind: "group" }
+  | { readonly kind: "invite"; readonly url: string };
+
 export interface RemindRecipient {
   readonly participantId: string;
   readonly name: string;
@@ -91,6 +111,15 @@ export interface RemindRecipient {
    * to be paid back, and for a guest, who has no account to hang it on.
    */
   readonly payWith: readonly RemindPayOption[];
+  /**
+   * Where their message points, if it goes out through the share sheet.
+   *
+   * Per recipient, because the right address depends on who opens it: the
+   * group's page for somebody with an account, the invite link for somebody
+   * without one. A reminder the app delivers itself carries no link at all,
+   * whatever this says.
+   */
+  readonly link: RemindLink;
 }
 
 /** What the caller gets back once a reminder has been recorded. */
@@ -127,8 +156,10 @@ export const REMIND_MESSAGE_MAX_LENGTH = 1200;
 /**
  * The longest the *typed* part may be — what the textarea caps.
  *
- * Four hundred characters short of the message limit, which is more than an
- * origin plus `/groups/<uuid>` and the longest payment line either need.
+ * Four hundred characters short of the message limit, which is more than the
+ * link and the longest payment line together need. The longer of the two links
+ * is the invite one: an origin plus `/join/g/` and a 43-character token, seven
+ * characters past `/groups/<uuid>`. `links.test.ts` does the sum.
  * Capping the box rather than only the action is what stops the limit being
  * discovered as a refusal after the writing is done.
  */

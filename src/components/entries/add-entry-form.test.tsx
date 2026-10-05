@@ -182,7 +182,10 @@ function renderForm(
     ok: true,
     data: { settlementId: "s1" },
   });
-  createRecurring.mockResolvedValue({ ok: true, data: { id: "r1" } });
+  createRecurring.mockResolvedValue({
+    ok: true,
+    data: { id: "r1", added: 1, addedFrom: "2026-10-05", next: "2026-11-05" },
+  });
   updateExpense.mockResolvedValue({ ok: true, data: undefined });
   updateSettlement.mockResolvedValue({ ok: true, data: undefined });
   toSettlement.mockResolvedValue({ ok: true, data: { settlementId: "s2" } });
@@ -416,6 +419,164 @@ describe("the drawer", () => {
     } finally {
       if (original) Object.defineProperty(prototype, "showPicker", original);
     }
+  });
+});
+
+/**
+ * The button that saves, and every sheet's button, kept in reach on a phone.
+ *
+ * Each was the last thing inside the part that scrolls. On a 375×812 screen
+ * with nothing typed the drawer's button already sat half below the edge, and
+ * the amount takes focus as it opens, so the keyboard covered the rest; the
+ * split sheet's Done went the same way as soon as an exact amount was typed.
+ * They are pinned under the body now, beside it rather than over it.
+ *
+ * jsdom does no layout, so what is pinned here is the structure that makes it
+ * true on a phone: the button is outside the element that scrolls, and the
+ * footer holding it is that element's sibling rather than something laid on
+ * top of it.
+ */
+describe("the buttons that finish a sheet", () => {
+  /** The scrolling body of a dialog, and the footer pinned under it. */
+  function regions(dialog: HTMLElement) {
+    const body = dialog.querySelector<HTMLElement>('[data-slot="sheet-body"]');
+    const actions = dialog.querySelector<HTMLElement>(
+      '[data-slot="sheet-actions"]',
+    );
+    if (!body || !actions) throw new Error("no pinned footer on this sheet");
+    return { body, actions };
+  }
+
+  /** That `button` is pinned in `dialog`'s footer and not in its body. */
+  function expectPinned(dialog: HTMLElement, button: HTMLElement) {
+    const { body, actions } = regions(dialog);
+    expect(body.className).toContain("overflow-y-auto");
+    expect(body).not.toContainElement(button);
+    expect(actions).toContainElement(button);
+    // Beside the body, not inside it and not laid over it.
+    expect(actions.parentElement).toBe(body.parentElement);
+    expect(actions.className).not.toMatch(/\b(?:absolute|fixed|sticky)\b/);
+  }
+
+  const EDITING = {
+    kind: "expense" as const,
+    id: "e1",
+    type: "expense" as const,
+    amountText: "84.60",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "Migros",
+    category: "groceries",
+    subcategory: "",
+    notes: "",
+    payerId: "seb",
+    settleTo: null,
+    includedIds: ["seb", "herve"],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "",
+  };
+
+  it("keeps the drawer's button out of the body on every tab", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const drawer = screen.getByRole("dialog");
+
+    for (const [tab, action] of [
+      ["Expense", "Add expense"],
+      ["Income", "Add income"],
+      ["Repayment", "Record repayment"],
+    ]) {
+      await user.click(screen.getByRole("tab", { name: tab }));
+      // The body is the panel the tabs switch; the button is not part of it.
+      expect(screen.getByRole("tabpanel", { name: tab })).toBe(
+        regions(drawer).body,
+      );
+      expectPinned(drawer, screen.getByRole("button", { name: action }));
+    }
+  });
+
+  it("keeps it there when the entry repeats", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+
+    expectPinned(
+      screen.getByRole("dialog"),
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+  });
+
+  /**
+   * Delete is not the way forward, so it stays last in the body, where it
+   * was: pinned beside Save it would sit a slip away from the button pressed
+   * every time.
+   */
+  it("pins Save changes on an edit, and leaves Delete in the body", () => {
+    renderForm({ editing: EDITING });
+    const drawer = screen.getByRole("dialog");
+
+    expectPinned(drawer, screen.getByRole("button", { name: "Save changes" }));
+    expect(regions(drawer).body).toContainElement(
+      screen.getByRole("button", { name: "Delete this entry" }),
+    );
+  });
+
+  /**
+   * The footer is the bottom edge now, so it is the one that clears the home
+   * indicator — and stops clearing it on the keyboard, which is over the
+   * indicator, so the room would only be a gap above the keys.
+   */
+  it("clears the home indicator, except while riding on the keyboard", () => {
+    renderForm();
+    const { body, actions } = regions(screen.getByRole("dialog"));
+
+    expect(actions.className).toContain("env(safe-area-inset-bottom)");
+    expect(actions.className).toContain("in-data-[keyboard]:");
+    expect(body.className).not.toContain("safe-area");
+  });
+
+  it("pins the split sheet's Done, exact amounts and all", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+
+    const split = screen.getByRole("dialog", { name: "Payment and split" });
+    await user.click(within(split).getByRole("button", { name: "Exact" }));
+
+    const { body } = regions(split);
+    expect(within(body).getAllByRole("textbox").length).toBeGreaterThan(0);
+    expectPinned(split, within(split).getByRole("button", { name: "Done" }));
+  });
+
+  it("pins the button on the sheet that names a pair by hand", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+    await user.click(screen.getByRole("button", { name: "Someone else" }));
+
+    const pair = screen.getByRole("dialog", { name: "Pay someone else" });
+    expectPinned(
+      pair,
+      within(pair).getByRole("button", { name: "Use this pair" }),
+    );
+  });
+
+  it("pins the repeat sheet's Done, and its way out", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+
+    const repeat = screen.getByRole("dialog", { name: "Repeat" });
+    expectPinned(repeat, within(repeat).getByRole("button", { name: "Done" }));
+    expectPinned(
+      repeat,
+      within(repeat).getByRole("button", { name: "Don’t repeat this entry" }),
+    );
   });
 });
 
@@ -1541,8 +1702,47 @@ describe("recurrence", () => {
       }),
     );
     expect(createExpense).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The series adds what has already come as it is saved, and the title says
+   * so — "saved" alone, with nothing in the list behind it, is what sent
+   * people to add the expense again by hand.
+   */
+  it("says the first one is in the group when it was added as it was saved", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+
     expect(success).toHaveBeenCalledWith(
-      "Recurring entry saved",
+      "Internet added. The next one is on Nov 5, 2026.",
+      expect.anything(),
+    );
+  });
+
+  it("says when the first one will come when its date has not", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    createRecurring.mockResolvedValue({
+      ok: true,
+      data: { id: "r1", added: 0, addedFrom: null, next: "2026-11-05" },
+    });
+    await enterAmount(user, "90");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+
+    expect(success).toHaveBeenCalledWith(
+      "Internet saved. The first one will be added on Nov 5, 2026.",
       expect.anything(),
     );
   });

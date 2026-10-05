@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useNumberLocale } from "@/i18n/format-context";
+import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   parseAmountToMinor,
   previewSplit,
 } from "@/components/expenses/expense-form-logic";
+import { savedSeriesMessage } from "./saved-series";
 
 /**
  * ISO weekday numbers (1 = Monday) paired with the locale's own name for the
@@ -67,6 +68,7 @@ export function RecurringForm({
   const router = useRouter();
   const locale = useLocale();
   const numberLocale = useNumberLocale();
+  const dates = useDateFormatter();
   const t = useTranslations("recurring");
   const tSplit = useTranslations("expenses.split");
   const weekdays = useWeekdayOptions(locale);
@@ -158,7 +160,12 @@ export function RecurringForm({
         setError(result.error ?? t("errors.saveFailed"));
         return;
       }
-      toast.success(t("created"));
+      // Says whether the first expense is already in the group, or the day it
+      // will be — see `savedSeriesMessage`.
+      const saved = savedSeriesMessage(result.data, description.trim(), (day) =>
+        dates.plain(day),
+      );
+      toast.success(t(`saved.${saved.key}`, saved.values));
       setDescription("");
       setAmount("");
       router.refresh();

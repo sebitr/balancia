@@ -1,4 +1,6 @@
+import type { ComponentProps } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 /**
  * The entry drawer's shell, apart from the form that fills it.
@@ -95,6 +97,57 @@ export function openOnAmount(event: Event): void {
   if (!amount || amount.value !== "") return;
   event.preventDefault();
   amount.focus({ preventScroll: true });
+}
+
+/**
+ * The scrolling middle of a sheet raised over the form that has a button to
+ * press — who paid and how it splits, a pair named by hand, a schedule.
+ *
+ * Those sheets used to scroll as one piece, button included, so the button was
+ * the last thing in them and the first thing a phone lost: below the edge on a
+ * tall split, under the keyboard the moment an exact amount was typed. Now the
+ * body scrolls and the button is pinned under it in `PinnedActions`, the same
+ * shape the drawer itself takes.
+ *
+ * It runs to the sheet's edges and pads itself back in, so the focus ring on a
+ * control at the side is not clipped by the scroll. The padding at its foot is
+ * what lets the last row clear the hairline when scrolled to the end.
+ *
+ * The caller's root has to be `flex min-h-0 flex-col`, or nothing gives way
+ * when the sheet reaches its height limit and the body never scrolls at all.
+ */
+export function PinnedBody({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="sheet-body"
+      className={cn(
+        "-mx-4 flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-4 [&>*]:shrink-0",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The foot of such a sheet: its button, never scrolled away from.
+ *
+ * Beside the body rather than over it, so it covers no row. A hairline across
+ * the full width says where the body is cut off, as the drawer's own footer
+ * does. The room under it is the sheet's: the sheet clears the home indicator,
+ * and stops clearing it while it rides on the keyboard.
+ */
+export function PinnedActions({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="sheet-actions"
+      className={cn(
+        "-mx-4 flex shrink-0 flex-col gap-2 border-t border-border px-4 pt-3",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 /**

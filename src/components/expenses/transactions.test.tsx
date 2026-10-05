@@ -487,11 +487,11 @@ describe("Transactions", () => {
     const user = userEvent.setup();
     renderList();
 
-    await user.click(kind("Revenue"));
+    await user.click(kind("Income"));
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByText("Airbnb refund")).toBeVisible();
 
-    await user.click(kind("Revenue"));
+    await user.click(kind("Income"));
     expect(screen.getAllByRole("listitem")).toHaveLength(ROWS.length);
     expect(window.location.search).toBe("");
   });
@@ -515,7 +515,7 @@ describe("Transactions", () => {
     expect(kind("Expenses")).toBeInTheDocument();
     expect(kind("Repayments")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Revenue" }),
+      screen.queryByRole("button", { name: "Income" }),
     ).not.toBeInTheDocument();
   });
 
@@ -1090,7 +1090,7 @@ describe("Transactions filter sheet", () => {
     const sheet = await openSheet(user);
     // Two rows say "airbnb"; one of them is the refund.
     expect(apply(sheet)).toHaveAccessibleName("Show 2 transactions");
-    await user.click(sheet.getByRole("button", { name: "Revenue" }));
+    await user.click(sheet.getByRole("button", { name: "Income" }));
     expect(apply(sheet)).toHaveAccessibleName("Show 1 transaction");
   });
 

@@ -257,6 +257,13 @@ function SheetContent({
    *
    * `bottom` rather than a transform: the drag-to-dismiss above owns
    * `transform`, and the two must not fight over it.
+   *
+   * `data-keyboard` says so to whatever is inside. A footer pinned to the
+   * bottom of a sheet pads itself clear of the home indicator, and with the
+   * sheet sitting on the keyboard that indicator is underneath the keyboard:
+   * the padding is then a strip of nothing between the button and the keys,
+   * on the one screen state with the least room to spare. `in-data-[keyboard]:`
+   * is how a footer takes it back.
    */
   const keyboard = useKeyboardInset();
   const lifted = bottom && keyboard > 0;
@@ -267,6 +274,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
+        data-keyboard={lifted ? "" : undefined}
         className={cn(
           // No `h-auto` on the top and bottom variants, and it must not come
           // back. It only restated the default — a fixed element with one edge

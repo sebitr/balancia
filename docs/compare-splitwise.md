@@ -5,9 +5,17 @@ shares expenses, who owes whom? The main decision is not the arithmetic. It is
 whether you want a managed commercial service or open-source software that you
 can host and operate yourself.
 
-This comparison was last checked on **17 August 2026**. Splitwise can change
+This comparison was last checked on **5 October 2026**. Splitwise can change
 its product and pricing; its official pages linked below are the authority for
 its current service.
+
+The same comparison is a page on the site, in English at
+[balancia.app/splitwise-alternative](https://balancia.app/splitwise-alternative)
+and in French at
+[balancia.app/fr/alternative-splitwise](https://balancia.app/fr/alternative-splitwise).
+Its words are in `messages/*.json` under `compare.splitwise`; a claim changes
+in both places or in neither, and the date above is `COMPARISON_REVIEWED` in
+`src/components/marketing/comparison-content.ts`.
 
 ## Short answer
 
@@ -19,20 +27,20 @@ its current service.
 
 ## Feature and operating model
 
-| Question                                     | Balancia                                                                                              | Splitwise                                                                                                |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Who runs it?                                 | Use the free hosted instance or run it on your own server.                                            | Splitwise, Inc. provides and operates the service.                                                       |
-| Is the application open source?              | Yes. The complete application is AGPL-3.0-or-later.                                                   | No self-hosted source distribution is offered on its service pages.                                      |
-| Is there a paid feature tier?                | No. Every feature is in the repository and the hosted instance has no paid plan.                      | Yes. Splitwise offers a Pro subscription with additional features and limits.                            |
-| Where is group data stored?                  | On the chosen Balancia instance. Self-hosters control its PostgreSQL database and receipt storage.    | In Splitwise's managed service and its service providers, as described by its privacy statement.         |
-| Can someone participate without registering? | Yes, through a revocable link scoped to one participant in one group.                                 | The standard Splitwise flow is account-based.                                                            |
-| Which splits are supported?                  | Equal, exact, percentage and weighted shares, with several payers on one transaction.                 | Splitwise supports shared bills and debts; consult its current product for exact plan-dependent options. |
-| How is currency handled?                     | Keep each currency separate or freeze a conversion rate with each expense.                            | Splitwise advertises currency conversion as a Pro feature using current rates.                           |
-| Can existing data move in?                   | Imports Splitwise group CSV exports and account JSON backups with a preview and duplicate protection. | Splitwise's own help pages document CSV exports and a complete JSON backup for Pro accounts.             |
-| Can data move out?                           | Every group exports to JSON, CSV and Excel.                                                           | Official help documents per-group CSV export and a complete JSON backup for Pro accounts.                |
-| Are receipts private?                        | Stored on the selected instance behind per-request authorization.                                     | Stored and processed as part of the managed Splitwise service.                                           |
-| Does it have native apps?                    | No. Balancia is an installable web app (PWA).                                                         | Yes. Splitwise provides web and native mobile applications.                                              |
-| Does it accept offline entries?              | No. It shows an honest offline screen and waits for a connection.                                     | Check the current Splitwise apps for offline behavior.                                                   |
+| Question                                     | Balancia                                                                                                 | Splitwise                                                                                                |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Who runs it?                                 | Use the free hosted instance or run it on your own server.                                               | Splitwise, Inc. provides and operates the service.                                                       |
+| Is the application open source?              | Yes. The complete application is AGPL-3.0-or-later.                                                      | No self-hosted source distribution is offered on its service pages.                                      |
+| Is there a paid feature tier?                | No. Every feature is in the repository and the hosted instance has no paid plan.                         | Yes. Splitwise Pro's page lists unlimited expenses, currency conversion, receipt scanning and no ads.    |
+| Where is group data stored?                  | On the chosen Balancia instance. Self-hosters control its PostgreSQL database and receipt storage.       | In Splitwise's managed service and its service providers, as described by its privacy statement.         |
+| Can someone participate without registering? | Yes, through a revocable link scoped to one participant in one group.                                    | The standard Splitwise flow is account-based.                                                            |
+| Which splits are supported?                  | Equal, exact, percentage and weighted shares, with several payers on one transaction.                    | Splitwise supports shared bills and debts; consult its current product for exact plan-dependent options. |
+| How is currency handled?                     | Keep each currency separate or freeze a conversion rate with each expense.                               | Splitwise advertises currency conversion as a Pro feature using current rates.                           |
+| Can existing data move in?                   | Imports Splitwise group CSV exports and account JSON backups with a preview and duplicate protection.    | Splitwise's own help pages document CSV exports and a complete JSON backup for Pro accounts.             |
+| Can data move out?                           | Every group exports to JSON, CSV and Excel.                                                              | Official help documents per-group CSV export and a complete JSON backup for Pro accounts.                |
+| Are receipts private?                        | Stored on the selected instance behind per-request authorization.                                        | Stored and processed as part of the managed Splitwise service.                                           |
+| Does it have native apps?                    | No. Balancia is an installable web app (PWA).                                                            | Yes. Splitwise provides web and native mobile applications.                                              |
+| Does it accept offline entries?              | Partly. Expenses and income are recorded on the device and sent on reconnect; see [offline](offline.md). | Check the current Splitwise apps for offline behavior.                                                   |
 
 ## Privacy and control
 
@@ -77,7 +85,7 @@ The Splitwise columns above use Splitwise's official
 [Privacy Statement](https://www.splitwise.com/privacy),
 [Pro page](https://www.splitwise.com/pro) and
 [export guidance](https://feedback.splitwise.com/forums/162446-general/suggestions/3096099-download-export-splitwise-data),
-reviewed on 17 August 2026.
+reviewed on 5 October 2026.
 
 Splitwise is a trademark of Splitwise, Inc. Balancia is not affiliated with,
 endorsed by or sponsored by Splitwise, Inc. The comparison is provided to help

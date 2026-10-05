@@ -259,3 +259,53 @@ The doctrine is written out at `toastUndoable` in
 assert the silence — `expect(toastSuccess).not.toHaveBeenCalled()` — because a
 confirmation is exactly the kind of thing that creeps back in one screen at a
 time.
+
+# A public page has one address per language, and the tracker stays on them
+
+The homepage and the comparison pages are the only pages meant to be found.
+They are one table, `SLUGS` in `src/lib/public-pages.ts`, and the proxy, the
+alternate links, the sitemap, `/llms.txt` and the tracker's list of pages all
+read it. `docs/seo.md` is the long form.
+
+**The address is the language.** `/` is English and `/fr` is French, to
+everybody: a crawler sends no cookie and no `Accept-Language`, so while the
+homepage chose its language from those the French copy was in no index at
+all. `proxy.ts` reads the language off the path and hands it to the render in
+`x-balancia-locale`, which `resolveRequestLocale` reads before the cookie.
+
+**Never serve one by rewriting to the English file.** It is the obvious
+design and was the first one. Next runs the proxy again on the path a rewrite
+points at, so `/fr`, rewritten to `/`, came back through as `/`, was told it
+was English, and rendered in English at a French address — with a first-pass
+response every unit test passed. Nor from one `[locale]` route at the root: a
+dynamic segment there answers every one-segment path nothing else claims, and
+the linter then takes each deliberate `<a href="/dashboard">` for a link to
+it. A language is a folder, `app/fr/`, of two small files.
+
+Adding a page is a row in `SLUGS`, a folder under `src/app` named after its
+English slug, and its copy. Adding a language is its folder.
+`src/lib/public-pages.test.ts` fails on either with no route behind it.
+
+**The page counter reports the public pages and nothing else, and where its
+tag is mounted is not what makes that true.** It was taken to be. The tracker
+hooks the browser's history when it loads, signing in is a navigation rather
+than a page load, and so it followed every reader who signed in from a
+counted page into the application: 96 addresses with a group or an expense
+identifier in them reached the collector before anybody read its page list.
+What is sent is decided at the moment of sending, by address, in the hook in
+`src/lib/analytics/bridge.ts`:
+
+- `COUNTED_PATHS` is a list of exact addresses. Do not make it a pattern.
+- The tracker's tag is written by the script that defines the hook, never
+  into the HTML beside it — a tracker that finds no hook sends everything.
+- An event is a literal type in `src/lib/analytics/events.ts` or it does not
+  exist; there is no `track(name, payload)`.
+
+`src/lib/analytics/bridge.test.ts` runs the shipped script against group
+addresses. `docs/telemetry.md` §17 is what an administrator is told, and
+changes with the code or not at all.
+
+**`COMPARISON_REVIEWED` is a fact.** It is the day somebody last read the
+other product's own pages and checked every row. It is printed on the page
+and is the pages' `lastmod`. Move it on a day you have done that, never to
+make a page look fresh.

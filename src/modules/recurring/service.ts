@@ -245,6 +245,16 @@ function ruleFrom(template: {
   };
 }
 
+/**
+ * Writes a template, and nothing else: its first occurrence is left for a run
+ * to generate, however long ago it fell due.
+ *
+ * Not what to call on somebody's behalf. A person saving a series is owed the
+ * entries whose dates have already come, and `setUpRecurringExpense` adds
+ * those as well. This half stands alone for the tests that drive a series
+ * through the worker's clock from its first day, and for the demo data, which
+ * leaves its rent to the worker like a group left alone would.
+ */
 export async function createRecurringExpense(
   access: GroupAccess,
   input: RecurringInput,
@@ -350,6 +360,126 @@ export async function createRecurringExpense(
   await telemetry.recurringExpenseCreated({ frequency: input.frequency });
 
   return templateId;
+}
+
+/**
+ * Where a series stands the moment it has been saved, which is what the
+ * person who saved it is told.
+ *
+ * Dates are calendar days in the group's zone, as a rule's are.
+ */
+export interface RecurringSetUp {
+  readonly id: string;
+  /** How many of its entries exist already. */
+  readonly added: number;
+  /** The date of the earliest of them; null when none was added. */
+  readonly addedFrom: string | null;
+  /** The next date it will add one on; null when it has none left. */
+  readonly next: string | null;
+}
+
+/**
+ * Saves a recurring expense and adds, there and then, every entry whose date
+ * has already come.
+ *
+ * Generation used to be left to the worker's hourly tick, so a monthly bill
+ * saved at 19:55 with today's date said "saved" and showed nothing: no entry,
+ * no change to anybody's balance, until 20:00. Somebody who sees a
+ * confirmation and no expense adds the expense again by hand, and the tick
+ * then makes it twice. So the first run happens here, in the request, before
+ * the answer goes back.
+ *
+ * It is the worker's own run — `generateTemplate` — with the same idempotency:
+ * each date is claimed in `recurring_occurrences` before its expense is
+ * written, so a tick that reaches the template meanwhile cannot make any of
+ * them a second time, and the marker it leaves is the one the worker reads
+ * next. What differs is the edge of "already come":
+ *
+ * - **Today counts from the first minute.** The worker waits for
+ *   `GENERATION_HOUR` so that nobody's phone goes off at midnight about rent.
+ *   That is a rule about unattended runs. A series saved at 07:00 is somebody
+ *   adding an expense at 07:00, which notifies the group at once like any
+ *   other entry; holding it for two hours would bring back the very gap this
+ *   closes.
+ * - **A start date in the past is caught up**, every date from it to today,
+ *   under the catch-up cap every run works to. That is what the worker would
+ *   do at its next tick — the recurrence sheet previews those dates as part
+ *   of the series — so doing it now changes when the entries arrive, never
+ *   which. Beyond the cap the worker carries on from the marker as it always
+ *   has.
+ * - **The person saving it is not notified** about entries they are watching
+ *   being made, as nobody is about their own expense. Everybody else in the
+ *   split is, as for any generated occurrence, and each still records a
+ *   "recurring.generated" activity line.
+ *
+ * Dates are the group's, not the device's: "today" is today in the group's
+ * zone, the one the schedule runs in, so a phone a day ahead of its group
+ * neither makes tomorrow's entry early nor leaves today's out.
+ *
+ * Resuming a paused series and un-archiving a group are untouched. They move
+ * the marker past what fell due meanwhile on purpose, and nothing here runs
+ * for them.
+ *
+ * A run that throws does not undo the save. The template is committed, and
+ * failing the request would invite saving it a second time; the failure is
+ * logged and reported as the worker's would be, the marker stays where it
+ * was, and the next tick tries again. The answer counts the entries that do
+ * exist, so it is true either way.
+ */
+export async function setUpRecurringExpense(
+  access: GroupAccess,
+  input: RecurringInput,
+  options: { db?: Database; now?: Date } = {},
+): Promise<RecurringSetUp> {
+  const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+  const id = await createRecurringExpense(access, input, { db });
+
+  const [template] = await db
+    .select(generationColumns)
+    .from(recurringExpenses)
+    .innerJoin(groups, eq(groups.id, recurringExpenses.groupId))
+    .where(eq(recurringExpenses.id, id))
+    .limit(1);
+
+  const today = todayIn(template.timezone, now);
+  const first = template.nextRunAt
+    ? todayIn(template.timezone, template.nextRunAt)
+    : null;
+
+  if (first !== null && first <= today) {
+    try {
+      await generateTemplate(db, template, now, {
+        through: today,
+        excludeUserId:
+          access.actor.kind === "user" ? access.actor.userId : null,
+      });
+    } catch (error) {
+      await reportGenerationFailure(template, error);
+    }
+  }
+
+  // Read back rather than taken from the run: a tick that won a date in the
+  // same second made that entry, and it exists all the same.
+  const occurrences = await db
+    .select({ date: recurringOccurrences.occurrenceDate })
+    .from(recurringOccurrences)
+    .where(eq(recurringOccurrences.recurringExpenseId, id))
+    .orderBy(asc(recurringOccurrences.occurrenceDate));
+  const [marker] = await db
+    .select({ nextRunAt: recurringExpenses.nextRunAt })
+    .from(recurringExpenses)
+    .where(eq(recurringExpenses.id, id))
+    .limit(1);
+
+  return {
+    id,
+    added: occurrences.length,
+    addedFrom: occurrences[0]?.date ?? null,
+    next: marker?.nextRunAt
+      ? todayIn(template.timezone, marker.nextRunAt)
+      : null,
+  };
 }
 
 /** The columns a template's rule is rebuilt from. */
@@ -715,6 +845,40 @@ export async function getRecurrenceCadence(
   return row ?? null;
 }
 
+/** What a run reads for each template, its group's money settings beside it. */
+const generationColumns = {
+  id: recurringExpenses.id,
+  groupId: recurringExpenses.groupId,
+  direction: recurringExpenses.direction,
+  description: recurringExpenses.description,
+  notes: recurringExpenses.notes,
+  category: recurringExpenses.category,
+  subcategory: recurringExpenses.subcategory,
+  amount: recurringExpenses.amount,
+  currency: recurringExpenses.currency,
+  exchangeRate: recurringExpenses.exchangeRate,
+  payers: recurringExpenses.payers,
+  splitMethod: recurringExpenses.splitMethod,
+  splitInput: recurringExpenses.splitInput,
+  frequency: recurringExpenses.frequency,
+  interval: recurringExpenses.interval,
+  weekday: recurringExpenses.weekday,
+  weekOfMonth: recurringExpenses.weekOfMonth,
+  dayOfMonth: recurringExpenses.dayOfMonth,
+  monthOfYear: recurringExpenses.monthOfYear,
+  timezone: recurringExpenses.timezone,
+  startDate: recurringExpenses.startDate,
+  endDate: recurringExpenses.endDate,
+  occurrenceCount: recurringExpenses.occurrenceCount,
+  nextRunAt: recurringExpenses.nextRunAt,
+  createdByParticipantId: recurringExpenses.createdByParticipantId,
+  createdAt: recurringExpenses.createdAt,
+  currencyMode: groups.currencyMode,
+  baseCurrency: groups.baseCurrency,
+  groupName: groups.name,
+  archivedAt: groups.archivedAt,
+};
+
 export interface GenerationReport {
   readonly templatesProcessed: number;
   readonly expensesCreated: number;
@@ -742,38 +906,7 @@ export async function generateDueOccurrences(
   const now = options.now ?? new Date();
 
   const templates = await db
-    .select({
-      id: recurringExpenses.id,
-      groupId: recurringExpenses.groupId,
-      direction: recurringExpenses.direction,
-      description: recurringExpenses.description,
-      notes: recurringExpenses.notes,
-      category: recurringExpenses.category,
-      subcategory: recurringExpenses.subcategory,
-      amount: recurringExpenses.amount,
-      currency: recurringExpenses.currency,
-      exchangeRate: recurringExpenses.exchangeRate,
-      payers: recurringExpenses.payers,
-      splitMethod: recurringExpenses.splitMethod,
-      splitInput: recurringExpenses.splitInput,
-      frequency: recurringExpenses.frequency,
-      interval: recurringExpenses.interval,
-      weekday: recurringExpenses.weekday,
-      weekOfMonth: recurringExpenses.weekOfMonth,
-      dayOfMonth: recurringExpenses.dayOfMonth,
-      monthOfYear: recurringExpenses.monthOfYear,
-      timezone: recurringExpenses.timezone,
-      startDate: recurringExpenses.startDate,
-      endDate: recurringExpenses.endDate,
-      occurrenceCount: recurringExpenses.occurrenceCount,
-      nextRunAt: recurringExpenses.nextRunAt,
-      createdByParticipantId: recurringExpenses.createdByParticipantId,
-      createdAt: recurringExpenses.createdAt,
-      currencyMode: groups.currencyMode,
-      baseCurrency: groups.baseCurrency,
-      groupName: groups.name,
-      archivedAt: groups.archivedAt,
-    })
+    .select(generationColumns)
     .from(recurringExpenses)
     .innerJoin(groups, eq(groups.id, recurringExpenses.groupId))
     .where(
@@ -797,92 +930,14 @@ export async function generateDueOccurrences(
 
   for (const template of templates) {
     try {
-      const rule = ruleFrom(template);
       // Not "today": an occurrence is due once its 09:00 has passed in the
       // group's own zone, which on a catch-up run after an outage is not the
       // same date. See `GENERATION_HOUR`.
-      const dueDate = dueThrough(template.timezone, now);
-
-      const series = await seriesSoFar(db, template.id, rule);
-
-      /*
-       * `next_run_at` is the earliest date this run may generate, as well as
-       * the moment the template is due. Ordinarily it is the occurrence after
-       * the last one, and bounds nothing. After an outage it is the first
-       * occurrence the outage missed, and everything from there is caught up.
-       * After a pause or an archive, coming back moved it on to the first
-       * occurrence still to come (`resumedRunAt`), and the dates in between —
-       * which fell due while the template stood still — are walked past
-       * rather than generated. So is a date skipped because somebody on it has
-       * left the group: it stays skipped, rather than being tried again on
-       * every run after it. A null marker bounds nothing, and the series picks
-       * up after its last occurrence, as a restored template does.
-       */
-      const floor = template.nextRunAt
-        ? todayIn(template.timezone, template.nextRunAt)
-        : null;
-
-      const due = occurrencesUpTo(rule, dueDate, {
-        from: series.last,
-        notBefore: floor,
-        // Cap catch-up so a template dormant for years cannot flood a group.
-        maxOccurrences: 120,
-        alreadyGenerated: series.generated,
+      const run = await generateTemplate(db, template, now, {
+        through: dueThrough(template.timezone, now),
       });
-
-      for (const occurrenceDate of due) {
-        const notificationIds = await generateSingleOccurrence(
-          db,
-          template,
-          occurrenceDate,
-          now,
-        );
-        if (notificationIds) {
-          expensesCreated += 1;
-          // Outside the occurrence transaction, which has already committed.
-          await dispatchNotifications(notificationIds);
-        } else {
-          occurrencesSkipped += 1;
-        }
-      }
-
-      // Advance the due marker even when nothing was generated, so the
-      // template is not re-scanned on every tick.
-      const lastGenerated = due.at(-1) ?? series.last;
-      /*
-       * A series that has had all its occurrences has no next one, however
-       * happily the maths would go on producing dates. `nextOccurrence` sees a
-       * single occurrence and cannot know, so the count is applied here — the
-       * one place that knows how many there have been. Counted again rather
-       * than added up, because a date skipped for a missing participant was
-       * due but is not one of them.
-       */
-      const exhausted =
-        rule.count != null &&
-        remainingOf(
-          rule,
-          (await seriesSoFar(db, template.id, rule)).generated,
-        ) <= 0;
-      let upcoming = exhausted
-        ? null
-        : lastGenerated
-          ? nextOccurrence(rule, lastGenerated)
-          : firstOccurrence(rule);
-      // Never back behind the floor this run started from, or the dates it
-      // walked past would be on the table again at the next one.
-      while (upcoming && floor && upcoming < floor) {
-        upcoming = nextOccurrence(rule, upcoming);
-      }
-
-      await db
-        .update(recurringExpenses)
-        .set({
-          nextRunAt: upcoming
-            ? occurrenceInstant(upcoming, template.timezone)
-            : null,
-          lastRunAt: due.length > 0 ? now : undefined,
-        })
-        .where(eq(recurringExpenses.id, template.id));
+      expensesCreated += run.created;
+      occurrencesSkipped += run.skipped;
     } catch (error) {
       /*
        * One template that cannot generate must not stop every other one on
@@ -897,21 +952,9 @@ export async function generateDueOccurrences(
        * hourly, which is the point: somebody should notice. Occurrences it
        * managed before the throw have committed, and the retry resumes after
        * them.
-       *
-       * The log line names the template and its group and the class of
-       * error, never the message: allocation messages carry amounts.
        */
       templatesFailed += 1;
-      logger.error(
-        {
-          recurringExpenseId: template.id,
-          groupId: template.groupId,
-          err: classifyError(error),
-          ...(error instanceof AllocationError ? { reason: error.code } : {}),
-        },
-        "Recurring template failed to generate; the next run will retry it",
-      );
-      await reportCrash(error, "scheduler");
+      await reportGenerationFailure(template, error);
     }
   }
 
@@ -923,7 +966,138 @@ export async function generateDueOccurrences(
   };
 }
 
-/** The row shape `generateDueOccurrences` selects for each due template. */
+/**
+ * Logs a template that threw, and reports it.
+ *
+ * The log line names the template and its group and the class of error, never
+ * the message: allocation messages carry amounts.
+ */
+async function reportGenerationFailure(
+  template: { id: string; groupId: string },
+  error: unknown,
+): Promise<void> {
+  logger.error(
+    {
+      recurringExpenseId: template.id,
+      groupId: template.groupId,
+      err: classifyError(error),
+      ...(error instanceof AllocationError ? { reason: error.code } : {}),
+    },
+    "Recurring template failed to generate; the next run will retry it",
+  );
+  await reportCrash(error, "scheduler");
+}
+
+/** What one template's run produced. */
+interface TemplateRun {
+  readonly created: number;
+  readonly skipped: number;
+}
+
+/**
+ * Generates one template's occurrences up to and including `through`, and
+ * moves its marker on.
+ *
+ * The whole of what a run does for a template, shared by the worker's tick and
+ * by `setUpRecurringExpense`. The two differ only in the last date they will
+ * generate — the worker waits for nine, somebody saving a series does not —
+ * and in whether anybody is left out of the notifications. Throws whatever an
+ * occurrence threw, with the occurrences before it committed and the marker
+ * left where it was; the caller decides what a failure costs.
+ */
+async function generateTemplate(
+  db: Database,
+  template: TemplateRow,
+  now: Date,
+  options: { through: string; excludeUserId?: string | null },
+): Promise<TemplateRun> {
+  const rule = ruleFrom(template);
+  const series = await seriesSoFar(db, template.id, rule);
+
+  /*
+   * `next_run_at` is the earliest date this run may generate, as well as the
+   * moment the template is due. Ordinarily it is the occurrence after the last
+   * one, and bounds nothing. After an outage it is the first occurrence the
+   * outage missed, and everything from there is caught up. After a pause or
+   * an archive, coming back moved it on to the first occurrence still to come
+   * (`resumedRunAt`), and the dates in between — which fell due while the
+   * template stood still — are walked past rather than generated. So is a
+   * date skipped because somebody on it has left the group: it stays skipped,
+   * rather than being tried again on every run after it. A null marker bounds
+   * nothing, and the series picks up after its last occurrence, as a restored
+   * template does.
+   */
+  const floor = template.nextRunAt
+    ? todayIn(template.timezone, template.nextRunAt)
+    : null;
+
+  const due = occurrencesUpTo(rule, options.through, {
+    from: series.last,
+    notBefore: floor,
+    // Cap catch-up so a template dormant for years cannot flood a group.
+    maxOccurrences: 120,
+    alreadyGenerated: series.generated,
+  });
+
+  let created = 0;
+  let skipped = 0;
+  for (const occurrenceDate of due) {
+    const notificationIds = await generateSingleOccurrence(
+      db,
+      template,
+      occurrenceDate,
+      now,
+      options.excludeUserId ?? null,
+    );
+    if (notificationIds) {
+      created += 1;
+      // Outside the occurrence transaction, which has already committed.
+      await dispatchNotifications(notificationIds);
+    } else {
+      skipped += 1;
+    }
+  }
+
+  // Advance the due marker even when nothing was generated, so the template
+  // is not re-scanned on every tick.
+  const lastGenerated = due.at(-1) ?? series.last;
+  /*
+   * A series that has had all its occurrences has no next one, however
+   * happily the maths would go on producing dates. `nextOccurrence` sees a
+   * single occurrence and cannot know, so the count is applied here — the one
+   * place that knows how many there have been. Counted again rather than
+   * added up, because a date skipped for a missing participant was due but is
+   * not one of them.
+   */
+  const exhausted =
+    rule.count != null &&
+    remainingOf(rule, (await seriesSoFar(db, template.id, rule)).generated) <=
+      0;
+  let upcoming = exhausted
+    ? null
+    : lastGenerated
+      ? nextOccurrence(rule, lastGenerated)
+      : firstOccurrence(rule);
+  // Never back behind the floor this run started from, or the dates it walked
+  // past would be on the table again at the next one.
+  while (upcoming && floor && upcoming < floor) {
+    upcoming = nextOccurrence(rule, upcoming);
+  }
+
+  await db
+    .update(recurringExpenses)
+    .set({
+      nextRunAt: upcoming
+        ? occurrenceInstant(upcoming, template.timezone)
+        : null,
+      lastRunAt: due.length > 0 ? now : undefined,
+    })
+    .where(eq(recurringExpenses.id, template.id));
+
+  return { created, skipped };
+}
+
+/** The row shape a run selects for each template — see `generationColumns`. */
 interface TemplateRow {
   id: string;
   groupId: string;
@@ -941,11 +1115,13 @@ interface TemplateRow {
   frequency: RecurrenceFrequency;
   interval: number;
   weekday: number | null;
+  weekOfMonth: string | null;
   dayOfMonth: number | null;
   monthOfYear: number | null;
   timezone: string;
   startDate: string;
   endDate: string | null;
+  occurrenceCount: number | null;
   nextRunAt: Date | null;
   createdByParticipantId: string | null;
   /** When the template, and so its rate, was written; it cannot be edited. */
@@ -1034,6 +1210,7 @@ async function generateSingleOccurrence(
   template: TemplateRow,
   occurrenceDate: string,
   now: Date,
+  excludeUserId: string | null,
 ): Promise<string[] | null> {
   // Before the transaction: it can be a call to the rate provider, and a
   // network round trip must not hold the occurrence's locks open.
@@ -1193,6 +1370,7 @@ async function generateSingleOccurrence(
           ...prepared.payers.map((payer) => payer.participantId),
           ...prepared.shares.map((share) => share.participantId),
         ],
+        excludeUserId,
       });
     })
     .catch((error: unknown) => {
