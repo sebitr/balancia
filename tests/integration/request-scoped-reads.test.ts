@@ -17,6 +17,7 @@ import { loadGroupOverview } from "@/modules/groups/overview";
 import { removeParticipant, setGroupArchived } from "@/modules/groups/service";
 import { listClaimableMembers, loadJoinSummary } from "@/modules/join/service";
 import { listRemindRecipients } from "@/modules/reminders/service";
+import { createSettlement } from "@/modules/settlements/service";
 import { loadSettleUp } from "@/modules/settlements/settle-up";
 import {
   addTestParticipant,
@@ -369,7 +370,19 @@ describe("group authorization, asked once per render", () => {
 });
 
 describe("group authorization after a Server Action", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Nobody is removed while they still owe: the debtor pays back their half
+    // of the dinner first, so what is under test is the access check after
+    // the removal and not the open-balance refusal before it.
+    await createSettlement(group.access, {
+      fromParticipantId: debtor.participantId,
+      toParticipantId: group.ownerParticipantId,
+      amount: "1500",
+      currency: "EUR",
+      exchangeRate: "",
+      settledOn: isoToday(),
+      notes: "",
+    });
     cookieActor.value = debtor.actor;
   });
 
