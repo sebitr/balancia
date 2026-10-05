@@ -3202,7 +3202,7 @@
     "payWithLine": "{method} : {detail}",
     "payWithChoose": "Quel moyen de paiement",
     "payCodeAttached": "Un code à scanner part avec",
-    "logActivity": "Visible dans le groupe",
+    "showInActivity": "Afficher dans l’activité du groupe",
     "sendPush": "Envoyer à {name} dans Balancia",
     "sendShare": "Partager avec {name}",
     "sendCaptionPush": "La notification part immédiatement, telle quelle.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useNumberLocale } from "@/i18n/format-context";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Amount } from "@/components/money/amount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -138,6 +139,7 @@ export function RemindSheet({
   /** Set once the sender types: their words then survive a tone change. */
   const [edited, setEdited] = useState<string | null>(null);
   const [logToActivity, setLogToActivity] = useState(true);
+  const activitySwitchId = useId();
   /**
    * Whether the way to pay goes with the message, and which one.
    *
@@ -725,24 +727,11 @@ export function RemindSheet({
         </div>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setLogToActivity((on) => !on)}
-          aria-pressed={logToActivity}
-          className={cn(
-            "tap-target inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-            logToActivity ? PICKED_CHIP : UNPICKED,
-          )}
-        >
-          <Clock aria-hidden="true" className="size-3.5" />
-          {t("logActivity")}
-        </button>
-
-        {/* Absent rather than disabled when there is nothing to attach: a
-            reader who has never said how they want to be paid back, or a
-            reminder the app delivers itself. */}
-        {payOptions.length > 0 && (
+      {/* Absent rather than disabled when there is nothing to attach: a
+          reader who has never said how they want to be paid back, or a
+          reminder the app delivers itself. */}
+      {payOptions.length > 0 && (
+        <div className="mb-3 flex gap-2">
           <button
             type="button"
             onClick={() => setAttachPay((on) => !on)}
@@ -755,7 +744,35 @@ export function RemindSheet({
             <Wallet aria-hidden="true" className="size-3.5" />
             {t("payWith")}
           </button>
-        )}
+        </div>
+      )}
+
+      {/*
+       * Whether the group's Activity gets a line saying a reminder went out.
+       *
+       * It was a pill reading "Visible to the group", tinted when on, which
+       * looked like a label on the message rather than a choice about it —
+       * and said nothing about where it would be visible. A switch says it is
+       * one, and the row says where. Nothing is stored when it moves: it is a
+       * choice about this send, carried by the button below, so it is not one
+       * of the settings that save on the press.
+       */}
+      <div className="mb-4 flex items-center gap-3 rounded-[14px] border border-border px-3 py-2.5">
+        <Clock
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+        <label
+          htmlFor={activitySwitchId}
+          className="min-w-0 flex-1 cursor-pointer text-sm"
+        >
+          {t("showInActivity")}
+        </label>
+        <Switch
+          id={activitySwitchId}
+          checked={logToActivity}
+          onCheckedChange={setLogToActivity}
+        />
       </div>
 
       {current && (

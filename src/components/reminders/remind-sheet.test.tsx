@@ -546,6 +546,61 @@ describe("the way to pay", () => {
 });
 
 /**
+ * Whether the group's Activity says a reminder went out. It was a pill that
+ * read like a tag on the message; it is a switch, named for where the line
+ * will appear, and it is a choice about this send rather than a setting.
+ */
+describe("the line in the group's activity", () => {
+  it("is a switch, on unless the sender turns it off", () => {
+    render([recipient()]);
+
+    const toggle = screen.getByRole("switch", {
+      name: "Show in group activity",
+    });
+    expect(toggle).toBeChecked();
+    // The pill it replaced is gone.
+    expect(
+      screen.queryByRole("button", { name: /visible to the group/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("goes with the reminder it was set for, and saves nothing on its own", async () => {
+    vi.mocked(sendReminderAction).mockClear();
+    const user = userEvent.setup();
+    render([recipient()]);
+
+    await user.click(
+      screen.getByRole("switch", { name: "Show in group activity" }),
+    );
+
+    expect(
+      screen.getByRole("switch", { name: "Show in group activity" }),
+    ).not.toBeChecked();
+    // Moving it writes nothing; only sending does.
+    expect(sendReminderAction).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: "Send to Jonas in Balancia" }),
+    );
+
+    await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
+    const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
+    expect(input).toMatchObject({ logToActivity: false });
+  });
+
+  it("can be turned from its label too", async () => {
+    const user = userEvent.setup();
+    render([recipient()]);
+
+    await user.click(screen.getByText("Show in group activity"));
+
+    expect(
+      screen.getByRole("switch", { name: "Show in group activity" }),
+    ).not.toBeChecked();
+  });
+});
+
+/**
  * Somebody added by name, with no account, who opened the group's page from a
  * reminder met a sign-in form asking for a password they never had. Where the
  * server says the sender may hand out the group's invite link, and it still

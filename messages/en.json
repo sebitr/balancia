@@ -3202,7 +3202,7 @@
     "payWithLine": "{method}: {detail}",
     "payWithChoose": "Which way to pay",
     "payCodeAttached": "A code to scan goes with it",
-    "logActivity": "Visible to the group",
+    "showInActivity": "Show in group activity",
     "sendPush": "Send to {name} in Balancia",
     "sendShare": "Share with {name}",
     "sendCaptionPush": "The push goes out immediately, exactly as written.",
