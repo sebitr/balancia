@@ -521,6 +521,7 @@
     "searchPlaceholder": "{count, plural, one {Search # group} other {Search # groups}}",
     "noMatch": "No group matches “{query}”",
     "sectionYouAreOwed": "You're owed",
+    "sectionNoExpenses": "No expenses yet",
     "sectionSettled": "Settled up · {count}",
     "sectionArchived": "Archived · {count}",
     "addExpense": "Add expense",
@@ -529,6 +530,7 @@
     "archivedGroups": "{count, plural, one {# archived group} other {# archived groups}}",
     "nothingOutstanding": "Nothing outstanding in {groups, plural, one {# group} other {# groups}}",
     "nothingOutstandingSince": "Nothing outstanding in {groups, plural, one {# group} other {# groups}} · last cleared {when} in {group}",
+    "nothingRecorded": "Nothing recorded in {groups, plural, one {# group} other {# groups}} yet",
     "nameNudgeTitle": "What should people call you?",
     "nameNudgeBody": "Your groups see you as “{name}”, which is your email address. Give them a name instead.",
     "nameNudgeAction": "Set my name",
@@ -549,6 +551,7 @@
     "pickerSearchPlaceholder": "Search groups",
     "peopleCount": "{count, plural, one {# person} other {# people}}",
     "settledWord": "Settled",
+    "noExpensesWord": "No expenses yet",
     "archivedWord": "Archived"
   },
   "group": {

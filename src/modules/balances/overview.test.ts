@@ -44,7 +44,13 @@ function position(
   net: ReturnType<typeof money> | null,
   overrides: Partial<GroupSummary> = {},
 ): GroupPosition {
-  return { group: group(overrides), amounts, net, owedTo: null };
+  return {
+    group: group(overrides),
+    amounts,
+    net,
+    owedTo: null,
+    hasEntries: true,
+  };
 }
 
 describe("directionOf", () => {
