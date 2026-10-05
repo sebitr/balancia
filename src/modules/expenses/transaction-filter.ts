@@ -98,6 +98,7 @@ const filterSchema = z.object({
   min: z.string().max(32),
   max: z.string().max(32),
   payers: z.array(z.string().max(64)).max(64),
+  people: z.array(z.string().max(64)).max(64),
   positions: z.array(z.enum(POSITION_CHOICES)),
   properties: z.array(z.enum(PROPERTY_CHOICES)),
   sort: z.enum(SORT_CHOICES),
@@ -204,6 +205,30 @@ export function narrowing(filter: ListFilter, scope: FilterScope): Narrowing {
         sql`EXISTS (SELECT 1 FROM ${expensePayers} WHERE ${expensePayers.expenseId} = ${expenses.id} AND ${inArray(expensePayers.participantId, ids)})`,
       );
       onSettlements.push(inArray(settlements.fromParticipantId, ids));
+    }
+  }
+
+  // With, any of: on the entry at all — a payer or a share on an expense,
+  // either end of a repayment. Ids are held to the same shape as a payer's,
+  // for the same reason.
+  if (filter.people.length > 0) {
+    const ids = filter.people.filter((id) => PARTICIPANT_ID.test(id));
+    if (ids.length === 0) {
+      expensesPossible = false;
+      settlementsPossible = false;
+    } else {
+      onExpenses.push(
+        or(
+          sql`EXISTS (SELECT 1 FROM ${expensePayers} WHERE ${expensePayers.expenseId} = ${expenses.id} AND ${inArray(expensePayers.participantId, ids)})`,
+          sql`EXISTS (SELECT 1 FROM ${expenseShares} WHERE ${expenseShares.expenseId} = ${expenses.id} AND ${inArray(expenseShares.participantId, ids)})`,
+        )!,
+      );
+      onSettlements.push(
+        or(
+          inArray(settlements.fromParticipantId, ids),
+          inArray(settlements.toParticipantId, ids),
+        )!,
+      );
     }
   }
 

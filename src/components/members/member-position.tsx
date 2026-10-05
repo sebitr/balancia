@@ -30,6 +30,17 @@ import { cn } from "@/lib/utils";
  *
  * Settled up is a sentence and not a figure: "0.00" invites the reader to look
  * for what it refers to.
+ *
+ * Under the sentence, when the two of them are not square, sits what the
+ * reader can do about it — `actions`, the settle screen's own buttons for this
+ * same pair, handed in by the page. A screen that told you "You owe Marta" and
+ * then offered nothing sent you to another screen to find the same figure
+ * again before you could record that you had paid it.
+ *
+ * No figure here is ever cut short. The two under the headline used to be
+ * truncated to their column, which is how "CHF 1,979.…" reached a phone;
+ * they wrap now, label and figure both, because a balance with its last
+ * digits missing is not a smaller balance, it is a wrong one.
  */
 
 /** Which of three readers is looking, which decides all of the copy. */
@@ -75,14 +86,15 @@ const SENTENCES = {
 
 export function MemberPosition({
   position,
-  groupName,
   name,
   mode,
+  actions,
 }: {
   position: PositionView;
-  groupName: string;
   name: string;
   mode: PositionMode;
+  /** What the reader can do about the figure: the settle screen's actions. */
+  actions?: React.ReactNode;
 }) {
   const t = useTranslations("memberStats");
 
@@ -97,10 +109,10 @@ export function MemberPosition({
     <section className="flex flex-col gap-3 rounded-[17px] bg-card p-3.5 shadow-[0_0_0_1px_var(--border)]">
       <h2 className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
         {mode === "self"
-          ? t("eyebrowSelf", { group: groupName })
+          ? t("balanceYou")
           : mode === "between"
             ? t("eyebrowBetween")
-            : t("eyebrowMember", { name })}
+            : t("balanceThem", { name })}
       </h2>
 
       {tone === "neutral" ? (
@@ -124,6 +136,7 @@ export function MemberPosition({
             <Amount
               minorUnits={magnitude.toString()}
               currency={position.currency}
+              className="min-w-0 wrap-anywhere"
             />
           </p>
           {/* Indented to the figure, past the arrow and its gap, so it reads
@@ -132,11 +145,13 @@ export function MemberPosition({
         </div>
       )}
 
+      {actions}
+
       <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3">
         {mode === "between" ? (
           <>
             <SubCell
-              label={t("netAcrossGroup")}
+              label={t("balanceThem", { name })}
               minorUnits={position.net}
               currency={position.currency}
               tone="signed"
@@ -207,11 +222,14 @@ function SubCell({
       : tone;
 
   return (
+    // Neither half is truncated: a label wraps onto a second line, and a
+    // figure too wide for its column breaks rather than losing its last
+    // digits behind an ellipsis.
     <div className="flex min-w-0 flex-col gap-1">
-      <dt className="truncate text-2xs text-muted-foreground">{label}</dt>
+      <dt className="text-2xs text-muted-foreground">{label}</dt>
       <dd
         className={cn(
-          "truncate text-sm font-semibold",
+          "text-sm font-semibold wrap-anywhere",
           resolved && TONE[resolved].ink,
         )}
       >

@@ -2,22 +2,32 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
+import { EntriesWithRow } from "@/components/members/entries-with-row";
 import { MemberPosition } from "@/components/members/member-position";
 import { MemberStatistics } from "@/components/members/member-statistics";
+import { SettleActions } from "@/components/settlements/settle-actions";
 import { requireGroupAccess } from "@/lib/actions";
 import { getDateFormatter } from "@/i18n/preferences";
 import { loadGroupBalances } from "@/modules/balances/service";
 import { counterpartiesOf } from "@/modules/groups/overview";
 import { loadMemberStats } from "@/modules/groups/member-stats-service";
 import { listParticipants } from "@/modules/groups/service";
+import { buildPayoutHints } from "@/modules/payouts/hints";
+import { listRemindRecipients } from "@/modules/reminders/service";
+import {
+  groupTransfers,
+  type SettleUpTransfer,
+} from "@/modules/settlements/settle-up";
 
 /**
- * One member, read as statistics.
+ * One person, and what is between you.
  *
  * Reached from a row of "Everyone's balance" on the overview. That row already
  * answers "how much" in one signed number; this screen answers the questions
  * the number cannot — what they put in against what was theirs to carry, how
- * that has moved, where it went, and who they keep sharing entries with.
+ * that has moved, where it went, and who they keep sharing entries with — and
+ * lets the reader do something about the number: settle it, ask for it, or
+ * open the entries that make it up.
  *
  * The same screen serves the reader's own row, in the second person. Nothing
  * about the data changes: a group's balances are shared by definition, and a
@@ -25,7 +35,9 @@ import { listParticipants } from "@/modules/groups/service";
  *
  * The position at the top is read from `loadGroupBalances` rather than derived
  * here — one place in this codebase turns facts into a balance, and it is not
- * a screen.
+ * a screen. The payments under it are the settle screen's own, picked out for
+ * this pair by `groupTransfers` from the same pass, so "You owe Marta
+ * CHF 960.84" here and "Pay Marta back · CHF 960.84" there cannot disagree.
  */
 
 export async function generateMetadata({
@@ -111,29 +123,85 @@ export default async function MemberStatsPage({
         b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0,
       )[0];
 
+      /*
+       * The payments between the reader and this person, exactly as the
+       * settle screen lists them — at most one, in one direction, in a
+       * currency. None on the reader's own page, where there is nobody to
+       * pay, and none for a reader with no place in the group, who is a
+       * party to nothing.
+       */
+      const pair =
+        self && !viewingSelf
+          ? groupTransfers(
+              entry.currency,
+              suggestions,
+              balances.participantNames,
+              self,
+            ).yours.filter(
+              (transfer) =>
+                transfer.fromParticipantId === participantId ||
+                transfer.toParticipantId === participantId,
+            )
+          : [];
+
       return {
-        currency: entry.currency,
-        net: net.toString(),
-        between: between.toString(),
-        owedBy: sum(incoming).toString(),
-        owes: sum(outgoing).toString(),
-        owedByCount: incoming.length,
-        owesCount: outgoing.length,
-        openCount: counterparties.length,
-        openTotal: sum(counterparties).toString(),
-        largestDebtTo: largestDebt
-          ? (balances.participantNames.get(largestDebt.toParticipantId) ?? "")
-          : null,
+        pair,
+        view: {
+          currency: entry.currency,
+          net: net.toString(),
+          between: between.toString(),
+          owedBy: sum(incoming).toString(),
+          owes: sum(outgoing).toString(),
+          owedByCount: incoming.length,
+          owesCount: outgoing.length,
+          openCount: counterparties.length,
+          openTotal: sum(counterparties).toString(),
+          largestDebtTo: largestDebt
+            ? (balances.participantNames.get(largestDebt.toParticipantId) ?? "")
+            : null,
+        },
       };
     })
     // A currency this person has never appeared in is not a position of
     // theirs; it is somebody else's, listed under a heading with their name.
     .filter(
-      (position) =>
-        position.net !== "0" ||
-        position.openCount > 0 ||
-        stats.currencies.includes(position.currency),
+      ({ view }) =>
+        view.net !== "0" ||
+        view.openCount > 0 ||
+        stats.currencies.includes(view.currency),
     );
+
+  /*
+   * What the settle screen would load for these same payments, and nothing
+   * more: who can be reminded only when this person owes the reader, and how
+   * to pay only when the reader owes them — `buildPayoutHints` asked about
+   * this pair alone, so the page carries nobody else's payment details.
+   */
+  const payments = positions.flatMap(({ pair }) => pair);
+  const owing = payments.filter((transfer) => transfer.fromIsSelf);
+  const [recipients, payoutHints] = await Promise.all([
+    payments.some((transfer) => transfer.toIsSelf)
+      ? listRemindRecipients(access)
+      : [],
+    owing.length > 0
+      ? buildPayoutHints(access.groupId, access.group.name, {
+          currencies: [...new Set(owing.map((debt) => debt.currency))].map(
+            (currency) => ({
+              currency,
+              yours: owing.filter((debt) => debt.currency === currency),
+              others: [],
+            }),
+          ),
+          transferCount: owing.length,
+          lastSettled: [],
+        })
+      : [],
+  ]);
+
+  const senderName =
+    access.actor.kind === "guest"
+      ? access.actor.displayName
+      : access.actor.name;
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -168,18 +236,41 @@ export default async function MemberStatsPage({
         </p>
       </div>
 
-      {positions.map((position) => (
+      {positions.map(({ view, pair }) => (
         <MemberPosition
-          key={position.currency}
-          position={position}
-          groupName={access.group.name}
+          key={view.currency}
+          position={view}
           name={name}
           // Three readers, three headlines: your own row is your net, somebody
-          // else's is the one figure between the two of you, and a guest with
-          // no participant row of their own has no "between" to show.
+          // else's is the one figure between the two of you, and a reader
+          // with no participant row of their own has no "between" to show.
           mode={viewingSelf ? "self" : self ? "between" : "member"}
+          actions={
+            pair.length > 0
+              ? pair.map((transfer) => (
+                  <SettleActions
+                    key={`${transfer.fromParticipantId}-${transfer.toParticipantId}`}
+                    transfer={toView(transfer)}
+                    groupId={groupId}
+                    groupName={access.group.name}
+                    senderName={senderName}
+                    recipients={recipients}
+                    payoutHints={payoutHints}
+                  />
+                ))
+              : null
+          }
         />
       ))}
+
+      {/* The entries behind the number, for whoever wants to know why it is
+          what it is. */}
+      <EntriesWithRow
+        groupId={groupId}
+        participantId={participantId}
+        name={name}
+        viewingSelf={viewingSelf}
+      />
 
       <MemberStatistics
         name={name}
@@ -201,7 +292,6 @@ export default async function MemberStatsPage({
               sharePercent: entry.sharePercent,
               rank: entry.rank,
               evenPercent: entry.evenPercent,
-              medianPercent: entry.medianPercent,
               members: entry.members.map((member) => ({
                 participantId: member.participantId,
                 name: member.name,
@@ -263,4 +353,18 @@ export default async function MemberStatsPage({
       />
     </div>
   );
+}
+
+/** Minor units cross to the client as strings; a bigint would not survive. */
+function toView(transfer: SettleUpTransfer) {
+  return {
+    fromParticipantId: transfer.fromParticipantId,
+    fromName: transfer.fromName,
+    toParticipantId: transfer.toParticipantId,
+    toName: transfer.toName,
+    currency: transfer.currency,
+    minorUnits: transfer.amount.toString(),
+    fromIsSelf: transfer.fromIsSelf,
+    toIsSelf: transfer.toIsSelf,
+  };
 }
