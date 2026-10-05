@@ -18,6 +18,7 @@ import { GroupReady } from "@/components/groups/group-ready";
 import { useDetectedTimezone } from "@/components/groups/use-detected-timezone";
 import { defaultCurrency } from "@/modules/currencies/default-currency";
 import {
+  ENDINGS,
   nextScreen,
   previousScreen,
   progressOf,
@@ -62,9 +63,9 @@ import type {
  *
  * Only identity blocks the door. Currencies, notifications, payout details and
  * everything else that used to be asked before an account existed are asked
- * from the checklist at the end of a personal invitation, from settings, or
- * from the moment they pay off. A shared link asks none of them: it ends in
- * the group, the moment the join commits.
+ * from the checklist at the end of a personal invitation taken with an
+ * account, from settings, or from the moment they pay off. A shared link and a
+ * guest ask none of them: they end in the group, the moment the join commits.
  */
 export function OnboardingFlow({
   arrival: arrivalProp,
@@ -216,15 +217,14 @@ export function OnboardingFlow({
    * Whether the checklist has anything left to say.
    *
    * Computed from the same rows the screen would draw, so the question and
-   * the answer cannot drift apart. A guest is never complete — their account
-   * row is urgent, not done — which is why `intent` is part of it.
+   * the answer cannot drift apart. Only an account ever reaches the list, so
+   * nothing here has to speak for a guest.
    */
   const passkeysSupported = usePasskeySupport();
   const profileIsComplete = useMemo(
     () =>
       initialProfile !== null &&
       checklistIsComplete({
-        isGuest: intent === "guest",
         credential,
         email: email || null,
         hasPhoto: initialProfile.hasPhoto,
@@ -238,7 +238,7 @@ export function OnboardingFlow({
         notificationCount: 5,
         pushEnabled: initialProfile.pushEnabled,
       }),
-    [initialProfile, intent, credential, email, name, passkeysSupported],
+    [initialProfile, credential, email, name, passkeysSupported],
   );
 
   /*
@@ -258,24 +258,16 @@ export function OnboardingFlow({
 
   const previous = previousScreen(route, screen);
   /*
-   * The last screen of whichever route this is, rather than a named one.
+   * The last screen of whichever route this is, when that screen is an ending.
    *
-   * It used to name `checklist` and `firstGroup`, which stopped being the
-   * whole answer when a finished checklist started dropping out: the arrival
-   * screen is the end of the road for somebody who has nothing left to set
-   * up, and offering them a back button to un-claim a name they have already
-   * claimed is not a place to return to.
-   *
-   * Two last screens are not endings, because nothing has been committed on
-   * them until the reader acts: the identity screen, where a cold sign-in's
-   * route stops and a shared link's account route does, and "keep it", where
-   * a shared link's guest and signed-in routes stop. The way back stays open
-   * from both.
+   * Being last used to be enough, until a finished checklist started dropping
+   * out: the arrival screen is the end of the road for somebody who has
+   * nothing left to set up, and offering them a back button to un-claim a
+   * name they have already claimed is not a place to return to. Several
+   * routes now stop on a screen where nothing is committed until the reader
+   * acts — see `ENDINGS` — and those keep the way back.
    */
-  const finished =
-    nextScreen(route, screen) === null &&
-    screen !== "identity" &&
-    screen !== "keepIt";
+  const finished = nextScreen(route, screen) === null && ENDINGS.has(screen);
   const groupId = joinedGroupId ?? initialGroup?.groupId ?? null;
   const groupName = initialGroup?.summary.groupName ?? "";
 
@@ -357,7 +349,8 @@ export function OnboardingFlow({
   const leave = () => leaveFor(groupId);
 
   /**
-   * The end of a shared link: the group itself, saying "you're in".
+   * The end of a shared link, and of a personal invitation's guest: the group
+   * itself, saying "you're in".
    *
    * A toast rather than a screen. The arrival screen and the checklist that
    * used to stand here were a receipt in front of the thing it was a receipt
@@ -669,8 +662,16 @@ export function OnboardingFlow({
              */
             hasAccount={credential !== null || signedIn}
             onDone={() => {
-              const index = route.indexOf("profile");
-              advance(route[index + 1] ?? "arrival");
+              const next = nextScreen(route, "profile");
+              if (next) {
+                advance(next);
+                return;
+              }
+              // A personal invitation's guest: the session was minted when
+              // the link was opened, so the group is already theirs to land
+              // in, the same way a shared link's guest lands.
+              if (groupId) arrive(groupId);
+              else leave();
             }}
           />
         )}
@@ -681,15 +682,16 @@ export function OnboardingFlow({
             name={firstNameOf(name)}
             group={initialGroup}
             /*
-              The checklist, or the group itself when there is no checklist
-              left to show. Read off the route rather than named, so the two
-              cannot disagree about which screen comes after this one.
+              Whether the checklist is still to come. Read off the route rather
+              than named, so the screen and the route cannot disagree about it
+              — and so the buttons can say which of the two they do.
             */
-            onContinue={() => {
-              const next = nextScreen(route, "arrival");
-              if (next) advance(next);
-              else leave();
-            }}
+            onFinishSetup={
+              nextScreen(route, "arrival") === "checklist"
+                ? () => advance("checklist")
+                : null
+            }
+            onLeave={leave}
           />
         )}
 
@@ -697,7 +699,6 @@ export function OnboardingFlow({
           <ChecklistScreen
             group={initialGroup}
             profile={initialProfile}
-            isGuest={intent === "guest"}
             credential={credential}
             email={email}
             name={name}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ENDINGS,
   nextScreen,
   previousScreen,
   progressOf,
@@ -52,13 +53,24 @@ describe("routeFor", () => {
     ]);
   });
 
-  it("asks a guest for a name and nothing else", () => {
-    expect(routeFor(state("personal", "guest"))).toEqual([
-      "welcome",
-      "profile",
-      "arrival",
-      "checklist",
-    ]);
+  it("asks a guest for a name, and ends in the group as a shared link's guest does", () => {
+    // The arrival screen and the checklist were a receipt in front of the
+    // group, and of the checklist's rows a guest could keep only the account,
+    // which the overview's guest card offers.
+    const route = routeFor(state("personal", "guest"));
+    expect(route).toEqual(["welcome", "profile"]);
+    expect(nextScreen(route, "profile")).toBeNull();
+    // Nothing is committed on the name screen, so it keeps its way back.
+    expect(ENDINGS.has("profile")).toBe(false);
+  });
+
+  it("keeps the arrival screen and the checklist for an account", () => {
+    // Every row of the list can be saved by an account, and the arrival
+    // screen is what gives the page time to hand the account's setup down.
+    for (const intent of ["account", "signin"] as Intent[]) {
+      const route = routeFor(state("personal", intent));
+      expect(route.slice(-2)).toEqual(["arrival", "checklist"]);
+    }
   });
 
   it("opens a shared link on the list, and lets a guest in from the next screen", () => {

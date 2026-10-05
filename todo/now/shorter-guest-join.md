@@ -12,5 +12,9 @@ screen says "You owe €60.00" with a way back to the list. The guest card on
 the overview is what is left of the checklist, and only somebody owed money is
 told an account lets them say how to be paid.
 
+A personal invitation's guest ends the same way: their name, then the group.
+An account still gets "You're in" and the checklist, behind buttons that say
+what they do — "Finish setting up" and "Go to the group".
+
 No Claude Design mock-up: the Artifact tool was refused in the session that
 did this. The pattern page is `design-system/src/pages/patterns/join.html`.

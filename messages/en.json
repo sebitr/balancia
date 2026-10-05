@@ -1597,9 +1597,6 @@
       "title": "{name}, how do you want to join {group}?",
       "titleSignedIn": "{name}, ready to join {group}?",
       "titleNew": "What should {group} call you?",
-      "youOwe": "You owe {amount}",
-      "youGetBack": "You get back {amount}",
-      "youreSettled": "You're settled up",
       "sub": "An account keeps {group}, your balance and {count, plural, =0 {everything you add} one {the expense under your name} other {the # expenses under your name}} on any device, not just this browser.",
       "subSignedIn": "You're signed in as {account}. Your balance and {count, plural, =0 {everything you add} one {the expense under your name} other {the # expenses under your name}} go on that account.",
       "subNew": "You start with nothing owed either way. An account keeps {group} on any device, not just this browser.",
@@ -1612,6 +1609,11 @@
       "join": "Join {group}",
       "notYou": "Not you? Back to the list",
       "backToList": "Back to the list"
+    },
+    "yourBalance": {
+      "owe": "You owe {amount}",
+      "getBack": "You get back {amount}",
+      "settled": "You're settled up"
     },
     "identity": {
       "title": "Your email, and one tap",
@@ -1657,9 +1659,8 @@
       "sub": "Three taps, one code. Everything else can wait.",
       "welcomeBackTitle": "Welcome back, {name}",
       "welcomeBackSub": "Nothing changed while you were gone.",
-      "guestTitle": "You're in as a guest",
-      "guestSub": "Everything works — add expenses, see your balance. Claim the account whenever you want to keep it.",
-      "seeGroup": "See the group"
+      "finishSetup": "Finish setting up",
+      "goToGroup": "Go to the group"
     },
     "firstGroup": {
       "title": "You're in, {name}",
@@ -1670,8 +1671,6 @@
     "checklist": {
       "title": "Finish setting up",
       "count": "{done} of {total}",
-      "position": "Your position",
-      "guestBadge": "Guest",
       "settleTitle": "{name} wants to settle up",
       "settleNote": "Tap to choose how they should send it",
       "continue": "Go to the group",
@@ -1679,8 +1678,6 @@
       "accountNotePasskey": "Passkey saved to this phone",
       "accountNoteVerified": "Verified {email}",
       "accountNotePassword": "Password saved",
-      "claimLabel": "Claim your account",
-      "claimNote": "Guest access lives in this browser only",
       "profileLabel": "Name and photo",
       "profileNotePhoto": "{name}, with a photo",
       "profileNoteInitials": "{name}, initials for now",
@@ -1730,16 +1727,6 @@
         "sub": "The name your groups see, and a photo if you feel like it. Tap the circle.",
         "nameLabel": "Your name",
         "done": "Done"
-      },
-      "claim": {
-        "title": "Claim this account",
-        "sub": "It keeps the group, your balance and every expense you added — on any device, not just this browser.",
-        "emailLabel": "Email address",
-        "emailPlaceholder": "you@example.com",
-        "codeLabel": "The six-digit code",
-        "send": "Email me a code",
-        "verify": "Create my account",
-        "failed": "That could not be saved. Try again in a moment."
       }
     }
   },

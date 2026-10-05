@@ -77,6 +77,15 @@ export interface OnboardingRouteState {
  *    kept. Signing in skips the profile screen — the account has a name — and
  *    a guest skips the account screen, having chosen not to have one.
  *
+ *    A guest then ends the way a shared link's guest does: in the group, with
+ *    "you're in" said there. The arrival screen and the checklist were nothing
+ *    to a guest that the group's guest card does not already say — of the
+ *    checklist's rows only the account could be kept without one. An account
+ *    keeps both, because it can save every row of the checklist there, and
+ *    because the arrival screen is what gives the page time to hand down the
+ *    account's own setup before the checklist reads it. Its buttons say which
+ *    of the two they do; see `ArrivalScreen`.
+ *
  *  - **Shared.** Nobody knows who this is, so that is the first question, and
  *    the link opens straight onto it: the group, and which of its names is
  *    you. Only once there is a person on the screen — with a balance under the
@@ -102,9 +111,10 @@ export interface OnboardingRouteState {
  *    itself, and the dashboard is its welcome; and somebody who wants no
  *    account yet names a group and themselves, and leaves with its link.
  *
- * The checklist is the one screen a personal invitation can lose. It is a
- * receipt of what is set up and what is not, so an account that has all of it
- * already ends on the arrival screen and goes straight to the group from there.
+ * The checklist is the one screen a personal invitation's account can lose. It
+ * is a receipt of what is set up and what is not, so an account that has all
+ * of it already ends on the arrival screen and goes straight to the group from
+ * there.
  */
 export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
   if (state.arrival === "cold") {
@@ -137,19 +147,37 @@ export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
     ];
   }
 
+  // A guest gives a name and nothing else, and goes from there to the group.
+  if (state.intent === "guest") return ["welcome", "profile"];
+
   return [
     "welcome",
-    // A guest gives a name and nothing else; everybody else proves an address
-    // first, and only a new account is then asked what to call itself.
-    ...(state.intent === "guest"
-      ? (["profile"] as const)
-      : state.intent === "signin"
-        ? (["identity"] as const)
-        : (["identity", "profile"] as const)),
+    // An account proves an address first, and only a new one is then asked
+    // what to call itself.
+    ...(state.intent === "signin"
+      ? (["identity"] as const)
+      : (["identity", "profile"] as const)),
     "arrival",
     ...(state.setupComplete ? [] : (["checklist"] as const)),
   ];
 }
+
+/**
+ * The screens a route can end on that are endings: something has been
+ * committed by the time the reader stands on them, so they offer no way back.
+ *
+ * A route can also stop on a screen that is not one — the identity screen of a
+ * cold sign-in or a shared link's account, "keep it" for a shared link's guest
+ * or signed-in reader, the name screen for a personal invitation's guest.
+ * Nothing is committed on those until the reader acts, so their back button
+ * stays.
+ */
+export const ENDINGS: ReadonlySet<ScreenId> = new Set<ScreenId>([
+  "arrival",
+  "checklist",
+  "firstGroup",
+  "groupLink",
+]);
 
 /** The screen a back button returns to, or null at the start of the route. */
 export function previousScreen(

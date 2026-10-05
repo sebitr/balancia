@@ -227,6 +227,110 @@ describe("the personal invitation", () => {
     expect(
       screen.getByText(/Guest access lives in this browser/),
     ).toBeInTheDocument();
+    // The name screen commits nothing, so the welcome is still a tap away.
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+  });
+
+  it("lands a guest in the group, as a shared link's guest lands, in two screens", async () => {
+    // It used to end on "You're in as a guest", whose "See the group" opened
+    // a checklist of four rows a guest could keep only one of.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="personal"
+        group={group}
+        inviterName="Léa"
+        knownName="Grace"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveValue(
+      "Grace",
+    );
+    await user.click(screen.getByRole("button", { name: "Join as a guest" }));
+
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+    expect(toast.success).toHaveBeenCalledWith("You're in Weekend in Verbier", {
+      description: undefined,
+    });
+    expect(screen.queryByText("Finish setting up")).toBeNull();
+    expect(stepsTaken()).toEqual(["welcome", "profile", "left"]);
+  });
+
+  it("keeps the checklist for an account, behind a button that says so", async () => {
+    auth.verifySignupCodeAction.mockResolvedValue({
+      ok: true,
+      data: { joinedGroupId: null, claimedGroupId: "group-1" },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="personal" group={group} knownName="Grace" />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "grace@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(
+      screen.getByRole("heading", { name: "You're in, Grace" }),
+    ).toBeInTheDocument();
+    // The balance is the reader's, and said to them.
+    expect(screen.getByText(/You get back CHF\s84\.20/)).toBeInTheDocument();
+    // Two buttons, each saying what it does. Nothing anywhere says "See the
+    // group" and opens something else.
+    expect(screen.queryByRole("button", { name: "See the group" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Go to the group" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Finish setting up" }));
+    expect(screen.getByText("Account created")).toBeInTheDocument();
+    expect(router.push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Go to the group" }));
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+  });
+
+  it("goes straight to the group from the arrival screen when asked to", async () => {
+    auth.verifySignupCodeAction.mockResolvedValue({
+      ok: true,
+      data: { joinedGroupId: null, claimedGroupId: "group-1" },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="personal" group={group} knownName="Grace" />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "grace@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email me a code instead" }),
+    );
+    await user.type(screen.getByLabelText("The six-digit code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Go to the group" }));
+
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+    expect(stepsTaken()).toEqual([
+      "welcome",
+      "identity",
+      "profile",
+      "arrival",
+      "left",
+    ]);
   });
 });
 
@@ -1065,7 +1169,12 @@ describe("what the checklist already knows", () => {
     );
 
     await signIn(user, rerender, everything);
-    await user.click(screen.getByRole("button", { name: "See the group" }));
+
+    // Nothing left, so nothing offered: the one button is the way out.
+    expect(
+      screen.queryByRole("button", { name: "Finish setting up" }),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Go to the group" }));
 
     expect(screen.queryByText("Finish setting up")).toBeNull();
     // Straight to the group, which is what the arrival screen's button says.
@@ -1079,7 +1188,7 @@ describe("what the checklist already knows", () => {
     );
 
     await signIn(user, rerender, { ...everything, hasPhoto: false });
-    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Finish setting up" }));
 
     expect(screen.getByText("Finish setting up")).toBeInTheDocument();
     expect(router.push).not.toHaveBeenCalled();
@@ -1092,7 +1201,7 @@ describe("what the checklist already knows", () => {
     );
 
     await signIn(user, rerender, { ...everything, hasPhoto: false });
-    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Finish setting up" }));
 
     // Account, currencies, payouts and push: four of the five, from the
     // profile alone. Only the photo is left.
@@ -1118,9 +1227,9 @@ describe("a guest who came to /register to stop being one", () => {
    *
    * The arrival is therefore captured when the flow mounts, the same way the
    * account and the group are. It was not, and the last two screens of this
-   * journey fell out of the route from under somebody halfway along it: "See
-   * the group" left for the group itself, and the checklist — the one screen
-   * that says the account now exists — was never shown at all.
+   * journey fell out of the route from under somebody halfway along it: the
+   * arrival screen's button left for the group itself, and the checklist — the
+   * one screen that says the account now exists — was never shown at all.
    */
   const asAGuest = (
     <OnboardingFlow
@@ -1155,18 +1264,21 @@ describe("a guest who came to /register to stop being one", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
   };
 
-  it("reaches the checklist, with the account row no longer a warning", async () => {
+  it("reaches the checklist from a button that says it will, which says the account exists", async () => {
     const user = userEvent.setup();
     const { rerender } = renderWithIntl(asAGuest);
 
     await createTheAccount(user);
     rerender(onceClaimed);
 
-    await user.click(screen.getByRole("button", { name: "See the group" }));
+    // "Go to the group" sits beside it, and the checklist is not a group.
+    expect(
+      screen.getByRole("button", { name: "Go to the group" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Finish setting up" }));
 
     expect(screen.getByText("Account created")).toBeInTheDocument();
-    expect(screen.queryByText("Claim your account")).toBeNull();
-    // Leaving is the checklist's own button's job, not this one's.
+    // Opening the checklist did not leave for the group.
     expect(router.push).not.toHaveBeenCalled();
   });
 
@@ -1179,7 +1291,7 @@ describe("a guest who came to /register to stop being one", () => {
 
     await createTheAccount(user);
     rerender(onceClaimed);
-    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Finish setting up" }));
 
     const offer = screen.getByRole("button", {
       name: /Sign in faster next time/,
@@ -1206,7 +1318,7 @@ describe("a guest who came to /register to stop being one", () => {
     await createTheAccount(user);
     rerender(onceClaimed);
 
-    await user.click(screen.getByRole("button", { name: "See the group" }));
+    await user.click(screen.getByRole("button", { name: "Finish setting up" }));
     await user.click(screen.getByRole("button", { name: "Go to the group" }));
 
     expect(router.push).toHaveBeenCalledWith("/groups/group-1");

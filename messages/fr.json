@@ -1587,9 +1587,6 @@
       "title": "{name}, comment veux-tu rejoindre {group} ?",
       "titleSignedIn": "{name}, tu rejoins {group} ?",
       "titleNew": "Comment t’appelle-t-on dans {group} ?",
-      "youOwe": "Tu dois {amount}",
-      "youGetBack": "Tu récupères {amount}",
-      "youreSettled": "Tu es à jour",
       "sub": "Un compte garde {group}, ton solde et {count, plural, =0 {tout ce que tu ajoutes} one {la dépense à ton nom} other {les # dépenses à ton nom}} sur n’importe quel appareil, pas seulement dans ce navigateur.",
       "subSignedIn": "Connecté en tant que {account}. Ton solde et {count, plural, =0 {tout ce que tu ajoutes} one {la dépense à ton nom} other {les # dépenses à ton nom}} rejoignent ce compte.",
       "subNew": "Tu commences sans rien devoir ni récupérer. Un compte garde {group} sur n’importe quel appareil, pas seulement dans ce navigateur.",
@@ -1602,6 +1599,11 @@
       "join": "Rejoindre {group}",
       "notYou": "Pas toi ? Retour à la liste",
       "backToList": "Retour à la liste"
+    },
+    "yourBalance": {
+      "owe": "Tu dois {amount}",
+      "getBack": "Tu récupères {amount}",
+      "settled": "Tu es à jour"
     },
     "identity": {
       "title": "Ton e-mail, et un geste",
@@ -1657,9 +1659,8 @@
       "sub": "Trois gestes, un code. Le reste peut attendre.",
       "welcomeBackTitle": "Content de te revoir, {name}",
       "welcomeBackSub": "Rien n’a changé pendant ton absence.",
-      "guestTitle": "Tu y es, sans compte",
-      "guestSub": "Tout fonctionne — ajoute des dépenses, consulte ton solde. Crée ton compte quand tu veux le garder.",
-      "seeGroup": "Voir le groupe"
+      "finishSetup": "Finir la configuration",
+      "goToGroup": "Aller au groupe"
     },
     "firstGroup": {
       "title": "Tu y es, {name}",
@@ -1670,8 +1671,6 @@
     "checklist": {
       "title": "Finir la configuration",
       "count": "{done} sur {total}",
-      "position": "Ta situation",
-      "guestBadge": "Invité",
       "settleTitle": "{name} veut te rembourser",
       "settleNote": "Touche pour choisir comment te faire rembourser",
       "continue": "Aller au groupe",
@@ -1679,8 +1678,6 @@
       "accountNotePasskey": "Clé d’accès enregistrée sur ce téléphone",
       "accountNoteVerified": "{email} vérifiée",
       "accountNotePassword": "Mot de passe enregistré",
-      "claimLabel": "Crée ton compte",
-      "claimNote": "L’accès invité vit uniquement dans ce navigateur",
       "profileLabel": "Nom et photo",
       "profileNotePhoto": "{name}, avec une photo",
       "profileNoteInitials": "{name}, initiales pour l’instant",
@@ -1730,16 +1727,6 @@
         "sub": "Le nom que tes groupes voient, et une photo si tu en as envie. Touche le cercle.",
         "nameLabel": "Ton nom",
         "done": "Terminé"
-      },
-      "claim": {
-        "title": "Crée ton compte",
-        "sub": "Il garde le groupe, ton solde et toutes les dépenses que tu as ajoutées — sur n’importe quel appareil, pas seulement dans ce navigateur.",
-        "emailLabel": "Adresse e-mail",
-        "emailPlaceholder": "toi@exemple.com",
-        "codeLabel": "Le code à six chiffres",
-        "send": "M’envoyer un code",
-        "verify": "Créer mon compte",
-        "failed": "Impossible d’enregistrer. Réessaie dans un instant."
       }
     }
   },

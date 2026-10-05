@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/wordmark";
-import { BalanceAmount } from "@/components/money/amount";
 import { TONE, toneFor } from "@/components/money/balance-tone";
 import {
   ImageDecodeError,
@@ -583,19 +582,8 @@ export function KeepItScreen({
   );
 }
 
-/**
- * The person they just said they are, and where they stand — as "you".
- *
- * "You owe €60.00", in the balance's tone: the word carries the direction, so
- * the figure needs no sign and the colour is never the only cue.
- */
+/** The person they just said they are, and where they stand — as "you". */
 function YouRow({ member }: { member: JoinMemberView }) {
-  const t = useTranslations("onboarding.keepIt");
-  const locale = useNumberLocale();
-  const balance = member.balances[0] ?? null;
-  const tone = balance ? toneFor(balance.minorUnits) : "neutral";
-  const amount = balance ? magnitudeOf(balance, locale) : "";
-
   return (
     <div className="flex items-center gap-3">
       <Avatar className="size-13">
@@ -607,15 +595,10 @@ function YouRow({ member }: { member: JoinMemberView }) {
         <span className="truncate text-base font-semibold">
           {member.displayName}
         </span>
-        <span
-          className={cn("text-sm font-medium tabular-nums", TONE[tone].ink)}
-        >
-          {tone === "negative"
-            ? t("youOwe", { amount })
-            : tone === "positive"
-              ? t("youGetBack", { amount })
-              : t("youreSettled")}
-        </span>
+        <YourBalance
+          balance={member.balances[0] ?? null}
+          className="text-sm font-medium"
+        />
       </div>
     </div>
   );
@@ -809,25 +792,32 @@ export function ProfileScreen({
 }
 
 /**
- * You're in.
+ * You're in — for an account that came in through a personal invitation.
  *
- * The balance is the point of the screen, and it says the same thing three
- * ways at once — the word, the arrow, the colour — because colour alone is
- * never the signal. `BalanceAmount` is what guarantees that.
+ * Nobody else reaches it. A shared link and a personal invitation's guest go
+ * straight to the group and say "you're in" there, in a toast; an account
+ * stops here because it has a checklist whose rows it can actually save, and
+ * because this screen is what gives the page time to hand down the account's
+ * own setup before the checklist is seeded from it.
  *
- * A personal invitation's screen only. A shared link goes straight to the
- * group once the join commits, and says "you're in" there, in a toast.
+ * Each button says what it does. When there is something left to set up, the
+ * primary opens the checklist and says so, and "Go to the group" sits under
+ * it; when there is nothing, "Go to the group" is the only button. It used to
+ * be one button reading "See the group" that opened the checklist.
  */
 export function ArrivalScreen({
   intent,
   name,
   group,
-  onContinue,
+  onFinishSetup,
+  onLeave,
 }: {
   intent: Intent;
   name: string;
   group: OnboardingGroupView | null;
-  onContinue: () => void;
+  /** Opens the checklist; null when there is nothing left on it. */
+  onFinishSetup: (() => void) | null;
+  onLeave: () => void;
 }) {
   const t = useTranslations("onboarding.arrival");
   const position = group?.position ?? null;
@@ -843,19 +833,11 @@ export function ArrivalScreen({
 
       <div className="flex flex-col gap-2">
         <Headline>
-          {intent === "guest"
-            ? t("guestTitle")
-            : intent === "signin"
-              ? t("welcomeBackTitle", { name })
-              : t("title", { name })}
+          {intent === "signin"
+            ? t("welcomeBackTitle", { name })
+            : t("title", { name })}
         </Headline>
-        <Sub>
-          {intent === "guest"
-            ? t("guestSub")
-            : intent === "signin"
-              ? t("welcomeBackSub")
-              : t("sub")}
-        </Sub>
+        <Sub>{intent === "signin" ? t("welcomeBackSub") : t("sub")}</Sub>
       </div>
 
       {position && group && (
@@ -863,33 +845,65 @@ export function ArrivalScreen({
           <span className="text-xs text-muted-foreground">
             {group.summary.groupName}
           </span>
-          <BalanceAmount
-            minorUnits={position.minorUnits}
-            currency={position.currency}
-            size="large"
-            showLabel={false}
-          />
-          <span className="text-xs text-muted-foreground">
-            <BalanceLabel minorUnits={position.minorUnits} />
-          </span>
+          <YourBalance balance={position} className="text-xl font-semibold" />
         </div>
       )}
 
       <Spacer />
 
-      <Button size="lg" className={PRIMARY} onClick={onContinue}>
-        {t("seeGroup")}
-      </Button>
+      <div className="flex flex-col gap-2.5">
+        {onFinishSetup ? (
+          <>
+            <Button size="lg" className={PRIMARY} onClick={onFinishSetup}>
+              {t("finishSetup")}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className={SECONDARY}
+              onClick={onLeave}
+            >
+              {t("goToGroup")}
+            </Button>
+          </>
+        ) : (
+          <Button size="lg" className={PRIMARY} onClick={onLeave}>
+            {t("goToGroup")}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
 
-/** The word under the amount — the third of the three redundant cues. */
-function BalanceLabel({ minorUnits }: { minorUnits: string }) {
-  const t = useTranslations("money");
-  const value = BigInt(minorUnits);
+/**
+ * Where the reader stands, said to them: "You owe €60.00".
+ *
+ * For a balance that is theirs — once they have said who they are, or been
+ * let in as somebody. The word carries the direction, so the figure goes
+ * unsigned, and the phrase takes the balance's own tone from `TONE`, which is
+ * never the only cue.
+ */
+export function YourBalance({
+  balance,
+  className,
+}: {
+  balance: { minorUnits: string; currency: string } | null;
+  className?: string;
+}) {
+  const t = useTranslations("onboarding.yourBalance");
+  const locale = useNumberLocale();
+  const tone = balance ? toneFor(balance.minorUnits) : "neutral";
+  const amount = balance ? magnitudeOf(balance, locale) : "";
+
   return (
-    <>{value > 0n ? t("getsBack") : value < 0n ? t("owes") : t("settledUp")}</>
+    <span className={cn("tabular-nums", TONE[tone].ink, className)}>
+      {tone === "negative"
+        ? t("owe", { amount })
+        : tone === "positive"
+          ? t("getBack", { amount })
+          : t("settled")}
+    </span>
   );
 }
 
