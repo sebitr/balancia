@@ -1334,7 +1334,10 @@ describe("a repayment taken back from its toast", () => {
     const actions = entries
       .filter((entry) => entry.entityId === settlementId)
       .map((entry) => entry.action);
-    expect(actions.sort()).toEqual(["settlement.created", "settlement.deleted"]);
+    expect(actions.sort()).toEqual([
+      "settlement.created",
+      "settlement.deleted",
+    ]);
     expect((await findRestorableDeletions(group.access, entries)).size).toBe(1);
   });
 });
