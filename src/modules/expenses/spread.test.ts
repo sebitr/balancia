@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryTotals,
-  isCategorised,
+  isDivided,
   spreadBands,
   subcategoryTotals,
   UNCATEGORISED,
@@ -131,7 +131,7 @@ describe("categoryTotals", () => {
   });
 });
 
-describe("isCategorised", () => {
+describe("isDivided", () => {
   const spreadOf = (entries: SpreadEntry[]) =>
     categoryTotals(entries, SEPARATE)[0];
 
@@ -144,22 +144,45 @@ describe("isCategorised", () => {
     // One band holding the whole total is not a breakdown, so the caller
     // drawing the spine leaves it out.
     expect(spread.categories).toHaveLength(1);
-    expect(isCategorised(spread)).toBe(false);
+    expect(isDivided(spread)).toBe(false);
   });
 
-  it("says yes as soon as one expense is filed, however little it is worth", () => {
+  /**
+   * The audit found this one on the transactions screen: every expense filed
+   * under Groceries, and a full-width coloured block reading "Groceries 100%"
+   * above the search field.
+   */
+  it("says no when everything is filed under the same category", () => {
+    const spread = spreadOf([
+      entry({ category: "groceries", amount: 4200n }),
+      entry({ category: "groceries", amount: 1800n }),
+    ]);
+
+    expect(isDivided(spread)).toBe(false);
+  });
+
+  it("says no for a lone imported free-text category too", () => {
+    expect(isDivided(spreadOf([entry({ category: "Lodging" })]))).toBe(false);
+  });
+
+  it("says yes as soon as a second category appears, however little it is worth", () => {
+    const spread = spreadOf([
+      entry({ category: "groceries", amount: 25000n }),
+      entry({ category: "restaurants", amount: 1n }),
+    ]);
+
+    expect(isDivided(spread)).toBe(true);
+  });
+
+  it("counts the uncategorised bucket as one of the two", () => {
+    // Groceries beside Uncategorised is a real division: either band narrows
+    // the list to something it was not already showing.
     const spread = spreadOf([
       entry({ category: null, amount: 25000n }),
       entry({ category: "groceries", amount: 1n }),
     ]);
 
-    expect(isCategorised(spread)).toBe(true);
-  });
-
-  it("counts an imported free-text category, which is still somebody's answer", () => {
-    expect(isCategorised(spreadOf([entry({ category: "Lodging" })]))).toBe(
-      true,
-    );
+    expect(isDivided(spread)).toBe(true);
   });
 });
 

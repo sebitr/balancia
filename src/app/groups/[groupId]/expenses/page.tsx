@@ -22,7 +22,7 @@ import {
 } from "@/modules/categorization";
 import {
   categoryTotals,
-  isCategorised,
+  isDivided,
   spreadBands,
 } from "@/modules/expenses/spread";
 import {
@@ -119,11 +119,12 @@ export default async function ExpensesPage({
    * appears only when there is one currency to measure in, and simply is not
    * there when there is not.
    *
-   * It also needs something to divide. Until somebody files an expense under a
-   * category the whole total sits in one bucket, and the spine becomes a single
-   * full-height band reading "Uncategorised · 100%" — a chart of one fact, and
-   * a filter whose only setting is the list already on screen. So it stays out
-   * until there is a division to draw, and the list takes the width back.
+   * It also needs something to divide. While the whole total sits in one
+   * category — nobody has filed anything, or everybody filed it all under
+   * Groceries — the spine is a single band reading "Groceries · 100%": a chart
+   * of one fact, and a filter whose only setting is the list already on
+   * screen. So it stays out until there are two categories to draw, and the
+   * list takes the width back.
    */
   const display = {
     mode: access.group.currencyMode,
@@ -132,7 +133,7 @@ export default async function ExpensesPage({
   const spreads = categoryTotals(spending, display);
   const single = spreads.length === 1 ? spreads[0] : null;
   const bands: BandView[] | null =
-    single && isCategorised(single)
+    single && isDivided(single)
       ? spreadBands(single, single.categories.length).map((band) => ({
           key: band.key,
           categories: [...band.categories],

@@ -131,15 +131,22 @@ function byTotalThenKey(a: CategoryTotal, b: CategoryTotal): number {
 }
 
 /**
- * Whether anybody has filed any of this spending under a category.
+ * Whether this spending divides into at least two categories.
  *
- * A group where nobody has still produces a spread: everything lands in the
- * uncategorised bucket, which then holds the whole total. That is a breakdown
- * with nothing broken down, and a caller drawing one — the spine — has nothing
- * to draw and should not.
+ * Anything less is a breakdown with nothing broken down, and a caller drawing
+ * one — the spine — has nothing to draw and should not. That used to be asked
+ * as "has anybody filed anything under a category", which caught the group
+ * where nobody had — everything in the uncategorised bucket, one band reading
+ * "Uncategorised 100%" — and missed the group where everybody had filed under
+ * the same one: a full-width coloured block reading "Groceries 100%" above
+ * the search field, a chart of one fact and a filter whose only setting was
+ * the list already on screen. Both are one category, so both are this.
+ *
+ * Two can include the uncategorised bucket: Groceries beside Uncategorised is
+ * a real division, and pressing either one narrows the list.
  */
-export function isCategorised(spread: CategorySpread): boolean {
-  return spread.categories.some((entry) => entry.category !== null);
+export function isDivided(spread: CategorySpread): boolean {
+  return spread.categories.length >= 2;
 }
 
 /**
