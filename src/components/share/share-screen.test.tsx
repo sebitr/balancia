@@ -172,6 +172,7 @@ describe("ShareScreen", () => {
       renderWithIntl(
         <ShareScreen
           groups={[{ ...GROUPS[0]!, timezone: "Pacific/Auckland" }]}
+          userId={USER}
         />,
       );
 

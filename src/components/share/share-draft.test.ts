@@ -90,6 +90,7 @@ describe("shareDraft", () => {
     // and a receipt shared over breakfast is breakfast's.
     const draft = shareDraft({
       groupId: "group-1",
+      owner: { kind: "user", userId: "user-1" },
       text: "12 coffee",
       fallbackCurrency: "NZD",
       timezone: "Pacific/Auckland",
