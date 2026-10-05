@@ -21,10 +21,12 @@ import {
   type GroupAccess,
 } from "@/lib/security/authorization";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
+import { loadGroupBalances } from "@/modules/balances/service";
+import { OpenBalanceError } from "@/modules/balances/open-balance";
 import { dispatchNotifications } from "@/modules/notifications/service";
 import { recordSettlementNotification } from "@/modules/notifications/events";
 import { resolveConversion } from "@/modules/currencies/conversion";
-import { money } from "@/modules/currencies/money";
+import { money, type Money } from "@/modules/currencies/money";
 import { classifyRateSource } from "@/modules/currencies/rates";
 import { telemetry } from "@/lib/telemetry";
 import type { SettlementInput } from "@/modules/expenses/schemas";
@@ -59,25 +61,96 @@ export interface ListedSettlement extends SettlementSummary {
   readonly cursorKey: string;
 }
 
-async function assertParticipants(
+/**
+ * The two people a repayment names, confirmed to be in the group and held
+ * there until the transaction ends.
+ *
+ * FOR SHARE is the half of the lock `removeParticipant` waits on; the note
+ * there says why. Removed people come back rather than failing the query, so
+ * that each caller can decide what a removed person may still do: an edit may
+ * keep one who is already on the repayment, and a new one may name them only
+ * to clear what they left behind (`assertClearsRemoved`).
+ */
+async function lockParticipants(
   tx: Database,
   groupId: string,
   ids: readonly string[],
-): Promise<void> {
+): Promise<{ id: string; displayName: string; removed: boolean }[]> {
+  const unique = [...new Set(ids)];
   const rows = await tx
-    .select({ id: participants.id })
+    .select({
+      id: participants.id,
+      displayName: participants.displayName,
+      removedAt: participants.removedAt,
+    })
     .from(participants)
     .where(
-      and(
-        eq(participants.groupId, groupId),
-        inArray(participants.id, [...new Set(ids)]),
-        isNull(participants.removedAt),
-      ),
-    );
-  if (rows.length !== new Set(ids).size) {
+      and(eq(participants.groupId, groupId), inArray(participants.id, unique)),
+    )
+    .for("share");
+  if (rows.length !== unique.length) {
     throw new AuthorizationError(
       "One or more of those people are not part of this group.",
+      "participantNotInGroup",
     );
+  }
+  return rows.map((row) => ({
+    id: row.id,
+    displayName: row.displayName,
+    removed: row.removedAt !== null,
+  }));
+}
+
+/**
+ * A repayment naming somebody who has left, held to the one thing it is for.
+ *
+ * Removal is refused while somebody still owes or is owed, but a person can
+ * come to have money outstanding afterwards without anyone adding them to
+ * anything: an old expense they shared is edited or deleted, a repayment they
+ * made is deleted, a deletion is undone. Refusing every one of those would
+ * freeze history the moment somebody left, and restoring them just to record a
+ * payment would put them back in a group they were taken out of. So a
+ * repayment may name them — but only in the direction that settles what is
+ * outstanding, and for no more than it, so it can close a debt and never open
+ * one.
+ *
+ * Measured in the money the balance is kept in: the settlement's own currency
+ * in a group that keeps them apart, the base currency in one that converts.
+ *
+ * Two of these recorded in the same instant each see the whole debt, so
+ * between them they can overshoot it. Nothing serialises them, deliberately:
+ * what an overshoot leaves is a small balance the other way, which this same
+ * rule then lets the next repayment settle.
+ */
+async function assertClearsRemoved(
+  tx: Database,
+  access: GroupAccess,
+  input: SettlementInput,
+  effective: Money,
+  removed: readonly { id: string; displayName: string }[],
+): Promise<void> {
+  const { currencies } = await loadGroupBalances(access, {
+    db: tx,
+    inTransaction: true,
+  });
+  const balances = currencies.find(
+    (entry) => entry.currency === effective.currency,
+  )?.balances;
+
+  for (const person of removed) {
+    const balance =
+      balances?.find((row) => row.participantId === person.id)?.amount ?? 0n;
+    // Paying moves the payer's balance up and the payee's down, so what this
+    // payment can settle is a debt for the one paying and a credit for the one
+    // being paid.
+    const outstanding =
+      person.id === input.fromParticipantId ? -balance : balance;
+    if (outstanding <= 0n || effective.amount > outstanding) {
+      throw new OpenBalanceError(
+        "removedParticipantSettlement",
+        person.displayName,
+      );
+    }
   }
 }
 
@@ -98,7 +171,7 @@ export async function createSettlement(
   });
 
   const created = await db.transaction(async (tx) => {
-    await assertParticipants(tx, access.groupId, [
+    const named = await lockParticipants(tx, access.groupId, [
       input.fromParticipantId,
       input.toParticipantId,
     ]);
@@ -111,6 +184,17 @@ export async function createSettlement(
       source: rateSource,
       capturedAt: options.now,
     });
+
+    const removed = named.filter((person) => person.removed);
+    if (removed.length > 0) {
+      await assertClearsRemoved(
+        tx,
+        access,
+        input,
+        conversion.effective,
+        removed,
+      );
+    }
 
     const insertedSettlement = await tx
       .insert(settlements)
@@ -196,7 +280,11 @@ export async function updateSettlement(
 
   const notificationIds = await db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: settlements.id })
+      .select({
+        id: settlements.id,
+        fromParticipantId: settlements.fromParticipantId,
+        toParticipantId: settlements.toParticipantId,
+      })
       .from(settlements)
       .where(
         and(
@@ -213,10 +301,24 @@ export async function updateSettlement(
       );
     }
 
-    await assertParticipants(tx, access.groupId, [
+    /*
+     * Somebody removed since this repayment was recorded is still one of its
+     * two sides, and fixing its date or its note is no reason to make it about
+     * somebody else. They may stay on it; they may not be moved onto it.
+     */
+    const named = await lockParticipants(tx, access.groupId, [
       input.fromParticipantId,
       input.toParticipantId,
     ]);
+    const alreadyOnIt = [existing.fromParticipantId, existing.toParticipantId];
+    if (
+      named.some((person) => person.removed && !alreadyOnIt.includes(person.id))
+    ) {
+      throw new AuthorizationError(
+        "One or more of those people are not part of this group.",
+        "participantNotInGroup",
+      );
+    }
 
     const conversion = resolveConversion({
       mode: access.group.currencyMode,

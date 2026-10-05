@@ -59,8 +59,13 @@ services:
       EXCHANGE_RATE_PROVIDER: ${DEMO_EXCHANGE_RATE_PROVIDER:-frankfurter}
       LOG_LEVEL: ${DEMO_LOG_LEVEL:-info}
       NEXT_TELEMETRY_DISABLED: 1
+    # On this host only, for the same reason as compose.yaml's app: the demo
+    # sits behind a reverse proxy too, and the limit on minting visitors keys
+    # on the X-Forwarded-For that proxy writes. Reached directly, a caller
+    # writes it themselves. `[address:]port` — DEMO_PORT=0.0.0.0:3001 for a
+    # proxy on another machine.
     ports:
-      - "${DEMO_PORT:-3001}:3000"
+      - "${DEMO_PORT:-127.0.0.1:3001}:3000"
     healthcheck:
       test:
         - CMD-SHELL

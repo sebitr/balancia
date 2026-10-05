@@ -10,12 +10,12 @@ are two surfaces, and only one of them needs configuring:
 
 ## What raises one
 
-| Event                                     | Who is told                                    |
-| ----------------------------------------- | ---------------------------------------------- |
-| An expense is added, edited or deleted    | Everyone who paid for it or owes a share of it |
-| A payment is recorded, changed or deleted | The two people it is between                   |
-| A recurring expense is generated          | Everyone in the generated split                |
-| An import finishes                        | The person who started it                      |
+| Event                                       | Who is told                                    |
+| ------------------------------------------- | ---------------------------------------------- |
+| An expense is added, edited or deleted      | Everyone who paid for it or owes a share of it |
+| A repayment is recorded, changed or deleted | The two people it is between                   |
+| A recurring expense is generated            | Everyone in the generated split                |
+| An import finishes                          | The person who started it                      |
 
 Three rules apply to all of them:
 
@@ -35,7 +35,7 @@ the flat it was split between on the first of every month. The reasoning is
 written out at `GENERATION_HOUR` in `src/modules/recurring/schedule.ts`. There
 is no per-group setting for it, because nobody has asked to choose.
 
-Each person has four switches (expenses, payments, recurring, imports) and can
+Each person has four switches (expenses, repayments, recurring, imports) and can
 quieten a group — either **muted**, which lasts until it is undone, or
 **snoozed for 24 hours**, which wears off on its own. Both are the same row in
 `notification_group_mutes`, and `snoozed_until` is the whole of the difference:
@@ -158,3 +158,12 @@ the recipient's language rather than the actor's.
 A subscription the push service reports as gone (404/410) is deleted rather
 than retried; one that keeps failing temporarily is retired after ten
 consecutive failures.
+
+The endpoint is chosen by the browser, which is to say by whoever is signed in,
+so the server at the other end is not trusted to behave. Each send has ten
+seconds, reply included, and one that runs out counts as a temporary failure;
+of a rejection's body only the first few hundred bytes are read, for the log. An
+endpoint inside the network — loopback, a private or link-local range, the
+cloud metadata address, multicast, or any of those written as IPv6, NAT64
+included — is refused when the subscription is saved and again before every
+send (`src/lib/security/internal-hosts.ts`).

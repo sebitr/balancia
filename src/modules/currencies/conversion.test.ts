@@ -6,7 +6,7 @@ import {
   parseExchangeRate,
   resolveConversion,
 } from "./conversion";
-import { money } from "./money";
+import { MAX_MINOR_UNITS, money } from "./money";
 
 const capturedAt = new Date("2026-01-15T12:00:00.000Z");
 
@@ -26,6 +26,46 @@ describe("parseExchangeRate", () => {
     expect(() => parseExchangeRate("1.0000000000001")).toThrow(
       CurrencyConfigurationError,
     );
+  });
+
+  it("rejects a rate above a billion to one", () => {
+    // Stray zeros on a real rate. Applied, it multiplied an ordinary amount
+    // past what the converted-amount column holds, and the insert answered 500.
+    expect(parseExchangeRate("1000000000").toString()).toBe("1000000000");
+    expect(() => parseExchangeRate("1000000000.000000000001")).toThrow(
+      CurrencyConfigurationError,
+    );
+    expect(() => parseExchangeRate("92000000000000")).toThrow(
+      CurrencyConfigurationError,
+    );
+  });
+});
+
+describe("resolveConversion — the converted amount's range", () => {
+  it("refuses a conversion that lands past the largest amount", () => {
+    // Both halves are accepted on their own — an amount under the line, a
+    // rate under the cap — and their product is not an amount Balancia can
+    // store.
+    expect(() =>
+      resolveConversion({
+        mode: "converted",
+        baseCurrency: "EUR",
+        amount: money(10n ** 17n, "USD"),
+        rate: "1000",
+        capturedAt,
+      }),
+    ).toThrow(CurrencyConfigurationError);
+  });
+
+  it("still converts right up to it", () => {
+    const result = resolveConversion({
+      mode: "converted",
+      baseCurrency: "EUR",
+      amount: money(10n ** 15n, "USD"),
+      rate: "1000",
+      capturedAt,
+    });
+    expect(result.effective).toEqual(money(MAX_MINOR_UNITS, "EUR"));
   });
 });
 

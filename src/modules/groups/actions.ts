@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import {
   actionError,
   requireGroupAccess,
@@ -206,13 +207,29 @@ export async function setGroupSplitDefaultAction(
   return result;
 }
 
+/**
+ * Checked at runtime rather than trusted from the signature: an action is an
+ * endpoint, and `"false"` is truthy — a caller sending the word archived the
+ * group it asked to bring back, and recorded the string in its history.
+ */
+const setGroupArchivedSchema = z.object({
+  groupId: z.uuid(),
+  archived: z.boolean(),
+});
+
 export async function setGroupArchivedAction(
   groupId: string,
   archived: boolean,
 ): Promise<ActionResult> {
+  const parsed = setGroupArchivedSchema.safeParse({ groupId, archived });
+  if (!parsed.success) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
+
   const result = await runAction("groups.archive", async () => {
-    const access = await requireGroupAccess(groupId);
-    await setGroupArchived(access, archived);
+    const access = await requireGroupAccess(parsed.data.groupId);
+    await setGroupArchived(access, parsed.data.archived);
   });
 
   if (result.ok) {

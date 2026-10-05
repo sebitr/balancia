@@ -184,7 +184,7 @@ describe("PeopleCard", () => {
     expect(screen.getByRole("button", { expanded: true })).toBeVisible();
     expect(
       screen.getByText(
-        /Seb signs in with seb@trosset.net.*\(s\)he always has full access/,
+        /Seb signs in with seb@trosset.net.*they always have full access/,
       ),
     ).toBeVisible();
 
@@ -225,7 +225,7 @@ describe("PeopleCard", () => {
     await user.click(screen.getByRole("button", { name: /Cyril/ }));
     expect(
       screen.getByText(
-        "Cyril has no account. With a one-time link, (s)he can take part without signing up.",
+        "Cyril has no account. With a one-time link, they can take part without signing up.",
       ),
     ).toBeVisible();
     await user.selectOptions(

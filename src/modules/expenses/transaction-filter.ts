@@ -334,11 +334,13 @@ function positionSql(scope: FilterScope): SQL | null {
  *
  * `moneyForGroup` is the rule, and this repeats it for the two places a
  * filter needs it inside the query: the amount bounds, and the largest-first
- * order. The converted figure in a converted group, the original everywhere
- * else. If `moneyForGroup` changes which currency a row counts under, this
- * has to change with it — the amount-bound case in the integration test seeds
- * an unconverted foreign row in a converted group so that a divergence fails
- * there rather than in somebody's filter.
+ * order. The frozen conversion in a converted group, when the row carries
+ * one; the original everywhere else, which keeps an unconverted foreign row
+ * in its own currency, as `ledgerCurrencyOf` has it. If `moneyForGroup`
+ * changes which currency a row counts under, this has to change with it — the
+ * amount-bound case in the integration test seeds an unconverted foreign row
+ * in a converted group so that a divergence fails there rather than in
+ * somebody's filter.
  */
 export function displayMoneySql(
   table: typeof expenses | typeof settlements,
@@ -347,12 +349,11 @@ export function displayMoneySql(
   if (group.currencyMode === "separate") {
     return { amount: sql`${table.amount}`, currency: sql`${table.currency}` };
   }
+  // Both halves present, exactly as `moneyForGroup` asks.
+  const frozen = sql`(${table.convertedAmount} IS NOT NULL AND ${table.convertedCurrency} IS NOT NULL)`;
   return {
-    amount: sql`coalesce(${table.convertedAmount}, ${table.amount})`,
-    currency:
-      group.baseCurrency === null
-        ? sql`coalesce(${table.convertedCurrency}, ${table.currency})`
-        : sql`coalesce(${table.convertedCurrency}, ${group.baseCurrency}::text, ${table.currency})`,
+    amount: sql`(CASE WHEN ${frozen} THEN ${table.convertedAmount} ELSE ${table.amount} END)`,
+    currency: sql`(CASE WHEN ${frozen} THEN ${table.convertedCurrency} ELSE ${table.currency} END)`,
   };
 }
 

@@ -39,7 +39,11 @@ async function handleGet(
     const actor = await getCurrentActor();
     const access = await authorizeGroup(actor, groupId);
     const participants = await listParticipants(access.groupId);
-    return noStore({ participants: participants.map(serializeParticipant) });
+    return noStore({
+      participants: participants.map((participant) =>
+        serializeParticipant(participant, access),
+      ),
+    });
   } catch (error) {
     return mobileApiError(error, "/api/groups/[groupId]/participants GET", {
       groupId,
