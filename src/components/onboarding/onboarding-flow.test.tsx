@@ -714,6 +714,9 @@ describe("the cold arrival", () => {
         groupName: "Lisbon trip",
         displayName: "Dana",
         timezone: "Europe/Zurich",
+        // A guest states no preference, so the device's place decides: a
+        // phone in Zurich keeps its group in francs rather than in euros.
+        baseCurrency: "CHF",
       }),
     );
     expect(

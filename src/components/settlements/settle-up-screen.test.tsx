@@ -42,6 +42,7 @@ function recipient(overrides: Partial<RemindRecipient> = {}): RemindRecipient {
     lastRemindedAt: null,
     locked: false,
     muted: false,
+    link: { kind: "group" },
     ...overrides,
   };
 }

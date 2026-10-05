@@ -13,6 +13,10 @@ import { PositionCard } from "@/components/groups/position-card";
 import { PositionHero } from "@/components/groups/position-hero";
 import { SettlementList } from "@/components/groups/settlement-list";
 import { SpendingCard } from "@/components/groups/spending-card";
+import {
+  ActivityRow,
+  historyHoldsADeletion,
+} from "@/components/activity/activity-row";
 import { SinceLastOpened } from "@/components/activity/since-last-opened";
 import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
 import { requireGroupAccess } from "@/lib/actions";
@@ -389,6 +393,15 @@ export default async function GroupOverviewPage({
             }))}
           />
         </>
+      )}
+
+      {/* The group's history, for whoever can open this screen — the Activity
+          screen asks for no more access than this one does, and a Restore
+          there is still offered only to whoever may press it. Always on a
+          group with money in it; on an empty one, only once something has
+          been deleted that Activity could put back. See `ActivityRow`. */}
+      {(!startHere || historyHoldsADeletion(activity)) && (
+        <ActivityRow groupId={groupId} />
       )}
 
       {/* Last, and only for a guest: what they would lose by closing this

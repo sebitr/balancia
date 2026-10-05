@@ -29,12 +29,10 @@ import {
   MetaField,
   MetaStrip,
   PartyRow,
-  PartyTable,
-  PartyTableRow,
   Section,
   TypeChip,
-  type PersonTone,
 } from "@/components/entries/detail-blocks";
+import { SplitCard, YourStake } from "@/components/entries/stake-blocks";
 import { fileKindOf, fileSizeOf } from "@/components/entries/file-meta";
 import { DeleteEntryButton } from "@/components/entries/delete-entry-button";
 import { requireGroupAccess } from "@/lib/actions";
@@ -51,7 +49,6 @@ import {
   FALLBACK_GLYPH,
   hasGlyph,
 } from "@/components/expenses/category-icon";
-import { signOf } from "@/modules/expenses/direction";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { withFragment } from "@/components/entries/drawer-fragment";
 import { PUSH } from "@/components/motion/transitions";
@@ -62,10 +59,10 @@ import { titleAccess } from "../../title-access";
  *
  * Spending and income are the same row in the same table with one sign
  * between them, so they are also the same screen: what changes is the word on
- * the chip, the colour of the figure, and whether the people below it were
- * *split between* or *credited to*. Stating the kind rather than leaving it to
- * be inferred from a colour is the point of the chip — a green figure is not a
- * sentence.
+ * the chip, the sentences that say what it did to people, and whether the
+ * people below it were *split between* or *credited to*. Stating the kind
+ * rather than leaving it to be inferred from a colour is the point of the
+ * chip — a green figure is not a sentence.
  *
  * Every figure on the screen is in the entry's own currency, which is what was
  * actually paid. When the group converts, the strip under the amount says what
@@ -128,7 +125,6 @@ export default async function TransactionDetailPage({
     tCommon,
     tCategories,
     tSubcategories,
-    tMoney,
     dates,
     locale,
   ] = await Promise.all([
@@ -140,7 +136,6 @@ export default async function TransactionDetailPage({
     getTranslations("common"),
     getTranslations("expenses.categories"),
     getTranslations("expenses.subcategories"),
-    getTranslations("money"),
     getDateFormatter(),
     getNumberLocale(),
   ]);
@@ -149,7 +144,6 @@ export default async function TransactionDetailPage({
   const tone = revenue ? "revenue" : "expense";
   const currency = expense.currency;
   const self = access.participantId;
-  const sign = signOf(expense.direction);
 
   // Canonical categories are translated; anything else came from an import
   // and is shown exactly as it was imported.
@@ -174,38 +168,6 @@ export default async function TransactionDetailPage({
     : FALLBACK_GLYPH;
 
   const split = SPLIT_METHODS[expense.splitMethod];
-
-  /**
-   * What this entry did to one person's balance — not what the group's
-   * balances are now, which is the same three figures on every screen in the
-   * group and says nothing about the entry being read.
-   *
-   * Paid minus owed, signed by direction: income is spending run backwards, so
-   * whoever received the money is the one who now owes the others.
-   */
-  const impactOf = (participantId: string): bigint => {
-    const paid = expense.payers
-      .filter((payer) => payer.participantId === participantId)
-      .reduce((sum, payer) => sum + payer.amount, 0n);
-    const owed = expense.shares
-      .filter((share) => share.participantId === participantId)
-      .reduce((sum, share) => sum + share.amount, 0n);
-    return sign * (paid - owed);
-  };
-
-  // You first: the row somebody came to this screen to read should not have to
-  // be found among the others.
-  const shares = [...expense.shares].sort((left, right) => {
-    if (left.participantId === right.participantId) return 0;
-    if (left.participantId === self) return -1;
-    if (right.participantId === self) return 1;
-    return 0;
-  });
-
-  const moved = shares.some((share) => impactOf(share.participantId) !== 0n);
-
-  const toneOf = (participantId: string): PersonTone =>
-    participantId === self ? "self" : "other";
 
   const converted =
     expense.convertedAmount !== null && expense.convertedCurrency !== null;
@@ -248,8 +210,15 @@ export default async function TransactionDetailPage({
         <BigAmount
           minorUnits={expense.amount.toString()}
           currency={currency}
-          tone={tone}
           locale={locale}
+          caption={
+            <YourStake
+              entry={expense}
+              participantId={self}
+              currency={currency}
+              locale={locale}
+            />
+          }
         />
 
         <MetaStrip>
@@ -319,40 +288,12 @@ export default async function TransactionDetailPage({
           </MetaChip>
         }
       >
-        <DetailCard>
-          <PartyTable
-            personLabel={t("person")}
-            figureLabel={t(revenue ? "credited" : "share")}
-            balanceLabel={moved ? t("balance") : null}
-          >
-            {shares.map((share) => {
-              const impact = impactOf(share.participantId);
-              return (
-                <PartyTableRow
-                  key={share.participantId}
-                  name={share.displayName}
-                  tone={toneOf(share.participantId)}
-                  minorUnits={share.amount.toString()}
-                  currency={currency}
-                  balance={
-                    moved
-                      ? {
-                          minorUnits: impact.toString(),
-                          label: tMoney(
-                            impact > 0n
-                              ? "getsBack"
-                              : impact < 0n
-                                ? "owes"
-                                : "settledUp",
-                          ),
-                        }
-                      : null
-                  }
-                />
-              );
-            })}
-          </PartyTable>
-        </DetailCard>
+        <SplitCard
+          entry={expense}
+          participantId={self}
+          currency={currency}
+          locale={locale}
+        />
       </Section>
 
       {expense.notes && (

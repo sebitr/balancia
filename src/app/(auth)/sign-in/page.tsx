@@ -42,6 +42,22 @@ const EMAIL_CHANGE_ERRORS: Record<string, string> = {
   taken: "emailTaken",
 };
 
+/**
+ * Whether the reader was turned away from a group's page.
+ *
+ * The group shell sends anybody signed out here with `next=/groups/<id>`, and
+ * the likeliest of them is not a member who forgot to sign in but somebody who
+ * was sent the group's address — a reminder, a forwarded message — and has no
+ * account at all. "Back to your groups" says nothing to them, so a line does.
+ *
+ * Decided from the shape of `next` alone, before and without any lookup: the
+ * shell redirects for every id, real or not, so the line can say nothing about
+ * whether the group exists or what it is called, and it does not.
+ */
+function cameFromGroupPage(next: string | string[] | undefined): boolean {
+  return typeof next === "string" && /^\/groups\/[^/?#]+/.test(next);
+}
+
 export default async function SignInPage({
   searchParams,
 }: PageProps<"/sign-in">) {
@@ -50,7 +66,7 @@ export default async function SignInPage({
   }
 
   const env = getEnv();
-  const { error, verified, emailChange } = await searchParams;
+  const { error, verified, emailChange, next } = await searchParams;
   const code = typeof error === "string" ? error : undefined;
   const changeOutcome =
     typeof emailChange === "string" ? emailChange : undefined;
@@ -85,6 +101,7 @@ export default async function SignInPage({
       appleEnabled={env.appleSignInEnabled}
       initialError={initialError}
       initialNotice={initialNotice}
+      privateGroup={cameFromGroupPage(next)}
       demoMode={env.DEMO_MODE}
     />
   );

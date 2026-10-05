@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="New group" subtitle="Naming the people who share the costs, before the first expense" -->
+<!-- @dsCard group="Patterns" name="New group" subtitle="A name, the currency it will keep, and the people who share the costs" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -1341,102 +1341,255 @@ a[aria-current="page"] .nav-icon--primary {
     <h1>New group</h1>
     <p class="lede">
       A group is a set of people sharing costs, so creating one asks who they
-      are. This is the moment where "they don't need an account" stops being a
-      claim on a marketing page and becomes something you watch happen: you type
-      three names, and three people are in the group.
+      are. It also asks the one thing that can never be changed afterwards:
+      which currency the balance is kept in. That answer comes straight after
+      the name, already guessed from where the phone is, and the button that
+      fixes it says it out loud.
     </p>
   </header>
 
   <section>
     <h2>On a phone</h2>
-    <div class="spec" style="display: flex; justify-content: center">
-      <div class="frame frame--phone" style="width: 100%">
-        <div style="padding: 1rem">
-          <div class="field-group">
+    <!-- Two states of one sheet: the converted default, and the answer that
+         has no single currency to name. -->
+    <div class="grid-2">
+      <div class="spec" style="display: flex; justify-content: center">
+        <div class="frame frame--phone" style="width: 100%">
+          <div class="screen-header">
+            <span class="screen-title">New group</span>
+            <button class="screen-header-close" aria-label="Close">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 1.375rem;
+              padding: 0 1rem 1rem;
+            "
+          >
             <div class="field">
-              <label class="field-label" for="ng-name">Group name</label>
-              <input class="input" id="ng-name" value="Lisbon trip" />
+              <input
+                class="input"
+                aria-label="Group name"
+                value="Flat on Langstrasse"
+              />
+              <button
+                class="btn btn--ghost btn--xs"
+                style="align-self: flex-start"
+              >
+                + Add a description
+              </button>
             </div>
 
-            <fieldset style="border: 0; margin: 0; padding: 0">
-              <legend class="field-label" style="padding: 0 0 0.5rem">
-                Who else is in this group?
-              </legend>
+            <!-- Straight after the name: the one answer that is final. Below
+                 the people, three names pushed it under the footer. -->
+            <div class="field" data-radio-group>
+              <span class="spec-label" style="margin: 0"
+                >If someone pays in another currency</span
+              >
+              <label class="field-choice" data-checked>
+                <span class="radio" data-checked></span>
+                <span class="list-main">
+                  <span class="list-title">One shared balance</span>
+                  <span class="list-sub"
+                    >Foreign amounts converted into CHF</span
+                  >
+                </span>
+              </label>
+              <label class="field-choice">
+                <span class="radio"></span>
+                <span class="list-main">
+                  <span class="list-title">A balance per currency</span>
+                  <span class="list-sub">Each currency settles on its own</span>
+                </span>
+              </label>
+              <!-- Under both answers rather than between them, so choosing
+                   the second does not slide it out from under the finger. -->
+              <button
+                class="select"
+                style="width: auto; margin-left: 1.5rem"
+                aria-label="That balance is in CHF"
+              >
+                <span class="note" style="margin: 0; font-size: 0.75rem"
+                  >That balance is in</span
+                >
+                <span style="font-weight: 600">🇨🇭 CHF</span>
+              </button>
+              <p
+                class="note"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.375rem;
+                  margin: 0;
+                  font-size: 0.75rem;
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                  style="width: 0.75rem; height: 0.75rem; flex-shrink: 0"
+                >
+                  <rect width="18" height="11" x="3" y="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Fixed once the group exists.
+              </p>
+            </div>
 
+            <div class="field">
+              <div style="display: flex; justify-content: space-between">
+                <span class="spec-label" style="margin: 0">Participants</span>
+                <span class="note" style="font-size: 0.75rem">3 people</span>
+              </div>
               <ul class="list">
                 <li>
                   <div class="list-row">
                     <span class="list-main">Amélie</span>
-                    <span class="note" style="margin: 0; font-size: 0.75rem"
-                      >You</span
-                    >
+                    <span class="badge badge--secondary">You</span>
                   </div>
                 </li>
                 <li>
                   <div class="list-row">
                     <span class="list-main">Jonas</span>
-                    <!-- 44px target: this sits beside a text row on a phone. -->
-                    <button
-                      class="btn btn--ghost"
-                      style="width: 2.75rem; height: 2.75rem; padding: 0"
-                      aria-label="Remove Jonas"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        style="width: 1rem; height: 1rem"
-                      >
-                        <path d="M18 6 6 18M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <span class="note" style="margin: 0">×</span>
                   </div>
                 </li>
                 <li>
                   <div class="list-row">
                     <span class="list-main">Ravi</span>
-                    <button
-                      class="btn btn--ghost"
-                      style="width: 2.75rem; height: 2.75rem; padding: 0"
-                      aria-label="Remove Ravi"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        style="width: 1rem; height: 1rem"
-                      >
-                        <path d="M18 6 6 18M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <span class="note" style="margin: 0">×</span>
                   </div>
                 </li>
               </ul>
+              <div style="display: flex; gap: 0.5rem">
+                <input class="input" placeholder="Add a person" />
+                <button class="btn btn--secondary">Add</button>
+              </div>
+              <p class="note" style="margin: 0; font-size: 0.75rem">
+                No account needed. You can add or rename people later on.
+              </p>
+            </div>
 
-              <!-- Stacked at 375px: a field and a button side by side leaves
-                   neither enough room. -->
-              <div
+            <div class="field">
+              <p class="note" style="margin: 0; font-size: 0.75rem">
+                Days end at Zurich time, from this device. Change it in the
+                group’s settings.
+              </p>
+              <button class="btn btn--default btn--lg" style="width: 100%">
+                Create group in CHF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spec" style="display: flex; justify-content: center">
+        <div class="frame frame--phone" style="width: 100%">
+          <div class="screen-header">
+            <span class="screen-title">New group</span>
+            <button class="screen-header-close" aria-label="Close">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 1.375rem;
+              padding: 0 1rem 1rem;
+            "
+          >
+            <div class="field">
+              <input class="input" aria-label="Group name" value="Road trip" />
+            </div>
+
+            <div class="field" data-radio-group>
+              <span class="spec-label" style="margin: 0"
+                >If someone pays in another currency</span
+              >
+              <label class="field-choice">
+                <span class="radio"></span>
+                <span class="list-main">
+                  <span class="list-title">One shared balance</span>
+                  <span class="list-sub"
+                    >Foreign amounts converted into CHF</span
+                  >
+                </span>
+              </label>
+              <label class="field-choice" data-checked>
+                <span class="radio" data-checked></span>
+                <span class="list-main">
+                  <span class="list-title">A balance per currency</span>
+                  <span class="list-sub">Each currency settles on its own</span>
+                </span>
+              </label>
+              <!-- No base currency in this mode, so no row to choose one and
+                   nothing sent for it. The note still follows the answer. -->
+              <p
+                class="note"
                 style="
                   display: flex;
-                  flex-direction: column;
-                  gap: 0.5rem;
-                  margin-top: 0.75rem;
+                  align-items: center;
+                  gap: 0.375rem;
+                  margin: 0;
+                  font-size: 0.75rem;
                 "
               >
-                <input class="input" placeholder="Their name" />
-                <button class="btn btn--outline">Add</button>
-              </div>
-
-              <p class="note" style="margin: 0.75rem 0 0; font-size: 0.75rem">
-                They do not need an account. Add them now and send whoever wants
-                to use the app a link later — you can add or rename people at
-                any time.
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                  style="width: 0.75rem; height: 0.75rem; flex-shrink: 0"
+                >
+                  <rect width="18" height="11" x="3" y="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Fixed once the group exists.
               </p>
-            </fieldset>
+            </div>
+
+            <p class="note" style="margin: 0; font-size: 0.75rem">
+              Participants, as on the left.
+            </p>
+
+            <div class="field">
+              <p class="note" style="margin: 0; font-size: 0.75rem">
+                Days end at Zurich time, from this device. Change it in the
+                group’s settings.
+              </p>
+              <!-- Several currencies, none to name. -->
+              <button class="btn btn--default btn--lg" style="width: 100%">
+                Create group
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1444,7 +1597,40 @@ a[aria-current="page"] .nav-icon--primary {
     <p class="note" style="margin-top: 0.75rem">
       Your own name heads the list, labelled <em>You</em>. Without it the list
       reads as "the other people", and the count never matches what the group
-      overview will show a moment later.
+      overview will show a moment later. The list grows downwards, under the
+      currency, so however many people are added the currency and its button are
+      both on screen at 375 × 812.
+    </p>
+  </section>
+
+  <section>
+    <h2>Where the currency comes from</h2>
+    <div class="spec">
+      <dl class="dl">
+        <dt>Picked by hand</dt>
+        <dd>
+          Final. Nothing that arrives afterwards — the device answering late at
+          hydration included — replaces it.
+        </dd>
+        <dt>Preferred currency</dt>
+        <dd>What the account said it prefers, in its settings.</dd>
+        <dt>Where the device is</dt>
+        <dd>
+          The time zone the sheet already states in its footer, mapped to what
+          is paid there: <code>Europe/Zurich</code> → CHF,
+          <code>Europe/London</code> → GBP, <code>Asia/Tokyo</code> → JPY. Never
+          the language: <code>en-US</code> is set on phones far from America.
+        </dd>
+        <dt>EUR</dt>
+        <dd>
+          Only when none of the above says anything — a device on
+          <code>UTC</code>.
+        </dd>
+      </dl>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The same guess decides the currency of a group started without an account,
+      from the welcome screen.
     </p>
   </section>
 
@@ -1455,9 +1641,10 @@ a[aria-current="page"] .nav-icon--primary {
         <li>
           <div class="list-row">
             <span class="list-main">
-              <span class="list-title">"Who else is in this group?"</span>
+              <span class="list-title">"Create group in CHF"</span>
               <span class="list-sub"
-                >A question, not a heading. It expects an answer.</span
+                >The tap that fixes the currency says what it fixes. Plain
+                "Create group" when there is a balance per currency.</span
               >
             </span>
           </div>
@@ -1465,7 +1652,18 @@ a[aria-current="page"] .nav-icon--primary {
         <li>
           <div class="list-row">
             <span class="list-main">
-              <span class="list-title">"They do not need an account."</span>
+              <span class="list-title">"Fixed once the group exists."</span>
+              <span class="list-sub"
+                >Beside the answer it is about, not at the bottom of the
+                sheet.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"No account needed."</span>
               <span class="list-sub"
                 >Stated where it is true, not on a help page.</span
               >
@@ -1475,17 +1673,7 @@ a[aria-current="page"] .nav-icon--primary {
         <li>
           <div class="list-row">
             <span class="list-main">
-              <span class="list-title">"…a link later"</span>
-              <span class="list-sub"
-                >Names the next step without demanding it now.</span
-              >
-            </span>
-          </div>
-        </li>
-        <li>
-          <div class="list-row">
-            <span class="list-main">
-              <span class="list-title">"…at any time"</span>
+              <span class="list-title">"…add or rename people later on"</span>
               <span class="list-sub"
                 >Removes the fear of getting the list wrong.</span
               >
@@ -1502,16 +1690,19 @@ a[aria-current="page"] .nav-icon--primary {
       <div class="do">
         <strong>Do</strong>
         <p class="note" style="margin: 0">
-          Let the field stay empty. Someone creating a group alone, or importing
-          from Splitwise a minute later, should not have to dismiss anything.
+          Ask the currency straight after the name, and guess it from where the
+          device is. Let the people field stay empty: someone creating a group
+          alone, or importing from Splitwise a minute later, should not have to
+          dismiss anything.
         </p>
       </div>
       <div class="dont">
         <strong>Don't</strong>
         <p class="note" style="margin: 0">
-          Ask for email addresses here, or make Enter submit the form. The first
-          turns a thirty-second task into recruitment; the second creates a
-          group when someone meant to add a third person.
+          Put the currency where a growing list can push it under the footer, or
+          make Enter submit the form. The first creates a group in a currency
+          nobody saw; the second creates one when someone meant to add a third
+          person.
         </p>
       </div>
     </div>

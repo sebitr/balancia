@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isWebAssemblyInferenceEnabled } from "@/lib/env";
+import { LOCALE_HEADER_NAME } from "@/i18n/locales";
 import { umamiDestination } from "@/lib/analytics/umami";
+import { matchPublicPath } from "@/lib/public-pages";
 import { APPLE_CALLBACK_PATH } from "@/modules/auth/apple-paths";
 import { SHARE_CARD_PREFIX } from "@/modules/groups/share-card";
 
@@ -8,13 +10,15 @@ import { SHARE_CARD_PREFIX } from "@/modules/groups/share-card";
  * Security headers and origin validation.
  *
  * This is Next.js 16's `proxy` convention (the former `middleware`). It runs on
- * the Node.js runtime for every request and does two things:
+ * the Node.js runtime for every request and does three things:
  *
  *  1. Sets a strict Content-Security-Policy with a per-request nonce, plus the
  *     usual hardening headers.
  *  2. Rejects cross-origin state-changing requests whose Origin header does not
  *     match the host — a defence-in-depth CSRF check on top of the framework's
  *     own Server Action origin validation and SameSite cookies.
+ *  3. Reads the language off a public page's address — `/fr` is the homepage
+ *     in French — and hands it to the render as a request header.
  *
  * A correlation ID is attached so a request can be followed through the logs.
  */
@@ -130,6 +134,19 @@ export function proxy(request: NextRequest): NextResponse {
     }
   }
 
+  // A public page has one address per language and no other. A spelling that
+  // names one but is not that address — `/en`, or a French page under its
+  // English slug — is sent on to it rather than served, so that a crawler
+  // never finds the same words at two URLs. Permanent, and 308 rather than
+  // 301 so a Server Action posted from the old address is not turned into a
+  // GET on the way.
+  const publicRoute = matchPublicPath(request.nextUrl.pathname);
+  if (publicRoute && publicRoute.path !== request.nextUrl.pathname) {
+    const moved = request.nextUrl.clone();
+    moved.pathname = publicRoute.path;
+    return NextResponse.redirect(moved, 308);
+  }
+
   const nonce = crypto.randomUUID().replace(/-/g, "");
   const requestId = crypto.randomUUID();
 
@@ -137,6 +154,24 @@ export function proxy(request: NextRequest): NextResponse {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);
 
+  // The language of a public page is its address, never the reader's cookie:
+  // the same URL has to say the same words to everybody, or the copy a
+  // crawler files it under is whichever one it happened to be served. Removed
+  // first, on every request, so the header is only ever this file's word —
+  // sent by a client it would otherwise choose the language of any screen.
+  requestHeaders.delete(LOCALE_HEADER_NAME);
+  if (publicRoute) {
+    requestHeaders.set(LOCALE_HEADER_NAME, publicRoute.locale);
+  }
+
+  // Deliberately `next()` for a page in another language too, and not a
+  // rewrite to the English page's file, which is the obvious way to serve
+  // one file at two addresses. Next runs this function a second time on the
+  // path a rewrite points at — so `/fr`, rewritten to `/`, came back through
+  // here as `/`, had the header above set to English, and was rendered in
+  // English at a French address. Nothing in a unit test shows it: the first
+  // pass's response is exactly right. The other languages have route files
+  // of their own instead (`app/fr/`), and this runs once.
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
   response.headers.set(

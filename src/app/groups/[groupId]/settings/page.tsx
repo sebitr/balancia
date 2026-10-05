@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ChevronRight, Repeat2, Upload, type LucideIcon } from "lucide-react";
+import {
+  ChevronRight,
+  History,
+  Repeat2,
+  Upload,
+  type LucideIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyModeNote } from "@/components/groups/currency-mode-note";
 import { DangerZone } from "@/components/groups/danger-zone";
@@ -22,7 +28,7 @@ import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
  *
  * Ordered by how often it is opened for each: what the group is called, then
  * the link that lets everybody else in, then getting the data out, then the
- * two screens this one is the way to, then the two ways to end it. The invite
+ * screens this one is the way to, then the two ways to end it. The invite
  * link sits that high because it is the one control here that reaches past the
  * group — the rest says what the group is, that one says who else is in it.
  * Every card writes as it is used; none of them has a Save. The currency mode
@@ -125,6 +131,13 @@ export default async function GroupSettingsPage({
               href={`/groups/${groupId}/recurring`}
               icon={Repeat2}
               label={t("recurring")}
+            />
+            {/* For everyone who can open this screen, as the overview's row
+                is: Activity asks for no more access than settings does. */}
+            <ShortcutRow
+              href={`/groups/${groupId}/activity`}
+              icon={History}
+              label={t("activity")}
             />
             {access.permissions.importData && (
               <ShortcutRow
