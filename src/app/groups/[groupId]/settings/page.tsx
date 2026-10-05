@@ -127,8 +127,10 @@ export default async function GroupSettingsPage({
         </CardHeader>
         <CardContent>
           <ul className="divide-y divide-border overflow-hidden rounded-lg border">
+            {/* Says where it came from, so the screen's back arrow returns
+                here: the transactions list is the other way in. */}
             <ShortcutRow
-              href={`/groups/${groupId}/recurring`}
+              href={`/groups/${groupId}/recurring?from=settings`}
               icon={Repeat2}
               label={t("recurring")}
             />

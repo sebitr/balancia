@@ -645,6 +645,84 @@ describe("Transactions", () => {
   });
 });
 
+/**
+ * The way to the recurring expenses, beside the kind chips. They used to be
+ * two levels down, behind a shortcut at the foot of group settings.
+ */
+describe("Transactions, and the recurring expenses", () => {
+  function renderWith(
+    repeating: { running: number } | null,
+    rows: readonly RowView[] = ROWS,
+    locale?: "fr",
+  ) {
+    window.history.replaceState(null, "", "/groups/g1/expenses");
+    return renderWithIntl(
+      <Transactions
+        groupId="g1"
+        eyebrow={<h1>Transactions</h1>}
+        bands={BANDS}
+        kinds={kindsOf(rows)}
+        rows={rows}
+        cursor={null}
+        repeating={repeating}
+        {...sheetProps(rows)}
+      />,
+      locale ? { locale } : undefined,
+    );
+  }
+
+  it("leads to them, counting the ones running", () => {
+    renderWith({ running: 2 });
+
+    const link = screen.getByRole("link", { name: /Repeating · 2/ });
+    expect(link).toHaveAttribute("href", "/groups/g1/recurring");
+    // It goes somewhere: it is not one of the chips that filter the list.
+    expect(link).not.toHaveAttribute("aria-pressed");
+    expect(
+      within(screen.getByRole("group", { name: "Filter by kind" })).queryByRole(
+        "link",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("drops the number when every one of them is paused", () => {
+    renderWith({ running: 0 });
+
+    expect(screen.getByRole("link", { name: "Repeating" })).toHaveAttribute(
+      "href",
+      "/groups/g1/recurring",
+    );
+  });
+
+  it("is not there for a group with none", () => {
+    renderWith(null);
+
+    expect(
+      screen.queryByRole("link", { name: /Repeating/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** A group of expenses only has no chips, and still has its rent. */
+  it("stands on its own when there are no chips beside it", () => {
+    renderWith({ running: 1 }, [row({ id: "e1", title: "Rent" })]);
+
+    expect(
+      screen.queryByRole("group", { name: "Filter by kind" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Repeating · 1/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("says it in French", () => {
+    renderWith({ running: 2 }, ROWS, "fr");
+
+    expect(
+      screen.getByRole("link", { name: /Récurrentes · 2/ }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("Transactions without a single currency", () => {
   it("drops the spine without explaining itself above the list", () => {
     window.history.replaceState(null, "", "/groups/g1/expenses");

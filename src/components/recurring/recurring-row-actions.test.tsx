@@ -65,13 +65,14 @@ function lastToast() {
   ];
 }
 
-function render(paused = false) {
+function render(paused = false, canEdit?: boolean) {
   return renderWithIntl(
     <RecurringRowActions
       groupId="g1"
       templateId="r1"
       description="Rent"
       paused={paused}
+      canEdit={canEdit}
     />,
   );
 }
@@ -132,6 +133,47 @@ describe("removing a recurring expense", () => {
 
     expect(error).toHaveBeenCalledWith("That did not work.");
     expect(success).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The menu offered Pause and Delete and nothing else, so a rent that went up
+ * was deleted and set up again from memory.
+ */
+describe("changing a recurring expense", () => {
+  it("leads with Edit, which opens the entry form on the rule", async () => {
+    const user = userEvent.setup();
+    render();
+
+    await openMenu(user);
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      "Edit",
+      "Pause",
+      "Delete",
+    ]);
+    expect(items[0]).toHaveAttribute("href", "/groups/g1/recurring/r1/edit");
+  });
+
+  it("offers Edit on a paused rule too, which stays paused", async () => {
+    const user = userEvent.setup();
+    render(true);
+
+    await openMenu(user);
+    expect(
+      await screen.findByRole("menuitem", { name: "Edit" }),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves Edit out where there is nobody to split a rule between", async () => {
+    const user = userEvent.setup();
+    render(false, false);
+
+    await openMenu(user);
+    await screen.findByRole("menuitem", { name: "Pause" });
+    expect(
+      screen.queryByRole("menuitem", { name: "Edit" }),
+    ).not.toBeInTheDocument();
   });
 });
 

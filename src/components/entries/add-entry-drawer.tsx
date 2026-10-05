@@ -6,7 +6,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 import { draftFields, type EntryDraftFields } from "./draft-fields";
-import { RESUME_PARAM, sheetOf } from "./drawer-fragment";
+import { RESUME_PARAM, repeatsOf, sheetOf } from "./drawer-fragment";
 import { ENTRY_SHEET_CLASS, openOnAmount } from "./entry-sheet";
 import { settleIntentOf, settlePrefill } from "./settle-intent";
 import { useFragmentParams } from "./use-fragment-params";
@@ -58,20 +58,25 @@ type Exit =
 export function AddEntryDrawer({
   dismissTo,
   ...form
-}: Omit<AddEntryFormProps, "draft" | "prefill" | "openSheet"> & {
+}: Omit<
+  AddEntryFormProps,
+  "draft" | "prefill" | "openSheet" | "startRepeating"
+> & {
   /**
    * Where leaving leads — saved or dismissed, it is the same way out.
    *
    * `back` pops the intercepted route, returning to whatever the drawer opened
    * over. `group` is for the standalone route, arrived at by a link or a
-   * refresh, where there is no such thing behind to go back to.
+   * refresh, where there is no such thing behind to go back to; `recurring`
+   * is the same for a recurring expense being changed, whose list is the
+   * screen it was opened from.
    *
    * Saving used to push `/groups/<id>` instead of popping, on the grounds that
    * "back to group" should mean the group. It left `/expenses/new` sitting in
    * the history behind it, so the next back gesture — which on a phone is how
    * you leave anything — reopened the form over the group.
    */
-  dismissTo: "back" | "group";
+  dismissTo: "back" | "group" | "recurring";
 }) {
   const router = useRouter();
   /*
@@ -114,6 +119,8 @@ export function AddEntryDrawer({
         router.replace(exit.to);
       } else if (dismissTo === "back") {
         router.back();
+      } else if (dismissTo === "recurring") {
+        router.push(`/groups/${form.groupId}/recurring`);
       } else {
         router.push(`/groups/${form.groupId}`);
       }
@@ -160,7 +167,10 @@ export function AddEntryDrawer({
    * ordinary case pay for the rare one.
    */
   const resuming =
-    params !== null && params.get(RESUME_PARAM) === "1" && !form.editing;
+    params !== null &&
+    params.get(RESUME_PARAM) === "1" &&
+    !form.editing &&
+    !form.rule;
   const [stored, setStored] = useState<EntryDraftFields | null | undefined>(
     undefined,
   );
@@ -193,6 +203,8 @@ export function AddEntryDrawer({
   const intent = params === null ? null : settleIntentOf(params);
   const prefill = intent ? settlePrefill(intent, form.outstanding) : undefined;
   const openSheet = params === null ? undefined : sheetOf(params);
+  // The Recurring screen's way in: the same form, facing the other way.
+  const startRepeating = params !== null && repeatsOf(params);
   const filters = params === null ? "" : listQuery(params);
 
   return (
@@ -212,6 +224,7 @@ export function AddEntryDrawer({
             {...form}
             draft={draft}
             prefill={prefill}
+            startRepeating={startRepeating}
             // What the link asked for belongs to the first look. A reload is
             // for reading the entry as it now stands, not for replaying it.
             openSheet={reloads === 0 ? openSheet : undefined}
