@@ -90,9 +90,12 @@ export function rememberOrigin(): void {
   const path = returnPath(
     `${window.location.pathname}${window.location.search}`,
   );
-  if (path === null) return;
   try {
-    sessionStorage.setItem(KEY, path);
+    // A screen that cannot be gone back to still ends the last visit's claim:
+    // an older origin left in place would be a ✕ to somewhere this visit
+    // never started from.
+    if (path === null) sessionStorage.removeItem(KEY);
+    else sessionStorage.setItem(KEY, path);
   } catch {
     // Private browsing, or a full quota. A way back that cannot be written is
     // a ✕ that leads to the dashboard, as it always used to — not a failure.

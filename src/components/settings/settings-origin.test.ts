@@ -67,9 +67,12 @@ describe("the remembered origin", () => {
   });
 
   it("is never a screen inside settings", () => {
+    standOn("/groups/g1");
+    rememberOrigin();
     standOn("/settings/notifications");
     rememberOrigin();
 
+    // Nor the earlier visit's, which this one did not start from.
     expect(readOrigin()).toBeNull();
   });
 
