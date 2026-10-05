@@ -256,7 +256,7 @@ jobs:
       # its image optimizer, which is not this job's business to demand.
       - name: Confirm no dev dependencies were shipped
         run: |
-          for pkg in typescript esbuild vitest jsdom drizzle-kit @playwright/test \
+          for pkg in typescript @typescript/native esbuild vitest jsdom drizzle-kit @playwright/test \
                      prettier eslint tailwindcss tsx; do
             if docker run --rm --entrypoint test balancia:ci -d "/app/node_modules/$pkg"; then
               echo "::error::$pkg is present in the runtime image"
