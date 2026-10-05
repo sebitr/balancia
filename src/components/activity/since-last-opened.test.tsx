@@ -59,7 +59,9 @@ const block = (lastOpenedAt: string | null) =>
 
 describe("since your last visit", () => {
   it("links its heading to the group's whole history", async () => {
-    renderWithIntl(await block("2026-09-01T00:00:00Z"));
+    const rendered = await block("2026-09-01T00:00:00Z");
+    expect(rendered).not.toBeNull();
+    renderWithIntl(rendered!);
 
     const link = screen.getByRole("link", { name: "View all" });
     expect(link).toHaveAttribute("href", "/groups/g1/activity");
