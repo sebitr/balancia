@@ -14,8 +14,12 @@ import { PeopleCard, type PersonView } from "./people-card";
  */
 
 const refresh = vi.fn();
+const replace = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: () => refresh() }),
+  useRouter: () => ({
+    refresh: () => refresh(),
+    replace: (href: string) => replace(href),
+  }),
 }));
 
 /*
@@ -30,10 +34,14 @@ type ById = (
 
 const {
   createInvitationAction,
+  leaveGroupAction,
   removeParticipantAction,
   restoreParticipantAction,
   updateParticipantAction,
 } = vi.hoisted(() => ({
+  leaveGroupAction: vi.fn<
+    (groupId: string) => Promise<{ ok: boolean; error?: string }>
+  >(async () => ({ ok: true })),
   updateParticipantAction: vi.fn<
     (
       groupId: string,
@@ -63,10 +71,11 @@ const {
  * message carrying an Undo — so the call is captured and its action invoked.
  */
 const success = vi.fn();
+const error = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => success(...args),
-    error: vi.fn(),
+    error: (...args: unknown[]) => error(...args),
   },
 }));
 
@@ -76,6 +85,7 @@ vi.mock("@/modules/groups/actions", () => ({
     data: { participantId: "new" },
   })),
   createInvitationAction,
+  leaveGroupAction,
   removeParticipantAction,
   restoreParticipantAction,
   revokeInvitationAction: vi.fn(async () => ({ ok: true })),
@@ -111,11 +121,14 @@ function render(
   return renderWithIntl(
     <PeopleCard
       groupId="g1"
+      groupName="Flat"
+      archived={false}
       people={people}
       viewerId="seb"
       canManage
       canInvite
       canRemove
+      canLeave={false}
       {...props}
     />,
   );
@@ -125,8 +138,15 @@ function render(
 function renderAsMember(
   people: PersonView[],
   viewerId: string | null = "member",
+  props: Partial<React.ComponentProps<typeof PeopleCard>> = {},
 ) {
-  return render(people, { viewerId, canInvite: false, canRemove: false });
+  return render(people, {
+    viewerId,
+    canInvite: false,
+    canRemove: false,
+    canLeave: true,
+    ...props,
+  });
 }
 
 /** What one write posted, as plain entries. */
@@ -188,7 +208,9 @@ describe("PeopleCard", () => {
       ),
     ).toBeVisible();
 
-    await user.click(screen.getAllByRole("button", { expanded: false })[0]);
+    // By name: the owner's open row now ends in a dialog trigger, which is a
+    // collapsed button too.
+    await user.click(screen.getByRole("button", { name: /Cyril/ }));
     // Still exactly one — opening the second closed the first.
     expect(screen.getAllByRole("button", { expanded: true })).toHaveLength(1);
     expect(
@@ -456,5 +478,213 @@ describe("PeopleCard", () => {
     );
     expect(screen.getByText("Seb")).toBeVisible();
     expect(screen.getByText("Cyril")).toBeVisible();
+  });
+});
+
+/**
+ * The reader's own way out, at the foot of their own row: held back for the
+ * reasons removal is, in their own words, and confirmed in a dialog that
+ * opens on staying and promises no undo it could not keep.
+ */
+describe("leaving the group", () => {
+  const ME = person({
+    id: "member",
+    name: "Amélie",
+    email: "amelie@example.com",
+    access: "account",
+  });
+
+  async function openMine(
+    me: PersonView = ME,
+    props: Partial<React.ComponentProps<typeof PeopleCard>> = {},
+  ) {
+    const user = userEvent.setup();
+    renderAsMember([OWNER, me, person()], "member", props);
+    await user.click(screen.getByRole("button", { name: /Amélie/ }));
+    return user;
+  }
+
+  it("is offered on the reader's own row, and on nobody else's", async () => {
+    const user = await openMine();
+
+    const leave = screen.getByRole("button", { name: "Leave this group" });
+    expect(leave).toBeEnabled();
+    expect(leave).toHaveAccessibleDescription(
+      "You will stop seeing this group. What you added stays in it, under your name.",
+    );
+
+    // Somebody else's row, open, offers no way to take them out.
+    await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    expect(
+      screen.queryByRole("button", { name: "Leave this group" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Remove from group/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("waits until the reader has paid what they owe, and says how much", async () => {
+    await openMine({
+      ...ME,
+      balances: [{ minorUnits: "-3000", currency: "EUR" }],
+    });
+
+    const leave = screen.getByRole("button", { name: "Leave this group" });
+    expect(leave).toBeDisabled();
+    expect(leave).toHaveAccessibleDescription(
+      "You still owe €30.00. Settle up first, then leave.",
+    );
+  });
+
+  it("waits until the reader has been paid back, too", async () => {
+    await openMine({
+      ...ME,
+      balances: [{ minorUnits: "3000", currency: "EUR" }],
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Leave this group" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "You are still owed €30.00. Settle up first, then leave.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("names every currency still open, whichever way each runs", async () => {
+    await openMine({
+      ...ME,
+      balances: [
+        { minorUnits: "-3000", currency: "EUR" },
+        { minorUnits: "2000", currency: "CHF" },
+      ],
+    });
+
+    expect(
+      screen.getByText(
+        /^You still have €30\.00, CHF.?20\.00 outstanding\. Settle up first, then leave\.$/,
+      ),
+    ).toBeVisible();
+  });
+
+  it("tells the owner why they cannot, and what they can do instead", async () => {
+    const user = userEvent.setup();
+    render([OWNER, person()]);
+
+    await user.click(screen.getByRole("button", { name: /Seb/ }));
+
+    const leave = screen.getByRole("button", { name: "Leave this group" });
+    expect(leave).toBeDisabled();
+    expect(leave).toHaveAccessibleDescription(
+      "You own this group, so you cannot leave it. To stop using it, archive it or delete it in the group's settings.",
+    );
+  });
+
+  it("is held shut in an archived group, which only its owner can reopen", async () => {
+    await openMine(ME, { archived: true });
+
+    expect(
+      screen.getByRole("button", { name: "Leave this group" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "This group is archived. Its owner has to restore it before you can leave.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("is not offered to a guest, whose way out is the owner's", () => {
+    const guest = person({
+      id: "guest",
+      name: "Hervé",
+      access: "link",
+      link: {
+        createdAt: "2026-08-12T09:00:00.000Z",
+        expiresAt: null,
+        lastUsedAt: "2026-08-17T09:00:00.000Z",
+      },
+    });
+    render([OWNER, guest], {
+      viewerId: "guest",
+      canManage: false,
+      canInvite: false,
+      canRemove: false,
+      canLeave: false,
+    });
+
+    // Nothing behind their own row at all, so it is not a control.
+    expect(screen.queryAllByRole("button", { expanded: false })).toHaveLength(
+      0,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Leave this group" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks first, opening on the safe choice, and promises no undo", async () => {
+    const user = await openMine();
+    await user.click(screen.getByRole("button", { name: "Leave this group" }));
+
+    const dialog = screen.getByRole("alertdialog");
+    expect(within(dialog).getByText("Leave Flat?")).toBeVisible();
+    expect(
+      within(dialog).getByText(
+        "You will no longer see this group. Everything you added stays under your name. To come back, someone in the group has to invite you again.",
+      ),
+    ).toBeVisible();
+    expect(within(dialog).queryByText(/undo/i)).toBeNull();
+    expect(
+      within(dialog).getByRole("button", { name: "Stay in the group" }),
+    ).toHaveFocus();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Stay in the group" }),
+    );
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(leaveGroupAction).not.toHaveBeenCalled();
+  });
+
+  it("leaves, says so, and goes home with no way back to offer", async () => {
+    const user = await openMine();
+    await user.click(screen.getByRole("button", { name: "Leave this group" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Leave group",
+      }),
+    );
+
+    // The group only: whose row it is, the server knows without being told.
+    expect(leaveGroupAction).toHaveBeenCalledWith("g1");
+    expect(success).toHaveBeenCalledWith("You left Flat");
+    // No Undo: the reader could not open the group it would put them back in.
+    expect(success.mock.calls.at(-1)).toHaveLength(1);
+    expect(replace).toHaveBeenCalledWith("/dashboard");
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("stays put and says why when the server refuses", async () => {
+    leaveGroupAction.mockResolvedValueOnce({
+      ok: false,
+      error:
+        "You still have money outstanding in this group. Settle up first, then leave.",
+    });
+    const user = await openMine();
+    await user.click(screen.getByRole("button", { name: "Leave this group" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Leave group",
+      }),
+    );
+
+    expect(error).toHaveBeenCalledWith(
+      "You still have money outstanding in this group. Settle up first, then leave.",
+    );
+    expect(success).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+    // What changed since the screen was drawn is fetched, so the row can say.
+    expect(refresh).toHaveBeenCalled();
   });
 });
