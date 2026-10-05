@@ -69,6 +69,9 @@ export function SplitSummaryRow({
     <button
       type="button"
       onClick={onOpen}
+      // Where a save refused over the split puts focus: this row says what is
+      // wrong, and pressing it opens the sheet that fixes it.
+      data-split-row=""
       className="w-full overflow-hidden rounded-[17px] bg-card text-left shadow-hairline transition-colors active:bg-accent"
     >
       <span className="flex items-center gap-3 p-3.5">
@@ -140,14 +143,15 @@ export function SplitSummaryRow({
        * The outcome, in the one place it cannot be mistaken for the total.
        *
        * Tinted rather than outlined: it is the conclusion the row above draws,
-       * not a fourth thing in it. An empty split turns the strip red — a state
-       * somebody chose, but not one they can save from, and the colour is
-       * never the only thing saying so.
+       * not a fourth thing in it. A split that cannot be saved turns the strip
+       * red — an empty one, or amounts that miss the total by a figure the
+       * strip names — and the colour is never the only thing saying so. The
+       * sheet can be closed on such a split, so this is where it stays said.
        */}
       <span
         className={cn(
           "flex items-center gap-2 px-3.5 py-2.5 text-sm",
-          summary.key === "nobody"
+          summary.warning
             ? "bg-destructive/10 text-destructive-ink"
             : "bg-wash-1 text-muted-foreground",
         )}
