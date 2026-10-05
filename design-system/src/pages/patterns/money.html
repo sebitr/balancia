@@ -136,6 +136,120 @@
       <code>sr-only</code> rather than disappearing — it is never actually
       removed.
     </p>
+    <p class="note" style="margin-top: 0.5rem">
+      Hiding the word is for a figure whose row has no room left and already
+      carries an arrow — the per-currency header, beside the spend. It is not
+      for a list: a name followed by a red figure is a colour doing the
+      explaining. A figure with no arrow and no visible word keeps its sign.
+    </p>
+  </section>
+
+  <section>
+    <h2>One arrow pair</h2>
+    <div class="spec">
+      <div class="row" style="gap: 2rem">
+        <span class="balance balance--positive">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M17 7 7 17" />
+            <path d="M17 17H7V7" />
+          </svg>
+          <span class="balance-label"
+            >in — coming to whoever the line is about</span
+          >
+        </span>
+        <span class="balance balance--negative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M7 17 17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
+          <span class="balance-label">out — going from them</span>
+        </span>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      <code>ArrowDownLeft</code> and <code>ArrowUpRight</code>, and no other
+      direction glyph, on every screen that draws one: the dashboard, the
+      group's hero, the per-currency list, a person's page, the statistics'
+      flows. Straight <code>ArrowUp</code> / <code>ArrowDown</code> are gone —
+      the group's hero pointed up for "you owe" while a person's page pointed
+      down for the same debt, so one figure turned its arrow over between two
+      screens. Where a word now sits beside the figure the glyph may be dropped
+      altogether; it is never swapped for another.
+    </p>
+  </section>
+
+  <section>
+    <h2>Said to the reader</h2>
+    <div class="spec">
+      <dl class="dl" style="margin: 0">
+        <dt>a balance</dt>
+        <dd>
+          "Sam / owes" · "You / get back" — the name, and the verb under it in
+          the muted label style. The reader is "You", never their own name.
+        </dd>
+        <dt>an entry</dt>
+        <dd>
+          "You get back €60.00" · "You owe €30.00" · "You paid your share" — a
+          line of its own, so it starts with a capital, in the tone's ink.
+        </dd>
+        <dt>a repayment</dt>
+        <dd>
+          "You received €30.00" · "You paid €30.00" — which way the money went,
+          in the neutral ink: a repayment closes a position rather than opening
+          one.
+        </dd>
+        <dt>a transfer to make</dt>
+        <dd>
+          "You pay Marta back" · "Sam pays you back" · "Yusuf pays Marta back" —
+          the settle-up screen's words, wherever a transfer is listed.
+        </dd>
+        <dt>one made</dt>
+        <dd>
+          "You paid Marta back" · "Sam paid you back" · "Sam paid Marta" — the
+          list's title, the repayment's screen, its search and the saved toast.
+        </dd>
+        <dt>a person</dt>
+        <dd>
+          "You owe Marta" · "Marta owes you" · "You and Marta are settled up",
+          under the figure on their page.
+        </dd>
+      </dl>
+    </div>
+    <div class="do-dont" style="margin-top: 0.75rem">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Write each sentence as one message, with tags where the two halves are
+          styled apart:
+          <code
+            >&lt;person&gt;You&lt;/person&gt; &lt;verb&gt;get
+            back&lt;/verb&gt;</code
+          >. French then says "Tu récupères".
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Put a name next to a verb. "You" + "get back" came out "Toi
+          récupères"; "Sam → Robin" named Robin to Robin in the third person and
+          never said which way the arrow ran.
+        </p>
+      </div>
+    </div>
   </section>
 
   <section>
