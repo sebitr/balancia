@@ -28,7 +28,7 @@ async function signInAsOrdinaryParticipant(page: Page): Promise<void> {
   // Signing out matters as well as registering twice: `/register` sends a
   // signed-in browser away, so the second registration needs a signed-out one.
   // Sign out lives at the foot of the settings hub now, behind a confirmation.
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("link", { name: "Your account" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page
     .getByRole("alertdialog")
@@ -43,7 +43,7 @@ test.describe("telemetry administration", () => {
   test("is not offered to an ordinary participant", async ({ page }) => {
     await signInAsOrdinaryParticipant(page);
 
-    await page.getByRole("link", { name: "Settings" }).click();
+    await page.getByRole("link", { name: "Your account" }).click();
 
     // The hub draws every row this account is allowed to open, and no row for
     // administration — which is presentation only; the screen behind it

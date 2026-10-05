@@ -24,7 +24,7 @@ import {
  * back, because the Undo would be raised into a page nobody is signed in to.
  */
 async function signOut(page: Page): Promise<void> {
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("link", { name: "Your account" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page
     .getByRole("alertdialog")
