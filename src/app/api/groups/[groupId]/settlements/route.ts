@@ -7,6 +7,7 @@ import {
 import { settlementInputSchema } from "@/modules/expenses/schemas";
 import {
   apiActor,
+  idempotencyKey,
   invalidInput,
   isUuid,
   mobileApiError,
@@ -18,7 +19,8 @@ import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * A group's repayments, and the write that records one. The POST body is
- * `settlementInputSchema` verbatim, shared with the web form's action.
+ * `settlementInputSchema` verbatim, shared with the web form's action, and
+ * it takes an `Idempotency-Key` on the same terms as the expenses route.
  */
 
 const limitSchema = z.coerce.number().int().min(1).max(500).catch(100);
@@ -98,7 +100,9 @@ async function handlePost(
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
-    const settlementId = await createSettlement(access, parsed.data);
+    const settlementId = await createSettlement(access, parsed.data, {
+      clientKey: idempotencyKey(request),
+    });
     return noStore({ settlementId }, { status: 201 });
   } catch (error) {
     return mobileApiError(error, "/api/groups/[groupId]/settlements POST", {

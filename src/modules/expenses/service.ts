@@ -51,6 +51,12 @@ import {
   type SplitInput,
 } from "./split";
 import type { ExpenseInput } from "./schemas";
+import {
+  EditConflictError,
+  entryVersion,
+  nextVersion,
+  versionIs,
+} from "./edit-conflict";
 
 /**
  * Expense service.
@@ -273,7 +279,7 @@ export function prepareExpense(
  * arriving at once, both finding nothing here — is caught by the unique index
  * and re-read through this same function.
  */
-async function expenseForClientKey(
+export async function expenseForClientKey(
   db: Database,
   groupId: string,
   clientKey: string,
@@ -290,6 +296,158 @@ async function expenseForClientKey(
     )
     .limit(1);
   return existing?.entityId ?? null;
+}
+
+export interface WrittenExpense {
+  readonly expenseId: string;
+  /** For the caller to dispatch once the transaction has committed. */
+  readonly notificationIds: string[];
+  readonly converted: boolean;
+  readonly shareCount: number;
+}
+
+/**
+ * Writes one expense inside a transaction somebody else holds: the row, its
+ * client key if it has one, its payers and shares, its receipts, its activity
+ * event, the category it teaches and its notifications.
+ *
+ * Separate from `createExpense` so that a change of kind can write the expense
+ * and remove the repayment it replaces in the same commit — see
+ * `convertSettlementToExpense`. It dispatches nothing, for the reason given at
+ * `writeSettlement`.
+ */
+export async function writeExpense(
+  tx: Database,
+  access: GroupAccess,
+  input: ExpenseInput,
+  options: { now?: Date; rateSource: ExchangeRateSource; clientKey?: string },
+): Promise<WrittenExpense> {
+  const referenced = [
+    ...input.payers.map((payer) => payer.participantId),
+    ...input.splitEntries.map((entry) => entry.participantId),
+  ];
+  await assertParticipantsInGroup(tx, access.groupId, referenced);
+
+  const prepared = prepareExpense(access, input, {
+    now: options.now,
+    rateSource: options.rateSource,
+  });
+
+  const inserted = await tx
+    .insert(expenses)
+    .values({
+      groupId: access.groupId,
+      direction: input.direction ?? "out",
+      description: input.description,
+      notes: input.notes || null,
+      category: input.category || null,
+      subcategory: input.subcategory || null,
+      amount: prepared.amount,
+      currency: prepared.currency,
+      convertedAmount: prepared.convertedAmount,
+      convertedCurrency: prepared.convertedCurrency,
+      exchangeRate: prepared.exchangeRate,
+      exchangeRateSource: prepared.exchangeRateSource,
+      exchangeRateAt: prepared.exchangeRateAt,
+      splitMethod: input.splitMethod,
+      splitInput: prepared.splitInput,
+      expenseDate: input.expenseDate,
+      createdByActorType: access.actor.kind,
+      createdByParticipantId: access.participantId,
+    })
+    .returning({ id: expenses.id });
+  const expense = onlyRow(inserted, "the expense insert");
+
+  /*
+   * Spend the key in the same transaction as the expense it names, so the
+   * two can never disagree: either both are there or neither is. Written
+   * here rather than after the commit because a crash in between would leave
+   * an expense no replay could recognise, and the next flush would write a
+   * second one.
+   *
+   * A concurrent replay that got past the fast path lands on the unique
+   * index here and takes this whole transaction down with it — including the
+   * duplicate expense above, which is the point. `createExpense` catches it.
+   */
+  if (options.clientKey) {
+    await tx.insert(entryClientKeys).values({
+      groupId: access.groupId,
+      clientKey: options.clientKey,
+      entityType: "expense",
+      entityId: expense.id,
+    });
+  }
+
+  await tx.insert(expensePayers).values(
+    prepared.payers.map((payer) => ({
+      expenseId: expense.id,
+      participantId: payer.participantId,
+      amount: payer.amount,
+      convertedAmount: payer.convertedAmount,
+    })),
+  );
+
+  await tx.insert(expenseShares).values(
+    prepared.shares.map((share) => ({
+      expenseId: expense.id,
+      participantId: share.participantId,
+      amount: share.amount,
+      convertedAmount: share.convertedAmount,
+    })),
+  );
+
+  if (input.attachmentIds?.length) {
+    await linkAttachments(tx, access.groupId, expense.id, input.attachmentIds);
+  }
+
+  await recordActivity(tx, {
+    groupId: access.groupId,
+    action: "expense.created",
+    entityType: "expense",
+    entityId: expense.id,
+    ...activityActorFrom(access),
+    metadata: {
+      description: input.description,
+      amount: prepared.amount.toString(),
+      currency: prepared.currency,
+      splitMethod: input.splitMethod,
+      payerCount: prepared.payers.length,
+      shareCount: prepared.shares.length,
+    },
+  });
+
+  // Whatever category was settled on teaches the classifier, in the same
+  // transaction as the expense that taught it.
+  await recordCategoryChoice(
+    access,
+    {
+      merchant: input.description,
+      category: input.category ?? null,
+      subcategory: input.subcategory ?? null,
+    },
+    { db: tx },
+  );
+
+  const notificationIds = await recordExpenseNotification(tx, access, {
+    type: "expense.created",
+    expenseId: expense.id,
+    description: input.description,
+    amount: prepared.amount,
+    currency: prepared.currency,
+    participantIds: [
+      ...prepared.payers.map((payer) => payer.participantId),
+      ...prepared.shares.map((share) => share.participantId),
+    ],
+  });
+
+  return {
+    expenseId: expense.id,
+    notificationIds,
+    // Carried out of the transaction for telemetry: two numbers and a
+    // boolean, decided here where the prepared expense is in scope.
+    converted: prepared.exchangeRate !== null,
+    shareCount: prepared.shares.length,
+  };
 }
 
 /**
@@ -335,139 +493,13 @@ export async function createExpense(
   });
 
   const write = () =>
-    db.transaction(async (tx) => {
-      const referenced = [
-        ...input.payers.map((payer) => payer.participantId),
-        ...input.splitEntries.map((entry) => entry.participantId),
-      ];
-      await assertParticipantsInGroup(tx, access.groupId, referenced);
-
-      const prepared = prepareExpense(access, input, {
+    db.transaction((tx) =>
+      writeExpense(tx, access, input, {
         now: options.now,
         rateSource,
-      });
-
-      const inserted = await tx
-        .insert(expenses)
-        .values({
-          groupId: access.groupId,
-          direction: input.direction ?? "out",
-          description: input.description,
-          notes: input.notes || null,
-          category: input.category || null,
-          subcategory: input.subcategory || null,
-          amount: prepared.amount,
-          currency: prepared.currency,
-          convertedAmount: prepared.convertedAmount,
-          convertedCurrency: prepared.convertedCurrency,
-          exchangeRate: prepared.exchangeRate,
-          exchangeRateSource: prepared.exchangeRateSource,
-          exchangeRateAt: prepared.exchangeRateAt,
-          splitMethod: input.splitMethod,
-          splitInput: prepared.splitInput,
-          expenseDate: input.expenseDate,
-          createdByActorType: access.actor.kind,
-          createdByParticipantId: access.participantId,
-        })
-        .returning({ id: expenses.id });
-      const expense = onlyRow(inserted, "the expense insert");
-
-      /*
-       * Spend the key in the same transaction as the expense it names, so the
-       * two can never disagree: either both are there or neither is. Written
-       * here rather than after the commit because a crash in between would leave
-       * an expense no replay could recognise, and the next flush would write a
-       * second one.
-       *
-       * A concurrent replay that got past the fast path lands on the unique
-       * index here and takes this whole transaction down with it — including the
-       * duplicate expense above, which is the point. The caller catches it below.
-       */
-      if (options.clientKey) {
-        await tx.insert(entryClientKeys).values({
-          groupId: access.groupId,
-          clientKey: options.clientKey,
-          entityType: "expense",
-          entityId: expense.id,
-        });
-      }
-
-      await tx.insert(expensePayers).values(
-        prepared.payers.map((payer) => ({
-          expenseId: expense.id,
-          participantId: payer.participantId,
-          amount: payer.amount,
-          convertedAmount: payer.convertedAmount,
-        })),
-      );
-
-      await tx.insert(expenseShares).values(
-        prepared.shares.map((share) => ({
-          expenseId: expense.id,
-          participantId: share.participantId,
-          amount: share.amount,
-          convertedAmount: share.convertedAmount,
-        })),
-      );
-
-      if (input.attachmentIds?.length) {
-        await linkAttachments(
-          tx,
-          access.groupId,
-          expense.id,
-          input.attachmentIds,
-        );
-      }
-
-      await recordActivity(tx, {
-        groupId: access.groupId,
-        action: "expense.created",
-        entityType: "expense",
-        entityId: expense.id,
-        ...activityActorFrom(access),
-        metadata: {
-          description: input.description,
-          amount: prepared.amount.toString(),
-          currency: prepared.currency,
-          splitMethod: input.splitMethod,
-          payerCount: prepared.payers.length,
-          shareCount: prepared.shares.length,
-        },
-      });
-
-      // Whatever category was settled on teaches the classifier, in the same
-      // transaction as the expense that taught it.
-      await recordCategoryChoice(
-        access,
-        {
-          merchant: input.description,
-          category: input.category ?? null,
-          subcategory: input.subcategory ?? null,
-        },
-        { db: tx },
-      );
-
-      const notificationIds = await recordExpenseNotification(tx, access, {
-        type: "expense.created",
-        expenseId: expense.id,
-        description: input.description,
-        amount: prepared.amount,
-        currency: prepared.currency,
-        participantIds: [
-          ...prepared.payers.map((payer) => payer.participantId),
-          ...prepared.shares.map((share) => share.participantId),
-        ],
-      });
-
-      return {
-        expenseId: expense.id,
-        notificationIds,
-        // Carried out of the transaction for telemetry: two numbers and a
-        // boolean, decided here where the prepared expense is in scope.
-        converted: prepared.exchangeRate !== null,
-        shareCount: prepared.shares.length,
-      };
-    });
+        clientKey: options.clientKey,
+      }),
+    );
 
   /*
    * The backstop under the fast path above, for two replays of one entry that
@@ -514,12 +546,23 @@ export async function createExpense(
   return expenseId;
 }
 
+/**
+ * Replaces an expense with `input`, whole.
+ *
+ * `expectedVersion` is the version the edit was made from — what `getExpense`
+ * handed out as `version`. With it, the write lands only if nobody has changed
+ * the expense since, and an `EditConflictError` is thrown otherwise, with
+ * nothing written. Without it the edit applies unconditionally, which is what
+ * a caller that never read a version still gets. See `./edit-conflict`.
+ *
+ * Returns the version the expense has now.
+ */
 export async function updateExpense(
   access: GroupAccess,
   expenseId: string,
   input: ExpenseInput,
-  options: { db?: Database; now?: Date } = {},
-): Promise<void> {
+  options: { db?: Database; now?: Date; expectedVersion?: string } = {},
+): Promise<string> {
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
 
@@ -531,7 +574,7 @@ export async function updateExpense(
     on: input.expenseDate,
   });
 
-  const notificationIds = await db.transaction(async (tx) => {
+  const { notificationIds, version } = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: expenses.id, description: expenses.description })
       .from(expenses)
@@ -572,7 +615,7 @@ export async function updateExpense(
       rateSource,
     });
 
-    await tx
+    const updated = await tx
       .update(expenses)
       .set({
         direction: input.direction ?? "out",
@@ -590,9 +633,28 @@ export async function updateExpense(
         splitMethod: input.splitMethod,
         splitInput: prepared.splitInput,
         expenseDate: input.expenseDate,
-        updatedAt: new Date(),
+        updatedAt: nextVersion(expenses.updatedAt),
       })
-      .where(eq(expenses.id, expenseId));
+      .where(
+        and(
+          eq(expenses.id, expenseId),
+          eq(expenses.groupId, access.groupId),
+          options.expectedVersion === undefined
+            ? undefined
+            : versionIs(expenses.updatedAt, options.expectedVersion),
+        ),
+      )
+      .returning({ version: entryVersion(expenses.updatedAt) });
+
+    /*
+     * The row was there a moment ago — the read above found it — so the only
+     * thing that can leave this empty is the version. A concurrent edit that
+     * committed first is caught here too: this UPDATE waits on its row lock and
+     * then re-checks the condition against the row that edit left behind.
+     * Throwing rolls back everything this transaction has done so far.
+     */
+    const [written] = updated;
+    if (!written) throw new EditConflictError();
 
     // Replace allocations wholesale: a partial update could leave a stale row
     // whose share no longer belongs to the new split.
@@ -648,7 +710,7 @@ export async function updateExpense(
       { db: tx },
     );
 
-    return recordExpenseNotification(tx, access, {
+    const notificationIds = await recordExpenseNotification(tx, access, {
       type: "expense.updated",
       expenseId,
       description: input.description,
@@ -660,6 +722,7 @@ export async function updateExpense(
         ...prepared.shares.map((share) => share.participantId),
       ],
     });
+    return { notificationIds, version: written.version };
   });
 
   await dispatchNotifications(notificationIds);
@@ -668,6 +731,74 @@ export async function updateExpense(
   // or a payer is indistinguishable here from one that fixed a typo, and that
   // is the intended resolution.
   await telemetry.expenseUpdated({ splitMethod: input.splitMethod });
+
+  return version;
+}
+
+/**
+ * Soft-deletes one expense inside a transaction somebody else holds, and hands
+ * back the notification ids for them to dispatch after their commit.
+ * `writeExpense`'s counterpart; the note at `writeSettlement` says why these
+ * are apart.
+ *
+ * `replacedBy` is `deleteExpense`'s, and the change of kind in `convert.ts`
+ * is the caller that sets it.
+ */
+export async function removeExpense(
+  tx: Database,
+  access: GroupAccess,
+  expenseId: string,
+  options: { replacedBy?: string } = {},
+): Promise<string[]> {
+  const deleted = await tx
+    .update(expenses)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        eq(expenses.id, expenseId),
+        eq(expenses.groupId, access.groupId),
+        isNull(expenses.deletedAt),
+      ),
+    )
+    .returning({
+      id: expenses.id,
+      description: expenses.description,
+      amount: expenses.amount,
+      currency: expenses.currency,
+    });
+
+  const [deletedExpense] = deleted;
+  if (!deletedExpense) {
+    throw new AuthorizationError(
+      "That expense is not part of this group.",
+      "notInGroup",
+    );
+  }
+
+  await recordActivity(tx, {
+    groupId: access.groupId,
+    action: "expense.deleted",
+    entityType: "expense",
+    entityId: expenseId,
+    ...activityActorFrom(access),
+    metadata: {
+      description: deletedExpense.description,
+      amount: deletedExpense.amount.toString(),
+      currency: deletedExpense.currency,
+      ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
+    },
+  });
+
+  // The allocations survive a soft delete, so they still say who this
+  // expense concerned.
+  return recordExpenseNotification(tx, access, {
+    type: "expense.deleted",
+    expenseId,
+    description: deletedExpense.description,
+    amount: deletedExpense.amount,
+    currency: deletedExpense.currency,
+    participantIds: await participantsOfExpense(tx, expenseId),
+  });
 }
 
 export async function deleteExpense(
@@ -686,57 +817,9 @@ export async function deleteExpense(
   requirePermission(access, "editAnyExpense");
   const db = options.db ?? getDb();
 
-  const notificationIds = await db.transaction(async (tx) => {
-    const deleted = await tx
-      .update(expenses)
-      .set({ deletedAt: new Date() })
-      .where(
-        and(
-          eq(expenses.id, expenseId),
-          eq(expenses.groupId, access.groupId),
-          isNull(expenses.deletedAt),
-        ),
-      )
-      .returning({
-        id: expenses.id,
-        description: expenses.description,
-        amount: expenses.amount,
-        currency: expenses.currency,
-      });
-
-    const [deletedExpense] = deleted;
-    if (!deletedExpense) {
-      throw new AuthorizationError(
-        "That expense is not part of this group.",
-        "notInGroup",
-      );
-    }
-
-    await recordActivity(tx, {
-      groupId: access.groupId,
-      action: "expense.deleted",
-      entityType: "expense",
-      entityId: expenseId,
-      ...activityActorFrom(access),
-      metadata: {
-        description: deletedExpense.description,
-        amount: deletedExpense.amount.toString(),
-        currency: deletedExpense.currency,
-        ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
-      },
-    });
-
-    // The allocations survive a soft delete, so they still say who this
-    // expense concerned.
-    return recordExpenseNotification(tx, access, {
-      type: "expense.deleted",
-      expenseId,
-      description: deletedExpense.description,
-      amount: deletedExpense.amount,
-      currency: deletedExpense.currency,
-      participantIds: await participantsOfExpense(tx, expenseId),
-    });
-  });
+  const notificationIds = await db.transaction((tx) =>
+    removeExpense(tx, access, expenseId, { replacedBy: options.replacedBy }),
+  );
 
   await dispatchNotifications(notificationIds);
 }
@@ -1028,15 +1111,23 @@ export async function listSpreadEntries(
   }));
 }
 
-/** A single expense, scoped to its group. Returns null if it is not there. */
+/**
+ * A single expense, scoped to its group. Returns null if it is not there.
+ *
+ * `version` is what an edit of it hands back to `updateExpense` as
+ * `expectedVersion`, so the edit is refused if somebody else got there first.
+ */
 export async function getExpense(
   groupId: string,
   expenseId: string,
   options: { db?: Database } = {},
-): Promise<(ExpenseSummary & { splitInput: SplitInput | null }) | null> {
+): Promise<
+  (ExpenseSummary & { splitInput: SplitInput | null; version: string }) | null
+> {
   const db = options.db ?? getDb();
   const [row] = await db
     .select({
+      version: entryVersion(expenses.updatedAt),
       id: expenses.id,
       direction: expenses.direction,
       description: expenses.description,

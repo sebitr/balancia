@@ -1,0 +1,7 @@
+Date,Description,Category,Cost,Currency,Ada,Blaise,Grace
+2026-04-01,Coffee,Food and drink,6.00,EUR,4.00,-2.00,-2.00
+2026-04-01,Taxi,Transportation,30.00,EUR,-10.00,20.00,-10.00
+2026-04-01,Coffee,Food and drink,6.00,EUR,4.00,-2.00,-2.00
+2026-04-02,Blaise paid Ada,Payment,5.00,EUR,-5.00,5.00,0.00
+2026-04-02,Blaise paid Ada,Payment,5.00,EUR,-5.00,5.00,0.00
+2026-04-02,Total balance, , ,EUR,-12.00,26.00,-14.00

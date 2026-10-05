@@ -92,7 +92,9 @@ two exports of one transaction have nothing else in common. Here the client is
 the same device that queued the entry, so it mints a random key and keeps it
 with the payload — which is the only way two genuinely identical entries can
 both land. Four people splitting the same €3 coffee twice in one afternoon is
-two expenses, and a content hash would silently eat the second.
+two expenses, and a content hash would silently eat the second. An import can
+count the copies of a line within one file; a queue sends entries one at a
+time, with nothing to count them against.
 
 The key is carried on the online path too, not only from the queue. That is
 where it earns most of its keep: a save over a live connection can still lose
@@ -104,6 +106,16 @@ A key is spent for good once used, deletion included. A replay arriving after
 somebody removed the entry hands back that id and leaves the deletion standing:
 the person who removed it could see what it was, and a network retry is not a
 reason to overrule them.
+
+**Repayments carry a key too**, though they are never queued. Without a queue
+to hold the key between attempts, the form holds it instead: one key from the
+first press of **Record payment** until a save lands, so pressing again after
+an answer that never came back replays that attempt rather than paying the debt
+a second time. `POST /api/groups/:groupId/settlements` takes the same header on
+the same terms. Changing an entry between an expense and a repayment is covered
+as well: it writes the new row and removes the old one in a single transaction
+under the form's key, so a second send of the same change answers with the row
+the first one made.
 
 ## When the server says no
 
@@ -117,6 +129,7 @@ mistaken for the ones that are not.
 | 401, session expired                | Kept, retried after signing in                            |
 | 429, or a 5xx                       | Kept, retried with a backoff capped at two minutes        |
 | 404 — group gone, or access lost    | Held back and shown to the reader                         |
+| 409 — the group was archived        | Held back and shown to the reader, as archived            |
 | 422 — refused, e.g. a removed payer | Held back and shown to the reader                         |
 
 A queued entry is never dropped except by the server accepting it or by the

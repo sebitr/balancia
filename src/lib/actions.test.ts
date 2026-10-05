@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../messages/en.json";
 import { runAction } from "./actions";
 import { AllocationError } from "@/modules/expenses/allocation";
+import { EditConflictError } from "@/modules/expenses/edit-conflict";
 import { AuthError } from "@/modules/auth/service";
 import { AuthorizationError } from "@/lib/security/authorization";
 import { InvalidAmountError } from "@/modules/currencies/money";
@@ -70,6 +71,24 @@ describe("runAction", () => {
     expect(result).toEqual({
       ok: false,
       error: messages.serverErrors.noGroupAccess,
+    });
+  });
+
+  /*
+   * This one code rides along with the sentence, so the edit form can offer to
+   * reload the entry somebody else changed without matching on words that
+   * change with the language. The two cases above pin down that the codes
+   * nobody acts on stay behind.
+   */
+  it("carries an edit conflict's code beside its sentence", async () => {
+    const result = await runAction("test", async () => {
+      throw new EditConflictError();
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: messages.serverErrors.editConflict,
+      code: "editConflict",
     });
   });
 

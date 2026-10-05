@@ -24,8 +24,9 @@ import { RestoreDeleted } from "./restore-deleted";
  * UTC unless an operator set one — and on it a group in Paris read 14:05
  * against an expense its members had added at 16:05.
  *
- * A deletion whose entry is still deleted carries a Restore. Which rows those
- * are is the page's question, answered in one query before this renders; see
+ * A deletion whose entry is still deleted carries a Restore, and so does the
+ * removal of somebody who is still removed. Which rows those are is the page's
+ * question, answered in one query before this renders; see
  * `findRestorableDeletions`.
  */
 
@@ -110,9 +111,10 @@ export async function ActivityFeed({
  *
  * "Restore" alone, read out of a list of the page's buttons, is several
  * buttons with one name. So the name carries the entry's own words — its
- * description, or for a repayment, which has none, its amount — and starts
- * with the word printed on the button, so that a voice command naming what it
- * sees still reaches it.
+ * description, or for a repayment, which has none, its amount, or for a
+ * person, their name as it was when they were removed — and starts with the
+ * word printed on the button, so that a voice command naming what it sees
+ * still reaches it.
  */
 function restoreLabel(
   entry: ActivityEntry,
@@ -121,6 +123,12 @@ function restoreLabel(
   locale: string,
 ): string {
   const metadata = entry.metadata ?? {};
+  if (kind === "participant") {
+    const name = metadata.displayName;
+    return typeof name === "string" && name.length > 0
+      ? t("restore.participant", { name })
+      : t("restore.unnamedParticipant");
+  }
   if (kind === "settlement") {
     const amount = amountOf(metadata, locale);
     return amount ? t("restore.settlement", { amount }) : t("restore.unnamed");

@@ -887,6 +887,7 @@ describe("switching type", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "Bus tickets" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1193,6 +1194,7 @@ describe("settlement", () => {
         amount: "12840",
         paymentMethod: "TWINT",
       }),
+      CLIENT_KEY,
     );
     expect(success).toHaveBeenCalledWith(
       "Repayment recorded",
@@ -1227,10 +1229,32 @@ describe("settlement", () => {
         fromParticipantId: "grace",
         toParticipantId: "seb",
       }),
+      CLIENT_KEY,
     );
     const line = render(success.mock.calls[0]?.[1]?.description as ReactElement)
       .container.textContent;
     expect(line).toContain("Grace → Seb");
+  });
+
+  /**
+   * The key a repayment goes out under belongs to the form, not to the press.
+   * Nothing queues a repayment the way the outbox queues an expense, so the
+   * second press *is* the retry — and it has to carry the first one's key, or
+   * an answer lost on the way back becomes a debt paid twice.
+   */
+  it("sends a second press under the first press's key", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    createSettlement.mockResolvedValueOnce({ ok: false, error: "Try again." });
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
+
+    expect(createSettlement).toHaveBeenCalledTimes(2);
+    const [first, second] = createSettlement.mock.calls.map((call) => call[2]);
+    expect(first).toEqual(CLIENT_KEY);
+    expect(second).toBe(first);
   });
 
   /**
@@ -1253,6 +1277,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1286,6 +1311,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "Poker chips" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1327,6 +1353,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ currency: "EUR" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1408,6 +1435,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "Bus tickets" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1425,6 +1453,7 @@ describe("settlement", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ notes: "" }),
+      CLIENT_KEY,
     );
   });
 
@@ -1949,9 +1978,11 @@ describe("editing an entry", () => {
 
     expect(updateExpense).not.toHaveBeenCalled();
     expect(toSettlement).toHaveBeenCalledTimes(1);
-    const [groupId, expenseId, payload] = toSettlement.mock.calls[0];
+    const [groupId, expenseId, payload, clientKey] = toSettlement.mock.calls[0];
     expect(groupId).toBe("g1");
     expect(expenseId).toBe("e1");
+    // A move writes a row as surely as a create does, and replays the same way.
+    expect(clientKey).toEqual(CLIENT_KEY);
     expect(payload).toMatchObject({
       fromParticipantId: "herve",
       toParticipantId: "seb",
@@ -2066,9 +2097,10 @@ describe("editing an entry", () => {
 
     expect(updateSettlement).not.toHaveBeenCalled();
     expect(toExpense).toHaveBeenCalledTimes(1);
-    const [groupId, settlementId, payload] = toExpense.mock.calls[0];
+    const [groupId, settlementId, payload, clientKey] = toExpense.mock.calls[0];
     expect(groupId).toBe("g1");
     expect(settlementId).toBe("s1");
+    expect(clientKey).toEqual(CLIENT_KEY);
     expect(payload).toMatchObject({
       direction: "out",
       description: "Concert tickets",
@@ -2193,6 +2225,152 @@ describe("editing an entry", () => {
     expect(
       screen.queryByRole("dialog", { name: "Payment and split" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * An edit made from a copy somebody else has since saved over.
+ *
+ * The server refuses it and writes nothing. What the form owes the reader is
+ * the reason, everything they typed still in place, and a way to see the entry
+ * as it now stands. The refusal's own re-render brings that entry in as
+ * `editing`, and it must replace neither their fields nor the version the next
+ * save is checked against — pressing Save again would otherwise overwrite the
+ * very change it was just refused for. Only Reload does both.
+ */
+describe("an edit somebody else saved first", () => {
+  const OPENED = {
+    kind: "expense" as const,
+    id: "e1",
+    type: "expense" as const,
+    amountText: "84.60",
+    currency: "CHF",
+    exchangeRate: "",
+    date: "2026-08-12",
+    description: "Migros",
+    category: "",
+    subcategory: "",
+    notes: "",
+    payerId: "seb",
+    settleTo: null,
+    includedIds: ["seb", "herve"],
+    splitMethod: "equal" as const,
+    splitValues: {},
+    paymentMethod: "",
+    version: "2026-08-12T10:00:00.000000Z",
+  };
+
+  /** The same expense, as the other person left it. */
+  const THEIRS = {
+    ...OPENED,
+    amountText: "91.20",
+    description: "Migros and the wine",
+    version: "2026-08-12T10:05:00.123456Z",
+  };
+
+  /** The server's words; the form only has to show them. */
+  const REFUSED = {
+    ok: false,
+    error: "Somebody else changed this entry since you opened it.",
+    code: "editConflict",
+  };
+
+  /** The drawer as the route renders it, around whichever copy it read. */
+  const drawer = (editing: typeof OPENED) => (
+    <AddEntryDrawer
+      dismissTo="back"
+      groupId="g1"
+      members={MEMBERS}
+      selfId="seb"
+      currencyMode="converted"
+      baseCurrency="CHF"
+      defaultCurrency="CHF"
+      timezone="Europe/Zurich"
+      outstanding={OUTSTANDING}
+      editing={editing}
+    />
+  );
+
+  const description = () =>
+    screen.getByRole("textbox", { name: "Description" });
+  const amount = () => screen.getByRole("textbox", { name: "Amount" });
+  const save = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+  };
+
+  it("says why, keeps what was typed, and reloads only when asked", async () => {
+    const user = userEvent.setup();
+    const view = renderForm({ editing: OPENED });
+    updateExpense.mockResolvedValueOnce(REFUSED).mockResolvedValueOnce(REFUSED);
+
+    await user.clear(description());
+    await user.type(description(), "Migros, and Cyril's share");
+    await save(user);
+
+    // Sent with the version its fields were read from, and refused.
+    expect(updateExpense.mock.calls[0][3]).toBe(OPENED.version);
+    expect(await screen.findByText(REFUSED.error)).toBeVisible();
+    expect(success).not.toHaveBeenCalled();
+
+    // The refusal re-renders the route, which reads the entry afresh.
+    view.rerender(drawer(THEIRS));
+
+    expect(description()).toHaveValue("Migros, and Cyril's share");
+    expect(amount()).toHaveValue("84.60");
+
+    // Still the copy this reader opened, so still refused — never an
+    // overwrite of the change it was refused for a moment ago.
+    await save(user);
+    expect(updateExpense.mock.calls[1][3]).toBe(OPENED.version);
+    expect(await screen.findByText(REFUSED.error)).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Reload" }));
+
+    expect(description()).toHaveValue("Migros and the wine");
+    expect(amount()).toHaveValue("91.20");
+    expect(screen.queryByText(REFUSED.error)).not.toBeInTheDocument();
+
+    await save(user);
+    expect(updateExpense).toHaveBeenCalledTimes(3);
+    expect(updateExpense.mock.calls[2][3]).toBe(THEIRS.version);
+  });
+
+  it("offers no reload for a refusal that has nothing to do with a copy", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: OPENED });
+    updateExpense.mockResolvedValueOnce({
+      ok: false,
+      error: "You do not have access to this group.",
+    });
+
+    await save(user);
+
+    expect(
+      await screen.findByText("You do not have access to this group."),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Reload" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends a repayment's version too", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      editing: {
+        ...OPENED,
+        kind: "settlement",
+        id: "s1",
+        type: "settle",
+        description: "",
+        settleTo: "herve",
+        includedIds: [],
+      },
+    });
+
+    await save(user);
+
+    expect(updateSettlement).toHaveBeenCalledTimes(1);
+    expect(updateSettlement.mock.calls[0][3]).toBe(OPENED.version);
   });
 });
 
@@ -2592,6 +2770,7 @@ describe("a drawer opened on a stated debt", () => {
         amount: "12840",
         currency: "CHF",
       }),
+      CLIENT_KEY,
     );
   });
 
@@ -2620,6 +2799,7 @@ describe("a drawer opened on a stated debt", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "TWINT" }),
+      CLIENT_KEY,
     );
   });
 
@@ -2632,6 +2812,7 @@ describe("a drawer opened on a stated debt", () => {
     expect(createSettlement).toHaveBeenCalledWith(
       "g1",
       expect.objectContaining({ paymentMethod: "" }),
+      CLIENT_KEY,
     );
   });
 

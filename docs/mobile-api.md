@@ -33,12 +33,56 @@ lands here first:
   `2999-12-31`: `2025-02-30` on a write is a 422 saying so, and on
   `/api/rates?on` a 400. The inbox's `before` instant is held to the same
   years.
-- **Authorization failures are 404**, indistinguishable from a group that does
+- **Refusing an outsider is 404**, indistinguishable from a group that does
   not exist (same rule as the export route). A path id that is not a UUID is
   the same 404, answered before any lookup. Missing authentication is 401.
   Refusals a person should read (a bad split, a rate limit) are 422 / 429 with
-  `{"error": "..."}`.
+  `{"error": "..."}`. An edit refused because somebody else changed the entry
+  first is 409 with `code: "editConflict"` — see _Editing without overwriting
+  somebody else_.
 - Every response is `Cache-Control: private, no-store`.
+- **Refusing somebody in the group is not a 404.** It says what stopped them,
+  with a `code` beside the sentence — see
+  [Refused inside a group](#refused-inside-a-group).
+
+### Refused inside a group
+
+Somebody already in the group is told what stopped them, because "Not found."
+about their own group reads as the group having gone. The status says which
+kind of refusal it is, and the body carries a stable `code` beside the English
+sentence. Branch on the code, not on the prose:
+
+```json
+{
+  "error": "The group owner cannot be removed from the group. Archive it or delete it instead.",
+  "code": "ownerNotRemovable"
+}
+```
+
+| Status | `code`                  | When                                                                                                                                                  |
+| ------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 422    | `participantNotInGroup` | An expense, repayment or recurring template names somebody removed from the group, or never in it                                                     |
+| 409    | `groupArchived`         | A write to an archived group. Restoring it is the group's own PATCH, which is not refused                                                             |
+| 409    | `ownerNotRemovable`     | `DELETE …/participants/:id` on the group's owner                                                                                                      |
+| 409    | `participantHasAccount` | `POST …/participants/:id/invitation` for somebody who signs in with their own account                                                                 |
+| 403    | `noPermission`          | An owner-only action asked for by a member or a guest: removing or restoring people, invitations and the join link, the group's settings, deleting it |
+| 403    | `notYourAccount`        | `PATCH …/participants/:id` on somebody else who has an account — only they change their own name and email                                            |
+
+Each is given only after the caller has been let into the group, so none of
+them tells an outsider anything: that the group exists, and what the caller's
+role allows, are already in every group read. **A 404 with no `code` is the one
+answer that means the group is out of reach** — gone, or not the caller's —
+or that the item named in the path is not in it. On anything else, keep the
+group: show the sentence, and let the person change what they asked for.
+
+The table is `IN_GROUP_STATUS` in `src/app/api/mobile.ts`. A refusal nobody has
+placed in it falls to the 404, and `src/app/api/mobile.test.ts` fails the build
+until every refusal the services can throw has been placed or deliberately
+left there.
+
+Three routes answer their own refusals and have not moved: the receipt upload
+and the receipt scan still say 404 to a write on an archived group, and the
+export says 404 to a guest.
 
 ## Sessions
 
@@ -173,9 +217,9 @@ is off, which is the default.
 | GET    | `/api/groups`                                            | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly. An archived position has no figures: `amounts` empty, `net` and `owedTo` null.                                       |
 | GET    | `/api/groups/:groupId`                                   | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, per-currency overviews, balance rows, suggested repayments, spending periods).                                                                                              |
 | GET    | `/api/groups/:groupId/expenses?limit&offset`             | `listExpenses`, newest first, payers and shares resolved.                                                                                                                                                                                                                                                                         |
-| GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                                                                                                                                     |
+| GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed, and its `version` — also sent as the `ETag` — for the edit to hand back as `If-Match`.                                                                                                                                                              |
 | GET    | `/api/groups/:groupId/settlements?limit`                 | `listSettlements`, newest first.                                                                                                                                                                                                                                                                                                  |
-| GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`).                                                                                                                                                                                                                                     |
+| GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`) and its `version`, also sent as the `ETag`.                                                                                                                                                                                          |
 | GET    | `/api/groups/:groupId/expenses/:expenseId/attachments`   | The receipts on one expense (`id`, `fileName`, `contentType`, `byteSize`); bytes come from the per-attachment download route.                                                                                                                                                                                                     |
 | GET    | `/api/groups/:groupId/participants`                      | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                                                                                                                                               |
 | GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200).                                                                                                                                                                                                                                                                         |
@@ -325,43 +369,43 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 
 ## Writes
 
-| Method | Path                                               | Body                                                                                                                                                                                                                                      |
-| ------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`. Takes `Idempotency-Key` — see below                                                                                                                                                             |
-| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`). Somebody removed from the group since may stay on the expense; naming a removed person it did not already have is a 404                                                        |
-| DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                                                                                                                               |
-| POST   | `/api/groups/:groupId/expenses/:expenseId/restore` | undo for the delete; the expense comes back under its own id, payers and shares intact                                                                                                                                                    |
-| POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`. May name somebody removed from the group only to settle what they still owe or are owed, and for no more than it — 422 otherwise                                                          |
-| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema`. Like the expense PATCH, keeps a removed person already on it and refuses (404) moving it onto one                                                                                                                |
-| DELETE | `/api/groups/:groupId/settlements/:settlementId`   | soft delete                                                                                                                                                                                                                               |
-| POST   | `/api/groups/:groupId/settlements/:id/restore`     | undo for the delete                                                                                                                                                                                                                       |
-| POST   | `/api/groups`                                      | `createGroupSchema` → 201 `{groupId, participantId}`. `ownerDisplayName` defaults to the account name.                                                                                                                                    |
-| PATCH  | `/api/groups/:groupId`                             | `updateGroupSchema` fields when `name`/`timezone` are present, and/or `{archived: boolean}` — either half may come alone. Un-archiving skips the recurring occurrences that fell due meanwhile.                                           |
-| DELETE | `/api/groups/:groupId`                             | **hard** delete, like the web's danger zone                                                                                                                                                                                               |
-| POST   | `/api/groups/:groupId/participants`                | `{displayName, email?}` → 201 `{participantId}`                                                                                                                                                                                           |
-| PATCH  | `/api/groups/:groupId/participants/:id`            | `{displayName, email?}`                                                                                                                                                                                                                   |
-| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions. 422 while they still owe or are owed anything, in any currency — settle up first                                                                                                |
-| POST   | `/api/groups/:groupId/participants/:id/restore`    | undo for the remove (the invitation stays gone — only its hash was kept)                                                                                                                                                                  |
-| POST   | `/api/groups/:groupId/participants/:id/invitation` | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once                                                                                                                                                                                   |
-| DELETE | `/api/groups/:groupId/participants/:id/invitation` | revoke                                                                                                                                                                                                                                    |
-| POST   | `/api/groups/:groupId/join-link`                   | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once, owner only                                                                                                                                                                       |
-| DELETE | `/api/groups/:groupId/join-link`                   | revoke, owner only                                                                                                                                                                                                                        |
-| POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id}`; checked like an expense, so payers, a split or a missing rate that would not make a valid entry are a 422, and a stranger a 404                                                                      |
-| PATCH  | `/api/groups/:groupId/recurring/:templateId`       | `{paused: boolean}`; resuming skips what fell due while paused and picks up at the first occurrence still to come                                                                                                                         |
-| DELETE | `/api/groups/:groupId/recurring/:templateId`       | delete the template; generated expenses stay                                                                                                                                                                                              |
-| POST   | `/api/groups/:groupId/recurring/:id/restore`       | undo for the delete; the worker picks the schedule up again on its next tick                                                                                                                                                              |
-| POST   | `/api/groups/:groupId/reminders`                   | `{toParticipantId, message, logToActivity?}` → `RemindResult`; the debt and channel are re-derived server-side, refusals are 422                                                                                                          |
-| PUT    | `/api/groups/:groupId/mute`                        | `{muted: boolean}` — per-user, needs an account                                                                                                                                                                                           |
-| POST   | `/api/notifications/read`                          | `{ids?: [uuid]}`; omit to mark all read                                                                                                                                                                                                   |
-| PUT    | `/api/notifications/preferences`                   | all five category booleans                                                                                                                                                                                                                |
-| PATCH  | `/api/profile`                                     | `{name?, locale?, accentColor?: accent name, dateFormat?, numberFormat?, preferredCurrency?: code\|null, favoriteCurrencies?: [code]}` — any subset; `accentColor` is one of the seven names in `docs/appearance.md`, `"coral"` clears it |
-| GET    | `/api/profile/payouts`                             | the caller's own `{methods, address}` — how they want to be paid back; never anybody else's                                                                                                                                               |
-| PUT    | `/api/profile/payouts`                             | `{methods?: [{method, detail}], address?: {...}\|null}`; the whole ordered list, 422 `{method, reason}` on a rejected detail                                                                                                              |
-| GET    | `/api/profile/avatar`                              | the caller's own photo, or 404; never anybody else's                                                                                                                                                                                      |
-| POST   | `/api/profile/avatar`                              | `multipart/form-data` with `file`; type is sniffed, 1 MB cap, replaces and sweeps the old one                                                                                                                                             |
-| DELETE | `/api/profile/avatar`                              | 204; the account goes back to its initial                                                                                                                                                                                                 |
-| DELETE | `/api/push/subscriptions/:id`                      | forget one device by its row id — the endpoint form is how a browser unsubscribes itself                                                                                                                                                  |
-| POST   | `/api/parse`                                       | `{text, fallbackCurrency?}` → `{amountText, currency, description, amountMinor}`. Names no group and reads no row — see [Parsing a sentence](#parsing-a-sentence)                                                                         |
+| Method | Path                                               | Body                                                                                                                                                                                                                                                                                                     |
+| ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`. Takes `Idempotency-Key` — see below                                                                                                                                                                                                                            |
+| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`) → `{ok, version}`. Takes `If-Match`; 409 when somebody else changed it first — see below. Somebody removed from the group since may stay on the expense; naming a removed person it did not already have is a 422 `participantNotInGroup`      |
+| DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                                                                                                                                                                                              |
+| POST   | `/api/groups/:groupId/expenses/:expenseId/restore` | undo for the delete; the expense comes back under its own id, payers and shares intact                                                                                                                                                                                                                   |
+| POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`. Takes `Idempotency-Key` — see below. May name somebody removed from the group only to settle what they still owe or are owed, and for no more than it — 422 otherwise                                                                                    |
+| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema` (full replace, like `updateSettlement` — an omitted `paymentMethod` clears it) → `{ok, version}`. Takes `If-Match`, exactly as the expense PATCH does. Like the expense PATCH, keeps a removed person already on it and refuses (422 `participantNotInGroup`) moving it onto one |
+| DELETE | `/api/groups/:groupId/settlements/:settlementId`   | soft delete                                                                                                                                                                                                                                                                                              |
+| POST   | `/api/groups/:groupId/settlements/:id/restore`     | undo for the delete                                                                                                                                                                                                                                                                                      |
+| POST   | `/api/groups`                                      | `createGroupSchema` → 201 `{groupId, participantId}`. `ownerDisplayName` defaults to the account name.                                                                                                                                                                                                   |
+| PATCH  | `/api/groups/:groupId`                             | `updateGroupSchema` fields when `name`/`timezone` are present, and/or `{archived: boolean}` — either half may come alone. Un-archiving skips the recurring occurrences that fell due meanwhile.                                                                                                          |
+| DELETE | `/api/groups/:groupId`                             | **hard** delete, like the web's danger zone                                                                                                                                                                                                                                                              |
+| POST   | `/api/groups/:groupId/participants`                | `{displayName, email?}` → 201 `{participantId}`                                                                                                                                                                                                                                                          |
+| PATCH  | `/api/groups/:groupId/participants/:id`            | `{displayName, email?}`                                                                                                                                                                                                                                                                                  |
+| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions. 422 while they still owe or are owed anything, in any currency — settle up first                                                                                                                                                               |
+| POST   | `/api/groups/:groupId/participants/:id/restore`    | undo for the remove (the invitation stays gone — only its hash was kept)                                                                                                                                                                                                                                 |
+| POST   | `/api/groups/:groupId/participants/:id/invitation` | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once                                                                                                                                                                                                                                                  |
+| DELETE | `/api/groups/:groupId/participants/:id/invitation` | revoke                                                                                                                                                                                                                                                                                                   |
+| POST   | `/api/groups/:groupId/join-link`                   | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once, owner only                                                                                                                                                                                                                                      |
+| DELETE | `/api/groups/:groupId/join-link`                   | revoke, owner only                                                                                                                                                                                                                                                                                       |
+| POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id}`; checked like an expense, so payers, a split or a missing rate that would not make a valid entry are a 422, and so is somebody not in the group                                                                                                                      |
+| PATCH  | `/api/groups/:groupId/recurring/:templateId`       | `{paused: boolean}`; resuming skips what fell due while paused and picks up at the first occurrence still to come                                                                                                                                                                                        |
+| DELETE | `/api/groups/:groupId/recurring/:templateId`       | delete the template; generated expenses stay                                                                                                                                                                                                                                                             |
+| POST   | `/api/groups/:groupId/recurring/:id/restore`       | undo for the delete; the worker picks the schedule up again on its next tick                                                                                                                                                                                                                             |
+| POST   | `/api/groups/:groupId/reminders`                   | `{toParticipantId, message, logToActivity?}` → `RemindResult`; the debt and channel are re-derived server-side, refusals are 422                                                                                                                                                                         |
+| PUT    | `/api/groups/:groupId/mute`                        | `{muted: boolean}` — per-user, needs an account                                                                                                                                                                                                                                                          |
+| POST   | `/api/notifications/read`                          | `{ids?: [uuid]}`; omit to mark all read                                                                                                                                                                                                                                                                  |
+| PUT    | `/api/notifications/preferences`                   | all five category booleans                                                                                                                                                                                                                                                                               |
+| PATCH  | `/api/profile`                                     | `{name?, locale?, accentColor?: accent name, dateFormat?, numberFormat?, preferredCurrency?: code\|null, favoriteCurrencies?: [code]}` — any subset; `accentColor` is one of the seven names in `docs/appearance.md`, `"coral"` clears it                                                                |
+| GET    | `/api/profile/payouts`                             | the caller's own `{methods, address}` — how they want to be paid back; never anybody else's                                                                                                                                                                                                              |
+| PUT    | `/api/profile/payouts`                             | `{methods?: [{method, detail}], address?: {...}\|null}`; the whole ordered list, 422 `{method, reason}` on a rejected detail                                                                                                                                                                             |
+| GET    | `/api/profile/avatar`                              | the caller's own photo, or 404; never anybody else's                                                                                                                                                                                                                                                     |
+| POST   | `/api/profile/avatar`                              | `multipart/form-data` with `file`; type is sniffed, 1 MB cap, replaces and sweeps the old one                                                                                                                                                                                                            |
+| DELETE | `/api/profile/avatar`                              | 204; the account goes back to its initial                                                                                                                                                                                                                                                                |
+| DELETE | `/api/push/subscriptions/:id`                      | forget one device by its row id — the endpoint form is how a browser unsubscribes itself                                                                                                                                                                                                                 |
+| POST   | `/api/parse`                                       | `{text, fallbackCurrency?}` → `{amountText, currency, description, amountMinor}`. Names no group and reads no row — see [Parsing a sentence](#parsing-a-sentence)                                                                                                                                        |
 
 Every restore refuses a row that is not deleted, so a client may replay one
 safely: a second call answers 404 rather than writing a second event about
@@ -383,21 +427,23 @@ strip a photo's EXIF block itself, as the web app does before uploading. The
 export answers **429** with `Retry-After` after ten requests an hour from one
 person for one group.
 
-### Creating an expense exactly once
+### Creating an expense or a repayment exactly once
 
-`POST /api/groups/:groupId/expenses` accepts an **`Idempotency-Key`** header,
-and any client that queues writes should send one. A client that loses its
-connection mid-request cannot tell "never arrived" from "arrived, and the
-answer was lost on the way back"; without a key, retrying the second case
-writes a second expense and the group's balances are quietly wrong.
+`POST /api/groups/:groupId/expenses` and `POST /api/groups/:groupId/settlements`
+accept an **`Idempotency-Key`** header, and any client that retries writes
+should send one. A client that loses its connection mid-request cannot tell
+"never arrived" from "arrived, and the answer was lost on the way back";
+without a key, retrying the second case writes a second entry and the group's
+balances are quietly wrong. For a repayment that means a debt paid twice and
+the debtor left in credit.
 
 - The value is a **UUID**, minted per entry, fixed before the first attempt and
   reused for every retry of that same entry. A malformed header is ignored
   rather than refused — a write landing once beats a 400 the client will retry
   forever — so a client that sends something else gets no protection at all.
-- The key is recorded in the same transaction as the expense, so the two cannot
-  disagree. A replay answers **201 with the `expenseId` the first call
-  created** — the same answer, not a new expense. The route does not
+- The key is recorded in the same transaction as the entry, so the two cannot
+  disagree. A replay answers **201 with the `expenseId` (or `settlementId`) the
+  first call created** — the same answer, not a new entry. The route does not
   distinguish the two cases in its status, because no caller needs it to: the
   only question a queue has is whether the server has the entry, and 201 says
   it does either way.
@@ -405,11 +451,57 @@ writes a second expense and the group's balances are quietly wrong.
   was deleted returns that id and leaves the deletion standing.
 - Scope is per group, so two devices may mint the same value without one
   group's write being mistaken for another's.
+- Expenses and repayments share one set of keys. A key spent on one kind and
+  sent again with the other writes nothing and fails with a 500, rather than
+  answering with an id of the wrong kind — mint a fresh key per entry,
+  whatever kind it is.
 
-Only the expense create takes a key today. The browser's own offline queue
-uses this exact route rather than the Server Action the form calls when it is
-online, because an action is addressed by an id that changes on every build and
-a queued entry has to survive a deploy — see [offline entry](offline.md).
+Only the two creates take a key. The browser's own offline queue uses the
+expenses route rather than the Server Action the form calls when it is online,
+because an action is addressed by an id that changes on every build and a
+queued entry has to survive a deploy — see [offline entry](offline.md).
+Repayments are not queued offline, but the web form sends its key to the
+action all the same.
+
+### Editing without overwriting somebody else
+
+An edit replaces the whole entry, so two people with the same expense open
+used to race without knowing it: the second save put back everything the first
+had just corrected. The two single-entry reads now say which version of the
+entry they returned, and the two PATCHes can be told to apply only to that
+version.
+
+- `GET /api/groups/:groupId/expenses/:expenseId` and
+  `GET /api/groups/:groupId/settlements/:settlementId` answer with an **`ETag`**
+  header and the same token as `version` in the body. Treat it as opaque: it is
+  compared exactly, character for character, and it changes on every edit.
+- Send it back on the PATCH as **`If-Match: "<version>"`**. If nobody has
+  changed the entry since, the edit lands and the answer is
+  `{"ok": true, "version": "…"}` with the new version as the `ETag`, so a second
+  edit needs no fresh read.
+- If somebody has, nothing is written and the answer is **409**:
+
+  ```json
+  { "error": "Somebody else changed this entry…", "code": "editConflict" }
+  ```
+
+  Fetch the entry again, show the person what it says now, and let them decide
+  whether their change still stands. Keep what they typed until they have — the
+  web form does. Merging the two edits is not something the server can do for
+  you: two corrections to one amount have no right answer to pick.
+
+The header is **optional**, and without it nothing has changed: the edit
+applies whatever has happened since, which is what a client built before this
+existed still gets. `*` means the same as no header. A weak tag (`W/"…"`) is
+accepted as its strong self, because a proxy that compresses responses — nginx
+does, by default — weakens the ETag on the way out. Anything that is not a
+version this server issued is kept, not ignored, and so fails with 409: a
+precondition a client asked for is never quietly dropped.
+
+The status is 409 rather than the 412 RFC 9110 gives a failed `If-Match`, so
+that it reads as the refusal it is — somebody else got there first — and so the
+`code` is the thing a client branches on. A deleted entry is still 404, as
+before, whether or not the header was sent.
 
 ### Parsing a sentence
 
@@ -477,8 +569,9 @@ prefix and a null `url`, which is enough to name the live link in a UI and to
 offer a fresh one instead.
 
 Every call on the group-wide link is the owner's, through `manageInvitations`.
-A member or a guest asking for it is answered 404, the same as somebody outside
-the group: who else the group is open to is not theirs to read or to change.
+A member or a guest asking for it is refused with 403 `noPermission`, before
+the link is looked up: who else the group is open to is not theirs to read or
+to change, and the refusal does not say whether there is a link at all.
 
 ### Redeeming one
 
@@ -846,7 +939,7 @@ enforcing that; there is no path.
 | 404    | A pinned key on another group — indistinguishable from "no such group".    |
 | 429    | The key's own rate bucket: 600 requests per 10 minutes, keyed by key.      |
 
-403 is the one refusal that is **not** answered 404. The 404 rule exists so
+A key's 403 is **not** answered 404 either. The 404 rule exists so
 group ids cannot be probed, and nothing is being probed here: the caller
 already holds the key and is being told a fact about the key itself, which they
 need in order to mint a better one.
