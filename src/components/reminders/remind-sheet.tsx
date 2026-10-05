@@ -17,6 +17,16 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
@@ -313,18 +323,41 @@ export function RemindSheet({
     return lines.join("\n");
   };
 
-  const shuffle = () => {
-    if (edited !== null && !window.confirm(t("discardEdit"))) return;
+  /** A fresh draft in `nextTone`, over whatever is in the box. */
+  const replaceDraft = (nextTone: RemindTone) => {
     setEdited(null);
-    setDraftKey(pickDraft(tone, draftKey).key);
+    setTone(nextTone);
+    setDraftKey(pickDraft(nextTone, draftKey).key);
+  };
+
+  /*
+   * A new draft asked for while the sender's own words are in the box, held
+   * until they say whether to throw those words away.
+   *
+   * This was `window.confirm`, which answered in the browser's own dialog —
+   * "OK" and "Cancel", in the browser's language rather than the app's, with
+   * no way to say which of the two keeps the message. The app's dialog names
+   * both outcomes on the buttons themselves.
+   */
+  const [pendingDraft, setPendingDraft] = useState<{
+    readonly tone: RemindTone;
+  } | null>(null);
+
+  const shuffle = () => {
+    if (edited !== null) {
+      setPendingDraft({ tone });
+      return;
+    }
+    replaceDraft(tone);
   };
 
   const changeTone = (next: RemindTone) => {
     if (next === tone) return;
-    if (edited !== null && !window.confirm(t("discardEdit"))) return;
-    setEdited(null);
-    setTone(next);
-    setDraftKey(pickDraft(next, draftKey).key);
+    if (edited !== null) {
+      setPendingDraft({ tone: next });
+      return;
+    }
+    replaceDraft(next);
   };
 
   const record = (recipient: RemindRecipient, message: string) => {
@@ -797,6 +830,31 @@ export function RemindSheet({
           </p>
         </>
       )}
+
+      <AlertDialog
+        open={pendingDraft !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDraft(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("replaceTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("replaceBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("replaceKeep")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDraft) replaceDraft(pendingDraft.tone);
+                setPendingDraft(null);
+              }}
+            >
+              {t("replaceConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

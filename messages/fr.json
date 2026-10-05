@@ -3212,7 +3212,10 @@
     "sentNextPush": "{name} suit, et le recevra dans l’application.",
     "copied": "Cet appareil ne peut pas partager directement : le message est dans ton presse-papiers.",
     "handoffFailed": "Cet appareil n’a pas accepté le message. Copie-le depuis le champ ci-dessus et envoie-le toi-même — rien n’a été enregistré.",
-    "discardEdit": "Changer de brouillon remplacera le message que tu as écrit. Continuer ?",
+    "replaceTitle": "Remplacer le message que tu as écrit ?",
+    "replaceBody": "Une nouvelle formulation prend la place de ce que tu as tapé, et tes propres mots ne pourront pas être récupérés.",
+    "replaceConfirm": "Remplacer mon message",
+    "replaceKeep": "Garder mon message",
     "failed": "Cette relance n’a pas pu être envoyée.",
     "drafts": {
       "gentle1": "Petit rappel : tu dois encore {amount} à {name} pour {group}. Rien ne presse.",

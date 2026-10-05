@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -542,6 +542,112 @@ describe("the way to pay", () => {
       screen.queryByRole("button", { name: "How to pay" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/\/groups\/g1$/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * A new wording asked for over words the sender typed. This asked through
+ * `window.confirm` — "OK" and "Cancel", in the browser's language — and now
+ * asks in the app's own dialog, whose buttons say which one keeps the text.
+ */
+describe("replacing what the sender wrote", () => {
+  const MINE = "Hey Jonas, about the flat";
+  const draftBox = () =>
+    screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: /the message to send/i,
+    });
+
+  async function typeOwnWords() {
+    const user = userEvent.setup();
+    render([recipient()]);
+    await user.clear(draftBox());
+    await user.type(draftBox(), MINE);
+    return user;
+  }
+
+  it("asks in the app's own words, never the browser's", async () => {
+    const confirm = vi.spyOn(window, "confirm");
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Replace the message you wrote?",
+    });
+    expect(
+      within(dialog).getByRole("button", { name: "Replace my message" }),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Keep my message" }),
+    ).toBeVisible();
+    expect(confirm).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it("keeps the sender's words when they say so", async () => {
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Keep my message" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(draftBox().value).toBe(MINE);
+  });
+
+  it("puts a new wording in when they agree", async () => {
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Replace my message" }),
+    );
+
+    await waitFor(() => expect(draftBox().value).not.toBe(MINE));
+    expect(draftBox().value).toContain("€148.00");
+  });
+
+  it("asks the same before a change of tone throws the words away", async () => {
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Dry" }));
+
+    expect(
+      await screen.findByRole("alertdialog", {
+        name: "Replace the message you wrote?",
+      }),
+    ).toBeVisible();
+    // Nothing has moved while the question is open. The sheet behind the
+    // dialog is hidden from assistive technology meanwhile, hence `hidden`.
+    expect(
+      screen.getByRole("button", { name: "Gentle", hidden: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(
+      screen.getByRole("button", { name: "Replace my message" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Dry" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(draftBox().value).not.toBe(MINE);
+  });
+
+  it("does not ask when there is nothing of the sender's to lose", async () => {
+    const user = userEvent.setup();
+    render([recipient()]);
+    const before = draftBox().value;
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(draftBox().value).not.toBe(before);
   });
 });
 

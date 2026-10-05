@@ -3212,7 +3212,10 @@
     "sentNextPush": "{name} is next, and gets it in the app.",
     "copied": "This device cannot share directly, so the message is on your clipboard.",
     "handoffFailed": "This device would not take the message. Copy it from the box above and send it yourself — nothing has been recorded.",
-    "discardEdit": "Shuffling replaces the message you wrote. Continue?",
+    "replaceTitle": "Replace the message you wrote?",
+    "replaceBody": "A new wording takes the place of what you typed, and your own words cannot be brought back.",
+    "replaceConfirm": "Replace my message",
+    "replaceKeep": "Keep my message",
     "failed": "That reminder could not be sent.",
     "drafts": {
       "gentle1": "Just a reminder: you still owe {name} {amount} for {group}. No rush.",
