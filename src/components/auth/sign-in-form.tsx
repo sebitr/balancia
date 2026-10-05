@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -29,6 +29,7 @@ import {
   upgradeToPasskey,
 } from "@/modules/auth/passkey-client";
 import { usePasskeySupport } from "./use-passkey-support";
+import { describedBy, useRefusalFocus } from "./use-refusal-focus";
 import { AppleSignInButton } from "./apple-sign-in-button";
 
 /**
@@ -81,6 +82,12 @@ const demoSchema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 type ValidationKey = "email" | "password";
+
+/** Where the caret can be sent back to after a refusal. */
+type RefusedField = "email" | "password" | "code";
+
+/** The refusal's id, which the field it concerns is described by. */
+const FORM_ERROR_ID = "sign-in-error";
 
 export function SignInForm({
   mailEnabled,
@@ -137,11 +144,28 @@ export function SignInForm({
     return message ? tValidation(message as ValidationKey) : null;
   };
 
+  const codeField = useRef<HTMLInputElement>(null);
+  const [refused, refuse] = useRefusalFocus<RefusedField>((field) => {
+    if (field === "code") codeField.current?.focus();
+    else form.setFocus(field, { shouldSelect: true });
+  });
+
+  /** The refusal, as the description of the field the caret was sent to. */
+  const refusalFor = (field: RefusedField) =>
+    formError && refused === field ? FORM_ERROR_ID : null;
+
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    refuse(null);
     const result = await signInAction(values);
     if (!result.ok) {
       setFormError(result.error ?? tErrors("generic"));
+      // The password, nearly always: "incorrect email or password" will not
+      // say which, and the password is the half people mistype. An address
+      // still waiting to be confirmed is the one refusal about the other
+      // field. (A malformed address never gets this far — the schema stops it
+      // and react-hook-form focuses the field itself.)
+      refuse(result.code === "emailUnverified" ? "email" : "password");
       return;
     }
     // Not awaited: it shows nothing and can be slow, and nobody signing in
@@ -159,13 +183,19 @@ export function SignInForm({
    */
   const requestCode = async () => {
     setFormError(null);
-    if (!(await form.trigger("email"))) return;
+    refuse(null);
+    // Into the field when it is the address that is wrong, as a submit would.
+    if (!(await form.trigger("email", { shouldFocus: true }))) return;
     const email = form.getValues("email").trim();
+    // Asked from the code screen, as a resend, the address field is gone and
+    // the boxes are what is left to type into.
+    const resending = codeSentTo !== null;
     setCodePending(true);
     try {
       const result = await requestSignInCodeAction({ email });
       if (!result.ok) {
         setFormError(result.error ?? tErrors("generic"));
+        refuse(resending ? "code" : "email");
         return;
       }
       setCode("");
@@ -179,6 +209,7 @@ export function SignInForm({
   const submitCode = async (value: string) => {
     if (!codeSentTo) return;
     setFormError(null);
+    refuse(null);
     setCodePending(true);
     try {
       const result = await signInWithCodeAction({
@@ -187,7 +218,10 @@ export function SignInForm({
       });
       if (!result.ok) {
         setFormError(result.error ?? t("codeWrong"));
+        // Emptied, and the caret back in it: the boxes were disabled while
+        // the code was checked, which let go of focus.
         setCode("");
+        refuse("code");
         return;
       }
       // A code leaves no credential behind at all, so this is the sign-in that
@@ -203,6 +237,7 @@ export function SignInForm({
 
   const onDemo = async () => {
     setFormError(null);
+    refuse(null);
     setDemoPending(true);
     try {
       const result = await startDemoAction();
@@ -227,6 +262,7 @@ export function SignInForm({
 
   const onPasskey = async () => {
     setFormError(null);
+    refuse(null);
     setPasskeyPending(true);
     try {
       await signInWithPasskey();
@@ -253,6 +289,8 @@ export function SignInForm({
 
   const onAutofillRefused = useEffectEvent((error: unknown) => {
     setFormError(passkeyErrorMessage(error));
+    // About the passkey, not about anything typed: no field is described by it.
+    refuse(null);
   });
 
   const isExpiredChallenge = useEffectEvent(
@@ -383,7 +421,7 @@ export function SignInForm({
       )}
 
       {formError && (
-        <Alert variant="destructive">
+        <Alert id={FORM_ERROR_ID} variant="destructive">
           <AlertDescription>
             {formError}
             {/* The refusal a code-only account meets is "incorrect password",
@@ -404,12 +442,14 @@ export function SignInForm({
             {t("codeSent", { email: codeSentTo })}
           </p>
           <CodeInput
+            ref={codeField}
             value={code}
             onChange={setCode}
             onComplete={(value) => void submitCode(value)}
             label={t("codeLabel")}
             disabled={codePending}
             autoFocus
+            describedBy={describedBy(refusalFor("code"))}
           />
           <Button
             type="button"
@@ -443,6 +483,7 @@ export function SignInForm({
                 setCodeSentTo(null);
                 setCode("");
                 setFormError(null);
+                refuse(null);
               }}
             >
               {t("usePassword")}
@@ -458,9 +499,10 @@ export function SignInForm({
               type="email"
               autoComplete="username webauthn"
               aria-invalid={Boolean(form.formState.errors.email)}
-              aria-describedby={
-                form.formState.errors.email ? "email-error" : undefined
-              }
+              aria-describedby={describedBy(
+                form.formState.errors.email && "email-error",
+                refusalFor("email"),
+              )}
               {...form.register("email")}
             />
             {fieldError("email") && (
@@ -487,9 +529,10 @@ export function SignInForm({
               type="password"
               autoComplete="current-password"
               aria-invalid={Boolean(form.formState.errors.password)}
-              aria-describedby={
-                form.formState.errors.password ? "password-error" : undefined
-              }
+              aria-describedby={describedBy(
+                form.formState.errors.password && "password-error",
+                refusalFor("password"),
+              )}
               {...form.register("password")}
             />
             {fieldError("password") && (

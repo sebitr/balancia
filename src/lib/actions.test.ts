@@ -93,6 +93,35 @@ describe("runAction", () => {
   });
 
   /*
+   * The sign-in form sends the caret back to the field that was wrong, and an
+   * unconfirmed address is the one refusal where that is not the password.
+   * The wrong password itself stays uncoded: it is the form's default, and
+   * the sentence is deliberately the same whichever half was mistyped.
+   */
+  it("carries an unconfirmed address's code beside its sentence", async () => {
+    const result = await runAction("auth.signIn", async () => {
+      throw new AuthError("Confirm your email address.", "emailUnverified");
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: messages.serverErrors.emailUnverified,
+      code: "emailUnverified",
+    });
+  });
+
+  it("leaves a wrong password uncoded", async () => {
+    const result = await runAction("auth.signIn", async () => {
+      throw new AuthError("Incorrect email or password.", "invalidCredentials");
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: messages.serverErrors.invalidCredentials,
+    });
+  });
+
+  /*
    * Regression: AuthError was missing from the safe list, so every wrong
    * password, every unverified email and every duplicate registration reached
    * the user as "Something went wrong on the server" — and was logged at ERROR
