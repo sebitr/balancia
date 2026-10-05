@@ -21,7 +21,7 @@ test("imports a Splitwise CSV with a preview step", async ({ page }) => {
 
   // Preview: counts and the people found in the file.
   await expect(page.getByText("4 expenses")).toBeVisible();
-  await expect(page.getByText("1 payment", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 repayment", { exact: true })).toBeVisible();
   await expect(page.getByText("EUR").first()).toBeVisible();
   for (const name of ["Ada", "Blaise", "Grace"]) {
     await expect(page.getByText(name, { exact: true })).toBeVisible();

@@ -20,6 +20,10 @@ import { RestoreDeleted } from "./restore-deleted";
  * Rendered on the server, which is where the reader's date notation can be
  * read from their cookies without shipping a list renderer to the browser.
  *
+ * Times are told on the group's clock. The app's own zone is the server's —
+ * UTC unless an operator set one — and on it a group in Paris read 14:05
+ * against an expense its members had added at 16:05.
+ *
  * A deletion whose entry is still deleted carries a Restore. Which rows those
  * are is the page's question, answered in one query before this renders; see
  * `findRestorableDeletions`.
@@ -29,11 +33,14 @@ export async function ActivityFeed({
   entries,
   groupId,
   restorable,
+  timeZone,
 }: {
   entries: readonly ActivityEntry[];
   groupId: string;
   /** The ids of the rows whose entry can still be put back. */
   restorable: ReadonlySet<string>;
+  /** The group's IANA zone, which every time in the feed is told in. */
+  timeZone: string;
 }) {
   const t = await getTranslations("activity");
   const dates = await getDateFormatter();
@@ -79,7 +86,7 @@ export async function ActivityFeed({
                 dateTime={entry.createdAt.toISOString()}
                 className="text-xs text-muted-foreground"
               >
-                {dates.at(entry.createdAt, { time: "short" })}
+                {dates.at(entry.createdAt, { time: "short", timeZone })}
               </time>
             </span>
             {kind && entry.entityId && (

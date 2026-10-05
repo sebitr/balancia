@@ -1070,7 +1070,9 @@ async function generateSingleOccurrence(
 
       // A participant removed since the template was written would make the
       // expense unbalanced; skip generation and leave a warning rather than
-      // writing corrupt financial data.
+      // writing corrupt financial data. FOR SHARE, like every other write that
+      // names somebody: a removal waits for this occurrence to commit before
+      // it reads their balance. See `removeParticipant`.
       const referenced = [
         ...payers.map((payer) => payer.participantId),
         ...splitEntries.map((entry) => entry.participantId),
@@ -1084,7 +1086,8 @@ async function generateSingleOccurrence(
             isNull(participants.removedAt),
             inArray(participants.id, [...new Set(referenced)]),
           ),
-        );
+        )
+        .for("share");
 
       if (present.length !== new Set(referenced).size) {
         logger.warn(

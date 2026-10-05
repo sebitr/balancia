@@ -147,7 +147,12 @@ export default async function RecurringPage({
                 <p className="text-xs text-muted-foreground">
                   {template.nextRunAt && !template.pausedAt
                     ? t("next", {
-                        date: dates.at(template.nextRunAt),
+                        // On the group's calendar, where the schedule runs.
+                        // The server's clock put a Sydney group's 09:00 on
+                        // the evening before.
+                        date: dates.at(template.nextRunAt, {
+                          timeZone: access.group.timezone,
+                        }),
                       })
                     : template.pausedAt
                       ? t("pausedNote")
@@ -186,6 +191,7 @@ export default async function RecurringPage({
             })),
             preferred: preferredCurrency,
           })}
+          timezone={access.group.timezone}
         />
       )}
     </div>

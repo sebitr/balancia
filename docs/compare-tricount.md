@@ -33,7 +33,7 @@ current service.
 | Are receipt images supported?        | Yes. Images and PDFs remain on the selected instance behind per-request authorization.                                 | Yes. Photos, including receipts, are stored and processed through the managed service.                                 |
 | Does it have native apps?            | No. Balancia is an installable web app (PWA).                                                                          | Yes. tricount is distributed as a mobile app.                                                                          |
 | Can expenses be entered offline?     | Yes. Expenses and income are recorded on the device and sent on reconnect; editing and repayments still need a server. | Yes. tricount advertises offline entry followed by automatic synchronization.                                          |
-| Does it move money?                  | No. It records settlements but is not a bank or payment processor.                                                     | Payment requests, bank connections and card features are available under country- and service-specific conditions.     |
+| Does it move money?                  | No. It records repayments but is not a bank or payment processor.                                                      | Payment requests, bank connections and card features are available under country- and service-specific conditions.     |
 | Who handles operations?              | The hosted service operator, or the self-hoster for their own instance.                                                | bunq handles hosting, updates and service operations.                                                                  |
 
 ## What both products do well

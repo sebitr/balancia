@@ -60,6 +60,22 @@ export interface StagedSettlement {
   readonly fromSourceName: string;
   readonly toSourceName: string;
   readonly notes?: string | null;
+  /**
+   * The expense an earlier version of the importer made of the same line.
+   *
+   * The Splitwise CSV importer once recognised a repayment only by a
+   * description like "Payment" or a cost of zero, and took the way Splitwise
+   * actually exports one — "Bob paid Carol", under the Payment category — for
+   * an expense. A group imported then holds that expense under an expense's
+   * fingerprint, which the payment read from the same line does not share.
+   * The commit step treats either fingerprint as already imported; without
+   * this, importing the file again would write the payment beside the expense
+   * and count it twice.
+   *
+   * Only ever looked up, never written: a line imported for the first time is
+   * stored under its own fingerprint alone.
+   */
+  readonly formerlyReadAs?: StagedExpense;
 }
 
 export type StagedRow = StagedExpense | StagedSettlement;

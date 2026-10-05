@@ -31,6 +31,7 @@ export function ScanReceiptEntry({
   groupId,
   participants,
   defaultCurrency,
+  timezone,
   onApply,
   trigger,
 }: {
@@ -46,6 +47,8 @@ export function ScanReceiptEntry({
   groupId: string;
   participants: readonly Participant[];
   defaultCurrency: string;
+  /** The group's, for dating a receipt that carries no date of its own. */
+  timezone: string;
   onApply: (result: ScannedExpense) => void;
   /** Replaces the default button — the add-entry screen passes its scan card. */
   trigger?: React.ComponentType<CaptureActions>;
@@ -74,6 +77,7 @@ export function ScanReceiptEntry({
       groupId={groupId}
       participants={participants}
       defaultCurrency={defaultCurrency}
+      timezone={timezone}
       onApply={onApply}
       trigger={trigger}
     />

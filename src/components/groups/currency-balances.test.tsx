@@ -212,14 +212,14 @@ describe("CurrencyBalances", () => {
     expect(within(settled).getByText("Settled up")).toBeInTheDocument();
     expect(settled).not.toHaveTextContent("0.00");
     // A currency with nothing to clear counts no payments.
-    expect(settled).not.toHaveTextContent(/payment/);
+    expect(settled).not.toHaveTextContent(/repayment/);
     expect(settled).toHaveTextContent(/48\.00 spent/);
   });
 
   it("names the spend and the payments that would clear a currency", () => {
     renderList();
 
-    expect(row("CHF")).toHaveTextContent(/350\.00 spent · 1 payment/);
+    expect(row("CHF")).toHaveTextContent(/350\.00 spent · 1 repayment/);
   });
 
   /**
@@ -291,7 +291,7 @@ describe("CurrencyBalances", () => {
     renderList([GBP], "GBP");
 
     expect(
-      screen.queryByRole("link", { name: "View suggested settlement" }),
+      screen.queryByRole("link", { name: "View suggested repayments" }),
     ).toBeNull();
   });
 
@@ -299,7 +299,7 @@ describe("CurrencyBalances", () => {
     renderList();
 
     expect(
-      screen.getByRole("link", { name: "View suggested settlement" }),
-    ).toHaveTextContent("2 payments clear all 3 currencies");
+      screen.getByRole("link", { name: "View suggested repayments" }),
+    ).toHaveTextContent("2 repayments clear all 3 currencies");
   });
 });

@@ -93,7 +93,7 @@ const NOTHING: ParsedReceipt = {
   total: undefined,
 };
 
-function renderScanner() {
+function renderScanner(timezone = "Europe/Zurich") {
   const onApply = vi.fn();
   const view = renderWithIntl(
     <ScanReceiptDialog
@@ -104,6 +104,7 @@ function renderScanner() {
         { id: "p2", displayName: "Cyril" },
       ]}
       defaultCurrency="EUR"
+      timezone={timezone}
       onApply={onApply}
     />,
   );
@@ -187,6 +188,27 @@ describe("ScanReceiptDialog", () => {
       expect(screen.getByDisplayValue("Casa Italia")).toBeInTheDocument(),
     );
     expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("dates a receipt that carries no date today on the group's calendar", async () => {
+    // Half past eleven at night in New York; already the 15th in UTC. Only
+    // the clock is faked, so the waits below still wait.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2025-03-15T03:30:00Z"));
+    try {
+      const user = userEvent.setup();
+      read.mockResolvedValue({ ...RECOGNISED, date: undefined });
+      renderScanner("America/New_York");
+
+      await user.click(screen.getByRole("button", { name: "Take a photo" }));
+      await user.click(screen.getByRole("button", { name: "shutter" }));
+
+      await waitFor(() =>
+        expect(screen.getByLabelText("Date")).toHaveValue("2025-03-14"),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("sends another photo back to the camera it was taken with", async () => {
