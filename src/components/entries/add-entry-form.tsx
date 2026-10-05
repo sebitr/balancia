@@ -11,7 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import {
@@ -52,6 +52,7 @@ import {
   formatMinorUnits,
   parseAmountToMinor,
   previewSplit,
+  splitEntriesFor,
   suggestExactValues,
   suggestPercentages,
   type SplitMessage,
@@ -122,6 +123,7 @@ import {
 } from "./recurrence-sheet";
 import { RowCard, Row, RowButton } from "./row-card";
 import { describeSplit } from "./split-notes";
+import { giveRemaining } from "./split-shortcuts";
 import { SplitSheet } from "./split-sheet";
 import { SplitSummaryRow } from "./split-summary-row";
 import {
@@ -590,6 +592,8 @@ export function AddEntryForm({
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
+  /** The language sentences are in, which is not how numbers are written. */
+  const language = useLocale();
   const dates = useDateFormatter();
   /*
    * Who is typing, stamped on anything this form leaves on the device — a
@@ -829,11 +833,25 @@ export function AddEntryForm({
    * to: any other message replacing it — a description left empty, a delete
    * that failed — takes the offer away with the conflict it answered.
    */
-  const [failure, setFailure] = useState<{
-    readonly message: string;
-    readonly code?: string;
-  } | null>(null);
-  const error = failure?.message ?? null;
+  /*
+   * A refusal over the split carries no sentence of its own. It says whatever
+   * the split's note says now, so that what the alert reads cannot fall behind
+   * the fields under it — and it goes away once there is nothing left to say,
+   * rather than standing over a form that has since become right.
+   */
+  const [failure, setFailure] = useState<
+    | {
+        readonly message: string;
+        readonly code?: string;
+        readonly cause?: undefined;
+      }
+    | {
+        readonly cause: "split";
+        readonly message?: undefined;
+        readonly code?: undefined;
+      }
+    | null
+  >(null);
   const setError = (message: string | null, code?: string) =>
     setFailure(message === null ? null : { message, code });
   /*
@@ -873,6 +891,16 @@ export function AddEntryForm({
   ) => {
     setError(message, code);
     setRefusal((last) => ({ field, count: (last?.count ?? 0) + 1 }));
+  };
+  /** The same, for a split that does not add up: see `failure`. */
+  const refuseSplit = () => {
+    setFailure({ cause: "split" });
+    // The caret goes to the row that says what is wrong and opens the sheet
+    // that fixes it, not to the alert a screen above it.
+    setRefusal((last) => ({
+      field: "[data-split-row]",
+      count: (last?.count ?? 0) + 1,
+    }));
   };
   useEffect(() => {
     if (refusal === null) return;
@@ -1161,13 +1189,6 @@ export function AddEntryForm({
       ? preview.allocations[0].formatted
       : null;
 
-  const summary = summariseSplit({
-    method,
-    participantCount: effectiveIncluded.length,
-    eachFormatted,
-    byItem,
-  });
-
   /**
    * The half of a dictated proposal that still says something new.
    *
@@ -1188,11 +1209,12 @@ export function AddEntryForm({
       : [];
 
   /**
-   * What the split does not add up to, said out loud.
+   * What the split comes to, said out loud.
    *
    * Separate from `preview`, which only decides whether the split is valid.
-   * This is the sentence under the per-person rows, and the one that tells
-   * somebody *which way* they are out.
+   * This is the sentence under the per-person rows, the one that tells
+   * somebody *which way* they are out — and, once the sheet is shut, the
+   * warning on the row and the alert a refused save raises.
    */
   const splitNote = useMemo(
     () =>
@@ -1202,13 +1224,47 @@ export function AddEntryForm({
         method,
         participantIds: effectiveIncluded,
         values,
-        absorberName:
-          members.find((member) => member.id === effectiveIncluded[0])
-            ?.displayName ?? "",
+        nameOf: (id) =>
+          members.find((member) => member.id === id)?.displayName ?? "",
+        selfId,
         locale,
+        language,
       }),
-    [totalMinor, currency, method, effectiveIncluded, values, members, locale],
+    [
+      totalMinor,
+      currency,
+      method,
+      effectiveIncluded,
+      values,
+      members,
+      selfId,
+      locale,
+      language,
+    ],
   );
+
+  const summary = summariseSplit({
+    method,
+    participantCount: effectiveIncluded.length,
+    eachFormatted,
+    byItem,
+    problem: splitNote,
+  });
+
+  /*
+   * The alert's sentence. A refusal over the split reads the split as it is
+   * now, and stops standing once the split can be saved: the alert used to
+   * keep saying "the exact amounts must add up" over amounts that did.
+   */
+  if (failure?.cause === "split" && preview.ok) setFailure(null);
+  const error =
+    failure?.cause === "split"
+      ? splitNote?.tone === "error"
+        ? t(`split.notes.${splitNote.key}`, splitNote.params)
+        : preview.error
+          ? splitText(preview.error)
+          : null
+      : (failure?.message ?? null);
 
   /**
    * An empty split stays empty.
@@ -1645,7 +1701,7 @@ export function AddEntryForm({
       return;
     }
     if (!isSettle && !preview.ok) {
-      refuse(preview.error ? splitText(preview.error) : null);
+      refuseSplit();
       return;
     }
 
@@ -1799,17 +1855,14 @@ export function AddEntryForm({
     else router.refresh();
   };
 
+  // Read the way the preview read them, so what the sheet called fine is
+  // exactly what is sent.
   const splitEntries = () =>
-    effectiveIncluded.map((id) => {
-      if (method === "equal") return { participantId: id };
-      if (method === "exact") {
-        const parsed = parseAmountToMinor(values[id] ?? "", currency);
-        return {
-          participantId: id,
-          value: parsed.ok ? parsed.value.toString() : "0",
-        };
-      }
-      return { participantId: id, value: (values[id] ?? "0").trim() };
+    splitEntriesFor({
+      method,
+      participantIds: effectiveIncluded,
+      values,
+      currency,
     });
 
   const submitEntry = async (clientKey?: string): Promise<Outcome> => {
@@ -2807,6 +2860,7 @@ export function AddEntryForm({
               members={members}
               title={isIncome ? t("split.titleIncome") : t("split.title")}
               totalFormatted={amountFormatted}
+              currency={currency}
               payerId={payerId}
               onPayerChange={setPayerId}
               includedIds={effectiveIncluded}
@@ -2820,10 +2874,23 @@ export function AddEntryForm({
               onValueChange={(id, value) =>
                 setValues((current) => ({ ...current, [id]: value }))
               }
+              onGiveRemaining={
+                totalMinor.ok
+                  ? (id) =>
+                      setValues((current) =>
+                        giveRemaining({
+                          values: current,
+                          participantId: id,
+                          participantIds: effectiveIncluded,
+                          currency,
+                          totalMinor: totalMinor.value,
+                        }),
+                      )
+                  : undefined
+              }
               preview={preview}
               note={splitNote}
               received={isIncome}
-              splitText={splitText}
               alwaysSplit={
                 worthSaving({
                   method,
