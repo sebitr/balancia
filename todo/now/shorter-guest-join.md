@@ -16,5 +16,6 @@ A personal invitation's guest ends the same way: their name, then the group.
 An account still gets "You're in" and the checklist, behind buttons that say
 what they do — "Finish setting up" and "Go to the group".
 
-No Claude Design mock-up: the Artifact tool was refused in the session that
-did this. The pattern page is `design-system/src/pages/patterns/join.html`.
+Claude Design mock-up, before and after:
+https://claude.ai/artifact/SgmB3s2EfHyxNViKxWrWDk. The pattern page is
+`design-system/src/pages/patterns/join.html`.
