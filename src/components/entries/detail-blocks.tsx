@@ -3,7 +3,11 @@ import { Amount } from "@/components/money/amount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initialOf } from "./initials";
 import { cn } from "@/lib/utils";
-import { TONE, toneFor } from "@/components/money/balance-tone";
+import {
+  TONE,
+  toneFor,
+  type BalanceTone,
+} from "@/components/money/balance-tone";
 
 /**
  * The read-only half of the entry vocabulary.
@@ -32,15 +36,14 @@ import { TONE, toneFor } from "@/components/money/balance-tone";
  * are the scale's one documented exception, and this is one of them.
  */
 
-/** Which of the three a screen is. Decides the chip, and the amount's colour. */
+/** Which of the three a screen is. Decides the chip. */
 export type EntryTone = "expense" | "revenue" | "settlement";
 
 /**
  * Colour marks the exception. An expense is what an entry is unless it says
- * otherwise, so its chip is plum on plum and carries no tone of its own; the
- * red is in the figure under it, which is where the meaning lives. It used to
- * wear the accent, which put a coral chip above a coral-red figure and, with
- * a mint accent, a green expense chip beside the green income one.
+ * otherwise, so its chip is plum on plum and carries no tone of its own. It
+ * used to wear the accent, which put a coral chip above a coral-red figure
+ * and, with a mint accent, a green expense chip beside the green income one.
  */
 const CHIP_TONE: Record<EntryTone, string> = {
   expense: "bg-secondary text-secondary-foreground",
@@ -52,22 +55,6 @@ const DISC_TONE: Record<EntryTone, string> = {
   expense: "bg-wash-4",
   revenue: "bg-positive/25",
   settlement: "bg-payer/25",
-};
-
-/**
- * A transfer is neither a gain nor a loss for the group, so it is the one
- * amount on these screens that carries no sign and no colour.
- */
-const AMOUNT_TONE: Record<EntryTone, string> = {
-  expense: "text-negative-ink",
-  revenue: "text-positive-ink",
-  settlement: "",
-};
-
-const AMOUNT_SIGN: Record<EntryTone, string> = {
-  expense: "−",
-  revenue: "+",
-  settlement: "",
 };
 
 /** Every card on these screens: one surface, one hairline, one radius. */
@@ -222,53 +209,93 @@ function currencyLeads(locale: string, currency: string): boolean {
 }
 
 /**
- * The figure the whole screen is about.
+ * The figure the whole screen is about, and the line that says what it means
+ * to whoever is reading.
  *
- * The currency and the sign sit on the figure's baseline at a third of its
- * size: they qualify the number rather than compete with it. The sign is a
- * character rather than a colour, so "money went out" survives greyscale and
- * is read aloud — and it always leads, whichever end the currency is at.
+ * The total is a fact about the entry, the same for everybody in it, so it
+ * carries no sign and no colour. It used to be a red "− 90.00" on every
+ * expense — the "you owe" red, in front of the person who had paid for the
+ * table and was owed most of it. The direction belongs to each person's part
+ * in the money rather than to the total, and the `caption` under it is where
+ * the reader's own part is said, in words and in its money tone.
+ *
+ * The currency sits on the figure's baseline at a third of its size: it
+ * qualifies the number rather than competing with it. The row wraps rather
+ * than running off the card, so a seven-figure total on a narrow phone puts
+ * its currency on a line of its own instead of losing digits under the edge.
  */
 export function BigAmount({
   minorUnits,
   currency,
-  tone,
   locale,
+  caption,
 }: {
   minorUnits: string;
   currency: string;
-  tone: EntryTone;
   /** The reader's number notation, which decides where the currency sits. */
   locale: string;
+  /** The reader's own part in it, one line under the figure. */
+  caption?: React.ReactNode;
 }) {
-  const sign = AMOUNT_SIGN[tone];
   const leads = currencyLeads(locale, currency);
-  const qualifier = (text: string) => (
-    <span
-      className={cn(
-        "text-base font-medium",
-        sign === "" ? "text-muted-foreground" : "opacity-75",
-      )}
-    >
-      {text}
+  const qualifier = (
+    <span className="text-base font-medium text-muted-foreground">
+      {currency}
     </span>
   );
 
   return (
-    <span
+    <div className="flex flex-col gap-2">
+      <span className="flex flex-wrap items-baseline gap-x-2 leading-none">
+        {leads && qualifier}
+        <span className="text-[40px] font-semibold tracking-[-0.03em]">
+          <Amount minorUnits={minorUnits} currency={currency} display="none" />
+        </span>
+        {!leads && qualifier}
+      </span>
+      {caption}
+    </div>
+  );
+}
+
+/**
+ * The reader's part in an entry, as one sentence under its total.
+ *
+ * The sentence arrives whole from the catalogue; the part of it that carries
+ * a direction — "you get back €60.00" — comes wrapped in a `StakeTone`, and
+ * only that part is coloured. Colour is the last cue here, never the first:
+ * the words already say which way the money goes.
+ */
+export function StakeLine({
+  quiet = false,
+  children,
+}: {
+  /** For a reader with no part in the entry: nothing to stand out. */
+  quiet?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <p
       className={cn(
-        "flex items-baseline gap-2 leading-none",
-        AMOUNT_TONE[tone],
+        "text-sm font-medium",
+        quiet ? "text-muted-foreground" : "text-foreground",
       )}
     >
-      {leads
-        ? qualifier(sign === "" ? currency : `${sign} ${currency}`)
-        : sign !== "" && qualifier(sign)}
-      <span className="text-[40px] font-semibold tracking-[-0.03em]">
-        <Amount minorUnits={minorUnits} currency={currency} display="none" />
-      </span>
-      {!leads && qualifier(currency)}
-    </span>
+      {children}
+    </p>
+  );
+}
+
+/** The directional half of a `StakeLine`, in its money tone. */
+export function StakeTone({
+  tone,
+  children,
+}: {
+  tone: BalanceTone;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className={cn("font-semibold", TONE[tone].ink)}>{children}</span>
   );
 }
 
@@ -386,105 +413,86 @@ export function PartyRow({
 }
 
 /**
- * The two-column table of who owes what.
+ * Who an entry was split between, one line per person.
  *
- * A real table rather than a row of flex columns: the header cells are what
- * make "96px" mean the same width on every row without each row being told,
- * and they are also the only way a screen reader can say which figure it is
- * reading. The name column takes what is left and truncates.
+ * This was a three-column table — person, share, balance — and on a phone it
+ * did not fit: 370px of minimum widths in a 343px card that clips, so the
+ * balance column lost its last digits and its heading read "BALANC". Nothing
+ * in a table can give way except the names, and they had nothing left to give.
+ *
+ * So each person is a row of two lines instead. The first is the name and
+ * the share, the one figure the list has in common, right-aligned so the
+ * shares line up down the card. The second says in words what the entry did
+ * to that person — the column of bare "+ €60.00" said it only in a sign and
+ * a colour, with the words hidden for screen readers. That line has the full
+ * width of the row to itself and wraps rather than clipping.
+ *
+ * The heading above the shares is drawn for the eye only; each figure carries
+ * its own name for a screen reader, which reads the list a row at a time.
  */
-export function PartyTable({
-  personLabel,
+export function SplitList({
   figureLabel,
-  balanceLabel,
   children,
 }: {
-  /** Names the first column for assistive technology; the mock leaves it blank. */
-  personLabel: string;
+  /** What the right-hand figure is: a share, or what was credited. */
   figureLabel: string;
-  /** Absent when this entry moved nobody's balance. */
-  balanceLabel: string | null;
   children: React.ReactNode;
 }) {
-  const head =
-    "h-8 border-b border-border pl-2.5 text-right text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase";
   return (
-    <table className="w-full border-collapse text-left">
-      <thead>
-        <tr className="bg-wash-1">
-          <th scope="col" className="h-8 border-b border-border pl-3.5">
-            <span className="sr-only">{personLabel}</span>
-          </th>
-          <th
-            scope="col"
-            className={cn(
-              head,
-              "min-w-[106px]",
-              balanceLabel === null && "pr-3.5",
-            )}
-          >
-            {figureLabel}
-          </th>
-          {balanceLabel !== null && (
-            <th scope="col" className={cn(head, "min-w-[128px] pr-3.5")}>
-              {balanceLabel}
-            </th>
-          )}
-        </tr>
-      </thead>
-      <tbody className="[&>tr:not(:last-child)>*]:border-b [&>tr:not(:last-child)>*]:border-border">
-        {children}
-      </tbody>
-    </table>
+    <>
+      <div
+        aria-hidden="true"
+        className="flex h-8 items-center justify-end border-b border-border bg-wash-1 px-3.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+      >
+        {figureLabel}
+      </div>
+      <ul className="divide-y divide-border">{children}</ul>
+    </>
   );
 }
 
 /**
- * One person's line in that table.
+ * One person's line in that list.
  *
- * The signed figure and its colour carry the whole meaning of the balance
- * column, so there are no "owes" / "gets back" words beside them — but the
- * word is still there for anyone not reading the colour.
+ * Two lines in the same 56px every other row on these screens stands at: the
+ * padding is what the second line takes from the height, not something added
+ * to it, so a row with no outcome to state is the same height as one with.
  */
-export function PartyTableRow({
+export function SplitRow({
   name,
   tone,
   minorUnits,
   currency,
-  balance,
+  figureLabel,
+  outcome,
 }: {
   name: string;
   tone: PersonTone;
   minorUnits: string;
   currency: string;
-  /** Null when the table has no balance column at all. */
-  balance: { minorUnits: string; label: string } | null;
+  /** Read before the figure, which on its own does not say what it is. */
+  figureLabel: string;
+  /** What this entry did to them, already worded; null when it moved nobody. */
+  outcome: { text: string; tone: BalanceTone } | null;
 }) {
-  const figure = "pl-2.5 text-right text-sm font-semibold whitespace-nowrap";
-  const impact = balance === null ? 0n : BigInt(balance.minorUnits);
-  const magnitude = impact < 0n ? -impact : impact;
-
   return (
-    <tr className="h-14">
-      <th scope="row" className="pl-3.5 text-left font-normal">
-        <span className="flex min-w-0 items-center gap-2.5">
-          <PersonAvatar name={name} tone={tone} />
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-            {name}
+    <li className="flex min-h-[56px] items-center gap-2.5 px-3.5 py-2">
+      <PersonAvatar name={name} tone={tone} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="flex items-baseline gap-2.5 text-sm font-semibold">
+          <span className="min-w-0 flex-1 truncate">{name}</span>
+          <span className="shrink-0 whitespace-nowrap">
+            <span className="sr-only">{figureLabel} </span>
+            <Amount minorUnits={minorUnits} currency={currency} />
           </span>
         </span>
-      </th>
-      <td className={cn(figure, balance === null && "pr-3.5")}>
-        <Amount minorUnits={minorUnits} currency={currency} />
-      </td>
-      {balance !== null && (
-        <td className={cn(figure, "pr-3.5", TONE[toneFor(impact)].ink)}>
-          <span aria-hidden="true">{impact < 0n ? "− " : "+ "}</span>
-          <Amount minorUnits={magnitude.toString()} currency={currency} />
-          <span className="sr-only"> {balance.label}</span>
-        </td>
-      )}
-    </tr>
+        {outcome && (
+          <span className={cn("text-xs font-medium", TONE[outcome.tone].ink)}>
+            {outcome.text}
+          </span>
+        )}
+      </span>
+    </li>
   );
 }
 
@@ -529,9 +537,10 @@ export function ChangeRow({
       <PersonAvatar name={name} tone={tone} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-semibold">{name}</span>
-        <span className="truncate text-2xs text-muted-foreground">
-          {before}
-        </span>
+        {/* Wraps rather than truncating: it carries a figure, and on a narrow
+            phone "Got back CHF 1,234.56 before this" lost its digits to an
+            ellipsis. A name can be cut short; an amount cannot. */}
+        <span className="text-2xs text-muted-foreground">{before}</span>
       </span>
       {balance === 0n ? (
         <span
