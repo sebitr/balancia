@@ -14,6 +14,15 @@ import { Amount } from "@/components/money/amount";
  * what is at stake. It is a `status` region rather than an alert or a dialog:
  * permanent, never dismissible while the session is a guest session, and gone
  * the moment the account exists.
+ *
+ * It is also what is left of the setup checklist for somebody who came in
+ * through a group's shared link as a guest. Of that list's rows only the
+ * account could be done without one — payout details, starred currencies and
+ * push all need an account to be kept — so this card is the list, cut to the
+ * rows that apply to the reader. The balance is said to them as theirs, "the
+ * €60.00 you owe", with the figure unsigned because the words carry the
+ * direction; and only somebody who is owed money is told an account lets them
+ * say how to be paid, because nobody needs that to pay a debt.
  */
 export async function GuestAccountWidget({
   groupName,
@@ -27,10 +36,12 @@ export async function GuestAccountWidget({
 }) {
   const t = await getTranslations("guestWidget");
 
+  const value = balance ? BigInt(balance.minorUnits) : 0n;
   const amount = balance ? (
     <Amount
       minorUnits={balance.minorUnits}
       currency={balance.currency}
+      signDisplay="never"
       className="font-medium text-foreground"
     />
   ) : null;
@@ -45,18 +56,13 @@ export async function GuestAccountWidget({
         {t("title", { group: groupName })}
       </AlertTitle>
       <AlertDescription>
-        {amount === null
+        {amount === null || value === 0n
           ? t("bodyPlain", { group: groupName })
-          : contributionCount === 0
-            ? t.rich("bodyBalance", {
-                group: groupName,
-                balance: () => amount,
-              })
-            : t.rich("bodyBalanceExpenses", {
-                group: groupName,
-                count: contributionCount,
-                balance: () => amount,
-              })}
+          : t.rich(value < 0n ? "bodyOwe" : "bodyGetBack", {
+              group: groupName,
+              count: contributionCount,
+              balance: () => amount,
+            })}
       </AlertDescription>
       {/* Outside the description, in the same column as it: AlertDescription
           underlines every anchor within, which is right for a link in prose

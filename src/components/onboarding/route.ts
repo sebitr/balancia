@@ -29,8 +29,9 @@ export type Intent = "account" | "signin" | "guest";
 
 export type ScreenId =
   | "welcome"
+  /** A shared link's first screen: the group, and which of its names is you. */
   | "whichOne"
-  | "confirm"
+  /** How that person comes in: an account, a sign-in, or a guest. */
   | "keepIt"
   | "identity"
   | "profile"
@@ -45,8 +46,6 @@ export type ScreenId =
 export interface OnboardingRouteState {
   readonly arrival: Arrival;
   readonly intent: Intent;
-  /** True once "none of these — I'm new here" has been taken. */
-  readonly isNewMember: boolean;
   /**
    * An account was already signed in when this flow started.
    *
@@ -60,10 +59,10 @@ export interface OnboardingRouteState {
    * There is nothing left on the setup checklist.
    *
    * Only an account that arrived with a photo, starred currencies, a payout
-   * method and a device registered for push can be in this state, so in
-   * practice it is the same reader as `signedIn` — one who has done all this
-   * before. The screen is dropped rather than shown with five green ticks,
-   * because a list that exists only to be dismissed is a tap for nothing.
+   * method and a device registered for push can be in this state — one who has
+   * done all this before. The screen is dropped rather than shown with five
+   * green ticks, because a list that exists only to be dismissed is a tap for
+   * nothing. A shared link has no checklist to drop, so it ignores this.
    */
   readonly setupComplete: boolean;
 }
@@ -78,22 +77,34 @@ export interface OnboardingRouteState {
  *    kept. Signing in skips the profile screen — the account has a name — and
  *    a guest skips the account screen, having chosen not to have one.
  *
- *  - **Shared.** Nobody knows who this is, so that is the first question:
- *    which of the listed names, or none of them. Only once there is a person
- *    on the screen — with a balance and expenses filed against it — is the
- *    account question worth asking, which is what "keep it" is for. A reader
- *    who is already signed in has answered it before arriving: they skip both
- *    "keep it" and the account screen, and claiming the name *is* the join.
+ *  - **Shared.** Nobody knows who this is, so that is the first question, and
+ *    the link opens straight onto it: the group, and which of its names is
+ *    you. Only once there is a person on the screen — with a balance under the
+ *    name — is the account question worth asking, which is what "keep it" is
+ *    for; it is also where somebody new types the name they will go by, and
+ *    where a reader already signed in says yes. Then the group itself, and
+ *    nothing in between: the flow leaves for it the moment the join commits.
+ *
+ *    Two screens left on the way, and why each was safe to lose. The welcome
+ *    only said that the link could not know who had opened it, which is one
+ *    sentence, and the list now says it. "Is this you?" repeated the name and
+ *    balance the list row had just shown, and committed nothing anybody could
+ *    not undo from "keep it", which names the person, shows the balance and
+ *    offers the way back to the list — nothing is claimed until a choice
+ *    there. The arrival screen and the checklist after it were a receipt in
+ *    front of the group: the group now says "you're in" itself, and for a
+ *    guest the checklist's only row that could be done at all — an account —
+ *    is the guest card on the overview. Payouts, currencies and push all need
+ *    an account to be kept.
  *
  *  - **Cold.** No group exists, so there is no arrival screen to land on. A
  *    new account ends at the empty state; a sign-in ends on the credential
  *    itself, and the dashboard is its welcome; and somebody who wants no
  *    account yet names a group and themselves, and leaves with its link.
  *
- * The checklist is the one screen any of them can lose. It is a receipt of
- * what is set up and what is not, so an account that has all of it already —
- * which only somebody arriving signed in can — ends on the arrival screen and
- * goes straight to the group from there.
+ * The checklist is the one screen a personal invitation can lose. It is a
+ * receipt of what is set up and what is not, so an account that has all of it
+ * already ends on the arrival screen and goes straight to the group from there.
  */
 export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
   if (state.arrival === "cold") {
@@ -115,22 +126,14 @@ export function routeFor(state: OnboardingRouteState): readonly ScreenId[] {
 
   if (state.arrival === "shared") {
     return [
-      "welcome",
       "whichOne",
-      // Claiming a listed name confirms it; being new types it instead.
-      state.isNewMember ? "profile" : "confirm",
-      // An account that walked in already signed in has nothing to decide
-      // here and nothing to prove: the screen it just committed on is what
-      // put it in the group.
-      ...(state.signedIn
+      "keepIt",
+      // An account that walked in already signed in has nothing to prove, and
+      // a guest has just declined the account: neither has anything to verify.
+      // Everybody else proves an address, and the join rides on it.
+      ...(state.signedIn || state.intent === "guest"
         ? []
-        : ([
-            "keepIt",
-            // A guest has just declined the account, so nothing to verify.
-            ...(state.intent === "guest" ? [] : (["identity"] as const)),
-          ] as const)),
-      "arrival",
-      ...(state.setupComplete ? [] : (["checklist"] as const)),
+        : (["identity"] as const)),
     ];
   }
 
@@ -170,8 +173,8 @@ export function nextScreen(
  * How far along the bar is, as a fraction.
  *
  * Measured against the route this person is actually on rather than a fixed
- * total, because the routes are three, five and seven screens long and a bar
- * that promised six would be lying to two of them.
+ * total, because the routes run from two screens to five and a bar that
+ * promised four would be lying to most of them.
  */
 export function progressOf(
   route: readonly ScreenId[],
@@ -191,7 +194,6 @@ export function progressOf(
 export const STEP_LABEL_KEYS: Record<ScreenId, string> = {
   welcome: "stepWelcome",
   whichOne: "stepWhoYouAre",
-  confirm: "stepConfirm",
   keepIt: "stepKeepIt",
   identity: "stepAccount",
   profile: "stepProfile",

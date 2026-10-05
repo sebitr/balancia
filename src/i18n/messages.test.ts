@@ -291,8 +291,6 @@ describe("French copy", () => {
     // sent to the rest of the group is not one of them: it is read by one
     // person at a time, in their own chat, and tutoies like everything else.
     const ADDRESSES_SEVERAL = new Set([
-      // "lequel d'entre vous vient de l'ouvrir" — the group, not the reader.
-      "onboarding.welcome.sharedSub",
       // "Entre vous deux" — the reader and one other member.
       "memberStats.eyebrowBetween",
     ]);
