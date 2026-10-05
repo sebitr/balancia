@@ -1,71 +1,46 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { UmamiScript } from "@/components/analytics/umami-script";
-import { SplittingWordmark } from "@/components/brand/splitting-wordmark";
-import { Wordmark } from "@/components/brand/wordmark";
-import { MarketingLanguageSwitcher } from "@/components/i18n/language-switcher";
 import { InstallCopyButton, SplitDemo } from "@/components/marketing/SplitDemo";
 import { INSTALL_COMMANDS } from "@/components/marketing/install-commands";
+import { HOME_QUESTIONS } from "@/components/marketing/questions";
+import {
+  ArrowIcon,
+  DARK_OUTLINE_BUTTON,
+  Eyebrow,
+  GITHUB,
+  GITHUB_BLOB,
+  GithubMark,
+  JsonLd,
+  MarketingShell,
+  PRIMARY_BUTTON,
+  TEXT_LINK,
+} from "@/components/marketing/shell";
 import { AreaMessages } from "@/i18n/area-messages";
+import { DEFAULT_LOCALE, isAppLocale } from "@/i18n/locales";
+import { resolvePreferredLocale } from "@/i18n/request";
+import { track } from "@/lib/analytics/events";
 import { publicPageAnalytics } from "@/lib/analytics/umami";
 import { getEnv } from "@/lib/env";
+import { publicPath, publicUrl } from "@/lib/public-pages";
+import {
+  publicPageMetadata,
+  publisherGraph,
+} from "@/components/marketing/metadata";
 import { getCurrentUser } from "@/lib/security/actor";
-
-const GITHUB = "https://github.com/sebitr/balancia";
-const GITHUB_BLOB = `${GITHUB}/blob/main`;
-
-const PRIMARY_BUTTON =
-  "inline-flex items-center justify-center gap-2.5 rounded-[13px] bg-primary px-6 font-semibold text-primary-foreground no-underline transition-colors hover:bg-marketing-primary-hover";
-const DARK_OUTLINE_BUTTON =
-  "inline-flex items-center justify-center gap-2.5 rounded-[13px] border border-white/22 px-[22px] font-medium text-marketing-cream no-underline transition-colors hover:bg-white/8";
-const TEXT_LINK =
-  "inline-flex items-center gap-1.5 font-semibold text-marketing-link no-underline transition-colors hover:text-marketing-link-hover";
-
-function Eyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-xs font-semibold tracking-[0.1em] text-primary uppercase">
-      {children}
-    </p>
-  );
-}
-
-function ArrowIcon() {
-  return <ArrowRight aria-hidden="true" className="size-[17px]" />;
-}
-
-function GithubMark({ className = "size-4" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-      className={className}
-    >
-      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8Z" />
-    </svg>
-  );
-}
+import { appVersion } from "@/lib/telemetry/environment";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [t, locale] = await Promise.all([
-    getTranslations("marketing.meta"),
-    getLocale(),
-  ]);
-  const env = getEnv();
-  const title = t("title");
-  const description = t("description");
-  const isFrench = locale === "fr";
-  const socialTitle = isFrench ? title : `${title} · Balancia`;
-  const socialImage = new URL("/icons/icon-512.png", env.appOrigin).toString();
+  const t = await getTranslations("marketing.meta");
 
   return {
-    title: isFrench ? { absolute: title } : title,
-    description,
-    alternates: { canonical: env.appOrigin },
+    ...(await publicPageMetadata({
+      page: "home",
+      title: t("title"),
+      description: t("description"),
+    })),
     keywords: [
       "shared expense tracker",
       "split expenses with friends",
@@ -75,44 +50,6 @@ export async function generateMetadata(): Promise<Metadata> {
       "multi-currency expense sharing",
       "roommate expense tracker",
     ],
-    openGraph: {
-      type: "website",
-      url: env.appOrigin,
-      siteName: "Balancia",
-      locale: isFrench ? "fr_FR" : "en_US",
-      title: socialTitle,
-      description,
-      ...(isFrench
-        ? {
-            images: [
-              {
-                url: socialImage,
-                width: 512,
-                height: 512,
-                alt: "Balancia",
-                type: "image/png",
-              },
-            ],
-          }
-        : {}),
-    },
-    twitter: {
-      card: isFrench ? "summary" : "summary_large_image",
-      title: socialTitle,
-      description,
-      ...(isFrench ? { images: [socialImage] } : {}),
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
-      },
-    },
   };
 }
 
@@ -126,11 +63,24 @@ export default async function LandingPage() {
   // click further on — so spend that click for them. The real instance keeps
   // its homepage, which is the only place this page was ever aimed at.
   if (env.DEMO_MODE) redirect("/sign-in");
-  const [t, analytics, locale] = await Promise.all([
+  const [t, analytics, requestLocale, preferredLocale] = await Promise.all([
     getTranslations("marketing"),
     publicPageAnalytics(),
     getLocale(),
+    resolvePreferredLocale(),
   ]);
+  const locale = isAppLocale(requestLocale) ? requestLocale : DEFAULT_LOCALE;
+
+  // `/` is English, and it is also where somebody who typed the name arrives
+  // — so a reader whose cookie or browser asks for a language Balancia has is
+  // sent on to that language's own address, where this used to answer them in
+  // it on the spot. The words did not change for them; what changed is that
+  // the French ones now have a URL a search engine can be given. A crawler
+  // states no preference and reads the English page here, which is the page
+  // this address is indexed as.
+  if (locale === DEFAULT_LOCALE && preferredLocale !== DEFAULT_LOCALE) {
+    redirect(publicPath("home", preferredLocale));
+  }
 
   const features = [
     ["01", t("features.items.splits.title"), t("features.items.splits.body")],
@@ -178,27 +128,11 @@ export default async function LandingPage() {
     [t("comparison.rows.export.before"), t("comparison.rows.export.after")],
   ];
 
-  const defaultFaqItems = [
-    [t("faq.items.free.question"), t("faq.items.free.answer")],
-    [t("faq.items.accounts.question"), t("faq.items.accounts.answer")],
-    [t("faq.items.export.question"), t("faq.items.export.answer")],
-    [t("faq.items.currency.question"), t("faq.items.currency.answer")],
-    [t("faq.items.privacy.question"), t("faq.items.privacy.answer")],
-    [t("faq.items.selfHost.question"), t("faq.items.selfHost.answer")],
-  ];
-  const frenchFaqItems = [
-    [t("faq.items.free.question"), t("faq.items.free.answer")],
-    [t("faq.items.accounts.question"), t("faq.items.accounts.answer")],
-    [t("faq.items.sharing.question"), t("faq.items.sharing.answer")],
-    [t("faq.items.unequal.question"), t("faq.items.unequal.answer")],
-    [t("faq.items.currency.question"), t("faq.items.currency.answer")],
-    [t("faq.items.splitwise.question"), t("faq.items.splitwise.answer")],
-    [t("faq.items.openSource.question"), t("faq.items.openSource.answer")],
-    [t("faq.items.selfHost.question"), t("faq.items.selfHost.answer")],
-    [t("faq.items.devices.question"), t("faq.items.devices.answer")],
-    [t("faq.items.comparison.question"), t("faq.items.comparison.answer")],
-  ];
-  const faqItems = locale === "fr" ? frenchFaqItems : defaultFaqItems;
+  const faqItems = HOME_QUESTIONS.map((key) => ({
+    key,
+    question: t(`faq.items.${key}.question`),
+    answer: t(`faq.items.${key}.answer`),
+  }));
 
   const featureList = [
     t("seo.features.splits"),
@@ -218,20 +152,30 @@ export default async function LandingPage() {
     t("selfHosting.install.steps.2"),
   ];
 
+  // The software is one thing however many pages describe it and in however
+  // many languages, so it has one identifier — on this instance's origin,
+  // which is the copy being described. The page-level entries below are this
+  // address's own.
+  const softwareId = `${env.appOrigin}/#software`;
+  const pageUrl = publicUrl("home", locale, env.appOrigin);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "SoftwareApplication",
-        "@id": `${env.appOrigin}/#software`,
+        "@id": softwareId,
         name: "Balancia",
         alternateName: t("seo.alternateName"),
         applicationCategory: "FinanceApplication",
         applicationSubCategory: t("seo.applicationSubCategory"),
         operatingSystem: t("seo.operatingSystem"),
         description: t("seo.description"),
-        url: env.appOrigin,
+        url: pageUrl,
+        // Where else this same software is described. An engine deciding
+        // whether two mentions of "Balancia" are one thing looks here first.
+        sameAs: [GITHUB],
         codeRepository: GITHUB,
+        softwareVersion: appVersion(),
         license: "https://www.gnu.org/licenses/agpl-3.0.html",
         isAccessibleForFree: true,
         offers: {
@@ -246,8 +190,10 @@ export default async function LandingPage() {
           "@type": "Audience",
           audienceType: t("seo.audience"),
         },
+        publisher: { "@id": `${env.appOrigin}/#publisher` },
         inLanguage: locale,
       },
+      publisherGraph(env.appOrigin),
       {
         "@type": "WebSite",
         "@id": `${env.appOrigin}/#website`,
@@ -255,13 +201,15 @@ export default async function LandingPage() {
         alternateName: t("seo.alternateName"),
         url: env.appOrigin,
         description: t("meta.description"),
+        publisher: { "@id": `${env.appOrigin}/#publisher` },
         inLanguage: locale,
       },
       {
         "@type": "FAQPage",
-        "@id": `${env.appOrigin}/#faq`,
+        "@id": `${pageUrl}#faq`,
         inLanguage: locale,
-        mainEntity: faqItems.map(([question, answer]) => ({
+        about: { "@id": softwareId },
+        mainEntity: faqItems.map(({ question, answer }) => ({
           "@type": "Question",
           name: question,
           acceptedAnswer: { "@type": "Answer", text: answer },
@@ -270,107 +218,9 @@ export default async function LandingPage() {
     ],
   };
 
-  const footerColumns = [
-    {
-      heading: t("footer.runIt"),
-      links: [
-        [t("footer.links.selfHosting"), `${GITHUB_BLOB}/docs/self-hosting.md`],
-        [t("footer.links.environment"), `${GITHUB_BLOB}/docs/environment.md`],
-        [t("footer.links.backup"), `${GITHUB_BLOB}/docs/backup-and-restore.md`],
-        [t("footer.links.migration"), `${GITHUB_BLOB}/docs/data-migration.md`],
-      ],
-    },
-    {
-      heading: t("footer.buildIt"),
-      links: [
-        [t("footer.links.architecture"), `${GITHUB_BLOB}/docs/architecture.md`],
-        [t("footer.links.development"), `${GITHUB_BLOB}/docs/development.md`],
-        [t("footer.links.contributing"), `${GITHUB_BLOB}/CONTRIBUTING.md`],
-        [
-          t("footer.links.status"),
-          `${GITHUB_BLOB}/docs/implementation-status.md`,
-        ],
-      ],
-    },
-    {
-      heading: t("footer.trustIt"),
-      links: [
-        [t("footer.links.security"), `${GITHUB_BLOB}/SECURITY.md`],
-        [t("footer.links.license"), `${GITHUB_BLOB}/LICENSE`],
-        [
-          t("footer.links.receiptScanning"),
-          `${GITHUB_BLOB}/docs/receipt-scanning.md`,
-        ],
-        [t("footer.links.source"), GITHUB],
-      ],
-    },
-  ];
-
   const page = (
-    <div className="marketing-page min-h-dvh bg-background text-foreground">
-      <UmamiScript />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
-
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-marketing-plum text-marketing-cream">
-        <div className="mx-auto flex h-[68px] w-full max-w-[1120px] items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
-          <a
-            href="#top"
-            className="text-marketing-cream no-underline"
-            aria-label={t("header.home")}
-          >
-            <SplittingWordmark
-              className="gap-2.5 text-[18px] tracking-[-0.02em]"
-              markClassName="size-[26px]"
-              wordClassName="hidden min-[440px]:inline"
-            />
-          </a>
-          <nav
-            aria-label={t("header.navigation")}
-            className="flex items-center gap-1.5 sm:gap-2"
-          >
-            <MarketingLanguageSwitcher />
-            {/* A phone header has room for the switcher, one text link and
-                the button, and not for a fourth thing: on a 360pt phone the
-                row is 328pt wide and the mark, the switcher, "Se connecter"
-                and the button take 322 of them. The link is "Sign in" —
-                somebody who already has an account is the one reader the
-                hero's button does nothing for, and the source is linked
-                twice more down the page. GitHub comes back at 721px, and the
-                wordmark's word at 440px, the width at which the row first
-                fits in French with the word in it. The link keeps its label
-                on one line whatever the width: wrapped inside a fixed 36px
-                box, "Se" and "connecter" would both show and neither read. */}
-            <a
-              href={GITHUB}
-              target="_blank"
-              rel="noreferrer"
-              className="hidden h-9 items-center gap-[7px] rounded-[10px] px-3 text-sm font-medium text-marketing-cream no-underline transition-colors hover:bg-white/9 min-[721px]:inline-flex"
-            >
-              <GithubMark />
-              {t("header.github")}
-            </a>
-            <Link
-              href="/sign-in"
-              className="inline-flex h-9 items-center rounded-[10px] px-2 text-sm font-medium whitespace-nowrap text-marketing-cream no-underline transition-colors hover:bg-white/9 min-[721px]:px-3"
-            >
-              {t("header.signIn")}
-            </Link>
-            {env.ALLOW_REGISTRATION && (
-              <Link
-                href="/register"
-                className="inline-flex h-11 w-[82px] shrink-0 items-center justify-center rounded-[10px] bg-primary px-2 text-center text-[13px] leading-[1.05] font-semibold text-primary-foreground no-underline transition-colors hover:bg-marketing-primary-hover min-[721px]:h-9 min-[721px]:w-auto min-[721px]:px-3.5 min-[721px]:text-sm min-[721px]:leading-normal"
-              >
-                {t("header.createAccount")}
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
+    <MarketingShell page="home">
+      <JsonLd data={jsonLd} />
 
       <main>
         <section
@@ -396,6 +246,10 @@ export default async function LandingPage() {
                 <Link
                   href={env.ALLOW_REGISTRATION ? "/register" : "/sign-in"}
                   className={`${PRIMARY_BUTTON} h-[52px] text-base`}
+                  {...track({
+                    name: env.ALLOW_REGISTRATION ? "signup" : "sign-in",
+                    at: "hero",
+                  })}
                 >
                   {env.ALLOW_REGISTRATION
                     ? t("hero.createAccount")
@@ -408,6 +262,7 @@ export default async function LandingPage() {
                   <a
                     href={env.DEMO_URL}
                     className={`${DARK_OUTLINE_BUTTON} h-[52px] text-base`}
+                    {...track({ name: "demo", at: "hero" })}
                   >
                     {t("hero.tryDemo")}
                   </a>
@@ -417,6 +272,7 @@ export default async function LandingPage() {
                   target="_blank"
                   rel="noreferrer"
                   className={`${DARK_OUTLINE_BUTTON} h-[52px] text-base`}
+                  {...track({ name: "source", at: "hero" })}
                 >
                   <GithubMark className="size-[17px]" />
                   {t("hero.readSource")}
@@ -436,6 +292,7 @@ export default async function LandingPage() {
                   <Link
                     href="/sign-in"
                     className="font-semibold text-marketing-cream underline decoration-white/40 underline-offset-4 transition-colors hover:decoration-marketing-cream"
+                    {...track({ name: "sign-in", at: "hero" })}
                   >
                     {t("header.signIn")}
                   </Link>
@@ -543,6 +400,23 @@ export default async function LandingPage() {
                 {t("comparison.link")}
                 <ArrowIcon />
               </a>
+              {/* Beside the import guide rather than instead of it: one is
+                  for somebody who has decided, the other for somebody still
+                  deciding — and this one stays on the site, which is how a
+                  crawler reaches the comparison from the page it trusts
+                  most. */}
+              <Link
+                href={publicPath("splitwise", locale)}
+                className={`${TEXT_LINK} mt-3 flex w-fit text-sm`}
+                {...track({
+                  name: "comparison",
+                  with: "splitwise",
+                  at: "comparison",
+                })}
+              >
+                {t("comparison.compareLink")}
+                <ArrowIcon />
+              </Link>
             </div>
             <div className="grid grid-cols-1 overflow-hidden rounded-[20px] bg-card shadow-[0_0_0_1px_oklch(0.226_0.072_319_/_0.1)] min-[721px]:grid-cols-2">
               {comparisonRows.flatMap(([before, after], index) => [
@@ -590,6 +464,7 @@ export default async function LandingPage() {
                   target="_blank"
                   rel="noreferrer"
                   className={`${PRIMARY_BUTTON} h-[46px] text-sm`}
+                  {...track({ name: "self-hosting-guide", at: "self-hosting" })}
                 >
                   {t("selfHosting.guide")}
                 </a>
@@ -598,6 +473,7 @@ export default async function LandingPage() {
                   target="_blank"
                   rel="noreferrer"
                   className={`${DARK_OUTLINE_BUTTON} h-[46px] text-sm`}
+                  {...track({ name: "source", at: "self-hosting" })}
                 >
                   <GithubMark />
                   github.com/sebitr/balancia
@@ -697,12 +573,12 @@ export default async function LandingPage() {
               {t("faq.title")}
             </h2>
             <div className="mt-10">
-              {faqItems.map(([question, answer]) => (
-                <details
-                  key={question}
-                  className="group border-t last:border-b"
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 py-5 text-[17px] font-medium">
+              {faqItems.map(({ key, question, answer }) => (
+                <details key={key} className="group border-t last:border-b">
+                  <summary
+                    className="flex cursor-pointer list-none items-center justify-between gap-5 py-5 text-[17px] font-medium"
+                    {...track({ name: "faq", question: key })}
+                  >
                     {question}
                     <span
                       aria-hidden="true"
@@ -738,6 +614,7 @@ export default async function LandingPage() {
                 <Link
                   href="/register"
                   className={`${PRIMARY_BUTTON} h-[54px] text-[17px]`}
+                  {...track({ name: "signup", at: "closing" })}
                 >
                   {t("cta.createAccount")}
                   <ArrowRight aria-hidden="true" className="size-[18px]" />
@@ -751,6 +628,7 @@ export default async function LandingPage() {
                 <a
                   href={env.DEMO_URL}
                   className="text-[15px] text-marketing-dark-trust no-underline transition-colors hover:text-marketing-cream"
+                  {...track({ name: "demo", at: "closing" })}
                 >
                   {t("cta.tryDemo")}
                 </a>
@@ -758,6 +636,7 @@ export default async function LandingPage() {
               <Link
                 href="/sign-in"
                 className="text-[15px] text-marketing-dark-trust no-underline transition-colors hover:text-marketing-cream"
+                {...track({ name: "sign-in", at: "closing" })}
               >
                 {t("cta.haveAccount")}
               </Link>
@@ -770,6 +649,7 @@ export default async function LandingPage() {
                   target="_blank"
                   rel="noreferrer"
                   className={`${DARK_OUTLINE_BUTTON} mt-3 h-[42px] rounded-[11px] text-sm`}
+                  {...track({ name: "source", at: "closing" })}
                 >
                   <GithubMark />
                   {t("cta.contribute")}
@@ -779,51 +659,11 @@ export default async function LandingPage() {
           </div>
         </section>
       </main>
-
-      <footer className="border-t bg-marketing-cream px-6 pt-14 pb-10">
-        <div className="mx-auto w-full max-w-[1120px]">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-8">
-            <div>
-              <Wordmark markClassName="size-[22px]" />
-              <p className="mt-3 text-[13.5px] leading-[1.5] text-muted-foreground">
-                {t("footer.taglineLine1")}
-                <br />
-                {t("footer.taglineLine2")}
-              </p>
-            </div>
-            {footerColumns.map((column) => (
-              <div key={column.heading}>
-                <h2 className="mb-3 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-                  {column.heading}
-                </h2>
-                <ul className="space-y-[9px] text-sm">
-                  {column.links.map(([label, href]) => (
-                    <li key={href}>
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-marketing-link no-underline transition-colors hover:text-marketing-link-hover"
-                      >
-                        {label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-wrap justify-between gap-x-6 gap-y-2 border-t pt-5 text-[13px] text-muted-foreground">
-            <span>{t("footer.bottomTagline")}</span>
-            <span>{t("footer.bottomLicense")}</span>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </MarketingShell>
   );
 
   // Everything above renders here, on the server, so the browser needs only
-  // the strings of the demo and the install block — and no other page needs
-  // those.
+  // the strings of the demo, the install block and the language menu — and no
+  // other page needs those.
   return <AreaMessages area="marketing">{page}</AreaMessages>;
 }
