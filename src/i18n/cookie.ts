@@ -53,20 +53,17 @@ export async function writeLocaleCookie(locale: string): Promise<void> {
  * Writes the accent.
  *
  * A cookie rather than local storage, unlike the theme: the accent has to be
- * on `<html>` in the server's own HTML or the first paint is coral and the
- * second one is not, and a colour that changes under the reader once per visit
- * is worse than one that takes a moment to follow them to a new device.
+ * on `<html>` in the server's own HTML or the first paint is the default and
+ * the second one is not, and a colour that changes under the reader once per
+ * visit is worse than one that takes a moment to follow them to a new device.
  *
- * `null` clears it, which is the coral default rather than a stored value —
- * the same way `auto` is the absence of a notation rather than a token.
+ * Always the name, the default included. Choosing coral used to clear the
+ * cookie, back when coral was the default; a cleared cookie now means plum to
+ * a signed-out reader, so a choice is written as what it is.
  */
-export async function writeAccentCookie(accent: string | null): Promise<void> {
-  const cookieStore = await cookies();
-  if (accent === null) {
-    cookieStore.delete(ACCENT_COOKIE_NAME);
-    return;
-  }
+export async function writeAccentCookie(accent: string): Promise<void> {
   if (!isAccentColor(accent)) return;
+  const cookieStore = await cookies();
   cookieStore.set(ACCENT_COOKIE_NAME, accent, displayCookieOptions());
 }
 
@@ -75,8 +72,7 @@ export async function writeAccentCookie(accent: string | null): Promise<void> {
  *
  * Per device rather than per account, so there is no column behind it; see
  * `modules/profile/surface.ts`. The default clears its cookie rather than
- * recording one, the same way coral clears the accent: plum is the absence
- * of a choice.
+ * recording one: plum is the absence of a choice.
  */
 export async function writeSurfaceCookies(
   preferences: Partial<SurfacePreferences>,
@@ -156,6 +152,10 @@ export async function applyStoredPreferences(
   if (preferences.locale) {
     await writeLocaleCookie(preferences.locale);
   }
+  // A null accent is an account from before plum was the default, and means
+  // coral. With no cookie, `resolveAccentColor` reads the column and finds
+  // that out for itself; writing it here would overwrite one chosen on this
+  // device while signed out, which is the rule above.
   if (preferences.accentColor !== null) {
     await writeAccentCookie(preferences.accentColor);
   }
