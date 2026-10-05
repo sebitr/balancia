@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Banknote } from "lucide-react";
+import { Banknote, ChevronRight } from "lucide-react";
 import { Amount } from "@/components/money/amount";
+import { TONE } from "@/components/money/balance-tone";
 import { RemindButton } from "@/components/reminders/remind-button";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -46,9 +47,28 @@ export function SettlementList({
   recipients: readonly RemindRecipient[];
 }) {
   const t = useTranslations("group");
+  const tSettle = useTranslations("settleUp");
   const [active, setActive] = useState<SettlementSuggestionView | null>(null);
 
   if (suggestions.length === 0) return null;
+
+  /**
+   * The transfer as a sentence, from the reader's side of it.
+   *
+   * It was two faces and an arrow — "Ada → Marta" — which said nothing about
+   * which of the two was the reader, even when it was Ada reading. These are
+   * the settle-up screen's words, so the screen this list leads to says the
+   * same thing back.
+   */
+  const sentenceFor = (suggestion: SettlementSuggestionView) =>
+    suggestion.fromIsSelf
+      ? tSettle("youPayBack", { name: suggestion.toName })
+      : suggestion.toIsSelf
+        ? tSettle("personRepaysYou", { name: suggestion.fromName })
+        : tSettle("paysBack", {
+            from: suggestion.fromName,
+            to: suggestion.toName,
+          });
 
   /**
    * Where recording this transfer goes: the add-entry drawer, over the group,
@@ -98,15 +118,53 @@ export function SettlementList({
           {suggestions.map((suggestion, index) => {
             const key = `${suggestion.fromParticipantId}-${suggestion.toParticipantId}-${suggestion.currency}-${index}`;
             const surface =
-              "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0";
+              "flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-wash-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0";
+            // The settle-up screen's colours for the same three cases: what
+            // the reader pays out, what comes back to them, and a debt that is
+            // neither, which is not theirs to read as good or bad news.
+            const tone = suggestion.fromIsSelf
+              ? TONE.negative.ink
+              : suggestion.toIsSelf
+                ? TONE.positive.ink
+                : TONE.neutral.ink;
             const inside = (
               <>
-                <SettlementPeople suggestion={suggestion} />
+                {/* Dimmed between two other people, as the settle-up screen
+                    dims its "Not your concern" rows. */}
+                <Avatar
+                  className={cn(
+                    "size-7 shrink-0",
+                    !suggestion.fromIsSelf &&
+                      !suggestion.toIsSelf &&
+                      "opacity-60",
+                  )}
+                >
+                  <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+                    {/* The other party: on the reader's own row their own
+                        initial would say nothing. */}
+                    {initialOf(
+                      suggestion.fromIsSelf
+                        ? suggestion.toName
+                        : suggestion.fromName,
+                    )}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Wraps rather than truncating: two names and a verb do not
+                    always fit beside a figure on a phone, and the end of the
+                    sentence is the receiver — the half that says where the
+                    money goes. */}
+                <span className="min-w-0 flex-1 text-sm font-medium wrap-anywhere">
+                  {sentenceFor(suggestion)}
+                </span>
                 <Amount
                   minorUnits={suggestion.minorUnits}
                   currency={suggestion.currency}
                   display="code"
-                  className="shrink-0 text-sm font-semibold"
+                  className={cn("shrink-0 text-sm font-semibold", tone)}
+                />
+                <ChevronRight
+                  aria-hidden="true"
+                  className="-ml-1 size-4 shrink-0 text-muted-foreground"
                 />
               </>
             );
@@ -116,7 +174,8 @@ export function SettlementList({
                 {/* The reader's own debt is the one they can act on, so its row
                     is the action: straight into the drawer, prefilled. Anybody
                     else's opens the sheet, which is where the little that can
-                    be done about someone else's debt lives. */}
+                    be done about someone else's debt lives. Both open
+                    something, so both carry the chevron that says so. */}
                 {suggestion.fromIsSelf ? (
                   <Link href={recordHref(suggestion)} className={surface}>
                     {inside}
@@ -151,10 +210,7 @@ export function SettlementList({
           {active && (
             <>
               <SheetTitle className="mt-4 text-xl font-semibold tracking-[-0.02em]">
-                {t("settlementDetailTitle", {
-                  from: active.fromName,
-                  to: active.toName,
-                })}
+                {sentenceFor(active)}
               </SheetTitle>
               <SheetDescription className="mt-1 text-xs">
                 {t("settlementDetailDescription")}
@@ -213,41 +269,6 @@ export function SettlementList({
   );
 }
 
-function SettlementPeople({
-  suggestion,
-}: {
-  suggestion: SettlementSuggestionView;
-}) {
-  return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <Person name={suggestion.fromName} self={suggestion.fromIsSelf} />
-      <ArrowRight
-        aria-hidden="true"
-        className="size-3.5 shrink-0 text-muted-foreground"
-      />
-      <Person name={suggestion.toName} self={suggestion.toIsSelf} />
-    </span>
-  );
-}
-
-function Person({ name, self }: { name: string; self: boolean }) {
-  return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <Avatar className="size-7 shrink-0">
-        <AvatarFallback
-          className={cn(
-            "text-2xs font-semibold",
-            self
-              ? "bg-primary/15 text-primary-ink"
-              : "bg-accent text-accent-foreground",
-          )}
-        >
-          {name.trim().charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
-      <span className="max-w-[5.5rem] truncate text-xs font-medium">
-        {name}
-      </span>
-    </span>
-  );
+function initialOf(name: string): string {
+  return name.trim().charAt(0).toUpperCase();
 }

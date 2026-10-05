@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Amount } from "@/components/money/amount";
 import { TONE, toneFor } from "@/components/money/balance-tone";
 import { cn } from "@/lib/utils";
@@ -14,10 +14,22 @@ import { cn } from "@/lib/utils";
  * between the two of you, and their net across the group moves down into a
  * sub-cell where it is context rather than the answer.
  *
- * Colour never carries the meaning alone: the amount also has an arrow and a
- * word. The word is read out rather than drawn, because the eyebrow above it
- * is already saying whose position this is and two sentences stacked on one
- * figure is one too many.
+ * Colour never carries the meaning alone: the amount has an arrow, and under
+ * it the sentence it stands for — "You owe Marta", "Marta owes you". The
+ * sentence used to be read out and never drawn, on the grounds that the
+ * eyebrow already said whose position it was. But "Between you two" says who,
+ * not which way, and a sighted reader was left with a red figure and an arrow
+ * to decode. It is the dashboard's caption, indented under the figure the same
+ * way.
+ *
+ * The arrow is the app's one pair: down and to the left for money coming to
+ * the person the sentence is about, up and to the right for money going out.
+ * It used to point straight up for a positive balance here and straight down
+ * for a negative one, so the same debt turned its arrow over between the group
+ * screen and this one.
+ *
+ * Settled up is a sentence and not a figure: "0.00" invites the reader to look
+ * for what it refers to.
  */
 
 /** Which of three readers is looking, which decides all of the copy. */
@@ -42,10 +54,23 @@ export interface PositionView {
   readonly largestDebtTo: string | null;
 }
 
-const WORDS = {
-  self: { positive: "wordYouGetBack", negative: "wordYouOwe" },
-  between: { positive: "wordOwesYou", negative: "wordYouOweThem" },
-  member: { positive: "wordGetsBack", negative: "wordOwes" },
+/** Each reader's sentence, one per direction, in whole messages. */
+const SENTENCES = {
+  self: {
+    positive: "heroYouGetBack",
+    negative: "heroYouOwe",
+    neutral: "heroYouSettled",
+  },
+  between: {
+    positive: "heroOwesYou",
+    negative: "heroYouOweThem",
+    neutral: "heroBetweenSettled",
+  },
+  member: {
+    positive: "heroGetsBack",
+    negative: "heroOwes",
+    neutral: "heroSettled",
+  },
 } as const;
 
 export function MemberPosition({
@@ -60,16 +85,13 @@ export function MemberPosition({
   mode: PositionMode;
 }) {
   const t = useTranslations("memberStats");
-  const tMoney = useTranslations("money");
 
   const headline = BigInt(mode === "between" ? position.between : position.net);
   const tone = toneFor(headline.toString());
   const magnitude = headline < 0n ? -headline : headline;
 
-  const Arrow =
-    tone === "positive" ? ArrowUp : tone === "negative" ? ArrowDown : Minus;
-  const word =
-    tone === "neutral" ? tMoney("settledUp") : t(WORDS[mode][tone], { name });
+  const sentence = t(SENTENCES[mode][tone], { name });
+  const Arrow = tone === "positive" ? ArrowDownLeft : ArrowUpRight;
 
   return (
     <section className="flex flex-col gap-3 rounded-[17px] bg-card p-3.5 shadow-[0_0_0_1px_var(--border)]">
@@ -81,19 +103,34 @@ export function MemberPosition({
             : t("eyebrowMember", { name })}
       </h2>
 
-      <p
-        className={cn(
-          "flex items-center gap-1.5 text-2xl font-semibold tracking-[-0.02em]",
-          TONE[tone].ink,
-        )}
-      >
-        <Arrow aria-hidden="true" className="size-5 shrink-0" />
-        <Amount
-          minorUnits={magnitude.toString()}
-          currency={position.currency}
-        />
-        <span className="sr-only">{word}</span>
-      </p>
+      {tone === "neutral" ? (
+        <p
+          className={cn(
+            "text-xl font-semibold tracking-[-0.02em]",
+            TONE.neutral.ink,
+          )}
+        >
+          {sentence}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <p
+            className={cn(
+              "flex items-center gap-1.5 text-2xl font-semibold tracking-[-0.02em]",
+              TONE[tone].ink,
+            )}
+          >
+            <Arrow aria-hidden="true" className="size-5 shrink-0" />
+            <Amount
+              minorUnits={magnitude.toString()}
+              currency={position.currency}
+            />
+          </p>
+          {/* Indented to the figure, past the arrow and its gap, so it reads
+              as the figure's caption rather than as a line of its own. */}
+          <p className="pl-[26px] text-sm font-medium">{sentence}</p>
+        </div>
+      )}
 
       <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3">
         {mode === "between" ? (

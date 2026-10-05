@@ -623,7 +623,11 @@ const CASES: readonly Case[] = [
   ["a dotted capital I", () => ({ query: "i̇stanbul" })],
   ["a sharp s", () => ({ query: "straße" })],
   ["a repayment's title", () => ({ query: "paid" })],
-  ["who paid whom", () => ({ query: "ada paid" })],
+  // Ada is the reader, so her own repayments are titled from her side and
+  // only one between two other people names both.
+  ["who paid whom", () => ({ query: "bob paid" })],
+  ["a repayment the reader made", () => ({ query: "you paid bob back" })],
+  ["a repayment the reader received", () => ({ query: "paid you back" })],
   ["a name with an underscore in it", () => ({ query: "zoë_b" })],
   ["a repayment's note", () => ({ query: "bus" })],
   ["a year, in the date", () => ({ query: "2019" })],

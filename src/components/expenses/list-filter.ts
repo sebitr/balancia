@@ -74,7 +74,12 @@ export interface RowView {
    * date, rather than displacing them.
    */
   readonly note: string | null;
-  /** Signed minor units, in the row's display currency; null when it is not ours. */
+  /**
+   * Signed minor units, in the row's display currency; null when it is not
+   * ours. On an expense, what it left the reader holding: positive is what
+   * they get back. On a repayment, which way the money went for them:
+   * positive is what they received, negative what they paid.
+   */
   readonly position: string | null;
   readonly revenue: boolean;
   readonly recurring: boolean;

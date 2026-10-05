@@ -127,6 +127,93 @@ describe("the comparison bars' alignment", () => {
   });
 });
 
+/**
+ * The direction is said in words a sighted reader can see. It used to be a
+ * sign and a colour, with "owes money" read out to a screen reader and kept
+ * from everyone else — and the reader's own row printed their own name, cut
+ * short, where every other screen says "You".
+ */
+describe("the words beside each balance", () => {
+  /** A person's row, found the way a reader reaches it: by its link. */
+  function rowOf(participantId: string): HTMLElement {
+    return screen
+      .getAllByRole("link")
+      .find((link) =>
+        link.getAttribute("href")?.endsWith(`/members/${participantId}`),
+      )!;
+  }
+
+  it("says who owes and who gets back, under their names", () => {
+    render();
+
+    const cyril = within(rowOf("p1"));
+    expect(cyril.getByText("Cyril")).toBeVisible();
+    expect(cyril.getByText("owes")).toBeVisible();
+    expect(cyril.getByText("owes")).not.toHaveClass("sr-only");
+
+    const herve = within(rowOf("p2"));
+    expect(herve.getByText("gets back")).toBeVisible();
+  });
+
+  it("calls the reader You, whatever their name is", () => {
+    render();
+
+    const self = within(rowOf("p3"));
+    expect(self.getByText("You")).toBeVisible();
+    expect(self.getByText("get back")).toBeVisible();
+    expect(self.queryByText("Seb")).toBeNull();
+  });
+
+  it("drops the sign once the word has said which way it goes", () => {
+    render();
+
+    for (const id of ["p1", "p2", "p3"]) {
+      expect(rowOf(id)).not.toHaveTextContent("+");
+      expect(rowOf(id)).not.toHaveTextContent("−");
+    }
+    expect(rowOf("p1")).toHaveTextContent("CHF 21,661.90");
+  });
+
+  it("keeps the tone on the figure, from TONE", () => {
+    render();
+
+    expect(within(rowOf("p1")).getByText("CHF 21,661.90")).toHaveClass(
+      "tabular-nums",
+    );
+    expect(
+      within(rowOf("p1")).getByText("CHF 21,661.90").parentElement,
+    ).toHaveClass("text-negative-ink");
+    expect(
+      within(rowOf("p2")).getByText("CHF 8,556.57").parentElement,
+    ).toHaveClass("text-positive-ink");
+  });
+
+  it("phrases a settled balance instead of printing a zero", () => {
+    render({
+      rows: [
+        row({ minorUnits: "0" }),
+        row({ participantId: "p2", name: "Hervé" }),
+      ],
+    });
+
+    const settled = rowOf("p1");
+    expect(within(settled).getByText("Settled up")).toBeVisible();
+    expect(settled).not.toHaveTextContent("0.00");
+  });
+
+  it("says it in French as whole sentences, never Toi with a verb", () => {
+    renderWithIntl(<BalanceList rows={ROWS} groupId="g1" limit={5} />, {
+      locale: "fr",
+    });
+
+    const self = within(rowOf("p3"));
+    expect(self.getByText("Tu")).toBeVisible();
+    expect(self.getByText("récupères")).toBeVisible();
+    expect(rowOf("p3")).not.toHaveTextContent("Toi");
+    expect(within(rowOf("p1")).getByText("doit")).toBeVisible();
+  });
+});
+
 describe("the comparison bars themselves", () => {
   /** The filled part of each bar, in source order. */
   function fills(container: HTMLElement): string[] {

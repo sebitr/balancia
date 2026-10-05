@@ -31,6 +31,11 @@ import {
 import { todayIn } from "@/modules/recurring/schedule";
 import { listSettlements } from "@/modules/settlements/service";
 import {
+  REPAYMENT_TITLE,
+  repaymentSide,
+  type RepaymentSide,
+} from "@/modules/settlements/side";
+import {
   NO_FILTER,
   searchNeedle,
   type ListFilter,
@@ -128,11 +133,11 @@ export async function loadTransactionPage(
   const limit = options.limit ?? TRANSACTION_PAGE_SIZE;
   const sort = (options.filter ?? NO_FILTER).sort;
   const t = await getTranslations("expensesList");
-  // The same sentence the rows below are titled with, so a search reads the
+  // The same sentences the rows below are titled with, so a search reads the
   // title the reader sees.
   const where = await narrowingFor(
     access,
-    (names) => t("settlementTitle", names),
+    (side, names) => t(REPAYMENT_TITLE[side], names),
     options,
   );
   const group = access.group;
@@ -257,6 +262,7 @@ export async function loadTransactionPage(
     }),
     ...settlements.map((settlement): Keyed => {
       const money = moneyForGroup(settlement, display);
+      const side = repaymentSide(settlement, self);
       return {
         key: keyOf(
           settlement.settledOn,
@@ -268,7 +274,9 @@ export async function loadTransactionPage(
           kind: "settlement",
           id: settlement.id,
           date: settlement.settledOn,
-          title: t("settlementTitle", {
+          // Named from the reader's side when they are on one: "Sam paid you
+          // back", never their own name in a sentence about somebody else.
+          title: t(REPAYMENT_TITLE[side], {
             from: settlement.fromName,
             to: settlement.toName,
           }),
@@ -278,14 +286,15 @@ export async function loadTransactionPage(
           category: null,
           subcategory: null,
           // A repayment clears a position rather than creating one, so it is
-          // shown neutrally — and only to the two people it names. Which of
-          // them paid is already the row's title.
+          // shown neutrally — and only to the two people it names. Signed by
+          // which way the money went for the reader: in when they received
+          // it, out when they paid it, which is the word the row prints.
           position:
-            self &&
-            (settlement.fromParticipantId === self ||
-              settlement.toParticipantId === self)
+            side === "received"
               ? money.amount.toString()
-              : null,
+              : side === "paid"
+                ? (-money.amount).toString()
+                : null,
           revenue: false,
           recurring: false,
           // Exactly one payer, and it is the half of the title that did the
@@ -336,7 +345,7 @@ export async function countTransactions(
   const t = await getTranslations("expensesList");
   const where = await narrowingFor(
     access,
-    (names) => t("settlementTitle", names),
+    (side, names) => t(REPAYMENT_TITLE[side], names),
     options,
   );
 
@@ -378,7 +387,10 @@ export async function countTransactions(
  */
 async function narrowingFor(
   access: GroupAccess,
-  settlementTitle: (names: { from: string; to: string }) => string,
+  settlementTitle: (
+    side: RepaymentSide,
+    names: { from: string; to: string },
+  ) => string,
   options: Omit<TransactionQuery, "cursor" | "limit">,
 ): Promise<Narrowing> {
   const filter = options.filter ?? NO_FILTER;
@@ -391,7 +403,7 @@ async function narrowingFor(
     group: access.group,
     participantId: access.participantId,
     today: options.today ?? todayIn(access.group.timezone),
-    settlementTitle: settlementTitleSql(settlementTitle),
+    settlementTitle: settlementTitleSql(settlementTitle, access.participantId),
     days:
       dateText === null
         ? new Map()

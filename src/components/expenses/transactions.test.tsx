@@ -208,13 +208,15 @@ const ROWS: RowView[] = [
     position: "6000",
     revenue: true,
   }),
+  // The reader, Seb, paid this one: the server titles it from their side and
+  // signs its position by which way the money went — out, so negative.
   row({
     kind: "settlement",
     id: "s1",
-    title: "Seb paid Padi",
+    title: "You paid Padi back",
     category: null,
     amount: "74000",
-    position: "74000",
+    position: "-74000",
     date: "2026-08-12",
   }),
 ];
@@ -363,34 +365,70 @@ describe("Transactions", () => {
     ).toBeVisible();
   });
 
-  it("keeps the word beside every position, so colour is never the only cue", () => {
+  /**
+   * The reader's own effect, in words a sighted reader can see. It used to be
+   * "+ €12.50" and "− €12.50" with the word kept for a screen reader, so the
+   * colour and a sign were doing the explaining.
+   */
+  it("says what each row left the reader holding, in words", () => {
     renderList([
       row({ id: "back", title: "Back", position: "1250" }),
       row({ id: "owed", title: "Owed", position: "-1250" }),
     ]);
 
-    expect(screen.getByText("you get back")).toBeInTheDocument();
-    expect(screen.getByText("you owe")).toBeInTheDocument();
+    const back = within(screen.getByText("Back").closest("li")!);
+    const owed = within(screen.getByText("Owed").closest("li")!);
+    expect(back.getByText("You get back €12.50")).toBeVisible();
+    expect(owed.getByText("You owe €12.50")).toBeVisible();
+    expect(back.getByText("You get back €12.50")).toHaveClass(
+      "text-positive-ink",
+    );
+    expect(owed.getByText("You owe €12.50")).toHaveClass("text-negative-ink");
   });
 
-  it("uses plus and minus signs for positive and negative positions", () => {
+  it("drops the sign once the words say which way it goes", () => {
     renderList([
       row({ id: "back", title: "Back", position: "1250" }),
       row({ id: "owed", title: "Owed", position: "-1250" }),
     ]);
 
+    for (const title of ["Back", "Owed"]) {
+      const item = screen.getByText(title).closest("li")!;
+      expect(item).not.toHaveTextContent("+");
+      expect(item).not.toHaveTextContent("−");
+    }
+  });
+
+  it("says a share that came out even, rather than printing a zero", () => {
+    renderList([
+      row({ id: "even", title: "Even", position: "0" }),
+      row({ id: "income", title: "Income", position: "0", revenue: true }),
+    ]);
+
     expect(
-      within(screen.getByText("Back").closest("li")!).getByText("+"),
+      within(screen.getByText("Even").closest("li")!).getByText(
+        "You paid your share",
+      ),
     ).toBeVisible();
     expect(
-      within(screen.getByText("Owed").closest("li")!).getByText("−"),
+      within(screen.getByText("Income").closest("li")!).getByText(
+        "You received your share",
+      ),
     ).toBeVisible();
+  });
+
+  it("says nothing under a row the reader is not in", () => {
+    renderList([row({ id: "theirs", title: "Theirs", position: null })]);
+
+    expect(screen.getByText("Theirs").closest("li")).not.toHaveTextContent(
+      /You /,
+    );
   });
 
   it("opens a settlement on its own detail screen", () => {
     renderList();
 
-    const settlement = screen.getByText("Seb paid Padi").closest("li");
+    const settlement = screen.getByText("You paid Padi back").closest("li");
     expect(settlement).not.toBeNull();
     // Not the edit drawer: the row cannot say whether the repayment finished
     // the job, and the screen behind it is where that is answered.
@@ -398,8 +436,70 @@ describe("Transactions", () => {
       "href",
       "/groups/g1/settlements/s1",
     );
-    // It is a repayment, so it closes a position rather than moving one.
-    expect(within(settlement!).getByText("settled")).toBeInTheDocument();
+  });
+
+  /**
+   * A repayment the reader received used to print "− €30.00", because a
+   * repayment is drawn neutral and the neutral tone signs with a minus. It
+   * says which way the money went instead, and stays neutral: a repayment
+   * closes a position rather than opening one.
+   */
+  it("says which way a repayment went for the reader", () => {
+    renderList([
+      row({
+        kind: "settlement",
+        id: "paid",
+        title: "You paid Padi back",
+        category: null,
+        amount: "3000",
+        position: "-3000",
+      }),
+      row({
+        kind: "settlement",
+        id: "received",
+        title: "Padi paid you back",
+        category: null,
+        amount: "3000",
+        position: "3000",
+        payers: ["padi"],
+      }),
+    ]);
+
+    const paid = within(screen.getByText("You paid Padi back").closest("li")!);
+    const received = within(
+      screen.getByText("Padi paid you back").closest("li")!,
+    );
+    expect(paid.getByText("You paid €30.00")).toHaveClass(
+      "text-neutral-balance-ink",
+    );
+    expect(received.getByText("You received €30.00")).toHaveClass(
+      "text-neutral-balance-ink",
+    );
+    expect(received.queryByText(/−/)).toBeNull();
+  });
+
+  it("writes the words in French as whole sentences", () => {
+    window.history.replaceState(null, "", "/groups/g1/expenses");
+    renderWithIntl(
+      <Transactions
+        groupId="g1"
+        eyebrow={<h1>Transactions</h1>}
+        bands={BANDS}
+        kinds={["expense"]}
+        rows={[
+          row({ id: "back", title: "Back", position: "1250" }),
+          row({ id: "owed", title: "Owed", position: "-1250" }),
+        ]}
+        cursor={null}
+        {...sheetProps()}
+      />,
+      { locale: "fr" },
+    );
+
+    // The figure follows the reader's own notation, which a test without
+    // that provider leaves at its default; the words are what is French.
+    expect(screen.getByText("Tu récupères €12.50")).toBeVisible();
+    expect(screen.getByText("Tu dois €12.50")).toBeVisible();
   });
 
   it("says what a repayment was for, beside the date", () => {
@@ -477,7 +577,7 @@ describe("Transactions", () => {
     expect(kind("Repayments")).toHaveAttribute("aria-pressed", "true");
     // Spending and the repayment stand together; the revenue row is the one
     // left out, which is what proves the pair filters rather than clears.
-    expect(screen.getByText("Seb paid Padi")).toBeVisible();
+    expect(screen.getByText("You paid Padi back")).toBeVisible();
     expect(screen.getByText("airbnb")).toBeVisible();
     expect(screen.queryByText("Airbnb refund")).not.toBeInTheDocument();
     expect(window.location.search).toBe("?kind=expense&kind=settlement");
@@ -881,7 +981,7 @@ describe("Transactions, left and returned to", () => {
 
     await userEvent.click(kind("Repayments"));
 
-    const row = screen.getByText("Seb paid Padi").closest("li");
+    const row = screen.getByText("You paid Padi back").closest("li");
     expect(within(row!).getByRole("link")).toHaveAttribute(
       "href",
       "/groups/g1/settlements/s1?kind=settlement",
@@ -1489,7 +1589,7 @@ describe("Transactions filter sheet, dates and order", () => {
     await user.click(apply(sheet));
 
     const rows = screen.getAllByRole("listitem");
-    expect(within(rows[0]).getByText("Seb paid Padi")).toBeVisible();
+    expect(within(rows[0]).getByText("You paid Padi back")).toBeVisible();
     expect(filterButton()).toHaveAccessibleName(
       "Filter and sort, 1 filter applied",
     );

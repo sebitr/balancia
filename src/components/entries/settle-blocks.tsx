@@ -16,6 +16,7 @@ import {
   type PaymentMethodId,
   type SupportedCountry,
 } from "@/modules/settlements/payment-methods";
+import { repaymentSide } from "@/modules/settlements/side";
 import { MethodMark } from "@/components/settlements/method-mark";
 import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
 
@@ -292,6 +293,7 @@ export function OutstandingList({
   onSelect,
   onPickSomeoneElse,
   hasCustomPair = false,
+  selfId,
 }: {
   pairs: readonly DebtPair[];
   selectedIndex: number | null;
@@ -300,8 +302,24 @@ export function OutstandingList({
   onPickSomeoneElse?: () => void;
   /** Whether one of the rows above is a pair the reader named themselves. */
   hasCustomPair?: boolean;
+  /** The reader, who is "you" in any pair they are part of. */
+  selfId: string | null;
 }) {
   const t = useTranslations("addEntry.settle");
+
+  /*
+   * The pair as a sentence, from the reader's side of it. "Sam pays Robin
+   * back", said to Robin, made them find their own name in it; the list is
+   * mostly the reader's own debts, so it is mostly "you".
+   */
+  const sentenceFor = (pair: DebtPair) => {
+    const side = repaymentSide(pair, selfId);
+    return side === "paid"
+      ? t("youPayBack", { to: pair.toName })
+      : side === "received"
+        ? t("paysYouBack", { from: pair.fromName })
+        : t("paysBack", { from: pair.fromName, to: pair.toName });
+  };
 
   const escapeHatch = onPickSomeoneElse ? (
     <li>
@@ -388,7 +406,7 @@ export function OutstandingList({
                    * pushing the tick off the card.
                    */}
                   <span className="block text-sm wrap-anywhere">
-                    {t("paysBack", { from: pair.fromName, to: pair.toName })}
+                    {sentenceFor(pair)}
                   </span>
                   <span
                     className={cn(

@@ -27,6 +27,7 @@ import {
   type BalanceTone,
 } from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
+import { formatMoney, money } from "@/modules/currencies/money";
 import { RANKED_BANDS, UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
 import {
@@ -43,6 +44,7 @@ import { listQuery, withQuery } from "./list-query";
 import {
   filterDimensions,
   filterParams,
+  kindOf,
   KINDS,
   NO_FILTER,
   readFilter,
@@ -187,17 +189,6 @@ export function fitBandsToHeight(
     },
   ];
 }
-
-/**
- * This list's own words for the three tones — "gets back" is a balance's
- * word, and a running position reads better as "back" / "owed" / "settled".
- * The classes and signs come from the shared `TONE` record.
- */
-const TONE_LABEL_KEYS = {
-  positive: "positionBack",
-  negative: "positionOwed",
-  neutral: "positionSettled",
-} as const;
 
 export function Transactions({
   groupId,
@@ -1253,8 +1244,7 @@ function Row({
           <Position
             minorUnits={row.position}
             currency={row.currency}
-            // A repayment moves nobody's position; it closes one.
-            tone={row.kind === "settlement" ? "neutral" : undefined}
+            kind={kindOf(row)}
           />
         )}
       </span>
@@ -1324,42 +1314,66 @@ function TypeBadge({ kind }: { kind: "revenue" | "settlement" | "recurring" }) {
 }
 
 /**
- * What the row left the reader holding.
+ * What the row left the reader holding, said in words.
  *
- * Three redundant cues, as everywhere else money carries a sign: the sign,
- * the colour, and the word — hidden from the eye, not from a screen reader —
- * so the meaning survives greyscale and colour blindness.
+ * It used to be a sign and a colour — "+ €60.00", "− €30.00" — with the word
+ * read out to a screen reader and kept from everyone else, so the colour was
+ * doing the explaining. Worse, a repayment the reader had *received* printed
+ * "− €30.00" too, because a repayment is neutral and the neutral tone signs
+ * with a minus. A sentence cannot be read the wrong way round: "you get back
+ * €60.00", "you owe €30.00", and for a repayment, which way the money went —
+ * "you received", "you paid".
+ *
+ * The figure carries no sign now: the words say which way it goes, and a
+ * minus inside "you owe" would say it twice and read as a typo. The line
+ * starts with the words, so it starts with a capital — the expense's own
+ * screen writes its outcomes the same way, and the two should read alike.
+ *
+ * The colour stays, from `TONE`, so the eye can still sort a column of them at
+ * a glance. A repayment stays neutral: it closes a position rather than
+ * opening one. A row the reader is not in has no position and says nothing.
  */
 function Position({
   minorUnits,
   currency,
-  tone,
+  kind,
 }: {
   minorUnits: string;
   currency: string;
-  tone?: BalanceTone;
+  /** A repayment's position is which way the money went, not a debt. */
+  kind: EntryKind;
 }) {
   const t = useTranslations("expensesList");
-  const resolved = tone ?? toneFor(minorUnits);
-  const sign = TONE[resolved].sign;
-  const magnitude =
-    BigInt(minorUnits) < 0n ? -BigInt(minorUnits) : BigInt(minorUnits);
+  const locale = useNumberLocale();
+  const signed = BigInt(minorUnits);
+  const direction = toneFor(signed);
+  const repayment = kind === "settlement";
+  const tone: BalanceTone = repayment ? "neutral" : direction;
+  const amount = formatMoney(money(signed < 0n ? -signed : signed, currency), {
+    locale,
+  });
+
+  const words =
+    direction === "neutral"
+      ? t("positionEven", { kind })
+      : repayment
+        ? direction === "positive"
+          ? t("positionYouReceived", { amount })
+          : t("positionYouPaid", { amount })
+        : direction === "positive"
+          ? t("positionYouGetBack", { amount })
+          : t("positionYouOwe", { amount });
 
   return (
+    // A sentence, so the caption size rather than the label floor; and on one
+    // line, because a figure broken from its words reads as two facts.
     <span
       className={cn(
-        "flex items-center gap-[3px] text-2xs font-medium",
-        TONE[resolved].ink,
+        "text-xs font-medium whitespace-nowrap tabular-nums",
+        TONE[tone].ink,
       )}
     >
-      <span
-        aria-hidden="true"
-        className="w-[11px] shrink-0 text-center leading-none font-semibold"
-      >
-        {sign}
-      </span>
-      <Amount minorUnits={magnitude.toString()} currency={currency} />
-      <span className="sr-only">{t(TONE_LABEL_KEYS[resolved])}</span>
+      {words}
     </span>
   );
 }
