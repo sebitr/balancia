@@ -527,7 +527,7 @@
     "sectionArchived": "Archivés · {count}",
     "addExpense": "Ajouter une dépense",
     "empty": "Rien pour l’instant",
-    "sectionYouOwe": "Tu dois",
+    "sectionNeedsYou": "À toi d’agir",
     "archivedGroups": "{count, plural, one {# groupe archivé} other {# groupes archivés}}",
     "nothingOutstanding": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}}",
     "nothingOutstandingSince": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}} · dernier remboursement {when} dans {group}",

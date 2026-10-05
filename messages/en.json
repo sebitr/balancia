@@ -527,7 +527,7 @@
     "sectionArchived": "Archived · {count}",
     "addExpense": "Add expense",
     "empty": "Nothing here yet",
-    "sectionYouOwe": "You owe",
+    "sectionNeedsYou": "Needs you",
     "archivedGroups": "{count, plural, one {# archived group} other {# archived groups}}",
     "nothingOutstanding": "Nothing outstanding in {groups, plural, one {# group} other {# groups}}",
     "nothingOutstandingSince": "Nothing outstanding in {groups, plural, one {# group} other {# groups}} · last cleared {when} in {group}",
