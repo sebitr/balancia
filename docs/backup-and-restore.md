@@ -177,7 +177,9 @@ docker run --rm -v balancia-uploads:/data \
   alpine:3.21 tar xzf /backup/uploads.tar.gz -C /data
 
 # 6. Bring everything up. Migrations run and become a no-op if the dump is
-#    already current, or apply cleanly if you restored an older schema.
+#    already current, or apply cleanly if you restored an older schema —
+#    unless the restored .env sets RUN_MIGRATIONS=false, which leaves them
+#    to you.
 docker compose up -d --build
 ```
 

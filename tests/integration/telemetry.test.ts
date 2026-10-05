@@ -349,6 +349,18 @@ describe("the deployment's kill switch", () => {
   });
 });
 
+/**
+ * An account on an instance somebody else set up.
+ *
+ * The first account on an empty instance is its administrator whatever writes
+ * it — the rule is a trigger on the table — so a test about anybody else has
+ * to make the operator first, or it is testing the operator.
+ */
+async function notTheOperator(): Promise<UserActor> {
+  await createTestUser({ name: "Operator" });
+  return createTestUser();
+}
+
 describe("who may change any of this", () => {
   it("makes the first registered account the instance administrator", async () => {
     const first = await registerUser({
@@ -370,7 +382,7 @@ describe("who may change any of this", () => {
     // Group ownership is about one group's money. The owner of a group is not
     // the owner of the server, and on a shared instance they are not even
     // usually the same person.
-    const actor = await createTestUser();
+    const actor = await notTheOperator();
     await createTestGroup(actor);
     expect(await isInstanceAdmin(actor.userId)).toBe(false);
   });
@@ -383,7 +395,7 @@ describe("who may change any of this", () => {
   });
 
   it("refuses an ordinary participant", async () => {
-    const actor = await createTestUser();
+    const actor = await notTheOperator();
     currentUser.value = actor;
     await expect(requireInstanceAdmin()).rejects.toBeInstanceOf(
       AuthorizationError,
@@ -391,7 +403,7 @@ describe("who may change any of this", () => {
   });
 
   it("admits an administrator", async () => {
-    const actor = await createTestUser();
+    const actor = await notTheOperator();
     await getDb()
       .update(users)
       .set({ isAdmin: true })
@@ -404,7 +416,7 @@ describe("who may change any of this", () => {
   });
 
   it("stops being an administrator the moment the flag is removed", async () => {
-    const actor = await createTestUser();
+    const actor = await notTheOperator();
     const db = getDb();
     await db
       .update(users)

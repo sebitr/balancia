@@ -11,7 +11,7 @@ describe("SplitDemo", () => {
     expect(
       screen.getByText("€84.60 ÷ 4 is €21.15 each, exactly."),
     ).toBeVisible();
-    expect(screen.getByText(/Settled in \d payments/)).toBeVisible();
+    expect(screen.getByText(/Settled in \d repayments/)).toBeVisible();
   });
 
   it("shows who receives a largest-remainder cent", async () => {

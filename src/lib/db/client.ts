@@ -33,6 +33,32 @@ declare global {
 
 export type Database = NodePgDatabase<typeof schema>;
 
+/*
+ * How long PostgreSQL lets one statement from this pool run, and how long it
+ * lets one of its transactions sit open with nothing running, before it
+ * cancels the one or ends the other.
+ *
+ * Without them a runaway query was never stopped: the request that sent it
+ * gave up, the connection stayed busy, and enough of those emptied the pool
+ * for everybody. The longest legitimate statements here take seconds, not
+ * tens of them — the single insert that stages a whole Splitwise import, the
+ * cascade that deletes a group with all its history, an export's reads over a
+ * large group, a sweep through `rate_limits` — so thirty seconds leaves
+ * headroom without leaving a stuck query holding a connection for long. No
+ * transaction waits on anything outside the database: rates are looked up and
+ * files stored before one opens, and mail and notifications go out after it
+ * commits. So a minute idle inside one means the process holding it has
+ * stalled, and its row locks are better released.
+ *
+ * Sent as startup parameters on every connection this pool opens. The
+ * migration runner connects on its own and pg-boss keeps its own pool, so
+ * neither is bound by these. An operator who needs longer can say so in
+ * `DATABASE_URL` (`?statement_timeout=120000`): node-postgres lets the
+ * connection string override what is set here.
+ */
+const STATEMENT_TIMEOUT_MS = 30_000;
+const IDLE_IN_TRANSACTION_TIMEOUT_MS = 60_000;
+
 function createPool(): Pool {
   const env = getEnv();
   if (env.DEMO_MODE || !env.DATABASE_URL) {
@@ -52,6 +78,8 @@ function createPool(): Pool {
     // Fail fast rather than hanging a request forever on a dead database.
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
+    statement_timeout: STATEMENT_TIMEOUT_MS,
+    idle_in_transaction_session_timeout: IDLE_IN_TRANSACTION_TIMEOUT_MS,
     application_name: "balancia",
   });
 }

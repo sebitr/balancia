@@ -405,6 +405,8 @@ for the person who runs the server, looking at their own server.
 | `balancia_onboarding_steps_total`                                                                                | counter   | `arrival` (`cold`/`personal`/`shared`), `step` (a screen, or `left`) |
 | `balancia_rate_limit_refusals_total`                                                                             | counter   | `bucket`                                                             |
 | `balancia_job_duration_seconds`                                                                                  | histogram | `queue`                                                              |
+| `balancia_worker_up`                                                                                             | gauge     | —                                                                    |
+| `balancia_maintenance_last_success_timestamp_seconds`                                                            | gauge     | —                                                                    |
 | `balancia_database_query_duration_seconds`                                                                       | histogram | —                                                                    |
 | `balancia_database_pool_connections`                                                                             | gauge     | `state` (`total`/`idle`/`waiting`)                                   |
 | `balancia_build_info`                                                                                            | gauge     | `version`                                                            |
@@ -418,6 +420,14 @@ every other template still generates — so it is not a `failed` job here. It
 is logged with its id and its group's, counted as `templatesFailed` in the
 run's summary line (logged as a warning when it is not zero), and sent as a
 `scheduler` crash report where those are switched on.
+
+A worker that is not running at all produces no job metrics, which is why it
+has a gauge of its own: `balancia_worker_up` is 1 while the worker in the web
+process is serving its queues and 0 while it is starting, retrying or stopping,
+and has no sample where `RUN_WORKER_IN_WEB=false` leaves the jobs to another
+container. `balancia_maintenance_last_success_timestamp_seconds` is when the
+nightly sweep last finished. The alert to build on them is in
+[self-hosting.md](self-hosting.md#alerting-on-the-background-jobs).
 
 The onboarding funnel is `balancia_onboarding_steps_total`. The flow between
 arriving and standing on a group is one URL, so page views cannot see it; this

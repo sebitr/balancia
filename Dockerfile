@@ -105,8 +105,16 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat curl tini
 
+# NEXT_MANUAL_SIG_HANDLE tells Next's server not to answer SIGTERM itself —
+# its handler exits the moment the HTTP server closes, cutting off whatever
+# job the in-web worker is running. src/worker/shutdown.ts answers it instead:
+# the jobs in hand get SHUTDOWN_DRAIN_MS to finish, then the process exits.
+# Set here and not offered as a setting: it is only right beside the handler
+# this image carries, and Next reads it before loading any .env file. The
+# worker command ignores it; it has handlers of its own.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_MANUAL_SIG_HANDLE=true \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     STORAGE_LOCAL_PATH=/data/uploads

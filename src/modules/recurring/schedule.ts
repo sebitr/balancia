@@ -441,10 +441,11 @@ export function upcomingOccurrences(
  * Two smaller things come out right by moving off midnight. Midnight is the
  * hour that daylight saving actually deletes in a handful of zones — Santiago,
  * Havana, Tehran — where `startOf("day")` quietly lands on 01:00 twice a year;
- * 09:00 exists in every zone on every date. And the recurring list renders
- * this instant in the *reader's* zone, so a midnight due date showed the day
- * before to anybody west of the group. Nine hours of margin covers every
- * reader the Pacific side of the group.
+ * 09:00 exists in every zone on every date. And the recurring list rendered
+ * this instant on the server's clock, so a midnight due date showed the day
+ * before for any group east of it. Nine hours of margin fixed that as far as
+ * Tokyo; the list reads the group's own clock now, which fixes it everywhere,
+ * and the margin stays for any screen that forgets to.
  */
 export const GENERATION_HOUR = 9;
 

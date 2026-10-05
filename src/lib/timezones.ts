@@ -73,6 +73,57 @@ export function detectTimezone(): string | null {
   }
 }
 
+/** The calendar day `at` falls on in `zone` (the runtime's own when absent). */
+function calendarDayIn(at: Date, zone: string | undefined): string | null {
+  try {
+    // A fixed locale, since only the digits are read back.
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(at);
+    const field = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((part) => part.type === type)?.value;
+    const [year, month, day] = [field("year"), field("month"), field("day")];
+    return year && month && day ? `${year}-${month}-${day}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Today in `zone`, as the `YYYY-MM-DD` an entry's date is stored in and
+ * `<input type="date">` takes.
+ *
+ * An entry's date is the day the money was spent *where the group is* — the
+ * schema says so, and the server's `todayIn` answers it that way. The forms
+ * used to ask `toISOString().slice(0, 10)` instead, which is today in UTC:
+ * wrong from late afternoon in Los Angeles, all morning in Auckland, and for
+ * an hour or two after midnight in Paris. The entry landed on that day, which
+ * on the edge of a month is the wrong month, and fetched that day's exchange
+ * rate.
+ *
+ * `Intl` rather than luxon, so a browser pays nothing for it, and meant to be
+ * asked on the device at the moment the answer is needed — a date handed down
+ * from the server render is stale for a form that is still open at midnight,
+ * and there is no server render at all behind the offline one.
+ *
+ * With no zone, or one this runtime does not know, it is today on the device's
+ * own clock: the next best guess about where somebody is standing, and never
+ * UTC.
+ */
+export function todayInZone(
+  zone: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  return (
+    (zone ? calendarDayIn(now, zone) : null) ??
+    calendarDayIn(now, undefined) ??
+    now.toISOString().slice(0, 10)
+  );
+}
+
 /**
  * The place a zone is named after: `Europe/Zurich` → Zurich,
  * `America/New_York` → New York, `America/Argentina/Ushuaia` → Ushuaia.

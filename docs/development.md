@@ -124,7 +124,7 @@ pnpm dev:worker
 | `pnpm build`            | Production build, then the service worker      |
 | `pnpm start`            | Serve the production build                     |
 | `pnpm lint`             | ESLint                                         |
-| `pnpm typecheck`        | `tsc --noEmit`                                 |
+| `pnpm typecheck`        | `tsc --noEmit`, on TypeScript 7                |
 | `pnpm test`             | Unit and component tests                       |
 | `pnpm test:integration` | Integration tests against real PostgreSQL      |
 | `pnpm test:all`         | Everything except Playwright                   |
@@ -352,6 +352,11 @@ Check the sheet in both themes, and on a notched iPhone — it pads for
 4. `pnpm db:migrate` to apply locally.
 5. Commit the schema change and the migration together.
 
+What drizzle-kit does not model — a trigger, a function — goes in a custom
+migration: `pnpm db:generate --custom --name <what_it_does>` writes an empty
+SQL file and its journal entry, and the SQL is yours to fill in.
+`drizzle/0039_first_account_is_admin.sql` is one.
+
 Never edit a migration that has already been applied anywhere. The runner
 records a checksum per migration and fails loudly if a file changes, which is
 the behaviour you want when the alternative is silent divergence.
@@ -380,6 +385,22 @@ environment, which is what keeps the dev containers out of it: they bind-mount
 the working tree, so the host's `.env.local` is sitting right there inside
 them, and what Compose sets has to win. `src/lib/env.test.ts` fails the build
 on a `tsx` entry that forgets the preload.
+
+**Two TypeScripts are installed, on purpose.** `tsc` is TypeScript 7, the
+native compiler: `pnpm typecheck`, `pnpm typecheck:indexing` and CI's type job
+run on it, in about a fifth of the time TypeScript 6 took. TypeScript 7.0 has
+no JavaScript API, though, and three things here need one — typescript-eslint,
+the two tests that read source through `ts.createSourceFile`, and `next
+build`'s own type check. So the `typescript` package name is
+`@typescript/typescript6`, Microsoft's compatibility package: TypeScript 6 with
+its API, and a `tsc6` binary rather than a second `tsc`. TypeScript 7 lives
+under `@typescript/native`. Both read the same `tsconfig.json`, and the project
+checks clean under each. When TypeScript 7.1 brings the API back, `typescript`
+can become 7 and the alias can go.
+
+The compatibility package ships no `tsserver.js`, so VS Code's "Use Workspace
+Version" has nothing to select: use VS Code's own TypeScript, or the
+"TypeScript (Native Preview)" extension for the TypeScript 7 language server.
 
 **Server Actions** validate with zod, resolve the actor, then call a service.
 No business logic lives in an action or a component.
