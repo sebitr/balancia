@@ -136,6 +136,9 @@ export const OFFLINE_NAMESPACES: readonly string[] = [
   "paymentMethods",
   "receiptScanner",
   "receipts",
+  // The confirmation a recurring entry is saved with, which the form reads
+  // whether or not it can save one from here.
+  "recurring.saved",
 ];
 
 /**

@@ -1,8 +1,8 @@
 import { authorizeGroup } from "@/lib/security/authorization";
 import {
-  createRecurringExpense,
   listRecurringExpenses,
   recurringInputSchema,
+  setUpRecurringExpense,
 } from "@/modules/recurring/service";
 import { RecurrenceError } from "@/modules/recurring/schedule";
 import {
@@ -18,8 +18,9 @@ import { trackRoute } from "@/lib/metrics/http";
 
 /**
  * Recurring templates: the list, and creating one. The template holds the
- * same fields as an expense plus its schedule; the worker turns it into real
- * expenses on time, never this route.
+ * same fields as an expense plus its schedule. Creating one adds, in the same
+ * request, the entries whose dates have already come, exactly as the web form
+ * does — see `setUpRecurringExpense`; the worker makes every one after that.
  */
 export async function GET(
   request: Request,
@@ -91,8 +92,10 @@ async function handlePost(
     const access = await authorizeGroup(actor, groupId, {
       requireActive: true,
     });
-    const id = await createRecurringExpense(access, parsed.data);
-    return noStore({ id }, { status: 201 });
+    // `{id, added, addedFrom, next}`: the same answer the web form's
+    // confirmation is written from.
+    const setUp = await setUpRecurringExpense(access, parsed.data);
+    return noStore(setUp, { status: 201 });
   } catch (error) {
     if (error instanceof RecurrenceError) {
       return noStore({ error: error.message }, { status: 422 });

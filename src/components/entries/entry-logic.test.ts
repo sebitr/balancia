@@ -275,11 +275,14 @@ describe("primaryActionKey", () => {
 
 describe("confirmationKey", () => {
   it("matches what was actually saved", () => {
-    expect(confirmationKey("expense", false)).toBe("expenseAdded");
-    expect(confirmationKey("income", false)).toBe("incomeAdded");
-    expect(confirmationKey("expense", true)).toBe("recurringSaved");
-    expect(confirmationKey("income", true)).toBe("recurringSaved");
-    expect(confirmationKey("settle", false)).toBe("paymentRecorded");
+    expect(confirmationKey("expense")).toBe("expenseAdded");
+    expect(confirmationKey("income")).toBe("incomeAdded");
+    expect(confirmationKey("settle")).toBe("paymentRecorded");
+  });
+
+  it("says an edit was saved, whatever the entry", () => {
+    expect(confirmationKey("expense", true)).toBe("changesSaved");
+    expect(confirmationKey("settle", true)).toBe("changesSaved");
   });
 });
 

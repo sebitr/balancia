@@ -1018,7 +1018,12 @@
     "paidBy": "Payé par",
     "splitEquallyBetween": "Partagé à parts égales entre",
     "submit": "Créer la dépense récurrente",
-    "created": "Dépense récurrente configurée",
+    "saved": {
+      "added": "{count, plural, one {« {description} » a été ajouté} other {« {description} » a été ajouté # fois, depuis le {from}}}. Prochaine occurrence le {next}.",
+      "addedLast": "{count, plural, one {« {description} » a été ajouté} other {« {description} » a été ajouté # fois, depuis le {from}}}. Il n’y en aura pas d’autre.",
+      "firstOn": "« {description} » est enregistré. La première occurrence sera ajoutée le {date}.",
+      "plain": "« {description} » est enregistré."
+    },
     "errors": {
       "chooseSplit": "Choisis qui participe à cette dépense.",
       "enterRate": "Saisis le taux de change : 1 {from} en {to}.",
@@ -3540,7 +3545,6 @@
     "saved": {
       "expenseAdded": "Dépense ajoutée",
       "incomeAdded": "Revenu ajouté",
-      "recurringSaved": "Transaction récurrente enregistrée",
       "paymentRecorded": "Remboursement enregistré",
       "changesSaved": "Modifications enregistrées",
       "deleted": "Transaction supprimée",

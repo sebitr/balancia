@@ -169,11 +169,19 @@ export interface RecurringNotificationInput {
   readonly amount: bigint;
   readonly currency: string;
   readonly participantIds: readonly string[];
+  /**
+   * The person who set the series up, when it is their request making it.
+   *
+   * Whatever had already come due by then is generated as they save, in front
+   * of them — see `setUpRecurringExpense` — and that much is their own doing.
+   */
+  readonly excludeUserId?: string | null;
 }
 
 /**
  * A generated recurring expense has no actor: the schedule did it, and there
- * is nobody to leave out of the audience.
+ * is nobody to leave out of the audience — except the occurrences made while
+ * somebody is saving the series, which leave that somebody out.
  */
 export async function recordRecurringNotification(
   tx: Database,
@@ -186,6 +194,7 @@ export async function recordRecurringNotification(
     entityId: input.expenseId,
     actorLabel: null,
     participantIds: input.participantIds,
+    excludeUserId: input.excludeUserId ?? null,
     payload: {
       kind: "recurring",
       groupName: input.groupName,
