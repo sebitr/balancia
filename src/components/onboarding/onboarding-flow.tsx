@@ -395,6 +395,23 @@ export function OnboardingFlow({
     invite: { url: string; expiresAt: string | null };
   } | null>(null);
   const detectedTimezone = useDetectedTimezone();
+  /*
+   * The group's currency: where the device is, until the reader picks one.
+   *
+   * A guest has no preference to state, so the guess is the place (#420). It
+   * is the one answer about a group that can never change, and this screen
+   * used to keep it to itself — a phone abroad started a group in the wrong
+   * currency with no way to see it until the first expense. So it is shown,
+   * and can be changed, as the create sheet does for an account.
+   *
+   * Derived rather than stored, for the create sheet's reason: the zone
+   * arrives at hydration, and a late answer may replace the guess but never
+   * the reader's own choice.
+   */
+  const [pickedCurrency, setPickedCurrency] = useState<string | null>(null);
+  const groupCurrency =
+    pickedCurrency ??
+    defaultCurrency({ device: currencyOfTimezone(detectedTimezone) });
   const startGroup = async (groupName: string) => {
     setJoinError(null);
     setJoining(true);
@@ -402,10 +419,7 @@ export function OnboardingFlow({
       groupName,
       displayName: name.trim(),
       timezone: detectedTimezone ?? "UTC",
-      // A guest has no preference to state, so where the device is decides.
-      baseCurrency: defaultCurrency({
-        device: currencyOfTimezone(detectedTimezone),
-      }),
+      baseCurrency: groupCurrency,
     });
     setJoining(false);
     if (!result.ok || !result.data) {
@@ -699,6 +713,8 @@ export function OnboardingFlow({
           <StartGroupScreen
             name={name}
             onNameChange={setName}
+            currency={groupCurrency}
+            onCurrencyChange={setPickedCurrency}
             busy={joining}
             error={joinError}
             onSubmit={(groupName) => void startGroup(groupName)}

@@ -2032,6 +2032,8 @@
       "groupNamePlaceholder": "Voyage à Lisbonne",
       "nameLabel": "Ton nom",
       "namePlaceholder": "Ton nom",
+      "currencyLabel": "Devise du groupe",
+      "currencyNote": "Les montants dans d’autres devises y sont convertis. Elle ne change plus une fois le groupe créé.",
       "create": "Créer le groupe",
       "failed": "Le groupe n’a pas pu être créé. Réessaie dans un instant."
     },

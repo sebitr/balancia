@@ -9,6 +9,7 @@ import {
   Check,
   ChevronRight,
   Loader2,
+  Lock,
   Users,
 } from "lucide-react";
 import {
@@ -22,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Amount, BalanceAmount } from "@/components/money/amount";
+import { CurrencyField } from "@/components/money/currency-field";
 import {
   ImageDecodeError,
   squareToWebp,
@@ -914,12 +916,17 @@ export function FirstGroupScreen({
 export function StartGroupScreen({
   name,
   onNameChange,
+  currency,
+  onCurrencyChange,
   busy = false,
   error = null,
   onSubmit,
 }: {
   name: string;
   onNameChange: (name: string) => void;
+  /** The currency the group will keep its balance in, guessed or picked. */
+  currency: string;
+  onCurrencyChange: (code: string) => void;
   busy?: boolean;
   error?: string | null;
   onSubmit: (groupName: string) => void;
@@ -962,6 +969,27 @@ export function StartGroupScreen({
             maxLength={120}
             disabled={busy}
           />
+        </div>
+        {/*
+         * The one answer here that is final, so it is on the screen rather
+         * than decided out of sight. The row the rest of the app uses for a
+         * currency in an ordinary form, opening the same list the create
+         * sheet does, drawn at this screen's field height.
+         */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="start-group-currency">{t("currencyLabel")}</Label>
+          <CurrencyField
+            id="start-group-currency"
+            value={currency}
+            onChange={onCurrencyChange}
+            label={t("currencyLabel")}
+            disabled={busy}
+            className="h-14 rounded-xl"
+          />
+          <p className="flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
+            <Lock aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+            {t("currencyNote")}
+          </p>
         </div>
       </div>
 

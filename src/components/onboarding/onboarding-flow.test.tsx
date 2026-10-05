@@ -461,6 +461,41 @@ describe("the cold arrival", () => {
     expect(router.push).toHaveBeenCalledWith("/groups/group-new");
   });
 
+  /**
+   * The currency is the one answer about a group that never changes, and this
+   * screen used to decide it out of sight: the guess was right for a phone at
+   * home and wrong for one on holiday, and nobody could tell which.
+   */
+  it("shows the currency the group will be in, and lets it be changed", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    );
+
+    // Guessed from where the device is, and said before anything is created.
+    const field = screen.getByRole("button", { name: /Currency: CHF/ });
+    expect(field).toBeVisible();
+    expect(screen.getByText("Group currency")).toBeVisible();
+    expect(screen.getByText(/Fixed once the group exists/)).toBeInTheDocument();
+
+    await user.click(field);
+    await user.click(await screen.findByRole("button", { name: /^EUR/ }));
+
+    expect(
+      await screen.findByRole("button", { name: /Currency: EUR/ }),
+    ).toBeVisible();
+
+    await user.type(screen.getByLabelText("Group name"), "Lisbon trip");
+    await user.type(screen.getByLabelText("Your name"), "Dana");
+    await user.click(screen.getByRole("button", { name: "Create the group" }));
+
+    expect(startGroupAsGuestAction).toHaveBeenCalledWith(
+      expect.objectContaining({ baseCurrency: "EUR" }),
+    );
+  });
+
   it("keeps a refused group start on its own screen, with the reason", async () => {
     startGroupAsGuestAction.mockResolvedValue({
       ok: false,

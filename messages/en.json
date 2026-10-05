@@ -1970,6 +1970,8 @@
       "groupNamePlaceholder": "Lisbon trip",
       "nameLabel": "Your name",
       "namePlaceholder": "Your name",
+      "currencyLabel": "Group currency",
+      "currencyNote": "Amounts in other currencies are converted into it. Fixed once the group exists.",
       "create": "Create the group",
       "failed": "The group could not be created. Try again in a moment."
     },
