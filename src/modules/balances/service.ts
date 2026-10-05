@@ -161,7 +161,9 @@ export async function loadGroupBalances(
   const rows =
     options.db === undefined || options.db === getDb()
       ? await readBalanceRowsOnce(groupId)
-      : await readBalanceRows(options.db, groupId);
+      : await readBalanceRows(options.db, groupId, {
+          inTransaction: options.inTransaction,
+        });
 
   return assembleBalances(group, rows, options.contributionsFor ?? null);
 }
@@ -181,10 +183,18 @@ const readBalanceRowsOnce = oncePerRender((groupId: string) =>
   readBalanceRows(getDb(), groupId),
 );
 
-/** The five reads behind one group's balances. */
+/**
+ * The five reads behind one group's balances.
+ *
+ * `inTransaction` is whatever the caller said about `db`: a transaction is one
+ * connection, which node-postgres cannot ask two things of at once, so the last
+ * three reads go one after another there instead of together. The memoised
+ * read below always holds the pool, and never sets it.
+ */
 async function readBalanceRows(
   db: Database,
   groupId: string,
+  { inTransaction = false }: { inTransaction?: boolean } = {},
 ): Promise<BalanceRows> {
   const participantRows = await db
     .select({
@@ -244,7 +254,7 @@ async function readBalanceRows(
         and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
       ),
   ] as const;
-  const [payerRows, shareRows, settlementRows] = options.inTransaction
+  const [payerRows, shareRows, settlementRows] = inTransaction
     ? [await reads[0], await reads[1], await reads[2]]
     : await Promise.all(reads);
 
