@@ -85,6 +85,7 @@
     "signIn": {
       "title": "Retrouve tes groupes",
       "subtitle": "Connecte-toi pour accéder à tes groupes et suivre tes soldes.",
+      "privateGroup": "Ce groupe est privé. Si quelqu’un t’a envoyé ce lien, demande-lui un lien d’invitation.",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "forgotPassword": "Mot de passe oublié ?",
@@ -2894,6 +2895,7 @@
     "toneCheeky": "Espiègle",
     "shuffle": "Autre suggestion",
     "groupLink": "Lien du groupe",
+    "inviteLink": "Lien d’invitation",
     "payWith": "Comment payer",
     "payWithLine": "{method} : {detail}",
     "payWithChoose": "Quel moyen de paiement",

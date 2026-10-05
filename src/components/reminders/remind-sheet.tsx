@@ -37,6 +37,7 @@ import {
 import {
   REMIND_BODY_MAX_LENGTH,
   type RemindDebt,
+  type RemindLink,
   type RemindPayOption,
   type RemindRecipient,
 } from "@/modules/reminders/types";
@@ -300,14 +301,13 @@ export function RemindSheet({
     recipient: RemindRecipient,
     pay: RemindPayOption | null,
   ): string => {
-    const origin = typeof window === "undefined" ? "" : window.location.origin;
     const lines = [bodyFor(recipient)];
     if (pay) {
       lines.push(
         t("payWithLine", { method: methodLabel(pay.method), detail: pay.text }),
       );
     }
-    lines.push(`${origin}/groups/${groupId}`);
+    lines.push(linkUrl(recipient.link, groupId));
     return lines.join("\n");
   };
 
@@ -691,11 +691,24 @@ export function RemindSheet({
               </p>
             )}
 
-            <p className="flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
-              <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
-              <span className="sr-only">{t("groupLink")}</span>
-              <span className="truncate">{groupLinkLabel(groupId)}</span>
-            </p>
+            {/*
+             * Named for what it is, because the two do different things in
+             * the hands of whoever opens them: the group's page asks them to
+             * sign in, the invite link asks which name on the list is theirs.
+             */}
+            {current && (
+              <p className="flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
+                <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                <span className="sr-only">
+                  {current.link.kind === "invite"
+                    ? t("inviteLink")
+                    : t("groupLink")}
+                </span>
+                <span className="truncate">
+                  {withoutScheme(linkUrl(current.link, groupId))}
+                </span>
+              </p>
+            )}
           </div>
         )}
 
@@ -786,10 +799,22 @@ function PayKindIcon({ kind }: { kind: RemindPayOption["kind"] }) {
   return <Icon aria-hidden="true" className="size-3.5 shrink-0" />;
 }
 
-/** The host, without its scheme: a chip, not an address bar. */
-function groupLinkLabel(groupId: string): string {
-  const host = typeof window === "undefined" ? "" : window.location.host;
-  return `${host}/groups/${groupId}`;
+/**
+ * The address a message ends with, in full.
+ *
+ * The group's page is built here, on the origin the sender is looking at. The
+ * invite link arrives whole from the server, which is the only place its token
+ * is ever opened — and only for a sender allowed to see it (`links.ts`).
+ */
+function linkUrl(link: RemindLink, groupId: string): string {
+  if (link.kind === "invite") return link.url;
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  return `${origin}/groups/${groupId}`;
+}
+
+/** The address without its scheme: a chip, not an address bar. */
+function withoutScheme(url: string): string {
+  return url.replace(/^https?:\/\//, "");
 }
 
 function CloseButton({

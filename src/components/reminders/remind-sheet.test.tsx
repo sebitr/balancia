@@ -35,6 +35,7 @@ function recipient(overrides: Partial<RemindRecipient> = {}): RemindRecipient {
     lastRemindedAt: null,
     locked: false,
     muted: false,
+    link: { kind: "group" },
     ...overrides,
   };
 }
@@ -56,6 +57,30 @@ function render(recipients: RemindRecipient[]) {
         />
       </SheetContent>
     </Sheet>,
+  );
+}
+
+/** The share sheet, which jsdom does not have. */
+function stubShare() {
+  const share = vi.fn<(data: ShareData) => Promise<void>>(async () => {});
+  Object.defineProperty(navigator, "share", {
+    value: share,
+    configurable: true,
+    writable: true,
+  });
+  return share;
+}
+
+/** The text handed to the share sheet, which is the message as it goes out. */
+function sharedText(share: ReturnType<typeof stubShare>): string {
+  return share.mock.calls.at(-1)?.[0].text ?? "";
+}
+
+/** What the action was actually asked to record, narrowed by the schema. */
+function sentMessage(): string {
+  const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
+  return reminderInputSchema.shape.message.parse(
+    (input as { message: unknown }).message,
   );
 }
 
@@ -403,30 +428,6 @@ describe("the way to pay", () => {
     code: null,
   };
 
-  /** The share sheet, which jsdom does not have. */
-  function stubShare() {
-    const share = vi.fn<(data: ShareData) => Promise<void>>(async () => {});
-    Object.defineProperty(navigator, "share", {
-      value: share,
-      configurable: true,
-      writable: true,
-    });
-    return share;
-  }
-
-  /** The text handed to the share sheet, which is the message as it goes out. */
-  function sharedText(share: ReturnType<typeof stubShare>): string {
-    return share.mock.calls.at(-1)?.[0].text ?? "";
-  }
-
-  /** What the action was actually asked to record, narrowed by the schema. */
-  function sentMessage(): string {
-    const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
-    return reminderInputSchema.shape.message.parse(
-      (input as { message: unknown }).message,
-    );
-  }
-
   it("shows it beside the draft rather than inside the text being edited", () => {
     render([recipient({ channel: "share", payWith: [BANK] })]);
 
@@ -541,5 +542,94 @@ describe("the way to pay", () => {
       screen.queryByRole("button", { name: "How to pay" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/\/groups\/g1$/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Somebody added by name, with no account, who opened the group's page from a
+ * reminder met a sign-in form asking for a password they never had. Where the
+ * server says the sender may hand out the group's invite link, and it still
+ * works, that is what their message ends with instead — the screen that asks
+ * which name on the list is theirs.
+ */
+describe("the link at the end", () => {
+  const INVITE =
+    "https://balancia.example/join/g/AbCdEfGhIjKlMnOpQrStUvWxYz012345678";
+
+  it("ends with the invite link for somebody who has no account", async () => {
+    const user = userEvent.setup();
+    const share = stubShare();
+    render([
+      recipient({ channel: "share", link: { kind: "invite", url: INVITE } }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const text = sharedText(share);
+    expect(text.split("\n").at(-1)).toBe(INVITE);
+    expect(text).not.toContain("/groups/g1");
+
+    await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
+    expect(sentMessage()).toBe(text);
+  });
+
+  /** Named for what it does in the hands of whoever opens it. */
+  it("calls it the invite link under the draft", () => {
+    render([
+      recipient({ channel: "share", link: { kind: "invite", url: INVITE } }),
+    ]);
+
+    expect(screen.getByText("Invite link")).toBeInTheDocument();
+    expect(screen.queryByText("Group link")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(INVITE.replace("https://", "")),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the group's address, and its name, for everybody else", async () => {
+    const user = userEvent.setup();
+    const share = stubShare();
+    render([recipient({ channel: "share" })]);
+
+    expect(screen.getByText("Group link")).toBeInTheDocument();
+    expect(screen.queryByText("Invite link")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    expect(sharedText(share).split("\n").at(-1)).toMatch(/\/groups\/g1$/);
+  });
+
+  /**
+   * Two people in one queue can need two different links: the sheet follows
+   * the recipient, not the first row it was opened on.
+   */
+  it("changes link with the person, down the queue", async () => {
+    vi.mocked(sendReminderAction).mockClear();
+    const user = userEvent.setup();
+    const share = stubShare();
+    render([
+      recipient({ channel: "share" }),
+      recipient({
+        participantId: "padi",
+        name: "Padi",
+        channel: "share",
+        link: { kind: "invite", url: INVITE },
+      }),
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /write the message/i }),
+    );
+    await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    expect(sharedText(share)).toMatch(/\/groups\/g1$/);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Share with Padi" }),
+    );
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(2));
+    expect(sharedText(share).split("\n").at(-1)).toBe(INVITE);
   });
 });
