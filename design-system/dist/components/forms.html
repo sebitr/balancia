@@ -736,6 +736,53 @@ code {
   font-size: 0.875rem;
   color: var(--destructive);
 }
+/* A stepper — split-sheet.tsx, StepButton. A narrow field between a step
+   either side; the field still takes typing. Each step is drawn at 28px and
+   hit at 44px (the app's `tap-target`), and the 8px gap keeps the two hit
+   areas off the field. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.stepper .input {
+  width: 2.75rem;
+  height: 2.25rem;
+  padding: 0.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.stepper-step {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  padding: 0;
+  cursor: pointer;
+}
+.stepper-step::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+}
+.stepper-step svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.stepper-step[disabled] {
+  cursor: default;
+  opacity: 0.4;
+}
 /* A choice card: label wrapping a nested field, tinted when checked. */
 .field-choice {
   display: flex;
@@ -1546,6 +1593,121 @@ a[aria-current="page"] .nav-icon--primary {
       A checked choice card tints to <code>primary/5</code> with a
       <code>primary/30</code> border. The whole card is the hit target — on a
       phone, a 16px checkbox alone is not.
+    </p>
+  </section>
+
+  <section>
+    <h2>Stepper</h2>
+    <div class="spec">
+      <div class="stack" style="gap: 0.75rem; max-width: 22rem">
+        <div class="row" style="justify-content: space-between">
+          <span style="display: flex; align-items: center; gap: 0.5rem"
+            ><span class="avatar">AM</span> Amélie</span
+          >
+          <span class="stepper">
+            <button
+              class="stepper-step"
+              type="button"
+              aria-label="One share fewer for Amélie"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+            <input
+              class="input"
+              value="2"
+              inputmode="decimal"
+              aria-label="Shares for Amélie"
+            />
+            <button
+              class="stepper-step"
+              type="button"
+              aria-label="One more share for Amélie"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+              </svg>
+            </button>
+          </span>
+          <span class="tabular-nums" style="width: 4.5rem; text-align: right"
+            >€45.00</span
+          >
+        </div>
+        <div class="row" style="justify-content: space-between">
+          <span style="display: flex; align-items: center; gap: 0.5rem"
+            ><span class="avatar">JT</span> Jonas</span
+          >
+          <span class="stepper">
+            <button
+              class="stepper-step"
+              type="button"
+              disabled
+              aria-label="One share fewer for Jonas"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+            <input
+              class="input"
+              value="0"
+              inputmode="decimal"
+              aria-label="Shares for Jonas"
+            />
+            <button
+              class="stepper-step"
+              type="button"
+              aria-label="One more share for Jonas"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+              </svg>
+            </button>
+          </span>
+          <span class="tabular-nums" style="width: 4.5rem; text-align: right"
+            >€0.00</span
+          >
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      For a small whole number that is nearly always 1, 2 or 3 — a share in a
+      split. The field stays typeable for a 1.5, and the steps add or take one
+      whole share from whatever is in it. Minus is disabled at zero: there is
+      never less than none. Each step is drawn at 28px and hit at 44px, and is
+      named for its row — "One more share for Amélie" — because a column of bare
+      plus signs does not say whose they are.
     </p>
   </section>
 
