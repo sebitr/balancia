@@ -2768,6 +2768,7 @@
     "edit": "Edit",
     "delete": {
       "trigger": "Delete",
+      "named": "Delete “{entry}”",
       "title": "Delete this entry?",
       "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after, or restore it later from Activity.",
       "keep": "Keep it",

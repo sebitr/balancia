@@ -2768,6 +2768,7 @@
     "edit": "Modifier",
     "delete": {
       "trigger": "Supprimer",
+      "named": "Supprimer « {entry} »",
       "title": "Supprimer cette transaction ?",
       "body": "« {entry} » sera retirée du groupe et les soldes seront recalculés sans elle. Tu peux annuler juste après, ou la rétablir plus tard depuis l’écran Activité.",
       "keep": "La conserver",
