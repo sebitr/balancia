@@ -17,18 +17,19 @@
  * currency list; not noticing costs a wrong entry and a recalculated balance
  * for everyone in the group.
  *
- * The order below is strongest signal first. Each step is something somebody
- * actually said, and only the last is a guess.
+ * The order below is strongest signal first. Each step up to the account's
+ * preference is something somebody actually said; the last two are guesses,
+ * the device's before the constant's.
  */
 
 /**
- * The guess, once every signal has come back empty.
+ * The last guess, once every signal has come back empty.
  *
  * Only reachable for a brand-new group, with no base currency, no entries yet,
- * belonging to an account that has never set a preferred currency — which is
- * to say, on the first expense of the first group of a new account and
- * essentially nowhere else. The two literals this replaces disagreed; one of
- * them had to win, and the wider audience is the euro one.
+ * belonging to an account that has never set a preferred currency, on a device
+ * whose time zone names no country — `UTC`, or a server render that has no
+ * device to ask. The two literals this replaces disagreed; one of them had to
+ * win, and the wider audience is the euro one.
  */
 export const FALLBACK_CURRENCY = "EUR";
 
@@ -62,6 +63,16 @@ export interface CurrencySignals {
   readonly used?: readonly CurrencyUse[];
   /** The account's stated preference, for a group too new to have a habit. */
   readonly preferred?: string | null;
+  /**
+   * What is paid where the device is, from `currencyOfTimezone`, for an
+   * account that has stated no preference.
+   *
+   * A guess, but a far better one than the constant: the sheet that creates a
+   * group already knew it was in Zurich and still offered euros, and a group's
+   * currency cannot be changed once it exists. Only a browser can supply it,
+   * so a server render passes nothing and the client fills it in.
+   */
+  readonly device?: string | null;
 }
 
 export function defaultCurrency(signals: CurrencySignals): string {
@@ -70,6 +81,7 @@ export function defaultCurrency(signals: CurrencySignals): string {
     signals.base ??
     mostUsedCurrency(signals.used ?? []) ??
     signals.preferred ??
+    signals.device ??
     FALLBACK_CURRENCY
   );
 }

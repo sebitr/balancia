@@ -907,8 +907,9 @@ export function FirstGroupScreen({
  *
  * Two fields, because two things have to exist before there is anything to
  * share: the group, and the person it is being started by. The currency and
- * the time zone come from the browser, the way the create sheet guesses them,
- * and are the group's to change once it exists.
+ * the time zone come from the browser, the way the create sheet guesses them.
+ * The zone is the group's to change once it exists; the currency, as for every
+ * group, is not.
  */
 export function StartGroupScreen({
   name,

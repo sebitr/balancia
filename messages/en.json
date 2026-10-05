@@ -1927,6 +1927,7 @@
     "timezoneHelp": "Used to decide when recurring expenses are due.",
     "timezoneDetected": "Detected from your device. Used to decide when recurring expenses are due.",
     "submit": "Create group",
+    "submitIn": "Create group in {currency}",
     "created": "Group created",
     "failed": "The group could not be created.",
     "sheetTitle": "New group",

@@ -18,11 +18,11 @@ import { CreateGroupSheet } from "@/components/groups/create-group-sheet";
 export function CreateGroupLauncher({
   defaultName,
   defaultTimezone,
-  defaultCurrency,
+  preferredCurrency,
 }: {
   defaultName: string;
   defaultTimezone: string;
-  defaultCurrency: string;
+  preferredCurrency: string | null;
 }) {
   const params = useSearchParams();
   const pathname = usePathname();
@@ -63,7 +63,7 @@ export function CreateGroupLauncher({
       onOpenChange={openChanged}
       defaultName={defaultName}
       defaultTimezone={defaultTimezone}
-      defaultCurrency={defaultCurrency}
+      preferredCurrency={preferredCurrency}
     />
   );
 }

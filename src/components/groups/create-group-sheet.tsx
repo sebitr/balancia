@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CurrencyPicker } from "@/components/money/currency-picker";
 import { currencyEntry } from "@/modules/currencies/catalog";
+import { defaultCurrency } from "@/modules/currencies/default-currency";
+import { currencyOfTimezone } from "@/modules/currencies/device-currency";
 import { GroupIconPicker } from "@/components/groups/group-icon-picker";
 import { GroupReady } from "@/components/groups/group-ready";
 import { GroupIconTile } from "@/components/groups/group-icon";
@@ -50,15 +52,19 @@ export function CreateGroupSheet({
   onOpenChange,
   defaultName,
   defaultTimezone,
-  defaultCurrency,
+  preferredCurrency,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The current user's display name, seeding the first participant. */
   defaultName: string;
   defaultTimezone: string;
-  /** The user's preferred currency, if they have one. */
-  defaultCurrency: string;
+  /**
+   * The currency the account has said it prefers, or null if it never has.
+   * Passed as said rather than already defaulted, because what stands in for
+   * a missing one is where the device is, and only the device can say that.
+   */
+  preferredCurrency: string | null;
 }) {
   const router = useRouter();
   const t = useTranslations("groupForm");
@@ -77,7 +83,8 @@ export function CreateGroupSheet({
   ]);
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<CurrencyMode>("converted");
-  const [currency, setCurrency] = useState(defaultCurrency);
+  /** Null until the person chooses one in the list, and theirs from then on. */
+  const [picked, setPicked] = useState<string | null>(null);
   const [icon, setIcon] = useState<GroupIcon | null>(null);
   const [color, setColor] = useState<GroupIconColor>(DEFAULT_GROUP_ICON_COLOR);
   const [pending, setPending] = useState(false);
@@ -91,6 +98,24 @@ export function CreateGroupSheet({
    */
   const detected = useDetectedTimezone();
   const timezone = detected ?? defaultTimezone;
+
+  /*
+   * The currency is the one answer here that can never be changed, so its
+   * default has to be a good guess: what the account said it prefers, or else
+   * what is paid where this device is, and the euro only when neither says.
+   *
+   * Derived on every render rather than copied into state, because the device
+   * answers late — a server render has no zone, and the detected one arrives
+   * at hydration. Until somebody picks, a late answer is welcome to replace
+   * the constant; once they have, `picked` wins and nothing arriving after
+   * can take their choice away.
+   */
+  const currency =
+    picked ??
+    defaultCurrency({
+      preferred: preferredCurrency,
+      device: currencyOfTimezone(detected),
+    });
 
   const draftRef = useRef<HTMLInputElement>(null);
 
@@ -196,6 +221,20 @@ export function CreateGroupSheet({
                 onOpenDescription={() => setDescOpen(true)}
               />
 
+              {/*
+               * Straight after the name, ahead of the people. It is the one
+               * answer that is final, and below a list that grows with every
+               * name it was pushed under the footer — a group of four was
+               * created in euros by somebody who never saw the word. Up here
+               * it is on screen whatever the list does.
+               */}
+              <CurrencyQuestion
+                mode={mode}
+                onMode={setMode}
+                currency={currency}
+                onOpenCurrency={() => setView("currency")}
+              />
+
               <Participants
                 members={members}
                 draft={draft}
@@ -207,13 +246,6 @@ export function CreateGroupSheet({
                     current.filter((_, position) => position !== index),
                   )
                 }
-              />
-
-              <CurrencyQuestion
-                mode={mode}
-                onMode={setMode}
-                currency={currency}
-                onOpenCurrency={() => setView("currency")}
               />
             </div>
 
@@ -269,7 +301,14 @@ export function CreateGroupSheet({
                 {pending && (
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />
                 )}
-                {t("submit")}
+                {/*
+                 * The currency, named on the last thing pressed. It is fixed
+                 * from this tap on, so the tap says what it fixes. A group
+                 * with a balance per currency has none to name.
+                 */}
+                {mode === "converted"
+                  ? t("submitIn", { currency })
+                  : t("submit")}
               </button>
             </footer>
           </form>
@@ -305,7 +344,7 @@ export function CreateGroupSheet({
             // mode only and so says one thing.
             title={t("balanceCurrency")}
             onSelect={(code) => {
-              setCurrency(code);
+              setPicked(code);
               setView("form");
             }}
             onBack={() => setView("form")}

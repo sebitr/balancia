@@ -25,7 +25,6 @@ import {
   type GroupPosition,
 } from "@/modules/balances/overview";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
-import { defaultCurrency } from "@/modules/currencies/default-currency";
 import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
 import { todayIso } from "@/modules/currencies/provider";
 
@@ -133,9 +132,10 @@ export default async function DashboardPage() {
       <CreateGroupLauncher
         defaultName={user.name ?? ""}
         defaultTimezone="UTC"
-        // A group that does not exist yet has no habit to read, so this is the
-        // preference-or-guess tail of the same chain the entry forms use.
-        defaultCurrency={defaultCurrency({ preferred: preferredCurrency })}
+        // A group that does not exist yet has no habit to read, so the sheet
+        // runs the preference-or-guess tail of the same chain the entry forms
+        // use — on the device, which is the only place the guess can be made.
+        preferredCurrency={preferredCurrency}
       />
     </Suspense>
   );
