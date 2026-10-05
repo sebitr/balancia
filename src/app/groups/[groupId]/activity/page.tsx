@@ -11,8 +11,10 @@ import {
 /**
  * The group's full history.
  *
- * The overview shows the last four events and hands the rest here, so "what
- * changed while I was away" stays a glance rather than a scroll.
+ * The overview shows only what is new and hands the rest here, so "what
+ * changed while I was away" stays a glance rather than a scroll. It leads here
+ * from that block's "View all" and from a row at its foot that is there
+ * whether or not anything is new; so does the Shortcuts card in settings.
  *
  * It is also where a deleted entry, or a removed person, comes back from once
  * the Undo toast has gone. The overview's short list offers no such button: it
