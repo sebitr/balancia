@@ -56,6 +56,7 @@ describe("a refusal to somebody in the group", () => {
     ["participantNotInGroup", 422],
     ["importParticipantUnknown", 422],
     ["ownerNotRemovable", 409],
+    ["ownerCannotLeave", 409],
     ["participantHasAccount", 409],
     ["groupArchived", 409],
     ["noPermission", 403],

@@ -135,6 +135,7 @@ describe("a refusal inside the group", () => {
   it.each([
     ["participantNotInGroup"],
     ["ownerNotRemovable"],
+    ["ownerCannotLeave"],
     ["participantHasAccount"],
     ["groupArchived"],
     ["noPermission"],

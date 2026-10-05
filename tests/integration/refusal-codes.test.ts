@@ -136,13 +136,15 @@ describe("naming somebody who is not in the group", () => {
 });
 
 describe("the people screen", () => {
-  it("tells the owner they cannot be removed, and keeps them", async () => {
+  // Naming their own row is leaving, and the owner may not leave a group
+  // while it is theirs. The refusal says so to them, in the second person.
+  it("tells the owner they cannot leave, and keeps them", async () => {
     const owner = await createTestUser();
     const group = await createTestGroup(owner);
 
     await expectRefusal(
       () => removeParticipant(group.access, group.ownerParticipantId),
-      "ownerNotRemovable",
+      "ownerCannotLeave",
     );
     expect(await removedAt(group.ownerParticipantId)).toBeNull();
   });
