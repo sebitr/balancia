@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, isNull, lt } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -37,6 +37,9 @@ import { AuthError } from "./service";
  *    replayed against another.
  *  - The signature counter is checked and advanced; a counter that fails to
  *    increase suggests a cloned authenticator and is refused.
+ *  - On an account with no password the passkey is the whole of the sign-in,
+ *    so there it must have verified its holder — a PIN, a fingerprint, a face.
+ *    A passkey signup, which always makes such an account, requires it.
  *  - Every ceremony for an existing account files the credential under that
  *    account's one stable user handle, because the handle is what a password
  *    manager groups its list by. Two handles on one account means two entries
@@ -245,7 +248,9 @@ export async function finishPasskeyRegistration(
     );
   }
 
-  const verified = await verifyRegistration(response, clientChallenge);
+  const verified = await verifyRegistration(response, clientChallenge, {
+    requireUserVerification: false,
+  });
   return insertPasskey(userId, verified, name, {
     db,
     userHandle: user.userHandle,
@@ -269,10 +274,15 @@ export interface VerifiedRegistration {
  *
  * Split out from the storing so that a signup — which has no account to store
  * against until this has succeeded — can verify first and create afterwards.
+ *
+ * User verification is the caller's to require, and checked here rather than
+ * handed to the library so that its absence gets its own sentence: "could not
+ * be verified" would send somebody off to retry a key that will never pass.
  */
 async function verifyRegistration(
   response: RegistrationResponseJSON,
   expectedChallenge: string,
+  options: { requireUserVerification: boolean },
 ): Promise<VerifiedRegistration> {
   const { rpID, origin } = relyingParty();
 
@@ -286,10 +296,7 @@ async function verifyRegistration(
       requireUserVerification: false,
     });
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey registration verification failed",
-    );
+    logger.warn({ err: error }, "Passkey registration verification failed");
     throw new AuthError(
       "That passkey could not be verified.",
       "passkeyUnverified",
@@ -300,6 +307,16 @@ async function verifyRegistration(
     throw new AuthError(
       "That passkey could not be verified.",
       "passkeyUnverified",
+    );
+  }
+
+  if (
+    options.requireUserVerification &&
+    !verification.registrationInfo.userVerified
+  ) {
+    throw new AuthError(
+      "That passkey did not check it was you with a PIN, fingerprint or face. An account without a password needs one that does.",
+      "passkeyUserVerificationRequired",
     );
   }
 
@@ -399,7 +416,15 @@ export async function startSignupPasskeyRegistration(
       // only way back into the account being created, so it has to be one the
       // authenticator can find on its own without an email typed first.
       residentKey: "required",
-      userVerification: "preferred",
+      /*
+       * And for the same reason it has to be one that checks who is holding
+       * it. The account has no password, so this passkey is the whole of the
+       * sign-in; a security key that answers to a touch alone would make the
+       * account anybody's who picks it up. Enforced on the answer as well as
+       * asked for here — see `verifySignupPasskeyRegistration` — because what
+       * a browser is asked is not what it is bound to do.
+       */
+      userVerification: "required",
     },
   });
 
@@ -448,7 +473,9 @@ export async function verifySignupPasskeyRegistration(
 
   return {
     identity: { email: consumed.signup.email, name: consumed.signup.name },
-    credential: await verifyRegistration(response, clientChallenge),
+    credential: await verifyRegistration(response, clientChallenge, {
+      requireUserVerification: true,
+    }),
     userHandle: consumed.signup.userHandle,
   };
 }
@@ -514,6 +541,7 @@ export async function finishPasskeyAuthentication(
       email: users.email,
       name: users.name,
       disabledAt: users.disabledAt,
+      hasPassword: sql<boolean>`${users.passwordHash} IS NOT NULL`,
     })
     .from(passkeys)
     .innerJoin(users, eq(users.id, passkeys.userId))
@@ -545,10 +573,7 @@ export async function finishPasskeyAuthentication(
       },
     });
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      "Passkey authentication verification failed",
-    );
+    logger.warn({ err: error }, "Passkey authentication verification failed");
     throw new AuthError(
       "That passkey could not be verified.",
       "passkeyUnverified",
@@ -574,6 +599,25 @@ export async function finishPasskeyAuthentication(
     throw new AuthError(
       "That passkey could not be verified. If this keeps happening, remove and register it again.",
       "passkeyUnverifiedRepeatedly",
+    );
+  }
+
+  /*
+   * A passkey that did not check who was holding it is only as good as the
+   * other thing guarding the account.
+   *
+   * The options ask for verification as "preferred" rather than "required",
+   * because a security key with no PIN set is a perfectly good second factor
+   * beside a password, and refusing it at the ceremony would refuse it for
+   * everybody. Where there is no password it is not a second anything: the
+   * key is the account, and signing in on a touch alone makes the account
+   * belong to whoever picks it up. So which of the two this is can only be
+   * decided here, once the assertion has said whose account it opens.
+   */
+  if (!verification.authenticationInfo.userVerified && !stored.hasPassword) {
+    throw new AuthError(
+      "That passkey did not check it was you with a PIN, fingerprint or face. An account without a password needs one that does.",
+      "passkeyUserVerificationRequired",
     );
   }
 

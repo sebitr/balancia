@@ -7,7 +7,7 @@ Balancia.
 
 Balancia is free, open-source software for splitting shared expenses. A group
 records who paid, who benefited and how each transaction should be divided;
-Balancia calculates the balances and suggests the payments needed to settle up.
+Balancia calculates the balances and suggests the repayments needed to settle up.
 
 It works for trips, shared homes, couples, families, events, clubs, teams and
 other groups where the same people regularly share costs or income.
@@ -46,7 +46,7 @@ and operational time are the operator's responsibility.
 ## Does everyone in a group need an account?
 
 No. A member can create a revocable guest link for one participant. A guest can
-view the group, add and edit expenses, record settlements and upload receipts.
+view the group, add and edit expenses, record repayments and upload receipts.
 Guests cannot manage people, invitations, ownership or group settings.
 
 The link grants access to that participant, so it should be shared privately
@@ -79,7 +79,7 @@ and its tests.
 When a group is created, it chooses one of two modes:
 
 1. **Separate currencies:** EUR, USD, JPY and every other currency keep their
-   own balances and settlements.
+   own balances and repayments.
 2. **Converted:** each foreign expense is converted into the group's base
    currency using a rate stored with that expense.
 

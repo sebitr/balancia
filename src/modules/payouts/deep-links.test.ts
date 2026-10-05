@@ -45,13 +45,28 @@ describe("PayPal", () => {
     ).toBe("https://paypal.me/seb/83.34EUR");
   });
 
-  it("leaves a link that is not PayPal's alone", () => {
-    // The field takes any payment link. Appending an amount to somebody's own
-    // page turns a link that worked into a 404.
-    const link = payoutDeepLink(request({ detail: "pay.me/seb" }));
+  it("takes www and paypal.com as PayPal's own", () => {
+    expect(payoutDeepLink(request({ detail: "www.paypal.me/seb" }))?.href).toBe(
+      "https://www.paypal.me/seb/83.34EUR",
+    );
+    expect(
+      payoutDeepLink(request({ detail: "paypal.com/paypalme/seb" }))?.href,
+    ).toBe("https://paypal.com/paypalme/seb/83.34EUR");
+  });
 
-    expect(link?.href).toBe("https://pay.me/seb");
-    expect(link?.carriesAmount).toBe(false);
+  it("builds no button from a saved link that is not PayPal's", () => {
+    // Saved before the field was held to PayPal's hosts. The screen would
+    // label this "Open PayPal", so it gets no link at all and the detail
+    // stays on screen as text — which promises nothing about where it leads.
+    expect(payoutDeepLink(request({ detail: "pay.me/seb" }))).toBeNull();
+    expect(
+      payoutDeepLink(request({ detail: "https://paypal.me.example/seb" })),
+    ).toBeNull();
+    // What a browser reads as the host, not what the string starts with: the
+    // part before `@` is a user name, and this one goes to example.org.
+    expect(
+      payoutDeepLink(request({ detail: "paypal.me@example.org/seb" })),
+    ).toBeNull();
   });
 
   it("says nothing for a detail that is not a link at all", () => {

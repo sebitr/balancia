@@ -236,10 +236,19 @@ export function formatDate(date: Date, options: DateFormatOptions): string {
 export interface DateFormatter {
   /** A stored calendar day, e.g. `"2026-08-13"`. Never carries a time. */
   plain(value: string, style?: DateStyle): string;
-  /** The day an instant falls on, in the app's zone. */
+  /**
+   * The day an instant falls on, in the app's zone — or in `timeZone`, for
+   * an instant that happened in a group.
+   *
+   * The app's zone is the server's, pinned so both sides of hydration agree,
+   * and it is UTC unless an operator set `TZ`. That is fine for a date on a
+   * settings screen and wrong for a clock: somebody in Paris who added an
+   * expense at 16:05 was shown 14:05. A group's zone is just as fixed on both
+   * sides, so passing it costs hydration nothing.
+   */
   at(
     value: Date | string | number,
-    options?: { style?: DateStyle; time?: "short" },
+    options?: { style?: DateStyle; time?: "short"; timeZone?: string },
   ): string;
 }
 
@@ -261,7 +270,7 @@ export function createDateFormatter(preferences: {
       formatDate(value instanceof Date ? value : new Date(value), {
         dateFormat,
         locale: formatLocale,
-        timeZone,
+        timeZone: options.timeZone ?? timeZone,
         style: options.style,
         time: options.time,
       }),

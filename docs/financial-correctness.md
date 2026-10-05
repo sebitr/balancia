@@ -19,6 +19,13 @@ PostgreSQL stores these values as `bigint`, TypeScript uses `bigint`, and JSON
 boundaries carry them as strings. JavaScript floating-point numbers never
 represent money.
 
+The largest amount Balancia accepts is 10¹⁸ minor units, either sign
+(`MAX_MINOR_UNITS`) — about a ninth of what a `bigint` column holds, so an amount
+that passes validation can never be one PostgreSQL refuses. The line is held
+wherever an amount is made, not only where it is typed: each exact split part
+on its own (a credit may be negative, but no larger), and every amount a
+conversion produces.
+
 ## Splits add up exactly
 
 Equal, percentage and share-based splits can leave indivisible minor units. For
@@ -34,6 +41,14 @@ Balancia uses a deterministic largest-remainder allocation:
 
 The interface tells the user when one or more people receive the rounding unit.
 It never hides the adjustment.
+
+The proportional shares are worked in whole numbers: every weight is scaled by
+the same power of ten, and each share is a `bigint` quotient and remainder.
+Nothing is rounded before the floor is taken, and two people owed the same
+fraction of a unit tie exactly and are settled by their order. Worked in
+decimal.js, as they used to be, each result was first cut to a fixed number of
+significant digits, and the rounding unit could go to somebody it was not owed
+to.
 
 ## Balances sum to zero
 
@@ -67,11 +82,49 @@ timezone; a series that ends after a number of times still gets all of them.
 Occurrences missed because the worker itself was down are different—nobody
 chose that gap—and they are caught up.
 
+## Removing somebody never strands a debt
+
+Removing a person from a group keeps their history: every expense and
+repayment that names them still counts, so their balance is still part of the
+group's. What removal takes away is the ability to name them in anything new.
+Those two rules together could leave a debt nobody can record, so three more
+hold them in place:
+
+- **Removal waits for zero.** Somebody who still owes or is owed anything, in
+  any currency the group keeps, cannot be removed; the server refuses, not
+  only the button. The check reads the balance under a row lock that every
+  write naming that person also takes, so an expense landing in the same
+  instant either counts or is refused — never both.
+- **An old entry keeps the people it had.** Editing an expense or a repayment
+  that names somebody removed since is allowed, and they may stay on it.
+  Adding a removed person to an entry they were not on is refused.
+- **A leftover debt can always be settled.** A balance can still move after
+  removal — an old expense edited, a repayment deleted, a deletion undone — so
+  a repayment may name a removed person, but only in the direction that
+  settles what they have outstanding and for no more than it. It can close a
+  debt; it cannot open one.
+
 ## Exchange rates are historical facts
 
 Converted groups store a decimal exchange rate with each foreign-currency
 expense. Multiplication uses decimal arithmetic and rounds once using the
-documented rule. A later rate update never rewrites a historical expense.
+documented rule. That arithmetic runs at 64 significant digits (`MoneyDecimal`
+in `src/modules/currencies/money.ts`) rather than decimal.js's default of 20,
+which rounded the product of a large amount and a rate once before the
+documented rounding. A later rate update never rewrites a historical expense.
+
+A rate is at most 1,000,000,000 to one (`MAX_EXCHANGE_RATE`), with at most
+twelve decimal places. Real rates sit orders of magnitude below the cap; what
+it refuses is a rate with stray zeros, which used to multiply an ordinary
+amount past what the converted column holds. A conversion whose result would
+still pass the largest amount is refused as well.
+
+A foreign-currency expense or repayment that reaches a converted group without
+a rate — an import, or a restored backup — has no base-currency value, and none
+is invented for it. It is never counted in the base at face value, which would
+read ¥30,000 as €30,000. It is balanced in its own currency instead, in a list
+of its own that sums to zero like any other, and statistics leave it out of
+base-currency totals, until somebody re-enters it with a rate.
 
 Daily rate suggestions are optional and off by default. The server—not the
 browser—records whether a saved rate matches a rate the instance fetched, so
@@ -96,7 +149,9 @@ random inputs to exercise the rules repeatedly:
 - balances always sum to zero;
 - the result is deterministic for the same inputs;
 - zero-, two- and three-decimal currencies behave correctly;
-- large values remain exact across database and JSON boundaries; and
+- large values remain exact across database and JSON boundaries;
+- allocations and conversions agree with whole-number arithmetic across the
+  whole accepted range of amounts; and
 - conversions round once and preserve the stored rate.
 
 The relevant implementation lives in `src/modules/expenses`,

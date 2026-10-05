@@ -13,7 +13,8 @@
 import { closeDb } from "@/lib/db/client";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { stopBoss } from "@/lib/jobs/queue";
+import { getBoss, stopBoss } from "@/lib/jobs/queue";
+import { clearHeartbeat, startHeartbeat } from "./heartbeat";
 import { startWorker } from "./run";
 
 async function main(): Promise<void> {
@@ -36,24 +37,29 @@ async function main(): Promise<void> {
     );
   }
 
+  await clearHeartbeat();
   await startWorker();
+
+  // For the `worker` service's healthcheck in compose.yaml. The queue's own
+  // database is what gets asked: a worker that cannot reach it serves nothing.
+  const boss = await getBoss();
+  const stopHeartbeat = startHeartbeat(() => boss.isInstalled());
 
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info({ signal }, "Shutting down worker");
+    stopHeartbeat();
     try {
-      // Graceful: let in-flight jobs finish before the pool closes.
+      // Graceful: stop fetching, let in-flight jobs finish within
+      // SHUTDOWN_DRAIN_MS, then close the pool.
       await stopBoss();
       await closeDb();
       logger.info("Worker stopped cleanly");
       process.exit(0);
     } catch (error) {
-      logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
-        "Error during worker shutdown",
-      );
+      logger.error({ err: error }, "Error during worker shutdown");
       process.exit(1);
     }
   };
@@ -63,12 +69,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  logger.error(
-    {
-      err:
-        error instanceof Error ? (error.stack ?? error.message) : String(error),
-    },
-    "Worker failed to start",
-  );
+  logger.error({ err: error }, "Worker failed to start");
   process.exit(1);
 });

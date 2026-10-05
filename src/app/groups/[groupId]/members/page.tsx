@@ -79,10 +79,21 @@ export default async function MembersPage({
     }
   }
 
+  /*
+   * Addresses are for the people who signed in, never for a guest link.
+   *
+   * A link is a bearer credential that gets forwarded, and the address on a
+   * row is the owner's sign-in address or one somebody typed for a person who
+   * is not on the app — neither is the business of whoever the link reached.
+   * Everything a guest reader needs from a row survives without it: the name,
+   * and whether they have an account, which `access` below already says.
+   */
+  const showsEmail = access.actor.kind !== "guest";
+
   const unordered: PersonView[] = participants.map((participant) => ({
     id: participant.id,
     name: participant.displayName,
-    email: participant.email ?? "",
+    email: showsEmail ? (participant.email ?? "") : "",
     isOwner: participant.role === "owner",
     access: accessOf(participant),
     link:

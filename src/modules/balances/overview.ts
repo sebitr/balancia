@@ -55,9 +55,15 @@ export type Counterparty =
 /** The user's standing in one group. */
 export interface GroupPosition {
   readonly group: GroupSummary;
-  /** Non-zero balances of the user, in the currencies the group balances in. */
+  /**
+   * Non-zero balances of the user, in the currencies the group balances in.
+   * Always empty for an archived group, whose ledger this screen does not read.
+   */
   readonly amounts: readonly Money[];
-  /** `amounts` summed into the display currency; null if a rate was missing. */
+  /**
+   * `amounts` summed into the display currency; null if a rate was missing,
+   * and for an archived group.
+   */
   readonly net: Money | null;
   /** Only ever set where the user owes: nobody is owed *to* a creditor. */
   readonly owedTo: Counterparty | null;
@@ -391,11 +397,20 @@ export async function loadHomeOverview(
 
   // One set of reads for every group at once, rather than one set per group:
   // see `loadBalancesForGroups`. This is the screen that made the difference.
-  const balancesByGroup = await loadBalancesForGroups(groups, {
-    db: options.db,
-  });
+  //
+  // Archived groups are listed and never read. Nothing shows their figures —
+  // the home list gives them a word where an amount would go, the switcher
+  // leaves them out, and every total above skips them — yet each one's whole
+  // history used to be summed on every visit, and archived groups only pile up.
+  const balancesByGroup = await loadBalancesForGroups(
+    groups.filter((group) => group.archivedAt === null),
+    { db: options.db },
+  );
 
   const unconverted: GroupPosition[] = groups.map((group) => {
+    if (group.archivedAt !== null) {
+      return { group, amounts: [], net: null, owedTo: null };
+    }
     const balances = balancesByGroup.get(group.id);
     if (!balances) {
       throw new Error(`Balances missing for group ${group.id}`);
@@ -434,6 +449,12 @@ export async function loadHomeOverview(
 
   const positions: GroupPosition[] = [];
   for (const position of unconverted) {
+    // An archived group was never read, so its net stays null: a zero here
+    // would claim it is square, which nobody checked.
+    if (position.group.archivedAt !== null) {
+      positions.push(position);
+      continue;
+    }
     let net: Money | null = zero(displayCurrency);
     for (const amount of position.amounts) {
       if (amount.currency === displayCurrency) {

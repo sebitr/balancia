@@ -8,6 +8,7 @@ import {
   noStore,
   serializeNotification,
 } from "@/app/api/mobile";
+import { MAX_CALENDAR_YEAR, MIN_CALENDAR_YEAR } from "@/lib/calendar-date";
 import { trackRoute } from "@/lib/metrics/http";
 
 /**
@@ -33,7 +34,17 @@ async function handleGet(request: Request) {
         : 50;
     const beforeRaw = url.searchParams.get("before");
     const before = beforeRaw ? new Date(beforeRaw) : undefined;
-    if (before && Number.isNaN(before.getTime())) {
+    // A JavaScript date reaches back to 271821 BC and PostgreSQL's timestamps
+    // stop at 4713 BC, so a `before` in between failed the query as a 500.
+    // The bound is the calendar years Balancia accepts rather than
+    // PostgreSQL's own, since every instant it stores sits inside them; a
+    // client wanting the newest page leaves `before` out.
+    if (
+      before &&
+      (Number.isNaN(before.getTime()) ||
+        before.getUTCFullYear() < MIN_CALENDAR_YEAR ||
+        before.getUTCFullYear() > MAX_CALENDAR_YEAR)
+    ) {
       return noStore({ error: "Invalid `before` instant." }, { status: 400 });
     }
 

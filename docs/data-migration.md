@@ -19,16 +19,16 @@ hundred entries of a three-person group. See _How large a file_ below.
 
 ### What comes back, and what does not
 
-| In the file           | On restore                                              |
-| --------------------- | ------------------------------------------------------- |
-| Expenses and payments | Restored, amount for amount                             |
-| Spending or income    | Restored the way each entry was recorded                |
-| Multiple payers       | Restored                                                |
-| Categories            | Restored as the code they were filed under              |
-| People                | Offered in the preview, matched by name or added as new |
-| Recurring expenses    | **Not restored** — set them up again                    |
-| Receipts              | **Not in the export at all**                            |
-| Converted amounts     | **Not restored** — see _Currency handling_ below        |
+| In the file             | On restore                                              |
+| ----------------------- | ------------------------------------------------------- |
+| Expenses and repayments | Restored, amount for amount                             |
+| Spending or income      | Restored the way each entry was recorded                |
+| Multiple payers         | Restored                                                |
+| Categories              | Restored as the code they were filed under              |
+| People                  | Offered in the preview, matched by name or added as new |
+| Recurring expenses      | **Not restored** — set them up again                    |
+| Receipts                | **Not in the export at all**                            |
+| Converted amounts       | **Not restored** — see _Currency handling_ below        |
 
 Whether an entry was money out or money in comes back with it. A backup
 written before Balancia recorded income says nothing about direction, and every
@@ -77,7 +77,7 @@ the interesting decisions — who is who, what will be skipped — need a human.
 2. Open **Settings → Import data**, or `/groups/<id>/import`.
 3. **Upload the file.** It is parsed on your own server. Nothing is sent
    anywhere. One file can be up to 1 MB — see _How large a file_ below.
-4. **Read the preview.** It reports how many expenses and payments were found,
+4. **Read the preview.** It reports how many expenses and repayments were found,
    which currencies appear, which people the file names, and every row that will
    be skipped along with the reason.
 5. **Map the people.** Each name from the export becomes either an existing
@@ -127,7 +127,7 @@ This is checked by an integration test and an end-to-end journey, because
 | Splitwise                       | Balancia                                         |
 | ------------------------------- | ------------------------------------------------ |
 | Expense                         | Expense, with per-person shares as exact amounts |
-| Payment / "Settle all balances" | Settlement (a repayment, not spending)           |
+| Payment / "Settle all balances" | Repayment, not spending                          |
 | Negative cost (a refund)        | Income, filed under _Refunds_                    |
 | Category                        | Category (free text)                             |
 | Date                            | Expense date                                     |
@@ -169,13 +169,62 @@ is still their net for the row. Balancia never stores a negative amount; it has
 income for money coming in, so the row is imported as income of the same size,
 filed under _Refunds_, with every sign turned round. The balances come out
 exactly as the export's columns say. Splitwise's JSON backup is read the same
-way, and a payment with a negative amount there becomes the same payment in the
-other direction.
+way, and a payment with a negative amount there becomes a repayment in the other
+direction.
 
 **Imported expenses keep their original currency and carry no exchange rate.**
 Inventing a historical rate would be worse than leaving it unset. In a
-converted-currency group, review imported foreign-currency expenses and re-enter
-them with the rate you want if you need them folded into the base currency.
+converted-currency group they are balanced in that currency, beside the base —
+see _Currency handling_ below — and re-entering one with the rate you want is
+what folds it into the base currency.
+
+### If you imported a CSV before October 2026
+
+Until the end of September 2026, the CSV importer read a Splitwise payment the
+wrong way round: a payment Blaise made to Ada was recorded as Ada paying
+Blaise, which moves both of them by twice the amount. Expenses were read
+correctly, and the JSON backup was never affected. Only the rows the preview
+counted as payments were — in the file, a row described as `Payment` or
+`Settle all balances`, or with a cost of zero.
+
+To check a group, compare its balances with the **Total balance** row at the
+end of the file you imported. If they agree to the cent, nothing needs doing.
+If they do not, open each payment the import created — dated as in Splitwise,
+with the row's description as its note — and swap who paid and who received,
+or delete it and record it again.
+
+Do not import the same file again to repair it. A payment now reads the other
+way round, so the import no longer recognises it as one it already wrote: it
+adds it again beside the reversed copy, and the two cancel out as if the
+payment had never happened. If that has already happened, delete the older
+copy of each payment, the one going the wrong way.
+
+Two more kinds of row were misread until then:
+
+- **A payment recorded in Splitwise's app** — `Bob paid Carol`, in the
+  `Payment` category, with its amount as the cost — came in as an **expense**:
+  described `Bob paid Carol`, filed under `Payment`, paid entirely by Bob and
+  owed entirely by Carol. The balances are right, because an expense one
+  person pays wholly for another moves both of them exactly as the repayment
+  does. What is wrong is the spending: the amount counts toward the group's
+  total spend, shows as a `Payment` slice in the spending by category, and sits
+  in the transactions list as an expense rather than a settlement.
+
+  Nothing needs doing unless you want those figures right. To turn one into
+  the repayment it was, delete the expense and record a repayment from
+  **Settle up**, Bob as who paid and Carol as who received it, with the same
+  amount and date. Nobody's balance moves.
+
+  Importing the same file again is safe for these rows, and does not convert
+  them either: the import knows each one as the expense it wrote, and skips
+  it whether that expense is still there or you have already replaced it by
+  hand.
+
+- **A "Settle all balances" row naming more than two people** was recorded as
+  a single payment between the first two people on it with an amount, for the
+  whole of the first one's. Everyone else on the row was left out, so the
+  group's balances do not match the **Total balance** row. Correct that
+  payment and record the missing ones by hand, as above, until they do.
 
 ### If you imported a CSV before October 2026
 
@@ -306,17 +355,26 @@ Balancia never converts during an import. If a Splitwise group mixed
 currencies:
 
 - In a **separate** group, each currency gets its own balance. Nothing to do.
-- In a **converted** group, imported foreign expenses stay in their original
-  currency with no rate, so they contribute to their own currency's balance
-  until you re-enter them.
+- In a **converted** group, imported foreign expenses and repayments stay in
+  their original currency with no rate, so they contribute to their own
+  currency's balance until you re-enter them. The group then shows its base-currency
+  balances first and one more list per such currency — `€` and `¥` side by side,
+  exactly as a separate group would — and each list sums to zero on its own.
+  Statistics count those rows under their own currency too; a yen amount with no
+  rate is never added into a euro total.
+
+Re-entering an expense with a rate is what moves it into the base. A repayment
+you record in Balancia afterwards is converted into the base currency like any
+other, so it settles the base list rather than the imported one.
 
 The simplest path for a mixed-currency Splitwise group is to import into a
 `separate` group.
 
 The same holds for a restored backup. A `converted` group's export carries the
-rate each expense was converted at, but the staging model has nowhere to put a
-historical rate, so a restored row comes back in the currency it was entered in
-and the preview warns how many rows that affects.
+rate each expense and repayment was converted at, but the staging model has
+nowhere to put a historical rate, so a restored row comes back in the currency
+it was entered in, is balanced there, and the preview warns how many rows that
+affects.
 
 ---
 

@@ -129,8 +129,9 @@ export default async function SettlementDetailPage({
   /*
    * Balances are kept per currency, and a repayment belongs to exactly one of
    * them: its own in a group that keeps currencies apart, the base currency in
-   * one that converts. That is the same choice `moneyForGroup` makes, so the
-   * two can never disagree about which ledger this payment landed in.
+   * one that converts — or its own again, when it arrived there with no rate.
+   * That is the same choice `moneyForGroup` makes, so the two can never
+   * disagree about which ledger this payment landed in.
    */
   const ledger = moneyForGroup(settlement, {
     mode: access.group.currencyMode,

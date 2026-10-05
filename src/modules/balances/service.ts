@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { oncePerRender } from "@/lib/render-memo";
 import {
   expensePayers,
   expenseShares,
@@ -9,6 +10,7 @@ import {
   settlements,
 } from "@/lib/db/schema";
 import { CurrencyConfigurationError } from "@/modules/currencies/conversion";
+import { ledgerCurrencyOf } from "@/modules/currencies/display";
 import type { GroupAccess } from "@/lib/security/authorization";
 import {
   balancesSumToZero,
@@ -28,11 +30,19 @@ import {
 /**
  * Balance service: loads the facts, hands them to the pure engine.
  *
- * The only real work here is choosing which amount column to feed the engine.
- * In a converted group that is the frozen converted amount (falling back to the
- * original when the expense was already in the base currency); in a separate
- * group it is always the original. Deleted expenses and settlements are
- * excluded at the query level.
+ * The only real work here is choosing which amount column to feed the engine,
+ * and which currency's balance it lands in. In a converted group that is the
+ * frozen converted amount, in the base currency; an entry already in the base
+ * has no conversion and brings its own amount. In a separate group it is always
+ * the original, in its own currency.
+ *
+ * One kind of entry is neither: a foreign row in a converted group that carries
+ * no conversion, which is what an import or a restored backup writes. It has
+ * no base figure, so it keeps its own amount and its own currency, and the
+ * group gets one more balance list — exactly as a separate group would — until
+ * somebody re-enters it with a rate. `ledgerCurrencyOf` is that rule.
+ *
+ * Deleted expenses and settlements are excluded at the query level.
  */
 
 export interface GroupBalances {
@@ -77,7 +87,7 @@ type GroupCurrencyFacts = Pick<
 >;
 
 /** One group's rows, however they were fetched. */
-interface BalanceRows {
+export interface BalanceRows {
   readonly participants: readonly { id: string; displayName: string }[];
   readonly expenses: readonly {
     id: string;
@@ -118,13 +128,64 @@ const EMPTY_ROWS: BalanceRows = {
   settlements: [],
 };
 
+/**
+ * One group's balances.
+ *
+ * A screen often asks this twice in one render without meaning to: the group
+ * overview for its own figures and the reminder list for who owes the reader,
+ * the settle-up plan beside that same list, the join screen's summary beside
+ * its claimable names. Each ask used to read the group's entire history again,
+ * because a position is a fact about all of it. So the rows are read once per
+ * render, below, and only the assembly — pure, and cheap next to a round trip —
+ * runs per caller. That is why `contributionsFor` is not part of what is
+ * remembered: it changes what is derived from the rows, never the rows.
+ *
+ * A caller holding a handle of its own reads for itself. A transaction can see
+ * writes the pool cannot yet, and a memo shared with it would be wrong in both
+ * directions; only the application's shared handle is remembered.
+ */
 export async function loadGroupBalances(
   access: Pick<GroupAccess, "groupId" | "group">,
-  options: { db?: Database; contributionsFor?: string | null } = {},
+  options: {
+    db?: Database;
+    contributionsFor?: string | null;
+    /**
+     * Set when `db` is a transaction. A transaction is one connection, and
+     * node-postgres does not support two queries on it at once, so the reads
+     * that are otherwise issued together below go one after another.
+     */
+    inTransaction?: boolean;
+  } = {},
 ): Promise<GroupBalances> {
-  const db = options.db ?? getDb();
   const { groupId, group } = access;
+  const rows =
+    options.db === undefined || options.db === getDb()
+      ? await readBalanceRowsOnce(groupId)
+      : await readBalanceRows(options.db, groupId);
 
+  return assembleBalances(group, rows, options.contributionsFor ?? null);
+}
+
+/**
+ * The rows, read at most once per server render.
+ *
+ * `oncePerRender` is scoped to one render and to nothing wider. Every render
+ * starts from an empty memo — including the one Next.js runs after a Server
+ * Action, which is a new render rather than the tail of the action — and
+ * outside a render (the action's own body, a route handler, the worker, a test)
+ * it calls straight through. So nothing that has just written can be shown the
+ * ledger from before it wrote. Keyed on the group id alone, because it is the
+ * only thing the reads depend on.
+ */
+const readBalanceRowsOnce = oncePerRender((groupId: string) =>
+  readBalanceRows(getDb(), groupId),
+);
+
+/** The five reads behind one group's balances. */
+async function readBalanceRows(
+  db: Database,
+  groupId: string,
+): Promise<BalanceRows> {
   const participantRows = await db
     .select({
       id: participants.id,
@@ -146,7 +207,8 @@ export async function loadGroupBalances(
     .from(expenses)
     .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
 
-  const [payerRows, shareRows, settlementRows] = await Promise.all([
+  // Built here and run below: a query is only sent once it is awaited.
+  const reads = [
     db
       .select({
         expenseId: expensePayers.expenseId,
@@ -181,19 +243,18 @@ export async function loadGroupBalances(
       .where(
         and(eq(settlements.groupId, groupId), isNull(settlements.deletedAt)),
       ),
-  ]);
+  ] as const;
+  const [payerRows, shareRows, settlementRows] = options.inTransaction
+    ? [await reads[0], await reads[1], await reads[2]]
+    : await Promise.all(reads);
 
-  return assembleBalances(
-    group,
-    {
-      participants: participantRows,
-      expenses: expenseRows,
-      payers: payerRows,
-      shares: shareRows,
-      settlements: settlementRows,
-    },
-    options.contributionsFor ?? null,
-  );
+  return {
+    participants: participantRows,
+    expenses: expenseRows,
+    payers: payerRows,
+    shares: shareRows,
+    settlements: settlementRows,
+  };
 }
 
 /**
@@ -336,12 +397,13 @@ export async function loadBalancesForGroups(
 }
 
 /**
- * Turns one group's rows into its balances. Pure: no query, no clock.
+ * Turns one group's rows into its balances. Pure: no query, no clock — which
+ * is also what makes the currency rules testable without a database.
  *
  * Shared by both loaders above so that batching the reads cannot change an
  * answer — only how many round trips it took to get the rows.
  */
-function assembleBalances(
+export function assembleBalances(
   group: GroupCurrencyFacts,
   rows: BalanceRows,
   contributionsFor: string | null,
@@ -375,8 +437,15 @@ function assembleBalances(
     { participantId: string; amount: bigint }[]
   >();
 
+  // An allocation carries a converted amount exactly when its entry does, so
+  // the fallback here is the entry kept in its own money — base or foreign —
+  // and the amount always matches the currency `ledgerOf` labels it with.
   const pick = (original: bigint, converted: bigint | null): bigint =>
     converts ? (converted ?? original) : original;
+  const ledgerOf = (row: {
+    currency: string;
+    convertedCurrency: string | null;
+  }): string => ledgerCurrencyOf(row, group.currencyMode);
 
   for (const row of payerRows) {
     const list = payersByExpense.get(row.expenseId) ?? [];
@@ -398,7 +467,7 @@ function assembleBalances(
   const engineExpenses: BalanceInputExpense[] = expenseRows.map((row) => ({
     id: row.id,
     direction: row.direction,
-    currency: converts ? (group.baseCurrency as string) : row.currency,
+    currency: ledgerOf(row),
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
@@ -406,7 +475,7 @@ function assembleBalances(
     id: row.id,
     direction: row.direction,
     expenseDate: row.expenseDate,
-    currency: converts ? (group.baseCurrency as string) : row.currency,
+    currency: ledgerOf(row),
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
   }));
@@ -414,18 +483,30 @@ function assembleBalances(
   const engineSettlements: BalanceInputSettlement[] = settlementRows.map(
     (row) => ({
       id: row.id,
-      currency: converts ? (group.baseCurrency as string) : row.currency,
+      currency: ledgerOf(row),
       fromParticipantId: row.fromParticipantId,
       toParticipantId: row.toParticipantId,
       amount: pick(row.amount, row.convertedAmount),
     }),
   );
 
-  const currencies = computeBalances({
+  const computed = computeBalances({
     participantIds,
     expenses: engineExpenses,
     settlements: engineSettlements,
   });
+
+  // A converted group's base currency leads, whatever the alphabet says. It is
+  // the list the group was set up to keep, and a screen with room for a single
+  // position shows the first one — which, before rows could be left in their
+  // own currency, was the only one. The rest follow in code order, as a
+  // separate group's do.
+  const currencies = converts
+    ? [
+        ...computed.filter((entry) => entry.currency === group.baseCurrency),
+        ...computed.filter((entry) => entry.currency !== group.baseCurrency),
+      ]
+    : computed;
 
   // The invariant that makes the rest of the product trustworthy. If it ever
   // fails the data is inconsistent, and showing a number would be worse than

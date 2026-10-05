@@ -125,7 +125,17 @@ AUTH_SECRET=$(openssl rand -base64 48)
 
 Written into `.env` by `scripts/bootstrap.sh` on first run. It is
 instance-identifying material — keep it in your backups. In production, values
-that look like placeholders (`changeme`, `password`, …) are rejected at startup.
+that look like placeholders (`changeme`, `password`, …) are rejected at startup,
+as is anything with fewer than eight distinct characters, which was typed
+rather than generated.
+
+So is every secret this repository commits — the development stack's, CI's,
+the end-to-end suite's and the image build's placeholder — whenever `APP_URL`
+is not a loopback address. Those are published in the source and each is long
+enough to pass the length rule, so an instance running one on a public address
+has a secret anyone can look up. On localhost they are allowed, because CI and
+the Docker build run production code under them there. `bootstrap.sh` looks
+for all of these on every run and offers to generate a replacement.
 
 Changing it signs nobody out and breaks no link: session and invitation tokens
 are random values stored as hashes, and none of them is derived from this. The
@@ -173,14 +183,19 @@ the relying-party ID by the authenticator.
 
 Default `Balancia`. The name shown in the browser's passkey prompt.
 
-### `TRUSTED_ORIGINS`
+### Trusting another origin
 
-Comma-separated extra origins permitted to call the app. `APP_URL` is always
-trusted; this is for the rare case of an additional legitimate front door.
-
-```bash
-TRUSTED_ORIGINS=https://alt.example.com,https://other.example.com
-```
+There is no setting for it — `TRUSTED_ORIGINS` was accepted once, and nothing
+ever read it. Balancia refuses a
+state-changing request whose `Origin` names a different host from the one in
+its `Host` header, and Next.js refuses a Server Action on the same comparison.
+A second hostname proxied to the same instance passes both untouched, as long
+as the proxy forwards `Host` — though passkeys, and every link Balancia
+writes, still belong to `APP_URL`. The one arrangement that would need an
+allow-list — a proxy that rewrites `Host` — cannot be given one at runtime:
+Next.js's list is `serverActions.allowedOrigins`, which is compiled into the
+server when the image is built. Forward `Host` instead. A line setting it in
+an older `.env` is ignored.
 
 ### `TRUSTED_PROXY_HOPS`
 
@@ -219,6 +234,18 @@ opens one pool, and pg-boss a small one of its own alongside it. If you gave
 the background jobs [their own container](#background-jobs), that is a second
 app-sized pool as well — plan for roughly `2 × DATABASE_POOL_MAX` against
 PostgreSQL's `max_connections` in that shape.
+
+Every connection in the app's pool is opened with two limits, which are not
+environment variables: PostgreSQL cancels a statement that runs for more than
+30 seconds, and ends a transaction left idle inside for more than a minute. The
+longest statements Balancia sends take seconds, and without the limits one
+runaway query held its connection for as long as it liked — enough of them and
+the pool ran dry for everybody. An installation that genuinely needs longer can
+say so in the connection string: `?statement_timeout=120000` (milliseconds) at
+the end of [`DATABASE_URL`](#database_url) overrides the default, which under
+Compose means setting that variable yourself. Migrations connect on their own
+and pg-boss keeps its own pool, so neither is bound by the defaults — though
+both read `DATABASE_URL` too, and would take an override written there.
 
 ---
 
@@ -277,7 +304,11 @@ password recovery — both simply are not offered, rather than half-working.
 
 **Turning SMTP on changes registration:** new accounts must confirm their email
 before they can sign in. Turning it on after people have registered leaves
-existing accounts unverified and therefore unable to sign in — verify them
+existing accounts unverified and therefore unable to sign in with a password.
+Worse, the first time each of them proves the address — a reset link or a
+sign-in code — Balancia removes every passkey, Apple link and API key the
+account held before, because it cannot tell them from ones a stranger left on
+an address that was never theirs (see `SECURITY.md`). Verify existing accounts
 manually if you do this:
 
 ```sql
@@ -849,8 +880,11 @@ is not collecting should not advertise that the endpoint would exist.
 
 Default `false`. Exposes Prometheus metrics at `/api/metrics`: HTTP request
 durations and status classes by route template, Server Action durations and
-outcomes, background-job durations and failures by queue, database query
-latency, connection-pool usage, memory, CPU and uptime.
+outcomes, background-job durations and failures by queue, whether the
+background worker is running and when the nightly maintenance sweep last
+finished, database query latency, connection-pool usage, memory, CPU and
+uptime. The alert to set up first is in
+[self-hosting.md](self-hosting.md#alerting-on-the-background-jobs).
 
 These are **exact, local and never transmitted**. They are not telemetry and
 share none of its code; the only way they leave the server is an operator
@@ -860,9 +894,10 @@ pointing their own scraper at them. See [Telemetry](telemetry.md#local-operation
 
 Optional bearer token required to read `/api/metrics`.
 
-Optional because an operator who publishes the app's port only to a private
-network has already answered the question. **If the port is reachable from
-anywhere else, set this.** Without it, metrics are readable by anyone who can
+Optional because an operator whose app can be reached only from a private
+network has already answered the question. **If anything else can reach it —
+through a reverse proxy counts, since the proxy forwards `/api/metrics` like
+any other path — set this.** Without it, metrics are readable by anyone who can
 reach the app: not financial data, but request rates, error rates and the
 version you are running.
 
@@ -888,6 +923,12 @@ nightly housekeeping sweep.
 On by default so that one container is the whole application. The image needs
 no companion service — behind a reverse proxy, or as the single `app` service
 of the Compose stack, it does all of its own work.
+
+A worker that cannot reach its queue at startup does not stop the app serving
+pages. It retries, from five seconds apart up to every five minutes, and says
+where it stands in the `worker` field of `/api/health/ready` and in the
+`balancia_worker_up` metric. On SIGTERM the app gives the jobs it is running up
+to twenty seconds to finish before it exits.
 
 Set it to `false` only when something else is running those jobs, which under
 Compose means enabling the `worker` service. That takes a second line, because
@@ -920,7 +961,8 @@ either one. The operational side is in
 
 Production emits newline-delimited JSON; development pretty-prints. Secrets,
 tokens, passwords and connection strings are redacted before anything is
-written, at any level.
+written, at any level, and a failed database statement is logged with its
+SQLSTATE and statement text but without the values bound to it.
 
 ### `NODE_ENV`
 
@@ -931,33 +973,56 @@ Seeding refuses to run when this is `production`.
 
 ### `APP_PORT`
 
-Compose only. Host port the app is published on. Default `3000`.
+Compose only. Where the app is published on the host, as `address:port`.
+Default `127.0.0.1:3000` — this host only.
 
-### `DB_PORT`
+The value is written into the published-port line verbatim, so it is Compose's
+own syntax, and the address in front of the number is what decides who can
+connect. Loopback is the default because the reverse proxy is meant to be the
+only way in: it is what writes the client's address into `X-Forwarded-For`, and
+rate limiting believes the rightmost entry — see
+[`TRUSTED_PROXY_HOPS`](#trusted_proxy_hops). A caller who reaches the port
+directly writes that entry themselves, and every per-address limit is then
+keyed on a value they chose.
 
-Compose only. Host port the database is published on. Default `5458`.
-
-`compose.yaml` publishes PostgreSQL so that host tooling — `psql`, a GUI
-client, `drizzle-kit`, a backup job — can reach it without going through a
-container. It is published on every interface the host has, which means the
-generated `POSTGRES_PASSWORD` is the only thing between the database and
-whoever can reach this machine.
-
-The value is written into the published-port line verbatim, so a bind address
-can be part of it:
+A proxy on the same host reaches the app at `127.0.0.1:3000`. A proxy running
+as a container on the Compose project's network reaches it by service name,
+`app:3000`, and needs no published port at all. Only a proxy on another machine
+needs the app on the network, and then the address says so — the interface
+that proxy reaches it through, or `0.0.0.0` for every one:
 
 ```bash
 # .env
-DB_PORT=127.0.0.1:5458
+APP_PORT=10.0.0.5:3000
 ```
 
-That keeps the port on the host itself; connect from elsewhere by tunnelling,
-`ssh -L 5458:127.0.0.1:5458 you@host`. The database is `balancia`, the user is
-`balancia`, and the password is `POSTGRES_PASSWORD` from `.env`:
+A bare number means the same as `0.0.0.0` to Compose — every interface — which
+is why `bootstrap.sh` never writes one, and offers to put `127.0.0.1` in front
+of one it finds.
+
+### `DB_PORT`
+
+Compose only. Where the database is published on the host, as `address:port`.
+Default `127.0.0.1:5458` — this host only.
+
+`compose.yaml` publishes PostgreSQL so that host tooling — `psql`, a GUI
+client, `drizzle-kit`, a backup job — can reach it without going through a
+container. It is kept to loopback because, anywhere else, the generated
+`POSTGRES_PASSWORD` would be the only thing between the database and whoever
+can reach this machine: Docker opens a published port with rules of its own,
+ahead of a host firewall such as ufw, so that firewall is not consulted.
+
+Connect from elsewhere by tunnelling, `ssh -L 5458:127.0.0.1:5458 you@host`.
+The database is `balancia`, the user is `balancia`, and the password is
+`POSTGRES_PASSWORD` from `.env`:
 
 ```bash
 psql "postgres://balancia:$POSTGRES_PASSWORD@127.0.0.1:5458/balancia"
 ```
+
+To put it on the network regardless, say so with the address —
+`DB_PORT=0.0.0.0:5458`. As with `APP_PORT`, a bare number means every interface,
+and `bootstrap.sh` asks about one it finds.
 
 ### `RUN_MIGRATIONS`
 
@@ -967,11 +1032,21 @@ safe — the runner holds a PostgreSQL advisory lock, so the second waits and
 then finds the schema current.
 
 Set to `false` to take that over yourself, e.g. to apply migrations once and
-confirm before rolling the app:
+confirm before rolling the app. Under Compose it goes in `.env`, and
+`compose.yaml` passes it to the app and the worker alike; each says in its log
+that it skipped the step. For a single one-off command rather than the whole
+stack, pass it to that command instead —
+`docker compose run --rm -e RUN_MIGRATIONS=false app sh` starts a shell without
+migrating first. Only the word `false` turns the step off. The migrations are
+then yours to apply:
 
 ```bash
 docker compose run --rm --entrypoint "node dist/migrate.js" app
 ```
+
+An app started before its image's migrations have been applied answers
+`/api/health/ready` with 503 — `pendingMigrations` in the body says how many
+are missing — and becomes ready by itself as soon as they are.
 
 ### `ALLOW_NEWER_SCHEMA`
 

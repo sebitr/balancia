@@ -42,8 +42,11 @@ const MAX_INTEGER_DIGITS = 8;
  */
 export function sanitiseAmount(text: string, currency: string): string {
   const exponent = currencyExponent(currency);
+  // Only digits and the two marks survive. A currency's sign or code goes, and
+  // so do spaces and a Swiss apostrophe, which only ever group thousands.
+  const marked = text.replace(/[^\d.,]/g, "");
   // A comma is what most of Europe gets under its thumb for the decimal.
-  const cleaned = text.replace(/,/g, ".").replace(/[^\d.]/g, "");
+  const cleaned = ungrouped(marked) ?? marked.replace(/,/g, ".");
   const [whole = "", ...rest] = cleaned.split(".");
 
   // Leading zeros carry no meaning: "05" is 5, while "0.5" keeps its zero.
@@ -58,6 +61,49 @@ export function sanitiseAmount(text: string, currency: string): string {
   // error, and eating it would make a decimal impossible to enter.
   const fraction = rest.join("").slice(0, exponent);
   return `${digits === "" ? "0" : digits}.${fraction}`;
+}
+
+/**
+ * Thousands grouped under one mark, in threes: `1.234.567`, `1,234,567`. At
+ * least two marks, because one alone could just as well be a decimal.
+ */
+const GROUPED = /^\d{1,3}([.,])\d{3}(?:\1\d{3})+$/;
+
+/**
+ * The same grouping, then the other mark and a fraction behind it:
+ * `1,234.56`, `1.234,56`, `1.234.567,89`.
+ */
+const GROUPED_WITH_FRACTION =
+  /^(\d{1,3}([.,])\d{3}(?:\2\d{3})*)(?!\2)[.,](\d+)$/;
+
+/**
+ * A pasted figure with its thousands taken out and a point for its decimal —
+ * or null when the grouping cannot be told from a decimal, which leaves the
+ * text to the keystroke rules in `sanitiseAmount`.
+ *
+ * A banking app hands over "1.234,56 €", and reading every mark as a decimal
+ * made that 1.23: a thousandfold short, on a figure plausible enough to be
+ * saved. Two shapes are never ambiguous. The same mark twice between groups of
+ * three is grouping, because no convention writes one mark for both jobs. And
+ * where both marks appear, the last is the decimal and every earlier one
+ * groups, whichever way round the writer's locale puts them.
+ *
+ * Both shapes insist on groups of exactly three and on a digit after the
+ * decimal, and that is what keeps them out of typing. The field has rewritten
+ * itself to a single point before the next key arrives, so a typed value only
+ * holds a second mark because a key has just put it there: a second point
+ * after "84.6", a comma inside "84.60", a comma after the third decimal of
+ * "1.234" dinars. None of those is a grouped amount, and reading the old point
+ * as a thousands mark would move the figure under the reader's finger. A single
+ * mark — `1.234` — is one convention's decimal and the other's thousand, and
+ * stays exactly as ambiguous as it was.
+ */
+function ungrouped(marked: string): string | null {
+  if (GROUPED.test(marked)) return marked.replace(/[.,]/g, "");
+  const match = GROUPED_WITH_FRACTION.exec(marked);
+  if (match === null) return null;
+  const [, whole = "", , fraction = ""] = match;
+  return `${whole.replace(/[.,]/g, "")}.${fraction}`;
 }
 
 /** Whether the text is a real amount greater than zero. */

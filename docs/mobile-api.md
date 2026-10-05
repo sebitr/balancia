@@ -21,12 +21,21 @@ lands here first:
 
 - **Money is a decimal string of integer minor units** (`"6390"` for €63.90),
   never a JSON number. Currency exponents vary (JPY 0, KWD 3) — see
-  `src/modules/currencies/iso-4217.ts`.
-- **Exchange rates are decimal strings**, `1 source = rate target`.
+  `src/modules/currencies/iso-4217.ts`. The largest amount is 10¹⁸ minor
+  units, either sign; a larger total, an exact split part larger than that
+  (a credit may be negative, not bigger), or a conversion that lands past it
+  is a 422.
+- **Exchange rates are decimal strings**, `1 source = rate target`, plain and
+  positive. A rate above 1,000,000,000 to one is a 422, and so is one with
+  more than twelve decimal places wherever it is applied.
 - **Calendar dates are `YYYY-MM-DD` strings** with no timezone; instants are
-  ISO 8601.
+  ISO 8601. A date is a day the calendar has, between `1900-01-01` and
+  `2999-12-31`: `2025-02-30` on a write is a 422 saying so, and on
+  `/api/rates?on` a 400. The inbox's `before` instant is held to the same
+  years.
 - **Authorization failures are 404**, indistinguishable from a group that does
-  not exist (same rule as the export route). Missing authentication is 401.
+  not exist (same rule as the export route). A path id that is not a UUID is
+  the same 404, answered before any lookup. Missing authentication is 401.
   Refusals a person should read (a bad split, a rate limit) are 422 / 429 with
   `{"error": "..."}`.
 - Every response is `Cache-Control: private, no-store`.
@@ -81,6 +90,14 @@ minutes and works once; a wrong guess does not spend it, but the address's
 retires the one before it, so a client should wait on the first mail rather
 than tap twice — the web's button counts down thirty seconds for exactly that
 reason.
+
+A code is also proof of the address. On an account whose address had never
+been proved — a passkey signup made somewhere else, say — the first code spent
+removes every passkey, Apple link, API key and session the account held until
+then, and drops any password, so the session it opens is the only way in left
+standing. A client should not be surprised when a passkey it had stored for
+that account stops being recognised afterwards: `passkeyUnknown` is the signal
+to stop offering it.
 
 `GET /api/auth/options` says whether the instance can do this at all — `code`
 is false without SMTP, and on the public demo — and, beside it, whether Sign in
@@ -153,7 +170,7 @@ is off, which is the default.
 
 | Method | Path                                                     | Body of the answer                                                                                                                                                                                                                                                                                                                |
 | ------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/groups`                                            | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly.                                                                                                                      |
+| GET    | `/api/groups`                                            | The home screen: `loadHomeOverview` serialized — buckets (`needsYou`, `youAreOwed`, `settled`, `archived`), net position, per-currency totals. Users only; guests get 403 and read their one group directly. An archived position has no figures: `amounts` empty, `net` and `owedTo` null.                                       |
 | GET    | `/api/groups/:groupId`                                   | One group as its screen opens: the access (`group`, `role`, `participantId`, `permissions`), active participants, and `loadGroupOverview` (positions, per-currency overviews, balance rows, suggested repayments, spending periods).                                                                                              |
 | GET    | `/api/groups/:groupId/expenses?limit&offset`             | `listExpenses`, newest first, payers and shares resolved.                                                                                                                                                                                                                                                                         |
 | GET    | `/api/groups/:groupId/expenses/:expenseId`               | One expense **with `splitInput`**, so an edit form reopens at what was typed.                                                                                                                                                                                                                                                     |
@@ -170,7 +187,7 @@ is off, which is the default.
 | GET    | `/api/groups/:groupId/transactions?cursor&limit&…`       | One page of the group's history, expenses and repayments in one list, newest first (40 by default, 500 at most). Feed `cursor` back for the next page; a null cursor is the end. Optionally filtered and reordered, and with `count` a count instead of a page — see below the table.                                             |
 | GET    | `/api/groups/:groupId/stats`                             | `loadGroupStats`: all three windows, every currency and the all-time records in one read.                                                                                                                                                                                                                                         |
 | GET    | `/api/groups/:groupId/participants/:participantId/stats` | `loadMemberStats` for one member, removed people included.                                                                                                                                                                                                                                                                        |
-| GET    | `/api/groups/:groupId/settle-up`                         | `loadSettleUp`: the shortest set of transfers that clears the group, split into the reader's own and everybody else's.                                                                                                                                                                                                            |
+| GET    | `/api/groups/:groupId/settle-up`                         | `loadSettleUp`: the shortest set of transfers that clears the group, split into the reader's own and everybody else's, plus `payoutHints` — never for an API key.                                                                                                                                                                 |
 | GET    | `/api/notifications?limit&before`                        | The inbox plus `unread`. Users only.                                                                                                                                                                                                                                                                                              |
 | GET    | `/api/notifications/preferences`                         | Category switches plus `mutedGroupIds`.                                                                                                                                                                                                                                                                                           |
 
@@ -183,6 +200,24 @@ on free text an import kept verbatim.
 
 The group read also carries `profile` (`description`, `icon`, `iconColor` via
 `getGroupProfile`), which `GroupAccess` deliberately omits.
+
+A participant row depends on who is reading it, in the group read and in
+`/participants` alike:
+
+| Reader                                                      | `email`      | `userId`     | `hasAccount` |
+| ----------------------------------------------------------- | ------------ | ------------ | ------------ |
+| A signed-in owner or member                                 | string, null | string, null | —            |
+| An API key, on the group read (`/participants` refuses one) | string, null | string, null | —            |
+| A guest (an invitation link)                                | —            | —            | boolean      |
+
+A guest's rows carry neither the address nor the account id — the keys are
+absent, not null — and `hasAccount` says the one thing the id was read for:
+whether this person signs in or is a name somebody typed. An invitation link
+is a credential that gets forwarded, and the owner's sign-in address is copied
+onto their participant row when the group is made; whoever the link reached
+has no use for either. `id`, `displayName`, `role` and the invitation fields
+are the same for everybody. A signed-in reader's rows are unchanged, which is
+the shape a native client decodes.
 
 The two statistics reads answer with the whole screen rather than one window of
 it. Three ranges, every currency and the all-time records come out of the same
@@ -240,6 +275,25 @@ by appearing in a transfer the group's own balances say the reader owes. There
 is no route that takes a name and answers with an IBAN, and adding one would
 be the mistake.
 
+Who reads `payoutHints`, and how much of it:
+
+| Reader                       | `payoutHints`                                                  |
+| ---------------------------- | -------------------------------------------------------------- |
+| A signed-in owner or member  | One per debt they owe: `methods` with each `detail`, and codes |
+| A guest (an invitation link) | The same — the detail to pay into and its code                 |
+| An API key, at any scope     | Always `[]`; the transfers are unchanged                       |
+
+A guest keeps the IBAN and the payment code of the people they owe, so that a
+group whose members are not all on the app can still pay each other. That is a
+decision rather than an oversight, and it has a cost worth naming: a guest can
+record an expense "paid by X, split on me", which is a debt to X, which is X's
+details. What a hint never carries, for anybody, is a postal address as a
+field of its own. The one standard that needs one, the Swiss QR-bill, embeds
+the creditor's address in its payload — a scanned code shows it, which is the
+standard's own requirement — and nothing else in the response spells it out.
+
+A key never reads a hint; why is under [API keys](#api-keys).
+
 `transactions` takes the web list's own filters, under the same names its URL
 uses, and answers with pages that are already narrowed and ordered. Every one
 is optional, and a request with none of them is answered exactly as it always
@@ -274,11 +328,11 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 | Method | Path                                               | Body                                                                                                                                                                                                                                      |
 | ------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/groups/:groupId/expenses`                    | `expenseInputSchema` → 201 `{expenseId}`. Takes `Idempotency-Key` — see below                                                                                                                                                             |
-| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`)                                                                                                                                                                                 |
+| PATCH  | `/api/groups/:groupId/expenses/:expenseId`         | `expenseInputSchema` (full replace, like `updateExpense`). Somebody removed from the group since may stay on the expense; naming a removed person it did not already have is a 404                                                        |
 | DELETE | `/api/groups/:groupId/expenses/:expenseId`         | soft delete                                                                                                                                                                                                                               |
 | POST   | `/api/groups/:groupId/expenses/:expenseId/restore` | undo for the delete; the expense comes back under its own id, payers and shares intact                                                                                                                                                    |
-| POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`                                                                                                                                                                                            |
-| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema`                                                                                                                                                                                                                   |
+| POST   | `/api/groups/:groupId/settlements`                 | `settlementInputSchema` → 201 `{settlementId}`. May name somebody removed from the group only to settle what they still owe or are owed, and for no more than it — 422 otherwise                                                          |
+| PATCH  | `/api/groups/:groupId/settlements/:settlementId`   | `settlementInputSchema`. Like the expense PATCH, keeps a removed person already on it and refuses (404) moving it onto one                                                                                                                |
 | DELETE | `/api/groups/:groupId/settlements/:settlementId`   | soft delete                                                                                                                                                                                                                               |
 | POST   | `/api/groups/:groupId/settlements/:id/restore`     | undo for the delete                                                                                                                                                                                                                       |
 | POST   | `/api/groups`                                      | `createGroupSchema` → 201 `{groupId, participantId}`. `ownerDisplayName` defaults to the account name.                                                                                                                                    |
@@ -286,7 +340,7 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 | DELETE | `/api/groups/:groupId`                             | **hard** delete, like the web's danger zone                                                                                                                                                                                               |
 | POST   | `/api/groups/:groupId/participants`                | `{displayName, email?}` → 201 `{participantId}`                                                                                                                                                                                           |
 | PATCH  | `/api/groups/:groupId/participants/:id`            | `{displayName, email?}`                                                                                                                                                                                                                   |
-| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions                                                                                                                                                                                  |
+| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions. 422 while they still owe or are owed anything, in any currency — settle up first                                                                                                |
 | POST   | `/api/groups/:groupId/participants/:id/restore`    | undo for the remove (the invitation stays gone — only its hash was kept)                                                                                                                                                                  |
 | POST   | `/api/groups/:groupId/participants/:id/invitation` | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once                                                                                                                                                                                   |
 | DELETE | `/api/groups/:groupId/participants/:id/invitation` | revoke                                                                                                                                                                                                                                    |
@@ -585,7 +639,7 @@ emit nothing else:
 | `taken`        | 409  | The seat is held by another account — see below                                                         | **`POST` only**        |
 | `authRequired` | 401  | No session. Answered before the token is read, so it never spends one                                   | **`POST` only**        |
 | `rateLimited`  | 429  | Bucket exhausted; carries `Retry-After` in seconds                                                      | both, `GET` and `POST` |
-| `unavailable`  | 500  | A fault on this side; logged in full, reported anonymously                                              | both, `GET` and `POST` |
+| `unavailable`  | 500  | A fault on this side; logged (less any query values), reported anonymously                              | both, `GET` and `POST` |
 
 The split a client needs: **404 and 410 mean the link is dead** and only a new
 one helps; **409** means this account cannot have that particular seat, but the
@@ -740,6 +794,13 @@ credential may be forwarded, and a one-request download of a group's entire
 financial history is a sharper tool in the wrong hands than the same data read
 a page at a time. Read `/api/groups/:id/transactions` instead, which pages.
 
+**One open route answers a key with less.** `GET /api/groups/:id/settle-up`
+gives a key every transfer and an empty `payoutHints`: the IBANs and payment
+codes of the people its owner owes are for the owner, on a screen, and not for
+a script. The debt that unlocks a hint is also one a key can write for itself
+— an expense "paid by them, split on me" is one request. The route reads
+`viaApiToken` off the actor, which `apiActor` sets and nothing else does.
+
 Routes a key may never reach do not read the `Authorization` header at all —
 those handlers still resolve a cookie and are simply blind to it. That is a
 stronger guarantee than a check they could stop performing: there is no branch
@@ -787,7 +848,11 @@ used from a rotating address cannot escape its own.
 
 ### Expiry
 
-There isn't any. A key works until it is revoked.
+There isn't any. A key works until it is revoked — by hand, or by its owner
+resetting their password or confirming a new email address, both of which
+revoke every key the account holds. Those two are how an owner takes an account
+back, and a key is exactly what a session held for a few minutes by somebody
+else could have minted.
 
 A default expiry sounds prudent and is not: a key that silently stops working
 is a wall tablet that goes blank on a Tuesday and a cron job nobody notices
