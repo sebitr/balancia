@@ -47,6 +47,8 @@ export interface ShareableGroup {
   readonly iconColor: GroupIconColor | null;
   /** What the group balances in, for a sentence that names no currency. */
   readonly currency: string;
+  /** The group's IANA zone, whose today the draft is dated. */
+  readonly timezone: string;
 }
 
 type Stage =
@@ -104,6 +106,7 @@ export function ShareScreen({
             owner: { kind: "user", userId },
             text: sharedText(payload),
             fallbackCurrency: group.currency,
+            timezone: group.timezone,
             selfParticipantId: read.participantId,
             memberIds: read.participants.map((participant) => participant.id),
             attachmentId,

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
@@ -16,27 +16,70 @@ import { Toaster, toastUndoable } from "./sonner";
  */
 
 /**
+ * Sonner runs on timers — a `setTimeout` to raise a toast, a frame to dismiss
+ * one, and 200ms of exit animation before it lets go — and each of them ends
+ * in a React state update. Left real, the last test's exit timer fired after
+ * Vitest had torn jsdom down, React reached for `window`, and CI reported an
+ * unhandled error against a file whose every test had passed. So those timers
+ * are fakes, which the `afterEach` below can see and run before a test is
+ * allowed to end.
+ *
+ * Only the four sonner reaches for are faked; React's scheduler, which runs on
+ * `setImmediate`, keeps the real ones. And the fake clock still follows the
+ * wall clock, because Testing Library ends every user-event call on a
+ * `setTimeout(0)` of its own and only knows how to move Jest's fake clock, not
+ * this one.
+ */
+beforeEach(() => {
+  vi.useFakeTimers({
+    toFake: [
+      "setTimeout",
+      "clearTimeout",
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+    ],
+    shouldAdvanceTime: true,
+  });
+});
+
+/**
  * Sonner's store outlives the render and replays whatever is still live to the
  * next `Toaster` that subscribes, so a toast left standing turns up in the
  * following test.
+ *
+ * Dismissing it is not the end of it: every step of the exit is set off by
+ * the render the step before it caused, and `act` only renders on its way
+ * out. So the timers run one pass per `act` until none is left — the frame
+ * that marks the toast deleted, the exit its effect then starts, and any
+ * dismissal that exit publishes in turn. A handful of passes is the whole of
+ * it; one that never settles is a loop, and says so rather than hanging.
  */
 afterEach(() => {
   act(() => {
     toast.dismiss();
   });
+  for (let pass = 0; vi.getTimerCount() > 0; pass++) {
+    if (pass === 20) {
+      throw new Error("sonner's timers are still rescheduling themselves");
+    }
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+  }
+  vi.useRealTimers();
 });
 
 /**
  * Raises a toast and waits for it.
  *
  * Sonner hands its store's updates to a `setTimeout` to keep them out of
- * React's batching, so a toast raised inside `act` is not on screen when `act`
- * returns — the macrotask has to be let through first.
+ * React's batching, so a toast raised inside `act` is not on screen until that
+ * timer has run.
  */
-async function raise(show: () => void) {
-  await act(async () => {
+function raise(show: () => void) {
+  act(() => {
     show();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    vi.advanceTimersByTime(0);
   });
 }
 
@@ -67,9 +110,9 @@ describe("the toaster", () => {
 });
 
 describe("a toast", () => {
-  it("leads a confirmation with the positive tone and a check", async () => {
+  it("leads a confirmation with the positive tone and a check", () => {
     renderWithIntl(<Toaster />);
-    await raise(() => toast.success("Saved"));
+    raise(() => toast.success("Saved"));
 
     expect(screen.getByText("Saved")).toBeVisible();
     expect(glyph().className).toContain("text-positive-ink");
@@ -78,9 +121,9 @@ describe("a toast", () => {
     );
   });
 
-  it("leads a failure with the destructive tone and an alert", async () => {
+  it("leads a failure with the destructive tone and an alert", () => {
     renderWithIntl(<Toaster />);
-    await raise(() => toast.error("Nope"));
+    raise(() => toast.error("Nope"));
 
     expect(glyph().className).toContain("text-destructive");
     expect(glyph().querySelector("svg")?.getAttribute("class")).toContain(
@@ -88,9 +131,9 @@ describe("a toast", () => {
     );
   });
 
-  it("goes away when it is tapped anywhere", async () => {
+  it("goes away when it is tapped anywhere", () => {
     renderWithIntl(<Toaster />);
-    await raise(() => toast.success("Saved"));
+    raise(() => toast.success("Saved"));
 
     const element = toastElement();
     fireEvent.pointerDown(element, { clientX: 120, clientY: 60 });
@@ -99,9 +142,9 @@ describe("a toast", () => {
     expect(element).toHaveAttribute("data-removed", "true");
   });
 
-  it("stays put when the pointer was swiping and thought better of it", async () => {
+  it("stays put when the pointer was swiping and thought better of it", () => {
     renderWithIntl(<Toaster />);
-    await raise(() => toast.success("Saved"));
+    raise(() => toast.success("Saved"));
 
     // Down, dragged up, released short of the threshold: sonner puts the toast
     // back, and the click that follows must not take it away again.
@@ -116,7 +159,7 @@ describe("a toast", () => {
     const user = userEvent.setup();
     const onUndo = vi.fn();
     renderWithIntl(<Toaster />);
-    await raise(() =>
+    raise(() =>
       toastUndoable("Cyril removed from the group", {
         label: "Undo",
         onUndo,
@@ -130,7 +173,7 @@ describe("a toast", () => {
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
 
-  it("replaces the confirmation it was told to name", async () => {
+  it("replaces the confirmation it was told to name", () => {
     renderWithIntl(<Toaster />);
     const saved = () =>
       toastUndoable(
@@ -141,8 +184,8 @@ describe("a toast", () => {
 
     // A settings card writing itself as it is edited says this over and over;
     // a named toast is one surface being updated, not a column being built.
-    await raise(saved);
-    await raise(saved);
+    raise(saved);
+    raise(saved);
 
     expect(document.querySelectorAll("[data-sonner-toast]")).toHaveLength(1);
   });
@@ -150,7 +193,7 @@ describe("a toast", () => {
   it("names its close button in the reader's language", async () => {
     const user = userEvent.setup();
     renderWithIntl(<Toaster />, { locale: "fr" });
-    await raise(() => toast.success("Enregistré"));
+    raise(() => toast.success("Enregistré"));
 
     await user.click(screen.getByRole("button", { name: "Fermer" }));
 

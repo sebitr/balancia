@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CurrencyField } from "@/components/money/currency-field";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
+import { todayInZone } from "@/lib/timezones";
 import { createRecurringAction } from "@/modules/recurring/actions";
 import {
   parseAmountToMinor,
@@ -53,12 +54,15 @@ export function RecurringForm({
   currencyMode,
   baseCurrency,
   defaultCurrency,
+  timezone,
 }: {
   groupId: string;
   participants: readonly { id: string; displayName: string }[];
   currencyMode: "separate" | "converted";
   baseCurrency: string | null;
   defaultCurrency: string;
+  /** The group's, which the schedule runs on and the start date defaults in. */
+  timezone: string;
 }) {
   const router = useRouter();
   const locale = useLocale();
@@ -77,9 +81,10 @@ export function RecurringForm({
   const [weekday, setWeekday] = useState("1");
   const [dayOfMonth, setDayOfMonth] = useState("1");
   const [monthOfYear, setMonthOfYear] = useState("1");
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  // Today on the group's calendar, which is the one the schedule is read in.
+  // A UTC day here could start it a day late, or a day early — which the
+  // worker would then dutifully catch up on.
+  const [startDate, setStartDate] = useState(() => todayInZone(timezone));
   const [payerId, setPayerId] = useState(participants[0]?.id ?? "");
   const [selectedIds, setSelectedIds] = useState<string[]>(
     participants.map((participant) => participant.id),

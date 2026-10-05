@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { getPool } from "@/lib/db/client";
 import { authorizeGroup } from "@/lib/security/authorization";
 import { createExpense } from "@/modules/expenses/service";
-import { createGroup, listParticipants } from "@/modules/groups/service";
+import {
+  createGroup,
+  listParticipants,
+  setGroupArchived,
+} from "@/modules/groups/service";
 import { createSettlement } from "@/modules/settlements/service";
 import { createTestUser, isoToday } from "../../../tests/helpers/factories";
 import { loadHomeOverview } from "./overview";
@@ -259,5 +263,60 @@ describe("loadHomeOverview", () => {
     } finally {
       pool.query = original;
     }
+  });
+
+  /**
+   * An archived group is listed, and its ledger is not read.
+   *
+   * Nothing shows its figures — the home list gives it a word where an amount
+   * would go, the switcher leaves it out, the totals skip it — so summing its
+   * whole history on every visit was work nobody saw. The batched reads cost
+   * the same number of queries either way, so what is checked is whose rows
+   * they asked for.
+   */
+  it("lists an archived group without reading its ledger", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+    await groupWhereOwing(actor, "Flatshare", ["Mika"], "1000");
+    const archived = await groupWhereOwing(actor, "Lisbon", ["Jonas"], "5000");
+    await setGroupArchived(archived.access, true);
+
+    const pool = getPool();
+    const original = pool.query;
+    const ledgerParameters: unknown[] = [];
+    pool.query = ((...args: Parameters<typeof original>) => {
+      const [first, second] = args as unknown[];
+      const text =
+        typeof first === "string" ? first : (first as { text: string }).text;
+      if (text.includes('"expense_payers"')) {
+        ledgerParameters.push(
+          ...(Array.isArray(second)
+            ? second
+            : ((first as { values?: unknown[] }).values ?? [])),
+        );
+      }
+      return original.apply(pool, args);
+    }) as typeof pool.query;
+
+    let overview: Awaited<ReturnType<typeof loadHomeOverview>>;
+    try {
+      overview = await loadHomeOverview(actor.userId);
+    } finally {
+      pool.query = original;
+    }
+
+    // Guards the guard: the live group's ledger was read, and seen being read.
+    expect(ledgerParameters).toContain(overview.buckets.needsYou[0]?.group.id);
+    expect(ledgerParameters).not.toContain(archived.created.id);
+
+    expect(overview.buckets.archived).toHaveLength(1);
+    expect(overview.buckets.archived[0]).toMatchObject({
+      group: { name: "Lisbon" },
+      amounts: [],
+      net: null,
+      owedTo: null,
+    });
+    expect(overview.buckets.needsYou.map((p) => p.group.name)).toEqual([
+      "Flatshare",
+    ]);
   });
 });

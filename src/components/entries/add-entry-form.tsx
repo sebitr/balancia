@@ -57,6 +57,7 @@ import {
 } from "@/components/expenses/expense-form-logic";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
+import { todayInZone } from "@/lib/timezones";
 import { convertMoney, formatMoney, money } from "@/modules/currencies/money";
 import {
   isValidSubcategoryFor,
@@ -407,7 +408,10 @@ export interface AddEntryFormProps {
   currencyMode: "separate" | "converted";
   baseCurrency: string | null;
   defaultCurrency: string;
-  /** Group timezone — the recurrence schedule and the country both read it. */
+  /**
+   * Group timezone — what "today" means for a new entry's date, and what the
+   * recurrence schedule and the country both read.
+   */
   timezone: string;
   /** Outstanding debts, most owed first, for the settle tab. */
   outstanding: readonly DebtPair[];
@@ -629,8 +633,10 @@ export function AddEntryForm({
   const [subcategory, setSubcategory] = useState(
     editing?.subcategory ?? draft?.subcategory ?? "",
   );
+  // Today where the group is, read on this device as the drawer opens. See
+  // `todayInZone` for the UTC day this used to be.
   const [date, setDate] = useState(
-    () => editing?.date ?? draft?.date ?? new Date().toISOString().slice(0, 10),
+    () => editing?.date ?? draft?.date ?? todayInZone(timezone),
   );
 
   const [payerId, setPayerId] = useState(
@@ -703,7 +709,7 @@ export function AddEntryForm({
         frequency: "monthly",
         interval: 1,
         weekday: 1,
-        dayOfMonth: Number(new Date().toISOString().slice(8, 10)),
+        dayOfMonth: Number(todayInZone(timezone).slice(8, 10)),
         weekOfMonth: null,
         endDate: null,
         count: null,
@@ -908,15 +914,20 @@ export function AddEntryForm({
   const selectedPair = useMemo(() => {
     if (settleFrom === null || settleTo === null) return null;
     if (settleFrom === settleTo) return null;
+    // Somebody removed with money still outstanding is in no roster, but the
+    // debt they left names them, and paying it is what they can still be in.
     const nameOf = (id: string) =>
-      members.find((member) => member.id === id)?.displayName ?? "";
+      members.find((member) => member.id === id)?.displayName ??
+      outstanding.find((pair) => pair.fromParticipantId === id)?.fromName ??
+      outstanding.find((pair) => pair.toParticipantId === id)?.toName ??
+      "";
     return {
       fromParticipantId: settleFrom,
       fromName: nameOf(settleFrom),
       toParticipantId: settleTo,
       toName: nameOf(settleTo),
     };
-  }, [settleFrom, settleTo, members]);
+  }, [settleFrom, settleTo, members, outstanding]);
 
   /**
    * A pair the reader named, rather than one the balances produced.
@@ -1998,7 +2009,7 @@ export function AddEntryForm({
   /** Today, unless a schedule has moved the first one somewhere else. */
   const dateLabel = upcoming[0]
     ? dates.plain(upcoming[0])
-    : isToday(date)
+    : isToday(date, timezone)
       ? t("date.today")
       : dates.plain(date);
 
@@ -2071,6 +2082,7 @@ export function AddEntryForm({
                   displayName: member.displayName,
                 }))}
                 defaultCurrency={currency}
+                timezone={timezone}
                 onApply={applyScan}
                 trigger={ScanRow}
               />
@@ -2944,8 +2956,14 @@ function matchPaymentMethod(
   );
 }
 
-function isToday(date: string): boolean {
-  return date === new Date().toISOString().slice(0, 10);
+/**
+ * Whether the row can say "Today" rather than the date.
+ *
+ * Asked on every render rather than remembered from when the drawer opened, so
+ * a form still open after midnight stops calling yesterday today.
+ */
+function isToday(date: string, timezone: string): boolean {
+  return date === todayInZone(timezone);
 }
 
 /**

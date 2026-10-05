@@ -1,6 +1,7 @@
 import { heardEntry } from "@/components/entries/heard-entry";
 import type { EntryDraft } from "@/lib/offline/drafts";
 import type { EntryOwner } from "@/lib/offline/owner";
+import { todayInZone } from "@/lib/timezones";
 
 /**
  * What another app shared, as the half-written entry the drawer restores.
@@ -34,6 +35,8 @@ export function shareDraft(input: {
   readonly text: string;
   /** The group's own currency, for a sentence that names none. */
   readonly fallbackCurrency: string;
+  /** The group's IANA zone. The entry is dated today there, as in the form. */
+  readonly timezone: string;
   /** The reader, in this group. Pays the entry, as they do in the drawer. */
   readonly selfParticipantId: string;
   /** Everybody active in the group. An equal split starts across all of them. */
@@ -65,7 +68,9 @@ export function shareDraft(input: {
       // form's own detection should run on the description as if it had been
       // typed.
       categoryChosen: false,
-      date: isoDay(now),
+      // The same day the form's own date field starts on: today where the
+      // group is, not in UTC.
+      date: todayInZone(input.timezone, now),
       payerId: input.selfParticipantId,
       includedIds: [...input.memberIds],
       splitMethod: "equal",
@@ -77,9 +82,4 @@ export function shareDraft(input: {
       description: heard.description,
     },
   };
-}
-
-/** The same `YYYY-MM-DD` the form's own date field starts on. */
-function isoDay(now: Date): string {
-  return now.toISOString().slice(0, 10);
 }

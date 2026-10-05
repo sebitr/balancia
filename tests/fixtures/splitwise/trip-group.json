@@ -1,0 +1,148 @@
+{
+  "expenses": [
+    {
+      "id": 1001,
+      "description": "Groceries",
+      "payment": false,
+      "cost": "60.0",
+      "currency_code": "EUR",
+      "date": "2026-03-01T12:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Food and drink" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "60.0",
+          "owed_share": "20.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "0.0",
+          "owed_share": "20.0"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "0.0",
+          "owed_share": "20.0"
+        }
+      ]
+    },
+    {
+      "id": 1002,
+      "description": "Taxi",
+      "payment": false,
+      "cost": "30.0",
+      "currency_code": "EUR",
+      "date": "2026-03-02T12:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Transportation" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "0.0",
+          "owed_share": "10.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "30.0",
+          "owed_share": "10.0"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "0.0",
+          "owed_share": "10.0"
+        }
+      ]
+    },
+    {
+      "id": 1003,
+      "description": "Museum tickets",
+      "payment": false,
+      "cost": "45.0",
+      "currency_code": "EUR",
+      "date": "2026-03-03T12:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Entertainment" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "0.0",
+          "owed_share": "15.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "0.0",
+          "owed_share": "15.0"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "45.0",
+          "owed_share": "15.0"
+        }
+      ]
+    },
+    {
+      "id": 1004,
+      "description": "Dinner",
+      "payment": false,
+      "cost": "100.0",
+      "currency_code": "EUR",
+      "date": "2026-03-04T12:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Food and drink" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "100.0",
+          "owed_share": "33.33"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "0.0",
+          "owed_share": "33.33"
+        },
+        {
+          "user": { "id": 3, "first_name": "Grace", "last_name": null },
+          "user_id": 3,
+          "paid_share": "0.0",
+          "owed_share": "33.34"
+        }
+      ]
+    },
+    {
+      "id": 1005,
+      "description": "Payment",
+      "payment": true,
+      "cost": "25.0",
+      "currency_code": "EUR",
+      "date": "2026-03-05T12:00:00Z",
+      "deleted_at": null,
+      "category": { "name": "Payment" },
+      "users": [
+        {
+          "user": { "id": 1, "first_name": "Ada", "last_name": null },
+          "user_id": 1,
+          "paid_share": "0.0",
+          "owed_share": "25.0"
+        },
+        {
+          "user": { "id": 2, "first_name": "Blaise", "last_name": null },
+          "user_id": 2,
+          "paid_share": "25.0",
+          "owed_share": "0.0"
+        }
+      ]
+    }
+  ]
+}

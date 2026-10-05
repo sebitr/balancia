@@ -1,3 +1,4 @@
+import { reportedWorkerState } from "@/lib/jobs/worker-status";
 import { appVersion } from "@/lib/telemetry/environment";
 import { getRegistry, type Gauge } from "./registry";
 
@@ -91,6 +92,21 @@ export function jobOutcomes() {
   );
 }
 
+/**
+ * When the nightly maintenance sweep last finished, in Unix seconds.
+ *
+ * The one job with a known cadence, so the one whose silence can be alerted
+ * on: more than a day since the last value means the sweep — and very likely
+ * every other job — has stopped. Set by the process that ran it, and absent
+ * until one has, including for the hours after a restart.
+ */
+export function maintenanceLastSuccess(): Gauge {
+  return getRegistry().gauge(
+    "balancia_maintenance_last_success_timestamp_seconds",
+    "When the nightly maintenance sweep last completed in this process, in Unix seconds.",
+  );
+}
+
 export function databaseQueryDuration() {
   return getRegistry().histogram(
     "balancia_database_query_duration_seconds",
@@ -149,6 +165,20 @@ export function registerRuntimeMetrics(): void {
   registry
     .gauge("process_uptime_seconds", "How long this process has been running.")
     .onCollect((gauge) => gauge.set(process.uptime()));
+
+  // No sample at all where the jobs are not this process's to run — a
+  // dedicated worker container, or a demo — rather than a 0 that would page
+  // somebody about a worker that was never meant to be here.
+  registry
+    .gauge(
+      "balancia_worker_up",
+      "1 while the background worker in this process is serving its queues; 0 while it is starting, failing to start or stopping.",
+    )
+    .onCollect((gauge) => {
+      const state = reportedWorkerState();
+      if (state === "external" || state === "disabled") return;
+      gauge.set(state === "running" ? 1 : 0);
+    });
 }
 
 /**

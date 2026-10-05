@@ -46,6 +46,7 @@ const GROUPS: ShareableGroup[] = [
     icon: "house",
     iconColor: "emerald",
     currency: "CHF",
+    timezone: "Europe/Zurich",
   },
   {
     id: "g-trip",
@@ -53,6 +54,7 @@ const GROUPS: ShareableGroup[] = [
     icon: "plane",
     iconColor: "coral",
     currency: "EUR",
+    timezone: "Europe/Lisbon",
   },
 ];
 
@@ -158,6 +160,27 @@ describe("ShareScreen", () => {
     };
     expect(draft.fields.attachmentIds).toEqual([]);
     expect(draft.fields.amountText).toBe("84.20");
+  });
+
+  it("dates the draft today on the chosen group's calendar", async () => {
+    // Nine in the morning on the 15th in Auckland, and still the 14th in UTC.
+    // Only the clock is faked, so the waits below still wait.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2025-03-14T20:00:00Z"));
+    try {
+      takeSharedPayload.mockResolvedValue(payload());
+      renderWithIntl(
+        <ShareScreen
+          groups={[{ ...GROUPS[0]!, timezone: "Pacific/Auckland" }]}
+        />,
+      );
+
+      await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
+      const draft = saveDraft.mock.calls[0]![0] as { fields: { date: string } };
+      expect(draft.fields.date).toBe("2025-03-15");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("asks nothing when there is only one group to ask about", async () => {

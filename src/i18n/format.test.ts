@@ -142,6 +142,24 @@ describe("createDateFormatter", () => {
   it("resolves an instant in the app's own zone", () => {
     expect(formatter.at("2026-08-14T01:30:00Z")).toBe("13/08/2026");
   });
+
+  it("reads an instant on a group's clock when it is given one", () => {
+    // What the activity feed does: the app's zone is the server's, and the
+    // group in Paris did this at five past four in the afternoon.
+    const server = createDateFormatter({
+      dateFormat: "dmy",
+      formatLocale: "en-GB",
+      timeZone: "UTC",
+    });
+    const at = new Date("2026-08-13T14:05:00Z");
+
+    expect(server.at(at, { time: "short" })).toBe("13/08/2026, 14:05");
+    expect(server.at(at, { time: "short", timeZone: "Europe/Paris" })).toBe(
+      "13/08/2026, 16:05",
+    );
+    // Only the one call: the formatter keeps its own zone for the next.
+    expect(server.at(at, { time: "short" })).toBe("13/08/2026, 14:05");
+  });
 });
 
 describe("numberLocale", () => {

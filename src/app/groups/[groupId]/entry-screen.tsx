@@ -148,12 +148,13 @@ export async function EntryScreen({
     );
   }
 
-  const names = new Map(
-    participants.map((participant) => [
-      participant.id,
-      participant.displayName,
-    ]),
-  );
+  /*
+   * Everyone the balances know, removed people included. A person removed
+   * with money outstanding — an old entry of theirs edited or deleted since —
+   * is still a row in the list below, and a row with no name is not one
+   * anybody can settle.
+   */
+  const names = balances.participantNames;
 
   /**
    * Who owes whom, largest first.
@@ -199,6 +200,26 @@ export async function EntryScreen({
     // nothing about the split maths — only what their avatar looks like.
     guest: participant.userId === null,
   }));
+  /*
+   * An entry being edited also offers anyone on it who has left the group
+   * since. The server lets an edit keep them and refuses only adding them
+   * somewhere new, so the form shows them rather than carrying them along
+   * unseen: a split that counted a person nobody could see or untick, and a
+   * payer with no name beside the amount they paid.
+   *
+   * Only here. The offline snapshot and a new entry get the group as it is.
+   */
+  const stillHere = new Set(members.map((member) => member.id));
+  const leftSince = editing
+    ? [...new Set(peopleOn(editing))].filter((id) => !stillHere.has(id))
+    : [];
+  const formMembers = [
+    ...members,
+    ...leftSince.map((id) => ({
+      id,
+      displayName: balances.participantNames.get(id) ?? "",
+    })),
+  ];
   const selfId = access.participantId ?? participants[0].id;
   /*
    * The group's own habit outranks any constant: `currencyMode: "separate"`
@@ -239,7 +260,7 @@ export async function EntryScreen({
         dismissTo={dismissTo}
         groupId={access.groupId}
         groupName={access.group.name}
-        members={members}
+        members={formMembers}
         selfId={selfId}
         currencyMode={access.group.currencyMode}
         baseCurrency={access.group.baseCurrency}
@@ -297,6 +318,16 @@ function toRecentEntries(
       category: expense.category ?? "",
       hoursAgo: (now - expense.createdAt.getTime()) / 3_600_000,
     }));
+}
+
+/** Everyone an entry names: its payers, its split, and a repayment's two sides. */
+function peopleOn(entry: EditingEntry): string[] {
+  return [
+    ...(entry.payerId ? [entry.payerId] : []),
+    ...(entry.payers ?? []).map((payer) => payer.participantId),
+    ...(entry.settleTo ? [entry.settleTo] : []),
+    ...entry.includedIds,
+  ];
 }
 
 async function loadEditing(
