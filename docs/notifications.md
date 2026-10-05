@@ -35,6 +35,14 @@ the flat it was split between on the first of every month. The reasoning is
 written out at `GENERATION_HOUR` in `src/modules/recurring/schedule.ts`. There
 is no per-group setting for it, because nobody has asked to choose.
 
+The exception is the moment a series is saved. Whatever of it has already come
+due — today's, and any dates from a start in the past — is generated in the
+same request, so the person saving it sees the entry at once rather than at the
+next hourly run. That is somebody adding an expense, not the schedule acting
+alone: it notifies the rest of the split straight away, whatever the hour, and
+leaves the person saving it out, as rule 1 says. See `setUpRecurringExpense`
+in `src/modules/recurring/service.ts`.
+
 Each person has four switches (expenses, repayments, recurring, imports) and can
 quieten a group — either **muted**, which lasts until it is undone, or
 **snoozed for 24 hours**, which wears off on its own. Both are the same row in

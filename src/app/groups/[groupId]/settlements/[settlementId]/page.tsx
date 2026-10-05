@@ -206,7 +206,6 @@ export default async function SettlementDetailPage({
         <BigAmount
           minorUnits={settlement.amount.toString()}
           currency={settlement.currency}
-          tone="settlement"
           locale={locale}
         />
 

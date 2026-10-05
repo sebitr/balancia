@@ -30,13 +30,20 @@ vi.mock("@/modules/join/actions", () => ({
   })),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-// jsdom has no layout, so the sheet's swipe-dismiss listeners have nothing to
-// measure; the picker below only needs the content rendered.
+/**
+ * The device's zone, which a test may withhold and then deliver — the way a
+ * server render has none and hydration brings it.
+ */
+const device = vi.hoisted(() => ({ zone: "Europe/Zurich" as string | null }));
 vi.mock("@/components/groups/use-detected-timezone", () => ({
-  useDetectedTimezone: () => "Europe/Zurich",
+  useDetectedTimezone: () => device.zone,
 }));
 
-function renderSheet() {
+function renderSheet({
+  preferredCurrency = null,
+  zone = "Europe/Zurich",
+}: { preferredCurrency?: string | null; zone?: string | null } = {}) {
+  device.zone = zone;
   createGroupAction.mockReset();
   push.mockReset();
   createGroupAction.mockResolvedValue({
@@ -50,16 +57,29 @@ function renderSheet() {
     },
   });
   const onOpenChange = vi.fn();
-  const view = renderWithIntl(
+  // A fresh element each time: React skips one it has already rendered.
+  const sheet = () => (
     <CreateGroupSheet
       open
       onOpenChange={onOpenChange}
       defaultName="Seb"
       defaultTimezone="UTC"
-      defaultCurrency="CHF"
-    />,
+      preferredCurrency={preferredCurrency}
+    />
   );
-  return { ...view, onOpenChange, user: userEvent.setup() };
+  const view = renderWithIntl(sheet());
+  return {
+    ...view,
+    onOpenChange,
+    user: userEvent.setup(),
+    /** Renders again as it is, for a zone that has changed underneath. */
+    redraw: () => view.rerender(sheet()),
+  };
+}
+
+/** The submit button, whichever currency it is naming. */
+function createButton() {
+  return screen.getByRole("button", { name: /^Create group/ });
 }
 
 /** What the server action was called with, as plain entries. */
@@ -93,12 +113,13 @@ describe("CreateGroupSheet", () => {
     const { user } = renderSheet();
 
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     expect(createGroupAction).toHaveBeenCalledOnce();
     const form = submitted();
     expect(form.get("name")).toBe("Lisbon");
-    // Converting is the offered default, and the creator is the sole member.
+    // Converting is the offered default, into what is paid where the device
+    // is — no preference was stated — and the creator is the sole member.
     expect(form.get("currencyMode")).toBe("converted");
     expect(form.get("baseCurrency")).toBe("CHF");
     expect(form.get("ownerDisplayName")).toBe("Seb");
@@ -123,10 +144,134 @@ describe("CreateGroupSheet", () => {
     ).not.toBeInTheDocument();
   });
 
+  /**
+   * The currency cannot be changed once the group exists, so it is the one
+   * answer that has to be on screen when the button is pressed. It sat below
+   * the people, and three names were enough to push it under the footer.
+   */
+  it("asks the currency straight after the name, ahead of the people", () => {
+    renderSheet();
+
+    const name = screen.getByPlaceholderText("Group name");
+    const modes = screen.getByRole("radiogroup", {
+      name: "If someone pays in another currency",
+    });
+    const balance = screen.getByRole("button", { name: /That balance is in/ });
+    const fixed = screen.getByText("Fixed once the group exists.");
+    const people = screen.getByText("Participants");
+
+    const follows = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(name, modes)).toBe(true);
+    expect(follows(modes, balance)).toBe(true);
+    // The note stays with the answer it is about, before anybody is named.
+    expect(follows(balance, fixed)).toBe(true);
+    expect(follows(fixed, people)).toBe(true);
+  });
+
+  it("names the currency it will fix on the button that fixes it", async () => {
+    const { user } = renderSheet();
+
+    expect(
+      screen.getByRole("button", { name: "Create group in CHF" }),
+    ).toBeInTheDocument();
+
+    // A balance per currency has no one currency to name.
+    await user.click(
+      screen.getByRole("radio", { name: /A balance per currency/ }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Create group" }),
+    ).toBeInTheDocument();
+  });
+
+  it("names it in French too", () => {
+    device.zone = "Europe/Zurich";
+    renderWithIntl(
+      <CreateGroupSheet
+        open
+        onOpenChange={vi.fn()}
+        defaultName="Seb"
+        defaultTimezone="UTC"
+        preferredCurrency={null}
+      />,
+      { locale: "fr" },
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Créer le groupe en CHF" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lets a stated preference beat where the device is", async () => {
+    const { user } = renderSheet({ preferredCurrency: "PLN" });
+
+    await user.type(screen.getByPlaceholderText("Group name"), "Kraków");
+    await user.click(
+      screen.getByRole("button", { name: "Create group in PLN" }),
+    );
+
+    expect(submitted().get("baseCurrency")).toBe("PLN");
+  });
+
+  it("lets a currency picked by hand beat both", async () => {
+    const { user } = renderSheet({ preferredCurrency: "PLN" });
+
+    await user.type(screen.getByPlaceholderText("Group name"), "Tokyo");
+    await user.click(
+      screen.getByRole("button", { name: /That balance is in/ }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Search a currency" }),
+      "japan",
+    );
+    await user.click(screen.getByRole("button", { name: /^JPY/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Create group in JPY" }),
+    );
+
+    expect(submitted().get("baseCurrency")).toBe("JPY");
+  });
+
+  /**
+   * The device answers at hydration, after the first render. Until somebody
+   * picks, its answer replaces the constant; after they have, it changes
+   * nothing.
+   */
+  it("takes the device's answer when it arrives late, but never over a pick", async () => {
+    const { user, redraw } = renderSheet({ zone: null });
+
+    // Nothing to go on yet: the constant.
+    expect(
+      screen.getByRole("button", { name: "Create group in EUR" }),
+    ).toBeInTheDocument();
+
+    device.zone = "Europe/Zurich";
+    redraw();
+    expect(
+      screen.getByRole("button", { name: "Create group in CHF" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /That balance is in/ }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Search a currency" }),
+      "japan",
+    );
+    await user.click(screen.getByRole("button", { name: /^JPY/ }));
+
+    device.zone = "Europe/London";
+    redraw();
+    expect(
+      screen.getByRole("button", { name: "Create group in JPY" }),
+    ).toBeInTheDocument();
+  });
+
   it("will not submit until the group has a name", async () => {
     const { user } = renderSheet();
 
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     expect(createGroupAction).not.toHaveBeenCalled();
   });
@@ -150,7 +295,7 @@ describe("CreateGroupSheet", () => {
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Remove Mika" }));
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     expect(submitted().all("participantNames")).toEqual(["Sofia"]);
   });
@@ -167,7 +312,7 @@ describe("CreateGroupSheet", () => {
     await user.click(screen.getByRole("radio", { name: "Blue" }));
     await user.click(screen.getByRole("button", { name: "Done" }));
 
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     const form = submitted();
     expect(form.get("icon")).toBe("tent");
@@ -187,7 +332,7 @@ describe("CreateGroupSheet", () => {
         onOpenChange={vi.fn()}
         defaultName="Seb"
         defaultTimezone="UTC"
-        defaultCurrency="CHF"
+        preferredCurrency="CHF"
       />,
       { locale: "fr" },
     );
@@ -276,7 +421,7 @@ describe("CreateGroupSheet", () => {
     );
     expect(screen.queryByText("That balance is in")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     const form = submitted();
     expect(form.get("currencyMode")).toBe("separate");
@@ -292,7 +437,7 @@ describe("CreateGroupSheet", () => {
     );
     await user.click(screen.getByRole("radio", { name: /One shared balance/ }));
 
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     expect(submitted().get("baseCurrency")).toBe("CHF");
   });
@@ -318,14 +463,14 @@ describe("CreateGroupSheet", () => {
 
     // Selection returns to the form, with the answer on the row.
     expect(screen.getByPlaceholderText("Group name")).toHaveValue("Roadtrip");
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
     expect(submitted().get("baseCurrency")).toBe("JPY");
   });
 
   it("hands the link over instead of dropping straight into the group", async () => {
     const { user } = renderSheet();
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     // The group exists, but the organiser has not been sent anywhere yet:
     // the sheet is now the screen that gives them the link.
@@ -341,7 +486,7 @@ describe("CreateGroupSheet", () => {
   it("goes to the group once the handover is done with", async () => {
     const { user, onOpenChange } = renderSheet();
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
     await user.click(await screen.findByRole("button", { name: "Later" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -353,7 +498,7 @@ describe("CreateGroupSheet", () => {
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
     await user.type(screen.getByLabelText("Add a person"), "Ana");
     await user.click(screen.getByRole("button", { name: "Add" }));
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     expect(
       await screen.findByText(
@@ -375,7 +520,7 @@ describe("CreateGroupSheet", () => {
       "Four days",
     );
     await user.type(screen.getByPlaceholderText("Group name"), "Porto");
-    await user.click(screen.getByRole("button", { name: "Create group" }));
+    await user.click(createButton());
 
     expect(submitted().get("description")).toBe("Four days");
   });

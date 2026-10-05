@@ -156,6 +156,29 @@ Which method goes is the sender's, defaulting to the first they ranked; whether
 it goes at all is one press, because a reminder pasted into a group chat is
 read by everybody in it.
 
+### And the way in
+
+The same message ends with an address, and which one depends on who opens it
+(`src/modules/reminders/links.ts`). The group's page is right for somebody with
+an account. For somebody added by name with none, it was a sign-in form asking
+for a password they never had — so their reminder carries the group's invite
+link instead, which opens on "Which one of these is you?" with their name on
+the list. Three conditions, all of them needed:
+
+- **The sender may already see the link.** That is `manageInvitations`, which
+  only the owner holds — the permission every screen showing the link reads it
+  behind. A member's or a guest's reminders keep the group's page, and so does
+  anything asked through an API key, which may never reach the join link.
+- **The link still works.** Expired, revoked, in an archived group, or minted
+  before its sealed copy existed: the group's page instead. A personal link is
+  never an option, since only its fingerprint is kept.
+- **Nothing is made for it.** Opening the reminder sheet reads the link and
+  never mints, extends or replaces one.
+
+Where the group's page is what goes, the sign-in page it lands on now says the
+group is private and to ask for an invite link — without naming the group or
+saying whether it exists, since it is shown for any `next=/groups/…`.
+
 ## What is deliberately absent
 
 Not oversights. Each of these is a scheme whose payment instruction cannot be

@@ -5,9 +5,16 @@
  * the type guard are needed by the language switcher in the browser as well as
  * by request handling on the server.
  *
- * Locale is resolved from a cookie rather than a URL prefix. Balancia is a
- * private, authenticated app with no SEO surface, so per-language URLs would
- * buy nothing and would break existing invitation links.
+ * Inside the app, locale is resolved from a cookie rather than a URL prefix:
+ * those screens are private and authenticated, so per-language URLs would buy
+ * nothing there and would break existing invitation links.
+ *
+ * The public pages are the exception, and for them the address is the
+ * language — `/` is English, `/fr` is French. A crawler sends no cookie and no
+ * `Accept-Language`, so while the homepage picked its language from those it
+ * was only ever read in English, and the French copy was in no index at all.
+ * `src/lib/public-pages.ts` holds the addresses and `proxy.ts` turns one into
+ * the header below.
  */
 
 export const LOCALES = ["en", "fr"] as const;
@@ -17,6 +24,17 @@ export type AppLocale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: AppLocale = "en";
 
 export const LOCALE_COOKIE_NAME = "balancia_locale";
+
+/**
+ * The language a public page was addressed in, from `proxy.ts` to the render.
+ *
+ * A request header rather than a route parameter because the root layout
+ * writes `<html lang>` and hands the browser its messages, and a layout is
+ * told nothing about the segments beneath it. `proxy.ts` sets this on a public
+ * page and removes it from every other request, so it is never the client's
+ * to send.
+ */
+export const LOCALE_HEADER_NAME = "x-balancia-locale";
 
 /** A year: the choice is a preference, not a session detail. */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;

@@ -74,10 +74,18 @@ describe("defaultCurrency", () => {
     );
   });
 
-  it("guesses only when every signal is empty", () => {
+  it("lets a stated preference beat where the device is", () => {
+    expect(defaultCurrency({ preferred: "PLN", device: "CHF" })).toBe("PLN");
+  });
+
+  it("guesses from the device before it guesses the constant", () => {
+    expect(defaultCurrency({ preferred: null, device: "CHF" })).toBe("CHF");
+  });
+
+  it("falls back to the constant only when every signal is empty", () => {
     expect(defaultCurrency({})).toBe(FALLBACK_CURRENCY);
-    expect(defaultCurrency({ base: null, used: [], preferred: null })).toBe(
-      FALLBACK_CURRENCY,
-    );
+    expect(
+      defaultCurrency({ base: null, used: [], preferred: null, device: null }),
+    ).toBe(FALLBACK_CURRENCY);
   });
 });

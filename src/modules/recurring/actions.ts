@@ -10,17 +10,27 @@ import {
   type ActionResult,
 } from "@/lib/actions";
 import {
-  createRecurringExpense,
   deleteRecurringExpense,
   recurringInputSchema,
   restoreRecurringExpense,
   setRecurringPaused,
+  setUpRecurringExpense,
+  type RecurringSetUp,
 } from "./service";
 
+/**
+ * Saves a series, and adds the entries whose dates have already come — see
+ * `setUpRecurringExpense`. The answer says how many and when the next one is,
+ * which is what the confirmation is built from.
+ *
+ * Revalidates the group's screens the way adding an expense does, because it
+ * may just have added one: the balances, the transactions and the settle-up
+ * suggestions all move with it.
+ */
 export async function createRecurringAction(
   groupId: string,
   payload: unknown,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<RecurringSetUp>> {
   const parsed = recurringInputSchema.safeParse(payload);
   if (!parsed.success) {
     return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
@@ -28,11 +38,15 @@ export async function createRecurringAction(
 
   const result = await runAction("recurring.create", async () => {
     const access = await requireGroupAccess(groupId, { requireActive: true });
-    const id = await createRecurringExpense(access, parsed.data);
-    return { id };
+    return setUpRecurringExpense(access, parsed.data);
   });
 
-  if (result.ok) revalidatePath(`/groups/${groupId}/recurring`);
+  if (result.ok) {
+    revalidatePath(`/groups/${groupId}`);
+    revalidatePath(`/groups/${groupId}/expenses`);
+    revalidatePath(`/groups/${groupId}/settle`);
+    revalidatePath(`/groups/${groupId}/recurring`);
+  }
   return result;
 }
 

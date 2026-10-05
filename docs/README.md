@@ -40,6 +40,8 @@ useful guide.
 | [Offline expense entry](offline.md)               | Recording with no network, the send queue and writing an expense exactly once      |
 | [Settling up](settling-up.md)                     | Payment codes and links, which schemes are supported, and why the rest are not     |
 | [Appearance](appearance.md)                       | Theme, surfaces, contrast and the accent, and why the money colours never move     |
+| [Being found](seo.md)                             | The public pages, their addresses per language, and what crawlers are told         |
+| [Measuring acquisition](analytics.md)             | The one number, the funnel behind it, and what is set up to read them              |
 
 ## Developing Balancia
 

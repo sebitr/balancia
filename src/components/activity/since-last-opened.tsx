@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { PUSH } from "@/components/motion/transitions";
 import type { ActivityEntry } from "@/modules/activity/service";
 import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
 
@@ -13,11 +15,17 @@ import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
  * The boundary comes from `lastOpenedAt`, which the page stamps *after* it has
  * rendered. A reader who lands here twice in a row therefore sees the second
  * visit as empty of news rather than as a screen that never changes.
+ *
+ * Its "View all" opens the group's whole history, as the one beside
+ * "Suggested repayments" opens every transfer. It goes when this block goes,
+ * which is why the overview also ends on a row to the same screen that does
+ * not depend on there being news — see `ActivityRow`.
  */
 
 export async function SinceLastOpened({
   entries,
   lastOpenedAt,
+  groupId,
 }: {
   entries: readonly ActivityEntry[];
   /** Null on a first visit, when everything counts as new. */
@@ -41,9 +49,21 @@ export async function SinceLastOpened({
       aria-labelledby="since-last-opened"
       className="flex flex-col gap-2.5"
     >
-      <h2 id="since-last-opened" className="text-sm font-medium">
-        {tGroup("sinceYourLastVisit")}
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="since-last-opened" className="text-sm font-medium">
+          {tGroup("sinceYourLastVisit")}
+        </h2>
+        {/* Described by the heading beside it, so that read out of a list of
+            the page's links it is not one more "View all" among several. */}
+        <Link
+          href={`/groups/${groupId}/activity`}
+          transitionTypes={PUSH}
+          aria-describedby="since-last-opened"
+          className="-my-2 rounded-lg px-2 py-2 text-xs font-medium text-primary-ink transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          {tGroup("viewAll")}
+        </Link>
+      </div>
 
       <ol className="flex flex-col gap-2.5 rounded-2xl px-3.5 py-3 ring-1 ring-border">
         {unseen.map((entry, index) => {

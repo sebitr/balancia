@@ -213,22 +213,22 @@ export function primaryActionKey(
   return repeats ? "saveRecurringExpense" : "addExpense";
 }
 
-/** The title on the confirmation screen. */
+/**
+ * The confirmation's title, for anything but a recurring entry.
+ *
+ * A recurring one is not a single fact: it may have added an entry already,
+ * several, or none until a later day, and its title says which — see
+ * `savedSeriesMessage`.
+ */
 export type ConfirmationKey =
-  | "expenseAdded"
-  | "incomeAdded"
-  | "recurringSaved"
-  | "paymentRecorded"
-  | "changesSaved";
+  "expenseAdded" | "incomeAdded" | "paymentRecorded" | "changesSaved";
 
 export function confirmationKey(
   type: EntryType,
-  repeats: boolean,
   editing = false,
 ): ConfirmationKey {
   if (editing) return "changesSaved";
   if (type === "settle") return "paymentRecorded";
-  if (repeats) return "recurringSaved";
   return type === "income" ? "incomeAdded" : "expenseAdded";
 }
 

@@ -592,6 +592,64 @@
             </li>
           </ul>
         </section>
+
+        <!-- Always last, whether or not anything is new: the way to the
+             group's whole history, which the delete dialogs promise. -->
+        <ul class="list" style="margin: 0">
+          <li>
+            <a
+              class="list-row"
+              href="#"
+              aria-label="Activity · Every change, deletions included"
+            >
+              <span
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.625rem;
+                  min-width: 0;
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="17"
+                  height="17"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="flex-shrink: 0; color: var(--primary-ink)"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                  <path d="M12 7v5l4 2" />
+                </svg>
+                <span class="list-main">
+                  <span class="list-title" style="font-size: 0.75rem"
+                    >Activity</span
+                  >
+                  <span class="list-sub" style="margin-top: 0"
+                    >Every change, deletions included</span
+                  >
+                </span>
+              </span>
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="flex-shrink: 0; color: var(--muted-foreground)"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </a>
+          </li>
+        </ul>
       </div>
 
       <nav class="bottom-nav" aria-label="Group sections">
@@ -728,7 +786,19 @@
         scroll.
       </dd>
       <dt>5 — Activity</dt>
-      <dd>What changed, for people returning after a few days.</dd>
+      <dd>
+        What changed, for people returning after a few days, under "Since your
+        last visit" with a "View all" beside the heading. That block renders
+        only when something is new, so the screen also ends on an
+        <em>Activity</em> row — icon, title, caption, chevron, drawn like the
+        Statistics row — that is there regardless. It is the way to the screen
+        every delete dialog promises a deletion can be restored from, and it is
+        shown to everyone who can open the overview, guests included. On an
+        empty group it appears only once something has been deleted there: a
+        brand-new group keeps its two first steps, and a group emptied by
+        deleting its only expense still has the way back. Settings lists the
+        same screen under Shortcuts.
+      </dd>
     </dl>
   </section>
 

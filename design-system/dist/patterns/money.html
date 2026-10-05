@@ -1606,6 +1606,94 @@ a[aria-current="page"] .nav-icon--primary {
   </section>
 
   <section>
+    <h2>One entry — its total, and each person's part</h2>
+    <div class="spec">
+      <div class="stack" style="gap: 0.5rem">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: 0.5rem;
+            line-height: 1;
+          "
+        >
+          <span style="font-weight: 500; color: var(--muted-foreground)"
+            >EUR</span
+          >
+          <span
+            class="tabular-nums"
+            style="font-size: 2.5rem; font-weight: 600; letter-spacing: -0.03em"
+            >90.00</span
+          >
+        </div>
+        <p style="margin: 0; font-size: 0.875rem; font-weight: 500">
+          You paid €90.00 ·
+          <span style="font-weight: 600; color: var(--positive-ink)"
+            >you get back €60.00</span
+          >
+        </p>
+      </div>
+    </div>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="avatar avatar--lg">A</span>
+            <span class="list-main" style="flex: 1">
+              <span class="list-title" style="justify-content: space-between">
+                Ada <span class="tabular-nums">€30.00</span>
+              </span>
+              <span class="list-sub" style="color: var(--positive-ink)"
+                >You get back €60.00</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="avatar avatar--lg">B</span>
+            <span class="list-main" style="flex: 1">
+              <span class="list-title" style="justify-content: space-between">
+                Bob <span class="tabular-nums">€30.00</span>
+              </span>
+              <span class="list-sub" style="color: var(--negative-ink)"
+                >Owes €30.00</span
+              >
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>total</dt>
+      <dd>
+        Plain ink, no sign. It is a fact about the entry, the same for everyone
+        in it — never the "you owe" red, which once greeted the person who had
+        paid for the table.
+      </dd>
+      <dt>your line</dt>
+      <dd>
+        One whole sentence under the total — "You paid €90.00 · you get back
+        €60.00", "Ada paid · you owe €30.00", "You’re not part of this expense".
+        Only the half with a direction takes its balance ink.
+      </dd>
+      <dt>split row</dt>
+      <dd>
+        Name and share on one line, the share right-aligned; under the name,
+        what the entry did to that person in words and in its balance ink. "You"
+        on the reader's own row. Wraps rather than clipping.
+      </dd>
+    </dl>
+    <p class="note" style="margin-top: 0.75rem">
+      A three-column table of person, share and signed balance needs 370px; a
+      phone card has 328–358. It clipped the balances it existed to show, so the
+      split is a list. Source: <code>BigAmount</code>, <code>SplitRow</code> in
+      <code>components/entries/detail-blocks.tsx</code>.
+    </p>
+  </section>
+
+  <section>
     <h2>Rules</h2>
     <div class="do-dont">
       <div class="do">

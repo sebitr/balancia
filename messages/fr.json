@@ -85,6 +85,7 @@
     "signIn": {
       "title": "Retrouve tes groupes",
       "subtitle": "Connecte-toi pour accéder à tes groupes et suivre tes soldes.",
+      "privateGroup": "Ce groupe est privé. Si quelqu’un t’a envoyé ce lien, demande-lui un lien d’invitation.",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "forgotPassword": "Mot de passe oublié ?",
@@ -592,6 +593,7 @@
     "showEarlierActivity": "Voir l’activité plus ancienne",
     "activityMetaTitle": "Activité",
     "activityTitle": "Activité",
+    "activityCaption": "Chaque modification, suppressions comprises",
     "personOwesYou": "{name} te doit de l’argent",
     "peopleOweYou": "{count, plural, one {# personne te doit de l’argent} other {# personnes te doivent de l’argent}}",
     "youOwePerson": "Tu dois de l’argent à {name}",
@@ -605,24 +607,33 @@
     "howCalculated": "Voir le détail du solde",
     "positionSheetTitle": "Détail de ton solde",
     "positionSheetDescription": "Les montants enregistrés qui donnent ton solde actuel.",
+    "explainPaidAndShare": "Tu as payé {paid}. Ta part était de {share}.",
+    "explainPaidNothing": "Tu n’as rien payé. Ta part était de {share}.",
+    "explainPaidForOthers": "Tu as payé {paid}, entièrement pour les autres.",
+    "explainPaidExactlyShare": "Tu as payé {paid}, exactement ta part.",
+    "explainNoExpenses": "Tu ne fais encore partie d’aucune dépense.",
+    "explainNoExpensesIn": "Tu ne fais partie d’aucune dépense en {currency}.",
+    "explainIncome": "Tu as encaissé {received} de revenus du groupe. Ta part de ses revenus était de {credited}.",
+    "explainIncomeForOthers": "Tu as encaissé {received} de revenus du groupe, entièrement pour les autres.",
+    "explainIncomeShareOnly": "D’autres ont encaissé les revenus du groupe. Ta part était de {credited}.",
+    "explainPaidBack": "Tu as remboursé {amount}.",
+    "explainBeenPaidBack": "On t’a remboursé {amount}.",
+    "explainAdjustmentUp": "D’autres ajustements augmentent ton solde de {amount}.",
+    "explainAdjustmentDown": "D’autres ajustements diminuent ton solde de {amount}.",
+    "explainGetBack": "Tu récupères donc {amount}.",
+    "explainOwe": "Tu dois donc {amount}.",
+    "explainSettled": "Tu es donc à jour.",
+    "positionFigures": "Les montants, ligne par ligne",
     "positionSectionExpenses": "Dépenses",
     "positionYouPaid": "Tu as payé",
     "positionYourShare": "Ta part",
-    "positionExpensesMore": "Tu as payé {amount} de plus que ta part.",
-    "positionExpensesLess": "Tu as payé {amount} de moins que ta part.",
-    "positionExpensesEqual": "Tu as payé exactement ta part.",
     "positionSectionRevenue": "Revenus",
     "positionRevenueReceived": "Tu as encaissé",
     "positionRevenueCredited": "Ta part",
-    "positionRevenueMore": "Tu as encaissé {amount} de plus que ta part.",
-    "positionRevenueLess": "Tu as encaissé {amount} de moins que ta part.",
-    "positionRevenueEqual": "Tu as encaissé exactement ta part.",
     "positionSectionSettlements": "Remboursements",
     "positionSettlementsPaid": "Tu as remboursé",
     "positionSettlementsReceived": "Tu as reçu",
-    "positionSettlementsCaption": "Les remboursements déjà effectués.",
     "positionOtherAdjustments": "Autres ajustements",
-    "positionResult": "Solde final",
     "sinceYourLastVisit": "Depuis ta dernière visite",
     "spending": "Dépenses",
     "spendingPeriods": {
@@ -1006,7 +1017,12 @@
     "paidBy": "Payé par",
     "splitEquallyBetween": "Partagé à parts égales entre",
     "submit": "Créer la dépense récurrente",
-    "created": "Dépense récurrente configurée",
+    "saved": {
+      "added": "{count, plural, one {« {description} » a été ajouté} other {« {description} » a été ajouté # fois, depuis le {from}}}. Prochaine occurrence le {next}.",
+      "addedLast": "{count, plural, one {« {description} » a été ajouté} other {« {description} » a été ajouté # fois, depuis le {from}}}. Il n’y en aura pas d’autre.",
+      "firstOn": "« {description} » est enregistré. La première occurrence sera ajoutée le {date}.",
+      "plain": "« {description} » est enregistré."
+    },
     "errors": {
       "chooseSplit": "Choisis qui participe à cette dépense.",
       "enterRate": "Saisis le taux de change : 1 {from} en {to}.",
@@ -1068,7 +1084,7 @@
   "marketing": {
     "meta": {
       "title": "Balancia · Dépenses partagées, équitablement réparties",
-      "description": "Gérez facilement les dépenses partagées entre amis, en couple, en voyage ou en colocation. Balancia est gratuit, open source et auto-hébergeable."
+      "description": "Gère facilement les dépenses partagées entre amis, en couple, en voyage ou en colocation. Balancia est gratuit, open source et auto-hébergeable."
     },
     "header": {
       "home": "Accueil Balancia",
@@ -1215,6 +1231,7 @@
         "map": "Associe les personnes aux participants du groupe, puis lance l’import."
       },
       "link": "Consulter le guide d’import Splitwise",
+      "compareLink": "Balancia et Splitwise, point par point",
       "beforeLabel": "Dans Splitwise",
       "afterLabel": "Avec Balancia",
       "rows": {
@@ -1240,7 +1257,7 @@
       "eyebrow": "Open source et auto-hébergement",
       "title": "Tes dépenses t’appartiennent. Tes données aussi.",
       "body": "Balancia est open source sous licence AGPL-3.0-or-later : son code peut être consulté, audité et amélioré par la communauté. Tu peux utiliser cette instance ou déployer la tienne avec Docker Compose. En auto-hébergement, la télémétrie est désactivée par défaut et aucun service externe n’est obligatoire.",
-      "bodyAnalytics": "Balancia est open source sous licence AGPL-3.0-or-later et peut être auto-hébergé avec Docker Compose. Sur cette instance, l’administrateur a activé une télémétrie anonyme : seules les pages publiques d’accueil et de connexion sont comptées. Aucune page interne, donnée personnelle, information financière, adresse IP ni identifiant d’installation n’est transmis.",
+      "bodyAnalytics": "Balancia est open source sous licence AGPL-3.0-or-later et peut être auto-hébergé avec Docker Compose. Sur cette instance, l’administrateur a activé une télémétrie anonyme : seules les pages publiques et les écrans de connexion sont comptés, avec les boutons utilisés et leur temps d’affichage. Aucune page interne, donnée personnelle, information financière, adresse IP ni identifiant d’installation n’est transmis.",
       "exportBody": "Chaque groupe peut être exporté en JSON, CSV ou Excel. Sur une instance auto-hébergée, la base de données et les reçus restent sur l’infrastructure que tu as choisie.",
       "guide": "Guide d’auto-hébergement",
       "install": {
@@ -1311,7 +1328,7 @@
         },
         "selfHost": {
           "question": "Peut-on auto-héberger Balancia ?",
-          "answer": "Oui. Clone le dépôt, lance le script de préparation, puis démarre Balancia avec Docker Compose. PostgreSQL, les migrations, l’application et son worker sont lancés ensemble. Le guide d’auto-hébergement contient aussi des exemples pour Caddy, Traefik et nginx."
+          "answer": "Oui. Télécharge le script d’installation et lance-le : il demande quoi activer, puis démarre PostgreSQL, les migrations, l’application et son worker avec Docker Compose. Le guide d’auto-hébergement contient aussi des exemples pour Caddy, Traefik et nginx."
         },
         "devices": {
           "question": "Balancia fonctionne-t-il sur iPhone et Android ?",
@@ -1337,6 +1354,7 @@
     "footer": {
       "taglineLine1": "Dépenses partagées,",
       "taglineLine2": "équitablement réparties.",
+      "compareIt": "Comparer",
       "runIt": "Héberger",
       "buildIt": "Contribuer",
       "trustIt": "Vérifier",
@@ -1352,7 +1370,9 @@
         "security": "Sécurité",
         "license": "Licence AGPL-3.0",
         "receiptScanning": "Lecture des reçus",
-        "source": "Code source sur GitHub"
+        "source": "Code source sur GitHub",
+        "splitwise": "Alternative à Splitwise",
+        "tricount": "Alternative à Tricount"
       },
       "bottomTagline": "Balancia — dépenses partagées, équitablement réparties.",
       "bottomLicense": "AGPL-3.0-or-later. Toute version réseau modifiée doit proposer son code source."
@@ -1378,6 +1398,282 @@
         "receipts": "Joindre une photo ou un PDF à une dépense avec un accès contrôlé",
         "selfHost": "Auto-héberger Balancia avec Docker Compose et PostgreSQL"
       }
+    }
+  },
+  "compare": {
+    "common": {
+      "checked": "Vérifié le {date} à partir des pages officielles de {name}. {name} peut faire évoluer son produit et ses tarifs ; ses propres pages, listées en bas, font foi sur ce qu’il propose aujourd’hui.",
+      "shortAnswer": "En bref",
+      "chooseBalancia": "Choisis Balancia si",
+      "chooseOther": "Choisis {name} si",
+      "tableTitle": "Balancia et {name}, point par point",
+      "question": "Question",
+      "faqTitle": "Questions fréquentes",
+      "sourcesTitle": "Sources et marques",
+      "alsoSee": "À lire aussi"
+    },
+    "splitwise": {
+      "name": "Splitwise",
+      "meta": {
+        "title": "Alternative à Splitwise gratuite et open source · Balancia",
+        "description": "Balancia est une alternative gratuite et open source à Splitwise : sans offre payante, avec des invités sans compte, l’import Splitwise et l’auto-hébergement."
+      },
+      "eyebrow": "Alternative à Splitwise",
+      "title": "Balancia ou Splitwise ?",
+      "titleAccent": "L’alternative open source que tu peux héberger toi-même.",
+      "lead": "Balancia est une alternative gratuite et open source à Splitwise. Les deux applications calculent qui doit quoi à qui après des dépenses partagées. La différence tient au modèle : Splitwise est un service géré avec une offre Pro payante ; Balancia n’a aucune offre payante, accueille des invités sans compte et peut tourner sur ton propre serveur.",
+      "verdict": {
+        "balancia": "tu veux toutes les fonctionnalités sans abonnement, des invités qui rejoignent le groupe par un lien sans s’inscrire, une gestion exacte de plusieurs devises, un export complet, ou la possibilité de tout garder sur un serveur que tu administres.",
+        "other": "tu veux un service géré bien établi, avec des applications natives iOS et Android ou l’import des transactions de carte bancaire, sans te demander où il tourne."
+      },
+      "rows": {
+        "operator": {
+          "question": "Qui fait tourner le service ?",
+          "balancia": "Tu utilises l’instance hébergée gratuite, ou tu l’installes sur ton propre serveur.",
+          "other": "Splitwise Inc. fournit et exploite le service."
+        },
+        "openSource": {
+          "question": "Le code est-il open source ?",
+          "balancia": "Oui. L’application complète est publiée sous licence AGPL-3.0-or-later.",
+          "other": "Ses pages ne proposent ni code source ni version auto-hébergeable."
+        },
+        "price": {
+          "question": "Y a-t-il une offre payante ?",
+          "balancia": "Non. Toutes les fonctionnalités sont dans le dépôt ; l’instance hébergée n’a ni abonnement, ni publicité, ni plafond de dépenses.",
+          "other": "Oui. Splitwise Pro est un abonnement ; sa page cite notamment les dépenses illimitées, la conversion de devises, la lecture des reçus, les graphiques et l’absence de publicité."
+        },
+        "data": {
+          "question": "Où sont stockées les données du groupe ?",
+          "balancia": "Sur l’instance Balancia choisie. En auto-hébergement, tu contrôles la base PostgreSQL et le stockage des reçus.",
+          "other": "Dans le service géré de Splitwise et chez ses prestataires, comme le décrit sa politique de confidentialité."
+        },
+        "guests": {
+          "question": "Peut-on participer sans créer de compte ?",
+          "balancia": "Oui, grâce à un lien révocable limité à un participant d’un seul groupe.",
+          "other": "Le parcours habituel de Splitwise repose sur un compte."
+        },
+        "splits": {
+          "question": "Quels modes de répartition ?",
+          "balancia": "Parts égales, montants fixes, pourcentages et parts pondérées, avec plusieurs payeurs pour une même transaction.",
+          "other": "Splitwise gère les notes partagées et les répartitions inégales ; le détail par offre est à vérifier dans son produit actuel."
+        },
+        "currency": {
+          "question": "Comment les devises sont-elles gérées ?",
+          "balancia": "Chaque devise garde son propre solde, ou tout est converti dans une devise de référence à un taux figé avec chaque dépense.",
+          "other": "Splitwise présente la conversion de devises aux taux du moment comme une fonctionnalité Pro."
+        },
+        "importIn": {
+          "question": "Peut-on reprendre un groupe Splitwise ?",
+          "balancia": "Oui. Balancia importe l’export CSV d’un groupe ou la sauvegarde JSON du compte, avec un aperçu avant toute modification et sans doublon en cas de réimport.",
+          "other": "Ses groupes s’exportent en CSV, le fichier que Balancia lit."
+        },
+        "exportOut": {
+          "question": "Peut-on repartir avec ses données ?",
+          "balancia": "Oui. Chaque groupe s’exporte en JSON, CSV et Excel, gratuitement.",
+          "other": "Un groupe s’exporte en feuille de calcul CSV ; d’après son support, la sauvegarde complète du compte, en JSON, est réservée à Splitwise Pro."
+        },
+        "receipts": {
+          "question": "Où vont les reçus ?",
+          "balancia": "Photos et PDF restent sur l’instance, derrière un contrôle d’accès à chaque requête.",
+          "other": "Ils sont stockés et traités par le service géré de Splitwise."
+        },
+        "apps": {
+          "question": "Existe-t-il des applications natives ?",
+          "balancia": "Non. Balancia est une application web installable (PWA) qui fonctionne dans le navigateur sur iPhone, Android et ordinateur.",
+          "other": "Oui. Splitwise propose des applications web, iOS et Android."
+        },
+        "offline": {
+          "question": "Est-ce que ça fonctionne hors ligne ?",
+          "balancia": "En partie. Dépenses et revenus peuvent être saisis sans réseau et sont envoyés au retour de la connexion ; la modification et les remboursements demandent une connexion.",
+          "other": "À vérifier dans les applications Splitwise actuelles."
+        }
+      },
+      "sections": {
+        "privacy": {
+          "title": "Confidentialité et contrôle",
+          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie et la lecture des reçus s’exécutent localement, sans envoyer de dépense à un service d’IA.",
+          "body2": "Ce contrôle est aussi une responsabilité : il faut appliquer les mises à jour, configurer HTTPS, protéger les secrets, surveiller l’instance et tester les sauvegardes. Splitwise prend ce travail en charge, et sa politique de confidentialité encadre la façon dont le service et ses prestataires traitent ce que tu saisis."
+        },
+        "migration": {
+          "title": "Passer de Splitwise à Balancia",
+          "step1": "Exporte le groupe Splitwise en CSV, ou télécharge la sauvegarde JSON du compte si ton offre la propose.",
+          "step2": "Dans Balancia, ouvre la page Import du groupe de destination.",
+          "step3": "Ajoute le fichier et vérifie l’aperçu : les personnes, les dépenses et les remboursements qui seront créés.",
+          "step4": "Associe les personnes importées aux participants du groupe, puis confirme.",
+          "note": "Balancia garde une empreinte de ce qu’il a importé : relancer le même fichier n’ajoute rien en double. Les parts finales sont reprises comme montants exacts ; le nom du mode de répartition d’origine et les anciens taux de change ne sont pas recréés."
+        },
+        "cost": {
+          "title": "Ce que ça coûte",
+          "body1": "Balancia ne facture rien : ni licence, ni abonnement, ni fonctionnalité réservée, sur l’instance hébergée comme sur la tienne.",
+          "body2": "Héberger sa propre copie a tout de même un coût réel : un serveur, du stockage, des sauvegardes, un domaine, parfois l’envoi d’e-mails, et le temps de s’en occuper. Pour partager un dîner ce soir, l’instance hébergée est le choix le plus simple ; l’auto-hébergement prend tout son sens quand le contrôle vaut cet entretien."
+        }
+      },
+      "faq": {
+        "free": {
+          "question": "Balancia est-il une alternative gratuite à Splitwise ?",
+          "answer": "Oui. Balancia n’a aucune offre payante : toutes les fonctionnalités, y compris les groupes en plusieurs devises, les reçus, les dépenses récurrentes et les exports, sont disponibles avec un compte gratuit et dans le code open source."
+        },
+        "importing": {
+          "question": "Puis-je importer mes groupes Splitwise dans Balancia ?",
+          "answer": "Oui. Balancia lit l’export CSV d’un groupe Splitwise ou la sauvegarde JSON d’un compte, affiche un aperçu de chaque personne, dépense et remboursement à créer, et ne crée aucun doublon si le même fichier est importé deux fois."
+        },
+        "limits": {
+          "question": "Balancia limite-t-il le nombre de dépenses ?",
+          "answer": "Non. Balancia n’a pas d’offre payante, donc pas de quota gratuit à épuiser."
+        },
+        "apps": {
+          "question": "Balancia a-t-il une application iPhone ou Android ?",
+          "answer": "Balancia est une application web progressive. Elle fonctionne dans le navigateur sur iPhone, iPad, Android et ordinateur et peut être ajoutée à l’écran d’accueil, mais elle n’est distribuée ni sur l’App Store ni sur le Play Store. Si les applications natives comptent avant tout, Splitwise en propose."
+        },
+        "accounts": {
+          "question": "Mes amis ont-ils besoin d’un compte Balancia ?",
+          "answer": "Non. Seule la personne qui crée le groupe en a besoin. Les autres peuvent le rejoindre avec un lien d’invitation révocable, puis ajouter des dépenses, enregistrer des remboursements et joindre des reçus."
+        }
+      },
+      "sources": {
+        "intro": "La colonne Splitwise s’appuie sur les pages officielles de Splitwise, consultées le {date} :",
+        "terms": "Conditions d’utilisation",
+        "privacy": "Politique de confidentialité",
+        "pro": "Page Splitwise Pro",
+        "export": "Export des données"
+      },
+      "trademark": "Splitwise est une marque de Splitwise Inc. Balancia n’est ni affilié à Splitwise Inc., ni approuvé ou sponsorisé par elle. Ce comparatif aide à choisir un modèle d’hébergement et de maîtrise des données ; il ne prétend pas que les deux produits se valent fonctionnalité par fonctionnalité."
+    },
+    "tricount": {
+      "name": "Tricount",
+      "meta": {
+        "title": "Alternative à Tricount gratuite et open source · Balancia",
+        "description": "Balancia est une alternative gratuite et open source à Tricount : export complet en JSON, CSV et Excel, invités sans compte ni application à installer, auto-hébergement possible."
+      },
+      "eyebrow": "Alternative à Tricount",
+      "title": "Balancia ou Tricount ?",
+      "titleAccent": "L’alternative open source qui te laisse repartir avec tes données.",
+      "lead": "Balancia est une alternative gratuite et open source à Tricount. Les deux suivent les dépenses partagées d’un groupe et calculent comment faire les comptes. Tricount est une application mobile gérée par bunq ; Balancia est un logiciel à utiliser sur une instance hébergée gratuite ou à installer toi-même, avec un export complet de chaque groupe en JSON, CSV et Excel.",
+      "verdict": {
+        "balancia": "tu veux pouvoir repartir avec tes données dans des formats réutilisables, consulter le code, garder la base et les reçus sur un serveur que tu choisis, accueillir des invités sans compte, ou décider précisément comment les devises sont équilibrées.",
+        "other": "tu veux une application mobile native, un service géré sans rien à administrer, un usage hors ligne plus complet, ou des demandes de paiement via ta banque là où elles sont proposées."
+      },
+      "rows": {
+        "operator": {
+          "question": "Qui fait tourner le service ?",
+          "balancia": "Tu utilises l’instance hébergée gratuite, ou tu l’installes sur ton propre serveur.",
+          "other": "bunq B.V. détient et exploite l’application et le service."
+        },
+        "openSource": {
+          "question": "Le code est-il open source ?",
+          "balancia": "Oui. L’application complète est publiée sous licence AGPL-3.0-or-later.",
+          "other": "Ni code source ni version auto-hébergeable ne sont proposés ; ses conditions restreignent la reproduction du service."
+        },
+        "price": {
+          "question": "Est-ce gratuit ?",
+          "balancia": "Oui. Aucune offre payante ni publicité, sur l’instance hébergée comme sur la tienne.",
+          "other": "Oui. Tricount présente l’application comme gratuite, sans publicité ni plafond quotidien, et son centre d’aide indique que Premium a été arrêté."
+        },
+        "data": {
+          "question": "Où sont stockées les données du groupe ?",
+          "balancia": "Sur l’instance Balancia choisie. En auto-hébergement, tu contrôles la base PostgreSQL et le stockage des reçus.",
+          "other": "Dans le service exploité par bunq et chez ses prestataires, selon la politique de confidentialité de Tricount."
+        },
+        "link": {
+          "question": "Peut-on partager un groupe par lien ?",
+          "balancia": "Oui. Un lien révocable, limité à un participant d’un seul groupe, sans compte ni application à installer.",
+          "other": "Oui. Son aide décrit l’ouverture d’un lien partagé sur le téléphone, puis l’accès au groupe dans l’application."
+        },
+        "splits": {
+          "question": "Quels modes de répartition ?",
+          "balancia": "Parts égales, montants fixes, pourcentages et parts pondérées, avec plusieurs payeurs pour une même transaction.",
+          "other": "Parts égales, ou répartition inégale saisie en montants ou en parts."
+        },
+        "currency": {
+          "question": "Comment les devises sont-elles gérées ?",
+          "balancia": "Chaque devise garde son propre solde, ou les dépenses sont converties au taux que tu choisis, figé avec chaque dépense.",
+          "other": "Un tricount a une devise par défaut ; les dépenses dans une autre devise y sont converties au taux du jour."
+        },
+        "income": {
+          "question": "Revenus et dépenses récurrentes sont-ils gérés ?",
+          "balancia": "Oui. Les revenus se répartissent comme les dépenses, et les deux peuvent se répéter selon un calendrier.",
+          "other": "Dépenses, transferts et revenus sont documentés ; les saisies récurrentes ne le sont pas."
+        },
+        "exportOut": {
+          "question": "Peut-on repartir avec ses données dans un format réutilisable ?",
+          "balancia": "Oui. Chaque groupe s’exporte à tout moment en JSON, CSV et Excel.",
+          "other": "Son centre d’aide range l’export CSV et PDF parmi les fonctions arrêtées avec Premium ; sa politique de confidentialité mentionne toujours un droit à la portabilité."
+        },
+        "receipts": {
+          "question": "Peut-on joindre des reçus ?",
+          "balancia": "Oui. Photos et PDF restent sur l’instance, derrière un contrôle d’accès à chaque requête.",
+          "other": "Oui. Les photos, reçus compris, sont stockées et traitées par le service géré."
+        },
+        "apps": {
+          "question": "Existe-t-il des applications natives ?",
+          "balancia": "Non. Balancia est une application web installable (PWA) qui fonctionne dans le navigateur sur iPhone, Android et ordinateur.",
+          "other": "Oui. Tricount est distribué sous forme d’application mobile."
+        },
+        "offline": {
+          "question": "Est-ce que ça fonctionne hors ligne ?",
+          "balancia": "En partie. Dépenses et revenus peuvent être saisis sans réseau et sont envoyés au retour de la connexion ; la modification et les remboursements demandent une connexion.",
+          "other": "Oui. Tricount met en avant l’ajout de dépenses sans réseau, synchronisées ensuite."
+        },
+        "money": {
+          "question": "Le service déplace-t-il de l’argent ?",
+          "balancia": "Non. Balancia enregistre les remboursements ; ce n’est ni une banque ni un prestataire de paiement.",
+          "other": "Des demandes de paiement et des connexions bancaires sont proposées selon le pays ; son aide cite les Pays-Bas, l’Allemagne, la France et la Belgique."
+        }
+      },
+      "sections": {
+        "both": {
+          "title": "Ce que les deux font bien",
+          "body1": "Les deux couvrent l’essentiel : ajouter les participants, saisir les dépenses, les répartir de façon inégale quand c’est plus juste, consulter les soldes, enregistrer les remboursements, gérer une seconde devise et garder la photo d’un reçu. L’un comme l’autre convient à un voyage, une colocation, un couple ou un événement.",
+          "body2": "Tricount offre la meilleure expérience mobile native, et son mode hors ligne va plus loin que celui de Balancia, qui se limite à l’ajout de dépenses et de revenus. Balancia convient mieux à un groupe qui veut un logiciel à déployer et à inspecter, un modèle financier vérifiable et un export complet dans des formats lisibles par d’autres outils."
+        },
+        "leave": {
+          "title": "Repartir avec ses données",
+          "body1": "Dans Balancia, la portabilité est une promesse, pas une option payante. Chaque groupe se télécharge à tout moment en JSON, qui conserve l’enregistrement complet et les montants exacts ; en CSV, pour n’importe quel outil de données ; ou en classeur Excel, pour celles et ceux qui préfèrent un tableur. Les reçus se téléchargent un par un pour l’instant, et en auto-hébergement la base et le stockage des reçus sont directement entre tes mains.",
+          "body2": "C’est une différence concrète avec Tricount tel qu’il est documenté aujourd’hui. Son centre d’aide range l’export CSV et PDF parmi les fonctions disparues avec Premium, et sa politique de confidentialité évoque la portabilité sans préciser de format réutilisable dans l’application. Si pouvoir partir compte pour ton groupe, fais confirmer le format par le support de Tricount avant d’y saisir des années de dépenses."
+        },
+        "privacy": {
+          "title": "Confidentialité et contrôle",
+          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie et la lecture des reçus s’exécutent localement, sans envoyer de dépense à un service d’IA.",
+          "body2": "Tricount appartient à bunq, qui l’exploite. Sa politique de confidentialité détaille les données financières, d’identification, d’appareil et d’usage utilisées pour faire fonctionner et améliorer le service, ainsi que les traitements confiés à ses prestataires. En échange, personne dans le groupe n’a de serveur, de base de données, de mises à jour ni de sauvegardes à gérer."
+        },
+        "migration": {
+          "title": "Passer de Tricount à Balancia",
+          "body1": "Balancia n’a pas d’import Tricount. Demande au support de Tricount quelle copie exploitable de tes données est disponible avant de prévoir une migration.",
+          "body2": "Tant qu’un export compatible n’existe pas, déplacer un tricount revient à recréer à la main ses participants, leurs soldes de départ et ses dépenses. Garde l’original tant que les soldes du nouveau groupe n’ont pas été comparés aux siens."
+        }
+      },
+      "faq": {
+        "free": {
+          "question": "Balancia est-il une alternative gratuite à Tricount ?",
+          "answer": "Oui. Balancia est gratuit sur son instance hébergée comme en auto-hébergement, sans offre payante ni publicité. Tricount se présente aussi comme gratuit ; la différence, c’est que Balancia est open source, auto-hébergeable et exporte chaque groupe en entier."
+        },
+        "importing": {
+          "question": "Puis-je importer un tricount dans Balancia ?",
+          "answer": "Pas directement. Balancia n’a pas d’import Tricount : le groupe doit être recréé à la main. Il importe en revanche les exports CSV et les sauvegardes JSON de Splitwise."
+        },
+        "exporting": {
+          "question": "Puis-je exporter mes données depuis Balancia ?",
+          "answer": "Oui. Chaque groupe se télécharge en JSON, CSV ou classeur Excel depuis ses paramètres, à tout moment et gratuitement."
+        },
+        "apps": {
+          "question": "Balancia fonctionne-t-il sans application mobile ?",
+          "answer": "Oui. Balancia est une application web progressive : elle fonctionne dans le navigateur sur iPhone, iPad, Android et ordinateur et peut être ajoutée à l’écran d’accueil. Elle n’est pas sur l’App Store ni sur le Play Store."
+        },
+        "accounts": {
+          "question": "Les participants ont-ils besoin d’un compte ?",
+          "answer": "Non. Seule la personne qui crée le groupe en a besoin. Les autres le rejoignent avec un lien d’invitation révocable, dans leur navigateur, sans rien installer."
+        }
+      },
+      "sources": {
+        "intro": "La colonne Tricount s’appuie sur les pages officielles de Tricount, consultées le {date} :",
+        "features": "Présentation des fonctionnalités",
+        "help": "Aide sur les dépenses et les devises",
+        "premium": "Arrêt de Premium et de l’export",
+        "requests": "Aide sur les demandes de paiement",
+        "privacy": "Politique de confidentialité",
+        "terms": "Conditions générales"
+      },
+      "trademark": "Tricount est une marque de son propriétaire. Balancia n’est ni affilié à Tricount ou à bunq B.V., ni approuvé ou sponsorisé par eux. Ce comparatif aide à choisir un modèle d’hébergement et de maîtrise des données ; il ne prétend pas que les deux produits se valent fonctionnalité par fonctionnalité."
     }
   },
   "notFound": {
@@ -1927,6 +2223,7 @@
     "timezoneHelp": "Sert à déterminer quand les dépenses récurrentes sont dues.",
     "timezoneDetected": "Détecté depuis ton appareil. Sert à déterminer quand les dépenses récurrentes sont dues.",
     "submit": "Créer le groupe",
+    "submitIn": "Créer le groupe en {currency}",
     "created": "Groupe créé",
     "failed": "Le groupe n’a pas pu être créé.",
     "sheetTitle": "Nouveau groupe",
@@ -2382,6 +2679,7 @@
     "title": "Paramètres du groupe",
     "shortcuts": "Raccourcis",
     "recurring": "Dépenses récurrentes",
+    "activity": "Activité",
     "import": "Importer des données",
     "convertedNote": "Tout est converti en {currency} au taux enregistré avec chaque dépense.",
     "separateNote": "Chaque devise conserve son propre solde. Rien n’est converti.",
@@ -2426,10 +2724,27 @@
     "receivedBy": "Reçu par",
     "splitBetween": "Partagé entre",
     "creditedTo": "Crédité à",
-    "person": "Personne",
     "share": "Part",
     "credited": "Crédité",
-    "balance": "Solde",
+    "stake": {
+      "paidGetBack": "Tu as payé {paid} · <tone>tu récupères {amount}</tone>",
+      "paidOwe": "Tu as payé {paid} · <tone>tu dois {amount}</tone>",
+      "paidEven": "Tu as payé {paid} · exactement ta part",
+      "receivedOwe": "Tu as reçu {received} · <tone>tu dois {amount}</tone>",
+      "receivedGetBack": "Tu as reçu {received} · <tone>tu récupères {amount}</tone>",
+      "receivedEven": "Tu as reçu {received} · exactement ta part",
+      "othersPaid": "{count, plural, one {{name} a payé} other {# personnes ont payé}} · <tone>tu dois {amount}</tone>",
+      "othersReceived": "{count, plural, one {{name} l’a reçu} other {# personnes l’ont reçu}} · <tone>tu récupères {amount}</tone>",
+      "notInvolved": "{kind, select, revenue {Tu ne fais pas partie de ce revenu} other {Tu ne fais pas partie de cette dépense}}"
+    },
+    "outcome": {
+      "youGetBack": "Tu récupères {amount}",
+      "youOwe": "Tu dois {amount}",
+      "youEven": "{kind, select, revenue {Tu as reçu ta part} other {Tu as payé ta part}}",
+      "getsBack": "Récupère {amount}",
+      "owes": "Doit {amount}",
+      "even": "{kind, select, revenue {A reçu sa part} other {A payé sa part}}"
+    },
     "splitEqual": "À parts égales",
     "splitExact": "Montants exacts",
     "splitPercentage": "Par pourcentage",
@@ -2878,6 +3193,7 @@
     "toneCheeky": "Espiègle",
     "shuffle": "Autre suggestion",
     "groupLink": "Lien du groupe",
+    "inviteLink": "Lien d’invitation",
     "payWith": "Comment payer",
     "payWithLine": "{method} : {detail}",
     "payWithChoose": "Quel moyen de paiement",
@@ -3235,7 +3551,6 @@
     "saved": {
       "expenseAdded": "Dépense ajoutée",
       "incomeAdded": "Revenu ajouté",
-      "recurringSaved": "Transaction récurrente enregistrée",
       "paymentRecorded": "Remboursement enregistré",
       "changesSaved": "Modifications enregistrées",
       "deleted": "Transaction supprimée",

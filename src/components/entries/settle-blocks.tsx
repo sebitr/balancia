@@ -18,6 +18,7 @@ import {
 } from "@/modules/settlements/payment-methods";
 import { repaymentSide } from "@/modules/settlements/side";
 import { MethodMark } from "@/components/settlements/method-mark";
+import { PinnedActions, PinnedBody } from "./entry-sheet";
 import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
 
 /**
@@ -115,8 +116,8 @@ export function PairSheet({
       : t("pairSummary", { from: nameOf(fromId), to: nameOf(toId) });
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
+    <div className="flex min-h-0 flex-col">
+      <div className="mb-4 shrink-0 space-y-1">
         <SheetTitle className="text-xl font-semibold">
           {t("pairTitle")}
         </SheetTitle>
@@ -124,48 +125,54 @@ export function PairSheet({
         <p className="text-xs text-muted-foreground">{t("pairSubtitle")}</p>
       </div>
 
-      <PairSide
-        label={t("whoPays")}
-        members={members}
-        selectedId={fromId}
-        onSelect={(id) =>
-          // Picking a payer who already holds the other side clears it rather
-          // than producing a pair of one person.
-          onChange({ fromId: id, toId: toId === id ? null : toId })
-        }
-        tone="payer"
-      />
-      <PairSide
-        label={t("whoReceives")}
-        members={members}
-        selectedId={toId}
-        onSelect={(id) => onChange({ fromId, toId: id })}
-        // You cannot pay yourself, and disabling the payer here says so more
-        // quietly than an error would.
-        disabledId={fromId}
-      />
+      {/* Two rows of faces grow with the group, and a large one pushed the
+          button off the sheet. The faces scroll; the button stays. */}
+      <PinnedBody>
+        <PairSide
+          label={t("whoPays")}
+          members={members}
+          selectedId={fromId}
+          onSelect={(id) =>
+            // Picking a payer who already holds the other side clears it rather
+            // than producing a pair of one person.
+            onChange({ fromId: id, toId: toId === id ? null : toId })
+          }
+          tone="payer"
+        />
+        <PairSide
+          label={t("whoReceives")}
+          members={members}
+          selectedId={toId}
+          onSelect={(id) => onChange({ fromId, toId: id })}
+          // You cannot pay yourself, and disabling the payer here says so more
+          // quietly than an error would.
+          disabledId={fromId}
+        />
 
-      <p
-        className={cn(
-          "text-xs",
-          complete ? "text-muted-foreground" : "text-destructive-ink",
-        )}
-      >
-        {summary}
-      </p>
+        <p
+          className={cn(
+            "text-xs",
+            complete ? "text-muted-foreground" : "text-destructive-ink",
+          )}
+        >
+          {summary}
+        </p>
+      </PinnedBody>
 
-      <button
-        type="button"
-        disabled={!complete}
-        onClick={() => {
-          // Guarded in the handler, not only in CSS.
-          if (!complete) return;
-          onConfirm();
-        }}
-        className="h-13 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-35"
-      >
-        {t("usePair")}
-      </button>
+      <PinnedActions>
+        <button
+          type="button"
+          disabled={!complete}
+          onClick={() => {
+            // Guarded in the handler, not only in CSS.
+            if (!complete) return;
+            onConfirm();
+          }}
+          className="h-13 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-35"
+        >
+          {t("usePair")}
+        </button>
+      </PinnedActions>
     </div>
   );
 }
