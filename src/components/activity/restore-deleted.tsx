@@ -10,10 +10,12 @@ import {
   restoreExpenseAction,
   restoreSettlementAction,
 } from "@/modules/expenses/actions";
+import { restoreParticipantAction } from "@/modules/groups/actions";
 import { restoreRecurringAction } from "@/modules/recurring/actions";
 
 /**
- * Putting a deleted entry back from the line in the history that deleted it.
+ * Putting a deleted entry back from the line in the history that deleted it —
+ * or a removed person, from the line that removed them.
  *
  * The same restore the Undo toast calls, reached without the toast. That one
  * is on screen for eight seconds and does not wait while it holds keyboard
@@ -45,6 +47,7 @@ const RESTORE = {
   expense: restoreExpenseAction,
   settlement: restoreSettlementAction,
   recurring_expense: restoreRecurringAction,
+  participant: restoreParticipantAction,
 } satisfies Record<
   string,
   (groupId: string, id: string) => Promise<{ ok: boolean; error?: string }>
