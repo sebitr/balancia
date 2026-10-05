@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { accentTokens, DEFAULT_ACCENT } from "@/modules/profile/accent";
 
 /**
  * The design-system kit says the same tokens as the app, and says them the
@@ -17,6 +18,11 @@ import { describe, expect, it } from "vitest";
  * is give a token a different value from the one `globals.css` gives it in the
  * same block. That is the failure mode: a swatch in the kit that is not the
  * colour the app paints.
+ *
+ * On top of those blocks the kit paints the default accent, as the root layout
+ * paints it on every page of the app — so the kit shows a plum button where
+ * the stylesheet alone would draw a coral one, because plum is what a reader
+ * who has never chosen sees. That block is held to `accentTokens` below.
  */
 
 const root = new URL("../../", import.meta.url);
@@ -110,6 +116,30 @@ describe("the design-system kit", () => {
         expect(kit.has(name), `${selector} is missing --${name}`).toBe(true);
       }
     }
+  });
+
+  it("paints the default accent exactly as the root layout does", () => {
+    const painted = tokens(KIT, "html:root");
+    expect(Object.fromEntries(painted)).toEqual(
+      Object.fromEntries(
+        Object.entries(accentTokens(DEFAULT_ACCENT)).map(([name, value]) => [
+          name.slice(2),
+          value,
+        ]),
+      ),
+    );
+  });
+
+  it("reads the painted ink wherever it declares --primary-ink", () => {
+    // A flat ink would outrank the paint on the same element, and the kit
+    // would show the accent's fill beside coral's ink.
+    for (const selector of [":root", ".dark"]) {
+      expect(tokens(KIT, selector).get("primary-ink")).toMatch(
+        /^var\(--accent-ink-(light|dark),/,
+      );
+    }
+    expect(KIT).toMatch(/--primary-ink: var\(--accent-ink-more-light,/);
+    expect(KIT).toMatch(/--primary-ink: var\(--accent-ink-more-dark,/);
   });
 
   it("draws no surface the app no longer has", () => {
