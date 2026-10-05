@@ -1,0 +1,872 @@
+<!-- @dsCard group="Patterns" name="Joining from a group link" subtitle="Pick your name, choose how to join, and you are in the group" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Joining from a group link</h1>
+    <p class="lede">
+      A group's link is the same for everybody it was sent to, so it cannot know
+      who opened it. It opens on the one question that follows from that — which
+      of these names is you — and then asks only how to come in. Two screens,
+      then the group itself. It reads as an invitation, and once the reader has
+      said who they are, every balance is said to them as theirs.
+    </p>
+  </header>
+
+  <section>
+    <h2>Before: six screens, six taps</h2>
+    <p class="note">
+      What shipped until October 2026, for a guest picking an existing name.
+      Four of these are gone; the two that stay were rewritten.
+    </p>
+    <div class="scroll-x">
+      <ol
+        style="
+          display: flex;
+          gap: 0.75rem;
+          list-style: none;
+          margin: 0;
+          padding: 0 0 0.5rem;
+          width: max-content;
+        "
+      >
+        <li class="spec" style="width: 13rem; padding: 0.875rem">
+          <div class="spec-label">1 · Welcome — removed</div>
+          <p style="margin: 0 0 0.5rem; font-weight: 600">
+            Flat share, and one link for everyone in it
+          </p>
+          <p class="note" style="margin: 0">
+            Its one useful sentence is the list's subtitle now.
+          </p>
+        </li>
+        <li class="spec" style="width: 13rem; padding: 0.875rem">
+          <div class="spec-label">2 · The list — kept</div>
+          <p style="margin: 0 0 0.5rem; font-weight: 600">
+            Which one of these is you?
+          </p>
+          <p class="note" style="margin: 0">
+            "Alex − €60.00 owes · 2 expenses filed". Now the first screen, as an
+            invitation.
+          </p>
+        </li>
+        <li class="spec" style="width: 13rem; padding: 0.875rem">
+          <div class="spec-label">3 · Is this you? — removed</div>
+          <p style="margin: 0 0 0.5rem; font-weight: 600">
+            Claiming it takes the balance too.
+          </p>
+          <p class="note" style="margin: 0">
+            Repeated the row it came from. The next screen names the person and
+            offers the way back; nothing is claimed before a choice there.
+          </p>
+        </li>
+        <li class="spec" style="width: 13rem; padding: 0.875rem">
+          <div class="spec-label">4 · Keep it — kept</div>
+          <p style="margin: 0 0 0.5rem; font-weight: 600">
+            You're Alex — how should we keep it?
+          </p>
+          <p class="note" style="margin: 0">
+            Now "Alex, how do you want to join Flat share?", with the balance as
+            theirs.
+          </p>
+        </li>
+        <li class="spec" style="width: 13rem; padding: 0.875rem">
+          <div class="spec-label">5 · You're in — removed</div>
+          <p style="margin: 0 0 0.5rem; font-weight: 600">
+            Its button said "See the group" and opened a checklist.
+          </p>
+          <p class="note" style="margin: 0">A toast over the group now.</p>
+        </li>
+        <li class="spec" style="width: 13rem; padding: 0.875rem">
+          <div class="spec-label">6 · Finish setting up — removed</div>
+          <p style="margin: 0 0 0.5rem; font-weight: 600">0 of 4</p>
+          <p class="note" style="margin: 0">
+            Offered a guest three rows only an account can keep, and a payout
+            method to somebody who owes. The guest card on the overview is what
+            is left of it.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>After: the list, how to join, the group</h2>
+    <div class="scroll-x">
+      <div
+        style="
+          display: flex;
+          gap: 1rem;
+          align-items: flex-start;
+          width: max-content;
+          padding-bottom: 0.5rem;
+        "
+      >
+        <!-- 1 · The list -->
+        <div class="frame" style="width: 390px; flex-shrink: 0">
+          <div style="padding: 1rem 1.25rem 1.5rem">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding-bottom: 0.875rem;
+              "
+            >
+              <div
+                style="
+                  flex: 1;
+                  height: 0.25rem;
+                  border-radius: 999px;
+                  background: var(--border);
+                "
+              ></div>
+              <span
+                style="
+                  font-size: 0.6875rem;
+                  font-weight: 600;
+                  letter-spacing: 0.07em;
+                  text-transform: uppercase;
+                  color: var(--muted-foreground);
+                "
+                >Who you are</span
+              >
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1.25rem">
+              <span class="wordmark"
+                ><svg viewBox="8 7 32 32" fill="none" aria-hidden="true">
+                  <circle cx="24" cy="11.5" r="4.4" fill="#F97361" />
+                  <rect
+                    x="8"
+                    y="21.75"
+                    width="32"
+                    height="4.5"
+                    rx="2.25"
+                    fill="currentColor"
+                  />
+                  <path
+                    d="M17.5 32a6.5 6.5 0 0 0 13 0Z"
+                    fill="currentColor"
+                  /></svg
+                ><span class="wordmark-text">Balancia</span></span
+              >
+
+              <div
+                class="card"
+                style="
+                  flex-direction: row;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 1rem;
+                "
+              >
+                <div
+                  style="display: flex; flex-direction: column; gap: 0.125rem"
+                >
+                  <span style="font-weight: 600">Flat share</span>
+                  <span class="note" style="font-size: 0.75rem"
+                    >4 people · 12 expenses · since 3 Sep</span
+                  >
+                </div>
+                <span class="avatar-stack">
+                  <span class="avatar avatar--lg">AL</span>
+                  <span class="avatar avatar--lg">SA</span>
+                  <span class="avatar avatar--lg">JO</span>
+                </span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.5rem">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    line-height: 1.25;
+                    letter-spacing: -0.025em;
+                  "
+                >
+                  Sam invited you to Flat share. Which of these is you?
+                </p>
+                <p class="note" style="margin: 0; font-size: 0.875rem">
+                  Everyone in the group gets this same link, so it can't tell
+                  who opened it. Pick your name and its balance becomes yours.
+                </p>
+              </div>
+
+              <ul
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 0.5rem;
+                  list-style: none;
+                  margin: 0;
+                  padding: 0;
+                "
+              >
+                <li>
+                  <div
+                    class="card"
+                    style="
+                      flex-direction: row;
+                      align-items: center;
+                      gap: 0.75rem;
+                      padding: 0.75rem 1rem;
+                      min-height: 4.25rem;
+                    "
+                  >
+                    <span class="avatar avatar--lg">AL</span>
+                    <span
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.125rem;
+                      "
+                    >
+                      <span style="font-weight: 500; font-size: 1rem"
+                        >Alex</span
+                      >
+                      <span class="note" style="font-size: 0.875rem"
+                        ><span
+                          class="tabular-nums"
+                          style="font-weight: 500; color: var(--negative-ink)"
+                          >owes €60.00</span
+                        >
+                        · 2 expenses</span
+                      >
+                    </span>
+                    <span class="note" aria-hidden="true">›</span>
+                  </div>
+                </li>
+                <li>
+                  <div
+                    class="card"
+                    style="
+                      flex-direction: row;
+                      align-items: center;
+                      gap: 0.75rem;
+                      padding: 0.75rem 1rem;
+                      min-height: 4.25rem;
+                    "
+                  >
+                    <span class="avatar avatar--lg">JO</span>
+                    <span
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.125rem;
+                      "
+                    >
+                      <span style="font-weight: 500; font-size: 1rem"
+                        >Jordan</span
+                      >
+                      <span class="note" style="font-size: 0.875rem"
+                        ><span
+                          class="tabular-nums"
+                          style="font-weight: 500; color: var(--positive-ink)"
+                          >gets back €35.50</span
+                        >
+                        · 4 expenses</span
+                      >
+                    </span>
+                    <span class="note" aria-hidden="true">›</span>
+                  </div>
+                </li>
+                <li>
+                  <div
+                    class="card"
+                    style="
+                      flex-direction: row;
+                      align-items: center;
+                      gap: 0.75rem;
+                      padding: 0.75rem 1rem;
+                      min-height: 4.25rem;
+                    "
+                  >
+                    <span class="avatar avatar--lg">RO</span>
+                    <span
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.125rem;
+                      "
+                    >
+                      <span style="font-weight: 500; font-size: 1rem"
+                        >Robin</span
+                      >
+                      <span class="note" style="font-size: 0.875rem"
+                        ><span
+                          style="
+                            font-weight: 500;
+                            color: var(--neutral-balance-ink);
+                          "
+                          >settled up</span
+                        >
+                        · 1 expense</span
+                      >
+                    </span>
+                    <span class="note" aria-hidden="true">›</span>
+                  </div>
+                </li>
+              </ul>
+
+              <button
+                type="button"
+                class="btn"
+                style="
+                  height: 3.125rem;
+                  width: 100%;
+                  border: 1px dashed var(--input);
+                  border-radius: var(--radius-xl);
+                  background: var(--card);
+                "
+              >
+                None of these — I'm new here
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 · How to join -->
+        <div class="frame" style="width: 390px; flex-shrink: 0">
+          <div style="padding: 1rem 1.25rem 1.5rem">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding-bottom: 0.875rem;
+              "
+            >
+              <button
+                type="button"
+                class="btn btn--outline btn--icon-lg"
+                aria-label="Back"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <div
+                style="
+                  flex: 1;
+                  height: 0.25rem;
+                  border-radius: 999px;
+                  background: linear-gradient(
+                    to right,
+                    var(--primary) 50%,
+                    var(--border) 50%
+                  );
+                "
+              ></div>
+              <span
+                style="
+                  font-size: 0.6875rem;
+                  font-weight: 600;
+                  letter-spacing: 0.07em;
+                  text-transform: uppercase;
+                  color: var(--muted-foreground);
+                "
+                >Join</span
+              >
+            </div>
+
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 1.25rem;
+                min-height: 40rem;
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 0.75rem">
+                <span
+                  class="avatar"
+                  style="width: 3.25rem; height: 3.25rem; font-size: 1.125rem"
+                  >AL</span
+                >
+                <div
+                  style="display: flex; flex-direction: column; gap: 0.125rem"
+                >
+                  <span style="font-size: 1rem; font-weight: 600">Alex</span>
+                  <span
+                    class="tabular-nums"
+                    style="
+                      font-size: 0.875rem;
+                      font-weight: 500;
+                      color: var(--negative-ink);
+                    "
+                    >You owe €60.00</span
+                  >
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.5rem">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    line-height: 1.25;
+                    letter-spacing: -0.025em;
+                  "
+                >
+                  Alex, how do you want to join Flat share?
+                </p>
+                <p class="note" style="margin: 0; font-size: 0.875rem">
+                  An account keeps Flat share, your balance and the 2 expenses
+                  under your name on any device, not just this browser.
+                </p>
+              </div>
+
+              <div style="flex: 1"></div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.625rem">
+                <button
+                  type="button"
+                  class="btn btn--default"
+                  style="height: 3.375rem; width: 100%; font-size: 1rem"
+                >
+                  Create an account
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--outline"
+                  style="height: 3.125rem; width: 100%; font-size: 1rem"
+                >
+                  I already have an account
+                </button>
+                <button
+                  type="button"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    width: 100%;
+                    min-height: 3.375rem;
+                    padding: 0.75rem 1rem;
+                    border: 1px dashed var(--input);
+                    border-radius: var(--radius-xl);
+                    background: var(--card);
+                    color: inherit;
+                    font: inherit;
+                    text-align: left;
+                  "
+                >
+                  <span style="flex: 1">
+                    <span style="display: block; font-weight: 500"
+                      >Continue as a guest</span
+                    >
+                    <span
+                      class="note"
+                      style="display: block; font-size: 0.75rem"
+                      >Stays in this browser. Nothing you add is lost if you
+                      create an account later.</span
+                    >
+                  </span>
+                  <span class="note" aria-hidden="true">›</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--link"
+                  style="align-self: center; color: var(--primary-ink)"
+                >
+                  Not you? Back to the list
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 · The group -->
+        <div class="frame" style="width: 390px; flex-shrink: 0">
+          <div class="app-header">
+            <span style="font-weight: 600">Flat share</span>
+            <span class="badge badge--outline">Guest</span>
+          </div>
+          <div
+            style="
+              padding: 0.75rem 0.75rem 0;
+              display: flex;
+              justify-content: center;
+            "
+          >
+            <div class="toast" style="--tone: var(--positive)">
+              <span class="toast-glyph">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <div class="toast-body">
+                <div class="toast-title">You're in Flat share</div>
+                <div class="note" style="font-size: 0.75rem">
+                  2 expenses were already under your name. They're yours now.
+                </div>
+              </div>
+              <button class="toast-close" type="button" aria-label="Dismiss">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div
+            style="
+              padding: 1rem 1rem 1.5rem;
+              display: flex;
+              flex-direction: column;
+              gap: 1.25rem;
+            "
+          >
+            <div style="display: flex; flex-direction: column; gap: 0.25rem">
+              <span class="note" style="margin: 0">You owe</span>
+              <span
+                class="tabular-nums"
+                style="
+                  font-size: 2.5rem;
+                  font-weight: 600;
+                  letter-spacing: -0.03em;
+                  color: var(--negative-ink);
+                "
+                >€60.00</span
+              >
+              <span class="note" style="margin: 0">to Sam</span>
+            </div>
+
+            <ul class="list">
+              <li>
+                <div class="list-row">
+                  <span class="list-main">
+                    <span class="list-title">Sam</span>
+                  </span>
+                  <span
+                    class="tabular-nums"
+                    style="font-weight: 500; color: var(--positive-ink)"
+                    >+ €95.50</span
+                  >
+                </div>
+              </li>
+              <li>
+                <div class="list-row">
+                  <span class="list-main">
+                    <span class="list-title">Alex (you)</span>
+                  </span>
+                  <span
+                    class="tabular-nums"
+                    style="font-weight: 500; color: var(--negative-ink)"
+                    >− €60.00</span
+                  >
+                </div>
+              </li>
+            </ul>
+
+            <!-- The guest card: last on the overview, and permanent. -->
+            <div
+              class="alert"
+              role="status"
+              style="
+                border-color: color-mix(
+                  in oklch,
+                  var(--primary) 30%,
+                  transparent
+                );
+                background: color-mix(in oklch, var(--primary) 6%, transparent);
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="color: var(--primary-ink)"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4M12 8h.01" />
+              </svg>
+              <div class="alert-title">You are in Flat share as a guest</div>
+              <div class="alert-desc">
+                This browser is the only place your access lives. An account
+                keeps Flat share, the
+                <span
+                  class="tabular-nums"
+                  style="font-weight: 500; color: var(--foreground)"
+                  >€60.00</span
+                >
+                you owe and everything you add.
+                <div style="margin-top: 0.75rem">
+                  <button type="button" class="btn btn--default">
+                    Create your account
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Choosing "Create an account" or "I already have an account" adds the
+      email-and-code screen between the second screen and the group, and nothing
+      else. The progress bar measures the route the reader is on, so it sits at
+      half on the second screen until a guest's tap ends the route.
+    </p>
+  </section>
+
+  <section>
+    <h2>The second screen, three ways</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Signed out, a listed name</span>
+              <span class="list-sub"
+                >"Alex, how do you want to join Flat share?" — Create an account
+                · I already have an account · Continue as a guest. The guest
+                option is the join itself.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Signed in, a listed name</span>
+              <span class="list-sub"
+                >"Alex, ready to join Flat share?" — "You're signed in as Léa
+                Martin. Your balance and the 2 expenses under your name go on
+                that account." One button: Join Flat share.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title"
+                >Nobody on the list ("None of these")</span
+              >
+              <span class="list-sub"
+                >"What should Flat share call you?" — a name field first, then
+                the same ways in, each waiting for the name, and "Back to the
+                list" under them.</span
+              >
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>The list in French</h2>
+    <div class="frame" style="width: 390px; max-width: 100%">
+      <div
+        style="
+          padding: 1rem 1.25rem 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        "
+      >
+        <div style="display: flex; flex-direction: column; gap: 0.5rem">
+          <p
+            style="
+              margin: 0;
+              font-size: 1.5rem;
+              font-weight: 600;
+              line-height: 1.25;
+              letter-spacing: -0.025em;
+            "
+          >
+            Sam t’invite dans Flat share. Lequel de ces noms est le tien&nbsp;?
+          </p>
+          <p class="note" style="margin: 0; font-size: 0.875rem">
+            Tout le groupe reçoit ce même lien, il ne sait donc pas qui l’a
+            ouvert. Choisis ton nom et son solde devient le tien.
+          </p>
+        </div>
+        <ul class="list">
+          <li>
+            <div class="list-row" style="justify-content: flex-start">
+              <span class="avatar avatar--lg">AL</span>
+              <span class="list-main">
+                <span class="list-title" style="font-size: 1rem">Alex</span>
+                <span class="list-sub" style="font-size: 0.875rem"
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 500; color: var(--negative-ink)"
+                    >doit 60,00&nbsp;€</span
+                  >
+                  · 2 dépenses</span
+                >
+              </span>
+            </div>
+          </li>
+          <li>
+            <div class="list-row" style="justify-content: flex-start">
+              <span class="avatar avatar--lg">JO</span>
+              <span class="list-main">
+                <span class="list-title" style="font-size: 1rem">Jordan</span>
+                <span class="list-sub" style="font-size: 0.875rem"
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 500; color: var(--positive-ink)"
+                    >récupère 35,50&nbsp;€</span
+                  >
+                  · 4 dépenses</span
+                >
+              </span>
+            </div>
+          </li>
+        </ul>
+        <button
+          type="button"
+          class="btn"
+          style="
+            height: 3.125rem;
+            width: 100%;
+            border: 1px dashed var(--input);
+            border-radius: var(--radius-xl);
+            background: var(--card);
+          "
+        >
+          Aucun — je viens d’arriver
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the copy has to carry</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title"
+                >"Sam invited you to Flat share. Which of these is you?"</span
+              >
+              <span class="list-sub"
+                >An invitation, from the person whose name the link's own chat
+                preview already shows — nothing a link-holder could not learn
+                before tapping. Without a name: "You're invited to Flat
+                share."</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"owes €60.00 · 2 expenses"</span>
+              <span class="list-sub"
+                >The word and the amount together, in the balance's tone, never
+                "filed" and never a bare signed figure.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">"You owe €60.00"</span>
+              <span class="list-sub"
+                >From the moment they have said who they are, the balance is
+                theirs and the sentence says "you". The word carries the
+                direction, so the figure goes unsigned.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title"
+                >"Nothing you add is lost if you create an account later."</span
+              >
+              <span class="list-sub"
+                >"Create an account", not "claim". The reader never meets the
+                word for what the server does to a seat.</span
+              >
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title"
+                >"…and lets you say how to be paid."</span
+              >
+              <span class="list-sub"
+                >On the guest card, only for somebody who gets money back.
+                Somebody who owes does not need a payout method to pay.</span
+              >
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Let a button do what it says. The join ends in the group, with a toast
+          saying "you're in"; nothing stands between them.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Commit on the tap that picks a row. Picking only opens the next
+          screen, which names the person and keeps "Not you? Back to the list"
+          under its buttons.
+        </p>
+      </div>
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Name the signed-in account on the list, before anybody picks: a link
+          opened on a borrowed laptop is how a balance gets taken by the wrong
+          person.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          List a person's expenses at their full price under their balance. The
+          lines would never add up to it; the list already shows the balance and
+          the count.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
