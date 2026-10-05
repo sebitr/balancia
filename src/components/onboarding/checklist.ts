@@ -12,26 +12,21 @@
  * remember on their next device. A row that merely repeated its own title
  * would be furniture.
  *
- * Three markers, and the glyph carries the state rather than the colour:
+ * Two markers, and the glyph carries the state rather than the colour:
  *
  *  - `done` — a filled positive circle with a check.
  *  - `todo` — a pale circle with a barely-there check.
- *  - `urgent` — a hollow ring with an arrow, never a filled check. A coral
- *    check would read as complete-and-important, and in greyscale would be
- *    indistinguishable from done. Only one row is ever urgent: a guest's
- *    unclaimed account, which is the single thing on the list that can be lost
- *    by closing the browser.
+ *
+ * Only an account reaches the list. A guest used to, and of its rows could
+ * keep only one — the account itself, marked urgent — since payouts,
+ * currencies and push all need an account to be stored on. That row is the
+ * guest card on the group's overview now, and the guest goes straight there.
  */
 
-export type ChecklistMarker = "done" | "todo" | "urgent";
+export type ChecklistMarker = "done" | "todo";
 
 export type ChecklistSheet =
-  | "claimAccount"
-  | "profile"
-  | "passkey"
-  | "payouts"
-  | "currencies"
-  | "notifications";
+  "profile" | "passkey" | "payouts" | "currencies" | "notifications";
 
 export interface ChecklistRow {
   readonly id: string;
@@ -45,7 +40,6 @@ export interface ChecklistRow {
 }
 
 export interface ChecklistState {
-  readonly isGuest: boolean;
   /** How the account was proved, for the receipt on the first row. */
   readonly credential: "passkey" | "code" | "password" | null;
   readonly email: string | null;
@@ -68,47 +62,34 @@ export interface ChecklistState {
 }
 
 export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
-  const account: ChecklistRow = state.isGuest
-    ? {
-        id: "account",
-        marker: "urgent",
-        labelKey: "claimLabel",
-        noteKey: "claimNote",
-        sheet: "claimAccount",
-      }
-    : {
-        id: "account",
-        marker: "done",
-        labelKey: "accountLabel",
-        // Which credential ran is the part worth keeping: it is what this
-        // person will look for when they open Balancia somewhere else.
-        noteKey:
-          state.credential === "passkey"
-            ? "accountNotePasskey"
-            : state.email
-              ? "accountNoteVerified"
-              : "accountNotePassword",
-        noteValues: state.email ? { email: state.email } : undefined,
-        sheet: null,
-      };
+  const account: ChecklistRow = {
+    id: "account",
+    marker: "done",
+    labelKey: "accountLabel",
+    // Which credential ran is the part worth keeping: it is what this person
+    // will look for when they open Balancia somewhere else.
+    noteKey:
+      state.credential === "passkey"
+        ? "accountNotePasskey"
+        : state.email
+          ? "accountNoteVerified"
+          : "accountNotePassword",
+    noteValues: state.email ? { email: state.email } : undefined,
+    sheet: null,
+  };
 
   /*
-   * Name and photo, for an account. A guest has no account to hang a photo
-   * on, so for them the row is not merely unfinishable but meaningless, and
-   * it is left out rather than shown as a thing still to do.
+   * Name and photo. A finished row opens nothing; an unfinished one opens the
+   * sheet that finishes it. Before, this row could never be tapped at all.
    */
-  const profile: ChecklistRow | null = state.isGuest
-    ? null
-    : {
-        id: "profile",
-        marker: state.hasPhoto ? "done" : "todo",
-        labelKey: "profileLabel",
-        noteKey: state.hasPhoto ? "profileNotePhoto" : "profileNoteInitials",
-        noteValues: { name: state.name },
-        // A finished row opens nothing; an unfinished one opens the sheet
-        // that finishes it. Before, this row could never be tapped at all.
-        sheet: state.hasPhoto ? null : "profile",
-      };
+  const profile: ChecklistRow = {
+    id: "profile",
+    marker: state.hasPhoto ? "done" : "todo",
+    labelKey: "profileLabel",
+    noteKey: state.hasPhoto ? "profileNotePhoto" : "profileNoteInitials",
+    noteValues: { name: state.name },
+    sheet: state.hasPhoto ? null : "profile",
+  };
 
   /*
    * A passkey for the next sign-in.
@@ -117,13 +98,11 @@ export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
    * register one: the moment after a successful sign-in is where most passkey
    * enrolments come from, and it is the one thing on this list that makes the
    * next device a tap rather than an inbox. Not shown where the account
-   * already came in with a passkey — the account row says so — nor to a guest,
-   * who has no account to attach one to, nor to an account that already has
-   * one somewhere: a list is for what is left, and a done row is only kept
-   * when it was this list that did it.
+   * already came in with a passkey — the account row says so — nor to an
+   * account that already has one somewhere: a list is for what is left, and a
+   * done row is only kept when it was this list that did it.
    */
   const passkey: ChecklistRow | null =
-    state.isGuest ||
     state.credential === "passkey" ||
     !state.passkeysSupported ||
     (state.hasPasskey && !state.passkeyAdded)
@@ -189,8 +168,7 @@ export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
  * Asked before the screen is reached rather than on it, because a checklist
  * with every row already ticked is a screen that exists only to be dismissed.
  * Derived from the rows rather than from the state so that a row added later
- * is counted here without anybody remembering to; `urgent` is not done, which
- * is what keeps a guest's unclaimed account from completing the list.
+ * is counted here without anybody remembering to.
  */
 export function checklistIsComplete(state: ChecklistState): boolean {
   return checklistRows(state).every((row) => row.marker === "done");

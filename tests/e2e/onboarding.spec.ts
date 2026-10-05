@@ -97,15 +97,13 @@ test.describe("onboarding", () => {
     ).toHaveValue("Grace");
     await guestPage.getByRole("button", { name: "Join as a guest" }).click();
 
-    await expect(
-      guestPage.getByRole("heading", { name: "You're in as a guest" }),
-    ).toBeVisible();
-    await guestPage.getByRole("button", { name: "See the group" }).click();
-
-    // The checklist marks the unclaimed account urgent, and only that row.
-    await expect(guestPage.getByText("Claim your account")).toBeVisible();
-    await guestPage.getByRole("button", { name: "Go to the group" }).click();
+    // Straight into the group, the way a shared link's guest lands: the group
+    // says "you're in", and its guest card is what is left of the checklist.
     await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
+    await expect(guestPage.getByText("You're in Verbier")).toBeVisible();
+    await expect(guestPage.getByRole("status")).toContainText(
+      "You are in Verbier as a guest",
+    );
 
     await ownerContext.close();
     await guestContext.close();

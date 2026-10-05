@@ -7,7 +7,6 @@ import {
 } from "./checklist";
 
 const base: ChecklistState = {
-  isGuest: false,
   credential: "passkey",
   email: "seb@hey.ch",
   hasPhoto: false,
@@ -34,15 +33,6 @@ describe("checklistRows", () => {
     expect(row({ ...base, credential: "code" }, "account").noteKey).toBe(
       "accountNoteVerified",
     );
-  });
-
-  it("marks a guest's account urgent, and never merely done-and-important", () => {
-    const account = row({ ...base, isGuest: true }, "account");
-    expect(account.marker).toBe("urgent");
-    // A filled coral check would be indistinguishable from `done` in
-    // greyscale, so `urgent` must stay its own marker rather than a tint.
-    expect(account.marker).not.toBe("done");
-    expect(account.sheet).toBe("claimAccount");
   });
 
   it("opens nothing from a completed row", () => {
@@ -74,13 +64,6 @@ describe("checklistRows", () => {
 
   it("keeps to five rows for an account that came in with a passkey", () => {
     expect(checklistRows(base)).toHaveLength(5);
-  });
-
-  it("leaves a guest four rows: no account to hang a photo on", () => {
-    const rows = checklistRows({ ...base, isGuest: true });
-    expect(rows).toHaveLength(4);
-    expect(rows.map((row) => row.id)).not.toContain("profile");
-    expect(rows.map((row) => row.id)).not.toContain("passkey");
   });
 
   it("opens the name-and-photo sheet until there is a photo", () => {
@@ -187,18 +170,15 @@ describe("checklistIsComplete", () => {
       }),
     ).toBe(true);
   });
-
-  it("is never true for a guest, whose account row is urgent", () => {
-    // Urgent is not done. A guest with all four of the others still has the
-    // one thing on this list that closing the browser loses.
-    expect(checklistIsComplete({ ...everything, isGuest: true })).toBe(false);
-  });
 });
 
 describe("checklistProgress", () => {
-  it("counts only what is done, so an urgent row is not credit", () => {
-    const guest = checklistRows({ ...base, isGuest: true });
-    expect(checklistProgress(guest)).toEqual({ done: 0, total: 4 });
+  it("counts only what is done", () => {
+    // The account row, and nothing else yet.
+    expect(checklistProgress(checklistRows(base))).toEqual({
+      done: 1,
+      total: 5,
+    });
   });
 
   it("counts up as rows are finished", () => {

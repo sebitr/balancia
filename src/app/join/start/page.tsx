@@ -3,7 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { resolveJoinLink } from "@/lib/security/join-link";
 import { readJoinCookie } from "@/modules/auth/cookies";
 import { getCurrentUser } from "@/lib/security/actor";
-import { loadProfileSetup } from "@/modules/profile/setup";
 import { getDateFormatter } from "@/i18n/preferences";
 import { listClaimableMembers, loadJoinSummary } from "@/modules/join/service";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
@@ -70,12 +69,9 @@ export default async function JoinStartPage() {
 
   const viewer = await getCurrentUser();
 
-  const [summary, claimable, profile] = await Promise.all([
+  const [summary, claimable] = await Promise.all([
     loadJoinSummary(link.groupId),
     listClaimableMembers(link.groupId),
-    // What they have set up already, so the checklist at the end starts from
-    // it — and disappears when there is nothing on it left to do.
-    viewer ? loadProfileSetup(viewer.userId) : null,
   ]);
 
   const dates = await getDateFormatter();
@@ -85,9 +81,10 @@ export default async function JoinStartPage() {
   return (
     <OnboardingFlow
       arrival="shared"
+      // The same name the link's chat bubble already shows (`preview.ts`), so
+      // saying it on the list tells a link-holder nothing new.
       inviterName={link.inviterName}
       account={viewer && { name: viewer.name, email: viewer.email }}
-      profile={profile}
       registrationAllowed={env.ALLOW_REGISTRATION}
       codeSignupAvailable={env.smtpEnabled}
       group={{
@@ -118,12 +115,6 @@ export default async function JoinStartPage() {
         balances: member.balances.map((balance) => ({
           currency: balance.currency,
           minorUnits: balance.amount.toString(),
-        })),
-        recentExpenses: member.recentExpenses.map((expense) => ({
-          id: expense.id,
-          description: expense.description,
-          minorUnits: expense.amount.toString(),
-          currency: expense.currency,
         })),
       }))}
     />
