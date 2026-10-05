@@ -480,7 +480,13 @@ describe("the cold arrival", () => {
     expect(screen.getByText("Group currency")).toBeVisible();
     expect(screen.getByText(/Fixed once the group exists/)).toBeInTheDocument();
 
+    // Narrowed first: a role query over all 156 rows is slow enough in jsdom
+    // to time out on a busy machine, and searching is how people use it.
     await user.click(field);
+    await user.type(
+      await screen.findByRole("textbox", { name: "Search a currency" }),
+      "EUR",
+    );
     await user.click(await screen.findByRole("button", { name: /^EUR/ }));
 
     expect(
