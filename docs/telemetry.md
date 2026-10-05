@@ -514,7 +514,11 @@ POST /v1/crash    → /api/telemetry/v1/crash
   read and against the actual bytes afterwards.
 - **Strict schema validation.** Unknown properties are **rejected with 400**,
   not discarded — see §13.
-- **Rate limited** to 60 reports per hour per source.
+- **Rate limited** to 60 reports per hour per source. The source is read the
+  way every other Balancia limit reads a client: from the right of
+  `X-Forwarded-For`, counting back
+  [`TRUSTED_PROXY_HOPS`](environment.md#trusted_proxy_hops) proxies, never from
+  the left, which the sender writes. An IPv6 source counts by its /64.
 - **202 Accepted** on success, with no body worth parsing.
 
 ---
@@ -706,7 +710,8 @@ outbound request and receives nothing to log.
 
 **In the collector's rate limiter, pseudonymously and briefly.** Refusing a
 flood requires distinguishing one source from another. What is stored is an
-HMAC of the address under the collector's own `AUTH_SECRET`, salted with the
+HMAC of the address (an IPv6 source's /64) under the collector's own
+`AUTH_SECRET`, salted with the
 UTC day, in the `rate_limits` table, swept within 24 hours by the maintenance
 job — never joined to a report, and never seen by the analytics tables.
 

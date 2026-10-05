@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit, RateLimitedError } from "@/lib/security/rate-limit";
 import { AuthError } from "@/modules/auth/service";
+import { afterResponse } from "@/modules/auth/deliver";
 import { requestSignInCode } from "@/modules/auth/signup";
 import { resolveRequestLocale } from "@/i18n/request";
 import {
@@ -52,13 +53,18 @@ async function handlePost(request: Request) {
       throw new RateLimitedError(limit.retryAfterSeconds);
     }
 
-    await requestSignInCode(parsed.data.email, {
-      userAgent: request.headers.get("user-agent"),
-      ipAddress,
-      // The mail is written in the account's own language when it has one;
-      // this is the fallback for an account that never chose.
-      locale: await resolveRequestLocale(),
-    });
+    await requestSignInCode(
+      parsed.data.email,
+      {
+        userAgent: request.headers.get("user-agent"),
+        ipAddress,
+        // The mail is written in the account's own language when it has one;
+        // this is the fallback for an account that never chose.
+        locale: await resolveRequestLocale(),
+      },
+      // After the answer, so an account's mail takes none of its time.
+      { deliver: afterResponse },
+    );
 
     return noStore({ ok: true });
   } catch (error) {

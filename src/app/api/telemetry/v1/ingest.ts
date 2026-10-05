@@ -2,6 +2,8 @@ import { createHmac } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { clientIpFrom } from "@/lib/security/actor";
+import { rateLimitAddress } from "@/lib/security/client-address";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { MAX_PAYLOAD_BYTES } from "@/lib/telemetry/schema";
 import { ingestReport } from "@/lib/telemetry/receiver";
@@ -51,15 +53,27 @@ function notFound(): NextResponse {
  * by recomputing the hash. What they cannot do is read an address out of the
  * table, and no analytics data is ever joined to this value — it lives in
  * `rate_limits` and is never seen by the reports.
+ *
+ * The address is read the way every other limit reads it: from the right of
+ * `X-Forwarded-For`, where the proxies write, as `clientIpFrom` explains. This
+ * once took the leftmost entry, which is the one the sender types, so a
+ * collector's only defence was a header anybody could change per request.
+ * And it is hashed as `rateLimitAddress` counts it, an IPv6 source by its
+ * /64, because the hash hides the address from the table and would equally
+ * hide that a thousand of them were one subscriber.
+ *
+ * Exported for its test, which is the only other caller it should have.
  */
-function limitKey(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const address =
-    forwarded?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    "unknown";
+export function limitKey(headers: Headers, now: Date = new Date()): string {
+  const address = rateLimitAddress(
+    clientIpFrom(
+      headers.get("x-forwarded-for"),
+      headers.get("x-real-ip"),
+      getEnv().TRUSTED_PROXY_HOPS,
+    ),
+  );
 
-  const day = new Date().toISOString().slice(0, 10);
+  const day = now.toISOString().slice(0, 10);
   return createHmac("sha256", getEnv().AUTH_SECRET)
     .update(`${day}:${address}`)
     .digest("hex")
@@ -85,7 +99,10 @@ export async function ingest(
     return NextResponse.json({ error: "payload too large" }, { status: 413 });
   }
 
-  const limit = await consumeRateLimit("telemetryIngest", limitKey(request));
+  const limit = await consumeRateLimit(
+    "telemetryIngest",
+    limitKey(request.headers),
+  );
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "too many reports" },

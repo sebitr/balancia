@@ -48,10 +48,11 @@ const eslintConfig = defineConfig([
      *
      * The adapter files that exist precisely to bridge the framework are
      * exempt: `actions.ts` (Server Actions), `actor.ts` (reads request
-     * headers/cookies), `render-memo.ts` (React's per-render `cache`, which
-     * calls straight through outside a render and so asks the domain for no
-     * request context), and the browser auth client. They are the boundary,
-     * not the domain.
+     * headers/cookies), `deliver.ts` (hands mail to `after()`),
+     * `render-memo.ts` (React's per-render `cache`, which calls straight
+     * through outside a render and so asks the domain for no request
+     * context), and the browser auth client. They are the boundary, not the
+     * domain.
      */
     files: ["src/modules/**/*.ts", "src/lib/**/*.ts"],
     ignores: [
@@ -61,6 +62,7 @@ const eslintConfig = defineConfig([
       "src/lib/security/actor.ts",
       "src/modules/**/actions.ts",
       "src/modules/auth/cookies.ts",
+      "src/modules/auth/deliver.ts",
       "src/modules/auth/passkey-client.ts",
     ],
     rules: {
