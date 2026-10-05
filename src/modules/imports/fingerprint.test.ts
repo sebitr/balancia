@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fingerprintRow } from "./service";
-import type { StagedRow } from "./types";
+import { fingerprintRow, fingerprintRows } from "./service";
+import type { StagedExpense, StagedRow } from "./types";
 
 /**
  * Import fingerprints, pinned.
@@ -85,5 +85,106 @@ describe("fingerprintRow", () => {
         shares: [...guesthouse.shares].reverse(),
       }),
     ).toBe(fingerprintRow("group-1", guesthouse));
+  });
+});
+
+/**
+ * A line the file holds more than once.
+ *
+ * Two coffees at one price on one morning, split the same way, read alike, and
+ * both are money. A copy after the first is hashed with its number, and those
+ * digests are stored as much as the first ones are, so they are pinned the
+ * same way: computed from the canonical form by hand, outside this module,
+ * when copies were first counted.
+ */
+describe("fingerprintRows", () => {
+  const fingerprints = (rows: StagedRow[]) =>
+    fingerprintRows("group-1", rows).map((entry) => entry.fingerprint);
+
+  it("leaves the first of two identical rows on the digest it always had", () => {
+    const [first, second] = fingerprints([guesthouse, guesthouse]);
+    expect(first).toBe(
+      "073b111e2563b2ac62ff81b82acaa7ec754c414aff0e6d7cd2cf2cf0e645ad8c",
+    );
+    expect(second).toBe(
+      "a6fe54278b809359287fe7b9a894738dd5d9b7ec45562266bafd4a4124076261",
+    );
+  });
+
+  it("gives every further copy a digest of its own", () => {
+    const [first, second, third] = fingerprints([
+      repayment,
+      repayment,
+      repayment,
+    ]);
+    expect(first).toBe(
+      "31b7c4f08a8fd82ee1c06576c7e1643c99e4d8e4230699c52765e5889a945180",
+    );
+    expect(second).toBe(
+      "a58ac285ca5440ace48c5f679ccff3de70f61f5b7168aec077c27b6c7fabfb0b",
+    );
+    expect(new Set([first, second, third]).size).toBe(3);
+    expect(third).toBe(fingerprintRow("group-1", repayment, 3));
+  });
+
+  it("counts a row only against the rows that read exactly like it", () => {
+    // A later export with another line between the two copies, and one
+    // before them, leaves both copies where they were.
+    const alone = fingerprints([guesthouse, guesthouse]);
+    const [before, first, between, second] = fingerprints([
+      repayment,
+      guesthouse,
+      repayment,
+      guesthouse,
+    ]);
+    expect([first, second]).toEqual(alone);
+    expect(before).toBe(fingerprintRow("group-1", repayment));
+    expect(between).toBe(fingerprintRow("group-1", repayment, 2));
+  });
+
+  it("counts copies whatever order their people arrive in", () => {
+    const [, second] = fingerprints([
+      guesthouse,
+      { ...guesthouse, shares: [...guesthouse.shares].reverse() },
+    ]);
+    expect(second).toBe(fingerprintRow("group-1", guesthouse, 2));
+  });
+
+  it("takes a former reading with the copy's own number", () => {
+    // Read as an expense by an older importer, which wrote only the first of
+    // two such lines: the second is known by a former fingerprint nothing
+    // holds, and is imported.
+    const olderReading: StagedExpense = {
+      kind: "expense",
+      description: "Blaise paid Ada",
+      category: "Payment",
+      date: "2026-02-20",
+      amount: "14000",
+      currency: "EUR",
+      payers: [{ sourceName: "Blaise", amount: "14000" }],
+      shares: [{ sourceName: "Ada", amount: "14000" }],
+    };
+    const payment: StagedRow = {
+      kind: "settlement",
+      date: "2026-02-20",
+      amount: "14000",
+      currency: "EUR",
+      fromSourceName: "Blaise",
+      toSourceName: "Ada",
+      notes: "Blaise paid Ada",
+      formerlyReadAs: olderReading,
+    };
+
+    const [first, second] = fingerprintRows("group-1", [payment, payment]);
+    expect(first).toEqual({
+      fingerprint: fingerprintRow("group-1", repayment),
+      former: fingerprintRow("group-1", olderReading),
+    });
+    expect(second).toEqual({
+      fingerprint: fingerprintRow("group-1", repayment, 2),
+      former: fingerprintRow("group-1", olderReading, 2),
+    });
+    expect(second.former).not.toBe(first.former);
+    expect(fingerprintRows("group-1", [repayment])[0].former).toBeNull();
   });
 });
