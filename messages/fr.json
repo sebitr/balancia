@@ -59,7 +59,8 @@
     "owes": "doit",
     "settledUp": "soldé",
     "settledUpBadge": "Soldé",
-    "settled": "Soldé"
+    "settled": "Soldé",
+    "approximately": "≈ {amount}"
   },
   "currencyPicker": {
     "back": "Retour",

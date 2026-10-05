@@ -59,7 +59,8 @@
     "owes": "owes",
     "settledUp": "settled up",
     "settledUpBadge": "Settled up",
-    "settled": "Settled"
+    "settled": "Settled",
+    "approximately": "≈ {amount}"
   },
   "currencyPicker": {
     "back": "Back",

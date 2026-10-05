@@ -99,6 +99,7 @@ export function BalanceAmount({
   showLabel = true,
   size = "default",
   fractionDigits,
+  approximate = false,
 }: {
   minorUnits: string;
   currency: string;
@@ -107,6 +108,11 @@ export function BalanceAmount({
   size?: "default" | "large" | "small";
   /** Digits after the separator; defaults to the currency's own precision. */
   fractionDigits?: number;
+  /**
+   * Marks the figure "≈", for one `fractionDigits` has rounded away from what
+   * is owed — so a list kept in whole units does not pass for the exact sum.
+   */
+  approximate?: boolean;
 }) {
   const locale = useNumberLocale();
   const t = useTranslations("money");
@@ -115,6 +121,10 @@ export function BalanceAmount({
   const label = t(TONE[tone].labelKey);
   const magnitude =
     BigInt(minorUnits) < 0n ? -BigInt(minorUnits) : BigInt(minorUnits);
+  const figure = formatMoney(money(magnitude, currency), {
+    locale,
+    fractionDigits,
+  });
 
   return (
     <span
@@ -133,7 +143,7 @@ export function BalanceAmount({
         {sign}
       </span>
       <span className="tabular-nums">
-        {formatMoney(money(magnitude, currency), { locale, fractionDigits })}
+        {approximate ? t("approximately", { amount: figure }) : figure}
       </span>
       {showLabel && (
         <span className="text-sm font-normal text-muted-foreground">

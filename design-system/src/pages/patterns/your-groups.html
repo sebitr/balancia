@@ -139,6 +139,15 @@
       <dl class="dl">
         <dt>Outstanding in any currency</dt>
         <dd>Each non-zero balance, with its own word, icon and colour.</dd>
+        <dt>Whole units, and "≈" when that moved it</dt>
+        <dd>
+          The list is scanned rather than reconciled, so a row drops the
+          centimes — but says so: <code>≈ CHF 961</code> for 960.84, never a
+          bare <code>CHF 961</code> under a total reading
+          <code>CHF 960.84</code>. A figure that is whole already carries no
+          mark, and one under a single unit keeps its centimes:
+          <code>CHF 0.40</code>, not <code>≈ CHF 0</code>.
+        </dd>
         <dt>Square in every currency</dt>
         <dd>
           A single "Settled up" — never a row of zeroes, and never
