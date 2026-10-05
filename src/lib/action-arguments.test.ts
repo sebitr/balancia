@@ -33,6 +33,9 @@ const mocks = vi.hoisted(() => ({
   setGroupArchived: vi.fn(),
   setRecurringPaused: vi.fn(),
   createExpense: vi.fn(),
+  createSettlement: vi.fn(),
+  convertExpenseToSettlement: vi.fn(),
+  convertSettlementToExpense: vi.fn(),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -87,6 +90,14 @@ vi.mock("@/modules/expenses/service", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   createExpense: mocks.createExpense,
 }));
+vi.mock("@/modules/settlements/service", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  createSettlement: mocks.createSettlement,
+}));
+vi.mock("@/modules/expenses/convert", () => ({
+  convertExpenseToSettlement: mocks.convertExpenseToSettlement,
+  convertSettlementToExpense: mocks.convertSettlementToExpense,
+}));
 
 const { createApiTokenAction } = await import("@/modules/api-tokens/actions");
 const { recordReceiptScanAction } = await import("@/modules/telemetry/actions");
@@ -95,7 +106,12 @@ const { markReadAction, savePreferencesAction, setGroupMutedAction } =
 const { setGroupArchivedAction } = await import("@/modules/groups/actions");
 const { setRecurringPausedAction } =
   await import("@/modules/recurring/actions");
-const { createExpenseAction } = await import("@/modules/expenses/actions");
+const {
+  convertExpenseToSettlementAction,
+  convertSettlementToExpenseAction,
+  createExpenseAction,
+  createSettlementAction,
+} = await import("@/modules/expenses/actions");
 
 const MALFORMED = {
   ok: false,
@@ -109,6 +125,9 @@ beforeEach(() => {
   }));
   mocks.createApiToken.mockResolvedValue({ token: "blc_x", record: {} });
   mocks.createExpense.mockResolvedValue(randomUUID());
+  mocks.createSettlement.mockResolvedValue(randomUUID());
+  mocks.convertExpenseToSettlement.mockResolvedValue(randomUUID());
+  mocks.convertSettlementToExpense.mockResolvedValue(randomUUID());
 });
 
 /** Casts a value a caller could send to whatever the signature claims. */
@@ -314,5 +333,74 @@ describe("createExpenseAction", () => {
       expect.anything(),
       { clientKey: undefined },
     );
+  });
+});
+
+/**
+ * The other three writes the entry form hands a key to: a repayment, whose key
+ * the form holds from the first press until a save lands, and the change of
+ * kind in either direction, whose key is spent on the row it writes. All three
+ * land in the index `createExpenseAction`'s key does, so they are held to its
+ * rule.
+ */
+describe("the repayment and change-of-kind actions", () => {
+  const [from, to, entryId] = [randomUUID(), randomUUID(), randomUUID()];
+  const repayment = {
+    fromParticipantId: from,
+    toParticipantId: to,
+    amount: "2500",
+    currency: "EUR",
+    settledOn: "2026-09-01",
+  };
+  const expense = {
+    description: "Dinner",
+    amount: "2500",
+    currency: "EUR",
+    expenseDate: "2026-09-01",
+    payers: [{ participantId: from, amount: "2500" }],
+    splitMethod: "equal",
+    splitEntries: [{ participantId: from }],
+  };
+
+  describe.each([
+    [
+      "createSettlementAction",
+      (key: unknown) => createSettlementAction(GROUP_ID, repayment, sent(key)),
+      mocks.createSettlement,
+    ],
+    [
+      "convertExpenseToSettlementAction",
+      (key: unknown) =>
+        convertExpenseToSettlementAction(
+          GROUP_ID,
+          entryId,
+          repayment,
+          sent(key),
+        ),
+      mocks.convertExpenseToSettlement,
+    ],
+    [
+      "convertSettlementToExpenseAction",
+      (key: unknown) =>
+        convertSettlementToExpenseAction(GROUP_ID, entryId, expense, sent(key)),
+      mocks.convertSettlementToExpense,
+    ],
+  ] as const)("%s", (_name, call, service) => {
+    it.each([
+      ["a key that is not a UUID", "outbox-1"],
+      ["a key that is not a string", 7],
+      ["an empty key", ""],
+    ])("refuses %s", async (_label, key) => {
+      expect(await call(key)).toEqual(MALFORMED);
+      expect(service).not.toHaveBeenCalled();
+    });
+
+    it("writes with a key, and without one", async () => {
+      const key = randomUUID();
+      expect((await call(key)).ok).toBe(true);
+      expect(service.mock.lastCall?.at(-1)).toEqual({ clientKey: key });
+      expect((await call(undefined)).ok).toBe(true);
+      expect(service.mock.lastCall?.at(-1)).toEqual({ clientKey: undefined });
+    });
   });
 });
