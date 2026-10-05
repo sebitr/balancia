@@ -236,7 +236,23 @@ themselves ask on every call. `authorizeGroup` itself remembers nothing.
   `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, a
   `default-src 'none'; sandbox` CSP and `Cache-Control: private, no-store`.
 - There is no publicly served uploads directory.
-- Uploads never attached to an expense are swept by the worker.
+- **Photographs lose their metadata before they leave the device.** JPEG, WebP
+  and HEIC receipts are redrawn in the browser — orientation applied, long
+  edge capped at 2560 px — so the EXIF block, and the GPS position a phone
+  writes into it, never reaches the server or the other members of the group.
+  PNG, GIF and PDF are sent as they are. A browser that cannot decode the
+  format (HEIC outside Safari) sends the original, and so does a client of the
+  API that uploads directly: the server stores what it is given.
+- The size limit is enforced on the bytes that arrive, not the declared
+  `Content-Length`, so a chunked upload is held to it too. One group keeps at
+  most 2 GiB of receipts in 5,000 files, whoever uploads them — guest links
+  included.
+- A receipt's file is removed when its row is: on deletion, when the worker
+  sweeps uploads never attached to an expense, and when its group is deleted,
+  directly or with the last account that could open it. When the storage
+  refuses one receipt's delete, the row is kept and the next sweep tries
+  again; when it refuses a deleted group's, the count is logged.
+- Exporting a group's whole history is rate limited per person and group.
 
 ### Transport and headers
 

@@ -334,8 +334,11 @@ figures nothing shows.
 - Strict security headers + CSP via `proxy.ts` (Next 16's middleware
   replacement).
 - Uploads: content-sniffed MIME allowlist (JPEG/PNG/WebP/GIF/PDF), size
-  limits, random object names, authorization on download, no public uploads
-  directory.
+  limits counted on the bytes that arrive, a per-group storage ceiling, random
+  object names, authorization on download, no public uploads directory.
+  Photographs are redrawn in the browser before upload, which drops their EXIF
+  block. Objects are removed with their rows, including when a group is
+  deleted.
 - WebAuthn: explicit `WEBAUTHN_RP_ID`/origin configuration validated at boot;
   HTTPS required outside localhost.
 - Instance administration: `users.is_admin`, held by the first account

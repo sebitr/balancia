@@ -40,6 +40,7 @@ export type RateLimitBucket =
   | "passwordResetEmail"
   | "emailChange"
   | "upload"
+  | "export"
   | "receiptScan"
   | "rateLookup"
   | "parseText"
@@ -188,6 +189,14 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // the token space would need.
     joinRedeem: { limit: 40, windowSeconds: 600 },
     upload: { limit: 60, windowSeconds: 600 },
+    /*
+     * A group's whole history, built in memory and zipped in one request, is
+     * the most expensive thing a reader can ask this server for. Keyed by who
+     * is asking and which group, rather than by address, so a household
+     * behind one router does not share it. Ten an hour is every format of
+     * that group three times over.
+     */
+    export: { limit: 10, windowSeconds: 3600 },
     // Tighter than `upload`, because each one is an outbound call the
     // operator is billed for. Enough to scan a dinner's worth of receipts and
     // retry the ones that came out wrong; not enough to run up a bill.

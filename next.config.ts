@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { PROXY_BODY_LIMIT_BYTES } from "./src/lib/upload-limit";
 
 // Locale is resolved per request from a cookie (see src/i18n/request.ts), so
 // no routing configuration is involved — the plugin only needs to know where
@@ -89,6 +90,13 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "1mb",
     },
+
+    // Every request passes through `src/proxy.ts`, and Next keeps a copy of
+    // its body only up to this size, silently cutting off the rest. Left at
+    // the default of 10 MB, an `UPLOAD_MAX_BYTES` above that could never
+    // work. Set from the same constant `env.ts` caps that setting at, so the
+    // two cannot drift; see `src/lib/upload-limit.ts`.
+    proxyClientMaxBodySize: PROXY_BODY_LIMIT_BYTES,
 
     // Every screen here is dynamic — each one reads a cookie to find out who
     // is asking — and a dynamic route's prefetch is thrown away the moment it

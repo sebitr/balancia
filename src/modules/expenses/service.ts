@@ -7,6 +7,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  or,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -904,6 +905,11 @@ async function linkAttachments(
         inArray(attachments.id, [...attachmentIds]),
         eq(attachments.groupId, groupId),
         isNull(attachments.deletedAt),
+        // A fresh upload, or one this expense already holds. A receipt on
+        // somebody else's expense is not up for grabs: the ids are whatever
+        // the form sent, and without this a submitted id would lift the
+        // photo off the entry it documents and onto this one.
+        or(isNull(attachments.expenseId), eq(attachments.expenseId, expenseId)),
       ),
     );
 }

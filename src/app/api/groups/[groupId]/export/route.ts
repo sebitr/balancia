@@ -3,6 +3,7 @@ import { z } from "zod";
 import { isUuid } from "@/app/api/mobile";
 import { getCurrentActor } from "@/lib/security/actor";
 import { authorizeGroup } from "@/lib/security/authorization";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 import {
   buildGroupExport,
   exportFileName,
@@ -57,6 +58,26 @@ async function handleGet(
   try {
     const actor = await getCurrentActor();
     const access = await authorizeGroup(actor, groupId);
+
+    // Everything below is built in memory at once, so how often one person
+    // can ask for it is bounded — per group, because the account's data
+    // screen offers every group from one picker and a backup of each is not
+    // abuse.
+    const who =
+      access.actor.kind === "user"
+        ? `user:${access.actor.userId}`
+        : `guest:${access.actor.sessionId}`;
+    const limit = await consumeRateLimit("export", `${who}:${access.groupId}`);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many exports. Try again later." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limit.retryAfterSeconds) },
+        },
+      );
+    }
+
     // buildGroupExport requires the exportData permission, so a guest is
     // refused here rather than after the work is done.
     const data = await buildGroupExport(access);

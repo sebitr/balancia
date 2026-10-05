@@ -2560,6 +2560,7 @@
     "fileType": "Receipts must be a JPEG, PNG, WebP, GIF, HEIC image or a PDF.",
     "importMappingInvalid": "That matching does not fit the file that was read. Read the file again.",
     "importParticipantUnknown": "Somebody you matched is not in this group any more. Read the file again and match the people afresh.",
+    "groupStorageFull": "This group has run out of room for receipts, so this one was not kept.",
     "signedInRequired": "You need to be signed in.",
     "unknownCurrency": "That is not a currency Balancia knows.",
     "reminderEmpty": "A reminder needs something to say.",
