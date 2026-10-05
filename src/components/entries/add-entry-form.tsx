@@ -108,6 +108,8 @@ import {
 } from "./entry-type-tabs";
 import { enqueueEntry } from "@/lib/offline/outbox";
 import { randomKey } from "@/lib/offline/idb";
+import { ownerFor } from "@/lib/offline/owner";
+import { useDeviceActor } from "@/components/offline/device-actor";
 import { ScanBanner, ScanRow, ReceiptItems } from "./receipt-blocks";
 import {
   RecurrenceSheet,
@@ -579,6 +581,16 @@ export function AddEntryForm({
   const router = useRouter();
   const locale = useNumberLocale();
   const dates = useDateFormatter();
+  /*
+   * Who is typing, stamped on anything this form leaves on the device — a
+   * queued entry, a draft — so that it is only ever sent as, or offered back
+   * to, them. See `owner.ts`.
+   */
+  const deviceActor = useDeviceActor();
+  const owner = useMemo(
+    () => (deviceActor ? ownerFor(deviceActor) : null),
+    [deviceActor],
+  );
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tMethods = useTranslations("paymentMethods");
@@ -1466,6 +1478,7 @@ export function AddEntryForm({
     }
     void saveDraft({
       groupId,
+      owner,
       savedAt: Date.now(),
       fields: settledDraft,
       summary: {
@@ -1473,7 +1486,7 @@ export function AddEntryForm({
         description: settledDraft.description,
       },
     });
-  }, [draftable, groupId, settledDraft]);
+  }, [draftable, groupId, owner, settledDraft]);
 
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
@@ -1763,6 +1776,7 @@ export function AddEntryForm({
       clientKey,
       groupId,
       groupName,
+      owner,
       payload: expensePayload(),
     });
     // Queued counts as saved for the draft's purposes: the entry is on the

@@ -37,6 +37,7 @@ vi.mock("@/lib/offline/shared", async (importOriginal) => ({
 
 const ME = "1111aaaa-0000-4000-8000-000000000001";
 const JONAS = "1111aaaa-0000-4000-8000-000000000002";
+const USER = "2222bbbb-0000-4000-8000-000000000001";
 
 const GROUPS: ShareableGroup[] = [
   {
@@ -88,7 +89,7 @@ beforeEach(() => {
 describe("ShareScreen", () => {
   it("says what arrived and asks which group it is for", async () => {
     takeSharedPayload.mockResolvedValue(payload());
-    renderWithIntl(<ShareScreen groups={GROUPS} />);
+    renderWithIntl(<ShareScreen groups={GROUPS} userId={USER} />);
 
     expect(await screen.findByText("dinner was 84.20")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Flat 12/ })).toBeInTheDocument();
@@ -97,7 +98,7 @@ describe("ShareScreen", () => {
 
   it("writes the chosen group's draft and opens its drawer", async () => {
     takeSharedPayload.mockResolvedValue(payload());
-    renderWithIntl(<ShareScreen groups={GROUPS} />);
+    renderWithIntl(<ShareScreen groups={GROUPS} userId={USER} />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: /Lisbon/ }),
@@ -106,9 +107,13 @@ describe("ShareScreen", () => {
     await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
     const draft = saveDraft.mock.calls[0]![0] as {
       groupId: string;
+      owner: unknown;
       fields: { amountText: string; currency: string; payerId: string };
     };
     expect(draft.groupId).toBe("g-trip");
+    // Offered back to the account that shared it and nobody else who signs
+    // in on this phone.
+    expect(draft.owner).toEqual({ kind: "user", userId: USER });
     expect(draft.fields.amountText).toBe("84.20");
     // The group that was chosen, not the one at the top of the list.
     expect(draft.fields.currency).toBe("EUR");
@@ -124,7 +129,7 @@ describe("ShareScreen", () => {
       ok: true,
       file: { id: "att-1", fileName: "receipt.jpg" },
     });
-    renderWithIntl(<ShareScreen groups={GROUPS} />);
+    renderWithIntl(<ShareScreen groups={GROUPS} userId={USER} />);
 
     expect(await screen.findByText("receipt.jpg")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Flat 12/ }));
@@ -143,7 +148,7 @@ describe("ShareScreen", () => {
     const file = new File(["x"], "receipt.jpg", { type: "image/jpeg" });
     takeSharedPayload.mockResolvedValue(payload({ file }));
     uploadReceipt.mockResolvedValue({ ok: false, reason: "offline" });
-    renderWithIntl(<ShareScreen groups={GROUPS} />);
+    renderWithIntl(<ShareScreen groups={GROUPS} userId={USER} />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: /Flat 12/ }),
@@ -167,6 +172,7 @@ describe("ShareScreen", () => {
       renderWithIntl(
         <ShareScreen
           groups={[{ ...GROUPS[0]!, timezone: "Pacific/Auckland" }]}
+          userId={USER}
         />,
       );
 
@@ -180,7 +186,7 @@ describe("ShareScreen", () => {
 
   it("asks nothing when there is only one group to ask about", async () => {
     takeSharedPayload.mockResolvedValue(payload());
-    renderWithIntl(<ShareScreen groups={[GROUPS[0]!]} />);
+    renderWithIntl(<ShareScreen groups={[GROUPS[0]!]} userId={USER} />);
 
     await waitFor(() =>
       expect(push).toHaveBeenCalledWith("/groups/g-flat/expenses/new#draft=1"),
@@ -191,7 +197,7 @@ describe("ShareScreen", () => {
     // A reload of this screen, or somebody opening /share by hand: the share
     // was taken by the first read and is deliberately not there twice.
     takeSharedPayload.mockResolvedValue(null);
-    renderWithIntl(<ShareScreen groups={GROUPS} />);
+    renderWithIntl(<ShareScreen groups={GROUPS} userId={USER} />);
 
     expect(await screen.findByText("Nothing was shared")).toBeInTheDocument();
     expect(saveDraft).not.toHaveBeenCalled();
@@ -200,7 +206,7 @@ describe("ShareScreen", () => {
   it("says so, and keeps the list, when filing fails", async () => {
     takeSharedPayload.mockResolvedValue(payload());
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
-    renderWithIntl(<ShareScreen groups={GROUPS} />);
+    renderWithIntl(<ShareScreen groups={GROUPS} userId={USER} />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: /Lisbon/ }),

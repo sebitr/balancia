@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ConfirmSheet } from "./confirm-sheet";
-import { signOutAction } from "@/modules/auth/actions";
+import { SignOutSheet } from "./sign-out-sheet";
 
 /**
  * Signing out, from the foot of the hub.
@@ -16,11 +15,11 @@ import { signOutAction } from "@/modules/auth/actions";
  * with no way back — Undo lives in a toast, and the toast would be raised into
  * a page nobody is signed in to any more. Two taps is the honest price.
  *
- * The Account screen offers the same thing from its danger card, with its own
- * sheet: see `danger-card.tsx`. They share the copy and the action rather than
- * the component, because one is a centred word and the other is a row with an
- * icon, and threading a `variant` through to say so would be the longer way to
- * write both.
+ * The Account screen offers the same thing from its danger card: see
+ * `danger-card.tsx`. They share the sheet and everything it does, and not the
+ * trigger, because one is a centred word and the other is a row with an icon,
+ * and threading a `variant` through to say so would be the longer way to write
+ * both.
  */
 export function SignOutButton() {
   const t = useTranslations("userSettings");
@@ -36,17 +35,7 @@ export function SignOutButton() {
         {t("signOut")}
       </button>
 
-      <ConfirmSheet
-        open={open}
-        onOpenChange={setOpen}
-        title={t("signOutTitle")}
-        body={t("signOutBody")}
-        confirmLabel={t("signOut")}
-        // The action revokes the session, clears the cookie and redirects, so
-        // there is nothing to close afterwards — the page it would have closed
-        // onto is gone.
-        onConfirm={() => signOutAction()}
-      />
+      <SignOutSheet open={open} onOpenChange={setOpen} />
     </>
   );
 }
