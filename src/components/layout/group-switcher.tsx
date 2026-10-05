@@ -148,7 +148,13 @@ export function GroupSwitcher({
   return (
     // `flex-1`, so the name is handed every pixel the icon cluster opposite is
     // not using rather than only the ones it happens to be left with.
-    <div className="flex min-w-0 flex-1 items-center gap-0.5">
+    //
+    // From `lg` up the header is the group's rail and runs down the window, so
+    // growing would mean growing *downwards*: the switcher keeps its own
+    // height at the top of the rail instead. It is also what the panel hangs
+    // from there — positioned, so the anchor below spans this row rather than
+    // the rail, whose bottom edge is the bottom of the window.
+    <div className="flex min-w-0 flex-1 items-center gap-0.5 lg:relative lg:flex-none">
       <Link
         href="/dashboard"
         transitionTypes={POP}
@@ -201,7 +207,9 @@ export function GroupSwitcher({
           sideOffset={2}
           collisionPadding={12}
           aria-label={t("yourGroups")}
-          className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none"
+          // A rail is narrower than the rows this lists, so from `lg` up the
+          // panel takes a width of its own and opens out over the screen.
+          className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none lg:w-80"
         >
           <span className="px-3.5 pt-[11px] pb-[7px] text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             {t("yourGroups")}

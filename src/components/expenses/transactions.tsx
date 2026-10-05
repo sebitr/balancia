@@ -613,8 +613,12 @@ export function Transactions({
              * ResizeObserver groups enough lower categories into a remainder to
              * preserve every band's minimum readable, tappable size along
              * whichever axis it is running on.
+             *
+             * From `lg` up there is neither a header above nor a bar below —
+             * the group's rail has both — so it sticks at the screen's own top
+             * padding and runs to its bottom one.
              */
-            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start"
+            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start lg:top-8 lg:h-[calc(100dvh-5rem)]"
           >
             {visibleBands.map((band) => {
               const dimmed = selected.size > 0 && !hasSelection(band);

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 
 /**
@@ -60,6 +60,7 @@ vi.mock("@/components/motion/screen", () => ({
 }));
 
 const { AppShell } = await import("./app-shell");
+const { default: Link } = await import("next/link");
 
 function renderHeaderFor(actor: { label: string; isGuest: boolean }) {
   cleanup();
@@ -83,5 +84,66 @@ describe("AppShell header", () => {
     expect(screen.getByRole("button", { name: "Theme" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Notifications" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+  });
+});
+
+/**
+ * A group's shell, whose header stands up as a rail from `lg` up.
+ *
+ * The rail is the header's own controls with the group's navigation between
+ * them, so the order they are written in is the order a keyboard meets them:
+ * the switcher, the places, then the bell and the account, then the screen —
+ * with a way past all of it first.
+ */
+describe("AppShell with a rail", () => {
+  function renderGroupShell() {
+    cleanup();
+    renderWithIntl(
+      <AppShell
+        actor={{ label: "Ada", isGuest: false }}
+        leading={<Link href="/groups/g1">Lisbon, March</Link>}
+        rail={
+          <nav aria-label="Group sections">
+            <Link href="/groups/g1/expenses/new">Add</Link>
+            <Link href="/groups/g1">Overview</Link>
+          </nav>
+        }
+        bottomNav={<nav aria-label="Group sections (bar)" />}
+      >
+        <Link href="/groups/g1/expenses/e1">An expense on the screen</Link>
+      </AppShell>,
+    );
+  }
+
+  it("carries the navigation between the switcher and the account", () => {
+    renderGroupShell();
+
+    const header = screen.getByRole("banner");
+    const order = within(header)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(order).toEqual([
+      "Lisbon, March",
+      "Add",
+      "Overview",
+      "Notifications",
+      expect.stringContaining("Ada"),
+    ]);
+  });
+
+  it("opens with a way past the rail to the screen", () => {
+    renderGroupShell();
+
+    const links = screen.getAllByRole("link");
+    expect(links[0]).toHaveTextContent("Skip to content");
+    expect(links[0]).toHaveAttribute("href", "#app-content");
+    expect(screen.getByRole("main")).toHaveAttribute("id", "app-content");
+    // Everything in the rail comes between the way past it and the screen.
+    expect(links.at(-1)).toHaveTextContent("An expense on the screen");
+  });
+
+  it("offers no way past a header that is only a top bar", () => {
+    renderHeaderFor({ label: "Ada", isGuest: false });
+    expect(screen.queryByRole("link", { name: "Skip to content" })).toBeNull();
   });
 });

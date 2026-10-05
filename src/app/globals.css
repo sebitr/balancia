@@ -596,6 +596,15 @@
    * drift.
    */
   --app-header-h: 4rem;
+
+  /*
+   * The width of a group's rail, from `lg` up — where the header and the
+   * bottom bar fold into one column down the left of the window. Stated here
+   * for the same reason as the header's height: the shell's grid, the
+   * position strip and the entry detail's docked actions all have to start
+   * where the rail stops, and none of them can measure it.
+   */
+  --app-rail-w: 15rem;
 }
 
 /* The marketing page has a fixed art direction and does not inherit the
@@ -1189,6 +1198,21 @@
      * travelled, which does not change with the length of the page below it.
      */
     animation-range: 104px 168px;
+  }
+
+  /*
+   * From `lg` up there is no header to hang under: the group's rail has taken
+   * its controls down the left of the window, so the strip sits at the very
+   * top of the column beside the rail. The hero now starts 56px higher — the
+   * header's 64px gone, the screen's top padding 8px more — and the range
+   * moves up with it, so the figure is handed over at the same moment.
+   */
+  @media (width >= 64rem) {
+    [data-slot="position-strip"] {
+      top: 0;
+      inset-inline-start: var(--app-rail-w);
+      animation-range: 48px 112px;
+    }
   }
 
   @keyframes position-strip {
