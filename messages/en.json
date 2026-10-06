@@ -3357,7 +3357,6 @@
     },
     "repeat": {
       "title": "Repeat",
-      "oneOff": "One-off",
       "active": "{frequency}, {day}",
       "frequency": {
         "weekly": "Weekly",
@@ -3365,28 +3364,20 @@
         "yearly": "Yearly",
         "daily": "Daily"
       },
-      "every": "Every",
       "interval": {
         "weekly": "{count, plural, one {# week} other {# weeks}}",
         "monthly": "{count, plural, one {# month} other {# months}}",
         "yearly": "{count, plural, one {# year} other {# years}}",
         "daily": "{count, plural, one {# day} other {# days}}"
       },
-      "onDay": "On day",
       "dayOfMonth": "Day {day}",
-      "fewer": "Less often",
-      "more": "More often",
-      "previousDay": "Previous day",
-      "nextDay": "Next day",
       "ends": "Ends",
       "never": "Never",
       "onADate": "On a date",
-      "preview": "Next: {dates}. Created automatically, {timezone} time.",
       "done": "Done",
       "label": "Repeats",
       "schedule": "Create this entry again on a schedule",
       "next": "Next: {dates}",
-      "onTheNth": "On the {week} {day}",
       "byDayOfMonth": "On the {day}",
       "byWeekday": "On the {week} {day}",
       "lastDayOfMonth": "Last day of the month",

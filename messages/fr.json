@@ -3357,7 +3357,6 @@
     },
     "repeat": {
       "title": "Répéter",
-      "oneOff": "Ponctuel",
       "active": "{frequency}, {day}",
       "frequency": {
         "weekly": "Chaque semaine",
@@ -3365,28 +3364,20 @@
         "yearly": "Chaque année",
         "daily": "Chaque jour"
       },
-      "every": "Tous les",
       "interval": {
         "weekly": "{count, plural, one {# semaine} other {# semaines}}",
         "monthly": "{count, plural, one {# mois} other {# mois}}",
         "yearly": "{count, plural, one {# an} other {# ans}}",
         "daily": "{count, plural, one {# jour} other {# jours}}"
       },
-      "onDay": "Le jour",
       "dayOfMonth": "Jour {day}",
-      "fewer": "Moins souvent",
-      "more": "Plus souvent",
-      "previousDay": "Jour précédent",
-      "nextDay": "Jour suivant",
       "ends": "Fin",
       "never": "Jamais",
       "onADate": "À une date",
-      "preview": "Prochaines : {dates}. Créées automatiquement, heure de {timezone}.",
       "done": "Terminé",
       "label": "Récurrence",
       "schedule": "Recréer cette transaction selon un calendrier",
       "next": "Prochaines : {dates}",
-      "onTheNth": "Le {week} {day}",
       "byDayOfMonth": "Le {day}",
       "byWeekday": "Le {week} {day}",
       "lastDayOfMonth": "Dernier jour du mois",
