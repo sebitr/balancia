@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="Export" subtitle="Three formats, and what each one is honestly for" -->
+<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The group rail, the overview in two columns, sheets at a phone's width" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<title>Export — Balancia</title>
+<title>Desktop layout — Balancia</title>
 <style>
 /*
  * Balancia design-system kit.
@@ -28,7 +28,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: var(--accent-ink-light, oklch(0.543 0.168 30));
+  --primary-ink: oklch(0.543 0.168 30);
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -100,7 +100,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: var(--accent-ink-dark, oklch(0.737 0.168 30));
+  --primary-ink: oklch(0.737 0.168 30);
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -162,7 +162,7 @@
     --border: oklch(0.62 0.02 82);
     --input: oklch(0.58 0.02 82);
     --sidebar-border: oklch(0.62 0.02 82);
-    --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
+    --primary-ink: oklch(0.442 0.168 30);
     --positive-ink: oklch(0.409 0.084 167);
     --negative-ink: oklch(0.429 0.164 32);
     --payer-ink: oklch(0.43 0.093 70);
@@ -175,29 +175,12 @@
     --border: oklch(1 0 0 / 38%);
     --input: oklch(1 0 0 / 42%);
     --sidebar-border: oklch(1 0 0 / 38%);
-    --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
+    --primary-ink: oklch(0.847 0.084 30);
     --positive-ink: oklch(0.83 0.13 167);
     --negative-ink: oklch(0.85 0.082 32);
     --payer-ink: oklch(0.87 0.118 78);
     --neutral-balance-ink: oklch(0.84 0.03 319);
   }
-}
-
-/* ── the accent, painted ──
-   The app paints the reader's accent inline on <html>, over the coral the
-   blocks above draw, and a reader who has never chosen is painted plum. These
-   are the six variables `accentTokens("plum")` writes, so every page here
-   shows the app as most people see it. `html:root` outranks `:root` and
-   `.dark` the way an inline declaration does; the inks reach `--primary-ink`
-   through the `var(--accent-ink-…)` it is declared with above.
-   src/app/design-system-kit.test.ts holds this block to the app's default. */
-html:root {
-  --primary: oklch(0.71 0.048 319);
-  --ring: oklch(0.71 0.048 319);
-  --accent-ink-light: oklch(0.535 0.048 319);
-  --accent-ink-more-light: oklch(0.43 0.048 319);
-  --accent-ink-dark: oklch(0.725 0.048 319);
-  --accent-ink-more-dark: oklch(0.85 0.048 319);
 }
 
 /* ── base ── */
@@ -1510,131 +1493,190 @@ a[aria-current="page"] .nav-icon--primary {
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Patterns</div>
-    <h1>Export</h1>
+    <h1>Desktop layout</h1>
     <p class="lede">
-      Balancia's claim is that you can leave. That is only true if leaving
-      produces something usable, so the same data is offered three ways — and
-      the interface says plainly which one is which, rather than presenting
-      three interchangeable buttons.
+      The app is drawn for a phone, and a desktop window gets the same screens
+      with the room used modestly: a rail in place of the bottom bar, two
+      columns on the one screen that has two kinds of thing to say, and every
+      other screen left at the one readable column it has always had. Entering a
+      month of receipts is a desk task; nothing else here is a reason to
+      redesign a screen.
     </p>
   </header>
 
   <section>
-    <h2>On a phone</h2>
-    <div class="spec" style="display: flex; justify-content: center">
-      <div class="frame frame--phone" style="width: 100%">
-        <div style="padding: 1rem">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Export</div></div>
-            <div class="card-content">
-              <p class="note" style="margin: 0 0 0.75rem">
-                Your data, in a format you can open anywhere. The file is built
-                on this server and sent straight to you.
-              </p>
-              <!-- Stacked, full width. Three buttons in a row do not fit at
-                   375px without shrinking each below a comfortable target. -->
-              <div style="display: flex; flex-direction: column; gap: 0.5rem">
-                <button class="btn btn--outline btn--sm">CSV</button>
-                <button class="btn btn--outline btn--sm">Excel</button>
-                <button class="btn btn--outline btn--sm">JSON</button>
+    <h2>Three widths</h2>
+    <dl class="dl">
+      <dt>below md</dt>
+      <dd>
+        The phone. The bottom bar, the header along the top, one column, and
+        every type step a point larger. Nothing on this page applies.
+      </dd>
+      <dt>md to lg</dt>
+      <dd>
+        768–1023px, a tablet held upright. The desk type scale, still the bar
+        and the top header — it is held like a phone. Bottom sheets stop at a
+        phone's width from here.
+      </dd>
+      <dt>lg up</dt>
+      <dd>
+        1024px and wider. Inside a group, the rail; on the overview, two
+        columns. The dashboard and the other screens with nothing to navigate
+        between keep the header along the top.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>The overview, from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      The money on the left — where you stand, the balances, the repayments that
+      square the group. The context on the right — what changed since your last
+      visit, what the group has spent, the way into Activity. The left column
+      comes first in the document, so a screen reader, a keyboard and a phone
+      all read it in the order the single column always had.
+    </p>
+    <div class="frame frame--desk">
+      <div class="rail" aria-hidden="true">
+        <div class="rail-switcher">Lisbon, March</div>
+        <span class="rail-add">Add</span>
+        <ul>
+          <li><a aria-current="page">Overview</a></li>
+          <li><a>Transactions</a></li>
+          <li><a>People</a></li>
+          <li><a>Settings</a></li>
+        </ul>
+        <div class="rail-foot"><span class="avatar">ST</span> Sébastien</div>
+      </div>
+      <div class="desk-screen">
+        <div class="overview-cols">
+          <div class="overview-col">
+            <div class="card">
+              <div
+                class="card-content"
+                style="display: flex; flex-direction: column; gap: 0.25rem"
+              >
+                <p class="card-desc" style="margin: 0">You get back</p>
+                <span
+                  class="balance balance--positive balance--large tabular-nums"
+                  >€248.00</span
+                >
+                <p class="note" style="margin: 0">from Jonas and Ravi</p>
               </div>
-              <p class="note" style="margin: 0.75rem 0 0; font-size: 0.75rem">
-                CSV and Excel hold one row per person per expense, ready to sort
-                and total. JSON is the complete record — every amount exactly as
-                stored — and is the one to keep for an archive.
-              </p>
-              <p class="note" style="margin: 0.5rem 0 0; font-size: 0.75rem">
-                Receipts are not in these files — download them from each
-                expense.
-              </p>
             </div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row"
+                  ><span class="list-title">Jonas owes</span
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--negative-ink)"
+                    >€148.60</span
+                  ></span
+                >
+              </li>
+              <li>
+                <span class="list-row"
+                  ><span class="list-title">Ravi owes</span
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--negative-ink)"
+                    >€99.40</span
+                  ></span
+                >
+              </li>
+            </ul>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row"
+                  ><span class="list-title">Jonas pays you back</span
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--positive-ink)"
+                    >€148.60</span
+                  ></span
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="overview-col">
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row"
+                  ><span class="list-main"
+                    ><span class="list-title"
+                      >Ravi added Dinner at Trattoria Il Ponte</span
+                    ><span class="list-sub">2 hours ago</span></span
+                  ><span class="tabular-nums">€128.40</span></span
+                >
+              </li>
+            </ul>
+            <div class="card">
+              <div class="card-content">
+                <p class="card-desc" style="margin: 0">Spending · This month</p>
+                <p class="tabular-nums" style="margin: 0.25rem 0 0">
+                  Group spent <strong>€1,411.00</strong> · You paid
+                  <strong>€612.30</strong>
+                </p>
+              </div>
+            </div>
+            <ul class="list">
+              <li>
+                <span class="list-row"
+                  ><span class="list-main"
+                    ><span class="list-title">Activity</span
+                    ><span class="list-sub"
+                      >Every change, deletions included</span
+                    ></span
+                  ></span
+                >
+              </li>
+            </ul>
           </div>
         </div>
       </div>
     </div>
-    <p class="note" style="margin-top: 0.75rem">
-      Above <code>sm</code> the three buttons become a row. Nothing else about
-      the card changes: the explanation is not a tooltip or a help link, because
-      choosing a format is exactly the moment the difference matters.
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>width</dt>
+      <dd>
+        The screen widens to <code>max-w-5xl</code> for a layout marked
+        <code>data-layout="wide"</code>, and only for one. 24px between the
+        columns; the blocks inside each keep the overview's own gap.
+      </dd>
+      <dt>empty group</dt>
+      <dd>
+        One column at every width. "Start here" is two steps, not a dashboard.
+      </dd>
+      <dt>position strip</dt>
+      <dd>
+        Hangs from the top of the window beside the rail, across the wide
+        column, since there is no header above it.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Every other screen</h2>
+    <p class="note">
+      Transactions, People, Settings, an entry, a person: one column,
+      <code>max-w-3xl</code>, centred in the space beside the rail, never
+      stretched across it. Gutters open to 24px at <code>lg</code> and 32px at
+      <code>xl</code>. Anything that was docked above the bar — an entry's Edit
+      and Remove — docks at the foot of the window instead, starting where the
+      rail stops.
     </p>
   </section>
 
   <section>
-    <h2>What each format is for</h2>
-    <div class="spec">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Format</th>
-            <th>Shape</th>
-            <th>Amounts</th>
-            <th>Use it when</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>JSON</strong></td>
-            <td>The whole group, nested</td>
-            <td>Integer minor units, as strings</td>
-            <td>Archiving, or moving to another instance</td>
-          </tr>
-          <tr>
-            <td><strong>CSV</strong></td>
-            <td>One row per person per expense</td>
-            <td>Major units, e.g. <code>30.00</code></td>
-            <td>A script, or a spreadsheet pivot</td>
-          </tr>
-          <tr>
-            <td><strong>Excel</strong></td>
-            <td>Four sheets: expenses, payments, people, balances</td>
-            <td>Numeric cells, summable</td>
-            <td>Sharing a readable summary with the group</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="note" style="margin-top: 0.75rem">
-      The split is deliberate and stated in the copy. JSON is the format that
-      cannot lose a digit; the spreadsheet formats present major units because
-      that is what a spreadsheet can add up. Money never passes through a
-      floating-point number on the way to a cell — the decimal literal the money
-      module produced is written verbatim.
-    </p>
-  </section>
-
-  <section>
-    <h2>Who can export</h2>
-    <div class="spec">
-      <ul class="list">
-        <li>
-          <div class="list-row">
-            <span class="list-main">
-              <span class="list-title">Owner and member</span>
-              <span class="list-sub">The Export card is shown</span>
-            </span>
-            <span class="badge badge--secondary">Yes</span>
-          </div>
-        </li>
-        <li>
-          <div class="list-row">
-            <span class="list-main">
-              <span class="list-title">Guest, via an invitation link</span>
-              <span class="list-sub"
-                >No card, and the endpoint answers 404</span
-              >
-            </span>
-            <span class="badge badge--outline">No</span>
-          </div>
-        </li>
-      </ul>
-    </div>
-    <p class="note" style="margin-top: 0.75rem">
-      This is not about secrecy — a guest already reads every expense on screen.
-      An invitation link is a bearer token which may be forwarded, and a
-      one-request download of a group's entire financial history is a sharper
-      tool in the wrong hands than the same data read a page at a time. The
-      refusal is a 404 rather than a 403, like every other authorization
-      failure, so nothing is confirmed to someone who should not be asking.
+    <h2>Sheets</h2>
+    <p class="note">
+      From <code>md</code> up a bottom sheet is <code>max-w-md</code> (28rem)
+      wide and centred under the window, the way a dialog is, instead of a strip
+      across all of it. It still rises from the bottom edge, still pins its
+      actions under a scrolling body, and still dismisses the same way. A sheet
+      that wants another width says <code>md:max-w-*</code>. The entry drawer's
+      loading skeleton is held to the same width, so the drawer does not change
+      shape when the form arrives.
     </p>
   </section>
 
@@ -1644,17 +1686,17 @@ a[aria-current="page"] .nav-icon--primary {
       <div class="do">
         <strong>Do</strong>
         <p class="note" style="margin: 0">
-          Say what each format is for, in the same breath as offering it. "CSV,
-          XLSX, JSON" is a file-extension list; "the one to keep for an archive"
-          is a decision someone can actually make.
+          Use the width where a screen has two kinds of thing to say, and leave
+          a list a list. A balance row 900px wide puts the figure a hand's width
+          from the name it belongs to.
         </p>
       </div>
       <div class="dont">
         <strong>Don't</strong>
         <p class="note" style="margin: 0">
-          Imply the export contains more than it does. Receipts live in storage
-          and are downloaded per expense — saying so is better than letting
-          someone discover it after they have deleted their account.
+          Change anything below <code>lg</code> to make room for the desktop.
+          The phone is where the app is used; every class this layout adds is
+          <code>lg:</code>, or <code>md:</code> for a sheet.
         </p>
       </div>
     </div>

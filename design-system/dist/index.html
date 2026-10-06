@@ -28,7 +28,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.543 0.168 30);
+  --primary-ink: var(--accent-ink-light, oklch(0.543 0.168 30));
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -100,7 +100,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.737 0.168 30);
+  --primary-ink: var(--accent-ink-dark, oklch(0.737 0.168 30));
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -162,7 +162,7 @@
     --border: oklch(0.62 0.02 82);
     --input: oklch(0.58 0.02 82);
     --sidebar-border: oklch(0.62 0.02 82);
-    --primary-ink: oklch(0.442 0.168 30);
+    --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
     --positive-ink: oklch(0.409 0.084 167);
     --negative-ink: oklch(0.429 0.164 32);
     --payer-ink: oklch(0.43 0.093 70);
@@ -175,12 +175,29 @@
     --border: oklch(1 0 0 / 38%);
     --input: oklch(1 0 0 / 42%);
     --sidebar-border: oklch(1 0 0 / 38%);
-    --primary-ink: oklch(0.847 0.084 30);
+    --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
     --positive-ink: oklch(0.83 0.13 167);
     --negative-ink: oklch(0.85 0.082 32);
     --payer-ink: oklch(0.87 0.118 78);
     --neutral-balance-ink: oklch(0.84 0.03 319);
   }
+}
+
+/* ── the accent, painted ──
+   The app paints the reader's accent inline on <html>, over the coral the
+   blocks above draw, and a reader who has never chosen is painted plum. These
+   are the six variables `accentTokens("plum")` writes, so every page here
+   shows the app as most people see it. `html:root` outranks `:root` and
+   `.dark` the way an inline declaration does; the inks reach `--primary-ink`
+   through the `var(--accent-ink-…)` it is declared with above.
+   src/app/design-system-kit.test.ts holds this block to the app's default. */
+html:root {
+  --primary: oklch(0.71 0.048 319);
+  --ring: oklch(0.71 0.048 319);
+  --accent-ink-light: oklch(0.535 0.048 319);
+  --accent-ink-more-light: oklch(0.43 0.048 319);
+  --accent-ink-dark: oklch(0.725 0.048 319);
+  --accent-ink-more-dark: oklch(0.85 0.048 319);
 }
 
 /* ── base ── */
@@ -1338,6 +1355,114 @@ a[aria-current="page"] .nav-icon--primary {
   background: var(--primary);
 }
 
+/* The group rail: from lg (1024px) up, the header and the bottom bar stood up
+   the left edge as one 15rem column — switcher, Add, the four places, then the
+   bell and the account at the foot. `src/components/layout/group-nav.tsx`. */
+.frame--desk {
+  display: flex;
+  max-width: 64rem;
+  min-height: 27rem;
+}
+.rail {
+  flex: 0 0 15rem;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: color-mix(in oklch, var(--background) 95%, transparent);
+  padding: 1rem 0.75rem 0.75rem;
+}
+.rail-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.rail-switcher svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+}
+.rail-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2.5rem;
+  margin: 1.25rem 0 0.875rem;
+  border-radius: var(--radius-xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.rail-add svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.rail ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rail ul a {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.5rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-xl);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--muted-foreground);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+.rail ul a:hover {
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+.rail ul a[aria-current="page"] {
+  color: var(--primary-ink);
+  background: transparent;
+}
+.rail-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: auto -0.75rem 0;
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+/* The screen beside the rail: one readable column, or the overview's two. */
+.desk-screen {
+  flex: 1;
+  min-width: 0;
+  padding: 2rem 1.5rem 3rem;
+}
+.overview-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.625rem 1.5rem;
+  align-items: start;
+}
+.overview-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.625rem;
+  min-width: 0;
+}
+
 /* ── swatches ── */
 .swatches {
   display: grid;
@@ -1427,9 +1552,10 @@ a[aria-current="page"] .nav-icon--primary {
       <div class="spec">
         <div class="spec-label">02 — Calm, not financial</div>
         <p>
-          Deep plum on cream, with coral held back for the one thing to do next.
-          Friendly and trustworthy without reading as banking software — this is
-          a trip with friends, not a ledger review.
+          Deep plum on cream, with the reader's accent — a lighter plum unless
+          they pick another — held back for the one thing to do next. Friendly
+          and trustworthy without reading as banking software — this is a trip
+          with friends, not a ledger review.
         </p>
       </div>
       <div class="spec">

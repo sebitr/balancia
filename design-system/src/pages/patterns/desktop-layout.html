@@ -1,0 +1,213 @@
+<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The group rail, the overview in two columns, sheets at a phone's width" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Desktop layout</h1>
+    <p class="lede">
+      The app is drawn for a phone, and a desktop window gets the same screens
+      with the room used modestly: a rail in place of the bottom bar, two
+      columns on the one screen that has two kinds of thing to say, and every
+      other screen left at the one readable column it has always had. Entering a
+      month of receipts is a desk task; nothing else here is a reason to
+      redesign a screen.
+    </p>
+  </header>
+
+  <section>
+    <h2>Three widths</h2>
+    <dl class="dl">
+      <dt>below md</dt>
+      <dd>
+        The phone. The bottom bar, the header along the top, one column, and
+        every type step a point larger. Nothing on this page applies.
+      </dd>
+      <dt>md to lg</dt>
+      <dd>
+        768–1023px, a tablet held upright. The desk type scale, still the bar
+        and the top header — it is held like a phone. Bottom sheets stop at a
+        phone's width from here.
+      </dd>
+      <dt>lg up</dt>
+      <dd>
+        1024px and wider. Inside a group, the rail; on the overview, two
+        columns. The dashboard and the other screens with nothing to navigate
+        between keep the header along the top.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>The overview, from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      The money on the left — where you stand, the balances, the repayments that
+      square the group. The context on the right — what changed since your last
+      visit, what the group has spent, the way into Activity. The left column
+      comes first in the document, so a screen reader, a keyboard and a phone
+      all read it in the order the single column always had.
+    </p>
+    <div class="frame frame--desk">
+      <div class="rail" aria-hidden="true">
+        <div class="rail-switcher">Lisbon, March</div>
+        <span class="rail-add">Add</span>
+        <ul>
+          <li><a aria-current="page">Overview</a></li>
+          <li><a>Transactions</a></li>
+          <li><a>People</a></li>
+          <li><a>Settings</a></li>
+        </ul>
+        <div class="rail-foot"><span class="avatar">ST</span> Sébastien</div>
+      </div>
+      <div class="desk-screen">
+        <div class="overview-cols">
+          <div class="overview-col">
+            <div class="card">
+              <div
+                class="card-content"
+                style="display: flex; flex-direction: column; gap: 0.25rem"
+              >
+                <p class="card-desc" style="margin: 0">You get back</p>
+                <span
+                  class="balance balance--positive balance--large tabular-nums"
+                  >€248.00</span
+                >
+                <p class="note" style="margin: 0">from Jonas and Ravi</p>
+              </div>
+            </div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row"
+                  ><span class="list-title">Jonas owes</span
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--negative-ink)"
+                    >€148.60</span
+                  ></span
+                >
+              </li>
+              <li>
+                <span class="list-row"
+                  ><span class="list-title">Ravi owes</span
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--negative-ink)"
+                    >€99.40</span
+                  ></span
+                >
+              </li>
+            </ul>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row"
+                  ><span class="list-title">Jonas pays you back</span
+                  ><span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--positive-ink)"
+                    >€148.60</span
+                  ></span
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="overview-col">
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row"
+                  ><span class="list-main"
+                    ><span class="list-title"
+                      >Ravi added Dinner at Trattoria Il Ponte</span
+                    ><span class="list-sub">2 hours ago</span></span
+                  ><span class="tabular-nums">€128.40</span></span
+                >
+              </li>
+            </ul>
+            <div class="card">
+              <div class="card-content">
+                <p class="card-desc" style="margin: 0">Spending · This month</p>
+                <p class="tabular-nums" style="margin: 0.25rem 0 0">
+                  Group spent <strong>€1,411.00</strong> · You paid
+                  <strong>€612.30</strong>
+                </p>
+              </div>
+            </div>
+            <ul class="list">
+              <li>
+                <span class="list-row"
+                  ><span class="list-main"
+                    ><span class="list-title">Activity</span
+                    ><span class="list-sub"
+                      >Every change, deletions included</span
+                    ></span
+                  ></span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>width</dt>
+      <dd>
+        The screen widens to <code>max-w-5xl</code> for a layout marked
+        <code>data-layout="wide"</code>, and only for one. 24px between the
+        columns; the blocks inside each keep the overview's own gap.
+      </dd>
+      <dt>empty group</dt>
+      <dd>
+        One column at every width. "Start here" is two steps, not a dashboard.
+      </dd>
+      <dt>position strip</dt>
+      <dd>
+        Hangs from the top of the window beside the rail, across the wide
+        column, since there is no header above it.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Every other screen</h2>
+    <p class="note">
+      Transactions, People, Settings, an entry, a person: one column,
+      <code>max-w-3xl</code>, centred in the space beside the rail, never
+      stretched across it. Gutters open to 24px at <code>lg</code> and 32px at
+      <code>xl</code>. Anything that was docked above the bar — an entry's Edit
+      and Remove — docks at the foot of the window instead, starting where the
+      rail stops.
+    </p>
+  </section>
+
+  <section>
+    <h2>Sheets</h2>
+    <p class="note">
+      From <code>md</code> up a bottom sheet is <code>max-w-md</code> (28rem)
+      wide and centred under the window, the way a dialog is, instead of a strip
+      across all of it. It still rises from the bottom edge, still pins its
+      actions under a scrolling body, and still dismisses the same way. A sheet
+      that wants another width says <code>md:max-w-*</code>. The entry drawer's
+      loading skeleton is held to the same width, so the drawer does not change
+      shape when the form arrives.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Use the width where a screen has two kinds of thing to say, and leave
+          a list a list. A balance row 900px wide puts the figure a hand's width
+          from the name it belongs to.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Change anything below <code>lg</code> to make room for the desktop.
+          The phone is where the app is used; every class this layout adds is
+          <code>lg:</code>, or <code>md:</code> for a sheet.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

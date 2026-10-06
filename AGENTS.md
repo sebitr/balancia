@@ -187,8 +187,8 @@ not derive them from anything.**
 This was tried the other way round and it is worth knowing why, because the
 idea is a natural one and it will occur to you too. The accent is the one
 colour a reader chooses, and three of the seven sit on a money colour: coral,
-the default, is two degrees from the "you owe" red; mint _is_ the "gets back"
-green; amber is the payer. So each money hue used to be rotated away from the
+the default until plum replaced it, is two degrees from the "you owe" red;
+mint _is_ the "gets back" green; amber is the payer. So each money hue used to be rotated away from the
 accent until it was forty degrees clear. The result was a pink "you owe" for
 the default accent, an olive "gets back" under mint and a chartreuse payer
 under amber — and the rule was not merely badly tuned, it was unsatisfiable.

@@ -18,7 +18,7 @@ import {
   writeSurfaceCookies,
 } from "@/i18n/cookie";
 import { isDateFormat, isNumberFormat } from "@/i18n/format";
-import { DEFAULT_ACCENT, isAccentColor } from "@/modules/profile/accent";
+import { isAccentColor } from "@/modules/profile/accent";
 import {
   isDarkSurface,
   type SurfacePreferences,
@@ -157,9 +157,12 @@ export async function setDisplayNameAction(
  * to the next device, and a signed-out reader gets the cookie alone rather
  * than being told to make an account before they may have a green app.
  *
- * Coral is the absence of a choice rather than a value — it is what `:root`
- * already says — so choosing it clears both, and an account that never touched
- * this screen and one that came back to coral are the same row.
+ * Stored by name, whichever it is. Choosing the default used to clear both,
+ * which is why an account made before plum became the default cannot say
+ * whether it picked coral or never came here — its null now means coral
+ * (`UNCHOSEN_ACCOUNT_ACCENT`). A cleared cookie means plum to a signed-out
+ * reader now, and a null column means coral, so neither can stand for a
+ * choice any more: the name is the only thing that says what was picked.
  */
 export async function setAccentColorAction(
   accent: string,
@@ -167,13 +170,12 @@ export async function setAccentColorAction(
   const t = await getTranslations("serverErrors");
 
   if (!isAccentColor(accent)) return actionError(t("unknownAccent"));
-  const stored = accent === DEFAULT_ACCENT ? null : accent;
 
   return runAction("setAccentColor", async () => {
-    await writeAccentCookie(stored);
+    await writeAccentCookie(accent);
 
     const user = await getCurrentUser();
-    if (user) await saveUserAccentColor(user.userId, stored);
+    if (user) await saveUserAccentColor(user.userId, accent);
   });
 }
 

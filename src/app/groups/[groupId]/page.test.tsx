@@ -284,3 +284,44 @@ describe("the overview's row to the group's history", () => {
     expect(activityRow()).toHaveAttribute("href", "/groups/g1/activity");
   });
 });
+
+/**
+ * The two columns a desktop window gets from `lg` up.
+ *
+ * The grid only places them; the document decides the order a screen reader
+ * and a keyboard take, and a phone shows. So that order is pinned here: the
+ * money first, then the context — the same order the single column has
+ * always read in.
+ */
+describe("the overview's columns", () => {
+  const column = (element: HTMLElement, slot: string) =>
+    element.closest(`[data-slot="${slot}"]`);
+
+  it("put where you stand on the left and what changed on the right", async () => {
+    await renderOverview();
+
+    const primary = column(screen.getByText("Position"), "overview-primary");
+    const secondary = column(
+      screen.getByText("Spending card"),
+      "overview-secondary",
+    );
+    expect(primary).not.toBeNull();
+    expect(secondary).toContainElement(activityRow());
+    // Siblings in one wide layout, the money first in the document.
+    expect(primary?.parentElement).toHaveAttribute("data-layout", "wide");
+    expect(secondary?.parentElement).toBe(primary?.parentElement);
+    expect(
+      primary!.compareDocumentPosition(secondary!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("leave an empty group in the one column it has always had", async () => {
+    loadGroupOverview.mockResolvedValue(overview(0));
+
+    const { container } = await renderOverview();
+
+    expect(screen.getByText("Start here")).toBeInTheDocument();
+    expect(container.querySelector('[data-layout="wide"]')).toBeNull();
+  });
+});

@@ -117,15 +117,15 @@
 /*
  * Balancia design tokens.
  *
- * Brand direction: deep plum ink on cream, with coral held back for the one
- * action to take next — friendly and trustworthy without reading as banking
- * software. Balance semantics:
+ * Brand direction: deep plum ink on cream, with the accent held back for the
+ * one action to take next — friendly and trustworthy without reading as
+ * banking software. Balance semantics:
  *   --positive  : money the participant should receive (never color alone)
  *   --negative  : money the participant owes
  *   --neutral-balance : settled / zero
- *   --payer     : who put the money in — the one role coral cannot carry,
- *                 because on the add screen coral already means "in the split"
- *                 and a payer is frequently also a participant in it
+ *   --payer     : who put the money in — the one role the accent cannot carry,
+ *                 because on the add screen the accent already means "in the
+ *                 split" and a payer is frequently also a participant in it
  *
  * Each of those, and --primary, comes in two weights, because one value cannot
  * do both jobs in the light theme. The plain token is the *fill*: the balance
@@ -152,37 +152,45 @@
  * as *text* in each theme, because an inline declaration cannot know which
  * theme it is in and the two need different lightness. So --primary-ink is
  * written once per block as `var(--accent-ink-…, <coral>)`, falling back to
- * the palette as drawn for a document nobody painted (the design-system kit,
- * a test). It is the only var() indirection left in this file, and the ring
- * and sidebar stay literal or aliased: several parsers read a bare oklch()
- * out of here and none of them needs to learn var().
+ * the palette as drawn for a document nobody painted (a test). It is the only
+ * var() indirection left in this file, and the ring and sidebar stay literal
+ * or aliased: several parsers read a bare oklch() out of here and none of
+ * them needs to learn var().
+ *
+ * The palette as drawn is coral, and it is the brand's: the emails, the app
+ * icon and the share image are derived from --primary below. It is not the
+ * default accent. The root layout paints every page it renders, and a reader
+ * who has never chosen is painted plum (DEFAULT_ACCENT), which sits beside
+ * neither money colour; coral is two degrees from the "you owe" red. The
+ * design-system kit paints plum the same way, on top of this palette.
  *
  * The money colours are literals, the same on every account. They used to be
  * derived — any money hue within forty degrees of the accent was rotated away
- * from it — and that is what turned "you owe" ruby under the default accent,
- * "gets back" olive under mint and the payer chartreuse under amber. The rule
- * was unsatisfiable rather than merely wrong: in the dark theme the seeds sit
- * at L 0.70–0.78 and these fills at L 0.72–0.82, and an ink is walked until it
- * clears 4.5:1, so two inks converge on one lightness whatever hue they start
- * from. Only hue is left to separate them, it needs about thirty degrees to
- * register, and thirty degrees is enough to stop a red being red. The full
- * argument is at the top of src/modules/profile/accent.test.ts.
+ * from it — and that is what turned "you owe" ruby under coral, then the
+ * default, "gets back" olive under mint and the payer chartreuse under amber.
+ * The rule was unsatisfiable rather than merely wrong: in the dark theme the
+ * seeds sit at L 0.70–0.78 and these fills at L 0.72–0.82, and an ink is
+ * walked until it clears 4.5:1, so two inks converge on one lightness whatever
+ * hue they start from. Only hue is left to separate them, it needs about
+ * thirty degrees to register, and thirty degrees is enough to stop a red being
+ * red. The full argument is at the top of src/modules/profile/accent.test.ts.
  *
  * So the accent is allowed to be a money colour's neighbour, and three of the
  * seven are: coral is two degrees from the "you owe" red, mint is the "gets
- * back" green, amber is the payer. What keeps a balance legible is not its
- * hue — it is the sign and the word beside it
- * (src/components/money/balance-tone.ts), and the rule in AGENTS.md that the
- * accent never paints a money surface.
+ * back" green, amber is the payer. None of the three is the default, but any
+ * of them can be chosen, and what keeps a balance legible is not its hue — it
+ * is the sign and the word beside it (src/components/money/balance-tone.ts),
+ * and the rule in AGENTS.md that the accent never paints a money surface.
  *
  * --chart-2 is the accent, because it is the "you" series; the other chart
  * colours are categorical and are kept a visible distance from every accent
  * and every money colour, so a bar is never mistaken for a balance. Other
  * accepted near-misses, on purpose: dark --notice-warning equals the amber
  * seed (a toast glyph beside a triangle, never on a money surface); the plum
- * accent sits close to --neutral-balance (settled is grey by design, and plum
- * is the "no accent" choice); dark --group-accent-emerald equals the positive
- * fill (a group's icon is content, not chrome).
+ * accent, the default, sits close to --neutral-balance (settled is grey by
+ * design, carries no direction, and is always phrased in words); dark
+ * --group-accent-emerald equals the positive fill (a group's icon is content,
+ * not chrome).
  */
 :root {
   --background: oklch(0.977 0.007 85);
@@ -596,6 +604,15 @@
    * drift.
    */
   --app-header-h: 4rem;
+
+  /*
+   * The width of a group's rail, from `lg` up — where the header and the
+   * bottom bar fold into one column down the left of the window. Stated here
+   * for the same reason as the header's height: the shell's grid, the
+   * position strip and the entry detail's docked actions all have to start
+   * where the rail stops, and none of them can measure it.
+   */
+  --app-rail-w: 15rem;
 }
 
 /* The marketing page has a fixed art direction and does not inherit the
@@ -1189,6 +1206,21 @@
      * travelled, which does not change with the length of the page below it.
      */
     animation-range: 104px 168px;
+  }
+
+  /*
+   * From `lg` up there is no header to hang under: the group's rail has taken
+   * its controls down the left of the window, so the strip sits at the very
+   * top of the column beside the rail. The hero now starts 56px higher — the
+   * header's 64px gone, the screen's top padding 8px more — and the range
+   * moves up with it, so the figure is handed over at the same moment.
+   */
+  @media (width >= 64rem) {
+    [data-slot="position-strip"] {
+      top: 0;
+      inset-inline-start: var(--app-rail-w);
+      animation-range: 48px 112px;
+    }
   }
 
   @keyframes position-strip {

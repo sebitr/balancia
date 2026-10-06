@@ -42,11 +42,21 @@ const DIRECTIONS = {
 export function Screen({
   children,
   inset,
+  rail,
   className,
 }: {
   children: ReactNode;
   /** Clears the bottom bar, on the screens that have one. */
   inset?: boolean;
+  /**
+   * The screen sits beside a group's rail from `lg` up, where the bottom bar
+   * has gone: the inset that cleared it goes too, the gutters open up, and a
+   * screen that holds a wide layout — the overview's two columns, marked
+   * `data-layout="wide"` — gets the room for it. Every other screen keeps the
+   * one readable column it has on a phone, centred in the space beside the
+   * rail rather than stretched across it.
+   */
+  rail?: boolean;
   /**
    * For a surface whose column is not the app's. The settings screens draw
    * their own header inside the snapshot and carry it to the top edge, so they
@@ -85,6 +95,8 @@ export function Screen({
         // iOS PWA home-indicator area. Pages without a bottom bar keep the
         // regular `py-6` inset above.
         inset && "pb-[calc(8rem+env(safe-area-inset-bottom))]",
+        rail &&
+          "lg:px-6 lg:pt-8 lg:pb-12 lg:has-data-[layout=wide]:max-w-5xl xl:px-8",
         className,
       )}
     >

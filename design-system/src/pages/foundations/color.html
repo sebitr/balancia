@@ -1,4 +1,4 @@
-<!-- @dsCard group="Foundations" name="Colour" subtitle="Plum and coral tokens, the three balance tones, seven accents and four surfaces" -->
+<!-- @dsCard group="Foundations" name="Colour" subtitle="Plum and cream tokens, the three balance tones, seven accents with plum the default, and four surfaces" -->
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Foundations</div>
@@ -176,7 +176,9 @@
         </div>
         <div class="swatch-meta">
           <div class="swatch-name">--primary</div>
-          <div class="swatch-val">coral — one action per screen</div>
+          <div class="swatch-val">
+            the accent, plum by default — one action per screen
+          </div>
         </div>
       </div>
       <div class="swatch">
@@ -226,8 +228,8 @@
           &mdash; section headings, metadata, descriptions
         </div>
         <div>
-          <span style="color: var(--primary)">--primary</span> &mdash; links and
-          the active nav item
+          <span style="color: var(--primary-ink)">--primary-ink</span> &mdash;
+          links and the active nav item
         </div>
         <div>
           <span style="color: var(--destructive)">--destructive</span> &mdash;
@@ -295,7 +297,20 @@
       that is accepted, because a balance is told apart by its sign and its word
       rather than by its hue.
     </p>
+    <p>
+      <strong>Plum is the default</strong>, and comes first on the appearance
+      screen: the brand's own ink, and the one accent near neither money colour.
+      Signed-out screens and every new account get it. Coral was the default
+      before, which put &ldquo;Settle up&rdquo; directly under a &ldquo;you
+      owe&rdquo; figure two degrees from it; an account made then keeps coral,
+      because it cannot be told from one that chose coral.
+    </p>
     <div class="row">
+      <span
+        class="badge"
+        style="background: oklch(0.71 0.048 319); color: oklch(0.226 0.072 319)"
+        >plum &middot; default</span
+      >
       <span
         class="badge"
         style="background: oklch(0.712 0.168 30); color: oklch(0.226 0.072 319)"
@@ -326,20 +341,16 @@
         style="background: oklch(0.7 0.17 350); color: oklch(0.226 0.072 319)"
         >raspberry</span
       >
-      <span
-        class="badge"
-        style="background: oklch(0.71 0.048 319); color: oklch(0.226 0.072 319)"
-        >plum</span
-      >
     </div>
     <p class="note" style="margin-top: 0.75rem">
-      Coral is two degrees from the "you owe" red and mint <em>is</em> the "gets
-      back" green — so under those accents the money colour moves, not the
-      accent: ruby for "you owe" under coral, grass for "gets back" under mint,
-      olive for the payer under amber. The other four leave all three where they
-      are. This kit shows the palette as drawn, with the accent unpainted; the
-      app paints the seed inline on <code>&lt;html&gt;</code>, and the tokens
-      above read it through <code>var(--accent-…, fallback)</code>.
+      The money colours never move with the accent: under coral, "you owe" is
+      the same red as under plum, and under mint "gets back" is the same green.
+      The stylesheet draws <code>--primary</code> as coral, which is the brand's
+      — the emails, the app icon and the homepage keep it — and the app paints
+      the reader's accent over it inline on <code>&lt;html&gt;</code>, where the
+      tokens above read it through <code>var(--accent-…, fallback)</code>. This
+      kit paints plum the same way, so every page here shows the app as a reader
+      who has never chosen sees it.
     </p>
     <p class="note">
       Do: <code>bg-primary</code> on the button, the ring, the link, the "you"
