@@ -1,13 +1,14 @@
-<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header and the group bottom bar" -->
+<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, and a group's bottom bar and desktop rail" -->
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Components</div>
     <h1>Navigation</h1>
     <p class="lede">
       Three pieces only: a sticky header that carries identity, the line a
-      screen opens with, and a bottom bar inside a group. There is no sidebar
-      and no hamburger — a group has five destinations and they all fit on a
-      thumb's reach.
+      screen opens with, and a group's navigation — a bottom bar on a phone, and
+      from <code>lg</code> (1024px) up a rail down the left of the window. There
+      is no hamburger: a group has five destinations and they all fit, on a
+      thumb's reach or down the side.
     </p>
   </header>
 
@@ -319,10 +320,189 @@
         <code>pb-[env(safe-area-inset-bottom)]</code>, so the bar clears the
         home indicator.
       </dd>
-      <dt>from sm up</dt>
+      <dt>up to lg</dt>
       <dd>
-        The bar leaves the fixed position and becomes a tab strip in the page
-        flow.
+        Fixed to the bottom edge at every width below 1024px, a tablet held
+        upright included — it is held like a phone.
+      </dd>
+      <dt>from lg up</dt>
+      <dd>
+        <code>lg:hidden</code>. The rail below takes over, and the screen drops
+        the inset it kept clear for the bar.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Group rail — from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      On a desktop the header and the bar fold into one column down the left of
+      the window: the switcher at the top, Add and the four places in the
+      middle, the bell and the account at the foot. The same controls, in the
+      same document order, so Tab walks the rail top to bottom and then the
+      screen.
+    </p>
+    <div class="frame frame--desk">
+      <header class="rail">
+        <div class="rail-switcher">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <g transform="translate(2.4 2.6) scale(0.85)">
+              <circle cx="16" cy="4.5" r="4.4" style="fill: var(--primary)" />
+              <rect
+                x="0"
+                y="14.75"
+                width="32"
+                height="4.5"
+                rx="2.25"
+                fill="currentColor"
+              />
+              <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
+            </g>
+          </svg>
+          Lisbon, March
+        </div>
+        <nav aria-label="Group sections">
+          <a class="rail-add" href="#">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+            Add
+          </a>
+          <ul>
+            <li>
+              <a href="#" aria-current="page"
+                ><span class="nav-icon"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"
+                    />
+                    <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+                    <path d="M7 21h10" />
+                    <path d="M12 3v18" />
+                    <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg></span
+                >Overview</a
+              >
+            </li>
+            <li>
+              <a href="#"
+                ><span class="nav-icon"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+                    />
+                    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                    <path d="M12 17.5v-11" /></svg></span
+                >Transactions</a
+              >
+            </li>
+            <li>
+              <a href="#"
+                ><span class="nav-icon"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span
+                >People</a
+              >
+            </li>
+            <li>
+              <a href="#"
+                ><span class="nav-icon"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                      d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"
+                    /></svg></span
+                >Settings</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <div class="rail-foot">
+          <span class="avatar">ST</span>
+          Sébastien
+        </div>
+      </header>
+      <div class="desk-screen" style="color: var(--muted-foreground)">
+        The screen: one readable column, <code>max-w-3xl</code>, centred in the
+        space beside the rail — or the overview's two columns. See
+        <em>Desktop layout</em> under Patterns.
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>breakpoint</dt>
+      <dd>
+        <code>lg</code>, not <code>md</code>. At 768px a 15rem rail would leave
+        the screen a phone's width, which buys nothing; at 1024px the rail and
+        two phone-width columns fit side by side.
+      </dd>
+      <dt>one landmark</dt>
+      <dd>
+        The bar and the rail are both in the document and CSS shows one:
+        <code>lg:hidden</code> on the bar, <code>hidden lg:flex</code> on the
+        rail. A screen reader finds one "Group sections" at any width, with the
+        same five names.
+      </dd>
+      <dt>Add</dt>
+      <dd>
+        The rail's one filled button, at its head. The same link, the same name
+        and the same offline fallback as the bar's disc.
+      </dd>
+      <dt>active</dt>
+      <dd>
+        The bar's two cues, unchanged: <code>--primary-ink</code> label and an
+        accent disc behind the icon, with <code>aria-current="page"</code>.
+      </dd>
+      <dt>density</dt>
+      <dd>
+        40px rows rather than 74px tabs — a pointer is not a thumb. Type stays
+        on the desk scale, <code>text-sm</code>.
+      </dd>
+      <dt>keyboard</dt>
+      <dd>
+        A "Skip to content" link comes first, parked above the window until it
+        takes focus: the rail is eight stops before the screen.
+      </dd>
+      <dt>switcher</dt>
+      <dd>
+        Its panel takes a 20rem width of its own and opens out over the screen;
+        the rail is narrower than the rows it lists.
       </dd>
     </dl>
   </section>
