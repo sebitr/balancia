@@ -23,7 +23,7 @@ import {
   noStore,
   readJsonBody,
 } from "@/app/api/mobile";
-import { resolveAccent } from "@/modules/profile/accent";
+import { resolveStoredAccent } from "@/modules/profile/accent";
 import {
   DEFAULT_DATE_FORMAT,
   DEFAULT_NUMBER_FORMAT,
@@ -233,7 +233,7 @@ async function currentUserPayload(userId: string) {
     numberFormat: isNumberFormat(row.numberFormat)
       ? row.numberFormat
       : DEFAULT_NUMBER_FORMAT,
-    accentColor: resolveAccent(row.accentColor),
+    accentColor: resolveStoredAccent(row.accentColor),
     preferredCurrency: row.preferredCurrency,
     favoriteCurrencies: row.favoriteCurrencies,
   };

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   contrastRatio,
+  deltaE,
   formatOklch,
   isInGamut,
   oklchToHex,
@@ -15,9 +16,13 @@ import {
   ACCENT_SEEDS,
   accentPalette,
   accentTokens,
+  DEFAULT_ACCENT,
   inkSurfaces,
   MONEY_ROLES,
+  resolveAccent,
+  resolveStoredAccent,
   SURFACES,
+  UNCHOSEN_ACCOUNT_ACCENT,
   type AccentColor,
   type Theme,
 } from "./accent";
@@ -47,9 +52,20 @@ import {
  * (`src/components/money/balance-tone.ts`) and the rule that the accent never
  * paints a money surface (`AGENTS.md`). The first assertion below is the one
  * that stops the rotation coming back.
+ *
+ * The one lever left was which accent a reader gets without asking, and it is
+ * plum: the brand's own ink, near neither money colour. Coral was the default
+ * until then, which put a "you owe" figure and the "Settle up" button under it
+ * two degrees apart. The block after the money colours pins who gets which.
  */
 
 const THEMES: readonly Theme[] = ["light", "dark"];
+
+/**
+ * The OKLab distance `src/app/token-contrast.test.ts` makes a chart colour
+ * keep from a balance, so a bar is never read as one.
+ */
+const MIN_DELTA_E = 0.075;
 
 const CSS = readFileSync(
   new URL("../../app/globals.css", import.meta.url),
@@ -97,6 +113,52 @@ describe("the money colours", () => {
     ).join(" ");
     for (const role of MONEY_ROLES) {
       expect(painted, `${role} is painted per account`).not.toContain(role);
+    }
+  });
+});
+
+describe("the default", () => {
+  it("is plum, for a reader with no cookie or an unreadable one", () => {
+    expect(DEFAULT_ACCENT).toBe("plum");
+    expect(resolveAccent(undefined)).toBe("plum");
+    expect(resolveAccent("")).toBe("plum");
+    expect(resolveAccent("chartreuse")).toBe("plum");
+  });
+
+  it("keeps a chosen accent, coral included", () => {
+    for (const accent of ACCENT_COLORS) {
+      expect(resolveAccent(accent)).toBe(accent);
+      expect(resolveStoredAccent(accent)).toBe(accent);
+    }
+  });
+
+  it("reads an account's empty column as coral, not as the default", () => {
+    // An account from before plum stored "never chose" and "chose coral" as
+    // the same null, so null has to keep meaning what it meant then.
+    expect(resolveStoredAccent(null)).toBe("coral");
+    expect(UNCHOSEN_ACCOUNT_ACCENT).toBe("coral");
+    expect(UNCHOSEN_ACCOUNT_ACCENT).not.toBe(DEFAULT_ACCENT);
+  });
+
+  it("comes first on the appearance screen", () => {
+    expect(ACCENT_COLORS[0]).toBe(DEFAULT_ACCENT);
+  });
+
+  it("sits clear of every money colour, in both themes", () => {
+    // The reason for the move, held as a number: the floor the chart colours
+    // keep from a balance (`token-contrast.test.ts`). It is asked of the
+    // default only — coral, mint and amber fail it by design, and stay
+    // choosable, because colour never carries a balance by itself.
+    for (const theme of THEMES) {
+      for (const role of MONEY_ROLES) {
+        expect(
+          deltaE(
+            ACCENT_SEEDS[DEFAULT_ACCENT],
+            cssToken(selectorFor(theme), role),
+          ),
+          `${DEFAULT_ACCENT} vs --${role} in the ${theme} theme`,
+        ).toBeGreaterThanOrEqual(MIN_DELTA_E);
+      }
     }
   });
 });

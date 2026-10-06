@@ -40,6 +40,14 @@ const painted = () =>
   document.documentElement.style.getPropertyValue("--primary");
 
 describe("AccentChoices", () => {
+  it("draws the default, plum, first", () => {
+    renderChoices();
+    const swatches = screen.getAllByRole("radio");
+    expect(swatches).toHaveLength(7);
+    expect(swatches[0]).toHaveAccessibleName("Plum");
+    expect(swatches[1]).toHaveAccessibleName("Coral");
+  });
+
   it("paints the root before it writes, and names what was chosen", async () => {
     // Never resolves, so nothing below can be the round trip having finished.
     const { user } = renderChoices();

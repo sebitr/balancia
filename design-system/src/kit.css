@@ -17,7 +17,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.543 0.168 30);
+  --primary-ink: var(--accent-ink-light, oklch(0.543 0.168 30));
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -89,7 +89,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.737 0.168 30);
+  --primary-ink: var(--accent-ink-dark, oklch(0.737 0.168 30));
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -151,7 +151,7 @@
     --border: oklch(0.62 0.02 82);
     --input: oklch(0.58 0.02 82);
     --sidebar-border: oklch(0.62 0.02 82);
-    --primary-ink: oklch(0.442 0.168 30);
+    --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
     --positive-ink: oklch(0.409 0.084 167);
     --negative-ink: oklch(0.429 0.164 32);
     --payer-ink: oklch(0.43 0.093 70);
@@ -164,12 +164,29 @@
     --border: oklch(1 0 0 / 38%);
     --input: oklch(1 0 0 / 42%);
     --sidebar-border: oklch(1 0 0 / 38%);
-    --primary-ink: oklch(0.847 0.084 30);
+    --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
     --positive-ink: oklch(0.83 0.13 167);
     --negative-ink: oklch(0.85 0.082 32);
     --payer-ink: oklch(0.87 0.118 78);
     --neutral-balance-ink: oklch(0.84 0.03 319);
   }
+}
+
+/* ── the accent, painted ──
+   The app paints the reader's accent inline on <html>, over the coral the
+   blocks above draw, and a reader who has never chosen is painted plum. These
+   are the six variables `accentTokens("plum")` writes, so every page here
+   shows the app as most people see it. `html:root` outranks `:root` and
+   `.dark` the way an inline declaration does; the inks reach `--primary-ink`
+   through the `var(--accent-ink-…)` it is declared with above.
+   src/app/design-system-kit.test.ts holds this block to the app's default. */
+html:root {
+  --primary: oklch(0.71 0.048 319);
+  --ring: oklch(0.71 0.048 319);
+  --accent-ink-light: oklch(0.535 0.048 319);
+  --accent-ink-more-light: oklch(0.43 0.048 319);
+  --accent-ink-dark: oklch(0.725 0.048 319);
+  --accent-ink-more-dark: oklch(0.85 0.048 319);
 }
 
 /* ── base ── */

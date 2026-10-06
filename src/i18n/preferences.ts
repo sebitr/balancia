@@ -1,6 +1,10 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { getTimeZone } from "next-intl/server";
+import { cache } from "react";
+import { getCurrentUser } from "@/lib/security/actor";
+import { getUserPreferences } from "@/modules/auth/service";
+import { SESSION_COOKIE_NAME } from "@/modules/auth/sessions";
 import {
   createDateFormatter,
   DATE_FORMAT_COOKIE_NAME,
@@ -18,7 +22,9 @@ import {
 import { resolveRequestLocale } from "./request";
 import {
   ACCENT_COOKIE_NAME,
-  resolveAccent,
+  DEFAULT_ACCENT,
+  isAccentColor,
+  resolveStoredAccent,
   type AccentColor,
 } from "@/modules/profile/accent";
 import {
@@ -97,19 +103,34 @@ export async function getNumberLocale(): Promise<string> {
  * request-context job, and the domain modules stay framework-free — the same
  * reason the notation above is resolved here and not in `auth/service`.
  *
- * From the cookie alone. The account column exists so the choice follows
- * somebody to a new device, and sign-in copies it into the cookie there — see
- * `applyStoredPreferences`. A database round trip in front of the root layout,
- * on every render, for a value that has not changed since the last one, would
- * be a poor trade for skipping that copy.
+ * From the cookie when there is one. The account column exists so the choice
+ * follows somebody to a new device, and sign-in copies it into the cookie
+ * there — see `applyStoredPreferences` — so a reader who has chosen is
+ * answered without the database.
  *
- * An unknown value resolves to coral rather than reaching `--primary`: the
- * cookie is not HttpOnly, so anything at all can be in it.
+ * With no cookie, the answer depends on who is asking. Signed out, it is the
+ * default, plum. Signed in, it is the account's column — because an account
+ * made before plum became the default holds a null that means coral (see
+ * `UNCHOSEN_ACCOUNT_ACCENT`), its devices hold no cookie for the same reason,
+ * and the cookie alone would repaint every one of them plum. That costs one
+ * read by primary key, for a signed-in reader with no accent cookie, and
+ * `cache` keeps it to one per request however many components ask. The
+ * session lookup is shared with the page's own, through `getCurrentUser`'s.
+ *
+ * An unknown value is treated as no cookie rather than reaching `--primary`:
+ * the cookie is not HttpOnly, so anything at all can be in it.
  */
-export async function resolveAccentColor(): Promise<AccentColor> {
+export const resolveAccentColor = cache(async (): Promise<AccentColor> => {
   const cookieStore = await cookies();
-  return resolveAccent(cookieStore.get(ACCENT_COOKIE_NAME)?.value);
-}
+  const chosen = cookieStore.get(ACCENT_COOKIE_NAME)?.value;
+  if (isAccentColor(chosen)) return chosen;
+
+  if (!cookieStore.has(SESSION_COOKIE_NAME)) return DEFAULT_ACCENT;
+  const user = await getCurrentUser();
+  if (!user) return DEFAULT_ACCENT;
+  const { accentColor } = await getUserPreferences(user.userId);
+  return resolveStoredAccent(accentColor);
+});
 
 /**
  * Which dark surface this request is lit with. A cookie only, like the

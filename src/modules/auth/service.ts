@@ -20,6 +20,7 @@ import {
   removeStoredReceipts,
   storageKeysOfGroup,
 } from "@/modules/attachments/service";
+import { DEFAULT_ACCENT } from "@/modules/profile/accent";
 import { provisionalNameFor } from "@/modules/profile/provisional-name";
 import {
   generateToken,
@@ -196,6 +197,10 @@ export async function insertUser(
         name: input.name ?? provisionalNameFor(input.email),
         nameChosenAt: input.name === null ? null : new Date(),
         passwordHash: input.passwordHash,
+        // Written rather than left null: a null accent is an account from
+        // before plum was the default, and means coral. See
+        // `UNCHOSEN_ACCOUNT_ACCENT`.
+        accentColor: DEFAULT_ACCENT,
         // Omitted rather than minted when absent: the column defaults itself,
         // and one place deciding what a handle looks like is enough.
         ...(input.webauthnUserHandle
@@ -270,6 +275,9 @@ export async function reclaimUnclaimedAccount(
       name: identity.name ?? provisionalNameFor(identity.email),
       nameChosenAt: identity.name === null ? null : new Date(),
       passwordHash: options.passwordHash ?? null,
+      // Nobody ever got in to choose one, so the row starts as a new account
+      // does — including one begun before plum was the default.
+      accentColor: DEFAULT_ACCENT,
       updatedAt: new Date(),
     })
     .where(
@@ -334,9 +342,11 @@ export async function registerUser(
 }
 
 /**
- * What an account chose to read in. Every field is null until it is chosen,
- * and sign-in seeds the matching cookies from these — which is how a returning
- * user gets their language and notation on a device that has no cookies yet.
+ * What an account chose to read in. Every field is null until it is chosen —
+ * except the accent, which a new account is written with, and whose null means
+ * an account from before plum was the default — and sign-in seeds the
+ * matching cookies from these, which is how a returning user gets their
+ * language and notation on a device that has no cookies yet.
  */
 export interface StoredPreferences {
   readonly locale: string | null;
@@ -600,6 +610,8 @@ export async function signInWithApple(
         email,
         name: name ?? provisionalNameFor(email),
         nameChosenAt: name === null ? null : now,
+        // As `insertUser` does, and for its reason.
+        accentColor: DEFAULT_ACCENT,
         // Apple verified the address; requiring this instance to verify it
         // again by mail would be asking a question that is already answered.
         // An unverified one (which Apple should not send) stays unverified.
@@ -1006,13 +1018,14 @@ export async function saveUserFormatPreferences(
 /**
  * Which colour this account paints its accent.
  *
- * `null` is the same absence of a choice as the two above, and means the coral
- * the app has always used. Which names are allowed is the check constraint's
- * business and `modules/profile/accent.ts`'s; this only writes.
+ * Always a name now. A `null` in the column is an account from before plum was
+ * the default, and is read as coral (`resolveStoredAccent`). Which names are
+ * allowed is the check constraint's business and `modules/profile/accent.ts`'s;
+ * this only writes.
  */
 export async function saveUserAccentColor(
   userId: string,
-  accentColor: string | null,
+  accentColor: string,
   options: { db?: Database } = {},
 ): Promise<void> {
   const db = options.db ?? getDb();
