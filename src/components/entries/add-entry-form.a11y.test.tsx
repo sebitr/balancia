@@ -296,7 +296,9 @@ describe("the recurrence sheet", () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
 
     const repeat = sheet("Repeat");
     const presets = repeat.getByRole("radiogroup", { name: "Repeat" });

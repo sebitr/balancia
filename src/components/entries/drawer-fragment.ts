@@ -48,6 +48,22 @@ export const RESUME_PARAM = "draft";
  */
 export const SHEET_PARAM = "sheet";
 
+/**
+ * Set to `1` to open the form with Repeats already on.
+ *
+ * The Recurring screen's "Add a recurring expense" writes it. That screen used
+ * to carry a form of its own, which could do less than this one — no daily
+ * rule, no end, an equal split only — and worded the same rule differently.
+ * Now it is one button into the one form, and this says which way the form
+ * should face when it opens.
+ */
+export const REPEAT_PARAM = "repeat";
+
+/** Whether a fragment asks for Repeats on. */
+export function repeatsOf(params: URLSearchParams): boolean {
+  return params.get(REPEAT_PARAM) === "1";
+}
+
 /** Anything `URLSearchParams` can be built from: a query string, another set, or a plain record. */
 export type FragmentParams =
   string | URLSearchParams | Readonly<Record<string, string>>;

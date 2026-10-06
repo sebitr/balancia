@@ -695,6 +695,7 @@
     "uncategorised": "Sans catégorie",
     "bandRemainder": "{first} +{count}",
     "kindFilterLabel": "Filtrer par type",
+    "repeating": "{count, plural, =0 {Récurrentes} other {Récurrentes · #}}",
     "kind_expense": "Dépenses",
     "kind_revenue": "Revenus",
     "kind_settlement": "Remboursements",
@@ -1002,35 +1003,30 @@
     }
   },
   "recurring": {
-    "setUpTitle": "Configurer une dépense récurrente",
-    "description": "Description",
-    "descriptionPlaceholder": "Loyer",
-    "amount": "Montant",
-    "currency": "Devise",
-    "rateHint": "Utilisé pour chaque occurrence, sauf si le taux du jour peut être récupéré.",
-    "repeats": "Répétition",
-    "weekly": "Chaque semaine",
-    "monthly": "Chaque mois",
-    "yearly": "Chaque année",
-    "every": "Tous les",
-    "on": "Le",
-    "dayOfMonth": "Jour du mois",
-    "shortMonths": "Les mois plus courts utilisent leur dernier jour.",
-    "month": "Mois",
-    "starting": "À partir du",
-    "paidBy": "Payé par",
-    "splitEquallyBetween": "Partagé à parts égales entre",
-    "submit": "Créer la dépense récurrente",
     "saved": {
       "added": "{count, plural, one {« {description} » a été ajouté} other {« {description} » a été ajouté # fois, depuis le {from}}}. Prochaine occurrence le {next}.",
       "addedLast": "{count, plural, one {« {description} » a été ajouté} other {« {description} » a été ajouté # fois, depuis le {from}}}. Il n’y en aura pas d’autre.",
       "firstOn": "« {description} » est enregistré. La première occurrence sera ajoutée le {date}.",
       "plain": "« {description} » est enregistré."
     },
-    "errors": {
-      "chooseSplit": "Choisis qui participe à cette dépense.",
-      "enterRate": "Saisis le taux de change : 1 {from} en {to}.",
-      "saveFailed": "La dépense récurrente n’a pas pu être créée."
+    "updated": {
+      "next": "Modification de « {description} » enregistrée, à partir du {date}. Les transactions déjà ajoutées restent telles quelles.",
+      "paused": "Modification de « {description} » enregistrée ; la série reste suspendue. Les transactions déjà ajoutées restent telles quelles.",
+      "ended": "Modification de « {description} » enregistrée ; la série n’a plus de date à venir. Les transactions déjà ajoutées restent telles quelles."
+    },
+    "schedule": {
+      "daily": "{count, plural, one {Tous les jours} other {Tous les # jours}}",
+      "weekly": "{count, plural, one {Toutes les semaines, le {weekday}} other {Toutes les # semaines, le {weekday}}}",
+      "monthly": "{count, plural, one {Tous les mois, le {day, selectordinal, one {#er} other {#}}} other {Tous les # mois, le {day, selectordinal, one {#er} other {#}}}}",
+      "monthlyWeekday": "{count, plural, one {Tous les mois, le {week} {weekday}} other {Tous les # mois, le {week} {weekday}}}",
+      "yearly": "{count, plural, one {Tous les ans, le {date}} other {Tous les # ans, le {date}}}",
+      "week": {
+        "1": "premier",
+        "2": "deuxième",
+        "3": "troisième",
+        "4": "quatrième",
+        "last": "dernier"
+      }
     }
   },
   "settlement": {
@@ -2111,6 +2107,7 @@
   },
   "recurringActions": {
     "actionsFor": "Actions pour {description}",
+    "edit": "Modifier",
     "resume": "Reprendre",
     "pause": "Suspendre",
     "resumed": "Reprise",
@@ -2585,26 +2582,15 @@
   },
   "recurringPage": {
     "title": "Dépenses récurrentes",
-    "intro": "Générées automatiquement dans le fuseau horaire du groupe ({timezone}).",
+    "intro": "Ajoutées automatiquement, le jour venu. Les jours suivent le fuseau horaire du groupe, {timezone}.",
     "emptyTitle": "Aucune dépense récurrente",
     "emptyDescription": "Configures-en une pour le loyer, un abonnement ou toute facture qui revient régulièrement.",
+    "add": "Ajouter une dépense récurrente",
     "pausedBadge": "Suspendue",
     "next": "Prochaine : {date}",
     "pausedNote": "Suspendue — rien ne sera généré",
     "noFurther": "Aucune occurrence à venir",
-    "generatedSoFar": "{count, plural, one {# générée à ce jour} other {# générées à ce jour}}",
-    "weekly": "{count, plural, one {Chaque semaine le {day}} other {Toutes les # semaines le {day}}}",
-    "monthly": "{count, plural, one {Chaque mois le {day}} other {Tous les # mois le {day}}}",
-    "yearly": "{count, plural, one {Chaque année le {day}/{month}} other {Tous les # ans le {day}/{month}}}",
-    "daily": "{count, plural, one {Tous les jours} other {Tous les # jours}}",
-    "monthlyWeekday": "{count, plural, one {Chaque mois le {week} {day}} other {Tous les # mois le {week} {day}}}",
-    "week": {
-      "1": "premier",
-      "2": "deuxième",
-      "3": "troisième",
-      "4": "quatrième",
-      "last": "dernier"
-    }
+    "generatedSoFar": "{count, plural, one {# générée à ce jour} other {# générées à ce jour}}"
   },
   "settingsPage": {
     "title": "Paramètres du groupe",
@@ -2875,7 +2861,8 @@
     "proofOfWorkRequired": "Ton navigateur n’a pas terminé sa vérification. Recharge la page et réessaie.",
     "apiTokenNameRequired": "Donne un nom à cette clé.",
     "apiTokenNameTooLong": "Ce nom est trop long.",
-    "apiTokenLimit": "Tu as autant de clés d’API qu’un compte peut en détenir. Révoque-en une d’abord."
+    "apiTokenLimit": "Tu as autant de clés d’API qu’un compte peut en détenir. Révoque-en une d’abord.",
+    "seriesEndsBeforeNext": "Cette série s’arrêterait avant la prochaine date qu’elle pourrait ajouter. Repousse sa fin, ou retire-la."
   },
   "serverValidation": {
     "checkForm": "Vérifie le formulaire.",
@@ -3227,6 +3214,10 @@
       "income": "Modifier le revenu",
       "settle": "Modifier le remboursement"
     },
+    "editRecurringTitles": {
+      "expense": "Modifier la dépense récurrente",
+      "income": "Modifier le revenu récurrent"
+    },
     "close": "Fermer",
     "types": {
       "label": "Type de transaction",
@@ -3357,7 +3348,6 @@
     "repeat": {
       "title": "Répéter",
       "oneOff": "Ponctuel",
-      "active": "{frequency}, {day}",
       "frequency": {
         "weekly": "Chaque semaine",
         "monthly": "Chaque mois",
@@ -3365,14 +3355,7 @@
         "daily": "Chaque jour"
       },
       "every": "Tous les",
-      "interval": {
-        "weekly": "{count, plural, one {# semaine} other {# semaines}}",
-        "monthly": "{count, plural, one {# mois} other {# mois}}",
-        "yearly": "{count, plural, one {# an} other {# ans}}",
-        "daily": "{count, plural, one {# jour} other {# jours}}"
-      },
       "onDay": "Le jour",
-      "dayOfMonth": "Jour {day}",
       "fewer": "Moins souvent",
       "more": "Plus souvent",
       "previousDay": "Jour précédent",
@@ -3386,7 +3369,7 @@
       "schedule": "Recréer cette transaction selon un calendrier",
       "next": "Prochaines : {dates}",
       "onTheNth": "Le {week} {day}",
-      "byDayOfMonth": "Le {day}",
+      "byDayOfMonth": "Le {day, selectordinal, one {#er} other {#}}",
       "byWeekday": "Le {week} {day}",
       "lastDayOfMonth": "Dernier jour du mois",
       "shortMonthNote": "Les mois sans ce jour prennent leur dernier.",
@@ -3399,27 +3382,8 @@
       "nextLabel": "Ensuite",
       "andAfter": "puis {rule}",
       "noOccurrences": "Cette règle ne se produit jamais.",
-      "weeks": {
-        "1": "premier",
-        "2": "deuxième",
-        "3": "troisième",
-        "4": "quatrième",
-        "last": "dernier"
-      },
-      "everyN": "Tous les {interval}",
-      "presetDaily": "Tous les jours",
-      "presetWeekly": "Toutes les semaines le {day}",
-      "presetFortnightly": "Toutes les 2 semaines le {day}",
-      "presetMonthly": "Tous les mois le {day}",
-      "presetYearly": "Tous les ans le {date}",
       "presetCustom": "Personnalisé…",
-      "timezoneNote": "Créé à l’heure de {timezone}.",
-      "everyOne": {
-        "daily": "Chaque jour",
-        "weekly": "Chaque semaine",
-        "monthly": "Chaque mois",
-        "yearly": "Chaque année"
-      }
+      "timezoneNote": "Créé à l’heure de {timezone}."
     },
     "scan": {
       "title": "Scanner un reçu",
@@ -3491,6 +3455,8 @@
       "addIncome": "Ajouter le revenu",
       "saveRecurringExpense": "Enregistrer la dépense récurrente",
       "saveRecurringIncome": "Enregistrer le revenu récurrent",
+      "saveFutureExpenses": "Enregistrer pour les prochaines dépenses",
+      "saveFutureIncome": "Enregistrer pour les prochains revenus",
       "recordPayment": "Enregistrer le remboursement",
       "saveChanges": "Enregistrer les modifications"
     },

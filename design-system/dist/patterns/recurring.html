@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The group rail, the overview in two columns, sheets at a phone's width" -->
+<!-- @dsCard group="Patterns" name="Recurring expenses" subtitle="One way to set one up, edited for the entries to come, found from Transactions" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<title>Desktop layout — Balancia</title>
+<title>Recurring expenses — Balancia</title>
 <style>
 /*
  * Balancia design-system kit.
@@ -1510,210 +1510,322 @@ a[aria-current="page"] .nav-icon--primary {
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Patterns</div>
-    <h1>Desktop layout</h1>
+    <h1>Recurring expenses</h1>
     <p class="lede">
-      The app is drawn for a phone, and a desktop window gets the same screens
-      with the room used modestly: a rail in place of the bottom bar, two
-      columns on the one screen that has two kinds of thing to say, and every
-      other screen left at the one readable column it has always had. Entering a
-      month of receipts is a desk task; nothing else here is a reason to
-      redesign a screen.
+      A recurring expense is a property of an entry, not a kind of its own: it
+      is set up in the entry form by turning Repeats on, changed there too, and
+      listed on a screen of its own that Transactions leads to. Its schedule
+      reads one way everywhere it is shown.
     </p>
   </header>
 
   <section>
-    <h2>Three widths</h2>
-    <dl class="dl">
-      <dt>below md</dt>
-      <dd>
-        The phone. The bottom bar, the header along the top, one column, and
-        every type step a point larger. Nothing on this page applies.
-      </dd>
-      <dt>md to lg</dt>
-      <dd>
-        768–1023px, a tablet held upright. The desk type scale, still the bar
-        and the top header — it is held like a phone. Bottom sheets stop at a
-        phone's width from here.
-      </dd>
-      <dt>lg up</dt>
-      <dd>
-        1024px and wider. Inside a group, the rail; on the overview, two
-        columns. The dashboard and the other screens with nothing to navigate
-        between keep the header along the top.
-      </dd>
-    </dl>
-  </section>
-
-  <section>
-    <h2>The overview, from lg up</h2>
-    <p class="note" style="margin-bottom: 1rem">
-      The money on the left — where you stand, the balances, the repayments that
-      square the group. The context on the right — what changed since your last
-      visit, what the group has spent, the way into Activity. The left column
-      comes first in the document, so a screen reader, a keyboard and a phone
-      all read it in the order the single column always had.
-    </p>
-    <div class="frame frame--desk">
-      <div class="rail" aria-hidden="true">
-        <div class="rail-switcher">Lisbon, March</div>
-        <span class="rail-add">Add</span>
-        <ul>
-          <li><a aria-current="page">Overview</a></li>
-          <li><a>Transactions</a></li>
-          <li><a>People</a></li>
-          <li><a>Settings</a></li>
-        </ul>
-        <div class="rail-foot"><span class="avatar">ST</span> Sébastien</div>
-      </div>
-      <div class="desk-screen">
-        <div class="overview-cols">
-          <div class="overview-col">
-            <div class="card">
-              <div
-                class="card-content"
-                style="display: flex; flex-direction: column; gap: 0.25rem"
+    <h2>The list</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Rent</span>
+              <span class="list-sub" style="font-size: 0.875rem"
+                >CHF 2,400.00 · Every month on the 1st</span
               >
-                <p class="card-desc" style="margin: 0">You get back</p>
-                <span
-                  class="balance balance--positive balance--large tabular-nums"
-                  >€248.00</span
-                >
-                <p class="note" style="margin: 0">from Jonas and Ravi</p>
-              </div>
-            </div>
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Jonas owes</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--negative-ink)"
-                    >€148.60</span
-                  ></span
-                >
-              </li>
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Ravi owes</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--negative-ink)"
-                    >€99.40</span
-                  ></span
-                >
-              </li>
-            </ul>
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Jonas pays you back</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--positive-ink)"
-                    >€148.60</span
-                  ></span
-                >
-              </li>
-            </ul>
+              <span class="list-sub"
+                >Next: 1 Nov 2026 · 10 generated so far</span
+              >
+            </span>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Actions for Rent"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
           </div>
-          <div class="overview-col">
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-main"
-                    ><span class="list-title"
-                      >Ravi added Dinner at Trattoria Il Ponte</span
-                    ><span class="list-sub">2 hours ago</span></span
-                  ><span class="tabular-nums">€128.40</span></span
-                >
-              </li>
-            </ul>
-            <div class="card">
-              <div class="card-content">
-                <p class="card-desc" style="margin: 0">Spending · This month</p>
-                <p class="tabular-nums" style="margin: 0.25rem 0 0">
-                  Group spent <strong>€1,411.00</strong> · You paid
-                  <strong>€612.30</strong>
-                </p>
-              </div>
-            </div>
-            <ul class="list">
-              <li>
-                <span class="list-row"
-                  ><span class="list-main"
-                    ><span class="list-title">Activity</span
-                    ><span class="list-sub"
-                      >Every change, deletions included</span
-                    ></span
-                  ></span
-                >
-              </li>
-            </ul>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title"
+                >Cleaning
+                <span class="badge badge--secondary">Paused</span></span
+              >
+              <span class="list-sub" style="font-size: 0.875rem"
+                >CHF 120.00 · Every 2 weeks on Friday</span
+              >
+              <span class="list-sub"
+                >Paused — nothing will be generated · 4 generated so far</span
+              >
+            </span>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Actions for Cleaning"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
           </div>
-        </div>
+        </li>
+      </ul>
+      <div style="margin-top: 1.5rem">
+        <button class="btn btn--default" style="width: 100%">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
+          </svg>
+          Add a recurring expense
+        </button>
       </div>
     </div>
-    <dl class="dl" style="margin-top: 1rem">
-      <dt>width</dt>
+    <dl class="dl" style="margin-top: 0.75rem">
+      <dt>subtitle</dt>
       <dd>
-        The screen widens to <code>max-w-5xl</code> for a layout marked
-        <code>data-layout="wide"</code>, and only for one. 24px between the
-        columns; the blocks inside each keep the overview's own gap.
+        "Added on their day, automatically. Days follow the group's time zone,
+        Europe/Zurich." — said to a person, not a log line.
       </dd>
-      <dt>empty group</dt>
+      <dt>row menu</dt>
       <dd>
-        One column at every width. "Start here" is two steps, not a dashboard.
+        <em>Edit</em>, then <em>Pause</em> or <em>Resume</em>, then
+        <em>Delete</em>. Edit first, because changing the rent or the split is
+        what a rule is opened for most often. Pause and Delete raise an Undo;
+        Edit opens a form.
       </dd>
-      <dt>position strip</dt>
+      <dt>add</dt>
       <dd>
-        Hangs from the top of the window beside the rail, across the wide
-        column, since there is no header above it.
+        One primary button under the list, and the empty state's action when
+        there is no list. It opens the entry form with Repeats already on — the
+        screen has no form of its own.
+      </dd>
+      <dt>back</dt>
+      <dd>
+        To Transactions, the way in; to group settings when the settings
+        shortcut was the way in.
       </dd>
     </dl>
   </section>
 
   <section>
-    <h2>Every other screen</h2>
+    <h2>One sentence per schedule</h2>
     <p class="note">
-      Transactions, People, Settings, an entry, a person: one column,
-      <code>max-w-3xl</code>, centred in the space beside the rail, never
-      stretched across it. Gutters open to 24px at <code>lg</code> and 32px at
-      <code>xl</code>. Anything that was docked above the bar — an entry's Edit
-      and Remove — docks at the foot of the window instead, starting where the
-      rail stops.
+      The repeat sheet's hero and presets, the entry form's Repeat row and the
+      list above all say a rule with one family of messages,
+      <code>recurring.schedule</code>. The day of the month is an ordinal in
+      English and plain in French; the interval is a plural; the weekday is the
+      locale's own name for it.
     </p>
+    <div class="spec scroll-x">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Rule</th>
+            <th>English</th>
+            <th>French</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>monthly, day 1</td>
+            <td>Every month on the 1st</td>
+            <td>Tous les mois, le 1er</td>
+          </tr>
+          <tr>
+            <td>every 3 months, day 22</td>
+            <td>Every 3 months on the 22nd</td>
+            <td>Tous les 3 mois, le 22</td>
+          </tr>
+          <tr>
+            <td>monthly, 2nd Tuesday</td>
+            <td>Every month on the second Tuesday</td>
+            <td>Tous les mois, le deuxième mardi</td>
+          </tr>
+          <tr>
+            <td>every 2 weeks, Friday</td>
+            <td>Every 2 weeks on Friday</td>
+            <td>Toutes les 2 semaines, le vendredi</td>
+          </tr>
+          <tr>
+            <td>yearly</td>
+            <td>Every year on 15 Oct</td>
+            <td>Tous les ans, le 15 oct.</td>
+          </tr>
+          <tr>
+            <td>daily</td>
+            <td>Every day</td>
+            <td>Tous les jours</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section>
-    <h2>Sheets</h2>
-    <p class="note">
-      From <code>md</code> up a bottom sheet is <code>max-w-md</code> (28rem)
-      wide and centred under the window, the way a dialog is, instead of a strip
-      across all of it. It still rises from the bottom edge, still pins its
-      actions under a scrolling body, and still dismisses the same way. A sheet
-      that wants another width says <code>md:max-w-*</code>. The entry drawer's
-      loading skeleton is held to the same width, so the drawer does not change
-      shape when the form arrives.
-    </p>
+    <h2>Changing one</h2>
+    <dl class="dl">
+      <dt>the form</dt>
+      <dd>
+        The entry form, titled <em>Edit recurring expense</em>, opened on the
+        rule. Expense and Income only; Repeats on and fixed — a rule stays a
+        rule, and the repeat sheet has no <em>Don't repeat</em>. Scan, voice and
+        the duplicate note are for new entries and are not shown.
+      </dd>
+      <dt>the button</dt>
+      <dd>
+        <em>Save for future expenses</em> (<em>…income</em>). It touches the
+        entries still to come and never the ones already added, and says so
+        rather than "Save changes".
+      </dd>
+      <dt>the date row</dt>
+      <dd>
+        Shows the rule's next date. It opens on the start of the period that
+        date falls in — its week, or its month — so an unchanged schedule keeps
+        its date and a moved day moves within that month: never a second entry
+        in the month already paid, never a month skipped. It cannot go earlier
+        than the day after the last entry, nor before today.
+      </dd>
+      <dt>the confirmation</dt>
+      <dd>
+        "Rent updated from 1 Nov 2026. Entries already added stay as they were."
+        A paused rule says it is still paused.
+      </dd>
+    </dl>
   </section>
 
   <section>
-    <h2>Rules</h2>
-    <div class="do-dont">
+    <h2>The way in from Transactions</h2>
+    <div class="spec">
+      <div
+        style="
+          max-width: 358px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.5rem;
+        "
+      >
+        <div style="flex: 1; display: flex; gap: 0.5rem">
+          <button
+            style="
+              flex: 1;
+              height: 34px;
+              padding: 0 0.75rem;
+              border: 0;
+              border-radius: 999px;
+              background: var(--muted);
+              color: var(--muted-foreground);
+              font: inherit;
+              font-size: 0.75rem;
+              font-weight: 600;
+              white-space: nowrap;
+            "
+          >
+            Expenses
+          </button>
+          <button
+            style="
+              flex: 1;
+              height: 34px;
+              padding: 0 0.75rem;
+              border: 0;
+              border-radius: 999px;
+              background: var(--muted);
+              color: var(--muted-foreground);
+              font: inherit;
+              font-size: 0.75rem;
+              font-weight: 600;
+              white-space: nowrap;
+            "
+          >
+            Repayments
+          </button>
+        </div>
+        <a
+          href="#"
+          style="
+            margin-left: auto;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            color: var(--primary-ink);
+            text-decoration: none;
+          "
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
+          </svg>
+          Repeating · 2
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      At the end of the kind chips whenever the group has a recurring expense,
+      paused ones included; the number counts the running ones and drops out
+      when there are none. With no chips — a group of expenses only — it stands
+      on its own under the title. It wraps to a line of its own rather than cut
+      a chip short, which in French at 360px it does.
+    </p>
+    <div class="do-dont" style="margin-top: 0.75rem">
       <div class="do">
         <strong>Do</strong>
         <p class="note" style="margin: 0">
-          Use the width where a screen has two kinds of thing to say, and leave
-          a list a list. A balance row 900px wide puts the figure a hand's width
-          from the name it belongs to.
+          Draw it as the screen's links are — link ink, a chevron, no fill —
+          because it goes somewhere.
         </p>
       </div>
       <div class="dont">
         <strong>Don't</strong>
         <p class="note" style="margin: 0">
-          Change anything below <code>lg</code> to make room for the desktop.
-          The phone is where the app is used; every class this layout adds is
-          <code>lg:</code>, or <code>md:</code> for a sheet.
+          Make it a fourth chip. A chip filters the list in place and stays
+          pressed; this leaves the screen.
         </p>
       </div>
     </div>

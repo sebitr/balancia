@@ -12,6 +12,7 @@ import {
   type RovingChoiceProps,
 } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
+import { scheduleSentence } from "@/components/recurring/schedule-sentence";
 import { PinnedActions, PinnedBody } from "./entry-sheet";
 import {
   RECURRENCE_FREQUENCIES,
@@ -159,12 +160,38 @@ export function RecurrenceSheet({
   startDate: string;
   timezone: string;
   onDone: () => void;
-  /** Turns repeats off and closes. The sheet's only way out downwards. */
-  onStop: () => void;
+  /**
+   * Turns repeats off and closes. The sheet's only way out downwards — absent
+   * for a rule being changed, which stays a rule.
+   */
+  onStop?: () => void;
 }) {
   const t = useTranslations("addEntry.repeat");
+  const tSchedule = useTranslations("recurring.schedule");
   const format = useFormatter();
   const dateFormatter = useDateFormatter();
+
+  /** A rule in words, as every screen words it. See `scheduleSentence`. */
+  const sentence = (patch: Partial<RecurrenceState>): string => {
+    const rule = { ...state, ...patch };
+    const words = scheduleSentence(
+      {
+        frequency: rule.frequency,
+        interval: rule.interval,
+        weekday: rule.weekday,
+        weekOfMonth: rule.frequency === "monthly" ? rule.weekOfMonth : null,
+        dayOfMonth: rule.dayOfMonth,
+        monthOfYear: null,
+        startDate,
+      },
+      {
+        weekday: (day) => weekdayName(day, format),
+        week: (week) => tSchedule(`week.${week}`),
+        dayMonth: (day) => dateFormatter.plain(day, "dayMonth"),
+      },
+    );
+    return tSchedule(words.key, words.values);
+  };
 
   const preset = presetOf(state);
   /* Custom opens itself for a rule that is already one, so reopening a
@@ -182,21 +209,11 @@ export function RecurrenceSheet({
   const shown = upcoming.slice(0, PREVIEW_COUNT);
   const more = upcoming.length > PREVIEW_COUNT;
 
-  /** The rule in words — the hero's first line, and the sentence in Custom. */
-  const ruleSentence = () => {
-    if (state.frequency === "monthly" && state.weekOfMonth !== null) {
-      return t("byWeekday", {
-        week: t(`weeks.${state.weekOfMonth}`),
-        day: weekdayName(state.weekday, format),
-      });
-    }
-    /* "Every 1 month" is what a generic sentence produces and not what
-       anybody says. One of anything gets its own wording. */
-    if (state.interval === 1) return t(`everyOne.${state.frequency}`);
-    return t("everyN", {
-      interval: t(`interval.${state.frequency}`, { count: state.interval }),
-    });
-  };
+  /**
+   * The rule in words — the hero's first line, and the sentence in Custom.
+   * The same sentence the form's row and the Recurring list show for it.
+   */
+  const ruleSentence = () => sentence({});
 
   /** What happens at the end, as the hero's second line. */
   const endsSentence = () => {
@@ -207,38 +224,24 @@ export function RecurrenceSheet({
     return t("endsNever");
   };
 
-  const presets: { id: PresetId; label: string; apply: () => void }[] = [
-    {
-      id: "daily",
-      label: t("presetDaily"),
-      apply: () => set({ frequency: "daily", interval: 1, weekOfMonth: null }),
-    },
-    {
-      id: "weekly",
-      label: t("presetWeekly", { day: weekdayName(state.weekday, format) }),
-      apply: () => set({ frequency: "weekly", interval: 1, weekOfMonth: null }),
-    },
-    {
-      id: "fortnightly",
-      label: t("presetFortnightly", {
-        day: weekdayName(state.weekday, format),
-      }),
-      apply: () => set({ frequency: "weekly", interval: 2, weekOfMonth: null }),
-    },
-    {
-      id: "monthly",
-      label: t("presetMonthly", { day: state.dayOfMonth }),
-      apply: () =>
-        set({ frequency: "monthly", interval: 1, weekOfMonth: null }),
-    },
-    {
-      id: "yearly",
-      label: t("presetYearly", {
-        date: dateFormatter.plain(startDate, "dayMonth"),
-      }),
-      apply: () => set({ frequency: "yearly", interval: 1, weekOfMonth: null }),
-    },
+  /* Each preset is labelled with the sentence it would make the rule, so the
+     row a reader taps reads exactly as the rule will everywhere after. */
+  const presetRules: { id: PresetId; rule: Partial<RecurrenceState> }[] = [
+    { id: "daily", rule: { frequency: "daily", interval: 1 } },
+    { id: "weekly", rule: { frequency: "weekly", interval: 1 } },
+    { id: "fortnightly", rule: { frequency: "weekly", interval: 2 } },
+    { id: "monthly", rule: { frequency: "monthly", interval: 1 } },
+    { id: "yearly", rule: { frequency: "yearly", interval: 1 } },
   ];
+  const presets: { id: PresetId; label: string; apply: () => void }[] =
+    presetRules.map((preset) => {
+      const rule = { ...preset.rule, weekOfMonth: null };
+      return {
+        id: preset.id,
+        label: sentence(rule),
+        apply: () => set(rule),
+      };
+    });
 
   /*
    * Custom is the last of the presets but not a rule of its own: choosing it
@@ -427,7 +430,7 @@ export function RecurrenceSheet({
                     onClick={() => set({ weekOfMonth: state.weekOfMonth ?? 2 })}
                   >
                     {t("byWeekday", {
-                      week: t(`weeks.${state.weekOfMonth ?? 2}`),
+                      week: tSchedule(`week.${state.weekOfMonth ?? 2}`),
                       day: weekdayName(state.weekday, format),
                     })}
                   </ChipButton>
@@ -471,7 +474,7 @@ export function RecurrenceSheet({
                             selected={week === state.weekOfMonth}
                             onClick={() => set({ weekOfMonth: week })}
                           >
-                            {t(`weeks.${week}`)}
+                            {tSchedule(`week.${week}`)}
                           </ChipButton>
                         </li>
                       ))}
@@ -612,13 +615,15 @@ export function RecurrenceSheet({
          * The way out, and the reason there is no switch in the header. Quiet,
          * because turning it off is not what most readers came to do.
          */}
-        <button
-          type="button"
-          onClick={onStop}
-          className="h-11 w-full text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          {t("dontRepeat")}
-        </button>
+        {onStop && (
+          <button
+            type="button"
+            onClick={onStop}
+            className="h-11 w-full text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t("dontRepeat")}
+          </button>
+        )}
       </PinnedActions>
     </div>
   );
