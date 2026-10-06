@@ -2223,7 +2223,6 @@
     "failed": "That did not work."
   },
   "receipts": {
-    "attach": "Attach a receipt",
     "removeFile": "Remove {name} from this expense",
     "formats": "JPEG, PNG, WebP, GIF, HEIC or PDF. Stored on this server, visible only to this group.",
     "uploadFailed": "That file could not be uploaded.",

@@ -2223,7 +2223,6 @@
     "failed": "Cela n’a pas fonctionné."
   },
   "receipts": {
-    "attach": "Joindre un reçu",
     "removeFile": "Retirer {name} de cette dépense",
     "formats": "JPEG, PNG, WebP, GIF, HEIC ou PDF. Stocké sur ce serveur, visible uniquement par ce groupe.",
     "uploadFailed": "Ce fichier n’a pas pu être envoyé.",

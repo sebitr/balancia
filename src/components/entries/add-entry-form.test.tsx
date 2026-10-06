@@ -1300,6 +1300,28 @@ describe("attaching a file", () => {
 
     expect(screen.queryByText("bill.pdf")).not.toBeInTheDocument();
   });
+
+  /**
+   * A repeating entry's template keeps no file. The row used to stay live and
+   * the save left the file behind; now it is off, and says why, while Repeats
+   * is on.
+   */
+  it("turns the row off and says why while the entry repeats", async () => {
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new");
+
+    const attach = screen.getByRole("button", { name: "Attach a file" });
+    expect(attach).toBeEnabled();
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    expect(attach).toBeDisabled();
+    expect(attach).toHaveAccessibleDescription(
+      "Files are not kept on a repeating entry.",
+    );
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    expect(attach).toBeEnabled();
+  });
 });
 
 describe("income", () => {

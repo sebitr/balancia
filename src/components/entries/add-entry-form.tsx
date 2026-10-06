@@ -2814,7 +2814,7 @@ export function AddEntryForm({
             // A recurring template has no attachment of its own to carry,
             // so say so where the files are rather than after the entry has
             // been saved without them.
-            note={recurrence.enabled ? t("attach.notRepeating") : null}
+            unavailable={recurrence.enabled ? t("attach.notRepeating") : null}
           />
         )}
 
