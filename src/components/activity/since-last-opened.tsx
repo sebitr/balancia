@@ -26,11 +26,14 @@ export async function SinceLastOpened({
   entries,
   lastOpenedAt,
   groupId,
+  viewerId = null,
 }: {
   entries: readonly ActivityEntry[];
   /** Null on a first visit, when everything counts as new. */
   lastOpenedAt: string | null;
   groupId: string;
+  /** The reader's own row, so a line about them can say "you". */
+  viewerId?: string | null;
   /** Pinned by the server, so relative times survive hydration unchanged. */
   now: string;
 }) {
@@ -92,7 +95,7 @@ export async function SinceLastOpened({
                 >
                   {actor}{" "}
                 </span>
-                {describeActivity(entry, translate)}
+                {describeActivity(entry, translate, viewerId)}
               </span>
             </li>
           );

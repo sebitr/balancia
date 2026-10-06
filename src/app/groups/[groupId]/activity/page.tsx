@@ -54,6 +54,7 @@ export default async function GroupActivityPage({
         groupId={access.groupId}
         restorable={restorable}
         timeZone={access.group.timezone}
+        viewerId={access.participantId}
       />
     </div>
   );
