@@ -85,6 +85,20 @@ export interface GroupPermissions {
    * one reaches into everyone's balances — the owner keeps that one.
    */
   readonly removeParticipants: boolean;
+  /**
+   * Taking yourself out of the group. Not a lesser `removeParticipants`: it
+   * names nobody but the one asking, so it reaches into no one else's
+   * balances, and the way out of a group should not depend on asking somebody
+   * for it.
+   *
+   * A member's alone. The owner cannot leave a group they own: nothing passes
+   * it on while they are still here, so it would be left with nobody to hold
+   * the door, restore anyone or delete it. Nor can a guest. Their seat may be
+   * the one a group started without an account keeps for its future owner
+   * (`claimGuestSession`), and in a group nobody owns yet, nobody could put
+   * them back or invite them again. See `removeParticipant`.
+   */
+  readonly leaveGroup: boolean;
   readonly manageInvitations: boolean;
   readonly manageGroupSettings: boolean;
   readonly importData: boolean;
@@ -186,6 +200,7 @@ const GUEST_PERMISSIONS: GroupPermissions = {
   manageRecurring: true,
   manageParticipants: false,
   removeParticipants: false,
+  leaveGroup: false,
   manageInvitations: false,
   manageGroupSettings: false,
   importData: false,
@@ -202,7 +217,7 @@ const GUEST_PERMISSIONS: GroupPermissions = {
  *
  * `manageParticipants` stays, because adding a name — the person who paid for
  * dinner and is not on the app — is part of recording expenses, not part of
- * administering the group.
+ * administering the group. So does the one door that is theirs: leaving.
  */
 const MEMBER_PERMISSIONS: GroupPermissions = {
   viewGroup: true,
@@ -213,6 +228,7 @@ const MEMBER_PERMISSIONS: GroupPermissions = {
   manageRecurring: true,
   manageParticipants: true,
   removeParticipants: false,
+  leaveGroup: true,
   manageInvitations: false,
   manageGroupSettings: false,
   importData: true,
@@ -230,6 +246,7 @@ const OWNER_PERMISSIONS: GroupPermissions = {
   manageRecurring: true,
   manageParticipants: true,
   removeParticipants: true,
+  leaveGroup: false,
   manageInvitations: true,
   manageGroupSettings: true,
   importData: true,

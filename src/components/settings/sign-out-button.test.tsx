@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { SignOutButton } from "./sign-out-button";
@@ -10,11 +10,11 @@ import { DangerCard } from "./danger-card";
  *
  * Two things are pinned here. What the sheet says before the tap: entries that
  * have not reached the server yet exist only on this device, and signing out
- * deletes them, so the count is spelled out while "Keep it" is still there to
- * press. And what the tap does, in order: the device forgets first, then push
- * is turned off for this browser while there is still a session to do it
- * with, then the session ends with the header that clears the browser's cache,
- * then the action that redirects.
+ * deletes them, so the count is spelled out while "Stay signed in" is still
+ * there to press. And what the tap does, in order: the device forgets first,
+ * then push is turned off for this browser while there is still a session to
+ * do it with, then the session ends with the header that clears the browser's
+ * cache, then the action that redirects.
  *
  * The push step runs for real against a stand-in service worker, so these
  * pin what reaches the server — this browser's endpoint — and not only that a
@@ -139,7 +139,7 @@ describe("SignOutButton", () => {
     const { user } = await openSheet();
     await screen.findByRole("alert");
 
-    await user.click(screen.getByRole("button", { name: "Keep it" }));
+    await user.click(screen.getByRole("button", { name: "Stay signed in" }));
 
     expect(forgetDevice).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -238,7 +238,9 @@ describe("DangerCard", () => {
       screen.getByLabelText("Type your email address to confirm"),
       "ada@example.com",
     );
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete my account permanently" }),
+    );
 
     // The account's push rows went with it; the server's half answers with
     // nothing to do, and the browser's half is what kills the endpoint.
@@ -262,10 +264,64 @@ describe("DangerCard", () => {
       screen.getByLabelText("Type your email address to confirm"),
       "ada@example.com",
     );
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete my account permanently" }),
+    );
 
     await waitFor(() => expect(deleteAccountAction).toHaveBeenCalledOnce());
     expect(forgetDevice).not.toHaveBeenCalled();
     expect(unsubscribe).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Each question answered in its own words.
+ *
+ * Every sheet here used to offer "Keep it" as the way out, which answered
+ * "Sign out of Balancia?" with a riddle. The way out now says what it keeps.
+ */
+describe("the way out of each account question", () => {
+  it("is to stay signed in, when signing out", async () => {
+    const { user, dialog } = await openSheet();
+
+    const stay = within(dialog).getByRole("button", { name: "Stay signed in" });
+    expect(
+      within(dialog).queryByRole("button", { name: "Keep it" }),
+    ).toBeNull();
+
+    await user.click(stay);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(signOutAction).not.toHaveBeenCalled();
+  });
+
+  it("is to keep the account, when deleting it", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<DangerCard email="ada@example.com" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete account" }));
+    const dialog = await screen.findByRole("alertdialog");
+
+    // Said in full, as the group's own deletion says it.
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Delete my account permanently",
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Keep my account" }),
+    );
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(deleteAccountAction).not.toHaveBeenCalled();
+  });
+
+  it("is said in French in French", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<DangerCard email="ada@example.com" />, { locale: "fr" });
+
+    await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
+    expect(
+      await screen.findByRole("button", { name: "Rester sur ce compte" }),
+    ).toBeInTheDocument();
   });
 });

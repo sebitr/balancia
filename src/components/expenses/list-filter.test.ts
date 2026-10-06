@@ -36,6 +36,7 @@ function row(overrides: Partial<RowView> = {}): RowView {
     revenue: false,
     recurring: false,
     payers: ["seb"],
+    people: ["seb"],
     foreign: false,
     receipt: false,
     ...overrides,
@@ -278,6 +279,56 @@ describe("selectRows", () => {
     });
   });
 
+  /**
+   * "Entries with Marta", from a person's page: every row that moved her
+   * balance, which is more than the rows she paid for.
+   */
+  describe("with", () => {
+    it("keeps a row the person paid, shares in, or is either end of", () => {
+      const rows = [
+        row({ id: "paid", payers: ["marta"], people: ["marta", "seb"] }),
+        row({ id: "shared", payers: ["seb"], people: ["seb", "marta"] }),
+        row({
+          id: "repaid",
+          kind: "settlement",
+          payers: ["seb"],
+          people: ["seb", "marta"],
+        }),
+        row({ id: "elsewhere", payers: ["seb"], people: ["seb", "padi"] }),
+      ];
+      expect(kept(rows, filter({ people: ["marta"] }))).toEqual([
+        "paid",
+        "shared",
+        "repaid",
+      ]);
+    });
+
+    it("means any of, and narrows the other sections as they do each other", () => {
+      const rows = [
+        row({ id: "marta", people: ["marta"] }),
+        row({ id: "padi", people: ["padi"] }),
+        row({ id: "both", people: ["marta", "padi"], payers: ["padi"] }),
+        row({ id: "nobody", people: ["seb"] }),
+      ];
+      expect(kept(rows, filter({ people: ["marta", "padi"] }))).toEqual([
+        "marta",
+        "padi",
+        "both",
+      ]);
+      expect(
+        kept(rows, filter({ people: ["marta"], payers: ["padi"] })),
+      ).toEqual(["both"]);
+    });
+
+    it("is not the same question as paid by", () => {
+      const rows = [
+        row({ id: "dinner", payers: ["seb"], people: ["seb", "marta"] }),
+      ];
+      expect(kept(rows, filter({ payers: ["marta"] }))).toEqual([]);
+      expect(kept(rows, filter({ people: ["marta"] }))).toEqual(["dinner"]);
+    });
+  });
+
   describe("search", () => {
     it("matches the title, a repayment's note, and the date as it is shown", () => {
       const rows = [
@@ -374,12 +425,13 @@ describe("filterDimensions", () => {
       kinds: ["expense"],
       min: "10",
       payers: ["seb"],
+      people: ["marta"],
       categories: ["home"],
       positions: ["owe"],
       properties: ["receipt"],
       sort: "oldest",
     });
-    expect(filterDimensions(applied)).toBe(8);
+    expect(filterDimensions(applied)).toBe(9);
   });
 
   it("does not count the search field, which speaks for itself", () => {
@@ -416,6 +468,7 @@ describe("readFilter and filterParams", () => {
       min: "10",
       max: "500",
       payers: ["seb", "padi"],
+      people: ["marta"],
       positions: ["owe", "flat"],
       properties: ["series", "receipt"],
       sort: "largest",
@@ -425,6 +478,15 @@ describe("readFilter and filterParams", () => {
 
   it("writes nothing at all for a filter that is off", () => {
     expect(filterParams(NO_FILTER).toString()).toBe("");
+  });
+
+  it("writes the person a page opened the list on as with=", () => {
+    expect(filterParams(filter({ people: ["marta"] })).toString()).toBe(
+      "with=marta",
+    );
+    expect(readFilter(new URLSearchParams("with=marta")).people).toEqual([
+      "marta",
+    ]);
   });
 
   it("produces the same string for the same filter, whatever order it was built in", () => {

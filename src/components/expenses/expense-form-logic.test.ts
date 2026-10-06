@@ -3,10 +3,54 @@ import {
   formatMinorUnits,
   parseAmountToMinor,
   previewSplit,
+  splitEntriesFor,
   splitValuesToText,
   suggestExactValues,
   suggestPercentages,
 } from "./expense-form-logic";
+
+/**
+ * What a save sends. The preview reads the fields through this very function,
+ * which is the point: a split the sheet calls fine is the split the server
+ * gets.
+ */
+describe("splitEntriesFor", () => {
+  it("sends an empty field as nothing, in each method's own unit", () => {
+    expect(
+      splitEntriesFor({
+        method: "exact",
+        participantIds: ["a", "b"],
+        values: { a: "12,50", b: "" },
+        currency: "EUR",
+      }),
+    ).toEqual([
+      { participantId: "a", value: "1250" },
+      { participantId: "b", value: "0" },
+    ]);
+    expect(
+      splitEntriesFor({
+        method: "shares",
+        participantIds: ["a", "b"],
+        values: { a: "1,5" },
+        currency: "EUR",
+      }),
+    ).toEqual([
+      { participantId: "a", value: "1.5" },
+      { participantId: "b", value: "0" },
+    ]);
+  });
+
+  it("sends no values at all for an equal split", () => {
+    expect(
+      splitEntriesFor({
+        method: "equal",
+        participantIds: ["a"],
+        values: { a: "3" },
+        currency: "EUR",
+      }),
+    ).toEqual([{ participantId: "a" }]);
+  });
+});
 
 describe("parseAmountToMinor", () => {
   it("parses amounts for two-decimal currencies", () => {
@@ -106,7 +150,11 @@ describe("splitValuesToText", () => {
 describe("previewSplit", () => {
   const participants = ["a", "b", "c"];
 
-  it("previews an equal split and flags the rounding difference", () => {
+  /**
+   * Whether the cent is worth a sentence is `describeSplit`'s question; the
+   * preview only has to put it where the server will.
+   */
+  it("previews an equal split, the odd cent on the first person", () => {
     const preview = previewSplit({
       totalMinor: 1000n,
       currency: "EUR",
@@ -122,21 +170,49 @@ describe("previewSplit", () => {
       333n,
       333n,
     ]);
-    expect(preview.roundingNote).toEqual({
-      key: "roundingNote",
-      params: { count: 1, amount: expect.stringContaining("0.01") },
-    });
   });
 
-  it("reports no rounding note when the split is exact", () => {
+  /**
+   * The payload sends an empty exact field as nothing, and the server takes
+   * it. The preview used to call it a missing value, which refused the save
+   * of a split the note under it said was fine.
+   */
+  it("counts an empty exact field as nothing, as the save does", () => {
     const preview = previewSplit({
-      totalMinor: 900n,
+      totalMinor: 1000n,
       currency: "EUR",
-      method: "equal",
+      method: "exact",
       participantIds: participants,
-      values: {},
+      values: { a: "10.00", b: "", c: "" },
     });
-    expect(preview.ok && preview.roundingNote).toBeNull();
+    expect(preview.ok && preview.allocations.map((a) => a.amount)).toEqual([
+      1000n,
+      0n,
+      0n,
+    ]);
+  });
+
+  it("reads a comma and a trailing point the way they were meant", () => {
+    const preview = previewSplit({
+      totalMinor: 1000n,
+      currency: "EUR",
+      method: "percentage",
+      participantIds: ["a", "b"],
+      values: { a: "62,5", b: "37.5" },
+    });
+    expect(preview.ok && preview.allocations.map((a) => a.amount)).toEqual([
+      625n,
+      375n,
+    ]);
+
+    const typing = previewSplit({
+      totalMinor: 1000n,
+      currency: "EUR",
+      method: "exact",
+      participantIds: ["a", "b"],
+      values: { a: "6.", b: "4" },
+    });
+    expect(typing.ok).toBe(true);
   });
 
   it("validates percentages against 100", () => {

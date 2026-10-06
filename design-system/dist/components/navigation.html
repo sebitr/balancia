@@ -753,6 +753,53 @@ code {
   font-size: 0.875rem;
   color: var(--destructive);
 }
+/* A stepper — split-sheet.tsx, StepButton. A narrow field between a step
+   either side; the field still takes typing. Each step is drawn at 28px and
+   hit at 44px (the app's `tap-target`), and the 8px gap keeps the two hit
+   areas off the field. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.stepper .input {
+  width: 2.75rem;
+  height: 2.25rem;
+  padding: 0.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.stepper-step {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  padding: 0;
+  cursor: pointer;
+}
+.stepper-step::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+}
+.stepper-step svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.stepper-step[disabled] {
+  cursor: default;
+  opacity: 0.4;
+}
 /* A choice card: label wrapping a nested field, tinted when checked. */
 .field-choice {
   display: flex;
@@ -1385,19 +1432,9 @@ a[aria-current="page"] .nav-icon--primary {
           </svg>
           <span class="wordmark-text">Balancia</span>
         </span>
-        <button class="btn btn--ghost btn--sm" aria-haspopup="menu">
+        <button class="btn btn--ghost btn--sm" aria-label="Your account">
           <span class="avatar">SE</span>
           Séb
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
         </button>
       </div>
       <div style="padding: 1.5rem 1rem; color: var(--muted-foreground)">
@@ -1418,8 +1455,12 @@ a[aria-current="page"] .nav-icon--primary {
         Links to the dashboard. For a guest it is inert —
         <code>aria-disabled</code>, removed from the tab order.
       </dd>
-      <dt>user menu</dt>
-      <dd>The only other control. Everything else belongs to the page.</dd>
+      <dt>avatar</dt>
+      <dd>
+        A link to the account's settings, not a menu. Announced as "Your
+        account" rather than "Settings": inside a group the tab bar already has
+        a Settings, for the group's. Everything else belongs to the page.
+      </dd>
     </dl>
   </section>
 
@@ -1501,7 +1542,9 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>close</dt>
       <dd>
         Filled, and only where a whole surface closes. Settings is the only one
-        that has it.
+        that has it. It goes back to the screen settings was opened from — the
+        dashboard only when there is none — and animates as a
+        <code>pop</code>, like the arrow.
       </dd>
       <dt>padding</dt>
       <dd>

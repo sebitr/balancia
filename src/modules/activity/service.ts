@@ -131,6 +131,12 @@ export interface ActivityEntry {
   readonly metadata: ActivityMetadata | null;
   readonly actorLabel: string | null;
   readonly actorType: "user" | "guest" | "system";
+  /**
+   * The actor's own row in the group, when they had one. Read for one thing:
+   * a removal whose actor is the person removed is somebody leaving, and is
+   * told that way. Null for the system, and once that row is gone.
+   */
+  readonly actorParticipantId: string | null;
   readonly createdAt: Date;
 }
 
@@ -149,6 +155,7 @@ export async function listGroupActivity(
       metadata: activityEvents.metadata,
       actorLabel: activityEvents.actorLabel,
       actorType: activityEvents.actorType,
+      actorParticipantId: activityEvents.actorParticipantId,
       createdAt: activityEvents.createdAt,
     })
     .from(activityEvents)

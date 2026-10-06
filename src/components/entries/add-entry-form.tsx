@@ -11,7 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import {
@@ -52,6 +52,7 @@ import {
   formatMinorUnits,
   parseAmountToMinor,
   previewSplit,
+  splitEntriesFor,
   suggestExactValues,
   suggestPercentages,
   type SplitMessage,
@@ -123,6 +124,7 @@ import {
 } from "./recurrence-sheet";
 import { RowCard, Row, RowButton } from "./row-card";
 import { describeSplit } from "./split-notes";
+import { giveRemaining } from "./split-shortcuts";
 import { SplitSheet } from "./split-sheet";
 import { SplitSummaryRow } from "./split-summary-row";
 import {
@@ -324,6 +326,15 @@ interface Outcome {
    * and when it adds the next. Only the recurring path has one.
    */
   readonly series?: SavedSeries;
+  /**
+   * The repayment this press has just recorded, when it recorded a new one.
+   *
+   * It is what the confirmation's Undo takes back out, so only a brand-new
+   * repayment carries it. An edit has a row from before to go back to, and a
+   * change of kind removed an entry on its way in — undoing either is not a
+   * deletion, and offering one would destroy more than was just done.
+   */
+  readonly recordedSettlementId?: string;
 }
 
 /**
@@ -591,6 +602,8 @@ export function AddEntryForm({
 }: AddEntryFormProps) {
   const router = useRouter();
   const locale = useNumberLocale();
+  /** The language sentences are in, which is not how numbers are written. */
+  const language = useLocale();
   const dates = useDateFormatter();
   /*
    * Who is typing, stamped on anything this form leaves on the device — a
@@ -830,11 +843,25 @@ export function AddEntryForm({
    * to: any other message replacing it — a description left empty, a delete
    * that failed — takes the offer away with the conflict it answered.
    */
-  const [failure, setFailure] = useState<{
-    readonly message: string;
-    readonly code?: string;
-  } | null>(null);
-  const error = failure?.message ?? null;
+  /*
+   * A refusal over the split carries no sentence of its own. It says whatever
+   * the split's note says now, so that what the alert reads cannot fall behind
+   * the fields under it — and it goes away once there is nothing left to say,
+   * rather than standing over a form that has since become right.
+   */
+  const [failure, setFailure] = useState<
+    | {
+        readonly message: string;
+        readonly code?: string;
+        readonly cause?: undefined;
+      }
+    | {
+        readonly cause: "split";
+        readonly message?: undefined;
+        readonly code?: undefined;
+      }
+    | null
+  >(null);
   const setError = (message: string | null, code?: string) =>
     setFailure(message === null ? null : { message, code });
   /*
@@ -874,6 +901,16 @@ export function AddEntryForm({
   ) => {
     setError(message, code);
     setRefusal((last) => ({ field, count: (last?.count ?? 0) + 1 }));
+  };
+  /** The same, for a split that does not add up: see `failure`. */
+  const refuseSplit = () => {
+    setFailure({ cause: "split" });
+    // The caret goes to the row that says what is wrong and opens the sheet
+    // that fixes it, not to the alert a screen above it.
+    setRefusal((last) => ({
+      field: "[data-split-row]",
+      count: (last?.count ?? 0) + 1,
+    }));
   };
   useEffect(() => {
     if (refusal === null) return;
@@ -1162,13 +1199,6 @@ export function AddEntryForm({
       ? preview.allocations[0].formatted
       : null;
 
-  const summary = summariseSplit({
-    method,
-    participantCount: effectiveIncluded.length,
-    eachFormatted,
-    byItem,
-  });
-
   /**
    * The half of a dictated proposal that still says something new.
    *
@@ -1189,11 +1219,12 @@ export function AddEntryForm({
       : [];
 
   /**
-   * What the split does not add up to, said out loud.
+   * What the split comes to, said out loud.
    *
    * Separate from `preview`, which only decides whether the split is valid.
-   * This is the sentence under the per-person rows, and the one that tells
-   * somebody *which way* they are out.
+   * This is the sentence under the per-person rows, the one that tells
+   * somebody *which way* they are out — and, once the sheet is shut, the
+   * warning on the row and the alert a refused save raises.
    */
   const splitNote = useMemo(
     () =>
@@ -1203,13 +1234,47 @@ export function AddEntryForm({
         method,
         participantIds: effectiveIncluded,
         values,
-        absorberName:
-          members.find((member) => member.id === effectiveIncluded[0])
-            ?.displayName ?? "",
+        nameOf: (id) =>
+          members.find((member) => member.id === id)?.displayName ?? "",
+        selfId,
         locale,
+        language,
       }),
-    [totalMinor, currency, method, effectiveIncluded, values, members, locale],
+    [
+      totalMinor,
+      currency,
+      method,
+      effectiveIncluded,
+      values,
+      members,
+      selfId,
+      locale,
+      language,
+    ],
   );
+
+  const summary = summariseSplit({
+    method,
+    participantCount: effectiveIncluded.length,
+    eachFormatted,
+    byItem,
+    problem: splitNote,
+  });
+
+  /*
+   * The alert's sentence. A refusal over the split reads the split as it is
+   * now, and stops standing once the split can be saved: the alert used to
+   * keep saying "the exact amounts must add up" over amounts that did.
+   */
+  if (failure?.cause === "split" && preview.ok) setFailure(null);
+  const error =
+    failure?.cause === "split"
+      ? splitNote?.tone === "error"
+        ? t(`split.notes.${splitNote.key}`, splitNote.params)
+        : preview.error
+          ? splitText(preview.error)
+          : null
+      : (failure?.message ?? null);
 
   /**
    * An empty split stays empty.
@@ -1646,7 +1711,7 @@ export function AddEntryForm({
       return;
     }
     if (!isSettle && !preview.ok) {
-      refuse(preview.error ? splitText(preview.error) : null);
+      refuseSplit();
       return;
     }
 
@@ -1690,7 +1755,7 @@ export function AddEntryForm({
         await queueEntry(clientKey);
         return;
       }
-      const { result, movedTo, series } = outcome;
+      const { result, movedTo, series, recordedSettlementId } = outcome;
 
       if (!result.ok) {
         refuse(result.error ?? t("errors.saveFailed"), null, result.code);
@@ -1740,12 +1805,32 @@ export function AddEntryForm({
       // entry landing in the list, and the toast says the same thing without
       // standing between them and it. A recurring entry's title says whether
       // there is one to see yet, and if not, the day there will be.
-      toast.success(
-        recurrence.enabled
-          ? seriesSaved(series)
-          : t(`saved.${confirmationKey(type, editing !== undefined)}`),
-        { description: describeSaved(createdExpenseId(result) ?? editing?.id) },
-      );
+      const confirmation = recurrence.enabled
+        ? seriesSaved(series)
+        : t(`saved.${confirmationKey(type, editing !== undefined)}`);
+      const facts = describeSaved(createdExpenseId(result) ?? editing?.id);
+      /*
+       * A new repayment can be taken back from its confirmation.
+       *
+       * It is the entry most likely to be recorded in a hurry and the costliest
+       * to get wrong: the outstanding rows read alike, one arrives already
+       * chosen, and marking the wrong person as paid clears a real debt without
+       * a word. Finding the row again in Transactions to delete it is the long
+       * way round for a slip that is noticed the moment the toast names who
+       * paid whom back.
+       */
+      if (recordedSettlementId) {
+        toastUndoable(
+          confirmation,
+          {
+            label: tCommon("undo"),
+            onUndo: () => onUndoRecorded(recordedSettlementId),
+          },
+          { description: facts },
+        );
+      } else {
+        toast.success(confirmation, { description: facts });
+      }
       // A conversion removed the row this drawer was opened on, so it leaves
       // the way a deletion does rather than back onto a detail screen that no
       // longer has anything to show — and it says where the entry went, which
@@ -1800,17 +1885,14 @@ export function AddEntryForm({
     else router.refresh();
   };
 
+  // Read the way the preview read them, so what the sheet called fine is
+  // exactly what is sent.
   const splitEntries = () =>
-    effectiveIncluded.map((id) => {
-      if (method === "equal") return { participantId: id };
-      if (method === "exact") {
-        const parsed = parseAmountToMinor(values[id] ?? "", currency);
-        return {
-          participantId: id,
-          value: parsed.ok ? parsed.value.toString() : "0",
-        };
-      }
-      return { participantId: id, value: (values[id] ?? "0").trim() };
+    splitEntriesFor({
+      method,
+      participantIds: effectiveIncluded,
+      values,
+      currency,
     });
 
   const submitEntry = async (clientKey?: string): Promise<Outcome> => {
@@ -1919,9 +2001,12 @@ export function AddEntryForm({
       notes,
     };
     if (!editing) {
-      return {
-        result: await createSettlementAction(groupId, input, heldClientKey()),
-      };
+      const result = await createSettlementAction(
+        groupId,
+        input,
+        heldClientKey(),
+      );
+      return { result, recordedSettlementId: result.data?.settlementId };
     }
     if (!converting) {
       return {
@@ -1963,6 +2048,43 @@ export function AddEntryForm({
     }
     router.refresh();
     toast.success(t("saved.restored"));
+  };
+
+  /**
+   * Takes back a repayment this form has just recorded: the Undo on its
+   * confirmation.
+   *
+   * It is the repayment's ordinary deletion, through the same action Delete
+   * uses on its detail screen, so the group is revalidated exactly as a delete
+   * revalidates it, and the group's Activity says what happened — recorded,
+   * then deleted — with a Restore on the second line like any other. By the
+   * time this runs the drawer has gone, so it takes the id rather than reading
+   * anything off the form.
+   *
+   * A repayment never waits in the outbox — `queueable` leaves it out — so
+   * there is no unsent one to drop here: the Undo is only ever offered for a
+   * repayment the server has already written and answered for.
+   *
+   * A failure is said out loud, a lost connection included. The toast that
+   * offered the Undo has gone, and somebody who pressed it believes the
+   * repayment went with it — left to fail in silence, the slip would stand
+   * with the reader sure it had been put right.
+   */
+  const onUndoRecorded = async (settlementId: string) => {
+    let result: { ok: boolean; error?: string };
+    try {
+      result = await deleteSettlementAction(groupId, settlementId);
+    } catch {
+      result = { ok: false };
+    }
+    if (!result.ok) {
+      toast.error(result.error ?? t("errors.undoRecordFailed"));
+      return;
+    }
+    router.refresh();
+    toast.success(t("saved.paymentUndone"), {
+      description: t("saved.paymentUndoneNote"),
+    });
   };
 
   /**
@@ -2811,6 +2933,7 @@ export function AddEntryForm({
               members={members}
               title={isIncome ? t("split.titleIncome") : t("split.title")}
               totalFormatted={amountFormatted}
+              currency={currency}
               payerId={payerId}
               onPayerChange={setPayerId}
               includedIds={effectiveIncluded}
@@ -2824,10 +2947,23 @@ export function AddEntryForm({
               onValueChange={(id, value) =>
                 setValues((current) => ({ ...current, [id]: value }))
               }
+              onGiveRemaining={
+                totalMinor.ok
+                  ? (id) =>
+                      setValues((current) =>
+                        giveRemaining({
+                          values: current,
+                          participantId: id,
+                          participantIds: effectiveIncluded,
+                          currency,
+                          totalMinor: totalMinor.value,
+                        }),
+                      )
+                  : undefined
+              }
               preview={preview}
               note={splitNote}
               received={isIncome}
-              splitText={splitText}
               alwaysSplit={
                 worthSaving({
                   method,

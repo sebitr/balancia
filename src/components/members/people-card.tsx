@@ -56,19 +56,28 @@ export interface PersonView {
 
 export function PeopleCard({
   groupId,
+  groupName,
+  archived,
   people,
   viewerId,
   canManage,
   canInvite,
   canRemove,
+  canLeave,
 }: {
   groupId: string;
+  /** Named by the confirmation to leave, and by the toast after it. */
+  groupName: string;
+  /** An archived group takes no changes, leaving included. */
+  archived: boolean;
   people: readonly PersonView[];
   /** The reader's own participant row, so their row can offer what only they may do. */
   viewerId: string | null;
   canManage: boolean;
   canInvite: boolean;
   canRemove: boolean;
+  /** Whether the reader may take themselves out — a member, not the owner. */
+  canLeave: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("membersPage");
@@ -137,6 +146,8 @@ export function PeopleCard({
           <PersonRow
             key={person.id}
             groupId={groupId}
+            groupName={groupName}
+            archived={archived}
             person={person}
             isOpen={openId === person.id}
             onToggle={() => toggle(person.id)}
@@ -148,6 +159,7 @@ export function PeopleCard({
             canManage={canManage}
             canInvite={canInvite}
             canRemove={canRemove}
+            canLeave={canLeave}
           />
         ))}
 

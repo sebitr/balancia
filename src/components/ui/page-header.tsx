@@ -101,6 +101,10 @@ export function PageHeader({
  * Filled where the arrow is bare, because it does something different: an
  * arrow returns to the screen behind this one, a ✕ closes the whole surface.
  * Settings is the only place that has one.
+ *
+ * It moves as the arrow does, a `POP`. Closing uncovers the screen the surface
+ * was opened over — the one the avatar pushed it from — so it is the way back
+ * out, whatever it points at.
  */
 export function PageHeaderClose({
   href,
@@ -112,6 +116,7 @@ export function PageHeaderClose({
   return (
     <Link
       href={href}
+      transitionTypes={POP}
       aria-label={label}
       className="tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full bg-wash-2 text-foreground transition-colors hover:bg-wash-4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >

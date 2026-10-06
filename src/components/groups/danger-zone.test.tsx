@@ -72,6 +72,17 @@ describe("the delete confirmation", () => {
     expect(deleteButton()).toBeDisabled();
   });
 
+  it("says it goes for everyone, and where to keep a copy first", async () => {
+    const user = renderZone();
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(
+      screen.getByText(
+        "The group goes for everyone in it, with every expense, repayment, receipt and invitation. This cannot be undone. Export it first if you want a copy.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("forgets what was typed once the dialog is closed", async () => {
     const user = renderZone();
     await user.click(screen.getByRole("button", { name: "Delete" }));

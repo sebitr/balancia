@@ -46,6 +46,7 @@ const LUNCH_ADDED: ActivityEntry = {
   metadata: { description: "Lunch" },
   actorLabel: "Bob",
   actorType: "user",
+  actorParticipantId: "p-bob",
   createdAt: new Date("2026-09-02T12:00:00Z"),
 };
 

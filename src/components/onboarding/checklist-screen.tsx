@@ -2,25 +2,15 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Check, ChevronRight, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { BalanceAmount } from "@/components/money/amount";
-import {
-  startCodeSignupAction,
-  verifySignupCodeAction,
-} from "@/modules/auth/actions";
-import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { initialsOf } from "@/components/join/types";
 import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePasskeySupport } from "@/components/auth/use-passkey-support";
 import { registerPasskey } from "@/modules/auth/passkey-client";
-import { CodeInput } from "./code-input";
 import {
   checklistProgress,
   checklistRows,
@@ -33,11 +23,9 @@ import {
   PayoutsSheet,
   ProfileSheet,
   SettleUpSheet,
-  SheetShell,
-  DONE,
   type PayoutEntry,
 } from "./sheets";
-import { PRIMARY } from "./screens";
+import { PRIMARY, YourBalance } from "./screens";
 import type { OnboardingGroupView, OnboardingProfileView } from "./types";
 
 /**
@@ -50,11 +38,9 @@ import type { OnboardingGroupView, OnboardingProfileView } from "./types";
  * the end of the flow rather than a permanent fixture of the group page, which
  * already carries the position, the balances, the settlements and the activity.
  *
- * One row can be urgent, and only one ever is: a guest's unclaimed account,
- * which is the single item here that is lost by closing the browser. It is
- * drawn as a hollow ring with an arrow rather than a coral check — a filled
- * check would read as complete-and-important, and in greyscale would be
- * indistinguishable from done.
+ * Only an account reaches it — the end of a personal invitation taken with
+ * one, or of a guest creating theirs from `/register`. A guest goes straight
+ * to the group, whose guest card carries the one row a guest could ever do.
  *
  * Every row starts from what the account already has rather than from zero.
  * That was the bug: somebody who opened a group link already signed in was
@@ -66,7 +52,6 @@ import type { OnboardingGroupView, OnboardingProfileView } from "./types";
 export function ChecklistScreen({
   group,
   profile = null,
-  isGuest,
   credential,
   email,
   name,
@@ -74,11 +59,10 @@ export function ChecklistScreen({
 }: {
   group: OnboardingGroupView | null;
   /**
-   * What the account had before this flow started. Null for a guest and for
-   * an account created a screen ago, both of which genuinely have none of it.
+   * What the account had before this flow started. Null for an account
+   * created a screen ago, which genuinely has none of it.
    */
   profile?: OnboardingProfileView | null;
-  isGuest: boolean;
   credential: "passkey" | "code" | null;
   email: string;
   name: string;
@@ -102,8 +86,6 @@ export function ChecklistScreen({
     profile?.payouts ?? [],
   );
   const [pushEnabled, setPushEnabled] = useState(profile?.pushEnabled ?? false);
-  const [claimed, setClaimed] = useState(false);
-  const [claimedEmail, setClaimedEmail] = useState(email);
   const [hasPhoto, setHasPhoto] = useState(profile?.hasPhoto ?? false);
   const [shownName, setShownName] = useState(name);
   const [hasPasskey, setHasPasskey] = useState(profile?.hasPasskey ?? false);
@@ -111,7 +93,6 @@ export function ChecklistScreen({
   const [registering, setRegistering] = useState(false);
   const passkeysSupported = usePasskeySupport();
 
-  const guest = isGuest && !claimed;
   const tMethods = useTranslations("paymentMethods");
 
   /**
@@ -137,9 +118,8 @@ export function ChecklistScreen({
   };
 
   const rows = checklistRows({
-    isGuest: guest,
-    credential: claimed ? "code" : credential,
-    email: claimedEmail || email || null,
+    credential,
+    email: email || null,
     hasPhoto,
     hasPasskey,
     passkeyAdded,
@@ -166,7 +146,6 @@ export function ChecklistScreen({
           <h1 className="min-w-0 flex-1 truncate font-heading text-xl font-semibold tracking-[-0.02em]">
             {group.summary.groupName}
           </h1>
-          {guest && <Badge variant="secondary">{t("guestBadge")}</Badge>}
           <Avatar>
             <AvatarFallback className="bg-accent text-xs text-accent-foreground">
               {initialsOf(name || "?")}
@@ -176,12 +155,10 @@ export function ChecklistScreen({
       )}
 
       {group?.position && (
-        <div className="flex flex-col gap-1 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-          <span className="text-xs text-muted-foreground">{t("position")}</span>
-          <BalanceAmount
-            minorUnits={group.position.minorUnits}
-            currency={group.position.currency}
-            size="large"
+        <div className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+          <YourBalance
+            balance={group.position}
+            className="text-xl font-semibold"
           />
         </div>
       )}
@@ -304,7 +281,6 @@ export function ChecklistScreen({
         chosen={currencies}
         onChange={setCurrencies}
         suggested={(group?.summary.totals ?? []).map((total) => total.currency)}
-        persist={!guest}
       />
 
       <NotificationsSheet
@@ -318,7 +294,6 @@ export function ChecklistScreen({
         onOpenChange={(next) => setOpen(next ? "payouts" : null)}
         entries={payouts}
         onChange={setPayouts}
-        persist={!guest}
       />
 
       {group?.settleRequest && (
@@ -328,7 +303,6 @@ export function ChecklistScreen({
           request={group.settleRequest}
           entries={payouts}
           onChange={setPayouts}
-          persist={!guest}
         />
       )}
 
@@ -339,41 +313,18 @@ export function ChecklistScreen({
         onNameChange={setShownName}
         onPhotoChange={() => setHasPhoto(true)}
       />
-
-      <ClaimAccountSheet
-        open={open === "claimAccount"}
-        onOpenChange={(next) => setOpen(next ? "claimAccount" : null)}
-        name={name}
-        onClaimed={(address) => {
-          setClaimed(true);
-          setClaimedEmail(address);
-          setOpen(null);
-        }}
-      />
     </div>
   );
 }
 
 /**
- * The three states, told apart by their glyph and not only by their colour.
+ * The two states, told apart by their glyph and not only by their colour.
  *
  * Principle 01 of the design system: colour is never the only carrier. Done is
- * a filled circle with a check in it, not-done is a pale circle with a check
- * barely visible inside it, and urgent is a hollow ring with an arrow — which
- * survives being printed in grey.
+ * a filled circle with a check in it, and not-done is a pale circle with a
+ * check barely visible inside it — which survives being printed in grey.
  */
 function Marker({ marker }: { marker: ChecklistMarker }) {
-  if (marker === "urgent") {
-    return (
-      <span
-        aria-hidden="true"
-        className="flex size-5.5 shrink-0 items-center justify-center rounded-full border-2 border-primary"
-      >
-        <ArrowRight className="size-3 text-primary-ink" />
-      </span>
-    );
-  }
-
   return (
     <span
       aria-hidden="true"
@@ -389,121 +340,5 @@ function Marker({ marker }: { marker: ChecklistMarker }) {
         )}
       />
     </span>
-  );
-}
-
-/**
- * Claiming a guest session, from inside the checklist.
- *
- * The same six digits as the flow's own identity screen, in a sheet, because
- * this is the one row a guest cannot afford to postpone: everything they have
- * done lives in this browser's cookie until an account exists to hold it.
- * Claiming keeps the group, the balance and every expense they added.
- */
-function ClaimAccountSheet({
-  open,
-  onOpenChange,
-  name,
-  onClaimed,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  name: string;
-  onClaimed: (email: string) => void;
-}) {
-  const t = useTranslations("onboarding.sheets.claim");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const address = email.trim();
-  const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address);
-
-  const send = async () => {
-    setError(null);
-    setBusy(true);
-    const result = await startCodeSignupAction({
-      name: name.trim(),
-      email: address,
-    });
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error ?? t("failed"));
-      return;
-    }
-    setSent(true);
-  };
-
-  const verify = async (value: string) => {
-    setError(null);
-    setBusy(true);
-    const result = await verifySignupCodeAction({
-      email: address,
-      code: value,
-    });
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error ?? t("failed"));
-      setCode("");
-      return;
-    }
-    onClaimed(address);
-  };
-
-  return (
-    <SheetShell
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("title")}
-      description={t("sub")}
-      footer={
-        <Button
-          size="lg"
-          className={DONE}
-          disabled={busy || (sent ? code.length < CODE_LENGTH : !valid)}
-          onClick={() => void (sent ? verify(code) : send())}
-        >
-          {busy && (
-            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          )}
-          {sent ? t("verify") : t("send")}
-        </Button>
-      }
-    >
-      <div className="flex flex-col gap-3">
-        <Label className="sr-only" htmlFor="claim-email">
-          {t("emailLabel")}
-        </Label>
-        <Input
-          id="claim-email"
-          type="email"
-          className="h-14 rounded-xl"
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-            if (sent) {
-              setSent(false);
-              setCode("");
-            }
-          }}
-          placeholder={t("emailPlaceholder")}
-          autoComplete="email"
-          inputMode="email"
-          disabled={busy}
-        />
-        {sent && (
-          <CodeInput
-            value={code}
-            onChange={setCode}
-            onComplete={(value) => void verify(value)}
-            label={t("codeLabel")}
-            disabled={busy}
-          />
-        )}
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
-    </SheetShell>
   );
 }

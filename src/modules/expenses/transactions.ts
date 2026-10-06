@@ -255,6 +255,14 @@ export async function loadTransactionPage(
           revenue: !isSpending(expense.direction),
           recurring: expense.recurringExpenseId !== null,
           payers: expense.payers.map((payer) => payer.participantId),
+          // Everybody the entry moved, once each: who paid and who shares.
+          people: [
+            ...new Set(
+              [...expense.payers, ...expense.shares].map(
+                (row) => row.participantId,
+              ),
+            ),
+          ],
           foreign: isForeign(expense.currency),
           receipt: expense.attachmentCount > 0,
         },
@@ -300,6 +308,7 @@ export async function loadTransactionPage(
           // Exactly one payer, and it is the half of the title that did the
           // paying.
           payers: [settlement.fromParticipantId],
+          people: [settlement.fromParticipantId, settlement.toParticipantId],
           foreign: isForeign(settlement.currency),
           // A repayment carries no attachments; there is no table for them.
           receipt: false,

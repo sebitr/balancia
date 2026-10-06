@@ -37,13 +37,14 @@ function render(
   view: PositionView,
   mode: PositionMode,
   locale: "en" | "fr" = "en",
+  actions?: React.ReactNode,
 ) {
   return renderWithIntl(
     <MemberPosition
       position={view}
-      groupName="Lisbon"
       name="Marta"
       mode={mode}
+      actions={actions}
     />,
     { locale },
   );
@@ -120,5 +121,85 @@ describe("MemberPosition", () => {
   it("writes a settled pair in French with tu, not vous", () => {
     render(position({ between: "0" }), "between", "fr");
     expect(screen.getByText("Marta et toi êtes à jour")).toBeVisible();
+  });
+
+  /**
+   * The settle screen's buttons for this pair go straight under the sentence
+   * they act on, above the figures that are only context.
+   */
+  it("puts what the reader can do under the sentence it is about", () => {
+    render(
+      position({ between: "-96084" }),
+      "between",
+      "en",
+      <button type="button">I paid Marta</button>,
+    );
+
+    const button = screen.getByRole("button", { name: "I paid Marta" });
+    expect(button.previousElementSibling).toHaveTextContent("You owe Marta");
+    expect(button.nextElementSibling?.tagName).toBe("DL");
+  });
+
+  describe("in plain words", () => {
+    it("names whose balance the figure under the headline is", () => {
+      render(
+        position({
+          between: "-96084",
+          net: "197885",
+          openCount: 2,
+          openTotal: "197885",
+        }),
+        "between",
+      );
+
+      expect(
+        screen.getByText("Marta's balance in this group"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Not settled with 2 people")).toBeInTheDocument();
+      expect(screen.queryByText(/Net across/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Open with/)).not.toBeInTheDocument();
+    });
+
+    it("calls the reader's own figure their balance in this group", () => {
+      render(position({ net: "-96084" }), "self");
+      expect(
+        screen.getByText("Your balance in this group"),
+      ).toBeInTheDocument();
+    });
+
+    it("says the same in French without eliding a name", () => {
+      render(
+        position({ between: "-96084", net: "197885", openCount: 1 }),
+        "between",
+        "fr",
+      );
+      expect(
+        screen.getByText("Solde dans ce groupe · Marta"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Pas à jour avec 1 personne"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * "CHF 1,979.…" under the headline was a balance with its last digits
+   * missing. Nothing that holds a figure here truncates any more.
+   */
+  it("never cuts an amount short", () => {
+    const { container } = render(
+      position({
+        between: "-1234567",
+        net: "2345678",
+        openCount: 4,
+        openTotal: "2345678",
+      }),
+      "between",
+    );
+
+    expect(screen.getByText(/^CHF.12,345\.67$/)).toBeVisible();
+    // Their balance, signed, and the total they are not settled with.
+    expect(screen.getAllByText(/CHF.23,456\.78$/)).toHaveLength(2);
+    expect(container.querySelector(".truncate")).toBeNull();
   });
 });

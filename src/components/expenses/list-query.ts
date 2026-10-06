@@ -47,6 +47,16 @@ export const MAX_PARAM = "max";
 /** A participant who paid. Repeats, and means *any of*. */
 export const PAYER_PARAM = "by";
 
+/**
+ * A participant the row is about at all — paid, has a share, or is either end
+ * of a repayment. Repeats, and means *any of*.
+ *
+ * Separate from `by` because "Marta paid for it" and "Marta is on it" are two
+ * questions: a person's page asks the second, which is every entry that moved
+ * their balance, and the dinner somebody else paid for is one of them.
+ */
+export const WITH_PARAM = "with";
+
 /** What the row left the reader holding — `owe`, `back`, `flat`. Repeats. */
 export const POSITION_PARAM = "pos";
 
@@ -74,6 +84,7 @@ const LIST_PARAMS = [
   MIN_PARAM,
   MAX_PARAM,
   PAYER_PARAM,
+  WITH_PARAM,
   POSITION_PARAM,
   PROPERTY_PARAM,
   SORT_PARAM,

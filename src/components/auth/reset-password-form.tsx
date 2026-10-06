@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { resetPasswordAction } from "@/modules/auth/actions";
+import { describedBy, useRefusalFocus } from "./use-refusal-focus";
+
+/** The refusal's id, which the new password field is described by. */
+const FORM_ERROR_ID = "reset-password-error";
 
 /**
  * Chooses the new password, using the token from the emailed link.
@@ -52,14 +56,27 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return message ? tValidation(message as ValidationKey) : null;
   };
 
+  /*
+   * Back to the new password on every refusal. The server holds it to two
+   * rules this form cannot check — not a common password, not the account's
+   * own name or address — and those are the refusals somebody can answer by
+   * typing. A spent link cannot be answered here at all, and the caret is no
+   * worse off in the field than on nothing.
+   */
+  const [refused, refuse] = useRefusalFocus<"password">((field) =>
+    form.setFocus(field, { shouldSelect: true }),
+  );
+
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    refuse(null);
     const result = await resetPasswordAction({
       token,
       password: values.password,
     });
     if (!result.ok) {
       setFormError(result.error ?? tErrors("generic"));
+      refuse("password");
       return;
     }
     setDone(true);
@@ -93,7 +110,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </div>
 
       {formError && (
-        <Alert variant="destructive">
+        <Alert id={FORM_ERROR_ID} variant="destructive">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
@@ -109,11 +126,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
             aria-invalid={Boolean(form.formState.errors.password)}
             // The rule, then what is wrong with this attempt at it — the same
             // pairing as the registration form.
-            aria-describedby={
-              form.formState.errors.password
-                ? "password-hint password-error"
-                : "password-hint"
-            }
+            aria-describedby={describedBy(
+              "password-hint",
+              form.formState.errors.password && "password-error",
+              formError && refused === "password" && FORM_ERROR_ID,
+            )}
             {...form.register("password")}
           />
           <p id="password-hint" className="text-xs text-muted-foreground">

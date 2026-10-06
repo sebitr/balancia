@@ -235,7 +235,7 @@ describe("an owner-only change asked for by a member", () => {
 });
 
 describe("the people screen", () => {
-  it("tells the owner they cannot be removed, with a 409", async () => {
+  it("tells the owner they cannot leave, with a 409", async () => {
     const owner = await createTestUser();
     const group = await createTestGroup(owner);
     cookieActor.value = owner;
@@ -251,8 +251,8 @@ describe("the people screen", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       error:
-        "The group owner cannot be removed from the group. Archive it or delete it instead.",
-      code: "ownerNotRemovable",
+        "You own this group, so you cannot leave it. Archive it or delete it instead.",
+      code: "ownerCannotLeave",
     });
     const [row] = await getDb()
       .select({ removedAt: participants.removedAt })

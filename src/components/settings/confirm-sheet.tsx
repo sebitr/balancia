@@ -2,7 +2,6 @@
 
 import { useState, type ReactNode } from "react";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
-import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,6 +25,11 @@ import { cn } from "@/lib/utils";
  * The confirm button holds its own pending state. These are slow actions with
  * a redirect at the end, and a sheet that sits inert after a tap is a sheet
  * somebody taps again.
+ *
+ * Both answers are named by the caller, the way out as much as the way on.
+ * It used to be one "Keep it" under every question, which answered "Sign out
+ * of Balancia?" with a riddle — keep what? Each sheet now says what staying
+ * keeps: "Stay signed in", "Keep my account", "Keep this passkey".
  */
 export function ConfirmSheet({
   open,
@@ -33,6 +37,7 @@ export function ConfirmSheet({
   title,
   body,
   confirmLabel,
+  cancelLabel,
   onConfirm,
   destructive = false,
   children,
@@ -42,13 +47,14 @@ export function ConfirmSheet({
   title: string;
   body: string;
   confirmLabel: string;
+  /** What answering no keeps, in the reader's words — never a bare "Cancel". */
+  cancelLabel: string;
   /** May be async; the sheet stays put and busy until it settles. */
   onConfirm: () => unknown;
   destructive?: boolean;
   /** Extra content between the body and the buttons — a confirmation field. */
   children?: ReactNode;
 }) {
-  const t = useTranslations("userSettings");
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {
@@ -97,7 +103,7 @@ export function ConfirmSheet({
           <div className="flex flex-col-reverse gap-2">
             <AlertDialogPrimitive.Cancel asChild>
               <Button variant="outline" className="h-11 rounded-[14px] text-sm">
-                {t("keepIt")}
+                {cancelLabel}
               </Button>
             </AlertDialogPrimitive.Cancel>
             <Button

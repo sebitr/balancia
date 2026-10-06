@@ -29,6 +29,7 @@ export function SignOutSheet({
       title={t("signOutTitle")}
       body={t("signOutBody")}
       confirmLabel={t("signOut")}
+      cancelLabel={t("signOutCancel")}
       // Clears this device, ends the session and redirects, so there is
       // nothing to close afterwards — the page it would have closed onto is
       // gone. See `signOut`.
@@ -45,8 +46,8 @@ export function SignOutSheet({
  * Signing out deletes the device's offline store, and the outbox is in it:
  * expenses typed with no network that have not reached the server yet exist
  * nowhere else. That is the one thing on this device a person would want back,
- * so the sheet says so before the tap rather than after — and "Keep it" is
- * already the way to stay signed in until they have gone.
+ * so the sheet says so before the tap rather than after — and "Stay signed in"
+ * is right under it, the way to keep them until they have gone.
  *
  * Mounted only while the sheet is open, so the count is read when it is
  * asked for and not on every visit to settings. Every entry on the device is
