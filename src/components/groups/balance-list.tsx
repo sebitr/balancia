@@ -257,7 +257,6 @@ function BalanceValue({
       <Amount
         minorUnits={row.minorUnits}
         currency={row.currency}
-        display="code"
         signDisplay={worded ? "never" : "exceptZero"}
       />
       {!worded && (

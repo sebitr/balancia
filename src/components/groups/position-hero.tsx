@@ -131,7 +131,6 @@ export function PositionHero({
                   key={position.currency}
                   minorUnits={position.minorUnits}
                   currency={position.currency}
-                  display="code"
                   signDisplay="exceptZero"
                   className={cn(
                     "text-sm font-semibold tabular-nums",
@@ -326,6 +325,12 @@ export function PositionHero({
   );
 }
 
+/**
+ * The screen's headline figure: the ISO code as a qualifier on the baseline,
+ * the numeral bare beside it, as the entry's total is drawn. It is one of the
+ * two exceptions written out at `formatMoney`; every other figure on this
+ * screen, the strip above included, is in the app's one notation.
+ */
 function HeroAmount({
   currency,
   minorUnits,
