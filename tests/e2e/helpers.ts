@@ -121,8 +121,9 @@ export async function addParticipant(
 }
 
 /**
- * Opens someone's row and issues them an invitation link, returning the URL
- * from its one-time reveal.
+ * Opens someone's row and issues them a personal link, returning the URL from
+ * its one-time reveal. The row offers it as a quiet button that asks how long
+ * the link should last before it makes one.
  */
 export async function createInviteLink(
   page: Page,
@@ -130,8 +131,9 @@ export async function createInviteLink(
   name: string,
 ): Promise<string> {
   await page.goto(`/groups/${groupId}/members`);
-  await page.getByRole("button", { name: new RegExp(name) }).click();
-  await page.getByRole("button", { name: "Create invite link" }).click();
+  await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  await page.getByRole("button", { name: `Personal link for ${name}` }).click();
+  await page.getByRole("button", { name: "Create the link" }).click();
 
   /*
    * Shown once, in a code block rather than a field: it is there to be copied,

@@ -68,6 +68,7 @@ vi.mock("@/components/groups/use-detected-timezone", () => ({
 }));
 
 const auth = vi.hoisted(() => ({
+  registerAction: vi.fn(),
   requestSignInCodeAction: vi.fn(),
   signInWithCodeAction: vi.fn(),
   startCodeSignupAction: vi.fn(),
@@ -115,6 +116,10 @@ beforeEach(() => {
   auth.verifySignupCodeAction.mockResolvedValue({
     ok: true,
     data: { joinedGroupId: null, claimedGroupId: "group-1" },
+  });
+  auth.registerAction.mockResolvedValue({
+    ok: true,
+    data: { verificationRequired: false, claimedGroupId: null },
   });
   for (const action of Object.values(profileActions)) action.mockReset();
   profileActions.setDisplayNameAction.mockResolvedValue({ ok: true });
@@ -592,6 +597,44 @@ describe("the shared link", () => {
     expect(router.push).toHaveBeenCalledWith("/groups/group-1");
   });
 
+  it("joins after a password signup, and keeps the reader on the link to do it", async () => {
+    // The password used to be a link to /register/password, which knew
+    // nothing of the group: the account was made and the join was lost.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        codeSignupAvailable={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+    // The name is the one picked from the list; nothing asks for it again.
+    expect(screen.queryByRole("textbox", { name: "Your name" })).toBeNull();
+    await user.type(
+      screen.getByRole("textbox", { name: "Email address" }),
+      "alex@example.com",
+    );
+    await user.type(screen.getByLabelText("Password"), "analytical engine");
+    await user.click(screen.getByRole("button", { name: "Create my account" }));
+
+    expect(auth.registerAction).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Alex", email: "alex@example.com" }),
+    );
+    expect(joinWithAccountAction).toHaveBeenCalledWith({
+      participantId: "member-2",
+      displayName: "Alex",
+    });
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+    expect(stepsTaken()).toEqual(["whichOne", "keepIt", "identity", "left"]);
+  });
+
   it("creates an account and lands it in the group in three screens", async () => {
     auth.verifySignupCodeAction.mockResolvedValue({
       ok: true,
@@ -658,11 +701,105 @@ describe("the shared link", () => {
   });
 });
 
+/**
+ * From `lg`, the list stays beside "how do you want to join" once a name is
+ * picked. jsdom runs no media queries, so what is held here is what the wide
+ * drawing is told: the list is there, marked with the name picked, hidden
+ * below `lg`, and picking again from it moves the second screen in place
+ * without a step, a commit, or a name left behind.
+ */
+describe("the shared link at a desk's width", () => {
+  it("opens on the list alone, as on a phone", () => {
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /^Alex/ })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Which of these is you?",
+    );
+  });
+
+  it("keeps the list beside the second screen, with the name marked", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+
+    // The question is the page's heading; the list beside it is context.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Alex, how do you want to join Weekend in Verbier?",
+    );
+    const list = screen.getByRole("heading", {
+      level: 2,
+      name: "You're invited to Weekend in Verbier. Which of these is you?",
+    });
+    expect(list.closest(".lg\\:flex")).toHaveClass("hidden");
+    expect(screen.getByRole("button", { name: /^Alex/ })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: /^Marc T\./ }),
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  it("follows another name picked beside it, committing nothing", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    await user.click(screen.getByRole("button", { name: /^Marc T\./ }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Marc T., how do you want to join Weekend in Verbier?",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/You get back CHF\s42\.00/)).toBeInTheDocument();
+    expect(joinAsGuestAction).not.toHaveBeenCalled();
+    // The reader changed their answer; they did not take a step.
+    expect(stepsTaken()).toEqual(["whichOne", "keepIt"]);
+
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+    expect(joinAsGuestAction).toHaveBeenCalledWith({
+      participantId: "member-1",
+      displayName: "Marc T.",
+    });
+  });
+
+  it("asks a fresh name of somebody new, not the one they just unpicked", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    await user.click(screen.getByRole("button", { name: /None of these/ }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: "What should Weekend in Verbier call you?",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveValue("");
+    expect(
+      screen.getByRole("button", { name: "None of these — I'm new here" }),
+    ).toHaveAttribute("aria-current", "true");
+  });
+});
+
 describe("the cold arrival", () => {
   it("describes the product, because there is no group to describe", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
     expect(
-      screen.getByRole("heading", { name: "Keep your accounts within reach" }),
+      screen.getByRole("heading", { name: "Keep track of who owes what" }),
     ).toBeInTheDocument();
   });
 
@@ -730,6 +867,47 @@ describe("the cold arrival", () => {
 
     await user.click(screen.getByRole("button", { name: "Later" }));
     expect(router.push).toHaveBeenCalledWith("/groups/group-new");
+  });
+
+  /**
+   * The currency is the one answer about a group that never changes, and this
+   * screen used to decide it out of sight: the guess was right for a phone at
+   * home and wrong for one on holiday, and nobody could tell which.
+   */
+  it("shows the currency the group will be in, and lets it be changed", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Start a group without an account/ }),
+    );
+
+    // Guessed from where the device is, and said before anything is created.
+    const field = screen.getByRole("button", { name: /Currency: CHF/ });
+    expect(field).toBeVisible();
+    expect(screen.getByText("Group currency")).toBeVisible();
+    expect(screen.getByText(/Fixed once the group exists/)).toBeInTheDocument();
+
+    // Narrowed first: a role query over all 156 rows is slow enough in jsdom
+    // to time out on a busy machine, and searching is how people use it.
+    await user.click(field);
+    await user.type(
+      await screen.findByRole("textbox", { name: "Search a currency" }),
+      "EUR",
+    );
+    await user.click(await screen.findByRole("button", { name: /^EUR/ }));
+
+    expect(
+      await screen.findByRole("button", { name: /Currency: EUR/ }),
+    ).toBeVisible();
+
+    await user.type(screen.getByLabelText("Group name"), "Lisbon trip");
+    await user.type(screen.getByLabelText("Your name"), "Dana");
+    await user.click(screen.getByRole("button", { name: "Create the group" }));
+
+    expect(startGroupAsGuestAction).toHaveBeenCalledWith(
+      expect.objectContaining({ baseCurrency: "EUR" }),
+    );
   });
 
   it("keeps a refused group start on its own screen, with the reason", async () => {
@@ -923,11 +1101,12 @@ describe("the cold arrival", () => {
     ]);
   });
 
-  it("keeps the password page a tap away where there is no mail server", async () => {
+  it("keeps the password a tap away where there is no mail server, on the same step", async () => {
     // Before, the password link appeared only when neither a passkey nor a
     // code could be offered — so a mail-less instance read on a phone showed
     // exactly one button, and somebody who did not want a passkey had no
-    // visible way to say so.
+    // visible way to say so. Then it was a link to /register/password, a page
+    // of its own with a confirm field, which left the flow altogether.
     const user = userEvent.setup();
     renderWithIntl(
       <OnboardingFlow
@@ -939,8 +1118,119 @@ describe("the cold arrival", () => {
     await user.click(screen.getByRole("button", { name: "Create an account" }));
 
     expect(
-      screen.getByRole("link", { name: "Sign up with a password" }),
-    ).toHaveAttribute("href", "/register/password");
+      screen.queryByRole("link", { name: "Sign up with a password" }),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+
+    // Still the Account step: the same bar, the same label, the same way back.
+    expect(
+      screen.getByRole("heading", { name: "Your email, and a password" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: "Account" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+    // One password, and the eye instead of a second one.
+    expect(screen.queryByLabelText(/Confirm/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show password", pressed: false }),
+    ).toBeInTheDocument();
+
+    // And the passkey is one tap back.
+    await user.click(
+      screen.getByRole("button", { name: "Use a passkey instead" }),
+    );
+    expect(
+      screen.getByRole("button", { name: /Continue with a passkey/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("creates the account with a password and carries on to the name and the first group", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+
+    // A cold arrival has no name yet, and the account cannot exist without
+    // one, so this step asks for it.
+    await user.type(
+      screen.getByRole("textbox", { name: "Your name" }),
+      "Ada Lovelace",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Email address" }),
+      "ada@example.com",
+    );
+    await user.type(screen.getByLabelText("Password"), "analytical engine");
+    await user.click(screen.getByRole("button", { name: "Create my account" }));
+
+    expect(auth.registerAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        password: "analytical engine",
+      }),
+    );
+    // The next step of the same flow, holding the name just typed.
+    expect(
+      screen.getByRole("heading", { name: /Last thing/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveValue(
+      "Ada Lovelace",
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      screen.getByRole("button", { name: "Create your first group" }),
+    ).toBeInTheDocument();
+    expect(stepsTaken()).toEqual([
+      "welcome",
+      "identity",
+      "profile",
+      "firstGroup",
+    ]);
+  });
+
+  it("refuses a password everybody uses under the field, before anything is sent", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Your name" }),
+      "Ada Lovelace",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Email address" }),
+      "ada@example.com",
+    );
+    const password = screen.getByLabelText("Password");
+    await user.type(password, "password123");
+    await user.click(screen.getByRole("button", { name: "Create my account" }));
+
+    expect(auth.registerAction).not.toHaveBeenCalled();
+    expect(password).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveFocus();
+    expect(password).toHaveAccessibleDescription(
+      /That password is one of the most commonly used ones/,
+    );
   });
 
   it("offers no code on an instance with no mail server", async () => {

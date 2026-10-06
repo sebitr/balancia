@@ -67,6 +67,16 @@ export interface GroupPosition {
   readonly net: Money | null;
   /** Only ever set where the user owes: nobody is owed *to* a creditor. */
   readonly owedTo: Counterparty | null;
+  /**
+   * Whether the group holds a single expense, income or repayment.
+   *
+   * A group nobody has recorded anything in has no balance either, and the
+   * home screen used to file it under "Settled up" for that reason — a group
+   * made a minute ago, pill and all, as though everyone had paid everyone
+   * back. Square and empty are different answers, and this is what tells them
+   * apart. Null for an archived group, whose ledger this screen does not read.
+   */
+  readonly hasEntries: boolean | null;
 }
 
 export type PositionDirection = "owes" | "owed" | "settled";
@@ -75,6 +85,11 @@ export interface HomeBuckets {
   /** Groups the user owes in — the only ones that ask for a decision. */
   readonly needsYou: readonly GroupPosition[];
   readonly youAreOwed: readonly GroupPosition[];
+  /**
+   * Nothing outstanding — which includes a group with nothing recorded yet.
+   * The two stay in one bucket, so the mobile API keeps its shape; a screen
+   * that words them differently splits them by `hasEntries`.
+   */
   readonly settled: readonly GroupPosition[];
   readonly archived: readonly GroupPosition[];
 }
@@ -409,7 +424,7 @@ export async function loadHomeOverview(
 
   const unconverted: GroupPosition[] = groups.map((group) => {
     if (group.archivedAt !== null) {
-      return { group, amounts: [], net: null, owedTo: null };
+      return { group, amounts: [], net: null, owedTo: null, hasEntries: null };
     }
     const balances = balancesByGroup.get(group.id);
     if (!balances) {
@@ -420,6 +435,10 @@ export async function loadHomeOverview(
       amounts: ownAmounts(group, balances.currencies),
       net: null,
       owedTo: counterpartyOf(group, balances),
+      // The engine opens a currency's ledger at the first entry written in
+      // it, so a group with no ledger at all is a group with no entries —
+      // read off rows already in hand rather than counted by another query.
+      hasEntries: balances.currencies.length > 0,
     };
   });
 

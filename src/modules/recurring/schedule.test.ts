@@ -3,11 +3,14 @@ import {
   GENERATION_HOUR,
   RecurrenceError,
   dueThrough,
+  editWindow,
   firstOccurrence,
   firstOccurrenceDueAfter,
   nextOccurrence,
+  occurrenceAfter,
   occurrenceInstant,
   occurrencesUpTo,
+  periodStart,
   remainingOf,
   todayIn,
   upcomingOccurrences,
@@ -541,5 +544,127 @@ describe("previewing a rule", () => {
     expect(upcomingOccurrences(monthly({ endDate: "2025-12-31" }), 3)).toEqual(
       [],
     );
+  });
+});
+
+/**
+ * An edit starts a rule again from a date, and the series' last entry was
+ * made under the version before it. Stepping on from that entry would carry
+ * the old version's days forward, or find nothing at all.
+ */
+describe("a rule that was edited", () => {
+  it("steps on from the last entry when the rule is unchanged", () => {
+    expect(occurrenceAfter(monthly(), "2026-03-01")).toBe("2026-04-01");
+    expect(occurrenceAfter(monthly(), null)).toBe("2026-01-01");
+  });
+
+  it("starts on the new rule's own days when the last entry came before it", () => {
+    // Moved from Mondays to Fridays from 6 October: a Monday plus a week is a
+    // Monday, which is the bug this answers.
+    const friday = weekly({ weekday: 5, startDate: "2026-10-06" });
+    expect(occurrenceAfter(friday, "2026-09-28")).toBe("2026-10-09");
+  });
+
+  it("does not end the series when the step falls short of the new start", () => {
+    // From the 1st to the 20th, starting again in December. One month on from
+    // the last entry is 20 November — before the start, so not an occurrence.
+    const rule = monthly({ dayOfMonth: 20, startDate: "2026-12-01" });
+    expect(occurrenceAfter(rule, "2026-10-01")).toBe("2026-12-20");
+    expect(occurrencesUpTo(rule, "2027-01-31", { from: "2026-10-01" })).toEqual(
+      ["2026-12-20", "2027-01-20"],
+    );
+  });
+
+  it("picks up after a pause on the new rule's days", () => {
+    const friday = weekly({ weekday: 5, startDate: "2026-10-06" });
+    expect(
+      firstOccurrenceDueAfter(friday, new Date("2026-10-12T12:00:00Z"), {
+        from: "2026-09-28",
+      }),
+    ).toBe("2026-10-16");
+  });
+});
+
+describe("where an edit starts", () => {
+  it("starts in the period the next date falls in, so the cadence holds", () => {
+    // Every two months on the 5th, next on 5 December: the edit starts on
+    // 1 December, and an unchanged rule still lands on the 5th.
+    expect(
+      editWindow({
+        frequency: "monthly",
+        next: "2026-12-05",
+        last: "2026-10-05",
+        today: "2026-10-06",
+      }),
+    ).toEqual({ earliest: "2026-10-06", from: "2026-12-01" });
+  });
+
+  it("moves a monthly day within the coming month, not into the one paid", () => {
+    const { from } = editWindow({
+      frequency: "monthly",
+      next: "2026-11-05",
+      last: "2026-10-05",
+      today: "2026-10-10",
+    });
+    expect(from).toBe("2026-11-01");
+    // The 5th moved to the 1st arrives on 1 November, not 1 December…
+    expect(firstOccurrence(monthly({ startDate: from }))).toBe("2026-11-01");
+    // …and moved to the 20th, on 20 November, not a second time in October.
+    expect(firstOccurrence(monthly({ dayOfMonth: 20, startDate: from }))).toBe(
+      "2026-11-20",
+    );
+  });
+
+  it("starts a weekly rule on the Monday of its next week", () => {
+    expect(
+      editWindow({
+        frequency: "weekly",
+        next: "2026-10-16",
+        last: "2026-10-09",
+        today: "2026-10-12",
+      }).from,
+    ).toBe("2026-10-12");
+  });
+
+  it("never starts on a day that is over, nor before today", () => {
+    // A paused series whose marker lies in March.
+    expect(
+      editWindow({
+        frequency: "monthly",
+        next: "2026-03-01",
+        last: "2026-02-01",
+        today: "2026-10-06",
+      }),
+    ).toEqual({ earliest: "2026-10-06", from: "2026-10-06" });
+  });
+
+  it("counts today when its entry has not been added yet", () => {
+    expect(
+      editWindow({
+        frequency: "monthly",
+        next: "2026-10-06",
+        last: "2026-09-06",
+        today: "2026-10-06",
+      }),
+    ).toEqual({ earliest: "2026-10-06", from: "2026-10-06" });
+  });
+
+  it("starts after the last entry when that is later than today", () => {
+    expect(
+      editWindow({
+        frequency: "daily",
+        next: null,
+        last: "2026-10-08",
+        today: "2026-10-06",
+      }),
+    ).toEqual({ earliest: "2026-10-09", from: "2026-10-09" });
+  });
+
+  it("names the first day of a period", () => {
+    expect(periodStart("daily", "2026-10-08")).toBe("2026-10-08");
+    // 8 October 2026 is a Thursday.
+    expect(periodStart("weekly", "2026-10-08")).toBe("2026-10-05");
+    expect(periodStart("monthly", "2026-10-08")).toBe("2026-10-01");
+    expect(periodStart("yearly", "2026-10-08")).toBe("2026-10-01");
   });
 });

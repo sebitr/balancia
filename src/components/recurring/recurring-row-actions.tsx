@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { MoreVertical, Pause, Play, Trash2 } from "lucide-react";
+import { MoreVertical, Pause, Pencil, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastUndoable } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -34,11 +35,17 @@ export function RecurringRowActions({
   templateId,
   description,
   paused,
+  canEdit = true,
 }: {
   groupId: string;
   templateId: string;
   description: string;
   paused: boolean;
+  /**
+   * Whether Edit is offered. It opens the entry form on the rule, which needs
+   * people in the group to split between, as adding one does.
+   */
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("recurringActions");
@@ -107,6 +114,21 @@ export function RecurringRowActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {/*
+           * First, because it is what a rule is opened for most often: the
+           * rent went up, a flatmate left. It used to be missing, and the only
+           * way to change a rule was to delete it and set it up again from
+           * memory. It opens the entry form on the rule, as a drawer over
+           * this list; the change is for the entries still to come.
+           */}
+          {canEdit && (
+            <DropdownMenuItem asChild>
+              <Link href={`/groups/${groupId}/recurring/${templateId}/edit`}>
+                <Pencil aria-hidden="true" />
+                {t("edit")}
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={() => void onTogglePause()}>
             {paused ? (
               <>

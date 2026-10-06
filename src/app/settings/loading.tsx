@@ -7,11 +7,12 @@ import { ScreenSkeleton } from "@/components/layout/screen-skeleton";
  *
  * Settings draws its own gutter rather than inheriting `<Screen>`'s (see
  * `SettingsScreen`), so the placeholder is given the same one here, the top
- * safe area included.
+ * safe area included — and, from `lg` up, none at all, because there it
+ * stands in the right-hand pane, whose column is the gutter.
  */
 export default function SettingsLoading() {
   return (
-    <div className="px-3.5 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+    <div className="px-3.5 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:px-0 lg:pt-0">
       <ScreenSkeleton rows={4} />
     </div>
   );

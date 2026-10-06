@@ -63,11 +63,15 @@ import {
 import { SPLIT_METHODS, type SplitInput } from "@/modules/expenses/split";
 import {
   RECURRENCE_FREQUENCIES,
+  RecurrenceError,
   WEEKS_OF_MONTH,
   dueThrough,
+  editWindow,
   firstOccurrence,
   firstOccurrenceDueAfter,
+  laterOf,
   nextOccurrence,
+  occurrenceAfter,
   occurrenceInstant,
   occurrencesUpTo,
   remainingOf,
@@ -278,6 +282,19 @@ export async function createRecurringExpense(
   };
   const first = firstOccurrence(rule);
 
+  /*
+   * A valid rule has no first date only when its end comes before it. It has
+   * nothing to add, and an end before the start is a pair the table refuses
+   * outright — which used to reach the reader as a write that failed for no
+   * reason they were given. The repeat sheet refuses it first; this is for
+   * any caller that gets past it.
+   */
+  if (first === null) {
+    throw new RecurrenceError("The end date is before the first one.", {
+      code: "endsBeforeFirst",
+    });
+  }
+
   // A template's rate is entered once, so its provenance is decided once too —
   // against the day the template starts. Occurrences look up their own day's
   // rate where they can, and fall back on this one; see `occurrenceRate`.
@@ -480,6 +497,282 @@ export async function setUpRecurringExpense(
       ? todayIn(template.timezone, marker.nextRunAt)
       : null,
   };
+}
+
+/**
+ * A template as the entry form reopens it: every field it was saved with, and
+ * the dates an edit works between.
+ */
+export interface RecurringDetail {
+  readonly id: string;
+  readonly direction: EntryDirection;
+  readonly description: string;
+  readonly notes: string | null;
+  readonly category: string | null;
+  readonly subcategory: string | null;
+  readonly amount: bigint;
+  readonly currency: string;
+  readonly exchangeRate: string | null;
+  readonly payers: readonly { participantId: string; amount: string }[];
+  readonly splitMethod: SplitInput["method"];
+  readonly splitEntries: readonly { participantId: string; value?: string }[];
+  readonly frequency: RecurrenceFrequency;
+  readonly interval: number;
+  readonly weekday: number | null;
+  readonly weekOfMonth: WeekOfMonth | null;
+  readonly dayOfMonth: number | null;
+  readonly monthOfYear: number | null;
+  readonly startDate: string;
+  readonly endDate: string | null;
+  readonly occurrenceCount: number | null;
+  readonly pausedAt: Date | null;
+  readonly timezone: string;
+  /** How many entries it has added. */
+  readonly generatedCount: number;
+  /**
+   * Where an edit starts unless told otherwise, and the earliest it may — see
+   * `editWindow`. Calendar days in the template's zone.
+   */
+  readonly edit: { readonly from: string; readonly earliest: string };
+}
+
+/**
+ * One template, to be edited — or null when it is not in this group or has
+ * been removed.
+ *
+ * Reads the group's own templates only, the way every other read here does,
+ * so an id from another group answers exactly as a missing one.
+ */
+export async function getRecurringExpense(
+  groupId: string,
+  templateId: string,
+  options: { db?: Database; now?: Date } = {},
+): Promise<RecurringDetail | null> {
+  const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+
+  const [row] = await db
+    .select({
+      id: recurringExpenses.id,
+      direction: recurringExpenses.direction,
+      description: recurringExpenses.description,
+      notes: recurringExpenses.notes,
+      category: recurringExpenses.category,
+      subcategory: recurringExpenses.subcategory,
+      amount: recurringExpenses.amount,
+      currency: recurringExpenses.currency,
+      exchangeRate: recurringExpenses.exchangeRate,
+      payers: recurringExpenses.payers,
+      splitMethod: recurringExpenses.splitMethod,
+      splitInput: recurringExpenses.splitInput,
+      nextRunAt: recurringExpenses.nextRunAt,
+      pausedAt: recurringExpenses.pausedAt,
+      ...scheduleColumns,
+    })
+    .from(recurringExpenses)
+    .where(
+      and(
+        eq(recurringExpenses.id, templateId),
+        eq(recurringExpenses.groupId, groupId),
+        isNull(recurringExpenses.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const rule = ruleFrom(row);
+  const [series, counted] = await Promise.all([
+    seriesSoFar(db, row.id, rule),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(recurringOccurrences)
+      .where(eq(recurringOccurrences.recurringExpenseId, row.id)),
+  ]);
+
+  const { nextRunAt, splitInput, payers, ...fields } = row;
+  return {
+    ...fields,
+    weekOfMonth: weekOfMonthFrom(row.weekOfMonth),
+    payers: payers as RecurringDetail["payers"],
+    splitEntries: splitInput as RecurringDetail["splitEntries"],
+    generatedCount: counted[0]?.total ?? 0,
+    edit: editWindow({
+      frequency: row.frequency,
+      next: nextRunAt ? todayIn(row.timezone, nextRunAt) : null,
+      last: series.last,
+      today: todayIn(row.timezone, now),
+    }),
+  };
+}
+
+/**
+ * Where a series stands once an edit has been saved — what the person who
+ * saved it is told.
+ */
+export interface RecurringUpdate {
+  readonly id: string;
+  /** The next date it adds an entry on, in its zone; null when none is left. */
+  readonly next: string | null;
+  /** Whether it is paused. An edit leaves that as it found it. */
+  readonly paused: boolean;
+}
+
+/**
+ * Changes a recurring expense for the entries still to come.
+ *
+ * Every field the series was set up with can change, through the same checks
+ * setting one up runs: the same schema, everybody named still in the group,
+ * and the same dry run of the expense every occurrence will be. Entries it has
+ * already added are never touched — they are the group's history, and
+ * correcting one is that entry's own edit.
+ *
+ * The schedule starts again from `input.startDate`, held to the edit window
+ * (see `editWindow`): never before the day after the last entry, never before
+ * today. The next date is the edited rule's first occurrence from there, so a
+ * series whose schedule did not change keeps its next date, and one whose did
+ * says on the form, before it is saved, which dates it now falls on — the
+ * preview is computed the same way from the same start.
+ *
+ * A paused series stays paused, and resuming it later moves it on from
+ * wherever it then stands, as it always has. Nothing is generated here: the
+ * entry form shows the next date, and the worker makes it.
+ */
+export async function updateRecurringExpense(
+  access: GroupAccess,
+  templateId: string,
+  input: RecurringInput,
+  options: { db?: Database; now?: Date } = {},
+): Promise<RecurringUpdate> {
+  requirePermission(access, "manageRecurring");
+  const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
+
+  // Outside the transaction, as on creation: it can ask the rate provider.
+  const rateSource = await classifyRateSource({
+    mode: access.group.currencyMode,
+    baseCurrency: access.group.baseCurrency,
+    currency: input.currency,
+    rate: input.exchangeRate,
+    on: input.startDate,
+  });
+
+  return db.transaction(async (tx) => {
+    const [template] = await tx
+      .select({
+        id: recurringExpenses.id,
+        timezone: recurringExpenses.timezone,
+        pausedAt: recurringExpenses.pausedAt,
+      })
+      .from(recurringExpenses)
+      .where(
+        and(
+          eq(recurringExpenses.id, templateId),
+          eq(recurringExpenses.groupId, access.groupId),
+          isNull(recurringExpenses.deletedAt),
+        ),
+      )
+      // Held against a run of the worker, which moves the marker this sets.
+      .for("update")
+      .limit(1);
+
+    if (!template) {
+      throw new AuthorizationError(
+        "That template is not part of this group.",
+        "notInGroup",
+      );
+    }
+
+    // The checks creation runs, for the reason it runs them: a rule the
+    // worker cannot turn into an entry fails there, every hour, unseen.
+    await assertParticipantsInGroup(tx, access.groupId, [
+      ...input.payers.map((payer) => payer.participantId),
+      ...input.splitEntries.map((entry) => entry.participantId),
+    ]);
+    prepareExpense(access, input, { rateSource });
+
+    const timezone = template.timezone;
+    const draft: RecurrenceRule = {
+      frequency: input.frequency,
+      interval: input.interval,
+      weekday: input.weekday ?? null,
+      weekOfMonth: weekOfMonthFrom(input.weekOfMonth ?? null),
+      dayOfMonth: input.dayOfMonth ?? null,
+      monthOfYear: input.monthOfYear ?? null,
+      timezone,
+      startDate: input.startDate,
+      endDate: input.endDate || null,
+      count: input.count ?? null,
+    };
+    const series = await seriesSoFar(tx, template.id, draft);
+    const { earliest } = editWindow({
+      frequency: input.frequency,
+      next: null,
+      last: series.last,
+      today: todayIn(timezone, now),
+    });
+    const rule: RecurrenceRule = {
+      ...draft,
+      startDate: laterOf(input.startDate, earliest),
+    };
+
+    // An end before the start is a series with nothing left in it, and the
+    // table refuses the pair outright. Said here, in words, rather than as a
+    // failed write.
+    if (rule.endDate && rule.endDate < rule.startDate) {
+      throw new RecurrenceError(
+        "The series would end before the next date it could add.",
+        { code: "seriesEndsBeforeNext" },
+      );
+    }
+
+    const next =
+      remainingOf(rule, series.generated) <= 0 ? null : firstOccurrence(rule);
+
+    await tx
+      .update(recurringExpenses)
+      .set({
+        direction: input.direction ?? "out",
+        description: input.description,
+        notes: input.notes || null,
+        category: input.category || null,
+        subcategory: input.subcategory || null,
+        amount: BigInt(input.amount),
+        currency: input.currency,
+        exchangeRate: input.exchangeRate || null,
+        exchangeRateSource: input.exchangeRate ? rateSource : null,
+        payers: input.payers,
+        splitMethod: input.splitMethod,
+        splitInput: input.splitEntries,
+        frequency: input.frequency,
+        interval: input.interval,
+        weekday: input.weekday ?? null,
+        weekOfMonth: input.weekOfMonth ?? null,
+        dayOfMonth: input.dayOfMonth ?? null,
+        monthOfYear: input.monthOfYear ?? null,
+        startDate: rule.startDate,
+        endDate: rule.endDate,
+        occurrenceCount: rule.count,
+        nextRunAt: next ? occurrenceInstant(next, timezone) : null,
+        updatedAt: now,
+      })
+      .where(eq(recurringExpenses.id, template.id));
+
+    await recordActivity(tx, {
+      groupId: access.groupId,
+      action: "recurring.updated",
+      entityType: "recurring_expense",
+      entityId: template.id,
+      ...activityActorFrom(access),
+      metadata: {
+        description: input.description,
+        frequency: input.frequency,
+        interval: input.interval,
+        nextOccurrence: next,
+      },
+    });
+
+    return { id: template.id, next, paused: template.pausedAt !== null };
+  });
 }
 
 /** The columns a template's rule is rebuilt from. */
@@ -804,6 +1097,33 @@ export async function listRecurringExpenses(
   }));
 }
 
+/**
+ * How many recurring expenses a group has, and how many of them are running.
+ *
+ * What the transactions list says beside its kind chips. Running means not
+ * paused; a series that has come to its end still counts, because the screen
+ * the count leads to still lists it.
+ */
+export async function countRecurringExpenses(
+  groupId: string,
+  options: { db?: Database } = {},
+): Promise<{ total: number; running: number }> {
+  const db = options.db ?? getDb();
+  const [row] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      running: sql<number>`(count(*) filter (where ${recurringExpenses.pausedAt} is null))::int`,
+    })
+    .from(recurringExpenses)
+    .where(
+      and(
+        eq(recurringExpenses.groupId, groupId),
+        isNull(recurringExpenses.deletedAt),
+      ),
+    );
+  return { total: row?.total ?? 0, running: row?.running ?? 0 };
+}
+
 /** How often a template runs, and nothing else. */
 export interface RecurrenceCadence {
   readonly frequency: RecurrenceFrequency;
@@ -1073,11 +1393,9 @@ async function generateTemplate(
     rule.count != null &&
     remainingOf(rule, (await seriesSoFar(db, template.id, rule)).generated) <=
       0;
-  let upcoming = exhausted
-    ? null
-    : lastGenerated
-      ? nextOccurrence(rule, lastGenerated)
-      : firstOccurrence(rule);
+  // `occurrenceAfter` rather than a bare step: after an edit the last entry
+  // was made under the rule's previous version, before its new start.
+  let upcoming = exhausted ? null : occurrenceAfter(rule, lastGenerated);
   // Never back behind the floor this run started from, or the dates it walked
   // past would be on the table again at the next one.
   while (upcoming && floor && upcoming < floor) {
@@ -1124,7 +1442,11 @@ interface TemplateRow {
   occurrenceCount: number | null;
   nextRunAt: Date | null;
   createdByParticipantId: string | null;
-  /** When the template, and so its rate, was written; it cannot be edited. */
+  /**
+   * When the template was written, which is when its typed rate is said to
+   * have been captured. An edit can change that rate since, and there is no
+   * column to say when; the creation stands in for it.
+   */
   createdAt: Date;
   currencyMode: "separate" | "converted";
   baseCurrency: string | null;

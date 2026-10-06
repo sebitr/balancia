@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * On a phone this is one column and nothing about it shows: the two halves
  * stack with the gap the overview already uses between its blocks, so the
  * screen reads exactly as it did before there were halves at all. From `lg`
- * up — where a group's rail has replaced the bottom bar and the window has
+ * up — where the sidebar has replaced the bottom bar and the window has
  * room to spare — they stand side by side:
  *
  * - `primary`, on the left, is the money: where the reader stands, the

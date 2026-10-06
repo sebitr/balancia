@@ -64,6 +64,9 @@ const REGIONS: Record<string, readonly string[]> = {
     "LU",
     "CY",
     "MT",
+    // Bulgaria joined on 1 January 2026, as `device-currency.ts` already
+    // knows. Search finds the lev under it too, which old groups still hold.
+    "BG",
   ],
   XAF: ["CM", "GA", "TD", "CG", "CF", "GQ"],
   XOF: ["SN", "CI", "ML", "BJ", "BF", "TG", "NE", "GW"],

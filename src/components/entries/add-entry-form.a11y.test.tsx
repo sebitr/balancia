@@ -254,7 +254,7 @@ describe("the split sheet's payer", () => {
     await user.click(screen.getByRole("button", { name: /^Paid by/ }));
 
     const split = sheet("Payment and split");
-    const seb = split.getByRole("radio", { name: "Paid by Seb" });
+    const seb = split.getByRole("radio", { name: "Paid by you" });
     expect(seb).toHaveAttribute("tabindex", "0");
     seb.focus();
     await user.keyboard("{ArrowRight}");
@@ -296,7 +296,9 @@ describe("the recurrence sheet", () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
 
     const repeat = sheet("Repeat");
     const presets = repeat.getByRole("radiogroup", { name: "Repeat" });

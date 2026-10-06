@@ -63,7 +63,7 @@ export function ChecklistScreen({
    * created a screen ago, which genuinely has none of it.
    */
   profile?: OnboardingProfileView | null;
-  credential: "passkey" | "code" | null;
+  credential: "passkey" | "code" | "password" | null;
   email: string;
   name: string;
   onLeave: () => void;

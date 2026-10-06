@@ -30,8 +30,7 @@ import { remainingFor } from "@/modules/join/expiry";
 export function GroupReady({
   groupId,
   groupName,
-  /** Everyone in the new group, the creator first. */
-  people,
+  others,
   invite,
   onSkip,
   heading: Heading = "h2",
@@ -39,7 +38,12 @@ export function GroupReady({
 }: {
   groupId: string;
   groupName: string;
-  people: readonly string[];
+  /**
+   * Everyone typed into the new group besides the reader, in the order they
+   * were typed. The reader is the one person here who will never open the
+   * link to pick a name, so they are left out of the list that says who can.
+   */
+  others: readonly string[];
   invite: { url: string; expiresAt: string | null } | null;
   onSkip: () => void;
   /**
@@ -87,7 +91,7 @@ export function GroupReady({
           {t("ready.title")}
         </Heading>
         <p className="text-sm text-pretty text-muted-foreground">
-          {lede(t, people)}
+          {lede(t, others)}
         </p>
       </div>
 
@@ -167,21 +171,26 @@ export function GroupReady({
  *
  * Two names and a count rather than the whole list: five names wrap to three
  * lines and stop being read, while "and 3 others" is still true and still
- * tells the organiser the screen knows who they typed. A group of one has
- * nobody to name yet, so it gets the sentence that describes the link instead.
+ * tells the organiser the screen knows who they typed.
+ *
+ * Only the others. The list used to start with the organiser, so the person
+ * reading it was told that they, too, could pick their name from the link —
+ * and a group of two named its organiser and nobody else. A group with nobody
+ * else in it yet has no names waiting, so it says what the link does instead:
+ * whoever opens it comes in under a name of their own.
+ *
+ * Each count is a whole sentence, because the verb agrees with it in French —
+ * "Ana pourra", "Ana et Tom pourront".
  */
 function lede(
   t: ReturnType<typeof useTranslations<"inviteLink">>,
-  people: readonly string[],
+  others: readonly string[],
 ): string {
-  const [first, second, ...rest] = people;
-  if (!second) return t("ready.ledeAlone");
-  return t("ready.lede", {
-    people:
-      rest.length === 0
-        ? t("ready.peopleTwo", { first, second })
-        : t("ready.peopleMany", { first, second, count: rest.length }),
-  });
+  const [first, second, ...rest] = others;
+  if (first === undefined) return t("ready.ledeNobody");
+  if (second === undefined) return t("ready.ledeOne", { first });
+  if (rest.length === 0) return t("ready.ledeTwo", { first, second });
+  return t("ready.ledeMany", { first, second, count: rest.length });
 }
 
 /**
