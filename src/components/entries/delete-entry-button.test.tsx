@@ -68,7 +68,10 @@ function lastToast() {
   ];
 }
 
-function render(kind: "expense" | "settlement" = "expense") {
+function render(
+  kind: "expense" | "settlement" = "expense",
+  placement?: "dock" | "header",
+) {
   return renderWithIntl(
     <DeleteEntryButton
       groupId="g1"
@@ -76,6 +79,7 @@ function render(kind: "expense" | "settlement" = "expense") {
       id="e1"
       description="Dinner"
       backTo="/groups/g1/expenses?q=din"
+      placement={placement}
     />,
   );
 }
@@ -169,6 +173,21 @@ describe("deleting the entry on screen", () => {
     lastToast()[1].action.onClick();
     expect(restoreSettlementAction).toHaveBeenCalledWith("g1", "e1");
     expect(restoreExpenseAction).not.toHaveBeenCalled();
+  });
+
+  it("says its name beside the bin in a desk header, and asks the same question", async () => {
+    const user = userEvent.setup();
+    render("expense", "header");
+
+    // The word is on the button rather than only in its accessible name: a
+    // desk header has the room the phone's 46px square does not.
+    const trigger = screen.getByRole("button", { name: "Delete" });
+    expect(trigger).toHaveTextContent("Delete");
+    expect(trigger).not.toHaveAttribute("aria-label");
+
+    await confirmDelete(user);
+    expect(deleteExpenseAction).toHaveBeenCalledWith("g1", "e1");
+    expect(lastToast()[1].action.label).toBe("Undo");
   });
 
   it("offers no undo for a deletion that did not happen", async () => {

@@ -23,6 +23,7 @@ import {
   restoreSettlementAction,
 } from "@/modules/expenses/actions";
 import { toastUndoable } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
 import { ACTION, ACTION_DESTRUCTIVE } from "./detail-blocks";
 import { cn } from "@/lib/utils";
 
@@ -51,12 +52,20 @@ export function DeleteEntryButton({
   id,
   description,
   backTo,
+  placement = "dock",
 }: {
   groupId: string;
   kind: "expense" | "settlement";
   id: string;
   /** What the confirmation names, so nobody deletes the wrong one. */
   description: string;
+  /**
+   * Which of the screen's two homes for it this one is: the 46px square in the
+   * phone's docked `ActionBar`, or a labelled button in the header from `lg`
+   * up, where there is room for the word beside the bin. Only the trigger
+   * differs; the question it asks and the Undo after it are the same.
+   */
+  placement?: "dock" | "header";
   /**
    * The list to land on, filters and all.
    *
@@ -131,18 +140,32 @@ export function DeleteEntryButton({
   return (
     <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
       <AlertDialogTrigger asChild>
-        <button
-          type="button"
-          disabled={pending}
-          aria-label={t("trigger")}
-          className={cn(ACTION, ACTION_DESTRUCTIVE, "disabled:opacity-50")}
-        >
-          {pending ? (
-            <Loader2 aria-hidden="true" className="size-[17px] animate-spin" />
-          ) : (
-            <Trash2 aria-hidden="true" className="size-[17px]" />
-          )}
-        </button>
+        {placement === "header" ? (
+          <Button variant="destructive" size="lg" disabled={pending}>
+            {pending ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <Trash2 aria-hidden="true" />
+            )}
+            {t("trigger")}
+          </Button>
+        ) : (
+          <button
+            type="button"
+            disabled={pending}
+            aria-label={t("trigger")}
+            className={cn(ACTION, ACTION_DESTRUCTIVE, "disabled:opacity-50")}
+          >
+            {pending ? (
+              <Loader2
+                aria-hidden="true"
+                className="size-[17px] animate-spin"
+              />
+            ) : (
+              <Trash2 aria-hidden="true" className="size-[17px]" />
+            )}
+          </button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
