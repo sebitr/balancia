@@ -522,6 +522,7 @@
   "dashboard": {
     "metaTitle": "Tes groupes",
     "title": "Tes groupes",
+    "todayLine": "{date} · {count, plural, one {# groupe actif} other {# groupes actifs}}",
     "newGroup": "Nouveau groupe",
     "emptyTitle": "Crée ton premier groupe",
     "emptyDescription": "Un voyage, une colocation, un projet — partout où des frais sont partagés. Balancia calcule qui doit quoi à qui.",
@@ -567,7 +568,9 @@
     "peopleCount": "{count, plural, one {# personne} other {# personnes}}",
     "settledWord": "Soldé",
     "noExpensesWord": "Pas encore de dépense",
-    "archivedWord": "Archivé"
+    "archivedWord": "Archivé",
+    "recentTitle": "Récemment dans tes groupes",
+    "recentAll": "Toutes les notifications"
   },
   "group": {
     "archived": "Archivé",

@@ -183,3 +183,58 @@ describe("GroupList", () => {
     expect(figure.closest(".truncate")).toBeNull();
   });
 });
+
+/*
+ * The same rows from `lg`, as the desktop board "01 · Home" draws them. jsdom
+ * runs no media queries, so both drawings are in the document here; what is
+ * held is what each width is given, by the classes that give it.
+ */
+describe("GroupList from lg", () => {
+  const mixed = row({
+    name: "Lisbon, March",
+    memberNames: ["Amélie", "Ravi", "Jonas"],
+    participantCount: 6,
+    amounts: [
+      { minorUnits: "24800", currency: "EUR" },
+      { minorUnits: "-6220", currency: "CHF" },
+    ],
+  });
+
+  it("says each figure's direction in words beside it, one line per currency", () => {
+    renderWithIntl(<GroupList groups={[mixed]} now={NOW} />);
+
+    const owed = screen.getByText("you are owed");
+    const owe = screen.getByText("you owe");
+    // In the tone's own ink, never the accent's.
+    expect(owed).toHaveClass("text-positive-ink");
+    expect(owe).toHaveClass("text-negative-ink");
+    expect(owed.className).not.toMatch(/primary/);
+    // Only where there is room to draw it; the figure's own word still says
+    // it to a screen reader at every width.
+    expect(owed).toHaveClass("hidden", "lg:inline");
+    expect(owed).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("gets back")).toHaveClass("sr-only");
+    // Each beside its own figure.
+    expect(owed.parentElement).toHaveTextContent("€248");
+    expect(owe.parentElement).toHaveTextContent("CHF 62");
+  });
+
+  it("drops the sign where the word stands beside the figure", () => {
+    renderWithIntl(<GroupList groups={[mixed]} now={NOW} />);
+
+    const sign = screen.getByText("+");
+    expect(sign).toHaveAttribute("aria-hidden", "true");
+    // The figure's box hides its one decorative child from `lg`: the sign.
+    expect(sign.parentElement?.className).toContain(
+      "lg:[&>[aria-hidden=true]]:hidden",
+    );
+  });
+
+  it("counts the people beside the faces", () => {
+    renderWithIntl(<GroupList groups={[mixed]} now={NOW} />);
+
+    const count = screen.getByText(/^6 people ·/);
+    expect(count).toHaveClass("hidden", "lg:inline");
+    expect(count.parentElement).toHaveTextContent("6 people · 2 days ago");
+  });
+});

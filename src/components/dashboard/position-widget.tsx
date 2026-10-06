@@ -38,6 +38,16 @@ import { TONE, toneFor } from "@/components/money/balance-tone";
  * keep theirs: nothing was converted to reach them, each is the amount that
  * would actually settle that currency, and the header leads on one of them
  * precisely so it can be acted on.
+ *
+ * ## From `lg` up
+ *
+ * The desktop board "01 · Home" draws this card wider and with less in it.
+ * Two currencies with no rate stand side by side, each with its arrow and its
+ * word (`LeadFigure`); the badge counting them sits against the label; and the
+ * action strip goes, because the sidebar and the title row hold both of its
+ * buttons. The board also prints "Shown per currency…" as a standing line
+ * under the figures. That is not drawn: `FigureDisclosure` below is why, and
+ * the figure still opens the sentence at every width.
  */
 
 interface Figure {
@@ -156,19 +166,34 @@ function DirectionArrow({
  * rest are rows: the reader still gets every figure, but only the one they can
  * act on is sized like an answer.
  *
+ * From `lg`, a pair is the exception (`paired`): two currencies stand side by
+ * side at one size, the debt first, as the owner's desktop direction draws
+ * Home — "↗ CHF 103.50 you owe" beside "↙ €223.70 you are owed". The width
+ * that pushed the groups off a phone's screen is not short there, and two
+ * figures in a row read as one answer in two currencies rather than as a
+ * stack of headlines. Three or more keep the lead and the rows at every
+ * width, which is the case this was written for.
+ *
  * Spans throughout, because this sits inside the button that opens its
  * footnote, and a button holds phrasing content only.
  */
-function LeadFigure({ entry }: { entry: CurrencyNet }) {
+function LeadFigure({
+  entry,
+  paired = false,
+}: {
+  entry: CurrencyNet;
+  paired?: boolean;
+}) {
   const t = useTranslations("dashboard");
   const owed = entry.net > 0n;
   const magnitude = entry.net < 0n ? -entry.net : entry.net;
+  const ink = TONE[toneFor(entry.net)].ink;
 
   return (
-    <span className="flex flex-col gap-1">
-      <span
-        className={cn("flex items-center gap-2", TONE[toneFor(entry.net)].ink)}
-      >
+    // The ink is set here as well as on the figure so that the word can take
+    // it from `lg` by inheriting it; below `lg` the word says muted.
+    <span className={cn("flex flex-col gap-1", paired && ink)}>
+      <span className={cn("flex items-center gap-2", ink)}>
         <DirectionArrow owed={owed} className="size-[26px]" />
         {/* Steps down rather than wrapping mid-number where the screen is
             narrower than the 376px this was drawn at. */}
@@ -180,8 +205,15 @@ function LeadFigure({ entry }: { entry: CurrencyNet }) {
         />
       </span>
       {/* Indented to the figure, so the word reads as its caption rather than
-          as the first of the rows below it. */}
-      <span className="block pl-[34px] text-xs text-muted-foreground">
+          as the first of the rows below it. Beside a second figure from `lg`
+          it is that figure's equal, and says itself in the tone's ink at a
+          reading size, as the board draws both. */}
+      <span
+        className={cn(
+          "block pl-[34px] text-xs text-muted-foreground",
+          paired && "lg:text-sm lg:font-medium lg:text-inherit",
+        )}
+      >
         {owed ? t("wordOwedToYou") : t("wordYouOwe")}
       </span>
     </span>
@@ -195,12 +227,30 @@ function LeadFigure({ entry }: { entry: CurrencyNet }) {
  * as a word and as ink, then the amount — at the size of a list rather than of
  * an answer. Nothing here is a link: a currency is not a screen, and the
  * groups behind it are already listed below.
+ *
+ * `paired` is the one row beside the lead from `lg` (see `LeadFigure`): the
+ * same three cues laid out as the lead lays them out — the arrow and the
+ * figure at the lead's size, the word under the figure in the tone's ink. The
+ * markup is the phone's row, placed on a grid, so the words still come before
+ * the figure for a screen reader as they always have, and nothing is drawn
+ * twice for the two widths.
  */
-function CurrencyRows({ entries }: { entries: readonly CurrencyNet[] }) {
+function CurrencyRows({
+  entries,
+  paired = false,
+}: {
+  entries: readonly CurrencyNet[];
+  paired?: boolean;
+}) {
   const t = useTranslations("dashboard");
 
   return (
-    <ul className="flex flex-col gap-0.5 border-t pt-3">
+    <ul
+      className={cn(
+        "flex flex-col gap-0.5 border-t pt-3",
+        paired && "lg:border-t-0 lg:pt-0",
+      )}
+    >
       {entries.map((entry) => {
         const owed = entry.net > 0n;
         const ink = TONE[toneFor(entry.net)].ink;
@@ -208,17 +258,49 @@ function CurrencyRows({ entries }: { entries: readonly CurrencyNet[] }) {
         return (
           <li
             key={entry.currency}
-            className="flex items-center justify-between gap-3 py-[7px]"
+            className={cn(
+              "flex items-center justify-between gap-3 py-[7px]",
+              // The row's own ink, for the word to inherit from `lg`.
+              paired &&
+                cn(
+                  "lg:grid lg:grid-cols-[26px_minmax(0,1fr)] lg:justify-start lg:gap-x-2 lg:gap-y-1 lg:py-0",
+                  ink,
+                ),
+            )}
           >
-            <span className="flex items-center gap-[7px] text-xs text-muted-foreground">
-              <DirectionArrow owed={owed} className={cn("size-[15px]", ink)} />
-              {owed ? t("wordOwedToYou") : t("wordYouOwe")}
+            <span
+              className={cn(
+                "flex items-center gap-[7px] text-xs text-muted-foreground",
+                paired && "lg:contents lg:text-inherit",
+              )}
+            >
+              <DirectionArrow
+                owed={owed}
+                className={cn(
+                  "size-[15px]",
+                  ink,
+                  paired && "lg:col-start-1 lg:row-start-1 lg:size-[26px]",
+                )}
+              />
+              <span
+                className={cn(
+                  paired &&
+                    "lg:col-start-2 lg:row-start-2 lg:text-sm lg:font-medium lg:text-inherit",
+                )}
+              >
+                {owed ? t("wordOwedToYou") : t("wordYouOwe")}
+              </span>
             </span>
             <Amount
               minorUnits={magnitude.toString()}
               currency={entry.currency}
               signDisplay="never"
-              className={cn("text-base font-semibold", ink)}
+              className={cn(
+                "text-base font-semibold",
+                ink,
+                paired &&
+                  "lg:col-start-2 lg:row-start-1 lg:text-[2.125rem] lg:leading-[1.05] lg:tracking-[-0.02em]",
+              )}
             />
           </li>
         );
@@ -309,6 +391,8 @@ export function PositionWidget({
     (net === null && outstanding.length === 0);
   const ratesUnavailable = net === null && outstanding.length > 0;
   const showTotals = !allSquare && net !== null;
+  /** Two currencies and no rate: side by side from `lg` (see `LeadFigure`). */
+  const paired = ratesUnavailable && outstanding.length === 2;
 
   /** The rate the figure was converted at, phrased for the day it is from. */
   const disclosure =
@@ -339,12 +423,25 @@ export function PositionWidget({
       aria-labelledby={labelId}
       className="overflow-hidden rounded-[20px] bg-card shadow-[inset_0_1px_0_0_var(--border)] ring-1 ring-foreground/10"
     >
-      <div className="flex flex-col gap-[18px] px-[18px] pt-5 pb-4">
+      <div
+        className={cn(
+          "flex flex-col gap-[18px] px-[18px] pt-5 pb-4",
+          // A pair of figures takes a column each from `lg`, under the label.
+          paired && "lg:grid lg:grid-cols-2 lg:gap-x-6",
+        )}
+      >
         {/* The label names the region as well as the figure, and the badge
             beside it says how many currencies are in play — the one number
             that would otherwise have to be counted off the rows. It is never a
-            total: these currencies are not added up anywhere. */}
-        <div className="flex items-center justify-between gap-2.5">
+            total: these currencies are not added up anywhere. From `lg` the
+            badge sits against the label it qualifies, as the board draws it,
+            rather than at the far end of a card three times as wide. */}
+        <div
+          className={cn(
+            "flex items-center justify-between gap-2.5 lg:justify-start",
+            paired && "lg:col-span-2",
+          )}
+        >
           <p
             id={labelId}
             className="text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase"
@@ -374,7 +471,7 @@ export function PositionWidget({
             label={t("perCurrencyDisclosureLabel")}
             note={t("ratesUnavailable")}
           >
-            <LeadFigure entry={lead} />
+            <LeadFigure entry={lead} paired={paired} />
           </FigureDisclosure>
         ) : disclosure ? (
           <FigureDisclosure label={t("rateDisclosureLabel")} note={disclosure}>
@@ -384,7 +481,9 @@ export function PositionWidget({
           figure
         )}
 
-        {ratesUnavailable && rest.length > 0 && <CurrencyRows entries={rest} />}
+        {ratesUnavailable && rest.length > 0 && (
+          <CurrencyRows entries={rest} paired={paired} />
+        )}
 
         {showTotals && (
           <>
@@ -467,7 +566,13 @@ export function PositionWidget({
           lands on: "Ajouter une dépense" and "Nouveau groupe" do not fit side
           by side on any phone, so French reads as two full-width rows where
           English stays one. Natural widths come back at the desk. */}
-      <div className="flex flex-wrap items-center gap-2 border-t bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] px-[18px] py-[13px]">
+      {/* From `lg` the strip steps aside: the sidebar holds Add expense, the
+          one filled button on every desktop screen, and New group stands in
+          Home's title row (see the dashboard page). Two of each on one screen
+          would be two answers to "where do I add this?". The picker below
+          stays mounted, so nothing it is in the middle of is lost when a
+          window is resized across the line. */}
+      <div className="flex flex-wrap items-center gap-2 border-t bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] px-[18px] py-[13px] lg:hidden">
         {/* 44px in the hand, 34 at the desk. This is the app's primary action
             and it was 34px tall on a phone — inside its target once
             `tap-target` is on it, but still drawn smaller than the rows of

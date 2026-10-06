@@ -304,3 +304,93 @@ describe("PositionWidget", () => {
     ).toBeVisible();
   });
 });
+
+/*
+ * The card from `lg`, as the desktop board "01 · Home" draws it. jsdom runs no
+ * media queries, so what is held is what each width is given, by the classes
+ * that give it.
+ */
+describe("PositionWidget from lg", () => {
+  /** The board's own account: CHF 103.50 owing, €223.70 owed, no rate. */
+  const PAIR = {
+    net: null,
+    owedToYou: null,
+    youOwe: null,
+    currencyTotals: [
+      { currency: "CHF", owedToYou: "0", youOwe: "10350" },
+      { currency: "EUR", owedToYou: "22370", youOwe: "0" },
+    ],
+  } satisfies Partial<PositionWidgetProps>;
+
+  it("stands two currencies side by side, the debt first, at one size", () => {
+    renderWidget(PAIR);
+
+    const region = screen.getByRole("region", { name: "Total balance" });
+    expect(region.firstElementChild).toHaveClass("lg:grid", "lg:grid-cols-2");
+
+    // The debt still leads, and still opens the reason there are two.
+    const lead = screen.getByRole("button", { name: /CHF\s*103\.50/ });
+    expect(lead).toBeVisible();
+    // The credit beside it takes the lead's size from `lg`.
+    expect(screen.getByText("€223.70")).toHaveClass(
+      "text-base",
+      "lg:text-[2.125rem]",
+    );
+  });
+
+  it("puts each word under its figure in the tone's ink", () => {
+    renderWidget(PAIR);
+
+    const [row] = screen.getAllByRole("listitem");
+    expect(row).toHaveClass("lg:grid", "text-positive-ink");
+    expect(screen.getByText("you are owed")).toHaveClass(
+      "lg:row-start-2",
+      "lg:text-inherit",
+    );
+    expect(screen.getByText("you owe")).toHaveClass("lg:text-inherit");
+    expect(screen.getByText("you owe").parentElement).toHaveClass(
+      "text-negative-ink",
+    );
+  });
+
+  /** Four answer-sized figures in a row is the stack #323 took away. */
+  it("keeps the lead and the rows for three currencies or more", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      currencyTotals: [
+        { currency: "CHF", owedToYou: "0", youOwe: "216100" },
+        { currency: "EUR", owedToYou: "63200", youOwe: "0" },
+        { currency: "USD", owedToYou: "0", youOwe: "18000" },
+      ],
+    });
+
+    const region = screen.getByRole("region", { name: "Total balance" });
+    expect(region.firstElementChild).not.toHaveClass("lg:grid");
+    expect(screen.getByText("€632.00")).not.toHaveClass("lg:text-[2.125rem]");
+  });
+
+  it("keeps the reason behind the figure rather than as a standing line", () => {
+    renderWidget(PAIR);
+
+    expect(
+      screen.queryByText(
+        "Shown per currency. There is no exchange rate to combine them into one total.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  /** The sidebar holds Add expense, and the title row New group. */
+  it("lets its two actions step aside", () => {
+    renderWidget(PAIR);
+
+    const strip = screen.getByRole("button", {
+      name: /Add expense/,
+    }).parentElement;
+    expect(strip).toHaveClass("lg:hidden");
+    expect(strip).toContainElement(
+      screen.getByRole("link", { name: /New group/ }),
+    );
+  });
+});

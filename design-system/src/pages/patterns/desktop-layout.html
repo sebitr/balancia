@@ -209,11 +209,12 @@
       <dt>width</dt>
       <dd>
         The screen widens to <code>--app-content-max</code> (75rem, gutters
-        included) for a layout marked <code>data-layout="wide"</code> — the overview's
-        two columns and the transactions table — and only for one, which is
-        exactly what the expanded sidebar leaves at 1440px.
-        At 1024 the two columns are about 360px each. 24px between them; the
-        blocks inside each keep the overview's own gap.
+        included) for a layout marked <code>data-layout="wide"</code> — the
+        overview's two columns, the transactions table and Home's two columns
+        from <code>xl</code> — and only for one, which is exactly what the
+        expanded sidebar leaves at 1440px. At 1024 the two columns are about
+        360px each. 24px between them; the blocks inside each keep the
+        overview's own gap.
       </dd>
       <dt>group header</dt>
       <dd>
@@ -237,11 +238,14 @@
   <section>
     <h2>Every other screen</h2>
     <p class="note">
-      Home, Notifications, People, Settings, an entry, a person: one column, <code>max-w-3xl</code>, centred in the space beside the
-      sidebar, never stretched across it. Transactions is a table at this width
-      instead, with its filters on one row — see Expense timeline. Gutters open to 24px at
-      <code>lg</code> and 40px at <code>xl</code>. An entry's Edit and Remove, docked above the bar
-      on a phone, sit in the screen's header at this width (board 08).
+      Notifications, People, Settings, an entry, a person: one column,
+      <code>max-w-3xl</code>, centred in the space beside the sidebar, never
+      stretched across it. Transactions is a table at this width instead, with
+      its filters on one row — see Expense timeline. Home keeps that column up
+      to <code>xl</code> and then sets "Recent in your groups" beside the groups
+      — see Your groups. Gutters open to 24px at <code>lg</code> and 40px at
+      <code>xl</code>. An entry's Edit and Remove, docked above the bar on a
+      phone, sit in the screen's header at this width (board 08).
     </p>
   </section>
 
