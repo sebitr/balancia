@@ -1019,6 +1019,143 @@ a.list-row:focus-visible {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* The table at width — src/components/expenses/transactions-table.tsx. A card
+   box, a 36px header on a muted wash, 52px rows (60 with a second line), the
+   whole row one link, no zebra. Its columns are decided by the box, not the
+   window: under 60rem of table the middle columns fold into the description's
+   second line. */
+.tbl-box {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.tbl-box .tbl {
+  table-layout: fixed;
+}
+.tbl-box .tbl thead {
+  background: color-mix(in oklch, var(--muted) 40%, var(--card));
+}
+.tbl-box .tbl td {
+  height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.tbl-box .tbl th:first-child,
+.tbl-box .tbl td:first-child {
+  padding-left: 1rem;
+}
+.tbl-box .tbl th:last-child,
+.tbl-box .tbl td:last-child {
+  padding-right: 1rem;
+}
+.tbl-row {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.tbl-row:hover,
+.tbl-row:has(a:focus-visible) {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.tbl-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tbl-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tbl-link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+.tbl-sub {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbl-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--foreground);
+}
+.tbl-sort svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.tbl-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The filters on one row above that table — src/components/expenses/filter-row.tsx.
+   36px controls: the search field, the kind chips (several may be on), the
+   Category and When menus, More filters, and Add at the end. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-row .input {
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.filter-chip {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-select svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+.filter-select--on {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+}
+
 /* ── money — src/components/money/amount.tsx ── */
 .balance {
   display: inline-flex;

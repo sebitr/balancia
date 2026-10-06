@@ -1019,6 +1019,143 @@ a.list-row:focus-visible {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* The table at width — src/components/expenses/transactions-table.tsx. A card
+   box, a 36px header on a muted wash, 52px rows (60 with a second line), the
+   whole row one link, no zebra. Its columns are decided by the box, not the
+   window: under 60rem of table the middle columns fold into the description's
+   second line. */
+.tbl-box {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.tbl-box .tbl {
+  table-layout: fixed;
+}
+.tbl-box .tbl thead {
+  background: color-mix(in oklch, var(--muted) 40%, var(--card));
+}
+.tbl-box .tbl td {
+  height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.tbl-box .tbl th:first-child,
+.tbl-box .tbl td:first-child {
+  padding-left: 1rem;
+}
+.tbl-box .tbl th:last-child,
+.tbl-box .tbl td:last-child {
+  padding-right: 1rem;
+}
+.tbl-row {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.tbl-row:hover,
+.tbl-row:has(a:focus-visible) {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.tbl-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tbl-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tbl-link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+.tbl-sub {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbl-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--foreground);
+}
+.tbl-sort svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.tbl-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The filters on one row above that table — src/components/expenses/filter-row.tsx.
+   36px controls: the search field, the kind chips (several may be on), the
+   Category and When menus, More filters, and Add at the end. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-row .input {
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.filter-chip {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-select svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+.filter-select--on {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+}
+
 /* ── money — src/components/money/amount.tsx ── */
 .balance {
   display: inline-flex;
@@ -2062,7 +2199,7 @@ a[aria-current="page"] .nav-icon--primary {
         carry the direction, the colour comes from <code>TONE</code>. Nothing at
         all on a row the reader is not in.
       </dd>
-      <dt>Payment badge</dt>
+      <dt>Repayment badge</dt>
       <dd>
         <code>outline</code> — marks the row as a repayment rather than a cost.
       </dd>
@@ -2098,9 +2235,10 @@ a[aria-current="page"] .nav-icon--primary {
       <div class="do">
         <strong>Do</strong>
         <p class="note" style="margin: 0">
-          Make expense rows anchors to the detail page — the whole row, so the
-          tap target is 44px-plus on a phone. Settlement rows are plain divs
-          with no hover: there is no detail page to reach.
+          Make every row an anchor to its own screen — the whole row, so the tap
+          target is 44px-plus on a phone. A repayment has one too: the one thing
+          its row cannot say is whether it finished the job, and that is what
+          its screen is for.
         </p>
       </div>
       <div class="dont">
@@ -2112,6 +2250,341 @@ a[aria-current="page"] .nav-icon--primary {
         </p>
       </div>
     </div>
+  </section>
+
+  <section>
+    <h2>At width — from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      From 1024px the same rows are drawn as a table, and the chips, the
+      category spine and the search row give way to one row of filters. It is
+      not a second list: one loader, one filter in the URL, one paging hook, and
+      the table is handed exactly the rows the phone's list would draw. Below
+      <code>lg</code> only the list is mounted and nothing moves.
+    </p>
+    <!-- Read as Sébastien, in Lisbon, March: six people, 42 transactions. -->
+    <div class="spec" style="display: flex; flex-direction: column; gap: 1rem">
+      <div class="filter-row">
+        <input
+          class="input"
+          type="search"
+          placeholder="Search transactions"
+          aria-label="Search transactions"
+          style="flex: 1 1 14rem; min-width: 14rem; width: auto"
+        />
+        <span
+          role="group"
+          aria-label="Filter by kind"
+          class="row"
+          style="gap: 0.375rem"
+        >
+          <button class="filter-chip" type="button" aria-pressed="false">
+            Expenses
+          </button>
+          <button class="filter-chip" type="button" aria-pressed="false">
+            Repayments
+          </button>
+        </span>
+        <button class="filter-select" type="button">
+          Any category
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        <button class="filter-select" type="button">
+          Any time
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        <button class="filter-select" type="button">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 6h18" />
+            <path d="M7 12h10" />
+            <path d="M10 18h4" />
+          </svg>
+          More filters
+        </button>
+        <span style="margin-left: auto">
+          <button
+            class="btn btn--default"
+            type="button"
+            style="height: 2.25rem; border-radius: 0.75rem; font-weight: 600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+            Add an expense
+          </button>
+        </span>
+      </div>
+
+      <div class="tbl-box">
+        <table class="tbl">
+          <caption class="sr-only">
+            Transactions
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="descending" style="width: 6rem">
+                <span class="tbl-sort"
+                  >Date<svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="m19 12-7 7-7-7" /></svg
+                ></span>
+              </th>
+              <th scope="col">Description</th>
+              <th scope="col" style="width: 8rem">Category</th>
+              <th scope="col" style="width: 10rem">Paid by</th>
+              <th scope="col" style="width: 7rem">Split</th>
+              <th scope="col" class="num" style="width: 7rem">Amount</th>
+              <th scope="col" class="num" style="width: 11rem">For you</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">12 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Dinner at Trattoria Il Ponte</a>
+                <span
+                  style="color: var(--muted-foreground); font-size: 0.75rem"
+                >
+                  · 2 receipts</span
+                >
+              </td>
+              <td style="color: var(--muted-foreground)">Restaurants</td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span class="avatar">A</span>Amélie</span
+                >
+              </td>
+              <td style="color: var(--muted-foreground)">6 equally</td>
+              <td class="num" style="font-weight: 500">€128.40</td>
+              <td
+                class="num"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  color: var(--negative-ink);
+                "
+              >
+                You owe €21.40
+              </td>
+            </tr>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">11 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Jonas paid Amélie</a>
+                <span class="badge badge--outline">Repayment</span>
+              </td>
+              <td></td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span class="avatar">J</span>Jonas</span
+                >
+              </td>
+              <td style="color: var(--muted-foreground)">Cash</td>
+              <td
+                class="num"
+                style="font-weight: 500; color: var(--muted-foreground)"
+              >
+                €120.00
+              </td>
+              <td class="num"></td>
+            </tr>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">9 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Apartment cleaning</a>
+                <span class="badge badge--secondary">Recurring</span>
+              </td>
+              <td style="color: var(--muted-foreground)">Home</td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span
+                    class="avatar"
+                    style="
+                      background: var(--primary);
+                      color: var(--primary-foreground);
+                    "
+                    >SB</span
+                  >You</span
+                >
+              </td>
+              <td style="color: var(--muted-foreground)">4 of 6</td>
+              <td class="num" style="font-weight: 500">€65.00</td>
+              <td
+                class="num"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  color: var(--positive-ink);
+                "
+              >
+                You get back €48.75
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="tbl-foot">
+          <span
+            >Showing 40 of 42 transactions · sorted by date, newest first</span
+          >
+          <span>More load as you scroll</span>
+        </div>
+      </div>
+
+      <p class="spec-label">
+        The same table in 740px of box — a 1024px window beside the sidebar
+      </p>
+      <div class="tbl-box" style="max-width: 46rem">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="descending" style="width: 6rem">
+                <span class="tbl-sort"
+                  >Date<svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="m19 12-7 7-7-7" /></svg
+                ></span>
+              </th>
+              <th scope="col">Description</th>
+              <th scope="col" class="num" style="width: 11rem">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">12 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Dinner at Trattoria Il Ponte</a>
+                <span class="tbl-sub"
+                  >Restaurants · Amélie paid · 6 equally · 2 receipts</span
+                >
+              </td>
+              <td class="num">
+                <span style="display: block; font-weight: 500">€128.40</span>
+                <span
+                  style="
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    color: var(--negative-ink);
+                  "
+                  >You owe €21.40</span
+                >
+              </td>
+            </tr>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">11 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Jonas paid Amélie</a>
+                <span class="badge badge--outline">Repayment</span>
+                <span class="tbl-sub">Cash · Settling the taxi</span>
+              </td>
+              <td
+                class="num"
+                style="font-weight: 500; color: var(--muted-foreground)"
+              >
+                €120.00
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>columns</dt>
+      <dd>
+        Date · Description · Category · Paid by · Split · Amount · For you.
+        Decided by the table's own box: under 60rem the middle three fold into
+        the description's second line and the reader's line sits under the
+        amount; For you stands alone from 68rem. The description keeps about
+        290px either side of each step.
+      </dd>
+      <dt>date</dt>
+      <dd>
+        Day and month; the year only on a row from another year. Sorted newest
+        first by default, and the header says so with <code>aria-sort</code>
+        and an arrow. Pressing it turns the list round; Amount ranks largest
+        first where the group's amounts share one currency.
+      </dd>
+      <dt>paid by</dt>
+      <dd>
+        Avatar and name, "You" for the reader in the accent's "you" pill, two
+        payers joined the way the language joins them.
+      </dd>
+      <dt>split</dt>
+      <dd>
+        "6 equally" when everyone carries a share, "4 of 6" when some do, the
+        method beside it when the split was not even. A repayment is not shared
+        out: its split is how it was paid, when somebody said.
+      </dd>
+      <dt>amount, for you</dt>
+      <dd>
+        The total plain, as in the list; the reader's line in its tone's words,
+        never a sign. Nothing on a row the reader is not in.
+      </dd>
+      <dt>footer</dt>
+      <dd>
+        "Showing 40 of 42 transactions · sorted by date, newest first". Rows
+        arrive a page at a time as the window scrolls, exactly as on a phone.
+      </dd>
+      <dt>filters</dt>
+      <dd>
+        The kind chips stay chips — several may be on, which a segmented control
+        would say cannot happen. Category and When are menus that apply as they
+        are used; a month is written as the custom range the sheet's date fields
+        then show. More filters opens the phone's sheet for the rest, its badge
+        counting only what the row cannot show. The category spine is not drawn
+        at width: the Category column says the same thing row by row.
+      </dd>
+    </dl>
   </section>
 
   <section>

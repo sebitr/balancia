@@ -69,6 +69,11 @@ export interface SettlementSummary {
 export interface ListedSettlement extends SettlementSummary {
   /** Creation instant, UTC, to the microsecond. See `@/lib/db/keyset`. */
   readonly cursorKey: string;
+  /**
+   * How it was paid, as recorded — what the desktop table's Split column says
+   * for a repayment. Null when nobody said.
+   */
+  readonly paymentMethod: string | null;
 }
 
 /**
@@ -679,6 +684,7 @@ export async function listSettlements(
       exchangeRate: settlements.exchangeRate,
       settledOn: settlements.settledOn,
       notes: settlements.notes,
+      paymentMethod: settlements.paymentMethod,
       createdAt: settlements.createdAt,
     })
     .from(settlements)

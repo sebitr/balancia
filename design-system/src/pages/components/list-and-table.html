@@ -7,7 +7,8 @@
       The divided list is the workhorse of this product — expenses, members,
       recurring rules, and activity all use it. Tables appear only where a
       genuine second dimension exists, and they still have to survive a 375px
-      screen.
+      screen — or be drawn from <code>lg</code> only, over the rows a phone's
+      list already draws.
     </p>
   </header>
 
@@ -143,6 +144,137 @@
       accessibility failure in a different shape. Wide tables scroll inside
       their own container; the page body never scrolls sideways.
     </p>
+  </section>
+
+  <section>
+    <h2>Table at width</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      A table that cannot survive 375px is drawn from <code>lg</code> only, over
+      the same rows the phone's list draws below it — never a second loader. The
+      transactions are the first; the pattern is in Expense timeline.
+    </p>
+    <div class="spec">
+      <div class="tbl-box">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="descending" style="width: 6rem">
+                <span class="tbl-sort"
+                  >Date<svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="m19 12-7 7-7-7" /></svg
+                ></span>
+              </th>
+              <th scope="col">Description</th>
+              <th scope="col" style="width: 9rem">Paid by</th>
+              <th scope="col" class="num" style="width: 7rem">Amount</th>
+              <th scope="col" class="num" style="width: 11rem">For you</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">12 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Dinner at Trattoria Il Ponte</a>
+              </td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span class="avatar">A</span>Amélie</span
+                >
+              </td>
+              <td class="num" style="font-weight: 500">€128.40</td>
+              <td
+                class="num"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  color: var(--negative-ink);
+                "
+              >
+                You owe €21.40
+              </td>
+            </tr>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">10 Aug</td>
+              <td><a class="tbl-link" href="#">Tram passes ×6</a></td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span
+                    class="avatar"
+                    style="
+                      background: var(--primary);
+                      color: var(--primary-foreground);
+                    "
+                    >SB</span
+                  >You</span
+                >
+              </td>
+              <td class="num" style="font-weight: 500">€54.00</td>
+              <td
+                class="num"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  color: var(--positive-ink);
+                "
+              >
+                You get back €45.00
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="tbl-foot">
+          <span
+            >Showing 2 of 42 transactions · sorted by date, newest first</span
+          >
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>box</dt>
+      <dd>
+        The card: 16px radius, a hairline ring, nothing scrolling sideways.
+      </dd>
+      <dt>header</dt>
+      <dd>
+        36px, 12px uppercase in the muted ink on a muted wash. A sortable column
+        is a button inside its <code>&lt;th&gt;</code>, and the order is the
+        <code>&lt;th&gt;</code>'s <code>aria-sort</code>; the arrow draws it.
+      </dd>
+      <dt>rows</dt>
+      <dd>
+        52px, 60px with a second line. One <code>&lt;a&gt;</code> per row, on
+        the first text cell, its <code>::after</code> stretched over the row
+        (<code>position: relative</code> on the <code>&lt;tr&gt;</code>): a
+        click anywhere opens it, a keyboard reaches each row with one Tab, and
+        the table stays a table to a screen reader.
+      </dd>
+      <dt>states</dt>
+      <dd>
+        Hover and keyboard focus wash the row with <code>--wash-1</code>; focus
+        also draws the ring inset around the whole row. No zebra.
+      </dd>
+      <dt>alignment</dt>
+      <dd>
+        Text left; every figure right and tabular, never truncated. A column
+        that cannot fit its figure folds onto the second line instead — decided
+        by the table's own box with a container query, not by the window,
+        because a sidebar beside it changes the box and not the window.
+      </dd>
+      <dt>footer</dt>
+      <dd>
+        12px muted on a lighter wash: how many rows of how many, and in which
+        order.
+      </dd>
+    </dl>
   </section>
 
   <section>

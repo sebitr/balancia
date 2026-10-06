@@ -733,6 +733,22 @@
     "positionYouReceived": "Tu as reçu {amount}",
     "positionYouPaid": "Tu as remboursé {amount}",
     "positionEven": "{kind, select, revenue {Tu as reçu ta part} other {Tu as payé ta part}}",
+    "table": {
+      "date": "Date",
+      "description": "Description",
+      "category": "Catégorie",
+      "paidBy": "Payé par",
+      "split": "Répartition",
+      "amount": "Montant",
+      "forYou": "Pour toi",
+      "you": "Toi",
+      "paidByLine": "{who, select, you {Tu as payé} withYou {{names} avez payé} other {{count, plural, one {{names} a payé} other {{names} ont payé}}}}",
+      "split_ways": "{scope, select, all {{method, select, equal {{count} à parts égales} shares {{count}, par parts} percentage {{count}, par pourcentage} other {{count}, montants exacts}}} other {{method, select, equal {{count} sur {total}} shares {{count} sur {total}, par parts} percentage {{count} sur {total}, par pourcentage} other {{count} sur {total}, montants exacts}}}}",
+      "receipts": "{count, plural, one {# reçu} other {# reçus}}",
+      "footer": "{shown, plural, one {# transaction affichée} other {# transactions affichées}} sur {total} · {sort, select, oldest {triées par date, plus anciennes d’abord} largest {triées par montant, plus élevées d’abord} other {triées par date, plus récentes d’abord}}",
+      "footerUncounted": "{shown, plural, one {# transaction affichée} other {# transactions affichées}} · {sort, select, oldest {triées par date, plus anciennes d’abord} largest {triées par montant, plus élevées d’abord} other {triées par date, plus récentes d’abord}}",
+      "footerMore": "La suite se charge quand tu fais défiler"
+    },
     "filters": {
       "title": "Filtrer et trier",
       "description": "Affine la liste et choisis son ordre. Rien ne change tant que tu n’appliques pas.",
@@ -779,7 +795,12 @@
       "sort": "Trier",
       "sort_newest": "Plus récentes d’abord",
       "sort_oldest": "Plus anciennes d’abord",
-      "sort_largest": "Montant le plus élevé"
+      "sort_largest": "Montant le plus élevé",
+      "anyCategory": "Toutes les catégories",
+      "categoryMenu": "Catégorie : {value}",
+      "whenMenu": "Quand : {value}",
+      "more": "Plus de filtres",
+      "moreWith": "Plus de filtres, {count, plural, one {# appliqué} other {# appliqués}}"
     }
   },
   "userSettings": {

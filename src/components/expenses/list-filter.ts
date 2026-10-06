@@ -25,7 +25,10 @@ import {
  * Three controls narrow this screen — the kind chips, the category spine and
  * the search field — and a fourth, the filter sheet, reaches the axes none of
  * them can. All four write the same object, and this module is the only thing
- * that turns it into rows.
+ * that turns it into rows. A desktop window swaps the spine for a row of menus
+ * above its table — a category, a month — and those write the same object
+ * too, through the same moves the sheet makes (see "The moves the controls
+ * make" below).
  *
  * That matters more than it sounds. The sheet's apply button previews its own
  * outcome ("Show 4 transactions"), and a number counted by a second, similar
@@ -100,8 +103,39 @@ export interface RowView {
   readonly people: readonly string[];
   /** Recorded in a currency the group does not keep its books in. */
   readonly foreign: boolean;
-  /** At least one attachment that has not been deleted. */
+  /**
+   * At least one attachment that has not been deleted.
+   *
+   * `receipts > 0`, said again: it is what the Only show filter reads, and the
+   * API's clients read it under this name, so it stays a field of its own.
+   */
   readonly receipt: boolean;
+  /** How many attachments it carries that have not been deleted; 0 on a repayment. */
+  readonly receipts: number;
+  /**
+   * Who paid, by name, in the order of `payers`.
+   *
+   * Names rather than ids for the desktop table's Paid by column, which has to
+   * name somebody who has since left the group as readily as somebody still
+   * in it — and the people the screen is handed are only the ones still in it.
+   */
+  readonly payerNames: readonly string[];
+  /**
+   * How an expense was shared out: the method, and who carries a share of it.
+   * Null on a repayment, which is not shared — it moves money between two
+   * people, and `method` below is how.
+   */
+  readonly split: {
+    readonly method: "equal" | "exact" | "percentage" | "shares";
+    /** Participant ids, each once. */
+    readonly sharers: readonly string[];
+  } | null;
+  /**
+   * How a repayment was paid, as recorded: a code from the payment-method
+   * catalogue, or the free text an import kept. Null when nobody said, and on
+   * an expense.
+   */
+  readonly method: string | null;
 }
 
 /** The periods the When section offers. `any` is the absence of a filter. */
@@ -310,6 +344,165 @@ export function filterDimensions(filter: ListFilter): number {
 /** Everything the sheet holds, cleared. The search field is not the sheet's. */
 export function clearedFilter(filter: ListFilter): ListFilter {
   return { ...NO_FILTER, query: filter.query };
+}
+
+/*
+ * ## The moves the controls make
+ *
+ * Two sets of controls write this filter: the sheet a phone opens, and the row
+ * of menus a desktop window draws above its table. A choice has to mean the
+ * same thing from either — picking Groceries in the desk's Category menu and
+ * in the sheet's Category list is one decision, and so is picking a period —
+ * so the moves live here, beside the predicate that reads what they write,
+ * rather than inside whichever component needed them first. They used to be
+ * the sheet's own closures, which is exactly where a second copy would have
+ * started to drift from the first.
+ */
+
+/** The sections whose chips each switch one value in or out. */
+type ToggledField = "kinds" | "payers" | "people" | "positions" | "properties";
+
+/** A multi-select section: the value goes in if it is out, and out if it is in. */
+export function toggled<K extends ToggledField>(
+  filter: ListFilter,
+  field: K,
+  value: ListFilter[K][number],
+): ListFilter {
+  const current = filter[field] as readonly ListFilter[K][number][];
+  const next = current.includes(value)
+    ? current.filter((item) => item !== value)
+    : [...current, value];
+  return { ...filter, [field]: next };
+}
+
+/**
+ * A whole category, in or out.
+ *
+ * Picking the whole thing subsumes whichever parts of it were picked; letting
+ * go of it leaves nothing behind either.
+ */
+export function withCategory(filter: ListFilter, category: string): ListFilter {
+  const on = filter.categories.includes(category);
+  return {
+    ...filter,
+    categories: on
+      ? filter.categories.filter((code) => code !== category)
+      : [...filter.categories, category],
+    subcategories: filter.subcategories.filter(
+      (pair) => !pair.startsWith(`${category}.`),
+    ),
+  };
+}
+
+/**
+ * One part of a category, in or out.
+ *
+ * A part is not the whole, so choosing one lets the whole go — otherwise the
+ * parent would keep every row the part was meant to narrow away.
+ */
+export function withSubcategory(
+  filter: ListFilter,
+  category: string,
+  leaf: string,
+): ListFilter {
+  const pair = `${category}.${leaf}`;
+  const on = filter.subcategories.includes(pair);
+  return {
+    ...filter,
+    categories: filter.categories.filter((code) => code !== category),
+    subcategories: on
+      ? filter.subcategories.filter((code) => code !== pair)
+      : [...filter.subcategories, pair],
+  };
+}
+
+/** No category at all, which is what "Any category" asks for. */
+export function withoutCategories(filter: ListFilter): ListFilter {
+  return { ...filter, categories: [], subcategories: [] };
+}
+
+/**
+ * A period from the When section.
+ *
+ * Choosing a custom range fills it with the group's whole history, so the
+ * default answer to "which dates?" is one the reader can narrow rather than a
+ * pair of empty fields they have to fill before anything happens.
+ */
+export function withWhen(
+  filter: ListFilter,
+  when: WhenChoice,
+  bounds: { readonly firstDate: string | null; readonly today: string },
+): ListFilter {
+  if (when !== "custom") return { ...filter, when, from: "", to: "" };
+  return {
+    ...filter,
+    when,
+    from: filter.from || (bounds.firstDate ?? ""),
+    to: filter.to || bounds.today,
+  };
+}
+
+/**
+ * One calendar month, `YYYY-MM`, as the custom range from its first day to its
+ * last — a range the sheet's own date fields can show and change, rather than
+ * a fifth kind of period only the desktop's menu knows how to undo.
+ */
+export function withMonth(filter: ListFilter, month: string): ListFilter {
+  return {
+    ...filter,
+    when: "custom",
+    from: `${month}-01`,
+    to: `${month}-${lastDayOf(month)}`,
+  };
+}
+
+/** The month the filter covers exactly, `YYYY-MM`; null for any other period. */
+export function monthOf(filter: ListFilter): string | null {
+  if (filter.when !== "custom") return null;
+  const month = filter.from.slice(0, 7);
+  return filter.from === `${month}-01` &&
+    filter.to === `${month}-${lastDayOf(month)}`
+    ? month
+    : null;
+}
+
+/**
+ * Every month from the one the group's history starts in up to today's,
+ * newest first, as `YYYY-MM`. None when the group has no history.
+ */
+export function monthsBetween(
+  firstDate: string | null,
+  today: string,
+): string[] {
+  // A floor that is not a month would never be passed, and the walk below
+  // would not stop.
+  if (firstDate === null || !/^\d{4}-\d{2}/.test(firstDate)) return [];
+  const months: string[] = [];
+  let year = Number(today.slice(0, 4));
+  let month = Number(today.slice(5, 7));
+  const floor = firstDate.slice(0, 7);
+  for (;;) {
+    const key = `${year}-${String(month).padStart(2, "0")}`;
+    if (key < floor) break;
+    months.push(key);
+    month -= 1;
+    if (month === 0) {
+      month = 12;
+      year -= 1;
+    }
+  }
+  return months;
+}
+
+/** The last day of a `YYYY-MM` month, zero-padded: "28" to "31". */
+function lastDayOf(month: string): string {
+  const year = Number(month.slice(0, 4));
+  const index = Number(month.slice(5, 7));
+  // Day 0 of the next month is the last day of this one.
+  return String(new Date(Date.UTC(year, index, 0)).getUTCDate()).padStart(
+    2,
+    "0",
+  );
 }
 
 export interface RowContext {
