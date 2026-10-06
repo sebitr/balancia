@@ -67,14 +67,20 @@ export function checklistRows(state: ChecklistState): readonly ChecklistRow[] {
     marker: "done",
     labelKey: "accountLabel",
     // Which credential ran is the part worth keeping: it is what this person
-    // will look for when they open Balancia somewhere else.
+    // will look for when they open Balancia somewhere else. A password is
+    // named as one even with an address beside it: only a code proves the
+    // address, and an instance that offers the password has no mail to
+    // verify it with.
     noteKey:
       state.credential === "passkey"
         ? "accountNotePasskey"
-        : state.email
-          ? "accountNoteVerified"
-          : "accountNotePassword",
-    noteValues: state.email ? { email: state.email } : undefined,
+        : state.credential === "password" || !state.email
+          ? "accountNotePassword"
+          : "accountNoteVerified",
+    noteValues:
+      state.credential !== "password" && state.email
+        ? { email: state.email }
+        : undefined,
     sheet: null,
   };
 

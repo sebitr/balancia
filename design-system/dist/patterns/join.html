@@ -753,6 +753,55 @@ code {
   font-size: 0.875rem;
   color: var(--destructive);
 }
+/* A password field — password-input.tsx. One field with an eye in it, and
+   never a confirm field beside it. The eye is a toggle (aria-pressed, its name
+   always "Show password"), drawn at 32px inside the field's right edge and hit
+   at 44px; a pointer press keeps the caret in the field. */
+.password-field {
+  position: relative;
+}
+.password-field .input {
+  padding-right: 2.75rem;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.375rem;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  padding: 0;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+.password-toggle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+}
+.password-toggle:hover,
+.password-toggle[aria-pressed="true"] {
+  color: var(--foreground);
+}
+.password-toggle:hover {
+  background: var(--muted);
+}
+.password-toggle svg {
+  width: 1rem;
+  height: 1rem;
+}
 /* A stepper — split-sheet.tsx, StepButton. A narrow field between a step
    either side; the field still takes typing. Each step is drawn at 28px and
    hit at 44px (the app's `tap-target`), and the 8px gap keeps the two hit
@@ -2141,6 +2190,15 @@ a[aria-current="page"] .nav-icon--primary {
       email-and-code screen between the second screen and the group, and nothing
       else. The progress bar measures the route the reader is on, so it sits at
       half on the second screen until a guest's tap ends the route.
+    </p>
+    <p class="note">
+      On an instance with no mail server there is no code to send, and that same
+      screen asks for a password instead: "Your email, and a password", one
+      password field with the eye from <em>Forms</em>, and no confirm field. It
+      is a quiet "Sign up with a password" under the passkey, and the whole
+      screen where the browser cannot hold a passkey either. It is never a page
+      of its own: the reader keeps the bar, the back button and the group, and
+      the join follows the new account in.
     </p>
     <p class="note">
       A personal invitation ends the same way for a guest: their name, then the
