@@ -1,6 +1,6 @@
 # Somebody opening a group's link picks their name, chooses how to join, and is in the group — invited, and spoken to as "you"
 
-Branch: `feat/shorter-guest-join`
+Merged: 2026-10-05 in #428
 
 A group's shared link took six screens and six taps to reach the group as a
 guest: a welcome, the list, "Is this you?", "how should we keep it?", "You're
