@@ -295,8 +295,10 @@ export function GroupChip({
       aria-label={t("groupOptions", { group: row.groupName })}
       className={cn(
         "mt-2.5 mb-0.5 flex items-center gap-1.5 pl-[22px] text-2xs font-semibold text-foreground/75",
-        // From `lg`, inside the card: level with the faces below it.
-        "lg:mt-3 lg:mb-0 lg:pl-[38px] lg:text-xs",
+        // From `lg`, inside the card: level with the faces below it. Padding
+        // rather than margin there, which would collapse out through the top
+        // of its row and leave a gap in the card.
+        "lg:mt-0 lg:mb-0 lg:pt-3 lg:pl-[38px] lg:text-xs",
         ROW_FOCUS,
         "lg:rounded-md",
       )}
