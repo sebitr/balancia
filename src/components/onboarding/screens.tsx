@@ -61,11 +61,18 @@ function Spacer() {
   return <div className="flex-1" />;
 }
 
-function Headline({ children }: { children: React.ReactNode }) {
+function Headline({
+  as: Heading = "h1",
+  children,
+}: {
+  /** An h2 where another screen beside it carries the page's h1. */
+  as?: "h1" | "h2";
+  children: React.ReactNode;
+}) {
   return (
-    <h1 className="font-heading text-2xl leading-tight font-semibold tracking-[-0.025em] text-pretty">
+    <Heading className="font-heading text-2xl leading-tight font-semibold tracking-[-0.025em] text-pretty">
       {children}
-    </h1>
+    </Heading>
   );
 }
 
@@ -289,6 +296,11 @@ function Divider({ label }: { label: string }) {
  *
  * Picking a row commits nothing. The next screen names the person, shows the
  * balance again as theirs, and offers the way back.
+ *
+ * From `lg` the flow draws this list again beside that next screen, with the
+ * name picked marked as the current one, so another can be picked without
+ * going back — which is what `heading` and `picked` are for. Picking from it
+ * still commits nothing.
  */
 export function WhichOneScreen({
   group,
@@ -298,6 +310,8 @@ export function WhichOneScreen({
   typedName,
   onPick,
   onNewHere,
+  heading = "h1",
+  picked = null,
 }: {
   group: OnboardingGroupView;
   inviterName: string | null;
@@ -312,9 +326,14 @@ export function WhichOneScreen({
   typedName: string;
   onPick: (member: JoinMemberView) => void;
   onNewHere: () => void;
+  /** An h2 when the screen beside this list is the page's h1. */
+  heading?: "h1" | "h2";
+  /** The row the screen beside it is about: a member's id, or "new". */
+  picked?: string | null;
 }) {
   const t = useTranslations("onboarding.whichOne");
   const groupName = group.summary.groupName;
+  const newPicked = picked === "new";
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -323,7 +342,7 @@ export function WhichOneScreen({
       <GroupCard group={group} />
 
       <div className="flex flex-col gap-2">
-        <Headline>
+        <Headline as={heading}>
           {inviterName
             ? t("titleInviter", { inviter: inviterName, group: groupName })
             : t("title", { group: groupName })}
@@ -336,7 +355,11 @@ export function WhichOneScreen({
       <ul className="flex flex-col gap-2">
         {members.map((member) => (
           <li key={member.id}>
-            <MemberRow member={member} onPick={() => onPick(member)} />
+            <MemberRow
+              member={member}
+              current={picked === member.id}
+              onPick={() => onPick(member)}
+            />
           </li>
         ))}
       </ul>
@@ -346,13 +369,25 @@ export function WhichOneScreen({
       <button
         type="button"
         onClick={onNewHere}
-        className="flex min-h-[3.125rem] w-full items-center justify-center rounded-xl border border-dashed border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-muted"
+        aria-current={newPicked || undefined}
+        className={cn(
+          "flex min-h-[3.125rem] w-full items-center justify-center rounded-xl border border-dashed border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-muted",
+          CURRENT_ROW,
+        )}
       >
         {typedName ? t("newHereNamed", { name: typedName }) : t("newHere")}
       </button>
     </div>
   );
 }
+
+/**
+ * The row the screen beside the list is about, from `lg`. A wash and a firmer
+ * ring rather than the accent: the row carries a balance in its own tone, and
+ * the accent never paints a money surface.
+ */
+const CURRENT_ROW =
+  "aria-[current=true]:bg-accent aria-[current=true]:ring-2 aria-[current=true]:ring-foreground/25";
 
 /**
  * One name on the list: "Alex", then "owes €60.00 · 2 expenses".
@@ -362,9 +397,12 @@ export function WhichOneScreen({
  */
 function MemberRow({
   member,
+  current = false,
   onPick,
 }: {
   member: JoinMemberView;
+  /** The name the screen beside the list is about, from `lg`. */
+  current?: boolean;
   onPick: () => void;
 }) {
   const t = useTranslations("onboarding.whichOne");
@@ -386,13 +424,17 @@ function MemberRow({
     <button
       type="button"
       onClick={onPick}
+      aria-current={current || undefined}
       // Two stacked lines run together into one word for a screen reader, so
       // the name and the line under it are said as a pair.
       aria-label={`${member.displayName} — ${t.markup(key, {
         ...values,
         money: (chunks) => chunks,
       })}`}
-      className="flex min-h-[4.25rem] w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted"
+      className={cn(
+        "flex min-h-[4.25rem] w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted",
+        CURRENT_ROW,
+      )}
     >
       <Avatar size="lg">
         <AvatarFallback className="bg-accent text-sm text-accent-foreground">

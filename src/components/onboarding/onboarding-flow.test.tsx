@@ -658,6 +658,100 @@ describe("the shared link", () => {
   });
 });
 
+/**
+ * From `lg`, the list stays beside "how do you want to join" once a name is
+ * picked. jsdom runs no media queries, so what is held here is what the wide
+ * drawing is told: the list is there, marked with the name picked, hidden
+ * below `lg`, and picking again from it moves the second screen in place
+ * without a step, a commit, or a name left behind.
+ */
+describe("the shared link at a desk's width", () => {
+  it("opens on the list alone, as on a phone", () => {
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /^Alex/ })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Which of these is you?",
+    );
+  });
+
+  it("keeps the list beside the second screen, with the name marked", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+
+    // The question is the page's heading; the list beside it is context.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Alex, how do you want to join Weekend in Verbier?",
+    );
+    const list = screen.getByRole("heading", {
+      level: 2,
+      name: "You're invited to Weekend in Verbier. Which of these is you?",
+    });
+    expect(list.closest(".lg\\:flex")).toHaveClass("hidden");
+    expect(screen.getByRole("button", { name: /^Alex/ })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: /^Marc T\./ }),
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  it("follows another name picked beside it, committing nothing", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    await user.click(screen.getByRole("button", { name: /^Marc T\./ }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Marc T., how do you want to join Weekend in Verbier?",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/You get back CHF\s42\.00/)).toBeInTheDocument();
+    expect(joinAsGuestAction).not.toHaveBeenCalled();
+    // The reader changed their answer; they did not take a step.
+    expect(stepsTaken()).toEqual(["whichOne", "keepIt"]);
+
+    await user.click(
+      screen.getByRole("button", { name: /Continue as a guest/ }),
+    );
+    expect(joinAsGuestAction).toHaveBeenCalledWith({
+      participantId: "member-1",
+      displayName: "Marc T.",
+    });
+  });
+
+  it("asks a fresh name of somebody new, not the one they just unpicked", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow arrival="shared" group={group} members={members} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    await user.click(screen.getByRole("button", { name: /None of these/ }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: "What should Weekend in Verbier call you?",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveValue("");
+    expect(
+      screen.getByRole("button", { name: "None of these — I'm new here" }),
+    ).toHaveAttribute("aria-current", "true");
+  });
+});
+
 describe("the cold arrival", () => {
   it("describes the product, because there is no group to describe", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
