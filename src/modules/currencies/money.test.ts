@@ -271,6 +271,29 @@ describe("formatMoney", () => {
     expect(formatted).toContain("12,345,678,901,234,567.89");
   });
 
+  /**
+   * One notation for every figure: the symbol where it says the currency on
+   * its own, a prefixed symbol or the code where it would not. The narrow
+   * symbol this replaced wrote "$" for three dollars and "kr" for three
+   * krone, and the code it sat beside wrote "EUR 60.00" for the "€60.00" one
+   * tap away.
+   */
+  it("writes each currency in the one notation, telling neighbours apart", () => {
+    const write = (minor: bigint, currency: string, locale = "en-US") =>
+      formatMoney(money(minor, currency), { locale }).replace(/\s/g, " ");
+
+    expect(write(6000n, "EUR")).toBe("€60.00");
+    expect(write(6000n, "USD")).toBe("$60.00");
+    expect(write(6000n, "CHF")).toBe("CHF 60.00");
+    expect(write(6000n, "EUR", "fr-FR")).toBe("60,00 €");
+
+    // Two currencies that share a narrow sign never share a figure.
+    expect(write(6000n, "CAD")).toBe("CA$60.00");
+    expect(write(6000n, "AUD")).toBe("A$60.00");
+    expect(write(6000n, "SEK")).not.toBe(write(6000n, "NOK"));
+    expect(write(6000n, "USD", "fr-FR")).not.toBe(write(6000n, "CAD", "fr-FR"));
+  });
+
   it("can render a bare number for tabular layouts", () => {
     expect(
       formatMoney(money(-1050n, "EUR"), { locale: "en-US", display: "none" }),

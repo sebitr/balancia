@@ -49,7 +49,7 @@ export interface PositionView {
  * tone. Each of those is one whole message, chosen by case, so a translator
  * never has to stitch a sentence back together.
  *
- * Nothing whose amount is zero is said. "You received EUR 0.00 of the group's
+ * Nothing whose amount is zero is said. "You received €0.00 of the group's
  * income" is a sentence about something that did not happen, and in most
  * groups income and repayments never do. Only the opening sentence about
  * expenses is always there, because it is where the reader's question starts.
@@ -87,10 +87,7 @@ export function PositionBreakdown({
 
   /** An amount set inside a sentence, in the notation the rows use. */
   const inline = (amount: bigint) =>
-    formatMoney(money(amount < 0n ? -amount : amount, currency), {
-      locale,
-      display: "code",
-    });
+    formatMoney(money(amount < 0n ? -amount : amount, currency), { locale });
 
   const sentences: { key: string; text: string }[] = [];
 
@@ -291,7 +288,6 @@ export function PositionBreakdown({
                       <Amount
                         minorUnits={section.subtotal.toString()}
                         currency={currency}
-                        display="code"
                         signDisplay="exceptZero"
                         className="text-xs font-semibold"
                       />
@@ -309,7 +305,6 @@ export function PositionBreakdown({
                         <Amount
                           minorUnits={row.value.toString()}
                           currency={currency}
-                          display="code"
                         />
                       </dd>
                     </div>
@@ -327,7 +322,6 @@ export function PositionBreakdown({
                       <Amount
                         minorUnits={otherAdjustments.toString()}
                         currency={currency}
-                        display="code"
                         signDisplay="exceptZero"
                       />
                     </dd>

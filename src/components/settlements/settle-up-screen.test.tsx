@@ -81,7 +81,7 @@ describe("the transfers", () => {
     expect(screen.getByText("Pay Amélie back")).toBeInTheDocument();
     // Twice: the hero states the position, the row states the payment that
     // makes it up. With one payment they are the same figure.
-    expect(screen.getAllByText("EUR 148.60")).toHaveLength(2);
+    expect(screen.getAllByText("€148.60")).toHaveLength(2);
   });
 
   it("names the person paying the reader back on a row coming their way", () => {
@@ -132,9 +132,9 @@ describe("the transfers", () => {
 
     expect(screen.getByText("EUR")).toBeInTheDocument();
     expect(screen.getByText("CHF")).toBeInTheDocument();
-    expect(screen.getAllByText("EUR 148.60")).toHaveLength(2);
+    expect(screen.getAllByText("€148.60")).toHaveLength(2);
     expect(screen.getAllByText("CHF 62.00")).toHaveLength(2);
-    expect(screen.queryByText("EUR 210.60")).toBeNull();
+    expect(screen.queryByText("€210.60")).toBeNull();
   });
 
   it("says a settled currency in words rather than showing 0.00", () => {
@@ -207,8 +207,8 @@ describe("the hero", () => {
 
     expect(screen.getByText("You owe")).toBeInTheDocument();
     // 148.60 and 99.40 are in the plan; only the first is the reader's.
-    expect(screen.getAllByText("EUR 148.60")).toHaveLength(2);
-    expect(screen.queryByText("EUR 248.00")).toBeNull();
+    expect(screen.getAllByText("€148.60")).toHaveLength(2);
+    expect(screen.queryByText("€248.00")).toBeNull();
   });
 
   it("splits the bar between the reader's share and everyone else's", () => {
@@ -253,7 +253,7 @@ describe("the hero", () => {
     expect(within(legend).getByText("Lena")).toBeInTheDocument();
     expect(within(legend).queryByText("For you")).toBeNull();
     // The two are the reader's own, so the hero adds them.
-    expect(screen.getByText("EUR 297.20")).toBeInTheDocument();
+    expect(screen.getByText("€297.20")).toBeInTheDocument();
   });
 
   it("draws no bar for a plan with one payment in it", () => {
@@ -586,7 +586,7 @@ describe("payout details", () => {
     await user.click(screen.getByRole("button", { name: /Cash/ }));
 
     expect(
-      screen.getByText("Nothing to copy — hand them the EUR 148.60."),
+      screen.getByText("Nothing to copy — hand them the €148.60."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
   });
@@ -689,7 +689,7 @@ describe("the payment code", () => {
       screen.getByRole("img", { name: "Scan to pay" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Swiss QR-bill/)).toBeInTheDocument();
-    expect(screen.getByText("EUR 148.60 to Amélie")).toBeInTheDocument();
+    expect(screen.getByText("€148.60 to Amélie")).toBeInTheDocument();
   });
 
   it("is built from the account, whichever chip the payee put first", async () => {
@@ -797,7 +797,7 @@ describe("opening the provider", () => {
     const open = screen.getByRole("link", { name: "Open PayPal" });
     expect(open).toHaveAttribute("href", "https://paypal.me/amelie/148.60EUR");
     expect(
-      screen.getByText("Opens with EUR 148.60 already filled in"),
+      screen.getByText("Opens with €148.60 already filled in"),
     ).toBeVisible();
   });
 
@@ -868,7 +868,7 @@ describe("opening the provider", () => {
       expect.stringContaining("upi://pay?pa=amelie%40okhdfcbank"),
     );
     expect(
-      screen.getByText("Opens with INR 148.60 already filled in"),
+      screen.getByText("Opens with ₹148.60 already filled in"),
     ).toBeVisible();
   });
 });

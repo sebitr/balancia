@@ -252,7 +252,6 @@ function CurrencySpendingBlock({
           <Amount
             minorUnits={stat.groupSpent}
             currency={stat.currency}
-            display="code"
             className="mt-0.5 block truncate text-xl font-semibold tracking-[-0.02em]"
           />
         </div>
@@ -282,11 +281,7 @@ function CurrencySpendingBlock({
             {t("statYourShare")}
           </dt>
           <dd className="mt-0.5 truncate text-sm font-semibold">
-            <Amount
-              minorUnits={stat.yourShare}
-              currency={stat.currency}
-              display="code"
-            />
+            <Amount minorUnits={stat.yourShare} currency={stat.currency} />
           </dd>
         </div>
         <div className="pl-3">
@@ -301,11 +296,7 @@ function CurrencySpendingBlock({
             {t("statYouPaid")}
           </dt>
           <dd className="mt-0.5 truncate text-sm font-semibold">
-            <Amount
-              minorUnits={stat.youPaid}
-              currency={stat.currency}
-              display="code"
-            />
+            <Amount minorUnits={stat.youPaid} currency={stat.currency} />
           </dd>
         </div>
       </dl>

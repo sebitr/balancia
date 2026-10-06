@@ -58,19 +58,19 @@ function chf(minorUnits: bigint): string {
   const magnitude = minorUnits < 0n ? -minorUnits : minorUnits;
   return (
     sign +
-    formatMoney(money(magnitude, "CHF"), {
-      locale: "en",
-      display: "code",
-    }).replace(/\u00a0/g, " ")
+    formatMoney(money(magnitude, "CHF"), { locale: "en" }).replace(
+      /\u00a0/g,
+      " ",
+    )
   );
 }
 
 /** A row's own total, which carries no sign: it is an amount, not an effect. */
 function raw(minorUnits: bigint): string {
-  return formatMoney(money(minorUnits, "CHF"), {
-    locale: "en",
-    display: "code",
-  }).replace(/\u00a0/g, " ");
+  return formatMoney(money(minorUnits, "CHF"), { locale: "en" }).replace(
+    /\u00a0/g,
+    " ",
+  );
 }
 
 async function openSheet(
@@ -253,7 +253,7 @@ describe("more than one currency", () => {
     expect(
       screen.getByText(`So you get back ${raw(1310533n)}.`),
     ).toBeInTheDocument();
-    expect(screen.getByText("So you owe EUR 45.00.")).toBeInTheDocument();
+    expect(screen.getByText("So you owe €45.00.")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: FIGURES })).toHaveLength(2);
   });
 
@@ -317,9 +317,9 @@ describe("the headline", () => {
     expect(screen.getByText(chf(1310533n))).toBeVisible();
     expect(screen.getByText("You get back")).toBeVisible();
     expect(screen.getByText("Settled up in EUR")).toBeVisible();
-    // Named, never drawn: "EUR 0.00" is a figure the reader has to parse to
+    // Named, never drawn: "€0.00" is a figure the reader has to parse to
     // learn that there is nothing to parse.
-    expect(screen.queryByText(/EUR\s0\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/€0\.00/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Settled\s+EUR/)).not.toBeInTheDocument();
   });
 
@@ -346,11 +346,11 @@ describe("the headline", () => {
 
     renderCard([CHALET, OWED]);
 
-    expect(screen.getByText("− EUR 45.00")).toBeVisible();
+    expect(screen.getByText("− €45.00")).toBeVisible();
     expect(screen.getByText(chf(1310533n)).parentElement).toHaveTextContent(
       /You get back/,
     );
-    expect(screen.getByText("− EUR 45.00").parentElement).toHaveTextContent(
+    expect(screen.getByText("− €45.00").parentElement).toHaveTextContent(
       /You owe/,
     );
   });
