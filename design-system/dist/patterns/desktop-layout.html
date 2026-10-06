@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The group rail, the overview in two columns, sheets at a phone's width" -->
+<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The sidebar, a group's header and tabs, the overview in two columns, sheets at a phone's width" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -28,7 +28,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.543 0.168 30);
+  --primary-ink: var(--accent-ink-light, oklch(0.543 0.168 30));
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -100,7 +100,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.737 0.168 30);
+  --primary-ink: var(--accent-ink-dark, oklch(0.737 0.168 30));
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -162,7 +162,7 @@
     --border: oklch(0.62 0.02 82);
     --input: oklch(0.58 0.02 82);
     --sidebar-border: oklch(0.62 0.02 82);
-    --primary-ink: oklch(0.442 0.168 30);
+    --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
     --positive-ink: oklch(0.409 0.084 167);
     --negative-ink: oklch(0.429 0.164 32);
     --payer-ink: oklch(0.43 0.093 70);
@@ -175,12 +175,29 @@
     --border: oklch(1 0 0 / 38%);
     --input: oklch(1 0 0 / 42%);
     --sidebar-border: oklch(1 0 0 / 38%);
-    --primary-ink: oklch(0.847 0.084 30);
+    --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
     --positive-ink: oklch(0.83 0.13 167);
     --negative-ink: oklch(0.85 0.082 32);
     --payer-ink: oklch(0.87 0.118 78);
     --neutral-balance-ink: oklch(0.84 0.03 319);
   }
+}
+
+/* ── the accent, painted ──
+   The app paints the reader's accent inline on <html>, over the coral the
+   blocks above draw, and a reader who has never chosen is painted plum. These
+   are the six variables `accentTokens("plum")` writes, so every page here
+   shows the app as most people see it. `html:root` outranks `:root` and
+   `.dark` the way an inline declaration does; the inks reach `--primary-ink`
+   through the `var(--accent-ink-…)` it is declared with above.
+   src/app/design-system-kit.test.ts holds this block to the app's default. */
+html:root {
+  --primary: oklch(0.71 0.048 319);
+  --ring: oklch(0.71 0.048 319);
+  --accent-ink-light: oklch(0.535 0.048 319);
+  --accent-ink-more-light: oklch(0.43 0.048 319);
+  --accent-ink-dark: oklch(0.725 0.048 319);
+  --accent-ink-more-dark: oklch(0.85 0.048 319);
 }
 
 /* ── base ── */
@@ -1338,100 +1355,404 @@ a[aria-current="page"] .nav-icon--primary {
   background: var(--primary);
 }
 
-/* The group rail: from lg (1024px) up, the header and the bottom bar stood up
-   the left edge as one 15rem column — switcher, Add, the four places, then the
-   bell and the account at the foot. `src/components/layout/group-nav.tsx`. */
+/* The sidebar: from lg (1024px) up, on every signed-in screen — Home and
+   Notifications as well as a group — in place of the header along the top
+   and the group's bottom bar. 15rem, or 4rem folded to its icons.
+   `src/components/layout/app-sidebar.tsx`. It replaced #438's group rail. */
 .frame--desk {
   display: flex;
   max-width: 64rem;
   min-height: 27rem;
 }
-.rail {
+.sidebar {
   flex: 0 0 15rem;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border);
-  background: color-mix(in oklch, var(--background) 95%, transparent);
-  padding: 1rem 0.75rem 0.75rem;
+  gap: 2px;
+  min-width: 0;
+  padding: 0.75rem;
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  font-size: 0.875rem;
 }
-.rail-switcher {
+.sidebar-top {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  min-height: 2.5rem;
+  justify-content: space-between;
+  height: 2.75rem;
+  padding: 0 2px 0 6px;
+}
+.sidebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
-.rail-switcher svg {
-  width: 1.75rem;
-  height: 1.75rem;
+.sidebar-brand svg {
+  width: 1.625rem;
+  height: 1.625rem;
   flex-shrink: 0;
 }
-.rail-add {
-  display: flex;
+.sidebar-icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
-  height: 2.5rem;
-  margin: 1.25rem 0 0.875rem;
-  border-radius: var(--radius-xl);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted-foreground);
 }
-.rail-add svg {
+.sidebar-icon-btn svg {
   width: 1.125rem;
   height: 1.125rem;
 }
-.rail ul {
+.sidebar-search {
   display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  margin: 6px 0 2px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--muted-foreground);
 }
-.rail ul a {
+.sidebar-search span:first-of-type {
+  flex: 1;
+}
+.sidebar-search svg {
+  width: 1rem;
+  height: 1rem;
+}
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    0 1px 0 var(--border);
+  color: var(--muted-foreground);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+.sidebar-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  margin: 0.5rem 0 0.625rem;
+  padding: 0 0.5rem 0 0.75rem;
+  border-radius: var(--radius-xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+.sidebar-add svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.sidebar-row {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   height: 2.5rem;
+  padding: 0 0.5rem 0 0.625rem;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  text-decoration: none;
+}
+.sidebar-row svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+.sidebar-row span:first-of-type {
+  flex: 1;
+}
+.sidebar-row[aria-current] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sidebar-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 1.875rem;
+  margin-top: 0.875rem;
+  padding: 0 2px 0 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sidebar-section .sidebar-icon-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+/* A group: its tile, its name, and where the reader stands in it in words —
+   one line per currency, each in its own tone's ink, never in --primary. */
+.sidebar-group {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.625rem;
+  min-height: 3rem;
+  padding: 6px 0.5rem;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.sidebar-group[aria-current] {
+  background: var(--sidebar-accent);
+}
+.sidebar-group-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sidebar-group-name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-pos {
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-pos--positive {
+  color: var(--positive-ink);
+}
+.sidebar-pos--negative {
+  color: var(--negative-ink);
+}
+.sidebar-pos--neutral {
+  color: var(--neutral-balance-ink);
+}
+.sidebar-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sidebar-tile--current {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.sidebar-more {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.sidebar-more svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.sidebar-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: auto -0.75rem 0;
+  padding: 0.625rem 0.75rem 0;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sidebar-foot small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+/* Folded: 4rem of 44px targets. Every label stays the control's name and
+   comes back as a tip; a group's tile carries no colour that means money. */
+.sidebar--folded {
+  flex-basis: 4rem;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+}
+.sidebar--folded .sidebar-top {
+  flex-direction: column;
+  height: auto;
+  gap: 6px;
+  padding: 0;
+}
+.sidebar-fold-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+.sidebar-fold-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.sidebar-fold-btn[aria-current] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-fold-btn--add {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.sidebar-fold-btn .sidebar-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 1.125rem;
+  height: 1.125rem;
   padding: 0 0.25rem;
+}
+.sidebar-fold-btn .sidebar-tile {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+}
+.sidebar-rule {
+  width: 2rem;
+  height: 1px;
+  margin: 0.625rem 0;
+  background: var(--sidebar-border);
+}
+.sidebar-tip {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--radius-xl);
+  background: var(--popover);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-card);
+  line-height: 1.35;
+}
+
+/* A group's header, above the screen on its four places from lg up: the
+   tile, the name with its currencies, a meta line, and the places as a
+   segmented row. `src/components/layout/group-header.tsx`. */
+.group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem 1.5rem 0;
+}
+.group-head-title {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.group-head-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.group-head-name {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.group-head-meta {
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.group-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: fit-content;
+  margin: 0;
+  padding: 3px;
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  list-style: none;
+}
+.group-tabs a {
+  display: inline-flex;
+  align-items: center;
+  height: 2.125rem;
+  padding: 0 0.875rem;
+  border-radius: 9px;
+  color: var(--muted-foreground);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  color: var(--muted-foreground);
-  transition:
-    color 150ms ease,
-    background-color 150ms ease;
 }
-.rail ul a:hover {
+.group-tabs a[aria-current="page"] {
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-card);
   color: var(--foreground);
-  background: color-mix(in oklch, var(--foreground) 6%, transparent);
 }
-.rail ul a[aria-current="page"] {
-  color: var(--primary-ink);
-  background: transparent;
-}
-.rail-foot {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin: auto -0.75rem 0;
-  border-top: 1px solid var(--border);
-  padding: 0.75rem 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-/* The screen beside the rail: one readable column, or the overview's two. */
+/* The screen beside the sidebar: one readable column, or the overview's two. */
 .desk-screen {
   flex: 1;
   min-width: 0;
   padding: 2rem 1.5rem 3rem;
+}
+.group-head + .desk-screen {
+  padding-top: 1.5rem;
+}
+.desk-main {
+  flex: 1;
+  min-width: 0;
 }
 .overview-cols {
   display: grid;
@@ -1496,11 +1817,17 @@ a[aria-current="page"] .nav-icon--primary {
     <h1>Desktop layout</h1>
     <p class="lede">
       The app is drawn for a phone, and a desktop window gets the same screens
-      with the room used modestly: a rail in place of the bottom bar, two
-      columns on the one screen that has two kinds of thing to say, and every
-      other screen left at the one readable column it has always had. Entering a
-      month of receipts is a desk task; nothing else here is a reason to
-      redesign a screen.
+      with the room used modestly: a sidebar in place of the header and the
+      bottom bar, a group's places as tabs under its name, two columns on the
+      one screen that has two kinds of thing to say, and every other screen left
+      at the one readable column it has always had. Entering a month of receipts
+      is a desk task; nothing else here is a reason to redesign a screen.
+    </p>
+    <p class="note">
+      #438 first used the width with a 15rem rail inside a group — the switcher,
+      Add, the four places and the account. The sidebar replaced it: the places
+      moved into the group's header, and everything else went onto every
+      signed-in screen, Home included.
     </p>
   </header>
 
@@ -1520,9 +1847,16 @@ a[aria-current="page"] .nav-icon--primary {
       </dd>
       <dt>lg up</dt>
       <dd>
-        1024px and wider. Inside a group, the rail; on the overview, two
-        columns. The dashboard and the other screens with nothing to navigate
-        between keep the header along the top.
+        1024px and wider. The sidebar on every signed-in screen — Home and
+        Notifications too — in place of the header and the bar; a group's header
+        and tabs above its four places; on the overview, two columns. Settings
+        stays a surface of its own with its ✕, and no sidebar.
+      </dd>
+      <dt>xl up</dt>
+      <dd>
+        1280px and wider. Everything as drawn: 40px gutters, the group's tile
+        48px and its name a step larger. From 1536px the wide column stops at
+        75rem and centres.
       </dd>
     </dl>
   </section>
@@ -1537,101 +1871,147 @@ a[aria-current="page"] .nav-icon--primary {
       all read it in the order the single column always had.
     </p>
     <div class="frame frame--desk">
-      <div class="rail" aria-hidden="true">
-        <div class="rail-switcher">Lisbon, March</div>
-        <span class="rail-add">Add</span>
-        <ul>
-          <li><a aria-current="page">Overview</a></li>
-          <li><a>Transactions</a></li>
-          <li><a>People</a></li>
-          <li><a>Settings</a></li>
-        </ul>
-        <div class="rail-foot"><span class="avatar">ST</span> Sébastien</div>
+      <div class="sidebar" aria-hidden="true">
+        <div class="sidebar-top">
+          <span class="sidebar-brand">Balancia</span>
+        </div>
+        <span class="sidebar-search"><span>Search or jump to</span></span>
+        <span class="sidebar-add">Add expense</span>
+        <span class="sidebar-row"><span>Home</span></span>
+        <span class="sidebar-row"
+          ><span>Notifications</span><span class="sidebar-count">4</span></span
+        >
+        <div class="sidebar-section"><span>Groups</span></div>
+        <span class="sidebar-group" aria-current="true"
+          ><span class="sidebar-tile sidebar-tile--current">LM</span
+          ><span class="sidebar-group-text"
+            ><span class="sidebar-group-name">Lisbon, March</span
+            ><span class="sidebar-pos sidebar-pos--positive"
+              >you are owed €248.00</span
+            ><span class="sidebar-pos sidebar-pos--negative"
+              >you owe CHF 62.20</span
+            ></span
+          ></span
+        >
+        <span class="sidebar-group"
+          ><span class="sidebar-tile">F4</span
+          ><span class="sidebar-group-text"
+            ><span class="sidebar-group-name">Flat 4B</span
+            ><span class="sidebar-pos sidebar-pos--negative"
+              >you owe €36.80</span
+            ></span
+          ></span
+        >
+        <div class="sidebar-foot"><span class="avatar">SB</span> Sébastien</div>
       </div>
-      <div class="desk-screen">
-        <div class="overview-cols">
-          <div class="overview-col">
-            <div class="card">
-              <div
-                class="card-content"
-                style="display: flex; flex-direction: column; gap: 0.25rem"
-              >
-                <p class="card-desc" style="margin: 0">You get back</p>
-                <span
-                  class="balance balance--positive balance--large tabular-nums"
-                  >€248.00</span
-                >
-                <p class="note" style="margin: 0">from Jonas and Ravi</p>
-              </div>
+      <div class="desk-main">
+        <div class="group-head">
+          <div class="group-head-title">
+            <span class="group-head-tile">LM</span>
+            <div>
+              <p class="group-head-name">
+                Lisbon, March
+                <span class="badge badge--outline">EUR · CHF</span>
+              </p>
+              <p class="group-head-meta">
+                6 people · 42 expenses · 2 – 12 August
+              </p>
             </div>
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Jonas owes</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--negative-ink)"
-                    >€148.60</span
-                  ></span
-                >
-              </li>
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Ravi owes</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--negative-ink)"
-                    >€99.40</span
-                  ></span
-                >
-              </li>
-            </ul>
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Jonas pays you back</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--positive-ink)"
-                    >€148.60</span
-                  ></span
-                >
-              </li>
-            </ul>
           </div>
-          <div class="overview-col">
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-main"
-                    ><span class="list-title"
-                      >Ravi added Dinner at Trattoria Il Ponte</span
-                    ><span class="list-sub">2 hours ago</span></span
-                  ><span class="tabular-nums">€128.40</span></span
+          <ul class="group-tabs">
+            <li><a aria-current="page">Overview</a></li>
+            <li><a>Transactions</a></li>
+            <li><a>People</a></li>
+            <li><a>Settings</a></li>
+          </ul>
+        </div>
+        <div class="desk-screen">
+          <div class="overview-cols">
+            <div class="overview-col">
+              <div class="card">
+                <div
+                  class="card-content"
+                  style="display: flex; flex-direction: column; gap: 0.25rem"
                 >
-              </li>
-            </ul>
-            <div class="card">
-              <div class="card-content">
-                <p class="card-desc" style="margin: 0">Spending · This month</p>
-                <p class="tabular-nums" style="margin: 0.25rem 0 0">
-                  Group spent <strong>€1,411.00</strong> · You paid
-                  <strong>€612.30</strong>
-                </p>
+                  <p class="card-desc" style="margin: 0">You get back</p>
+                  <span
+                    class="balance balance--positive balance--large tabular-nums"
+                    >€248.00</span
+                  >
+                  <p class="note" style="margin: 0">from Jonas and Ravi</p>
+                </div>
               </div>
-            </div>
-            <ul class="list">
-              <li>
-                <span class="list-row"
-                  ><span class="list-main"
-                    ><span class="list-title">Activity</span
-                    ><span class="list-sub"
-                      >Every change, deletions included</span
+              <ul class="list" style="background: var(--card)">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-title">Jonas owes</span
+                    ><span
+                      class="tabular-nums"
+                      style="font-weight: 600; color: var(--negative-ink)"
+                      >€148.60</span
                     ></span
-                  ></span
-                >
-              </li>
-            </ul>
+                  >
+                </li>
+                <li>
+                  <span class="list-row"
+                    ><span class="list-title">Ravi owes</span
+                    ><span
+                      class="tabular-nums"
+                      style="font-weight: 600; color: var(--negative-ink)"
+                      >€99.40</span
+                    ></span
+                  >
+                </li>
+              </ul>
+              <ul class="list" style="background: var(--card)">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-title">Jonas pays you back</span
+                    ><span
+                      class="tabular-nums"
+                      style="font-weight: 600; color: var(--positive-ink)"
+                      >€148.60</span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="overview-col">
+              <ul class="list" style="background: var(--card)">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-main"
+                      ><span class="list-title"
+                        >Ravi added Dinner at Trattoria Il Ponte</span
+                      ><span class="list-sub">2 hours ago</span></span
+                    ><span class="tabular-nums">€128.40</span></span
+                  >
+                </li>
+              </ul>
+              <div class="card">
+                <div class="card-content">
+                  <p class="card-desc" style="margin: 0">
+                    Spending · This month
+                  </p>
+                  <p class="tabular-nums" style="margin: 0.25rem 0 0">
+                    Group spent <strong>€1,411.00</strong> · You paid
+                    <strong>€612.30</strong>
+                  </p>
+                </div>
+              </div>
+              <ul class="list">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-main"
+                      ><span class="list-title">Activity</span
+                      ><span class="list-sub"
+                        >Every change, deletions included</span
+                      ></span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -1639,9 +2019,17 @@ a[aria-current="page"] .nav-icon--primary {
     <dl class="dl" style="margin-top: 1rem">
       <dt>width</dt>
       <dd>
-        The screen widens to <code>max-w-5xl</code> for a layout marked
-        <code>data-layout="wide"</code>, and only for one. 24px between the
-        columns; the blocks inside each keep the overview's own gap.
+        The screen widens to <code>--app-content-max</code> (75rem, gutters
+        included) for a layout marked <code>data-layout="wide"</code>, and only
+        for one — which is exactly what the expanded sidebar leaves at 1440px.
+        At 1024 the two columns are about 360px each. 24px between them; the
+        blocks inside each keep the overview's own gap.
+      </dd>
+      <dt>group header</dt>
+      <dd>
+        Above the screen, outside the part that moves, at the screen's own width
+        — the readable column, or the wide one under the overview. 28px above
+        it, 20px to the tabs, 24px from the tabs to the screen.
       </dd>
       <dt>empty group</dt>
       <dd>
@@ -1649,8 +2037,9 @@ a[aria-current="page"] .nav-icon--primary {
       </dd>
       <dt>position strip</dt>
       <dd>
-        Hangs from the top of the window beside the rail, across the wide
-        column, since there is no header above it.
+        Hangs from the top of the window beside the sidebar, at whichever of its
+        widths, since there is no header above it; it fades in once the hero has
+        scrolled past the group header and out of sight.
       </dd>
     </dl>
   </section>
@@ -1658,13 +2047,35 @@ a[aria-current="page"] .nav-icon--primary {
   <section>
     <h2>Every other screen</h2>
     <p class="note">
-      Transactions, People, Settings, an entry, a person: one column,
-      <code>max-w-3xl</code>, centred in the space beside the rail, never
-      stretched across it. Gutters open to 24px at <code>lg</code> and 32px at
-      <code>xl</code>. Anything that was docked above the bar — an entry's Edit
-      and Remove — docks at the foot of the window instead, starting where the
-      rail stops.
+      Home, Notifications, Transactions, People, Settings, an entry, a person:
+      one column, <code>max-w-3xl</code>, centred in the space beside the
+      sidebar, never stretched across it. Gutters open to 24px at
+      <code>lg</code> and 40px at <code>xl</code>. Anything that was docked
+      above the bar — an entry's Edit and Remove — docks at the foot of the
+      window instead, starting where the sidebar stops.
     </p>
+  </section>
+
+  <section>
+    <h2>What gives way first at 1024px</h2>
+    <dl class="dl">
+      <dt>1</dt>
+      <dd>
+        Second columns wrap under the first. The overview's two stay side by
+        side, about 360px each.
+      </dd>
+      <dt>2</dt>
+      <dd>
+        Gutters close to 24px, the group's tile to 36px and its name to
+        <code>text-xl</code>.
+      </dd>
+      <dt>3</dt>
+      <dd>
+        The sidebar is last. It stays expanded at 1024 — it is the switcher, and
+        the only place every balance shows at once — unless the reader folds it,
+        which they can at any width.
+      </dd>
+    </dl>
   </section>
 
   <section>
@@ -1696,7 +2107,9 @@ a[aria-current="page"] .nav-icon--primary {
         <p class="note" style="margin: 0">
           Change anything below <code>lg</code> to make room for the desktop.
           The phone is where the app is used; every class this layout adds is
-          <code>lg:</code>, or <code>md:</code> for a sheet.
+          <code>lg:</code>, or <code>md:</code> for a sheet. And never let the
+          accent paint a balance in the sidebar: a position is words in the
+          tone's ink.
         </p>
       </div>
     </div>

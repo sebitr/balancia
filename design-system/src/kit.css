@@ -1344,100 +1344,404 @@ a[aria-current="page"] .nav-icon--primary {
   background: var(--primary);
 }
 
-/* The group rail: from lg (1024px) up, the header and the bottom bar stood up
-   the left edge as one 15rem column — switcher, Add, the four places, then the
-   bell and the account at the foot. `src/components/layout/group-nav.tsx`. */
+/* The sidebar: from lg (1024px) up, on every signed-in screen — Home and
+   Notifications as well as a group — in place of the header along the top
+   and the group's bottom bar. 15rem, or 4rem folded to its icons.
+   `src/components/layout/app-sidebar.tsx`. It replaced #438's group rail. */
 .frame--desk {
   display: flex;
   max-width: 64rem;
   min-height: 27rem;
 }
-.rail {
+.sidebar {
   flex: 0 0 15rem;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border);
-  background: color-mix(in oklch, var(--background) 95%, transparent);
-  padding: 1rem 0.75rem 0.75rem;
+  gap: 2px;
+  min-width: 0;
+  padding: 0.75rem;
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  font-size: 0.875rem;
 }
-.rail-switcher {
+.sidebar-top {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  min-height: 2.5rem;
+  justify-content: space-between;
+  height: 2.75rem;
+  padding: 0 2px 0 6px;
+}
+.sidebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
-.rail-switcher svg {
-  width: 1.75rem;
-  height: 1.75rem;
+.sidebar-brand svg {
+  width: 1.625rem;
+  height: 1.625rem;
   flex-shrink: 0;
 }
-.rail-add {
-  display: flex;
+.sidebar-icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
-  height: 2.5rem;
-  margin: 1.25rem 0 0.875rem;
-  border-radius: var(--radius-xl);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted-foreground);
 }
-.rail-add svg {
+.sidebar-icon-btn svg {
   width: 1.125rem;
   height: 1.125rem;
 }
-.rail ul {
+.sidebar-search {
   display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  margin: 6px 0 2px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--muted-foreground);
 }
-.rail ul a {
+.sidebar-search span:first-of-type {
+  flex: 1;
+}
+.sidebar-search svg {
+  width: 1rem;
+  height: 1rem;
+}
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    0 1px 0 var(--border);
+  color: var(--muted-foreground);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+.sidebar-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  margin: 0.5rem 0 0.625rem;
+  padding: 0 0.5rem 0 0.75rem;
+  border-radius: var(--radius-xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+.sidebar-add svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.sidebar-row {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   height: 2.5rem;
+  padding: 0 0.5rem 0 0.625rem;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  text-decoration: none;
+}
+.sidebar-row svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+.sidebar-row span:first-of-type {
+  flex: 1;
+}
+.sidebar-row[aria-current] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sidebar-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 1.875rem;
+  margin-top: 0.875rem;
+  padding: 0 2px 0 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sidebar-section .sidebar-icon-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+/* A group: its tile, its name, and where the reader stands in it in words —
+   one line per currency, each in its own tone's ink, never in --primary. */
+.sidebar-group {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.625rem;
+  min-height: 3rem;
+  padding: 6px 0.5rem;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.sidebar-group[aria-current] {
+  background: var(--sidebar-accent);
+}
+.sidebar-group-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sidebar-group-name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-pos {
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-pos--positive {
+  color: var(--positive-ink);
+}
+.sidebar-pos--negative {
+  color: var(--negative-ink);
+}
+.sidebar-pos--neutral {
+  color: var(--neutral-balance-ink);
+}
+.sidebar-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sidebar-tile--current {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.sidebar-more {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.sidebar-more svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.sidebar-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: auto -0.75rem 0;
+  padding: 0.625rem 0.75rem 0;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sidebar-foot small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+/* Folded: 4rem of 44px targets. Every label stays the control's name and
+   comes back as a tip; a group's tile carries no colour that means money. */
+.sidebar--folded {
+  flex-basis: 4rem;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+}
+.sidebar--folded .sidebar-top {
+  flex-direction: column;
+  height: auto;
+  gap: 6px;
+  padding: 0;
+}
+.sidebar-fold-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+.sidebar-fold-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.sidebar-fold-btn[aria-current] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-fold-btn--add {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.sidebar-fold-btn .sidebar-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 1.125rem;
+  height: 1.125rem;
   padding: 0 0.25rem;
+}
+.sidebar-fold-btn .sidebar-tile {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+}
+.sidebar-rule {
+  width: 2rem;
+  height: 1px;
+  margin: 0.625rem 0;
+  background: var(--sidebar-border);
+}
+.sidebar-tip {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--radius-xl);
+  background: var(--popover);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-card);
+  line-height: 1.35;
+}
+
+/* A group's header, above the screen on its four places from lg up: the
+   tile, the name with its currencies, a meta line, and the places as a
+   segmented row. `src/components/layout/group-header.tsx`. */
+.group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem 1.5rem 0;
+}
+.group-head-title {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.group-head-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.group-head-name {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.group-head-meta {
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.group-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: fit-content;
+  margin: 0;
+  padding: 3px;
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  list-style: none;
+}
+.group-tabs a {
+  display: inline-flex;
+  align-items: center;
+  height: 2.125rem;
+  padding: 0 0.875rem;
+  border-radius: 9px;
+  color: var(--muted-foreground);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  color: var(--muted-foreground);
-  transition:
-    color 150ms ease,
-    background-color 150ms ease;
 }
-.rail ul a:hover {
+.group-tabs a[aria-current="page"] {
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-card);
   color: var(--foreground);
-  background: color-mix(in oklch, var(--foreground) 6%, transparent);
 }
-.rail ul a[aria-current="page"] {
-  color: var(--primary-ink);
-  background: transparent;
-}
-.rail-foot {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin: auto -0.75rem 0;
-  border-top: 1px solid var(--border);
-  padding: 0.75rem 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-/* The screen beside the rail: one readable column, or the overview's two. */
+/* The screen beside the sidebar: one readable column, or the overview's two. */
 .desk-screen {
   flex: 1;
   min-width: 0;
   padding: 2rem 1.5rem 3rem;
+}
+.group-head + .desk-screen {
+  padding-top: 1.5rem;
+}
+.desk-main {
+  flex: 1;
+  min-width: 0;
 }
 .overview-cols {
   display: grid;
