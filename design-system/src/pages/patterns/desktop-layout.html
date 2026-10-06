@@ -280,6 +280,314 @@
   </section>
 
   <section>
+    <h2>Notifications, signing in and a group's link</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Three screens with one column each, drawn for a desk from
+      <code>lg</code> as the desktop boards 03, 19 and 22 draw them. The same
+      data and the same controls as the phone — nothing is mounted twice for the
+      two widths — and below <code>lg</code> nothing moves.
+    </p>
+
+    <div class="spec-label">Notifications</div>
+    <div class="frame frame--desk">
+      <div class="desk-screen">
+        <div
+          style="
+            max-width: 50rem;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: flex-end;
+              justify-content: space-between;
+              gap: 1rem;
+            "
+          >
+            <div>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 1.5rem;
+                  font-weight: 600;
+                  letter-spacing: -0.02em;
+                "
+              >
+                Notifications
+              </p>
+              <p class="note" style="margin: 0.125rem 0 0">
+                4 unread · what changed in your groups
+              </p>
+            </div>
+            <span style="display: flex; gap: 0.5rem">
+              <span class="btn btn--outline">Mark all as read</span>
+              <span class="btn">Notification settings</span>
+            </span>
+          </div>
+          <span
+            style="
+              display: inline-flex;
+              width: fit-content;
+              gap: 2px;
+              padding: 3px;
+              border-radius: 0.75rem;
+              background: var(--muted);
+              font-size: 0.875rem;
+            "
+          >
+            <span
+              style="
+                padding: 0.25rem 0.75rem;
+                border-radius: 9px;
+                background: var(--accent);
+                font-weight: 600;
+              "
+              >All</span
+            >
+            <span
+              style="padding: 0.25rem 0.75rem; color: var(--muted-foreground)"
+              >Unread 4</span
+            >
+            <span
+              style="padding: 0.25rem 0.75rem; color: var(--muted-foreground)"
+              >Reminders 1</span
+            >
+          </span>
+          <span class="spec-label" style="margin: 0.5rem 0 0">Today</span>
+          <div
+            class="card"
+            style="
+              padding: 0;
+              gap: 0;
+              border: 1px solid
+                color-mix(in oklch, var(--negative) 35%, transparent);
+            "
+          >
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+                gap: 0.875rem;
+                align-items: center;
+                padding: 1rem 1.25rem;
+              "
+            >
+              <span class="avatar" style="width: 2.75rem; height: 2.75rem"
+                >R</span
+              >
+              <span style="display: flex; flex-direction: column; gap: 0.25rem">
+                <strong>Ravi sent you a reminder</strong>
+                <span class="note" style="font-size: 0.875rem"
+                  >“Just a reminder: you still owe Ravi CHF 62.20 for Lisbon,
+                  March. No rush.”</span
+                >
+                <span class="note">Lisbon, March</span>
+              </span>
+              <span
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-end;
+                  color: var(--negative-ink);
+                "
+              >
+                <span
+                  class="tabular-nums"
+                  style="font-size: 1.5rem; font-weight: 600"
+                  >CHF 62.20</span
+                >
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >you owe</span
+                >
+              </span>
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 0.5rem;
+                padding: 0.625rem 1.25rem;
+                border-top: 1px solid var(--border);
+                background: color-mix(in oklch, var(--muted) 40%, var(--card));
+              "
+            >
+              <span class="btn btn--default">Settle up</span>
+              <span class="btn btn--outline">Open group</span>
+              <span class="btn">Copy link</span>
+            </div>
+          </div>
+          <ul class="list" style="background: var(--card)">
+            <li>
+              <span class="list-row" style="min-height: 3.75rem"
+                ><span class="avatar avatar--lg">A</span
+                ><span class="list-main" style="flex: 1"
+                  ><span class="list-title" style="font-weight: 400"
+                    >Amélie added Dinner at Trattoria Il Ponte</span
+                  ></span
+                ><span
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                  "
+                  ><span class="tabular-nums" style="font-weight: 500"
+                    >€128.40</span
+                  ><span class="note">2h</span></span
+                ></span
+              >
+            </li>
+            <li>
+              <span class="list-row" style="min-height: 3.75rem"
+                ><span class="avatar avatar--lg">L</span
+                ><span class="list-main" style="flex: 1"
+                  ><span class="list-title" style="font-weight: 400"
+                    >Léa made 3 changes to Electricity, July</span
+                  ></span
+                ><span class="note">5h</span></span
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin: 1rem 0 1.5rem">
+      <dt>column</dt>
+      <dd>
+        Stops at 800px (<code>max-w-200</code>) and centres in whatever room the
+        screen beside it leaves.
+      </dd>
+      <dt>rows</dt>
+      <dd>
+        Each day's run of rows between two reminders is one card: a 36px face
+        with its glyph (an added expense still wears none), a 60px row, the
+        figure at the right. The group's chip still heads its run and still
+        opens Snooze and Mute.
+      </dd>
+      <dt>reminder</dt>
+      <dd>
+        A card of its own: who sent it, their words in quotes, the group, and
+        what they ask for at the right in the debt's ink with "you owe" — never
+        the accent. Settle up, Open group and Copy link in a footer.
+      </dd>
+      <dt>Dismiss</dt>
+      <dd>
+        At every width, named for its row — "Dismiss “Amélie added Dinner…”" —
+        so a screen reader's list of buttons can tell sixteen of them apart.
+      </dd>
+    </dl>
+
+    <div class="spec-label">Sign in, and every signed-out screen</div>
+    <div class="frame frame--desk">
+      <div
+        style="
+          flex: 0 0 50%;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 2rem;
+          padding: 2rem 2.5rem;
+          background: var(--foreground);
+          color: var(--background);
+        "
+      >
+        <span class="wordmark-text">Balancia</span>
+        <span style="display: flex; flex-direction: column; gap: 0.75rem">
+          <span class="font-editorial" style="font-size: 3rem; line-height: 1"
+            >Where do I stand?</span
+          >
+          <span
+            style="
+              font-size: 0.875rem;
+              color: color-mix(in oklch, var(--background) 75%, transparent);
+            "
+            >Shared expenses on a server you run. One link for the whole group,
+            a balance per currency, and nothing sent anywhere else.</span
+          >
+        </span>
+        <span
+          class="mono"
+          style="color: color-mix(in oklch, var(--background) 75%, transparent)"
+          >home.lan</span
+        >
+      </div>
+      <div
+        style="
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+        "
+      >
+        <div
+          style="
+            width: 100%;
+            max-width: 20rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+          "
+        >
+          <p
+            style="
+              margin: 0;
+              font-size: 1.5rem;
+              font-weight: 600;
+              letter-spacing: -0.02em;
+            "
+          >
+            Back to your groups
+          </p>
+          <span class="btn btn--default" style="width: 100%"
+            >Use a passkey</span
+          >
+          <span class="note" style="text-align: center">or</span>
+          <span class="input" style="display: block">Email address</span>
+          <span class="input" style="display: block">Password</span>
+          <span class="btn btn--outline" style="width: 100%">Sign in</span>
+          <span class="btn btn--outline" style="width: 100%"
+            >Email me a sign-in code</span
+          >
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>panel</dt>
+      <dd>
+        Plum in both themes — the foreground as a ground in the light one, the
+        raised card in the dark one — never a nested <code>.dark</code>, which
+        would restate the accent. The wordmark is the way home at this width;
+        the header beside it keeps only the theme.
+      </dd>
+      <dt>instance</dt>
+      <dd>
+        The host the instance is served from, and nothing else: no version, no
+        database, no health line before sign-in.
+      </dd>
+      <dt>serif line</dt>
+      <dd>
+        "Where do I stand?" is the only serif inside the product's chrome, and
+        waits on the owner's ruling. It is one component,
+        <code>PanelLine</code>, and one line to take out.
+      </dd>
+      <dt>passkey first</dt>
+      <dd>
+        Filled, above "or", with the password's Sign in stepped back to an
+        outline. Assumed before the browser has answered, so the fields are
+        painted where they stay.
+      </dd>
+      <dt>a group's link</dt>
+      <dd>
+        The list beside "how do you want to join" — see
+        <em>Joining from a group link</em>.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
     <h2>Rules</h2>
     <div class="do-dont">
       <div class="do">

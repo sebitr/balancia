@@ -115,6 +115,10 @@
       "createOne": "Create one",
       "metaTitle": "Sign in"
     },
+    "panel": {
+      "headline": "Where do I stand?",
+      "lede": "Shared expenses on a server you run. One link for the whole group, a balance per currency, and nothing sent anywhere else."
+    },
     "validation": {
       "email": "Enter a valid email address",
       "password": "Enter your password"
@@ -2942,6 +2946,7 @@
   "notificationsPage": {
     "metaTitle": "Notifications",
     "title": "Notifications",
+    "summary": "{count, plural, =0 {Nothing unread} other {# unread}} · what changed in your groups",
     "bell": "Notifications",
     "bellUnread": "Notifications, {count} unread",
     "empty": "Nothing to catch up on",
@@ -2973,7 +2978,9 @@
     "archiveExpand": "Show the archive",
     "archiveCollapse": "Hide the archive",
     "dismissed": "Notification dismissed",
+    "dismissNamed": "Dismiss “{row}”",
     "settleUp": "Settle up",
+    "reminderFrom": "{name} sent you a reminder",
     "copyLink": "Copy link",
     "linkCopied": "Link copied",
     "linkCopyFailed": "That link could not be copied.",

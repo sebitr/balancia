@@ -81,7 +81,7 @@ describe("opening a notification", () => {
     const only = row();
     const { user } = renderInbox([only]);
 
-    await user.click(screen.getByRole("button", { name: /Hervé added/ }));
+    await user.click(screen.getByRole("button", { name: /^Hervé added/ }));
 
     expect(markReadAction).toHaveBeenCalledWith([only.id]);
     expect(push).toHaveBeenCalledWith(only.url);
@@ -91,7 +91,7 @@ describe("opening a notification", () => {
   it("writes nothing when the row was already read", async () => {
     const { user } = renderInbox([row({ read: true })]);
 
-    await user.click(screen.getByRole("button", { name: /Hervé added/ }));
+    await user.click(screen.getByRole("button", { name: /^Hervé added/ }));
 
     expect(markReadAction).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe("the counts beside the filters", () => {
     const { user } = renderInbox([row(), row()]);
 
     await user.click(
-      screen.getAllByRole("button", { name: /Hervé added/ })[0]!,
+      screen.getAllByRole("button", { name: /^Hervé added/ })[0]!,
     );
 
     expect(
@@ -134,9 +134,9 @@ describe("narrowing to one kind", () => {
 
     await user.click(screen.getByRole("button", { name: "Unread 1" }));
 
-    expect(screen.getAllByRole("button", { name: /Hervé added/ })).toHaveLength(
-      1,
-    );
+    expect(
+      screen.getAllByRole("button", { name: /^Hervé added/ }),
+    ).toHaveLength(1);
   });
 
   /** An empty filter explains itself rather than showing a blank column. */
@@ -169,7 +169,9 @@ describe("a run of changes to one expense", () => {
     renderInbox(burst());
 
     expect(
-      screen.getByRole("button", { name: /Hervé made 3 changes to jardinier/ }),
+      screen.getByRole("button", {
+        name: /^Hervé made 3 changes to jardinier/,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -178,7 +180,7 @@ describe("a run of changes to one expense", () => {
     const { user } = renderInbox(rows);
 
     await user.click(
-      screen.getByRole("button", { name: /Hervé made 3 changes/ }),
+      screen.getByRole("button", { name: /^Hervé made 3 changes/ }),
     );
 
     expect(screen.getByText(rows[1]!.sentence)).toBeInTheDocument();
@@ -202,7 +204,7 @@ describe("finished imports", () => {
   it("opens the group's expenses when there is only one", async () => {
     const { user } = renderInbox([anImport()]);
 
-    await user.click(screen.getByRole("button", { name: /Import finished/ }));
+    await user.click(screen.getByRole("button", { name: /^Import finished/ }));
 
     expect(push).toHaveBeenCalledWith("/groups/chalet/expenses");
   });
@@ -210,7 +212,7 @@ describe("finished imports", () => {
   it("gathers several into a count that opens", async () => {
     const { user } = renderInbox([anImport(), anImport()]);
 
-    const digest = screen.getByRole("button", { name: /2 imports finished/ });
+    const digest = screen.getByRole("button", { name: /^2 imports finished/ });
     expect(digest).toHaveAttribute("aria-expanded", "false");
 
     await user.click(digest);
@@ -244,6 +246,56 @@ describe("a reminder", () => {
 
     expect(push).toHaveBeenCalledWith("/groups/chalet/settle");
   });
+
+  /*
+   * What the card says from `lg`, where it is drawn wider. jsdom runs no
+   * media queries, so both drawings are in the document here; what is held is
+   * the wording and where each button goes, not which one a phone shows.
+   */
+  it("says who sent it, and what they ask for in the debt's own tone", () => {
+    renderInbox([{ ...reminder(), actor: "Cyril", debt: "CHF 33.34" }]);
+
+    expect(screen.getByText("Cyril sent you a reminder")).toBeInTheDocument();
+    const figure = screen.getByText("CHF 33.34");
+    expect(figure).toHaveClass("text-negative-ink");
+    expect(figure).not.toHaveClass("text-primary-ink");
+    expect(figure.nextElementSibling).toHaveTextContent("you owe");
+  });
+
+  it("keeps the phone's headline where the sender has no name", () => {
+    renderInbox([{ ...reminder(), actor: null, debt: "CHF 33.34" }]);
+
+    expect(screen.getByText("CHF 33.34 from Multi currency")).not.toHaveClass(
+      "lg:hidden",
+    );
+    expect(screen.queryByText(/sent you a reminder/)).toBeNull();
+  });
+
+  it("opens the group it is about, and marks it read on the way", async () => {
+    const one = reminder();
+    const { user } = renderInbox([one]);
+
+    await user.click(screen.getByRole("button", { name: "Open group" }));
+
+    expect(push).toHaveBeenCalledWith("/groups/chalet");
+    expect(markReadAction).toHaveBeenCalledWith([one.id]);
+  });
+});
+
+describe("the unread line", () => {
+  it("counts what is unread, and says so when nothing is", async () => {
+    const { user } = renderInbox([row(), row({ read: true })]);
+
+    expect(
+      screen.getByText("1 unread · what changed in your groups"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mark all as read" }));
+
+    expect(
+      screen.getByText("Nothing unread · what changed in your groups"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("getting rid of a row without a phone", () => {
@@ -255,24 +307,51 @@ describe("getting rid of a row without a phone", () => {
   it("offers a Dismiss button that takes the row away", async () => {
     const { user } = renderInbox([row(), row()]);
 
-    await user.click(screen.getAllByRole("button", { name: "Dismiss" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: /^Dismiss/ })[0]!);
 
-    expect(screen.getAllByRole("button", { name: /Hervé added/ })).toHaveLength(
-      1,
+    expect(
+      screen.getAllByRole("button", { name: /^Hervé added/ }),
+    ).toHaveLength(1);
+  });
+
+  /**
+   * Sixteen buttons all called "Dismiss" are sixteen buttons nobody can tell
+   * apart in a screen reader's list of them, or by voice.
+   */
+  it("names the row each Dismiss button takes away", async () => {
+    const first = row();
+    const burst = [
+      row({ entityId: "e-run", subject: "jardinier" }),
+      row({ entityId: "e-run", subject: "jardinier" }),
+    ];
+    const { user } = renderInbox([first, ...burst]);
+
+    expect(
+      screen.getByRole("button", { name: `Dismiss “${first.sentence}”` }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Dismiss “Hervé made 2 changes to jardinier”",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: `Dismiss “${first.sentence}”` }),
     );
+    expect(screen.queryByText(first.sentence)).toBeNull();
   });
 
   it("confirms with a way back that restores it", async () => {
     const { user } = renderInbox([row()]);
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    await user.click(screen.getByRole("button", { name: /^Dismiss/ }));
     expect(toastUndoable).toHaveBeenCalled();
 
     await userEvent.setup();
     toastUndoable.mock.calls.at(-1)![1].onUndo();
 
     expect(
-      await screen.findByRole("button", { name: /Hervé added/ }),
+      await screen.findByRole("button", { name: /^Hervé added/ }),
     ).toBeInTheDocument();
   });
 });

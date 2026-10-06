@@ -34,6 +34,8 @@ import {
 import {
   ActivityRow,
   BurstRow,
+  burstSentence,
+  digestSentence,
   Dismissible,
   GroupChip,
   ImportDigest,
@@ -82,6 +84,17 @@ const DAY_LABELS: Record<
  * that writes the push message, so a card on a lock screen and the row it
  * corresponds to cannot say different things. What this component adds is
  * shape: which day, which run, what folds, and what is still unread.
+ *
+ * ## From `lg` up
+ *
+ * One list and one loader at every width; a desk only draws it differently,
+ * as the desktop board's "03 · Notifications" does. The column stops at
+ * 800px and centres in whatever room the screen beside it leaves. The title
+ * gains the unread line, the two icon buttons say their names, the filters
+ * shrink to their labels, and each day's run of rows between reminders sits
+ * in one card — a reminder stands apart as a card of its own. No control is
+ * mounted twice for the two widths: each one changes its own drawing, so a
+ * screen reader meets the same buttons in the same order at any width.
  */
 export function NotificationList({
   items,
@@ -272,21 +285,38 @@ export function NotificationList({
   const empty = sections.length === 0;
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 pb-3">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <div className="flex items-center gap-1">
+    <div className="lg:mx-auto lg:w-full lg:max-w-200">
+      <div className="flex items-center justify-between gap-3 pb-3 lg:items-end lg:gap-4 lg:pb-5">
+        <div className="min-w-0">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            {t("title")}
+          </h1>
+          {/* The count the filter below also carries, said once as a
+              sentence where there is room for one. */}
+          <p className="hidden text-sm text-muted-foreground lg:mt-0.5 lg:block">
+            {t("summary", { count: counts.unread })}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 lg:gap-2">
+          {/* Both keep the name they are given here as the words they show
+              from `lg`, so what is read out and what is seen agree. */}
           {counts.unread > 0 && (
             <button
               type="button"
               onClick={markAll}
               disabled={isPending}
               aria-label={t("markAllRead")}
-              className={ICON_BUTTON}
+              className={cn(
+                ICON_BUTTON,
+                LABELLED,
+                "lg:border lg:bg-background",
+              )}
             >
-              <CheckCheck aria-hidden="true" className="size-[18px]" />
+              <CheckCheck
+                aria-hidden="true"
+                className="size-[18px] lg:size-4"
+              />
+              <span className="hidden lg:inline">{t("markAllRead")}</span>
             </button>
           )}
           {/* A way into settings, like the avatar, so closing settings
@@ -296,9 +326,13 @@ export function NotificationList({
             transitionTypes={PUSH}
             onClick={rememberOrigin}
             aria-label={t("settingsLink")}
-            className={cn(ICON_BUTTON, "text-muted-foreground")}
+            className={cn(ICON_BUTTON, "text-muted-foreground", LABELLED)}
           >
-            <SlidersHorizontal aria-hidden="true" className="size-[17px]" />
+            <SlidersHorizontal
+              aria-hidden="true"
+              className="size-[17px] lg:size-4"
+            />
+            <span className="hidden lg:inline">{t("settingsLink")}</span>
           </Link>
         </div>
       </div>
@@ -306,7 +340,7 @@ export function NotificationList({
       <div
         role="group"
         aria-label={t("filterLabel")}
-        className="flex gap-0.5 rounded-xl bg-wash-2 p-[3px]"
+        className="flex gap-0.5 rounded-xl bg-wash-2 p-[3px] lg:w-fit"
       >
         {FILTERS.map((one) => (
           <button
@@ -316,6 +350,8 @@ export function NotificationList({
             aria-pressed={filter === one}
             className={cn(
               "tap-target h-7 flex-1 rounded-[9px] text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+              // As wide as the label from `lg`, not a third of the column.
+              "lg:h-7.5 lg:flex-none lg:px-3 lg:text-sm",
               filter === one
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground hover:text-foreground",
@@ -355,19 +391,27 @@ export function NotificationList({
           description={t(EMPTY_COPY[filter].hint)}
         />
       ) : (
-        <div className="pt-1.5">
+        <div className="pt-1.5 lg:pt-0">
           {sections.map((section) => (
-            <section key={section.day} className="pt-3.5">
-              <h2 className="px-0.5 pb-1.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+            <section key={section.day} className="pt-3.5 lg:pt-6">
+              <h2 className="px-0.5 pb-1.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase lg:px-0 lg:pb-2.5 lg:text-xs lg:font-medium lg:tracking-[0.05em]">
                 {t(DAY_LABELS[section.day])}
               </h2>
 
               <ul>
-                {section.items.map((item) => {
+                {section.items.map((item, index) => {
                   if (item.kind === "reminder") {
                     return (
-                      <li key={item.key}>
-                        <Dismissible onDismiss={() => dismiss([item.row.id])}>
+                      <li
+                        key={item.key}
+                        // From `lg` a card of its own, set off from the rows'
+                        // card above and below it.
+                        className="lg:not-first:mt-3 lg:not-last:mb-3"
+                      >
+                        <Dismissible
+                          name={item.row.title}
+                          onDismiss={() => dismiss([item.row.id])}
+                        >
                           <ReminderCard
                             row={item.row}
                             now={now}
@@ -376,16 +420,36 @@ export function NotificationList({
                               router.push(`/groups/${item.row.groupId}/settle`);
                             }}
                             onCopy={() => void copyLink(item.row)}
+                            onOpen={() => {
+                              markRead([item.row.id]);
+                              router.push(`/groups/${item.row.groupId}`);
+                            }}
                           />
                         </Dismissible>
                       </li>
                     );
                   }
 
+                  // From `lg`, the rows between two reminders are one card:
+                  // its first row carries the top of it, its last the bottom.
+                  const items = section.items;
+                  const opens =
+                    index === 0 || items[index - 1]!.kind === "reminder";
+                  const closes =
+                    index === items.length - 1 ||
+                    items[index + 1]!.kind === "reminder";
+                  const inCard = cn(
+                    "lg:border-x lg:bg-card",
+                    opens && "lg:overflow-hidden lg:rounded-t-2xl lg:border-t",
+                    closes && "lg:overflow-hidden lg:rounded-b-2xl lg:border-b",
+                  );
+
                   if (item.kind === "digest") {
                     return (
-                      <li key={item.key}>
+                      <li key={item.key} className={inCard}>
                         <Dismissible
+                          name={digestSentence(t, item.rows)}
+                          onCard
                           onDismiss={() =>
                             dismiss(item.rows.map((row) => row.id))
                           }
@@ -403,14 +467,14 @@ export function NotificationList({
                             onOpen={open}
                           />
                         </Dismissible>
-                        <RowDivider />
+                        <RowDivider last={closes} />
                       </li>
                     );
                   }
 
                   const lead = item.kind === "burst" ? item.rows[0]! : item.row;
                   return (
-                    <li key={item.key}>
+                    <li key={item.key} className={inCard}>
                       {item.showChip && (
                         <GroupChip
                           row={lead}
@@ -423,6 +487,12 @@ export function NotificationList({
                         />
                       )}
                       <Dismissible
+                        name={
+                          item.kind === "burst"
+                            ? burstSentence(t, item.rows)
+                            : item.row.sentence
+                        }
+                        onCard
                         onDismiss={() =>
                           dismiss(
                             item.kind === "burst"
@@ -451,7 +521,7 @@ export function NotificationList({
                           />
                         )}
                       </Dismissible>
-                      <RowDivider />
+                      <RowDivider last={closes} />
                     </li>
                   );
                 })}
@@ -542,6 +612,10 @@ export function NotificationList({
 
 const ICON_BUTTON =
   "tap-target inline-flex size-8 items-center justify-center rounded-[11px] text-foreground/85 transition-colors hover:bg-wash-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
+
+/** An icon button that grows its words from `lg`: a desk's 36px button. */
+const LABELLED =
+  "lg:h-9 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-sm lg:font-medium lg:text-foreground lg:hover:bg-muted";
 
 /**
  * The copy each filter shows when it has nothing to show.
