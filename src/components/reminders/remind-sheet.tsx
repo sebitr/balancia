@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useNumberLocale } from "@/i18n/format-context";
 import { toast } from "sonner";
@@ -17,9 +17,20 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Amount } from "@/components/money/amount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -138,6 +149,7 @@ export function RemindSheet({
   /** Set once the sender types: their words then survive a tone change. */
   const [edited, setEdited] = useState<string | null>(null);
   const [logToActivity, setLogToActivity] = useState(true);
+  const activitySwitchId = useId();
   /**
    * Whether the way to pay goes with the message, and which one.
    *
@@ -311,18 +323,41 @@ export function RemindSheet({
     return lines.join("\n");
   };
 
-  const shuffle = () => {
-    if (edited !== null && !window.confirm(t("discardEdit"))) return;
+  /** A fresh draft in `nextTone`, over whatever is in the box. */
+  const replaceDraft = (nextTone: RemindTone) => {
     setEdited(null);
-    setDraftKey(pickDraft(tone, draftKey).key);
+    setTone(nextTone);
+    setDraftKey(pickDraft(nextTone, draftKey).key);
+  };
+
+  /*
+   * A new draft asked for while the sender's own words are in the box, held
+   * until they say whether to throw those words away.
+   *
+   * This was `window.confirm`, which answered in the browser's own dialog —
+   * "OK" and "Cancel", in the browser's language rather than the app's, with
+   * no way to say which of the two keeps the message. The app's dialog names
+   * both outcomes on the buttons themselves.
+   */
+  const [pendingDraft, setPendingDraft] = useState<{
+    readonly tone: RemindTone;
+  } | null>(null);
+
+  const shuffle = () => {
+    if (edited !== null) {
+      setPendingDraft({ tone });
+      return;
+    }
+    replaceDraft(tone);
   };
 
   const changeTone = (next: RemindTone) => {
     if (next === tone) return;
-    if (edited !== null && !window.confirm(t("discardEdit"))) return;
-    setEdited(null);
-    setTone(next);
-    setDraftKey(pickDraft(next, draftKey).key);
+    if (edited !== null) {
+      setPendingDraft({ tone: next });
+      return;
+    }
+    replaceDraft(next);
   };
 
   const record = (recipient: RemindRecipient, message: string) => {
@@ -694,15 +729,17 @@ export function RemindSheet({
             {/*
              * Named for what it is, because the two do different things in
              * the hands of whoever opens them: the group's page asks them to
-             * sign in, the invite link asks which name on the list is theirs.
+             * sign in, the group link asks which name on the list is theirs.
+             * "Group link" is the People screen's name for the second, so the
+             * first is the group's page rather than a second "link".
              */}
             {current && (
               <p className="flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
                 <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
                 <span className="sr-only">
                   {current.link.kind === "invite"
-                    ? t("inviteLink")
-                    : t("groupLink")}
+                    ? t("groupLink")
+                    : t("groupPage")}
                 </span>
                 <span className="truncate">
                   {withoutScheme(linkUrl(current.link, groupId))}
@@ -725,24 +762,11 @@ export function RemindSheet({
         </div>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setLogToActivity((on) => !on)}
-          aria-pressed={logToActivity}
-          className={cn(
-            "tap-target inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-            logToActivity ? PICKED_CHIP : UNPICKED,
-          )}
-        >
-          <Clock aria-hidden="true" className="size-3.5" />
-          {t("logActivity")}
-        </button>
-
-        {/* Absent rather than disabled when there is nothing to attach: a
-            reader who has never said how they want to be paid back, or a
-            reminder the app delivers itself. */}
-        {payOptions.length > 0 && (
+      {/* Absent rather than disabled when there is nothing to attach: a
+          reader who has never said how they want to be paid back, or a
+          reminder the app delivers itself. */}
+      {payOptions.length > 0 && (
+        <div className="mb-3 flex gap-2">
           <button
             type="button"
             onClick={() => setAttachPay((on) => !on)}
@@ -755,7 +779,35 @@ export function RemindSheet({
             <Wallet aria-hidden="true" className="size-3.5" />
             {t("payWith")}
           </button>
-        )}
+        </div>
+      )}
+
+      {/*
+       * Whether the group's Activity gets a line saying a reminder went out.
+       *
+       * It was a pill reading "Visible to the group", tinted when on, which
+       * looked like a label on the message rather than a choice about it —
+       * and said nothing about where it would be visible. A switch says it is
+       * one, and the row says where. Nothing is stored when it moves: it is a
+       * choice about this send, carried by the button below, so it is not one
+       * of the settings that save on the press.
+       */}
+      <div className="mb-4 flex items-center gap-3 rounded-[14px] border border-border px-3 py-2.5">
+        <Clock
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+        <label
+          htmlFor={activitySwitchId}
+          className="min-w-0 flex-1 cursor-pointer text-sm"
+        >
+          {t("showInActivity")}
+        </label>
+        <Switch
+          id={activitySwitchId}
+          checked={logToActivity}
+          onCheckedChange={setLogToActivity}
+        />
       </div>
 
       {current && (
@@ -780,6 +832,31 @@ export function RemindSheet({
           </p>
         </>
       )}
+
+      <AlertDialog
+        open={pendingDraft !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDraft(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("replaceTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("replaceBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("replaceKeep")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDraft) replaceDraft(pendingDraft.tone);
+                setPendingDraft(null);
+              }}
+            >
+              {t("replaceConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

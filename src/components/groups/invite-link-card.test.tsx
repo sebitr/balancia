@@ -253,9 +253,7 @@ describe("a link that cannot be shown", () => {
   it("offers to make the first one when a group has never had a link", () => {
     renderCard({ link: null });
 
-    expect(
-      screen.getByText("This group has no invite link yet."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("There is no group link yet.")).toBeInTheDocument();
     expect(screen.queryByText("Active")).toBeNull();
   });
 });

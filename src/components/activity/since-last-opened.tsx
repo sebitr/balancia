@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PUSH } from "@/components/motion/transitions";
+import { getNumberLocale } from "@/i18n/preferences";
 import type { ActivityEntry } from "@/modules/activity/service";
-import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
+import {
+  actorOf,
+  describeActivity,
+  NOBODY,
+  type ActivityPeople,
+  type ActivityTranslate,
+} from "./describe";
 
 /**
  * What changed while the reader was away.
@@ -26,6 +33,7 @@ export async function SinceLastOpened({
   entries,
   lastOpenedAt,
   groupId,
+  people = NOBODY,
 }: {
   entries: readonly ActivityEntry[];
   /** Null on a first visit, when everything counts as new. */
@@ -33,16 +41,20 @@ export async function SinceLastOpened({
   groupId: string;
   /** Pinned by the server, so relative times survive hydration unchanged. */
   now: string;
+  /** The reader, and the names the events point at; see `namesInActivity`. */
+  people?: ActivityPeople;
 }) {
-  const t = await getTranslations("activity");
-  const tGroup = await getTranslations("group");
-  const translate = t as unknown as ActivityTranslate;
   const boundary = lastOpenedAt ? new Date(lastOpenedAt) : null;
   const unseen = entries.filter(
     (entry) => boundary === null || entry.createdAt > boundary,
   );
 
   if (unseen.length === 0) return null;
+
+  const t = await getTranslations("activity");
+  const tGroup = await getTranslations("group");
+  const translate = t as unknown as ActivityTranslate;
+  const reader = { ...people, locale: await getNumberLocale() };
 
   return (
     <section
@@ -92,7 +104,7 @@ export async function SinceLastOpened({
                 >
                   {actor}{" "}
                 </span>
-                {describeActivity(entry, translate)}
+                {describeActivity(entry, translate, reader)}
               </span>
             </li>
           );

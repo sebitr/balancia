@@ -183,7 +183,9 @@ export function OnboardingFlow({
   /** The listed name picked on a shared link; null for somebody new. */
   const [claimed, setClaimed] = useState<JoinMemberView | null>(null);
   /** Which way in was actually taken, for the checklist's first receipt. */
-  const [credential, setCredential] = useState<"passkey" | "code" | null>(null);
+  const [credential, setCredential] = useState<
+    "passkey" | "code" | "password" | null
+  >(null);
   const [email, setEmail] = useState(arrivedWith?.email ?? "");
   /** The group the flow produced, once it is known. */
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
@@ -317,6 +319,9 @@ export function OnboardingFlow({
     [arrival],
   );
 
+  /** The name somebody starts with before picking one off the list. */
+  const unpickedName = knownName || (arrivedWith?.name ?? "");
+
   /**
    * Back to a shared link's list, having un-chosen the name.
    *
@@ -325,10 +330,37 @@ export function OnboardingFlow({
    * name somebody new typed is kept: it is theirs, and the row can say it.
    */
   const backToList = () => {
-    if (claimed) setName(knownName || (arrivedWith?.name ?? ""));
+    if (claimed) setName(unpickedName);
     setClaimed(null);
     setJoinError(null);
     advance("whichOne");
+  };
+
+  /*
+   * A shared link's two screens side by side, from `lg`.
+   *
+   * The desktop board "22 · Signed out on the group link" draws the list
+   * beside "how do you want to join" once a name is picked, so a desk can see
+   * what it chose from while it chooses how to come in. Nothing about the
+   * route changes: the list opens alone, picking a name is still the step to
+   * the second screen, and "Not you?" still goes back to the list alone.
+   * Below `lg` the list beside it is `display: none`, so a phone renders the
+   * second screen by itself, exactly as before.
+   */
+  const sideBySide =
+    arrival === "shared" && screen === "keepIt" && initialGroup !== null;
+
+  /**
+   * Another name picked from the list beside the second screen: the screen
+   * follows it in place. Still nothing committed, and no step counted — the
+   * reader has not moved on, only changed their answer. Held while a join is
+   * in flight, which has already named who it is joining.
+   */
+  const pickBeside = (member: JoinMemberView | null) => {
+    if (joining) return;
+    setName(member ? member.displayName : claimed ? unpickedName : name);
+    setClaimed(member);
+    setJoinError(null);
   };
 
   const goBack = () => {
@@ -418,24 +450,30 @@ export function OnboardingFlow({
   /**
    * After the credential, on a shared link.
    *
-   * A signup and a code sign-in carry the join with them and say which group
-   * it put the account in. A passkey sign-in cannot: the credential names the
-   * account on its own, through a route that has never heard of the link, so
-   * the join follows it here — the account is signed in by now, which makes
-   * it exactly the signed-in reader's join. Any other way of coming back
-   * without a group means the name was taken or the link died in the
-   * meantime; the account still exists, so the dashboard is where it goes,
-   * and the reason is said rather than the group pretended.
+   * A passkey or code signup and a code sign-in carry the join with them and
+   * say which group it put the account in. A passkey sign-in cannot: the
+   * credential names the account on its own, through a route that has never
+   * heard of the link, so the join follows it here — the account is signed in
+   * by now, which makes it exactly the signed-in reader's join. A password
+   * signup is the same case: `registerAction` was written for a page with no
+   * link behind it and carries no join, but it leaves the new account signed
+   * in. Any other way of coming back without a group means the name was taken
+   * or the link died in the meantime; the account still exists, so the
+   * dashboard is where it goes, and the reason is said rather than the group
+   * pretended.
    */
   const finishOnSharedLink = async (outcome: {
-    credential: "passkey" | "code";
+    credential: "passkey" | "code" | "password";
     joinedGroupId: string | null;
   }) => {
     if (outcome.joinedGroupId) {
       arrive(outcome.joinedGroupId);
       return;
     }
-    if (outcome.credential === "passkey" && intent === "signin") {
+    if (
+      (outcome.credential === "passkey" && intent === "signin") ||
+      outcome.credential === "password"
+    ) {
       setJoining(true);
       const result = await joinWithAccountAction(joiner());
       setJoining(false);
@@ -467,6 +505,23 @@ export function OnboardingFlow({
     invite: { url: string; expiresAt: string | null };
   } | null>(null);
   const detectedTimezone = useDetectedTimezone();
+  /*
+   * The group's currency: where the device is, until the reader picks one.
+   *
+   * A guest has no preference to state, so the guess is the place (#420). It
+   * is the one answer about a group that can never change, and this screen
+   * used to keep it to itself — a phone abroad started a group in the wrong
+   * currency with no way to see it until the first expense. So it is shown,
+   * and can be changed, as the create sheet does for an account.
+   *
+   * Derived rather than stored, for the create sheet's reason: the zone
+   * arrives at hydration, and a late answer may replace the guess but never
+   * the reader's own choice.
+   */
+  const [pickedCurrency, setPickedCurrency] = useState<string | null>(null);
+  const groupCurrency =
+    pickedCurrency ??
+    defaultCurrency({ device: currencyOfTimezone(detectedTimezone) });
   const startGroup = async (startedName: string) => {
     setJoinError(null);
     setJoining(true);
@@ -474,10 +529,7 @@ export function OnboardingFlow({
       groupName: startedName,
       displayName: name.trim(),
       timezone: detectedTimezone ?? "UTC",
-      // A guest has no preference to state, so where the device is decides.
-      baseCurrency: defaultCurrency({
-        device: currencyOfTimezone(detectedTimezone),
-      }),
+      baseCurrency: groupCurrency,
     });
     setJoining(false);
     if (!result.ok || !result.data) {
@@ -512,7 +564,12 @@ export function OnboardingFlow({
   if (arrival === "shared" && !initialGroup) return <DeadLinkScreen />;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-6">
+    <div
+      className={cn(
+        "mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-6",
+        sideBySide && "lg:max-w-5xl lg:px-8",
+      )}
+    >
       <header className="flex items-center gap-3 pt-4 pb-3.5">
         {previous && !finished ? (
           <button
@@ -554,8 +611,26 @@ export function OnboardingFlow({
         className={cn(
           "flex flex-1 flex-col pt-2",
           "motion-safe:slide-in-from-bottom-1.5 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in",
+          sideBySide &&
+            "lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:pt-6",
         )}
       >
+        {sideBySide && (
+          <div className="hidden lg:flex lg:flex-col">
+            <WhichOneScreen
+              group={initialGroup}
+              inviterName={inviterName}
+              accountName={arrivedWith?.name ?? null}
+              members={members}
+              typedName={unpickedName}
+              heading="h2"
+              picked={claimed?.id ?? "new"}
+              onPick={pickBeside}
+              onNewHere={() => pickBeside(null)}
+            />
+          </div>
+        )}
+
         {screen === "welcome" && arrival !== "shared" && (
           <WelcomeScreen
             arrival={arrival}
@@ -602,34 +677,45 @@ export function OnboardingFlow({
         )}
 
         {screen === "keepIt" && (
-          <KeepItScreen
-            groupName={groupName}
-            member={claimed}
-            name={name}
-            onNameChange={setName}
-            accountName={arrivedWith?.name ?? null}
-            registrationAllowed={registrationAllowed}
-            busy={joining}
-            error={joinError}
-            onJoin={() => void joinWithAccount()}
-            onChoose={(chosen) => {
-              setIntent(chosen);
-              if (chosen !== "guest") {
-                advance("identity");
-                return;
-              }
-              // The guest option commits here: there is no credential screen
-              // after it to carry the join, so the join is this tap.
-              void joinAsGuest();
-            }}
-            onBackToList={backToList}
-          />
+          // A card beside the list from `lg`; below it, a plain column that
+          // hands its height on to the screen inside, as `main` does.
+          <div
+            className={cn(
+              "flex flex-1 flex-col",
+              sideBySide &&
+                "lg:rounded-2xl lg:bg-card lg:p-6 lg:ring-1 lg:ring-foreground/10",
+            )}
+          >
+            <KeepItScreen
+              groupName={groupName}
+              member={claimed}
+              name={name}
+              onNameChange={setName}
+              accountName={arrivedWith?.name ?? null}
+              registrationAllowed={registrationAllowed}
+              busy={joining}
+              error={joinError}
+              onJoin={() => void joinWithAccount()}
+              onChoose={(chosen) => {
+                setIntent(chosen);
+                if (chosen !== "guest") {
+                  advance("identity");
+                  return;
+                }
+                // The guest option commits here: there is no credential screen
+                // after it to carry the join, so the join is this tap.
+                void joinAsGuest();
+              }}
+              onBackToList={backToList}
+            />
+          </div>
         )}
 
         {screen === "identity" && (
           <IdentityScreen
             intent={intent}
             name={name}
+            onNameChange={setName}
             email={email}
             onEmailChange={setEmail}
             codeSignupAvailable={codeSignupAvailable}
@@ -714,6 +800,8 @@ export function OnboardingFlow({
           <StartGroupScreen
             name={name}
             onNameChange={setName}
+            currency={groupCurrency}
+            onCurrencyChange={setPickedCurrency}
             busy={joining}
             error={joinError}
             onSubmit={(startedName) => void startGroup(startedName)}
@@ -724,7 +812,8 @@ export function OnboardingFlow({
           <GroupReady
             groupId={startedGroup.groupId}
             groupName={startedGroup.groupName}
-            people={[name.trim()]}
+            // Started from a name and a group name, with nobody else typed in.
+            others={[]}
             invite={startedGroup.invite}
             onSkip={leave}
             heading="h1"

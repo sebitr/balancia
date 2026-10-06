@@ -1,15 +1,21 @@
-<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The group rail, the overview in two columns, sheets at a phone's width" -->
+<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The sidebar, a group's header and tabs, the overview in two columns, sheets at a phone's width" -->
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Patterns</div>
     <h1>Desktop layout</h1>
     <p class="lede">
       The app is drawn for a phone, and a desktop window gets the same screens
-      with the room used modestly: a rail in place of the bottom bar, two
-      columns on the one screen that has two kinds of thing to say, and every
-      other screen left at the one readable column it has always had. Entering a
-      month of receipts is a desk task; nothing else here is a reason to
-      redesign a screen.
+      with the room used modestly: a sidebar in place of the header and the
+      bottom bar, a group's places as tabs under its name, two columns on the
+      one screen that has two kinds of thing to say, and every other screen left
+      at the one readable column it has always had. Entering a month of receipts
+      is a desk task; nothing else here is a reason to redesign a screen.
+    </p>
+    <p class="note">
+      #438 first used the width with a 15rem rail inside a group — the switcher,
+      Add, the four places and the account. The sidebar replaced it: the places
+      moved into the group's header, and everything else went onto every
+      signed-in screen, Home included.
     </p>
   </header>
 
@@ -29,9 +35,16 @@
       </dd>
       <dt>lg up</dt>
       <dd>
-        1024px and wider. Inside a group, the rail; on the overview, two
-        columns. The dashboard and the other screens with nothing to navigate
-        between keep the header along the top.
+        1024px and wider. The sidebar on every signed-in screen — Home and
+        Notifications too — in place of the header and the bar; a group's header
+        and tabs above its four places; on the overview, two columns. Settings
+        stays a surface of its own with its ✕, and no sidebar.
+      </dd>
+      <dt>xl up</dt>
+      <dd>
+        1280px and wider. Everything as drawn: 40px gutters, the group's tile
+        48px and its name a step larger. From 1536px the wide column stops at
+        75rem and centres.
       </dd>
     </dl>
   </section>
@@ -46,101 +59,147 @@
       all read it in the order the single column always had.
     </p>
     <div class="frame frame--desk">
-      <div class="rail" aria-hidden="true">
-        <div class="rail-switcher">Lisbon, March</div>
-        <span class="rail-add">Add</span>
-        <ul>
-          <li><a aria-current="page">Overview</a></li>
-          <li><a>Transactions</a></li>
-          <li><a>People</a></li>
-          <li><a>Settings</a></li>
-        </ul>
-        <div class="rail-foot"><span class="avatar">ST</span> Sébastien</div>
+      <div class="sidebar" aria-hidden="true">
+        <div class="sidebar-top">
+          <span class="sidebar-brand">Balancia</span>
+        </div>
+        <span class="sidebar-search"><span>Search or jump to</span></span>
+        <span class="sidebar-add">Add expense</span>
+        <span class="sidebar-row"><span>Home</span></span>
+        <span class="sidebar-row"
+          ><span>Notifications</span><span class="sidebar-count">4</span></span
+        >
+        <div class="sidebar-section"><span>Groups</span></div>
+        <span class="sidebar-group" aria-current="true"
+          ><span class="sidebar-tile sidebar-tile--current">LM</span
+          ><span class="sidebar-group-text"
+            ><span class="sidebar-group-name">Lisbon, March</span
+            ><span class="sidebar-pos sidebar-pos--positive"
+              >you are owed €248.00</span
+            ><span class="sidebar-pos sidebar-pos--negative"
+              >you owe CHF 62.20</span
+            ></span
+          ></span
+        >
+        <span class="sidebar-group"
+          ><span class="sidebar-tile">F4</span
+          ><span class="sidebar-group-text"
+            ><span class="sidebar-group-name">Flat 4B</span
+            ><span class="sidebar-pos sidebar-pos--negative"
+              >you owe €36.80</span
+            ></span
+          ></span
+        >
+        <div class="sidebar-foot"><span class="avatar">SB</span> Sébastien</div>
       </div>
-      <div class="desk-screen">
-        <div class="overview-cols">
-          <div class="overview-col">
-            <div class="card">
-              <div
-                class="card-content"
-                style="display: flex; flex-direction: column; gap: 0.25rem"
-              >
-                <p class="card-desc" style="margin: 0">You get back</p>
-                <span
-                  class="balance balance--positive balance--large tabular-nums"
-                  >€248.00</span
-                >
-                <p class="note" style="margin: 0">from Jonas and Ravi</p>
-              </div>
+      <div class="desk-main">
+        <div class="group-head">
+          <div class="group-head-title">
+            <span class="group-head-tile">LM</span>
+            <div>
+              <p class="group-head-name">
+                Lisbon, March
+                <span class="badge badge--outline">EUR · CHF</span>
+              </p>
+              <p class="group-head-meta">
+                6 people · 42 expenses · 2 – 12 August
+              </p>
             </div>
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Jonas owes</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--negative-ink)"
-                    >€148.60</span
-                  ></span
-                >
-              </li>
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Ravi owes</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--negative-ink)"
-                    >€99.40</span
-                  ></span
-                >
-              </li>
-            </ul>
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-title">Jonas pays you back</span
-                  ><span
-                    class="tabular-nums"
-                    style="font-weight: 600; color: var(--positive-ink)"
-                    >€148.60</span
-                  ></span
-                >
-              </li>
-            </ul>
           </div>
-          <div class="overview-col">
-            <ul class="list" style="background: var(--card)">
-              <li>
-                <span class="list-row"
-                  ><span class="list-main"
-                    ><span class="list-title"
-                      >Ravi added Dinner at Trattoria Il Ponte</span
-                    ><span class="list-sub">2 hours ago</span></span
-                  ><span class="tabular-nums">€128.40</span></span
+          <ul class="group-tabs">
+            <li><a aria-current="page">Overview</a></li>
+            <li><a>Transactions</a></li>
+            <li><a>People</a></li>
+            <li><a>Settings</a></li>
+          </ul>
+        </div>
+        <div class="desk-screen">
+          <div class="overview-cols">
+            <div class="overview-col">
+              <div class="card">
+                <div
+                  class="card-content"
+                  style="display: flex; flex-direction: column; gap: 0.25rem"
                 >
-              </li>
-            </ul>
-            <div class="card">
-              <div class="card-content">
-                <p class="card-desc" style="margin: 0">Spending · This month</p>
-                <p class="tabular-nums" style="margin: 0.25rem 0 0">
-                  Group spent <strong>€1,411.00</strong> · You paid
-                  <strong>€612.30</strong>
-                </p>
+                  <p class="card-desc" style="margin: 0">You get back</p>
+                  <span
+                    class="balance balance--positive balance--large tabular-nums"
+                    >€248.00</span
+                  >
+                  <p class="note" style="margin: 0">from Jonas and Ravi</p>
+                </div>
               </div>
-            </div>
-            <ul class="list">
-              <li>
-                <span class="list-row"
-                  ><span class="list-main"
-                    ><span class="list-title">Activity</span
-                    ><span class="list-sub"
-                      >Every change, deletions included</span
+              <ul class="list" style="background: var(--card)">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-title">Jonas owes</span
+                    ><span
+                      class="tabular-nums"
+                      style="font-weight: 600; color: var(--negative-ink)"
+                      >€148.60</span
                     ></span
-                  ></span
-                >
-              </li>
-            </ul>
+                  >
+                </li>
+                <li>
+                  <span class="list-row"
+                    ><span class="list-title">Ravi owes</span
+                    ><span
+                      class="tabular-nums"
+                      style="font-weight: 600; color: var(--negative-ink)"
+                      >€99.40</span
+                    ></span
+                  >
+                </li>
+              </ul>
+              <ul class="list" style="background: var(--card)">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-title">Jonas pays you back</span
+                    ><span
+                      class="tabular-nums"
+                      style="font-weight: 600; color: var(--positive-ink)"
+                      >€148.60</span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="overview-col">
+              <ul class="list" style="background: var(--card)">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-main"
+                      ><span class="list-title"
+                        >Ravi added Dinner at Trattoria Il Ponte</span
+                      ><span class="list-sub">2 hours ago</span></span
+                    ><span class="tabular-nums">€128.40</span></span
+                  >
+                </li>
+              </ul>
+              <div class="card">
+                <div class="card-content">
+                  <p class="card-desc" style="margin: 0">
+                    Spending · This month
+                  </p>
+                  <p class="tabular-nums" style="margin: 0.25rem 0 0">
+                    Group spent <strong>€1,411.00</strong> · You paid
+                    <strong>€612.30</strong>
+                  </p>
+                </div>
+              </div>
+              <ul class="list">
+                <li>
+                  <span class="list-row"
+                    ><span class="list-main"
+                      ><span class="list-title">Activity</span
+                      ><span class="list-sub"
+                        >Every change, deletions included</span
+                      ></span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -148,9 +207,17 @@
     <dl class="dl" style="margin-top: 1rem">
       <dt>width</dt>
       <dd>
-        The screen widens to <code>max-w-5xl</code> for a layout marked
-        <code>data-layout="wide"</code>, and only for one. 24px between the
-        columns; the blocks inside each keep the overview's own gap.
+        The screen widens to <code>--app-content-max</code> (75rem, gutters
+        included) for a layout marked <code>data-layout="wide"</code>, and only
+        for one — which is exactly what the expanded sidebar leaves at 1440px.
+        At 1024 the two columns are about 360px each. 24px between them; the
+        blocks inside each keep the overview's own gap.
+      </dd>
+      <dt>group header</dt>
+      <dd>
+        Above the screen, outside the part that moves, at the screen's own width
+        — the readable column, or the wide one under the overview. 28px above
+        it, 20px to the tabs, 24px from the tabs to the screen.
       </dd>
       <dt>empty group</dt>
       <dd>
@@ -158,8 +225,9 @@
       </dd>
       <dt>position strip</dt>
       <dd>
-        Hangs from the top of the window beside the rail, across the wide
-        column, since there is no header above it.
+        Hangs from the top of the window beside the sidebar, at whichever of its
+        widths, since there is no header above it; it fades in once the hero has
+        scrolled past the group header and out of sight.
       </dd>
     </dl>
   </section>
@@ -167,13 +235,35 @@
   <section>
     <h2>Every other screen</h2>
     <p class="note">
-      Transactions, People, Settings, an entry, a person: one column,
-      <code>max-w-3xl</code>, centred in the space beside the rail, never
-      stretched across it. Gutters open to 24px at <code>lg</code> and 32px at
-      <code>xl</code>. Anything that was docked above the bar — an entry's Edit
-      and Remove — docks at the foot of the window instead, starting where the
-      rail stops.
+      Home, Notifications, Transactions, People, Settings, an entry, a person:
+      one column, <code>max-w-3xl</code>, centred in the space beside the
+      sidebar, never stretched across it. Gutters open to 24px at
+      <code>lg</code> and 40px at <code>xl</code>. Anything that was docked
+      above the bar — an entry's Edit and Remove — docks at the foot of the
+      window instead, starting where the sidebar stops.
     </p>
+  </section>
+
+  <section>
+    <h2>What gives way first at 1024px</h2>
+    <dl class="dl">
+      <dt>1</dt>
+      <dd>
+        Second columns wrap under the first. The overview's two stay side by
+        side, about 360px each.
+      </dd>
+      <dt>2</dt>
+      <dd>
+        Gutters close to 24px, the group's tile to 36px and its name to
+        <code>text-xl</code>.
+      </dd>
+      <dt>3</dt>
+      <dd>
+        The sidebar is last. It stays expanded at 1024 — it is the switcher, and
+        the only place every balance shows at once — unless the reader folds it,
+        which they can at any width.
+      </dd>
+    </dl>
   </section>
 
   <section>
@@ -187,6 +277,314 @@
       loading skeleton is held to the same width, so the drawer does not change
       shape when the form arrives.
     </p>
+  </section>
+
+  <section>
+    <h2>Notifications, signing in and a group's link</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Three screens with one column each, drawn for a desk from
+      <code>lg</code> as the desktop boards 03, 19 and 22 draw them. The same
+      data and the same controls as the phone — nothing is mounted twice for the
+      two widths — and below <code>lg</code> nothing moves.
+    </p>
+
+    <div class="spec-label">Notifications</div>
+    <div class="frame frame--desk">
+      <div class="desk-screen">
+        <div
+          style="
+            max-width: 50rem;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: flex-end;
+              justify-content: space-between;
+              gap: 1rem;
+            "
+          >
+            <div>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 1.5rem;
+                  font-weight: 600;
+                  letter-spacing: -0.02em;
+                "
+              >
+                Notifications
+              </p>
+              <p class="note" style="margin: 0.125rem 0 0">
+                4 unread · what changed in your groups
+              </p>
+            </div>
+            <span style="display: flex; gap: 0.5rem">
+              <span class="btn btn--outline">Mark all as read</span>
+              <span class="btn">Notification settings</span>
+            </span>
+          </div>
+          <span
+            style="
+              display: inline-flex;
+              width: fit-content;
+              gap: 2px;
+              padding: 3px;
+              border-radius: 0.75rem;
+              background: var(--muted);
+              font-size: 0.875rem;
+            "
+          >
+            <span
+              style="
+                padding: 0.25rem 0.75rem;
+                border-radius: 9px;
+                background: var(--accent);
+                font-weight: 600;
+              "
+              >All</span
+            >
+            <span
+              style="padding: 0.25rem 0.75rem; color: var(--muted-foreground)"
+              >Unread 4</span
+            >
+            <span
+              style="padding: 0.25rem 0.75rem; color: var(--muted-foreground)"
+              >Reminders 1</span
+            >
+          </span>
+          <span class="spec-label" style="margin: 0.5rem 0 0">Today</span>
+          <div
+            class="card"
+            style="
+              padding: 0;
+              gap: 0;
+              border: 1px solid
+                color-mix(in oklch, var(--negative) 35%, transparent);
+            "
+          >
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+                gap: 0.875rem;
+                align-items: center;
+                padding: 1rem 1.25rem;
+              "
+            >
+              <span class="avatar" style="width: 2.75rem; height: 2.75rem"
+                >R</span
+              >
+              <span style="display: flex; flex-direction: column; gap: 0.25rem">
+                <strong>Ravi sent you a reminder</strong>
+                <span class="note" style="font-size: 0.875rem"
+                  >“Just a reminder: you still owe Ravi CHF 62.20 for Lisbon,
+                  March. No rush.”</span
+                >
+                <span class="note">Lisbon, March</span>
+              </span>
+              <span
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-end;
+                  color: var(--negative-ink);
+                "
+              >
+                <span
+                  class="tabular-nums"
+                  style="font-size: 1.5rem; font-weight: 600"
+                  >CHF 62.20</span
+                >
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >you owe</span
+                >
+              </span>
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 0.5rem;
+                padding: 0.625rem 1.25rem;
+                border-top: 1px solid var(--border);
+                background: color-mix(in oklch, var(--muted) 40%, var(--card));
+              "
+            >
+              <span class="btn btn--default">Settle up</span>
+              <span class="btn btn--outline">Open group</span>
+              <span class="btn">Copy link</span>
+            </div>
+          </div>
+          <ul class="list" style="background: var(--card)">
+            <li>
+              <span class="list-row" style="min-height: 3.75rem"
+                ><span class="avatar avatar--lg">A</span
+                ><span class="list-main" style="flex: 1"
+                  ><span class="list-title" style="font-weight: 400"
+                    >Amélie added Dinner at Trattoria Il Ponte</span
+                  ></span
+                ><span
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                  "
+                  ><span class="tabular-nums" style="font-weight: 500"
+                    >€128.40</span
+                  ><span class="note">2h</span></span
+                ></span
+              >
+            </li>
+            <li>
+              <span class="list-row" style="min-height: 3.75rem"
+                ><span class="avatar avatar--lg">L</span
+                ><span class="list-main" style="flex: 1"
+                  ><span class="list-title" style="font-weight: 400"
+                    >Léa made 3 changes to Electricity, July</span
+                  ></span
+                ><span class="note">5h</span></span
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin: 1rem 0 1.5rem">
+      <dt>column</dt>
+      <dd>
+        Stops at 800px (<code>max-w-200</code>) and centres in whatever room the
+        screen beside it leaves.
+      </dd>
+      <dt>rows</dt>
+      <dd>
+        Each day's run of rows between two reminders is one card: a 36px face
+        with its glyph (an added expense still wears none), a 60px row, the
+        figure at the right. The group's chip still heads its run and still
+        opens Snooze and Mute.
+      </dd>
+      <dt>reminder</dt>
+      <dd>
+        A card of its own: who sent it, their words in quotes, the group, and
+        what they ask for at the right in the debt's ink with "you owe" — never
+        the accent. Settle up, Open group and Copy link in a footer.
+      </dd>
+      <dt>Dismiss</dt>
+      <dd>
+        At every width, named for its row — "Dismiss “Amélie added Dinner…”" —
+        so a screen reader's list of buttons can tell sixteen of them apart.
+      </dd>
+    </dl>
+
+    <div class="spec-label">Sign in, and every signed-out screen</div>
+    <div class="frame frame--desk">
+      <div
+        style="
+          flex: 0 0 50%;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 2rem;
+          padding: 2rem 2.5rem;
+          background: var(--foreground);
+          color: var(--background);
+        "
+      >
+        <span class="wordmark-text">Balancia</span>
+        <span style="display: flex; flex-direction: column; gap: 0.75rem">
+          <span class="font-editorial" style="font-size: 3rem; line-height: 1"
+            >Where do I stand?</span
+          >
+          <span
+            style="
+              font-size: 0.875rem;
+              color: color-mix(in oklch, var(--background) 75%, transparent);
+            "
+            >Shared expenses on a server you run. One link for the whole group,
+            a balance per currency, and nothing sent anywhere else.</span
+          >
+        </span>
+        <span
+          class="mono"
+          style="color: color-mix(in oklch, var(--background) 75%, transparent)"
+          >home.lan</span
+        >
+      </div>
+      <div
+        style="
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+        "
+      >
+        <div
+          style="
+            width: 100%;
+            max-width: 20rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+          "
+        >
+          <p
+            style="
+              margin: 0;
+              font-size: 1.5rem;
+              font-weight: 600;
+              letter-spacing: -0.02em;
+            "
+          >
+            Back to your groups
+          </p>
+          <span class="btn btn--default" style="width: 100%"
+            >Use a passkey</span
+          >
+          <span class="note" style="text-align: center">or</span>
+          <span class="input" style="display: block">Email address</span>
+          <span class="input" style="display: block">Password</span>
+          <span class="btn btn--outline" style="width: 100%">Sign in</span>
+          <span class="btn btn--outline" style="width: 100%"
+            >Email me a sign-in code</span
+          >
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>panel</dt>
+      <dd>
+        Plum in both themes — the foreground as a ground in the light one, the
+        raised card in the dark one — never a nested <code>.dark</code>, which
+        would restate the accent. The wordmark is the way home at this width;
+        the header beside it keeps only the theme.
+      </dd>
+      <dt>instance</dt>
+      <dd>
+        The host the instance is served from, and nothing else: no version, no
+        database, no health line before sign-in.
+      </dd>
+      <dt>serif line</dt>
+      <dd>
+        "Where do I stand?" is the only serif inside the product's chrome, and
+        waits on the owner's ruling. It is one component,
+        <code>PanelLine</code>, and one line to take out.
+      </dd>
+      <dt>passkey first</dt>
+      <dd>
+        Filled, above "or", with the password's Sign in stepped back to an
+        outline. Assumed before the browser has answered, so the fields are
+        painted where they stay.
+      </dd>
+      <dt>a group's link</dt>
+      <dd>
+        The list beside "how do you want to join" — see
+        <em>Joining from a group link</em>.
+      </dd>
+    </dl>
   </section>
 
   <section>
@@ -205,7 +603,9 @@
         <p class="note" style="margin: 0">
           Change anything below <code>lg</code> to make room for the desktop.
           The phone is where the app is used; every class this layout adds is
-          <code>lg:</code>, or <code>md:</code> for a sheet.
+          <code>lg:</code>, or <code>md:</code> for a sheet. And never let the
+          accent paint a balance in the sidebar: a position is words in the
+          tone's ink.
         </p>
       </div>
     </div>

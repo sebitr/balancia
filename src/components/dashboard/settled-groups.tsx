@@ -12,8 +12,14 @@ import { RelativeTime } from "./relative-time";
 import { PUSH } from "@/components/motion/transitions";
 
 /**
- * The quiet end of the list: groups nobody owes anything in, then the archived
- * ones behind a row that opens them.
+ * The quiet end of the list: groups nobody has recorded anything in yet, then
+ * groups nobody owes anything in, then the archived ones behind a row that
+ * opens them.
+ *
+ * The first two are both "nothing outstanding", and they used to be one
+ * section: a group made a minute ago sat under "Settled up" with the word
+ * "Settled" beside it, as though a trip that had not started had been paid
+ * off. Settled is a result, and an empty group has not had one yet.
  *
  * These are rows in the same list as every other section, dimmed one step, so
  * the screen is one list from top to bottom rather than a list that trails off
@@ -36,10 +42,13 @@ export interface SettledGroupView {
 }
 
 export function SettledGroups({
+  unstarted = [],
   settled,
   archived,
   now,
 }: {
+  /** Groups with no expense, income or repayment in them yet. */
+  unstarted?: readonly SettledGroupView[];
   settled: readonly SettledGroupView[];
   archived: readonly SettledGroupView[];
   now: string;
@@ -62,8 +71,39 @@ export function SettledGroups({
     [needle, settled],
   );
 
+  const metaOf = (group: SettledGroupView) => (
+    <>
+      {t("peopleCount", { count: group.participantCount })}
+      {" · "}
+      <RelativeTime value={group.lastActivityAt} now={now} />
+    </>
+  );
+
   return (
     <>
+      {/* Above the settled ones, and not searched with them: there are only
+          ever a few, and the next thing any of them needs is somebody opening
+          it to add the first expense. Its own colours, too — the muted tile
+          says "finished", and nothing here has started. */}
+      {unstarted.length > 0 && (
+        <section>
+          <h3 className="pb-2.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+            {t("sectionNoExpenses")}
+          </h3>
+          <ul>
+            {unstarted.map((group) => (
+              <QuietRow
+                key={group.id}
+                group={group}
+                word={t("noExpensesWord")}
+                meta={metaOf(group)}
+                muted={false}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
       {settled.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-3 pb-2.5">
@@ -115,13 +155,7 @@ export function SettledGroups({
                   key={group.id}
                   group={group}
                   word={t("settledWord")}
-                  meta={
-                    <>
-                      {t("peopleCount", { count: group.participantCount })}
-                      {" · "}
-                      <RelativeTime value={group.lastActivityAt} now={now} />
-                    </>
-                  }
+                  meta={metaOf(group)}
                 />
               ))
             )}
@@ -191,10 +225,13 @@ function QuietRow({
   group,
   word,
   meta,
+  muted = true,
 }: {
   group: SettledGroupView;
   word: string;
   meta?: React.ReactNode;
+  /** False for a group that has not started: it has nothing to be quiet about. */
+  muted?: boolean;
 }) {
   return (
     <li className="border-t">
@@ -207,8 +244,13 @@ function QuietRow({
           icon={group.icon}
           color={group.iconColor}
           name={group.name}
-          muted
-          className="size-10 rounded-xl bg-wash-2 text-neutral-balance-ink"
+          muted={muted}
+          // The unmuted fallback is the active rows' own, in `group-sections`.
+          className={
+            muted
+              ? "size-10 rounded-xl bg-wash-2 text-neutral-balance-ink"
+              : "size-10 rounded-xl bg-accent text-accent-foreground"
+          }
           iconClassName="size-[19px]"
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">

@@ -129,15 +129,19 @@ describe("CreateGroupSheet", () => {
   });
 
   /**
-   * The zone decides which day an expense lands on and nothing else, so it is
-   * detected and stated rather than asked — named by its city, which is the
-   * half of `Europe/Zurich` a reader recognises.
+   * The zone decides days and times — what counts as today, when a recurring
+   * expense is added, what Activity shows — and the device already knows it,
+   * so it is detected and stated rather than asked: named by its city, which
+   * is the half of `Europe/Zurich` a reader recognises, and saying what it
+   * decides the way the group's settings do.
    */
   it("says which zone it detected instead of asking for one", () => {
     renderSheet();
 
     expect(
-      screen.getByText(/Days end at Zurich time, from this device\./),
+      screen.getByText(
+        /^Zurich time, from this device, decides what counts as today for new entries, when recurring expenses are added and the times shown in Activity\. Change it in the group’s settings\.$/,
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("combobox", { name: /time zone/i }),
@@ -493,7 +497,11 @@ describe("CreateGroupSheet", () => {
     expect(push).toHaveBeenCalledWith("/groups/g1");
   });
 
-  it("names the people it was given, creator first", async () => {
+  /**
+   * The creator is the one reading this, and the one person who will never
+   * open the link to pick a name — so they are not in the list of who can.
+   */
+  it("names the people it was given, leaving out the creator", async () => {
     const { user } = renderSheet();
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
     await user.type(screen.getByLabelText("Add a person"), "Ana");
@@ -502,9 +510,10 @@ describe("CreateGroupSheet", () => {
 
     expect(
       await screen.findByText(
-        "Share the same link with everyone. Seb and Ana can choose their existing name when they open it.",
+        "Share the same link with everyone. Ana can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Seb/)).not.toBeInTheDocument();
   });
 
   it("keeps the description out of the way until it is asked for", async () => {

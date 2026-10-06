@@ -208,6 +208,47 @@ describe("the activity feed's clock", () => {
   });
 });
 
+describe("a repayment in the feed", () => {
+  it("says who paid whom and how much, and calls the reader you", async () => {
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [
+          event({
+            id: "r1",
+            action: "settlement.created",
+            entityType: "settlement",
+            entityId: "s1",
+            actorLabel: "Sam",
+            actorParticipantId: "p-sam",
+            metadata: {
+              amount: "3000",
+              currency: "EUR",
+              from: "p-sam",
+              to: "p-ada",
+            },
+          }),
+        ],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "UTC",
+        people: {
+          you: "p-ada",
+          names: new Map([
+            ["p-sam", "Sam"],
+            ["p-ada", "Ada"],
+          ]),
+        },
+      }),
+      GROUP,
+    );
+
+    expect(screen.getByText("Sam")).toBeVisible();
+    expect(
+      screen.getByText("recorded their repayment of €30.00 to you"),
+    ).toBeVisible();
+  });
+});
+
 describe("restoring from the activity feed", () => {
   it("offers a restore only on deletions that still stand", async () => {
     renderWithIntl(await feed(["a1", "a2", "a3"]), GROUP);
@@ -546,5 +587,128 @@ describe("putting a removed person back from the activity feed", () => {
         name: "Restore the person who was removed",
       }),
     ).toBeVisible();
+  });
+});
+
+/**
+ * A person's own link and the group's shared one used to be told apart by
+ * nobody: the feed called the first a "guest link", the People screen called
+ * both an invite link. The feed now uses the People screen's names — a
+ * personal link for somebody, the group link for everybody — and says "you"
+ * to the person a link was for.
+ */
+describe("the lines about links", () => {
+  const SEB = { actorLabel: "Seb", actorParticipantId: "p-seb" };
+  const ALEX = {
+    actorLabel: "Alex",
+    actorType: "guest" as const,
+    actorParticipantId: "p-alex",
+  };
+
+  const SENT = event({
+    id: "l1",
+    action: "guest_link.created",
+    entityType: "guest_invitation",
+    ...SEB,
+    metadata: {
+      participantId: "p-alex",
+      participantName: "Alex",
+      expiresAt: null,
+      replacedPrevious: false,
+    },
+  });
+
+  const REVOKED = event({
+    id: "l2",
+    action: "guest_link.revoked",
+    entityType: "guest_invitation",
+    ...SEB,
+    metadata: { participantId: "p-alex", participantName: "Alex" },
+  });
+
+  const OPENED = event({
+    id: "l3",
+    action: "guest_link.redeemed",
+    entityType: "guest_invitation",
+    ...ALEX,
+  });
+
+  /** Joining through the group link mints a personal link behind the scenes. */
+  const JOINED = event({
+    id: "l4",
+    action: "guest_link.created",
+    entityType: "guest_invitation",
+    ...ALEX,
+    metadata: {
+      participantName: "Alex",
+      expiresAt: null,
+      replacedPrevious: false,
+      via: "join_link",
+      claimed: false,
+    },
+  });
+
+  async function lines(
+    entries: readonly ActivityEntry[],
+    viewerId: string | null,
+  ) {
+    renderWithIntl(
+      await ActivityFeed({
+        entries,
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "UTC",
+        people: { you: viewerId, names: new Map() },
+      }),
+      GROUP,
+    );
+  }
+
+  it("names whom a personal link was for, and the group link by its own name", async () => {
+    await lines([SENT, REVOKED, OPENED, JOINED], "p-seb");
+
+    expect(screen.getByText("sent Alex a personal link")).toBeVisible();
+    expect(
+      screen.getByText("revoked the personal link for Alex"),
+    ).toBeVisible();
+    expect(screen.getByText("opened their personal link")).toBeVisible();
+    // Nobody sent anybody anything: Alex came in through the group's link.
+    expect(screen.getByText("joined with the group link")).toBeVisible();
+    expect(screen.queryByText(/guest link|invite link/i)).toBeNull();
+  });
+
+  it("says you to the person the link was for", async () => {
+    await lines([SENT, REVOKED], "p-alex");
+
+    expect(screen.getByText("sent you a personal link")).toBeVisible();
+    expect(screen.getByText("revoked your personal link")).toBeVisible();
+    expect(screen.queryByText(/Alex/)).toBeNull();
+  });
+
+  it("does not say you twice when the reader opened their own link", async () => {
+    await lines([OPENED, JOINED], "p-alex");
+
+    expect(screen.getByText("opened their personal link")).toBeVisible();
+    expect(screen.getByText("joined with the group link")).toBeVisible();
+  });
+
+  it("still says what happened on a line written before it recorded whom", async () => {
+    // Revocations used to record the id alone, and links the name alone.
+    const OLD_REVOKED = { ...REVOKED, metadata: { participantId: "p-alex" } };
+    const OLD_SENT = { ...SENT, metadata: { participantName: "Alex" } };
+
+    await lines([OLD_REVOKED, OLD_SENT], "p-seb");
+    expect(screen.getByText("revoked a personal link")).toBeVisible();
+    // The name was always there; only the "you" needs the id.
+    expect(screen.getByText("sent Alex a personal link")).toBeVisible();
+  });
+
+  it("says you on an old revocation too, which always kept the id", async () => {
+    await lines(
+      [{ ...REVOKED, metadata: { participantId: "p-alex" } }],
+      "p-alex",
+    );
+
+    expect(screen.getByText("revoked your personal link")).toBeVisible();
   });
 });

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -28,6 +34,7 @@ import {
   supportsPasskeyAutofill,
   upgradeToPasskey,
 } from "@/modules/auth/passkey-client";
+import { cn } from "@/lib/utils";
 import { usePasskeySupport } from "./use-passkey-support";
 import { describedBy, useRefusalFocus } from "./use-refusal-focus";
 import { AppleSignInButton } from "./apple-sign-in-button";
@@ -57,7 +64,39 @@ import { AppleSignInButton } from "./apple-sign-in-button";
  * "Incorrect email or password" is the sentence it used to get. The code uses
  * the address already typed above, and takes the password field's place until
  * it lands.
+ *
+ * From `lg` the passkey leads, as the desktop board "19 · Sign in" draws it:
+ * the filled button first, "or", then the address and password with their
+ * submit stepped back to an outline. A desk is where a passkey in the
+ * browser's own manager is the one-click way in. Only the drawing moves — the
+ * button at the head and the one in the list below are the same handler, each
+ * `display: none` at the other's widths, so one is ever on screen or in the
+ * accessibility tree. Everything the form does is untouched.
  */
+
+/**
+ * The submit's filled look, stepped back to an outline from `lg` where the
+ * passkey above it is the filled one.
+ */
+const OUTLINE_FROM_LG =
+  "lg:h-10 lg:border-border lg:bg-background lg:text-foreground lg:hover:bg-muted";
+
+/** Hydration is the only change being waited for, and it never repeats. */
+const subscribeToNothing = (): (() => void) => () => {};
+
+/** "or", ruled either side. */
+function OrRule({ className }: { className?: string }) {
+  const tCommon = useTranslations("common");
+  return (
+    <div className={cn("flex items-center gap-3", className)}>
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-xs text-muted-foreground uppercase">
+        {tCommon("or")}
+      </span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
 
 /**
  * Field messages are catalogue keys rather than prose; `zodResolver` hands
@@ -122,7 +161,6 @@ export function SignInForm({
   // the code, so recognising the one refusal worth retrying means comparing
   // against the same catalogue entry the route rendered.
   const tServerErrors = useTranslations("serverErrors");
-  const tCommon = useTranslations("common");
   const tDemo = useTranslations("demo");
   const [formError, setFormError] = useState<string | null>(initialError);
   const [passkeyPending, setPasskeyPending] = useState(false);
@@ -133,6 +171,24 @@ export function SignInForm({
   const [codePending, setCodePending] = useState(false);
   const resend = useResendCooldown();
   const passkeysAvailable = usePasskeySupport();
+  /*
+   * From `lg`, whether the passkey is drawn at the head of the form.
+   *
+   * Assumed on the server and through hydration, when the browser has not
+   * been asked yet, rather than refused: a browser that can do passkeys —
+   * nearly every one — then keeps the form where it was painted, and only one
+   * that cannot loses the button afterwards. Read as "no" until asked, the
+   * button would arrive after the first paint and push the fields down under
+   * a cursor already on its way to them.
+   */
+  const hydrated = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
+  const passkeyFirst = !hydrated || passkeysAvailable;
+  /** What the list of other ways in still holds from `lg`, once it has. */
+  const othersAtLg = appleEnabled || (mailEnabled && !demoMode);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(demoMode ? demoSchema : schema),
@@ -436,6 +492,27 @@ export function SignInForm({
         </Alert>
       )}
 
+      {/* The passkey at the head of the form, from `lg` only. Below that it
+          keeps its place among the other ways in, further down. */}
+      {passkeyFirst && !codeSentTo && (
+        <div className="hidden lg:block lg:space-y-6">
+          <Button
+            type="button"
+            className="w-full lg:h-10"
+            onClick={() => void onPasskey()}
+            disabled={passkeyPending}
+          >
+            {passkeyPending ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <KeyRound aria-hidden="true" />
+            )}
+            {t("withPasskey")}
+          </Button>
+          <OrRule />
+        </div>
+      )}
+
       {codeSentTo ? (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -544,7 +621,7 @@ export function SignInForm({
 
           <Button
             type="submit"
-            className="w-full"
+            className={cn("w-full", passkeyFirst && OUTLINE_FROM_LG)}
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting && (
@@ -557,20 +634,21 @@ export function SignInForm({
 
       {!codeSentTo && (passkeysAvailable || appleEnabled || mailEnabled) && (
         <>
-          <div className="flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground uppercase">
-              {tCommon("or")}
-            </span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
+          {/* From `lg`, where the passkey and its "or" lead the form, what
+              is left here follows the submit without a second "or". */}
+          <OrRule className={cn(passkeyFirst && "lg:hidden")} />
 
-          <div className="space-y-2">
+          <div
+            className={cn(
+              "space-y-2",
+              passkeyFirst && !othersAtLg && "lg:hidden",
+            )}
+          >
             {passkeysAvailable && (
               <Button
                 type="button"
                 variant="outline"
-                className="w-full"
+                className={cn("w-full", passkeyFirst && "lg:hidden")}
                 onClick={() => void onPasskey()}
                 disabled={passkeyPending}
               >

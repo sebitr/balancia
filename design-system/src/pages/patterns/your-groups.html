@@ -139,6 +139,15 @@
       <dl class="dl">
         <dt>Outstanding in any currency</dt>
         <dd>Each non-zero balance, with its own word, icon and colour.</dd>
+        <dt>Whole units, and "≈" when that moved it</dt>
+        <dd>
+          The list is scanned rather than reconciled, so a row drops the
+          centimes — but says so: <code>≈ CHF 961</code> for 960.84, never a
+          bare <code>CHF 961</code> under a total reading
+          <code>CHF 960.84</code>. A figure that is whole already carries no
+          mark, and one under a single unit keeps its centimes:
+          <code>CHF 0.40</code>, not <code>≈ CHF 0</code>.
+        </dd>
         <dt>Square in every currency</dt>
         <dd>
           A single "Settled up" — never a row of zeroes, and never
@@ -146,9 +155,45 @@
         </dd>
         <dt>No expenses yet</dt>
         <dd>
-          Nothing at all below the rule. There is no position to report, and an
-          empty band would read as a loading failure.
+          The words <em>No expenses yet</em>, never "Settled". A group nobody
+          has recorded anything in has no balance, but it has not been settled
+          either: settled is a result, and an empty group has not had one.
         </dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>The sections, in order</h2>
+    <p class="note">
+      One list from top to bottom, cut into sections by a small uppercase label.
+      The label carries what every row under it has in common, so a row never
+      repeats it in colour or size.
+    </p>
+    <div class="spec">
+      <dl class="dl">
+        <dt>Needs you · You're owed</dt>
+        <dd>
+          Each group's own figure, largest first. These are the only groups that
+          ask anything of the reader.
+        </dd>
+        <dt>No expenses yet</dt>
+        <dd>
+          Groups with no expense, income or repayment in them, in their own
+          colours and with the words where an amount would be. Above the settled
+          ones, because the next thing each needs is its first entry. When these
+          are the only groups there are, the figure at the top says
+          <em>No expenses yet</em> too, and the line under it "Nothing recorded
+          in 1 group yet" — not "Settled up".
+        </dd>
+        <dt>Settled up · 6</dt>
+        <dd>
+          Groups where everything recorded has been paid back, dimmed one step,
+          with "Settled" where an amount would be. Counted, and searchable once
+          there are enough of them to need it.
+        </dd>
+        <dt>Archived</dt>
+        <dd>One row that opens the rest, at the very end.</dd>
       </dl>
     </div>
   </section>

@@ -1097,7 +1097,7 @@ export async function createInvitation(
     }
     if (participant.userId) {
       throw new AuthorizationError(
-        "This person already signs in with their own account, so they do not need a guest link.",
+        "This person already signs in with their own account, so they do not need a personal link.",
         "participantHasAccount",
       );
     }
@@ -1141,8 +1141,10 @@ export async function createInvitation(
       entityType: "guest_invitation",
       entityId: invitation.id,
       ...activityActorFrom(access),
-      // Note: the token itself is never recorded — only who it is for.
+      // Note: the token itself is never recorded — only who it is for. The id
+      // beside the name is what lets the feed say "sent you" to that person.
       metadata: {
+        participantId: participant.id,
         participantName: participant.displayName,
         expiresAt: expiresAt?.toISOString() ?? null,
         replacedPrevious: superseded.length > 0,
@@ -1185,13 +1187,27 @@ export async function revokeInvitation(
     }
 
     if (revoked.length > 0) {
+      // Whose link it was, by name as well as by id, so the feed can say
+      // "revoked the personal link for Alex" rather than "a personal link".
+      const [person] = await tx
+        .select({ displayName: participants.displayName })
+        .from(participants)
+        .where(
+          and(
+            eq(participants.id, participantId),
+            eq(participants.groupId, access.groupId),
+          ),
+        )
+        .limit(1);
       await recordActivity(tx, {
         groupId: access.groupId,
         action: "guest_link.revoked",
         entityType: "guest_invitation",
         entityId: revoked[0].id,
         ...activityActorFrom(access),
-        metadata: { participantId },
+        metadata: person
+          ? { participantId, participantName: person.displayName }
+          : { participantId },
       });
     }
   });

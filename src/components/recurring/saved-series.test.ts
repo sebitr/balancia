@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { IntlMessageFormat } from "intl-messageformat";
 import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
-import { savedSeriesMessage, type SavedSeries } from "./saved-series";
+import {
+  savedSeriesMessage,
+  updatedSeriesMessage,
+  type SavedSeries,
+  type UpdatedSeries,
+} from "./saved-series";
 
 /**
  * The sentence a saved series is confirmed with, which has to be true.
@@ -85,5 +90,45 @@ describe("savedSeriesMessage", () => {
     expect(say("en", empty)).toBe("Internet saved.");
     expect(say("en", undefined)).toBe("Internet saved.");
     expect(say("fr", empty)).toBe("« Internet » est enregistré.");
+  });
+});
+
+/**
+ * The sentence a changed series is confirmed with. Each one ends by saying the
+ * entries already added are untouched, which is what an edit to a rule makes
+ * somebody wonder, and what the button that saved it promised.
+ */
+describe("updatedSeriesMessage", () => {
+  function sayUpdated(
+    locale: "en" | "fr",
+    updated: UpdatedSeries | undefined,
+  ): string {
+    const message = updatedSeriesMessage(updated, "Rent", day);
+    const catalogue = (locale === "en" ? en : fr).recurring.updated;
+    return new IntlMessageFormat(catalogue[message.key], locale).format(
+      message.values,
+    ) as string;
+  }
+
+  it("says from when the change applies", () => {
+    const updated = { next: "2026-11-01", paused: false };
+
+    expect(sayUpdated("en", updated)).toBe(
+      "Rent updated from <2026-11-01>. Entries already added stay as they were.",
+    );
+    expect(sayUpdated("fr", updated)).toContain("à partir du <2026-11-01>");
+  });
+
+  it("says a paused series is still paused, whatever its marker says", () => {
+    expect(sayUpdated("en", { next: "2026-11-01", paused: true })).toBe(
+      "Rent updated, and still paused. Entries already added stay as they were.",
+    );
+  });
+
+  it("says a series with nothing left in it has no dates left", () => {
+    expect(sayUpdated("en", { next: null, paused: false })).toBe(
+      "Rent updated. It has no dates left; entries already added stay as they were.",
+    );
+    expect(sayUpdated("en", undefined)).toMatch(/^Rent updated\./);
   });
 });

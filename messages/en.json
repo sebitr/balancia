@@ -17,7 +17,8 @@
     "undo": "Undo",
     "dismiss": "Dismiss",
     "close": "Close",
-    "toastRegion": "Status messages"
+    "toastRegion": "Status messages",
+    "showPassword": "Show password"
   },
   "nav": {
     "language": "Language",
@@ -36,7 +37,16 @@
     "switcherYouAreOwed": "you are owed {amount}",
     "switcherDashboard": "Dashboard",
     "switcherAllGroups": "all groups",
-    "switcherRetry": "Couldn't load your groups. Try again."
+    "switcherRetry": "Couldn't load your groups. Try again.",
+    "sidebarHome": "Home",
+    "sidebarSearch": "Search or jump to",
+    "sidebarSearchGroup": "Search this group",
+    "sidebarCollapse": "Collapse the sidebar",
+    "sidebarExpand": "Expand the sidebar",
+    "sidebarGroups": "Groups",
+    "sidebarNoGroups": "No groups yet. A group you create or join turns up here, with where you stand in it.",
+    "sidebarKeepGroup": "Keep {group}",
+    "sidebarGuestNote": "This browser is the only place your access lives."
   },
   "theme": {
     "menu": "Theme"
@@ -60,7 +70,8 @@
     "owes": "owes",
     "settledUp": "settled up",
     "settledUpBadge": "Settled up",
-    "settled": "Settled"
+    "settled": "Settled",
+    "approximately": "≈ {amount}"
   },
   "currencyPicker": {
     "back": "Back",
@@ -86,7 +97,7 @@
     "signIn": {
       "title": "Back to your groups",
       "subtitle": "Sign in to access your groups and track your balances.",
-      "privateGroup": "This group is private. If someone sent you this link, ask them for an invite link.",
+      "privateGroup": "This group is private. If someone sent you this link, ask them for the group link.",
       "email": "Email address",
       "password": "Password",
       "forgotPassword": "Forgot password?",
@@ -103,6 +114,10 @@
       "noAccount": "No account yet?",
       "createOne": "Create one",
       "metaTitle": "Sign in"
+    },
+    "panel": {
+      "headline": "Where do I stand?",
+      "lede": "Shared expenses on a server you run. One link for the whole group, a balance per currency, and nothing sent anywhere else."
     },
     "validation": {
       "email": "Enter a valid email address",
@@ -521,6 +536,7 @@
     "searchPlaceholder": "{count, plural, one {Search # group} other {Search # groups}}",
     "noMatch": "No group matches “{query}”",
     "sectionYouAreOwed": "You're owed",
+    "sectionNoExpenses": "No expenses yet",
     "sectionSettled": "Settled up · {count}",
     "sectionArchived": "Archived · {count}",
     "addExpense": "Add expense",
@@ -529,6 +545,7 @@
     "archivedGroups": "{count, plural, one {# archived group} other {# archived groups}}",
     "nothingOutstanding": "Nothing outstanding in {groups, plural, one {# group} other {# groups}}",
     "nothingOutstandingSince": "Nothing outstanding in {groups, plural, one {# group} other {# groups}} · last cleared {when} in {group}",
+    "nothingRecorded": "Nothing recorded in {groups, plural, one {# group} other {# groups}} yet",
     "nameNudgeTitle": "What should people call you?",
     "nameNudgeBody": "Your groups see you as “{name}”, which is your email address. Give them a name instead.",
     "nameNudgeAction": "Set my name",
@@ -549,6 +566,7 @@
     "pickerSearchPlaceholder": "Search groups",
     "peopleCount": "{count, plural, one {# person} other {# people}}",
     "settledWord": "Settled",
+    "noExpensesWord": "No expenses yet",
     "archivedWord": "Archived"
   },
   "group": {
@@ -653,7 +671,7 @@
     "inviteLinkNote": "No account needed — everyone opens the link and finds their own name.",
     "aloneTitle": "You're on your own here",
     "aloneBody": "Add the first names of whoever is sharing. They don't need accounts.",
-    "inviteLinkNext": "The guest link comes right after.",
+    "inviteLinkNext": "The group link comes right after.",
     "keptApart": "Each currency keeps its own balance — Balancia never converts between them.",
     "settledIn": "Settled up in {currencies}",
     "balancesByCurrency": "Balances by currency",
@@ -695,6 +713,7 @@
     "uncategorised": "Uncategorised",
     "bandRemainder": "{first} +{count}",
     "kindFilterLabel": "Filter by kind",
+    "repeating": "{count, plural, =0 {Repeating} other {Repeating · #}}",
     "kind_expense": "Expenses",
     "kind_revenue": "Income",
     "kind_settlement": "Repayments",
@@ -933,6 +952,7 @@
     "someone": "Someone",
     "withDescription": "{action}: {description}",
     "left": "left the group",
+    "joinedWithGroupLink": "joined with the group link",
     "restore": {
       "action": "Restore",
       "expense": "Restore the expense “{description}”",
@@ -969,9 +989,9 @@
         "restored": "put someone back in the group"
       },
       "guest_link": {
-        "created": "created a guest link",
-        "revoked": "revoked a guest link",
-        "redeemed": "joined through a guest link"
+        "created": "sent someone a personal link",
+        "revoked": "revoked a personal link",
+        "redeemed": "opened their personal link"
       },
       "recurring": {
         "created": "set up a recurring expense",
@@ -998,39 +1018,51 @@
         "updated": "updated {name}'s details",
         "removed": "removed {name} from the group",
         "restored": "put {name} back in the group"
+      },
+      "guest_link": {
+        "created": "sent {name} a personal link",
+        "revoked": "revoked the personal link for {name}"
       }
+    },
+    "actionsYou": {
+      "guest_link": {
+        "created": "sent you a personal link",
+        "revoked": "revoked your personal link"
+      }
+    },
+    "repaymentRecorded": {
+      "between": "recorded {from}'s repayment of {amount} to {to}",
+      "toYou": "recorded {from}'s repayment of {amount} to you",
+      "yours": "recorded your repayment of {amount} to {to}",
+      "theirs": "recorded their repayment of {amount} to {to}",
+      "theirsToYou": "recorded their repayment of {amount} to you"
     }
   },
   "recurring": {
-    "setUpTitle": "Set up a recurring expense",
-    "description": "Description",
-    "descriptionPlaceholder": "Rent",
-    "amount": "Amount",
-    "currency": "Currency",
-    "rateHint": "Used for each occurrence, unless that day's rate can be looked up.",
-    "repeats": "Repeats",
-    "weekly": "Weekly",
-    "monthly": "Monthly",
-    "yearly": "Yearly",
-    "every": "Every",
-    "on": "On",
-    "dayOfMonth": "Day of month",
-    "shortMonths": "Short months use their last day.",
-    "month": "Month",
-    "starting": "Starting",
-    "paidBy": "Paid by",
-    "splitEquallyBetween": "Split equally between",
-    "submit": "Create recurring expense",
     "saved": {
       "added": "{count, plural, one {{description} added} other {{description} added # times, from {from}}}. The next one is on {next}.",
       "addedLast": "{count, plural, one {{description} added} other {{description} added # times, from {from}}}. That was the last one.",
       "firstOn": "{description} saved. The first one will be added on {date}.",
       "plain": "{description} saved."
     },
-    "errors": {
-      "chooseSplit": "Choose who this is split between.",
-      "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
-      "saveFailed": "The recurring expense could not be created."
+    "updated": {
+      "next": "{description} updated from {date}. Entries already added stay as they were.",
+      "paused": "{description} updated, and still paused. Entries already added stay as they were.",
+      "ended": "{description} updated. It has no dates left; entries already added stay as they were."
+    },
+    "schedule": {
+      "daily": "{count, plural, one {Every day} other {Every # days}}",
+      "weekly": "{count, plural, one {Every week on {weekday}} other {Every # weeks on {weekday}}}",
+      "monthly": "{count, plural, one {Every month on the {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}} other {Every # months on the {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}}}",
+      "monthlyWeekday": "{count, plural, one {Every month on the {week} {weekday}} other {Every # months on the {week} {weekday}}}",
+      "yearly": "{count, plural, one {Every year on {date}} other {Every # years on {date}}}",
+      "week": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      }
     }
   },
   "settlement": {
@@ -1865,7 +1897,7 @@
       "personalTitle": "{inviter} added you to {group}",
       "personalTitleNoInviter": "You have been added to {group}",
       "personalSub": "See where you stand, add what you paid for, and settle up when the trip ends.",
-      "coldTitle": "Keep your accounts within reach",
+      "coldTitle": "Keep track of who owes what",
       "coldSub": "Create an account to get back to your groups, keep track of what you spend, and see at a glance what is left to settle.",
       "createAccount": "Create an account",
       "haveAccount": "Sign in",
@@ -1882,6 +1914,8 @@
       "groupNamePlaceholder": "Lisbon trip",
       "nameLabel": "Your name",
       "namePlaceholder": "Your name",
+      "currencyLabel": "Group currency",
+      "currencyNote": "Amounts in other currencies are converted into it. Fixed once the group exists.",
       "create": "Create the group",
       "failed": "The group could not be created. Try again in a moment."
     },
@@ -1941,7 +1975,20 @@
       "codeWrong": "That code is wrong or has expired. Ask for a new one.",
       "noCredentialRoute": "This browser cannot use a passkey, and this instance cannot send email. Use a password to sign up instead.",
       "usePassword": "Sign in with a password",
-      "usePasswordSignUp": "Sign up with a password"
+      "usePasswordSignUp": "Sign up with a password",
+      "passwordTitle": "Your email, and a password",
+      "passwordSub": "Type it once. The eye shows you what you typed.",
+      "nameLabel": "Your name",
+      "passwordLabel": "Password",
+      "passwordHint": "At least 10 characters, and not your name, your address or one everybody uses.",
+      "passwordMin": "Use at least 10 characters",
+      "passwordMax": "That password is too long",
+      "passwordCommon": "That password is one of the most commonly used ones. Choose another",
+      "passwordPersonal": "Leave your name and your email address out of it",
+      "createAccount": "Create my account",
+      "createFailed": "That account could not be created.",
+      "checkEmail": "Open the link we sent to {email} to finish creating your account.",
+      "usePasskeyInstead": "Use a passkey instead"
     },
     "profile": {
       "title": "Last thing — your name",
@@ -2034,7 +2081,7 @@
     }
   },
   "inviteLink": {
-    "heading": "Invite link",
+    "heading": "Group link",
     "copy": "Copy",
     "copied": "Copied",
     "share": "Share",
@@ -2066,7 +2113,7 @@
     "statusActive": "Active",
     "statusExpired": "Expired",
     "statusRevoked": "Revoked",
-    "none": "This group has no invite link yet.",
+    "none": "There is no group link yet.",
     "unreadable": "This link still works for anyone holding it, but it can no longer be shown here. Create a new one to share it again.",
     "createNew": "Create a new link",
     "createFailed": "The link could not be created.",
@@ -2074,16 +2121,16 @@
     "peopleLink": "People",
     "revoke": "Revoke link",
     "revokeNote": "The link stops working immediately. People already in the group are unaffected, and you can create a new link any time.",
-    "revokeConfirmTitle": "Revoke the invite link?",
+    "revokeConfirmTitle": "Revoke the group link?",
     "revokeConfirmBody": "Anyone still holding it will no longer be able to join, including anyone part-way through. People already in the group keep their place.",
-    "revoked": "The invite link was revoked.",
+    "revoked": "The group link was revoked.",
     "revokeFailed": "The link could not be revoked.",
     "ready": {
       "title": "Your group is ready!",
-      "lede": "Share the same link with everyone. {people} can choose their existing name when they open it.",
-      "ledeAlone": "Share the same link with everyone. They can choose their existing name in the group or join as a new member.",
-      "peopleTwo": "{first} and {second}",
-      "peopleMany": "{first}, {second} and {count, plural, one {1 other} other {# others}}"
+      "ledeNobody": "Share the same link with everyone. Each person who opens it joins the group under their own name.",
+      "ledeOne": "Share the same link with everyone. {first} can choose their existing name when they open it.",
+      "ledeTwo": "Share the same link with everyone. {first} and {second} can choose their existing names when they open it.",
+      "ledeMany": "Share the same link with everyone. {first}, {second} and {count, plural, one {# other} other {# others}} can choose their existing names when they open it."
     }
   },
   "guestWidget": {
@@ -2113,6 +2160,7 @@
   },
   "recurringActions": {
     "actionsFor": "Actions for {description}",
+    "edit": "Edit",
     "resume": "Resume",
     "pause": "Pause",
     "resumed": "Resumed",
@@ -2161,7 +2209,7 @@
     "balanceCurrencyLabel": "That balance is in",
     "balanceCurrency": "Balance currency",
     "modeFixedShort": "Fixed once the group exists.",
-    "timezoneFootnote": "Days end at {city} time, from this device. Change it in the group’s settings.",
+    "timezoneFootnote": "{city} time, from this device, decides what counts as today for new entries, when recurring expenses are added and the times shown in Activity. Change it in the group’s settings.",
     "iconTitle": "Group icon",
     "chooseIcon": "Choose an icon",
     "iconColorLabel": "Colour",
@@ -2226,7 +2274,6 @@
     "failed": "That did not work."
   },
   "receipts": {
-    "attach": "Attach a receipt",
     "removeFile": "Remove {name} from this expense",
     "formats": "JPEG, PNG, WebP, GIF, HEIC or PDF. Stored on this server, visible only to this group.",
     "uploadFailed": "That file could not be uploaded.",
@@ -2329,10 +2376,12 @@
     "runSummary": "{imported} imported, {skipped} skipped",
     "runFailed": ", {failed} failed",
     "status": {
-      "completed": "completed",
-      "pending": "pending",
-      "failed": "failed",
-      "staged": "staged"
+      "uploaded": "Uploaded",
+      "parsed": "Read",
+      "ready": "Ready to review",
+      "importing": "Importing",
+      "completed": "Done",
+      "failed": "Failed"
     }
   },
   "membersPage": {
@@ -2346,7 +2395,7 @@
     "noAccess": "No access",
     "metaNoAccountInvited": "No account · link not used yet",
     "metaNoAccountJoined": "No account · joined",
-    "metaNoAccount": "No account · not invited yet",
+    "metaNoAccount": "No account · link not sent yet",
     "details": "Details",
     "name": "Name",
     "nameHere": "Your name in this group",
@@ -2362,34 +2411,35 @@
     "accountEmail": "{name} signs in with {email}.",
     "accountOwner": "{name} signs in with their own account. As the group owner they always have full access.",
     "accountOwnerEmail": "{name} signs in with {email}. As the group owner they always have full access.",
-    "noAccessBlurb": "{name} has no account. With a one-time link, they can take part without signing up.",
+    "noAccessBlurb": "A personal link lets {name} take part without an account. Whoever opens it acts as {name}.",
+    "personalLink": "Personal link for {name}",
     "expires": "Expires",
     "expiry_never": "Never",
     "expiry_week": "In 7 days",
     "expiry_day": "In 24 hours",
-    "createLink": "Create invite link",
+    "createLink": "Create the link",
     "createLinkFailed": "The link could not be created.",
-    "linkIsLive": "Invite link is live",
+    "linkIsLive": "The personal link for {name} is live",
     "linkCreated": "Created {date}",
     "linkExpires": "expires {date}",
     "linkNeverExpires": "never expires",
     "replaceLink": "Replace link",
     "revoke": "Revoke",
-    "revoked": "Invite link revoked",
+    "revoked": "The personal link for {name} was revoked",
     "revokeFailed": "The link could not be revoked.",
     "copyNow": "Copy this link now",
     "copyWarning": "Shown once — Balancia only keeps a fingerprint. Anyone holding it can act as {name}: see the group, add expenses, record repayments.",
-    "copyLink": "Copy invite link",
+    "copyLink": "Copy the personal link",
     "copiedIt": "I’ve copied it",
-    "linkCopied": "Invite link copied",
+    "linkCopied": "Personal link copied",
     "copyFailed": "Could not copy — select the link and copy it manually.",
     "removeFromGroup": "Remove from group",
-    "removeHint": "Their share of past expenses stays in the group. Any live invite link stops working.",
+    "removeHint": "Their share of past expenses stays in the group. Any personal link in their name stops working.",
     "removeBlockedOwes": "{name} still owes {amounts}. Settle up first, then remove them.",
     "removeBlockedOwed": "{name} is still owed {amounts}. Settle up first, then remove them.",
     "removeBlockedMixed": "{name} still has {amounts} outstanding. Settle up first, then remove them.",
     "removeTitle": "Remove {name}?",
-    "removeBody": "Past expenses keep their name, so the group history stays intact. Any live invite link stops working straight away. You can undo this right after, or restore them later from Activity.",
+    "removeBody": "Past expenses keep their name, so the group history stays intact. Any personal link in their name stops working straight away. You can undo this right after, or restore them later from Activity.",
     "keepThem": "Keep them",
     "remove": "Remove",
     "removed": "{name} removed from the group",
@@ -2411,7 +2461,7 @@
     "leaveFailed": "You could not leave the group. Try again.",
     "addSomeone": "Add someone",
     "then": "Then",
-    "createALink": "Create a link",
+    "createALink": "Personal link",
     "createALinkHint": "They join without signing up",
     "justAddThem": "Just add them",
     "justAddThemHint": "You can invite them later",
@@ -2587,26 +2637,15 @@
   },
   "recurringPage": {
     "title": "Recurring expenses",
-    "intro": "Generated automatically in the group's timezone ({timezone}).",
+    "intro": "Added on their day, automatically. Days follow the group's time zone, {timezone}.",
     "emptyTitle": "No recurring expenses",
     "emptyDescription": "Set one up for rent, a subscription or any bill that arrives on a schedule.",
+    "add": "Add a recurring expense",
     "pausedBadge": "Paused",
     "next": "Next: {date}",
     "pausedNote": "Paused — nothing will be generated",
     "noFurther": "No further occurrences",
-    "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}",
-    "weekly": "{count, plural, one {Every week on {day}} other {Every # weeks on {day}}}",
-    "monthly": "{count, plural, one {Every month on day {day}} other {Every # months on day {day}}}",
-    "yearly": "{count, plural, one {Every year on {day}/{month}} other {Every # years on {day}/{month}}}",
-    "daily": "{count, plural, one {Every day} other {Every # days}}",
-    "monthlyWeekday": "{count, plural, one {Every month on the {week} {day}} other {Every # months on the {week} {day}}}",
-    "week": {
-      "1": "first",
-      "2": "second",
-      "3": "third",
-      "4": "fourth",
-      "last": "last"
-    }
+    "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}"
   },
   "settingsPage": {
     "title": "Group settings",
@@ -2814,8 +2853,9 @@
     "participantNotInGroup": "Somebody you picked is not in this group any more. Reload the page and pick from the people who are.",
     "ownerNotRemovable": "The group owner cannot be removed from the group. Archive it or delete it instead.",
     "ownerCannotLeave": "You own this group, so you cannot leave it. Archive it or delete it instead.",
-    "participantHasAccount": "This person already signs in with their own account, so they do not need a guest link.",
+    "participantHasAccount": "This person already signs in with their own account, so they do not need a personal link.",
     "groupArchived": "This group is archived. Restore it before making changes.",
+    "endsBeforeFirst": "The end date is before the first one.",
     "noPermission": "You cannot do that in this group. Ask its owner.",
     "fileEmpty": "That file is empty.",
     "fileTooLarge": "That file is larger than the {limit} MB upload limit.",
@@ -2889,7 +2929,8 @@
     "proofOfWorkRequired": "Your browser did not finish its verification. Reload the page and try again.",
     "apiTokenNameRequired": "Give this key a name.",
     "apiTokenNameTooLong": "That name is too long.",
-    "apiTokenLimit": "You have as many API keys as one account can hold. Revoke one first."
+    "apiTokenLimit": "You have as many API keys as one account can hold. Revoke one first.",
+    "seriesEndsBeforeNext": "This series would end before the next date it could add. Move its end later, or remove it."
   },
   "serverValidation": {
     "checkForm": "Check the form.",
@@ -2919,6 +2960,7 @@
   "notificationsPage": {
     "metaTitle": "Notifications",
     "title": "Notifications",
+    "summary": "{count, plural, =0 {Nothing unread} other {# unread}} · what changed in your groups",
     "bell": "Notifications",
     "bellUnread": "Notifications, {count} unread",
     "empty": "Nothing to catch up on",
@@ -2950,7 +2992,9 @@
     "archiveExpand": "Show the archive",
     "archiveCollapse": "Hide the archive",
     "dismissed": "Notification dismissed",
+    "dismissNamed": "Dismiss “{row}”",
     "settleUp": "Settle up",
+    "reminderFrom": "{name} sent you a reminder",
     "copyLink": "Copy link",
     "linkCopied": "Link copied",
     "linkCopyFailed": "That link could not be copied.",
@@ -3137,12 +3181,12 @@
     "toneCheeky": "Cheeky",
     "shuffle": "Another wording",
     "groupLink": "Group link",
-    "inviteLink": "Invite link",
+    "groupPage": "Group page",
     "payWith": "How to pay",
     "payWithLine": "{method}: {detail}",
     "payWithChoose": "Which way to pay",
     "payCodeAttached": "A code to scan goes with it",
-    "logActivity": "Visible to the group",
+    "showInActivity": "Show in group activity",
     "sendPush": "Send to {name} in Balancia",
     "sendShare": "Share with {name}",
     "sendCaptionPush": "The push goes out immediately, exactly as written.",
@@ -3152,7 +3196,10 @@
     "sentNextPush": "{name} is next, and gets it in the app.",
     "copied": "This device cannot share directly, so the message is on your clipboard.",
     "handoffFailed": "This device would not take the message. Copy it from the box above and send it yourself — nothing has been recorded.",
-    "discardEdit": "Shuffling replaces the message you wrote. Continue?",
+    "replaceTitle": "Replace the message you wrote?",
+    "replaceBody": "A new wording takes the place of what you typed, and your own words cannot be brought back.",
+    "replaceConfirm": "Replace my message",
+    "replaceKeep": "Keep my message",
     "failed": "That reminder could not be sent.",
     "drafts": {
       "gentle1": "Just a reminder: you still owe {name} {amount} for {group}. No rush.",
@@ -3241,6 +3288,10 @@
       "income": "Edit income",
       "settle": "Edit repayment"
     },
+    "editRecurringTitles": {
+      "expense": "Edit recurring expense",
+      "income": "Edit recurring income"
+    },
     "close": "Close",
     "types": {
       "label": "What kind of entry",
@@ -3282,6 +3333,7 @@
       "creditedTo": "Credited to",
       "splitBetween": "Split between",
       "everyone": "Everyone",
+      "you": "You",
       "someOf": "{count} of {total}",
       "done": "Done",
       "methods": {
@@ -3303,13 +3355,14 @@
         "percentage": "Percentages must add up to 100."
       },
       "inputLabels": {
-        "equal": "Share for {name}",
-        "shares": "Shares for {name}",
-        "exact": "Exact amount for {name}",
-        "percentage": "Percentage for {name}"
+        "equal": "{you, select, yes {Your share} other {Share for {name}}}",
+        "shares": "{you, select, yes {Your shares} other {Shares for {name}}}",
+        "exact": "{you, select, yes {Your exact amount} other {Exact amount for {name}}}",
+        "percentage": "{you, select, yes {Your percentage} other {Percentage for {name}}}"
       },
       "summary": {
         "equalEach": "Split equally between {count} · {amount} each",
+        "equalAbout": "Split equally between {count} · about {amount} each",
         "exactAmounts": "Split by exact amounts · {count} people",
         "percentages": "Split by percentage · {count} people",
         "shares": "Split by shares · {count} people",
@@ -3322,9 +3375,9 @@
         "sharesZero": "Shares · every share is zero",
         "unreadable": "{method, select, exact {Exact amounts} percentage {Percentages} other {Shares}} · one value is not a number"
       },
-      "payerOption": "Paid by {name}",
-      "receiverOption": "Received by {name}",
-      "includeOption": "Include {name} in the split",
+      "payerOption": "{you, select, yes {Paid by you} other {Paid by {name}}}",
+      "receiverOption": "{you, select, yes {Received by you} other {Received by {name}}}",
+      "includeOption": "{you, select, yes {Include yourself in the split} other {Include {name} in the split}}",
       "notes": {
         "nobody": "Pick at least one person to split this with.",
         "roundedUp": "{you, select, yes {{count, plural, =0 {You pay} one {You and {names} pay} other {You, {names} pay}}} other {{count, plural, one {{names} pays} other {{names} pay}}}} {amount} more so it adds up to {total}.",
@@ -3338,13 +3391,13 @@
       "alwaysHint": "Saves it as this group's default",
       "addSomeone": "Add someone",
       "several": "Several",
-      "payerAmount": "Amount paid by {name}",
+      "payerAmount": "{you, select, yes {Amount you paid} other {Amount paid by {name}}}",
       "justOnePaid": "Just one person paid",
       "splitPayment": "Split the payment equally",
-      "giveRest": "Give the rest to {name}",
-      "giveRemaining": "Give the remaining {amount} to {name}",
-      "shareFewer": "One share fewer for {name}",
-      "shareMore": "One more share for {name}",
+      "giveRest": "{you, select, yes {Give yourself the rest} other {Give the rest to {name}}}",
+      "giveRemaining": "{you, select, yes {Give yourself the remaining {amount}} other {Give the remaining {amount} to {name}}}",
+      "shareFewer": "{you, select, yes {One share fewer for you} other {One share fewer for {name}}}",
+      "shareMore": "{you, select, yes {One more share for you} other {One more share for {name}}}",
       "payerShort": "{amount} still to assign to a payer.",
       "payerOver": "{amount} more than the total was paid.",
       "payerNobody": "Say how much at least one person paid."
@@ -3371,7 +3424,6 @@
     "repeat": {
       "title": "Repeat",
       "oneOff": "One-off",
-      "active": "{frequency}, {day}",
       "frequency": {
         "weekly": "Weekly",
         "monthly": "Monthly",
@@ -3379,14 +3431,7 @@
         "daily": "Daily"
       },
       "every": "Every",
-      "interval": {
-        "weekly": "{count, plural, one {# week} other {# weeks}}",
-        "monthly": "{count, plural, one {# month} other {# months}}",
-        "yearly": "{count, plural, one {# year} other {# years}}",
-        "daily": "{count, plural, one {# day} other {# days}}"
-      },
       "onDay": "On day",
-      "dayOfMonth": "Day {day}",
       "fewer": "Less often",
       "more": "More often",
       "previousDay": "Previous day",
@@ -3394,13 +3439,12 @@
       "ends": "Ends",
       "never": "Never",
       "onADate": "On a date",
-      "preview": "Next: {dates}. Created automatically, {timezone} time.",
       "done": "Done",
       "label": "Repeats",
       "schedule": "Create this entry again on a schedule",
       "next": "Next: {dates}",
       "onTheNth": "On the {week} {day}",
-      "byDayOfMonth": "On the {day}",
+      "byDayOfMonth": "On the {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "byWeekday": "On the {week} {day}",
       "lastDayOfMonth": "Last day of the month",
       "shortMonthNote": "Months without that day use their last one.",
@@ -3413,27 +3457,9 @@
       "nextLabel": "Next",
       "andAfter": "and {rule} after that",
       "noOccurrences": "That rule never happens.",
-      "weeks": {
-        "1": "first",
-        "2": "second",
-        "3": "third",
-        "4": "fourth",
-        "last": "last"
-      },
-      "everyN": "Every {interval}",
-      "presetDaily": "Every day",
-      "presetWeekly": "Every week on {day}",
-      "presetFortnightly": "Every 2 weeks on {day}",
-      "presetMonthly": "Every month on the {day}",
-      "presetYearly": "Every year on {date}",
+      "endsBeforeFirst": "The end date is before the first one.",
       "presetCustom": "Custom…",
-      "timezoneNote": "Created in {timezone} time.",
-      "everyOne": {
-        "daily": "Every day",
-        "weekly": "Every week",
-        "monthly": "Every month",
-        "yearly": "Every year"
-      }
+      "timezoneNote": "Created in {timezone} time."
     },
     "scan": {
       "title": "Scan a receipt",
@@ -3505,6 +3531,8 @@
       "addIncome": "Add income",
       "saveRecurringExpense": "Save recurring expense",
       "saveRecurringIncome": "Save recurring income",
+      "saveFutureExpenses": "Save for future expenses",
+      "saveFutureIncome": "Save for future income",
       "recordPayment": "Record repayment",
       "saveChanges": "Save changes"
     },

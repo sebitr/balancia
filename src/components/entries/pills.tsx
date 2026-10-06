@@ -99,6 +99,7 @@ export function MemberAvatar({
  */
 export function MemberPill({
   name,
+  shownAs = name,
   label,
   selected,
   onToggle,
@@ -109,6 +110,11 @@ export function MemberPill({
   guest = false,
 }: {
   name: string;
+  /**
+   * What the pill says, when it is not the name: "You", for the reader. The
+   * face keeps the name's initial, as it does on every other screen.
+   */
+  shownAs?: string;
   /** Accessible name, where the visible one would not be distinct enough. */
   label?: string;
   selected: boolean;
@@ -140,7 +146,7 @@ export function MemberPill({
       )}
     >
       <MemberAvatar name={name} selected={selected} tone={tone} guest={guest} />
-      <span className="truncate">{name}</span>
+      <span className="truncate">{shownAs}</span>
       {selected && (
         <Check
           aria-hidden="true"

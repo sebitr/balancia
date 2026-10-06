@@ -17,9 +17,9 @@ async function expectEntrySaved(page: Page, title: string): Promise<void> {
 /**
  * Opens the split editor.
  *
- * The summary row states the current split — "Split equally between 3 · CHF
- * 3.34 each" — and doubles as the way in, so it is matched on the part that
- * does not move with the numbers.
+ * The summary row states the current split — "Split equally between 3 · about
+ * CHF 3.33 each" — and doubles as the way in, so it is matched on the part
+ * that does not move with the numbers.
  */
 async function openSplit(page: Page): Promise<void> {
   await page.getByRole("button", { name: /Split .* between|Split by/ }).click();

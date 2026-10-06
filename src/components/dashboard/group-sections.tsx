@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BalanceAmount } from "@/components/money/amount";
 import { GroupIconTile } from "@/components/groups/group-icon";
 import type { GroupIcon, GroupIconColor } from "@/modules/groups/icons";
+import { minorUnitsPerMajor } from "@/modules/currencies/iso-4217";
 import { MemberStack } from "./member-stack";
 import { RelativeTime } from "./relative-time";
 import { PUSH } from "@/components/motion/transitions";
@@ -21,9 +22,32 @@ import { PUSH } from "@/components/motion/transitions";
  * Direction is carried by the section label, so each amount's own word moves
  * into `sr-only` rather than being dropped — colour is never the only signal.
  *
- * Amounts are rounded to whole units, as they are in the widget above: this
- * list is scanned, not reconciled, and the group's own screen has the centimes.
+ * Amounts are rounded to whole units, as a converted total is in the widget
+ * above: this list is scanned, not reconciled, and the group's own screen has
+ * the centimes (#100). But the widget keeps them whenever it shows a group's
+ * own currency, and "− CHF 961" under a heading of "CHF 960.84" read as two
+ * different debts. So a figure the rounding has moved says so — "≈ CHF 961" —
+ * and one under a single unit is shown exactly, because rounded it would be a
+ * debt of nothing.
  */
+
+/**
+ * How a row draws one figure: in whole units, marked when that moved it.
+ *
+ * `approximate` is false for a figure already whole, which "≈" would only cast
+ * doubt on, and for a currency with no minor unit at all.
+ */
+export function rowFigure(
+  minorUnits: string,
+  currency: string,
+): { fractionDigits: number | undefined; approximate: boolean } {
+  const units = BigInt(minorUnits);
+  const magnitude = units < 0n ? -units : units;
+  const unit = minorUnitsPerMajor(currency);
+  if (magnitude < unit)
+    return { fractionDigits: undefined, approximate: false };
+  return { fractionDigits: 0, approximate: magnitude % unit !== 0n };
+}
 
 export interface GroupRowView {
   readonly id: string;
@@ -100,7 +124,7 @@ export function GroupList({
                   key={amount.currency}
                   minorUnits={amount.minorUnits}
                   currency={amount.currency}
-                  fractionDigits={0}
+                  {...rowFigure(amount.minorUnits, amount.currency)}
                   showLabel={false}
                   className="text-base [&>svg]:size-[15px]"
                 />

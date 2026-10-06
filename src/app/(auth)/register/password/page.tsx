@@ -6,17 +6,21 @@ import { getCurrentActor } from "@/lib/security/actor";
 import { getEnv } from "@/lib/env";
 
 /**
- * Signing up with a password, for the case where neither of the other two works.
+ * Signing up with a password, on a page of its own.
  *
- * `/register` leads with a passkey and falls back to a mailed code. Between
- * them they cover every browser on every instance but one combination: a
- * deployment with no mail server, read in a browser with no WebAuthn. This is
- * where that reader is sent, and it is the reason the password form still
- * exists at all.
+ * `/register` leads with a passkey and falls back to a mailed code, and where
+ * the instance has no mail server it now asks for the password on its own
+ * Account step — see `components/onboarding/password-signup.tsx`. Nothing in
+ * the app links here any more: this page dropped the reader out of the flow
+ * they were in, and out of the group a link had brought them to.
  *
- * Not linked from anywhere else on purpose. A password is a thing to invent, a
- * thing to confirm and a thing to forget, and offering it beside a one-tap
- * passkey only invites somebody to pick it out of habit.
+ * It stays for what still arrives by its address: the end-to-end journeys
+ * make their accounts here (`tests/e2e/helpers.ts`), and it is the one sign-up
+ * page that carries the Apple button. Retiring it means moving both first.
+ *
+ * Still not offered beside a passkey, and that part is on purpose. A password
+ * is a thing to invent and a thing to forget, and offering it next to a
+ * one-tap passkey only invites somebody to pick it out of habit.
  */
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -4,20 +4,25 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 
 /**
- * Who gets the theme picker in the header.
+ * What the shell puts around a screen, and at which width.
  *
- * A signed-in reader has Settings › Appearance one tap behind the avatar, so
- * the header carries no second copy of it. A guest has no settings hub, and
- * the header is the only place they can change the theme — so for them it
- * stays. The shell's other children reach for the request, the router or the
- * theme provider, none of which exist in jsdom; each is swapped for a stub
- * that leaves a trace, since the subject here is only what the header holds.
+ * Below `lg` a header along the top; from `lg` up the sidebar, on every
+ * signed-in screen — Home and Notifications as well as a group's. Both are in
+ * the document at every width and CSS shows one, so each test scopes itself
+ * to the one it is about, and the last block stands the two widths up with
+ * the rules Tailwind emits there.
+ *
+ * The shell's other children reach for the request, the router or the theme
+ * provider, none of which exist in jsdom; each is swapped for a stub that
+ * leaves a trace, since the subject here is only what the chrome holds.
  */
 // `useRouter` is for `RefreshOnReturn`, which the shell mounts on every
 // screen. It refreshes on a `visibilitychange` and nothing here fires one, so
 // there is nothing for the stub to record.
+const nav = vi.hoisted(() => ({ pathname: "/dashboard" }));
+
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/dashboard",
+  usePathname: () => nav.pathname,
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
@@ -39,8 +44,25 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/components/demo/demo-banner", () => ({ DemoBanner: () => null }));
+// Server Components, which jsdom cannot render: each stands in with the shape
+// it draws, so the order and the scoping can be read.
 vi.mock("@/components/notifications/notification-bell", () => ({
-  NotificationBell: () => <a href="/notifications">Notifications</a>,
+  NotificationBell: ({ variant }: { variant?: string }) => (
+    <a href="/notifications" data-variant={variant ?? "header"}>
+      Notifications
+    </a>
+  ),
+}));
+vi.mock("./sidebar-groups-loader", () => ({
+  SidebarGroupsLoader: ({ groupId }: { groupId: string | null }) => (
+    <ul>
+      <li>
+        <a href="#g1" aria-current={groupId === "g1" ? "true" : undefined}>
+          Lisbon, March
+        </a>
+      </li>
+    </ul>
+  ),
 }));
 vi.mock("@/components/notifications/notification-refresh", () => ({
   NotificationRefresh: () => null,
@@ -62,90 +84,217 @@ vi.mock("@/components/motion/screen", () => ({
 const { AppShell } = await import("./app-shell");
 const { default: Link } = await import("next/link");
 
-function renderHeaderFor(actor: { label: string; isGuest: boolean }) {
+function renderShell(
+  actor: { label: string; isGuest: boolean },
+  options: { group?: { id: string; name: string }; pathname?: string } = {},
+) {
   cleanup();
+  nav.pathname = options.pathname ?? "/dashboard";
   renderWithIntl(
-    <AppShell actor={actor}>
-      <p>screen</p>
+    <AppShell
+      actor={actor}
+      group={options.group ?? null}
+      leading={
+        options.group ? (
+          <Link href={`/groups/${options.group.id}`}>{options.group.name}</Link>
+        ) : undefined
+      }
+      sidebarAdd={
+        options.group ? (
+          <Link href={`/groups/${options.group.id}/expenses/new`}>
+            Add expense
+          </Link>
+        ) : undefined
+      }
+      groupHeader={
+        options.group ? (
+          <nav aria-label="Group sections">
+            <Link href={`/groups/${options.group.id}`}>Overview</Link>
+          </nav>
+        ) : undefined
+      }
+      bottomNav={
+        options.group ? <nav aria-label="Group sections (bar)" /> : undefined
+      }
+    >
+      <Link href="/groups/g1/expenses/e1">An expense on the screen</Link>
     </AppShell>,
   );
 }
 
-describe("AppShell header", () => {
+const header = () =>
+  document.querySelector<HTMLElement>("[data-slot=app-header]")!;
+const sidebar = () =>
+  document.querySelector<HTMLElement>("[data-slot=app-sidebar]")!;
+
+describe("AppShell header, below lg", () => {
   it("leaves the theme to the settings hub for a signed-in reader", () => {
-    renderHeaderFor({ label: "Ada", isGuest: false });
-    expect(screen.queryByRole("button", { name: "Theme" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Notifications" })).toBeTruthy();
+    renderShell({ label: "Ada", isGuest: false });
+    expect(
+      within(header()).queryByRole("button", { name: "Theme" }),
+    ).toBeNull();
+    expect(
+      within(header()).getByRole("link", { name: "Notifications" }),
+    ).toHaveAttribute("data-variant", "header");
     // The avatar, which leads to the hub: named for whose it is, since a
     // group's tab bar has a "Settings" of its own.
-    expect(screen.getByRole("link", { name: "Your account" })).toBeTruthy();
+    expect(
+      within(header()).getByRole("link", { name: "Your account" }),
+    ).toBeTruthy();
   });
 
   it("keeps the theme picker for a guest, who has no settings hub", () => {
-    renderHeaderFor({ label: "Marta", isGuest: true });
-    expect(screen.getByRole("button", { name: "Theme" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Notifications" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Your account" })).toBeNull();
+    renderShell(
+      { label: "Marta", isGuest: true },
+      { group: { id: "g1", name: "Lisbon, March" }, pathname: "/groups/g1" },
+    );
+    expect(
+      within(header()).getByRole("button", { name: "Theme" }),
+    ).toBeTruthy();
+    expect(
+      within(header()).queryByRole("link", { name: "Notifications" }),
+    ).toBeNull();
+    expect(
+      within(header()).queryByRole("link", { name: "Your account" }),
+    ).toBeNull();
   });
 });
 
 /**
- * A group's shell, whose header stands up as a rail from `lg` up.
- *
- * The rail is the header's own controls with the group's navigation between
- * them, so the order they are written in is the order a keyboard meets them:
- * the switcher, the places, then the bell and the account, then the screen —
- * with a way past all of it first.
+ * From `lg` up, every signed-in screen gets the sidebar — the dashboard as
+ * well as a group. What a keyboard meets first is a way past it, then the
+ * sidebar top to bottom, then the screen.
  */
-describe("AppShell with a rail", () => {
-  function renderGroupShell() {
-    cleanup();
-    renderWithIntl(
-      <AppShell
-        actor={{ label: "Ada", isGuest: false }}
-        leading={<Link href="/groups/g1">Lisbon, March</Link>}
-        rail={
-          <nav aria-label="Group sections">
-            <Link href="/groups/g1/expenses/new">Add</Link>
-            <Link href="/groups/g1">Overview</Link>
-          </nav>
-        }
-        bottomNav={<nav aria-label="Group sections (bar)" />}
-      >
-        <Link href="/groups/g1/expenses/e1">An expense on the screen</Link>
-      </AppShell>,
+describe("AppShell sidebar, from lg", () => {
+  it("is drawn on Home, with no group lit and nothing of a group's", () => {
+    renderShell({ label: "Ada", isGuest: false });
+
+    const side = sidebar();
+    expect(side.tagName).toBe("HEADER");
+    expect(within(side).getByRole("link", { name: "Home" })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
-  }
+    expect(
+      within(side).getByRole("link", { name: "Notifications" }),
+    ).toHaveAttribute("data-variant", "sidebar");
+    expect(
+      within(side).getByRole("navigation", { name: "Your groups" }),
+    ).toHaveTextContent("Lisbon, March");
+    expect(
+      within(side).getByRole("link", { name: "Lisbon, March" }),
+    ).not.toHaveAttribute("aria-current");
+    // Outside a group, Add asks which group first.
+    expect(
+      within(side).getByRole("button", { name: "Add expense" }),
+    ).toHaveAttribute("aria-haspopup", "dialog");
+  });
 
-  it("carries the navigation between the switcher and the account", () => {
-    renderGroupShell();
+  it("lights the group and adds to it, inside a group", () => {
+    renderShell(
+      { label: "Ada", isGuest: false },
+      { group: { id: "g1", name: "Lisbon, March" }, pathname: "/groups/g1" },
+    );
 
-    const header = screen.getByRole("banner");
-    const order = within(header)
-      .getAllByRole("link")
-      .map((link) => link.textContent);
+    const side = sidebar();
+    expect(
+      within(side).getByRole("link", { name: "Lisbon, March" }),
+    ).toHaveAttribute("aria-current", "true");
+    expect(
+      within(side).getByRole("link", { name: "Add expense" }),
+    ).toHaveAttribute("href", "/groups/g1/expenses/new");
+    // The group's own places are not in the sidebar: they are the header's
+    // tabs above the screen.
+    expect(
+      within(side).queryByRole("navigation", { name: "Group sections" }),
+    ).toBeNull();
+  });
+
+  it("opens with a way past the sidebar to the screen, on every screen", () => {
+    for (const options of [
+      {},
+      { group: { id: "g1", name: "Lisbon, March" }, pathname: "/groups/g1" },
+    ]) {
+      renderShell({ label: "Ada", isGuest: false }, options);
+
+      const links = screen.getAllByRole("link");
+      expect(links[0]).toHaveTextContent("Skip to content");
+      expect(links[0]).toHaveAttribute("href", "#app-content");
+      expect(screen.getByRole("main")).toHaveAttribute("id", "app-content");
+      expect(links.at(-1)).toHaveTextContent("An expense on the screen");
+    }
+  });
+
+  it("walks the sidebar top to bottom before the group's tabs and the screen", () => {
+    renderShell(
+      { label: "Ada", isGuest: false },
+      { group: { id: "g1", name: "Lisbon, March" }, pathname: "/groups/g1" },
+    );
+
+    // The tab order, with the header along the top taken out the way CSS
+    // takes it out from `lg` up.
+    const order = [
+      ...document.querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled])",
+      ),
+    ]
+      .filter((element) => !header().contains(element))
+      .map(
+        (element) =>
+          element.getAttribute("aria-label") ?? element.textContent?.trim(),
+      );
+
     expect(order).toEqual([
-      "Lisbon, March",
-      "Add",
-      "Overview",
+      "Skip to content",
+      "Balancia home",
+      "Collapse the sidebar",
+      "Add expense",
+      "Home",
       "Notifications",
+      "New group",
+      "Lisbon, March",
       expect.stringContaining("Ada"),
+      "Overview",
+      "An expense on the screen",
     ]);
   });
+});
 
-  it("opens with a way past the rail to the screen", () => {
-    renderGroupShell();
+/**
+ * Both chromes are in the document at every width, and CSS shows one: the
+ * header is `lg:hidden`, the sidebar `hidden lg:flex`. jsdom applies no
+ * Tailwind and no media queries, so each width is stood in for by the rules
+ * Tailwind emits there.
+ */
+describe("the header and the sidebar together", () => {
+  const WIDTHS = [
+    ["a phone", ".hidden { display: none; }", "app-header"],
+    [
+      "a desktop",
+      ".hidden { display: none; } .lg\\:flex { display: flex; } .lg\\:hidden { display: none; }",
+      "app-sidebar",
+    ],
+  ] as const;
 
-    const links = screen.getAllByRole("link");
-    expect(links[0]).toHaveTextContent("Skip to content");
-    expect(links[0]).toHaveAttribute("href", "#app-content");
-    expect(screen.getByRole("main")).toHaveAttribute("id", "app-content");
-    // Everything in the rail comes between the way past it and the screen.
-    expect(links.at(-1)).toHaveTextContent("An expense on the screen");
-  });
-
-  it("offers no way past a header that is only a top bar", () => {
-    renderHeaderFor({ label: "Ada", isGuest: false });
-    expect(screen.queryByRole("link", { name: "Skip to content" })).toBeNull();
+  it.each(WIDTHS)("expose exactly one banner on %s", (_width, css, shown) => {
+    for (const isGuest of [false, true]) {
+      const sheet = document.createElement("style");
+      sheet.textContent = css;
+      document.head.append(sheet);
+      try {
+        renderShell(
+          { label: "Ada", isGuest },
+          {
+            group: { id: "g1", name: "Lisbon, March" },
+            pathname: "/groups/g1",
+          },
+        );
+        const banners = screen.getAllByRole("banner");
+        expect(banners).toHaveLength(1);
+        expect(banners[0]).toHaveAttribute("data-slot", shown);
+      } finally {
+        sheet.remove();
+      }
+    }
   });
 });

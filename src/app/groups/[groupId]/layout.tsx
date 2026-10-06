@@ -1,7 +1,15 @@
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { GroupNav, GroupRail } from "@/components/layout/group-nav";
+import { GroupHeader } from "@/components/layout/group-header";
+import {
+  GroupHeaderFacts,
+  GroupHeaderFactsFallback,
+} from "@/components/layout/group-header-facts";
+import { GroupNav } from "@/components/layout/group-nav";
 import { GroupSwitcher } from "@/components/layout/group-switcher";
+import { readSidebarCollapsed } from "@/components/layout/sidebar-cookie";
+import { SidebarGroupAdd } from "@/components/layout/sidebar-group-add";
 import { OfflineEntryProvider } from "@/components/offline/offline-entry";
 import { OutboxFlusher } from "@/components/offline/outbox-flusher";
 import { PendingStrip } from "@/components/offline/pending-strip";
@@ -49,6 +57,7 @@ export default async function GroupLayout({
 }: LayoutProps<"/groups/[groupId]">) {
   const { groupId } = await params;
   const access = await resolveAccess(groupId);
+  const sidebarCollapsed = await readSidebarCollapsed();
 
   /*
    * Wrapping the shell rather than sitting inside it, so that the bottom
@@ -77,10 +86,27 @@ export default async function GroupLayout({
           isGuest: access.actor.kind === "guest",
         }}
         bottomNav={<GroupNav groupId={access.groupId} />}
-        // The same navigation, for the rail the header becomes from `lg` up.
-        // Inside the offline provider for the same reason as the bar: its Add
+        // From `lg` up the sidebar lights this group and its Add adds to it —
+        // inside the offline provider for the same reason as the bar: Add
         // opens the local drawer when the routed one cannot load.
-        rail={<GroupRail groupId={access.groupId} />}
+        group={{ id: access.groupId, name: access.group.name }}
+        sidebarAdd={<SidebarGroupAdd groupId={access.groupId} />}
+        sidebarCollapsed={sidebarCollapsed}
+        // The same navigation as the bar, as tabs under the group's name,
+        // from `lg` up. The name is drawn at once from the authorization
+        // above; the tile and the counts stream in behind it.
+        groupHeader={
+          <GroupHeader groupId={access.groupId}>
+            <Suspense
+              fallback={<GroupHeaderFactsFallback name={access.group.name} />}
+            >
+              <GroupHeaderFacts
+                groupId={access.groupId}
+                name={access.group.name}
+              />
+            </Suspense>
+          </GroupHeader>
+        }
         // The name is already resolved by the authorization above, so the header
         // costs no query of its own; the switcher asks for the rest on opening.
         leading={

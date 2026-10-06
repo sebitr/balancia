@@ -42,6 +42,12 @@ export interface InboxRow {
   /** Actor, verb, object. The amount is not in here; it has a column. */
   readonly sentence: string;
   readonly amount: string | null;
+  /**
+   * What a reminder asks for, every currency named ("€24.00 and ¥1,400").
+   * The card sets it at its right from `lg`. Absent on every other kind, whose
+   * figure is `amount`.
+   */
+  readonly debt?: string | null;
   readonly url: string;
   readonly createdAt: string;
   readonly day: DaySection;
