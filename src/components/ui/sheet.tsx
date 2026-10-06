@@ -290,6 +290,14 @@ function SheetContent({
           // fade is a popover pretending to be a sheet.
           bottom &&
             "duration-[380ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-open:slide-in-from-bottom-[100%] data-closed:slide-out-to-bottom-[100%]",
+          // And from `md` up it is a phone's width, centred under the window
+          // the way a dialog is, rather than a strip across all of it. Every
+          // sheet here was drawn at 390pt — the entry form, the split, the
+          // filters — and stretched to 1280px its rows ran a hand's width
+          // from their figures. A plain `md:` utility rather than a
+          // `data-[side=bottom]:` one, so a caller that wants another width
+          // says `md:max-w-*` and wins the merge.
+          bottom && "md:mx-auto md:max-w-md",
           className,
         )}
         style={
