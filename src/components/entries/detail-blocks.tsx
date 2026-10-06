@@ -223,6 +223,10 @@ function currencyLeads(locale: string, currency: string): boolean {
  * qualifies the number rather than competing with it. The row wraps rather
  * than running off the card, so a seven-figure total on a narrow phone puts
  * its currency on a line of its own instead of losing digits under the edge.
+ *
+ * That makes this one of the two exceptions written out at `formatMoney`; the
+ * caption under it, like every other figure on the screen, is in the app's
+ * one notation.
  */
 export function BigAmount({
   minorUnits,

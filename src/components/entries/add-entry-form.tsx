@@ -78,11 +78,21 @@ import {
   updateExpenseAction,
   updateSettlementAction,
 } from "@/modules/expenses/actions";
-import { createRecurringAction } from "@/modules/recurring/actions";
+import {
+  createRecurringAction,
+  updateRecurringAction,
+} from "@/modules/recurring/actions";
 import {
   savedSeriesMessage,
+  updatedSeriesMessage,
   type SavedSeries,
+  type UpdatedSeries,
 } from "@/components/recurring/saved-series";
+import {
+  scheduleSentence,
+  weekdayName,
+} from "@/components/recurring/schedule-sentence";
+import { laterOf } from "@/modules/recurring/schedule";
 import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import {
   PAYMENT_METHOD_IDS,
@@ -298,6 +308,31 @@ export interface EditingEntry {
 }
 
 /**
+ * A recurring expense being changed, as what the form opens on.
+ *
+ * Its fields are the ones a half-written entry is restored from — the same
+ * shape, seeded the same way, Repeats on — so reopening a rule costs the form
+ * no second set of initial states. What a draft cannot say is beside them.
+ *
+ * Saving changes the rule for the entries still to come and no others: the
+ * button says so, and so does the confirmation. `fields.date` is where the
+ * edited rule starts, and `earliest` is as early as it may — see
+ * `editWindow`.
+ */
+export interface EditingRule {
+  readonly id: string;
+  readonly fields: EntryDraftFields;
+  readonly exchangeRate: string;
+  /** Everyone who puts money in, when that is more than one person. */
+  readonly payers?: readonly {
+    readonly participantId: string;
+    readonly amountText: string;
+  }[];
+  readonly earliest: string;
+  readonly paused: boolean;
+}
+
+/**
  * What a save produced: the action's answer, and — when the entry changed
  * tables — the screen it now lives on.
  *
@@ -327,6 +362,8 @@ interface Outcome {
    * and when it adds the next. Only the recurring path has one.
    */
   readonly series?: SavedSeries;
+  /** The same, for a recurring entry that was changed rather than set up. */
+  readonly updated?: UpdatedSeries;
   /**
    * The repayment this press has just recorded, when it recorded a new one.
    *
@@ -569,6 +606,16 @@ export interface AddEntryFormProps {
    * fills itself reads as two screens.
    */
   draft?: EntryDraftFields | null;
+  /**
+   * A recurring expense to change, rather than an entry. Never set together
+   * with `editing`, `prefill` or `draft`. See `EditingRule`.
+   */
+  rule?: EditingRule;
+  /**
+   * Open with Repeats already on — the Recurring screen's way in. See
+   * `REPEAT_PARAM`.
+   */
+  startRepeating?: boolean;
 }
 
 export function AddEntryForm({
@@ -598,9 +645,13 @@ export function AddEntryForm({
   openSheet,
   recentEntries = NO_RECENT,
   defaultSplit = null,
-  draft = null,
+  draft: restored = null,
   canAddGuests = false,
+  rule,
+  startRepeating = false,
 }: AddEntryFormProps) {
+  // A rule being changed seeds the fields the way a restored draft does.
+  const draft = rule ? rule.fields : restored;
   const router = useRouter();
   const locale = useNumberLocale();
   /** The language sentences are in, which is not how numbers are written. */
@@ -619,15 +670,11 @@ export function AddEntryForm({
   const t = useTranslations("addEntry");
   const tSplit = useTranslations("expenses.split");
   const tMethods = useTranslations("paymentMethods");
-  /*
-   * The ordinals — "second", "last" — as their own namespace, so the key is a
-   * literal the compiler can check rather than a string built from a value.
-   */
-  const tWeeksRaw = useTranslations("addEntry.repeat.weeks");
-  const tWeeks = (week: string) =>
-    tWeeksRaw(week as Parameters<typeof tWeeksRaw>[0]);
+  /** A schedule in words, worded once for every screen: `scheduleSentence`. */
+  const tSchedule = useTranslations("recurring.schedule");
   const tCommon = useTranslations("common");
   const tSeries = useTranslations("recurring.saved");
+  const tUpdated = useTranslations("recurring.updated");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const repeatsId = useId();
 
@@ -657,7 +704,9 @@ export function AddEntryForm({
       draft?.currency ??
       defaultCurrency,
   );
-  const [rate, setRate] = useState(editing?.exchangeRate ?? "");
+  const [rate, setRate] = useState(
+    editing?.exchangeRate ?? rule?.exchangeRate ?? "",
+  );
   const [description, setDescription] = useState(
     editing?.description ?? draft?.description ?? "",
   );
@@ -734,13 +783,18 @@ export function AddEntryForm({
    * two-payer expense from quietly rewriting it as a one-payer one: the form
    * used to take `payers[0]` and save the whole amount against them.
    */
-  const [several, setSeveral] = useState((editing?.payers?.length ?? 0) > 1);
+  const [several, setSeveral] = useState(
+    ((editing ?? rule)?.payers?.length ?? 0) > 1,
+  );
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
     () => ({
-      ...editing?.payers?.reduce<Record<string, string>>((all, payer) => {
-        all[payer.participantId] = payer.amountText;
-        return all;
-      }, {}),
+      ...(editing ?? rule)?.payers?.reduce<Record<string, string>>(
+        (all, payer) => {
+          all[payer.participantId] = payer.amountText;
+          return all;
+        },
+        {},
+      ),
     }),
   );
 
@@ -756,7 +810,7 @@ export function AddEntryForm({
   const [recurrence, setRecurrence] = useState<RecurrenceState>(
     () =>
       draft?.recurrence ?? {
-        enabled: false,
+        enabled: startRepeating,
         frequency: "monthly",
         interval: 1,
         weekday: 1,
@@ -1323,9 +1377,16 @@ export function AddEntryForm({
     // the button is closed while the sheet is still naming the shortfall.
     payerNote === null;
 
+  /*
+   * Where the schedule starts. A rule being changed never starts before the
+   * day after its last entry, nor before today — the server holds it to the
+   * same, so the dates shown are the dates it will keep. See `editWindow`.
+   */
+  const startDate = rule ? laterOf(date, rule.earliest) : date;
+
   const upcoming = useMemo(
-    () => upcomingOccurrences(recurrence, date, timezone),
-    [recurrence, date, timezone],
+    () => upcomingOccurrences(recurrence, startDate, timezone),
+    [recurrence, startDate, timezone],
   );
 
   /**
@@ -1347,22 +1408,26 @@ export function AddEntryForm({
     recurrence.enabled && recurrence.endDate !== null && upcoming.length === 0;
 
   /**
-   * "Monthly, day 1" — the rule in one line, wherever it is named.
-   *
-   * A daily rule has no second half at all: "Daily, day 12" would name a
-   * number the rule does not use.
+   * "Every month on the 1st" — the rule in one line, in the words the repeat
+   * sheet and the Recurring list use for it. See `scheduleSentence`.
    */
-  const repeatLabel =
-    recurrence.frequency === "daily"
-      ? t("repeat.frequency.daily")
-      : t("repeat.active", {
-          frequency: t(`repeat.frequency.${recurrence.frequency}`),
-          day: sendsWeekOfMonth(recurrence)
-            ? tWeeks(String(recurrence.weekOfMonth))
-            : recurrence.frequency === "weekly"
-              ? String(recurrence.weekday)
-              : t("repeat.dayOfMonth", { day: recurrence.dayOfMonth }),
-        });
+  const schedule = scheduleSentence(
+    {
+      frequency: recurrence.frequency,
+      interval: recurrence.interval,
+      weekday: recurrence.weekday,
+      weekOfMonth: sendsWeekOfMonth(recurrence) ? recurrence.weekOfMonth : null,
+      dayOfMonth: recurrence.dayOfMonth,
+      monthOfYear: null,
+      startDate,
+    },
+    {
+      weekday: (day) => weekdayName(language, day),
+      week: (week) => tSchedule(`week.${week}`),
+      dayMonth: (day) => dates.plain(day, "dayMonth"),
+    },
+  );
+  const repeatLabel = tSchedule(schedule.key, schedule.values);
 
   const amountLabel = scan
     ? t("labels.amountFromReceipt")
@@ -1504,7 +1569,8 @@ export function AddEntryForm({
    * itself, and offering it back later would offer to re-apply changes
    * somebody chose to abandon.
    */
-  const draftable = !editing && type !== "settle";
+  // Nor while changing a rule, which already exists for the same reason.
+  const draftable = !editing && !rule && type !== "settle";
   const attachmentIds = useMemo(
     () => attachments.map((file) => file.id),
     [attachments],
@@ -1575,7 +1641,7 @@ export function AddEntryForm({
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
   const duplicate = useMemo(() => {
-    if (type !== "expense" || editing) return null;
+    if (type !== "expense" || editing || rule) return null;
     const parsed = parseAmountToMinor(settledAmount || "0", currency);
     if (!parsed.ok) return null;
     return findDuplicate({
@@ -1588,6 +1654,7 @@ export function AddEntryForm({
   }, [
     type,
     editing,
+    rule,
     settledAmount,
     settledDescription,
     currency,
@@ -1749,9 +1816,11 @@ export function AddEntryForm({
       try {
         outcome = isSettle
           ? await submitSettlement()
-          : recurrence.enabled
-            ? await submitRecurring()
-            : await submitEntry(clientKey);
+          : rule
+            ? await submitRuleChange(rule.id)
+            : recurrence.enabled
+              ? await submitRecurring()
+              : await submitEntry(clientKey);
       } catch (cause) {
         /*
          * The request did not come back. That covers a connection that dropped
@@ -1768,7 +1837,8 @@ export function AddEntryForm({
         await queueEntry(clientKey);
         return;
       }
-      const { result, movedTo, series, recordedSettlementId } = outcome;
+      const { result, movedTo, series, updated, recordedSettlementId } =
+        outcome;
 
       if (!result.ok) {
         refuse(result.error ?? t("errors.saveFailed"), null, result.code);
@@ -1778,8 +1848,10 @@ export function AddEntryForm({
       // Spent. Whatever is saved from this form next is a new entry.
       heldKey.current = null;
 
-      // The entry exists now, so the draft of it does not.
-      void discardDraft(groupId);
+      // The entry exists now, so the draft of it does not. A rule that was
+      // changed was never the draft, and whatever the group has half-written
+      // stays where it is.
+      if (!rule) void discardDraft(groupId);
 
       // Something that moves the money has landed. The toast below says so and
       // the list behind it shows it; this is only for the hand that is already
@@ -1818,9 +1890,12 @@ export function AddEntryForm({
       // entry landing in the list, and the toast says the same thing without
       // standing between them and it. A recurring entry's title says whether
       // there is one to see yet, and if not, the day there will be.
-      const confirmation = recurrence.enabled
-        ? seriesSaved(series)
-        : t(`saved.${confirmationKey(type, editing !== undefined)}`);
+      // A rule that was changed says it left the entries already added alone.
+      const confirmation = rule
+        ? seriesUpdated(updated)
+        : recurrence.enabled
+          ? seriesSaved(series)
+          : t(`saved.${confirmationKey(type, editing !== undefined)}`);
       const facts = describeSaved(createdExpenseId(result) ?? editing?.id);
       /*
        * A new repayment can be taken back from its confirmation.
@@ -1960,39 +2035,47 @@ export function AddEntryForm({
   });
 
   const submitRecurring = async (): Promise<Outcome> => {
-    const result = await createRecurringAction(groupId, {
-      direction: directionOf(type) ?? "out",
-      description: description.trim(),
-      notes: "",
-      category: effectiveCategory,
-      subcategory: shownSubcategory,
-      amount: totalMinor.ok ? totalMinor.value.toString() : "0",
-      currency,
-      exchangeRate: needsRate ? rate.trim() : "",
-      payers: payerContributions(),
-      splitMethod: method,
-      splitEntries: splitEntries(),
-      frequency: recurrence.frequency,
-      interval: recurrence.interval,
-      /*
-       * Which fields a rule carries depends on what kind of rule it is, and
-       * the server refuses the combinations that would need a guess — "the
-       * 3rd" beside "the second Tuesday", a weekday on a daily rule. Sending
-       * only what this frequency means is what keeps them apart.
-       */
-      weekday: sendsWeekday(recurrence) ? recurrence.weekday : undefined,
-      weekOfMonth: sendsWeekOfMonth(recurrence)
-        ? String(recurrence.weekOfMonth)
-        : undefined,
-      dayOfMonth: sendsDayOfMonth(recurrence)
-        ? recurrence.dayOfMonth
-        : undefined,
-      startDate: date,
-      endDate: recurrence.endDate ?? "",
-      count: recurrence.count ?? undefined,
-    });
+    const result = await createRecurringAction(groupId, recurringPayload());
     return { result, series: result.data };
   };
+
+  /** Changes a rule for the entries still to come. See `EditingRule`. */
+  const submitRuleChange = async (id: string): Promise<Outcome> => {
+    const result = await updateRecurringAction(groupId, id, recurringPayload());
+    return { result, updated: result.data };
+  };
+
+  const recurringPayload = () => ({
+    direction: directionOf(type) ?? "out",
+    description: description.trim(),
+    // A rule's own notes ride through an edit untouched: this screen has
+    // nowhere to show them, and a new one starts with none.
+    notes: rule ? notes : "",
+    category: effectiveCategory,
+    subcategory: shownSubcategory,
+    amount: totalMinor.ok ? totalMinor.value.toString() : "0",
+    currency,
+    exchangeRate: needsRate ? rate.trim() : "",
+    payers: payerContributions(),
+    splitMethod: method,
+    splitEntries: splitEntries(),
+    frequency: recurrence.frequency,
+    interval: recurrence.interval,
+    /*
+     * Which fields a rule carries depends on what kind of rule it is, and
+     * the server refuses the combinations that would need a guess — "the
+     * 3rd" beside "the second Tuesday", a weekday on a daily rule. Sending
+     * only what this frequency means is what keeps them apart.
+     */
+    weekday: sendsWeekday(recurrence) ? recurrence.weekday : undefined,
+    weekOfMonth: sendsWeekOfMonth(recurrence)
+      ? String(recurrence.weekOfMonth)
+      : undefined,
+    dayOfMonth: sendsDayOfMonth(recurrence) ? recurrence.dayOfMonth : undefined,
+    startDate,
+    endDate: recurrence.endDate ?? "",
+    count: recurrence.count ?? undefined,
+  });
 
   /** The confirmation's title for a recurring entry. See `savedSeriesMessage`. */
   const seriesSaved = (series: SavedSeries | undefined): string => {
@@ -2000,6 +2083,14 @@ export function AddEntryForm({
       dates.plain(day),
     );
     return tSeries(message.key, message.values);
+  };
+
+  /** The same for a changed one, which says it left the past alone. */
+  const seriesUpdated = (updated: UpdatedSeries | undefined): string => {
+    const message = updatedSeriesMessage(updated, description.trim(), (day) =>
+      dates.plain(day),
+    );
+    return tUpdated(message.key, message.values);
   };
 
   const submitSettlement = async (): Promise<Outcome> => {
@@ -2276,7 +2367,13 @@ export function AddEntryForm({
       <header className="flex shrink-0 flex-col gap-3 border-b border-border px-4 pt-1.5 pb-3">
         <div className="flex items-center gap-3">
           <SheetTitle className="flex-1 truncate text-xl font-semibold tracking-[-0.02em]">
-            {editing ? t(`editTitles.${type}`) : t(`titles.${type}`)}
+            {rule
+              ? t(
+                  `editRecurringTitles.${type === "income" ? "income" : "expense"}`,
+                )
+              : editing
+                ? t(`editTitles.${type}`)
+                : t(`titles.${type}`)}
           </SheetTitle>
           {/* The group's name is not repeated here: the group is on screen
               behind this, which is the whole reason it is a drawer. */}
@@ -2309,7 +2406,7 @@ export function AddEntryForm({
          * tabs for two buttons that are not there is a header that looks
          * broken.
          */}
-        {type === "expense" && !editing && (
+        {type === "expense" && !editing && !rule && (
           <div className="flex gap-2 empty:hidden">
             {/* Nothing to scan into a form a scan has already filled: the
                 entry point would be pressed again on top of the values it
@@ -2718,6 +2815,9 @@ export function AddEntryForm({
               // tomorrow.
               aria-label={t("date.label")}
               value={date}
+              // A rule being changed starts again no earlier than this; the
+              // row shows the first date from wherever it is set.
+              min={rule?.earliest}
               onChange={(event) => setDate(event.target.value)}
               // Without this the row is inert on a desktop: the picker the
               // reader is aiming at only opens for an indicator they cannot
@@ -2769,6 +2869,9 @@ export function AddEntryForm({
                 // otherwise be read out as part of the switch's name.
                 aria-label={t("repeat.label")}
                 checked={recurrence.enabled}
+                // A rule stays a rule: turning it into a one-off is not what
+                // changing it means, and Delete is in its own menu.
+                disabled={rule !== undefined}
                 onCheckedChange={(next) =>
                   setRecurrence((current) => ({
                     ...current,
@@ -2918,7 +3021,7 @@ export function AddEntryForm({
         >
           {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
           {t(
-            `actions.${primaryActionKey(type, recurrence.enabled, editing !== undefined)}`,
+            `actions.${primaryActionKey(type, recurrence.enabled, editing !== undefined, rule !== undefined)}`,
           )}
         </Button>
       </div>
@@ -3140,15 +3243,23 @@ export function AddEntryForm({
             <RecurrenceSheet
               state={recurrence}
               onChange={setRecurrence}
-              startDate={date}
+              startDate={startDate}
               timezone={timezone}
               onDone={() => setSheet(null)}
               // The sheet's only way out downwards: it turns repeats off and
-              // closes, which is why there is no switch in its header.
-              onStop={() => {
-                setRecurrence((current) => ({ ...current, enabled: false }));
-                setSheet(null);
-              }}
+              // closes, which is why there is no switch in its header. A rule
+              // being changed has none, for the reason its switch is fixed.
+              onStop={
+                rule
+                  ? undefined
+                  : () => {
+                      setRecurrence((current) => ({
+                        ...current,
+                        enabled: false,
+                      }));
+                      setSheet(null);
+                    }
+              }
             />
           )}
         </SheetContent>

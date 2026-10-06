@@ -753,6 +753,55 @@ code {
   font-size: 0.875rem;
   color: var(--destructive);
 }
+/* A password field — password-input.tsx. One field with an eye in it, and
+   never a confirm field beside it. The eye is a toggle (aria-pressed, its name
+   always "Show password"), drawn at 32px inside the field's right edge and hit
+   at 44px; a pointer press keeps the caret in the field. */
+.password-field {
+  position: relative;
+}
+.password-field .input {
+  padding-right: 2.75rem;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.375rem;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  padding: 0;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+.password-toggle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+}
+.password-toggle:hover,
+.password-toggle[aria-pressed="true"] {
+  color: var(--foreground);
+}
+.password-toggle:hover {
+  background: var(--muted);
+}
+.password-toggle svg {
+  width: 1rem;
+  height: 1rem;
+}
 /* A stepper — split-sheet.tsx, StepButton. A narrow field between a step
    either side; the field still takes typing. Each step is drawn at 28px and
    hit at 44px (the app's `tap-target`), and the 8px gap keeps the two hit
@@ -1740,7 +1789,7 @@ a[aria-current="page"] .nav-icon--primary {
                 <span
                   class="tabular-nums"
                   style="font-weight: 600; color: var(--negative-ink)"
-                  >EUR 148.60</span
+                  >€148.60</span
                 >
               </a>
             </li>
@@ -1808,7 +1857,7 @@ a[aria-current="page"] .nav-icon--primary {
                 <span
                   class="tabular-nums"
                   style="font-weight: 600; color: var(--negative-ink)"
-                  >EUR 99.40</span
+                  >€99.40</span
                 >
               </a>
             </li>
@@ -1886,7 +1935,7 @@ a[aria-current="page"] .nav-icon--primary {
                 <span
                   class="tabular-nums"
                   style="font-weight: 600; color: var(--positive-ink)"
-                  >EUR 248.00</span
+                  >€248.00</span
                 >
               </a>
             </li>
@@ -1983,7 +2032,7 @@ a[aria-current="page"] .nav-icon--primary {
                 <span
                   class="tabular-nums"
                   style="font-weight: 600; color: var(--positive-ink)"
-                  >EUR 148.60</span
+                  >€148.60</span
                 >
                 <svg
                   aria-hidden="true"
@@ -2010,7 +2059,7 @@ a[aria-current="page"] .nav-icon--primary {
                 <span
                   class="tabular-nums"
                   style="font-weight: 600; color: var(--positive-ink)"
-                  >EUR 99.40</span
+                  >€99.40</span
                 >
                 <svg
                   aria-hidden="true"

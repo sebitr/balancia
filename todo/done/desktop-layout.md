@@ -1,6 +1,6 @@
 # Use the whole window on a desktop, instead of a phone column with a bottom bar
 
-Branch: `feat/desktop-layout`
+Merged: 2026-10-06 in #438
 
 Design: https://claude.ai/artifact/47LVzp9wBfizx7zgqDoFYw
 

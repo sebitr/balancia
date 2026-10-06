@@ -68,6 +68,7 @@ vi.mock("@/components/groups/use-detected-timezone", () => ({
 }));
 
 const auth = vi.hoisted(() => ({
+  registerAction: vi.fn(),
   requestSignInCodeAction: vi.fn(),
   signInWithCodeAction: vi.fn(),
   startCodeSignupAction: vi.fn(),
@@ -115,6 +116,10 @@ beforeEach(() => {
   auth.verifySignupCodeAction.mockResolvedValue({
     ok: true,
     data: { joinedGroupId: null, claimedGroupId: "group-1" },
+  });
+  auth.registerAction.mockResolvedValue({
+    ok: true,
+    data: { verificationRequired: false, claimedGroupId: null },
   });
   for (const action of Object.values(profileActions)) action.mockReset();
   profileActions.setDisplayNameAction.mockResolvedValue({ ok: true });
@@ -592,6 +597,44 @@ describe("the shared link", () => {
     expect(router.push).toHaveBeenCalledWith("/groups/group-1");
   });
 
+  it("joins after a password signup, and keeps the reader on the link to do it", async () => {
+    // The password used to be a link to /register/password, which knew
+    // nothing of the group: the account was made and the join was lost.
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="shared"
+        group={group}
+        members={members}
+        codeSignupAvailable={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+    // The name is the one picked from the list; nothing asks for it again.
+    expect(screen.queryByRole("textbox", { name: "Your name" })).toBeNull();
+    await user.type(
+      screen.getByRole("textbox", { name: "Email address" }),
+      "alex@example.com",
+    );
+    await user.type(screen.getByLabelText("Password"), "analytical engine");
+    await user.click(screen.getByRole("button", { name: "Create my account" }));
+
+    expect(auth.registerAction).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Alex", email: "alex@example.com" }),
+    );
+    expect(joinWithAccountAction).toHaveBeenCalledWith({
+      participantId: "member-2",
+      displayName: "Alex",
+    });
+    expect(router.push).toHaveBeenCalledWith("/groups/group-1");
+    expect(stepsTaken()).toEqual(["whichOne", "keepIt", "identity", "left"]);
+  });
+
   it("creates an account and lands it in the group in three screens", async () => {
     auth.verifySignupCodeAction.mockResolvedValue({
       ok: true,
@@ -662,7 +705,7 @@ describe("the cold arrival", () => {
   it("describes the product, because there is no group to describe", () => {
     renderWithIntl(<OnboardingFlow arrival="cold" group={null} />);
     expect(
-      screen.getByRole("heading", { name: "Keep your accounts within reach" }),
+      screen.getByRole("heading", { name: "Keep track of who owes what" }),
     ).toBeInTheDocument();
   });
 
@@ -923,11 +966,12 @@ describe("the cold arrival", () => {
     ]);
   });
 
-  it("keeps the password page a tap away where there is no mail server", async () => {
+  it("keeps the password a tap away where there is no mail server, on the same step", async () => {
     // Before, the password link appeared only when neither a passkey nor a
     // code could be offered — so a mail-less instance read on a phone showed
     // exactly one button, and somebody who did not want a passkey had no
-    // visible way to say so.
+    // visible way to say so. Then it was a link to /register/password, a page
+    // of its own with a confirm field, which left the flow altogether.
     const user = userEvent.setup();
     renderWithIntl(
       <OnboardingFlow
@@ -939,8 +983,119 @@ describe("the cold arrival", () => {
     await user.click(screen.getByRole("button", { name: "Create an account" }));
 
     expect(
-      screen.getByRole("link", { name: "Sign up with a password" }),
-    ).toHaveAttribute("href", "/register/password");
+      screen.queryByRole("link", { name: "Sign up with a password" }),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+
+    // Still the Account step: the same bar, the same label, the same way back.
+    expect(
+      screen.getByRole("heading", { name: "Your email, and a password" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: "Account" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+    // One password, and the eye instead of a second one.
+    expect(screen.queryByLabelText(/Confirm/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show password", pressed: false }),
+    ).toBeInTheDocument();
+
+    // And the passkey is one tap back.
+    await user.click(
+      screen.getByRole("button", { name: "Use a passkey instead" }),
+    );
+    expect(
+      screen.getByRole("button", { name: /Continue with a passkey/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("creates the account with a password and carries on to the name and the first group", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+
+    // A cold arrival has no name yet, and the account cannot exist without
+    // one, so this step asks for it.
+    await user.type(
+      screen.getByRole("textbox", { name: "Your name" }),
+      "Ada Lovelace",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Email address" }),
+      "ada@example.com",
+    );
+    await user.type(screen.getByLabelText("Password"), "analytical engine");
+    await user.click(screen.getByRole("button", { name: "Create my account" }));
+
+    expect(auth.registerAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        password: "analytical engine",
+      }),
+    );
+    // The next step of the same flow, holding the name just typed.
+    expect(
+      screen.getByRole("heading", { name: /Last thing/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveValue(
+      "Ada Lovelace",
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      screen.getByRole("button", { name: "Create your first group" }),
+    ).toBeInTheDocument();
+    expect(stepsTaken()).toEqual([
+      "welcome",
+      "identity",
+      "profile",
+      "firstGroup",
+    ]);
+  });
+
+  it("refuses a password everybody uses under the field, before anything is sent", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <OnboardingFlow
+        arrival="cold"
+        group={null}
+        codeSignupAvailable={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign up with a password" }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Your name" }),
+      "Ada Lovelace",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Email address" }),
+      "ada@example.com",
+    );
+    const password = screen.getByLabelText("Password");
+    await user.type(password, "password123");
+    await user.click(screen.getByRole("button", { name: "Create my account" }));
+
+    expect(auth.registerAction).not.toHaveBeenCalled();
+    expect(password).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveFocus();
+    expect(password).toHaveAccessibleDescription(
+      /That password is one of the most commonly used ones/,
+    );
   });
 
   it("offers no code on an instance with no mail server", async () => {

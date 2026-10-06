@@ -265,7 +265,6 @@ function PositionFigure({
       <Amount
         minorUnits={position.minorUnits}
         currency={position.currency}
-        display="code"
         signDisplay="exceptZero"
         className={cn(
           size,

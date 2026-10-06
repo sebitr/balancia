@@ -254,13 +254,45 @@ export function convertMoney(
  * and Intl does the rounding on the decimal string. Passing 0 is how a screen
  * that reads as a summary shows whole units; anything a person is checking to
  * the centime keeps the currency's own precision.
+ *
+ * **One way of writing money.** Every figure in the app is written in Intl's
+ * `symbol` display, in the reader's number notation: "€60.00", "CHF 60.00",
+ * "60,00 €". There is no option for the currency code. The group overview and
+ * the settle-up screen used to ask for it, so the €60.00 on the home screen
+ * read "EUR 60.00" one tap later and "€60.00" again in the transactions after
+ * that — one amount, two spellings, two taps apart.
+ *
+ * `symbol`, not `narrowSymbol`. The narrow form writes "$" for the US,
+ * Canadian and Australian dollar alike and "kr" for all three Scandinavian
+ * krone, so a group holding two of them showed two figures nobody could tell
+ * apart. `symbol` is CLDR's answer to exactly that: the bare sign where the
+ * reader's notation leaves no doubt ("€", "$" in American English, "£"), a
+ * prefixed one where it would ("CA$", "US$" in British English, "£GB" in
+ * French), and the code where there is nothing better ("CHF", "SEK"). Each
+ * figure says its own currency, so two can sit side by side without a
+ * heading, and no call site needs to reach for the code to get there.
+ *
+ * The two exceptions are not other spellings — they are the currency said
+ * once, apart from the number:
+ * - `display: "none"`, a bare number, where the row, column or heading has
+ *   already named the currency: a currency's row on a multi-currency
+ *   overview, the compact spending lines, a legend under its own figure.
+ * - The display-size headline of a screen (`BigAmount` on an entry,
+ *   `HeroAmount` on the group's position) sets the ISO code on the numeral's
+ *   baseline as a qualifier and draws the numeral bare beside it, as
+ *   `design-system/src/pages/patterns/money.html` draws it under "One entry".
+ *
+ * Both are written out on that page; a new exception goes there and here.
  */
 export function formatMoney(
   value: Money,
   options: {
     locale?: string;
-    /** "symbol" (default), "code", "name" or "none" for a bare number. */
-    display?: "symbol" | "code" | "name" | "none";
+    /**
+     * "symbol" (default), or "none" for a bare number whose currency is
+     * already named beside it. See above for why there is nothing else.
+     */
+    display?: "symbol" | "none";
     signDisplay?: Intl.NumberFormatOptions["signDisplay"];
     /** Digits after the separator; defaults to the currency's exponent. */
     fractionDigits?: number;
@@ -279,7 +311,7 @@ export function formatMoney(
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: value.currency,
-    currencyDisplay: display === "symbol" ? "narrowSymbol" : display,
+    currencyDisplay: "symbol",
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
     signDisplay,

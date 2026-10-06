@@ -35,6 +35,7 @@ export async function ActivityFeed({
   groupId,
   restorable,
   timeZone,
+  viewerId = null,
 }: {
   entries: readonly ActivityEntry[];
   groupId: string;
@@ -42,6 +43,8 @@ export async function ActivityFeed({
   restorable: ReadonlySet<string>;
   /** The group's IANA zone, which every time in the feed is told in. */
   timeZone: string;
+  /** The reader's own row, so a line about them can say "you". */
+  viewerId?: string | null;
 }) {
   const t = await getTranslations("activity");
   const dates = await getDateFormatter();
@@ -80,7 +83,7 @@ export async function ActivityFeed({
                   {actor}{" "}
                 </span>
                 <span className="text-muted-foreground">
-                  {describeActivity(entry, translate)}
+                  {describeActivity(entry, translate, viewerId)}
                 </span>
               </span>
               <time

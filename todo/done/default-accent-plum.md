@@ -1,6 +1,6 @@
 # Plum is the default accent, so the button no longer looks like the debt above it
 
-Branch: `feat/default-accent-plum`
+Merged: 2026-10-06 in #437
 
 Design: https://claude.ai/artifact/7XLCemkukMgsk3dhKBmhB7
 

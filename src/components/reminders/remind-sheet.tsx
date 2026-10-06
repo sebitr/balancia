@@ -694,15 +694,17 @@ export function RemindSheet({
             {/*
              * Named for what it is, because the two do different things in
              * the hands of whoever opens them: the group's page asks them to
-             * sign in, the invite link asks which name on the list is theirs.
+             * sign in, the group link asks which name on the list is theirs.
+             * "Group link" is the People screen's name for the second, so the
+             * first is the group's page rather than a second "link".
              */}
             {current && (
               <p className="flex items-center gap-2 rounded-[10px] bg-muted px-2.5 py-2 text-xs text-muted-foreground">
                 <LinkIcon aria-hidden="true" className="size-3.5 shrink-0" />
                 <span className="sr-only">
                   {current.link.kind === "invite"
-                    ? t("inviteLink")
-                    : t("groupLink")}
+                    ? t("groupLink")
+                    : t("groupPage")}
                 </span>
                 <span className="truncate">
                   {withoutScheme(linkUrl(current.link, groupId))}

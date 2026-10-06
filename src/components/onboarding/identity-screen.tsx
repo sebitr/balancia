@@ -27,6 +27,7 @@ import {
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { CodeInput } from "./code-input";
 import { OpenMailButton } from "./open-mail-button";
+import { PasswordSignup } from "./password-signup";
 import { useResendCooldown } from "./use-resend-cooldown";
 import { Headline, PRIMARY, SECONDARY, Spacer, Sub } from "./screens";
 import type { Intent } from "./route";
@@ -51,12 +52,14 @@ const ERROR_ID = "onboarding-identity-error";
  * Which of the two runs is a matter of what the browser and the instance can
  * do, never of what the reader is told to prefer: an instance with no mail
  * server is not offered a code, and a browser with no WebAuthn is not offered
- * a passkey. If neither is available the password pages are still there, and
- * this screen says so rather than pretending.
+ * a passkey. Where there is no code a password stands in for it, on this same
+ * step — see `PasswordSignup` — and where there is neither a code nor a
+ * passkey it is the whole of the step, and the step says why.
  */
 export function IdentityScreen({
   intent,
   name,
+  onNameChange,
   email,
   onEmailChange,
   codeSignupAvailable,
@@ -66,19 +69,31 @@ export function IdentityScreen({
   intent: Intent;
   /** The name the account will carry, when the flow already knows it. */
   name: string;
+  /** Only the password asks for a name here, and only when there is none. */
+  onNameChange: (name: string) => void;
   email: string;
   onEmailChange: (email: string) => void;
   codeSignupAvailable: boolean;
   /** Set on a shared link: which listed member is being claimed, if any. */
   join?: { participantId: string | null; displayName: string };
   onDone: (outcome: {
-    credential: "passkey" | "code";
+    credential: "passkey" | "code" | "password";
     joinedGroupId: string | null;
     claimedGroupId: string | null;
   }) => void;
 }) {
   const t = useTranslations("onboarding.identity");
   const passkeys = usePasskeySupport();
+  /*
+   * Whether the flow already had a name when this step opened, decided once.
+   *
+   * Read live, the password's name field would vanish under the first letter
+   * typed into it. The step is remounted every time it is reached, so this is
+   * the name the flow arrived with, not one typed here a moment ago.
+   */
+  const [nameKnown] = useState(() => name.trim() !== "");
+  /** The reader asked for the password over the passkey. */
+  const [passwordChosen, setPasswordChosen] = useState(false);
   /*
    * Which of the two is the first offer.
    *
@@ -258,6 +273,39 @@ export function IdentityScreen({
     });
   };
 
+  /*
+   * A password, where the instance cannot mail a code: on request beside a
+   * passkey, and from the start where the browser cannot hold one either.
+   *
+   * Signing in is not here. An account that already has a password signs in
+   * on `/sign-in`, which also offers what this step cannot — recovering it.
+   */
+  const usingPassword =
+    !signingIn && !codeSignupAvailable && (passwordChosen || !passkeys);
+  if (usingPassword) {
+    return (
+      <PasswordSignup
+        askName={!nameKnown}
+        name={name}
+        onNameChange={onNameChange}
+        email={email}
+        onEmailChange={onEmailChange}
+        explainer={passkeys ? null : t("noCredentialRoute")}
+        solution={solution}
+        onUsePasskey={passkeys ? () => setPasswordChosen(false) : null}
+        onDone={({ claimedGroupId }) =>
+          // A password signup carries no join: on a shared link the flow
+          // joins as the account it has just signed in, as after a passkey.
+          onDone({
+            credential: "password",
+            joinedGroupId: null,
+            claimedGroupId,
+          })
+        }
+      />
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-5">
       <div className="flex flex-col gap-2">
@@ -403,30 +451,44 @@ export function IdentityScreen({
             })()}
 
             {/*
-              No mail server, so no code. The password pages still work: on a
-              browser with no WebAuthn they are the only way, and even with a
-              passkey on offer they stay a quiet tap away rather than a page
-              nobody can find.
+              No mail server, so no code. A password still works: on a browser
+              with no WebAuthn it is the only way, and even with a passkey on
+              offer it stays a quiet tap away rather than something nobody can
+              find. Signing up, the tap opens it on this step; signing in, it
+              is the sign-in page, where a password can also be recovered.
             */}
-            {!codeSignupAvailable && (
-              <>
-                {!passkeys && (
-                  <p className="text-sm text-pretty text-muted-foreground">
-                    {t("noCredentialRoute")}
-                  </p>
-                )}
+            {!codeSignupAvailable &&
+              (signingIn ? (
+                <>
+                  {!passkeys && (
+                    <p className="text-sm text-pretty text-muted-foreground">
+                      {t("noCredentialRoute")}
+                    </p>
+                  )}
+                  <Button
+                    asChild
+                    size="lg"
+                    variant={passkeys ? "ghost" : "outline"}
+                    className={SECONDARY}
+                  >
+                    <Link href="/sign-in">{t("usePassword")}</Link>
+                  </Button>
+                </>
+              ) : (
                 <Button
-                  asChild
                   size="lg"
-                  variant={passkeys ? "ghost" : "outline"}
+                  variant="ghost"
                   className={SECONDARY}
+                  disabled={busy}
+                  onClick={() => {
+                    setError(null);
+                    refuse(null);
+                    setPasswordChosen(true);
+                  }}
                 >
-                  <Link href={signingIn ? "/sign-in" : "/register/password"}>
-                    {signingIn ? t("usePassword") : t("usePasswordSignUp")}
-                  </Link>
+                  {t("usePasswordSignUp")}
                 </Button>
-              </>
-            )}
+              ))}
           </>
         )}
       </div>

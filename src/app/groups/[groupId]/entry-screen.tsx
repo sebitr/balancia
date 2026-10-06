@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getNumberLocale } from "@/i18n/preferences";
@@ -7,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AddEntryDrawer } from "@/components/entries/add-entry-drawer";
 import { SnapshotCapture } from "@/components/offline/snapshot-capture";
-import type { EditingEntry } from "@/components/entries/add-entry-form";
+import type {
+  EditingEntry,
+  EditingRule,
+} from "@/components/entries/add-entry-form";
+import type { EntryType } from "@/components/entries/entry-logic";
+import { getRecurringExpense } from "@/modules/recurring/service";
 import type { DebtPair } from "@/components/entries/settle-blocks";
 import type { RecentEntry } from "@/components/entries/duplicate-note";
 import { groupSplitDefault } from "@/modules/groups/split-default";
@@ -57,12 +63,18 @@ export async function EntryScreen({
   groupId,
   dismissTo,
   edit,
+  rule: ruleId,
   whenGone = "notFound",
 }: {
   groupId: string;
-  dismissTo: "back" | "group";
+  dismissTo: "back" | "group" | "recurring";
   /** The entry to reopen, by the table it lives in. Absent means a new one. */
   edit?: { kind: "expense" | "settlement"; id: string };
+  /**
+   * A recurring expense to change, by id — the Recurring screen's Edit. The
+   * same form, opened on the rule with Repeats on; see `EditingRule`.
+   */
+  rule?: string;
   /**
    * What to answer when the entry to reopen is no longer there.
    *
@@ -186,9 +198,18 @@ export async function EntryScreen({
     .sort((a, b) => Number(BigInt(b.amountMinor) - BigInt(a.amountMinor)));
 
   const editing = edit ? await loadEditing(access.groupId, edit) : undefined;
+  const selfId = access.participantId ?? participants[0].id;
+  const rule = ruleId
+    ? await loadRule(
+        access.groupId,
+        ruleId,
+        participants.map((participant) => participant.id),
+        selfId,
+      )
+    : undefined;
   // Null only ever comes back from a load that was asked for: an entry that is
   // not in this group, or has already been removed under the reader.
-  if (editing === null) {
+  if (editing === null || rule === null) {
     if (whenGone === "nothing") return null;
     notFound();
   }
@@ -220,7 +241,6 @@ export async function EntryScreen({
       displayName: balances.participantNames.get(id) ?? "",
     })),
   ];
-  const selfId = access.participantId ?? participants[0].id;
   /*
    * The group's own habit outranks any constant: `currencyMode: "separate"`
    * leaves `baseCurrency` null, and a hardcoded fallback then opened this
@@ -277,12 +297,21 @@ export async function EntryScreen({
         // is going. Its key stays on the server and is never sent here.
         receiptOcrProvider={configuredOcrProviderName()}
         editing={editing}
+        rule={rule}
+        // A rule is an expense or an income, never a repayment.
+        entryTypes={rule ? RULE_TYPES : undefined}
         recentEntries={recentEntries}
         canAddGuests={access.permissions.manageParticipants}
-        defaultSplit={groupSplitDefault(
-          access.group.defaultSplit,
-          participants.map((participant) => participant.id),
-        )}
+        // Not for a rule: its split is the thing being corrected, and saving
+        // it should not quietly become the group's way of splitting things.
+        defaultSplit={
+          rule
+            ? null
+            : groupSplitDefault(
+                access.group.defaultSplit,
+                participants.map((participant) => participant.id),
+              )
+        }
       />
     </>
   );
@@ -390,6 +419,85 @@ async function loadExpense(
     ),
     paymentMethod: "",
     version: expense.version,
+  };
+}
+
+/** What a rule can be: an expense or an income. */
+const RULE_TYPES: readonly EntryType[] = ["expense", "income"];
+
+/**
+ * A recurring expense as the form reopens it — or null when it is not in this
+ * group or has been removed.
+ *
+ * Its people are checked against the group as it is now, the way a restored
+ * draft's are: a flatmate who has left is not offered back, because the
+ * worker cannot add an entry that names them and the save would refuse them.
+ * Changing who is in the split after somebody leaves is the commonest reason
+ * to open a rule at all. A payer who has left gives way to the reader, who is
+ * the one making the change.
+ */
+async function loadRule(
+  groupId: string,
+  templateId: string,
+  memberIds: readonly string[],
+  selfId: string,
+): Promise<EditingRule | null> {
+  // An address somebody typed is not an id until it parses as one, and the
+  // column would answer anything else with an error rather than a miss.
+  if (!z.uuid().safeParse(templateId).success) return null;
+  const template = await getRecurringExpense(groupId, templateId);
+  if (!template) return null;
+
+  const live = new Set(memberIds);
+  const currency = template.currency;
+  const entries = template.splitEntries.filter((entry) =>
+    live.has(entry.participantId),
+  );
+  const payers = template.payers.filter((payer) =>
+    live.has(payer.participantId),
+  );
+  const asText = (minor: string) =>
+    toMajorString(money(BigInt(minor), currency));
+
+  return {
+    id: template.id,
+    fields: {
+      type: template.direction === "in" ? "income" : "expense",
+      amountText: toMajorString(money(template.amount, currency)),
+      currency,
+      description: template.description,
+      notes: template.notes ?? "",
+      category: template.category ?? "",
+      subcategory: template.subcategory ?? "",
+      categoryChosen: (template.category ?? "") !== "",
+      date: template.edit.from,
+      payerId: payers[0]?.participantId ?? selfId,
+      includedIds: entries.map((entry) => entry.participantId),
+      splitMethod: template.splitMethod,
+      splitValues: splitValuesToText(template.splitMethod, entries, currency),
+      recurrence: {
+        enabled: true,
+        frequency: template.frequency,
+        interval: template.interval,
+        weekday: template.weekday ?? 1,
+        dayOfMonth:
+          template.dayOfMonth ?? Number(template.startDate.slice(8, 10)),
+        weekOfMonth: template.weekOfMonth,
+        endDate: template.endDate,
+        count: template.occurrenceCount,
+      },
+      attachmentIds: [],
+    },
+    exchangeRate: template.exchangeRate ?? "",
+    payers:
+      payers.length > 1
+        ? payers.map((payer) => ({
+            participantId: payer.participantId,
+            amountText: asText(payer.amount),
+          }))
+        : undefined,
+    earliest: template.edit.earliest,
+    paused: template.pausedAt !== null,
   };
 }
 

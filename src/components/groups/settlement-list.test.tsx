@@ -163,9 +163,7 @@ describe("SettlementList's sentences", () => {
 
     expect(screen.getByText("CHF 960.84")).toHaveClass("text-negative-ink");
     expect(screen.getByText("CHF 12.00")).toHaveClass("text-positive-ink");
-    expect(screen.getByText("EUR 125.14")).toHaveClass(
-      "text-neutral-balance-ink",
-    );
+    expect(screen.getByText("€125.14")).toHaveClass("text-neutral-balance-ink");
   });
 
   it("titles the sheet with the same sentence", async () => {

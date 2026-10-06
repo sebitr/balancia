@@ -43,7 +43,10 @@ import type {
 } from "@/lib/security/authorization";
 import type { ActivityEntry } from "@/modules/activity/service";
 import type { PayoutHint } from "@/modules/payouts/hints";
-import type { RecurringSummary } from "@/modules/recurring/service";
+import type {
+  RecurringDetail,
+  RecurringSummary,
+} from "@/modules/recurring/service";
 import type { NotificationEntry } from "@/modules/notifications/types";
 import type { GroupStats } from "@/modules/groups/group-stats";
 import type { MemberStats } from "@/modules/groups/member-stats";
@@ -517,6 +520,43 @@ export function serializeRecurring(template: RecurringSummary) {
     pausedAt: iso(template.pausedAt),
     timezone: template.timezone,
     generatedCount: template.generatedCount,
+  };
+}
+
+/**
+ * One template with everything an edit sends back: the body `PUT` takes, as
+ * it stands, plus where an edit may start. `startDate` is the date the rule
+ * runs from now — after an edit, the day that edit started it again.
+ */
+export function serializeRecurringDetail(template: RecurringDetail) {
+  return {
+    id: template.id,
+    direction: template.direction,
+    description: template.description,
+    notes: template.notes,
+    category: template.category,
+    subcategory: template.subcategory,
+    amount: minor(template.amount),
+    currency: template.currency,
+    exchangeRate: template.exchangeRate,
+    payers: template.payers,
+    splitMethod: template.splitMethod,
+    splitEntries: template.splitEntries,
+    frequency: template.frequency,
+    interval: template.interval,
+    weekday: template.weekday,
+    weekOfMonth:
+      template.weekOfMonth === null ? null : String(template.weekOfMonth),
+    dayOfMonth: template.dayOfMonth,
+    monthOfYear: template.monthOfYear,
+    startDate: template.startDate,
+    endDate: template.endDate,
+    count: template.occurrenceCount,
+    pausedAt: iso(template.pausedAt),
+    timezone: template.timezone,
+    generatedCount: template.generatedCount,
+    editFrom: template.edit.from,
+    editEarliest: template.edit.earliest,
   };
 }
 

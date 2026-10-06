@@ -413,6 +413,7 @@ export default async function GroupOverviewPage({
                   entries={activity}
                   lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
                   groupId={groupId}
+                  viewerId={access.participantId}
                   now={now.toISOString()}
                 />
               )}

@@ -74,12 +74,14 @@ export default async function ImportPage({
                       t("runFailed", { failed: run.rowsFailed })}
                   </span>
                 </span>
+                {/* One word per status the column can hold, and no fallback
+                    to the stored value: four of the six used to reach the
+                    page as `ready` or `parsed`, in English, in any language.
+                    `import-status.test.ts` holds the catalogue to the enum. */}
                 <Badge
                   variant={run.status === "completed" ? "secondary" : "outline"}
                 >
-                  {t.has(`status.${run.status}` as "status.completed")
-                    ? t(`status.${run.status}` as "status.completed")
-                    : run.status}
+                  {t(`status.${run.status}`)}
                 </Badge>
               </li>
             ))}

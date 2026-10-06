@@ -138,10 +138,7 @@ export function PayoutHint({
   if (!chosen) return null;
 
   const label = labelOf(chosen.method);
-  const amount = formatMoney(money(BigInt(minorUnits), currency), {
-    locale,
-    display: "code",
-  });
+  const amount = formatMoney(money(BigInt(minorUnits), currency), { locale });
 
   /**
    * The one sentence that says why there is no code, or nothing.

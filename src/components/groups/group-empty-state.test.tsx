@@ -151,7 +151,7 @@ describe("GroupEmptyState", () => {
     expect(
       screen.getByRole("link", { name: "Add people" }).getAttribute("href"),
     ).toBe("/groups/g1/members");
-    expect(screen.getByText("The guest link comes right after.")).toBeTruthy();
+    expect(screen.getByText("The group link comes right after.")).toBeTruthy();
 
     // There is nobody to send it to, so the link is not offered — even though
     // the group has one and the reader is allowed to see it.

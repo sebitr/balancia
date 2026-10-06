@@ -275,6 +275,8 @@ export type PrimaryActionKey =
   | "addIncome"
   | "saveRecurringExpense"
   | "saveRecurringIncome"
+  | "saveFutureExpenses"
+  | "saveFutureIncome"
   | "recordPayment"
   | "saveChanges";
 
@@ -292,7 +294,16 @@ export function primaryActionKey(
   type: EntryType,
   repeats: boolean,
   editing = false,
+  /**
+   * A recurring expense is being changed. Its button says the change is for
+   * the entries still to come, which is all it touches — "Save changes" would
+   * leave the reader wondering about the ten rents already in the group.
+   */
+  editingRule = false,
 ): PrimaryActionKey {
+  if (editingRule) {
+    return type === "income" ? "saveFutureIncome" : "saveFutureExpenses";
+  }
   if (editing) return "saveChanges";
   if (type === "settle") return "recordPayment";
   if (type === "income") {

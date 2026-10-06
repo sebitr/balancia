@@ -294,6 +294,29 @@ export function nextOccurrence(
   return withinRange(candidate, rule) ? candidate.toISODate() : null;
 }
 
+/**
+ * The occurrence after `previous` — or the rule's first, when there is no
+ * previous one or the previous one came before the rule began.
+ *
+ * The second case is what a rule edited since looks like. An edit starts the
+ * rule again from a later date (see `editWindow`), so the series' last entry
+ * was made under the version before it, on that version's days. Stepping on
+ * from it would carry the old alignment forward — a weekly rule moved from
+ * Monday to Friday adds a week to a Monday and lands on a Monday — or, when
+ * the step falls short of the new start, find nothing at all and end the
+ * series. The rule's own first occurrence is the right answer in both.
+ *
+ * For a rule nobody has edited every occurrence is on or after its start, so
+ * this is exactly `nextOccurrence` there.
+ */
+export function occurrenceAfter(
+  rule: RecurrenceRule,
+  previous: string | null | undefined,
+): string | null {
+  if (!previous || previous < rule.startDate) return firstOccurrence(rule);
+  return nextOccurrence(rule, previous);
+}
+
 function withinRange(candidate: DateTime, rule: RecurrenceRule): boolean {
   if (!candidate.isValid) return false;
   const start = parseDate(rule.startDate, rule.timezone);
@@ -349,9 +372,7 @@ export function occurrencesUpTo(
   if (limit <= 0) return [];
 
   const occurrences: string[] = [];
-  let current = options.from
-    ? nextOccurrence(rule, options.from)
-    : firstOccurrence(rule);
+  let current = occurrenceAfter(rule, options.from);
 
   while (current && occurrences.length < limit) {
     const currentDate = parseDate(current, rule.timezone);
@@ -389,9 +410,7 @@ export function firstOccurrenceDueAfter(
   validateRule(rule);
   const alreadyDue = dueThrough(rule.timezone, now);
 
-  let current = options.from
-    ? nextOccurrence(rule, options.from)
-    : firstOccurrence(rule);
+  let current = occurrenceAfter(rule, options.from);
   while (current && current <= alreadyDue) {
     current = nextOccurrence(rule, current);
   }
@@ -410,6 +429,90 @@ export function remainingOf(
 ): number {
   if (rule.count == null) return Infinity;
   return Math.max(0, rule.count - alreadyGenerated);
+}
+
+/**
+ * The first day of the period a date falls in: the Monday of its week for a
+ * weekly rule, the 1st of its month for a monthly or a yearly one, and the day
+ * itself for a daily one.
+ *
+ * A period is what "once a month" counts in. See `editWindow` for why an edit
+ * starts from one.
+ */
+export function periodStart(
+  frequency: RecurrenceFrequency,
+  date: string,
+): string {
+  const day = DateTime.fromISO(date, { zone: "UTC" });
+  if (!day.isValid) {
+    throw new RecurrenceError(`Invalid date "${date}"`);
+  }
+  switch (frequency) {
+    case "daily":
+      return date;
+    case "weekly":
+      return day.startOf("week").toISODate() as string;
+    case "monthly":
+    case "yearly":
+      return day.startOf("month").toISODate() as string;
+  }
+}
+
+/** The day after a calendar date. */
+function dayAfter(date: string): string {
+  return DateTime.fromISO(date, { zone: "UTC" })
+    .plus({ days: 1 })
+    .toISODate() as string;
+}
+
+/** The later of two calendar dates. */
+export function laterOf(one: string, other: string): string {
+  return one >= other ? one : other;
+}
+
+/**
+ * The dates an edit to a rule works between, on the group's calendar.
+ *
+ * An edit changes the rule for the entries still to come and never for the
+ * ones it has added, so it starts the rule again from a date — its new
+ * `startDate` — and the next entry is the edited rule's first occurrence from
+ * there. Two dates bound that:
+ *
+ * - `earliest`: the day after the last entry the series added, and never
+ *   before today. Earlier would hand the rule a day that is already over, and
+ *   the worker would back-fill it — a second October rent for a rule whose
+ *   October rent exists, under the version that replaced it. Today itself
+ *   counts: an occurrence due today that has not been added yet is still to
+ *   come, and the worker adds it at nine as it would have.
+ * - `from`: where the edit starts unless the person says otherwise, which is
+ *   the beginning of the period the series' next date falls in, held to
+ *   `earliest`. Starting there keeps the series' cadence when nothing about
+ *   the schedule changes — an amount edited on an every-two-months rule still
+ *   lands on the same months — and when the day does change it moves within
+ *   that period rather than adding to the one already paid or skipping the
+ *   next. A rent moved from the 5th to the 1st arrives on 1 November, not 1
+ *   December; moved from the 5th to the 20th, it arrives on 20 November, not
+ *   twice in October.
+ *
+ * `next` is the date the series would have added next as it stands, or null
+ * when it has none — ended, or the marker cleared — and then the edit starts
+ * from `earliest`. A paused series' marker may lie in the past; the bound
+ * takes care of that the same way.
+ */
+export function editWindow(options: {
+  readonly frequency: RecurrenceFrequency;
+  readonly next: string | null;
+  readonly last: string | null;
+  readonly today: string;
+}): { readonly earliest: string; readonly from: string } {
+  const earliest = options.last
+    ? laterOf(dayAfter(options.last), options.today)
+    : options.today;
+  const from = laterOf(
+    periodStart(options.frequency, options.next ?? earliest),
+    earliest,
+  );
+  return { earliest, from };
 }
 
 /**

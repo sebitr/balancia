@@ -15,6 +15,7 @@ import { settlementTotals } from "@/modules/settlements/service";
 import { moneyForGroup } from "@/modules/currencies/display";
 import { isSpending } from "@/modules/expenses/direction";
 import { todayIn } from "@/modules/recurring/schedule";
+import { countRecurringExpenses } from "@/modules/recurring/service";
 import {
   EXPENSE_CATEGORY_IDS,
   normalizeLegacyCategory,
@@ -26,6 +27,7 @@ import {
   spreadBands,
 } from "@/modules/expenses/spread";
 import {
+  RepeatingLink,
   Transactions,
   type BandView,
   type EntryKind,
@@ -75,20 +77,31 @@ export default async function ExpensesPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [page, spending, repaid, people, firstDate] = await Promise.all([
+  const [page, spending, repaid, people, firstDate, rules] = await Promise.all([
     loadTransactionPage(access),
     listSpreadEntries(access.groupId),
     settlementTotals(access.groupId),
     listParticipants(access.groupId),
     firstTransactionDate(access.groupId),
+    countRecurringExpenses(access.groupId),
   ]);
 
   const t = await getTranslations("expensesList");
+
+  /*
+   * The way to the recurring expenses, whenever the group has one — even with
+   * nothing recorded yet, which is exactly the state of a group whose first
+   * rent is set for next month. See `RepeatingLink`.
+   */
+  const repeating = rules.total > 0 ? { running: rules.running } : null;
 
   if (page.rows.length === 0) {
     return (
       <div className="space-y-4">
         <PageTitle label={t("eyebrow")} />
+        {repeating && (
+          <RepeatingLink groupId={groupId} running={repeating.running} />
+        )}
         <EmptyState
           icon={Receipt}
           title={t("emptyTitle")}
@@ -213,6 +226,7 @@ export default async function ExpensesPage({
       // The group's own calendar day, not the server's: `This month` has to
       // mean the month the expense dates were written against.
       today={todayIn(access.group.timezone)}
+      repeating={repeating}
     />
   );
 }

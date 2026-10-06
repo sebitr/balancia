@@ -54,6 +54,7 @@ const {
   createExpense,
   createSettlement,
   createRecurring,
+  updateRecurring,
   updateExpense,
   updateSettlement,
   toSettlement,
@@ -73,6 +74,7 @@ const {
   createExpense: vi.fn(),
   createSettlement: vi.fn(),
   createRecurring: vi.fn(),
+  updateRecurring: vi.fn(),
   updateExpense: vi.fn(),
   updateSettlement: vi.fn(),
   toSettlement: vi.fn(),
@@ -104,6 +106,7 @@ vi.mock("@/modules/expenses/actions", () => ({
 }));
 vi.mock("@/modules/recurring/actions", () => ({
   createRecurringAction: createRecurring,
+  updateRecurringAction: updateRecurring,
 }));
 vi.mock("@/lib/offline/outbox", () => ({ enqueueEntry: enqueue }));
 vi.mock("@/components/expenses/upload-receipt", () => ({
@@ -575,7 +578,9 @@ describe("the buttons that finish a sheet", () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
 
     const repeat = screen.getByRole("dialog", { name: "Repeat" });
     expectPinned(repeat, within(repeat).getByRole("button", { name: "Done" }));
@@ -2092,11 +2097,198 @@ describe("recurrence", () => {
     const user = userEvent.setup();
     renderForm();
 
-    expect(screen.queryByText(/^Monthly/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Every month/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
 
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
     expect(screen.getByRole("heading", { name: "Repeat" })).toBeInTheDocument();
+  });
+
+  /**
+   * The row, the sheet and the Recurring list say a rule one way. The row used
+   * to read "Monthly, Day 5" against the sheet's "Every month on the 5", and a
+   * weekly rule as "Weekly, 1" — the number of its weekday.
+   */
+  it("words the rule as the sheet and the list do", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
+
+    const repeat = screen.getByRole("dialog", { name: "Repeat" });
+    await user.click(
+      within(repeat).getByRole("radio", { name: /^Every week on / }),
+    );
+    const weekly = within(repeat)
+      .getByRole("radio", { name: /^Every week on / })
+      .textContent?.trim();
+    await user.click(within(repeat).getByRole("button", { name: "Done" }));
+
+    expect(weekly).toBe("Every week on Monday");
+    expect(
+      screen.getByRole("button", { name: /Every week on Monday/ }),
+    ).toBeInTheDocument();
+  });
+
+  /** The Recurring screen's "Add a recurring expense" is this form, facing the other way. */
+  it("opens with Repeats on when the link asks for it", () => {
+    renderForm({}, "/groups/g1/expenses/new#repeat=1");
+
+    expect(screen.getByRole("switch", { name: "Repeats" })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens with Repeats off otherwise", () => {
+    renderForm({}, "/groups/g1/expenses/new");
+
+    expect(screen.getByRole("switch", { name: "Repeats" })).not.toBeChecked();
+  });
+
+  /**
+   * A recurring expense, reopened from the Recurring screen's Edit.
+   *
+   * Rent of 2,400 on the 1st, split three ways, with the next one due on 1
+   * November; the reader is changing it to 2,550.
+   */
+  describe("changing a recurring expense", () => {
+    const RULE = {
+      id: "r1",
+      fields: {
+        type: "expense" as const,
+        amountText: "2400.00",
+        currency: "CHF",
+        description: "Rent",
+        notes: "",
+        category: "",
+        subcategory: "",
+        categoryChosen: false,
+        date: "2026-11-01",
+        payerId: "seb",
+        includedIds: ["seb", "herve", "cyril"],
+        splitMethod: "equal" as const,
+        splitValues: {},
+        recurrence: {
+          enabled: true,
+          frequency: "monthly" as const,
+          interval: 1,
+          weekday: 1,
+          dayOfMonth: 1,
+          weekOfMonth: null,
+          endDate: null,
+          count: null,
+        },
+        attachmentIds: [],
+      },
+      exchangeRate: "",
+      earliest: "2026-10-06",
+      paused: false,
+    };
+
+    function renderRule(rule: Partial<typeof RULE> = {}) {
+      const rendered = renderForm(
+        { rule: { ...RULE, ...rule }, entryTypes: ["expense", "income"] },
+        "/groups/g1/recurring/r1/edit",
+      );
+      updateRecurring.mockClear();
+      updateRecurring.mockResolvedValue({
+        ok: true,
+        data: { id: "r1", next: "2026-11-01", paused: false },
+      });
+      return rendered;
+    }
+
+    it("opens on the rule, with Repeats on and kept on", () => {
+      renderRule();
+
+      expect(
+        screen.getByRole("heading", { name: "Edit recurring expense" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue(
+        "2400.00",
+      );
+      expect(screen.getByLabelText("Description")).toHaveValue("Rent");
+      const repeats = screen.getByRole("switch", { name: "Repeats" });
+      expect(repeats).toBeChecked();
+      expect(repeats).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Every month on the 1st/ }),
+      ).toBeInTheDocument();
+      // A rule is an expense or an income; a repayment cannot repeat.
+      expect(
+        screen.queryByRole("tab", { name: "Repayment" }),
+      ).not.toBeInTheDocument();
+    });
+
+    /** The button says what it touches, which is not the entries already added. */
+    it("saves for the entries still to come, and says so", async () => {
+      const user = userEvent.setup();
+      renderRule();
+
+      const amount = screen.getByRole("textbox", { name: "Amount" });
+      await user.clear(amount);
+      await user.type(amount, "2550");
+      await user.click(
+        screen.getByRole("button", { name: "Save for future expenses" }),
+      );
+
+      expect(updateRecurring).toHaveBeenCalledWith(
+        "g1",
+        "r1",
+        expect.objectContaining({
+          description: "Rent",
+          amount: "255000",
+          frequency: "monthly",
+          dayOfMonth: 1,
+          startDate: "2026-11-01",
+        }),
+      );
+      expect(createRecurring).not.toHaveBeenCalled();
+      expect(success).toHaveBeenCalledWith(
+        "Rent updated from Nov 1, 2026. Entries already added stay as they were.",
+        expect.anything(),
+      );
+    });
+
+    it("says a paused rule is still paused", async () => {
+      const user = userEvent.setup();
+      renderRule({ paused: true });
+      updateRecurring.mockResolvedValue({
+        ok: true,
+        data: { id: "r1", next: "2026-11-01", paused: true },
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "Save for future expenses" }),
+      );
+
+      expect(success).toHaveBeenCalledWith(
+        "Rent updated, and still paused. Entries already added stay as they were.",
+        expect.anything(),
+      );
+    });
+
+    /** A rule stays a rule: the sheet has no way to turn it into a one-off. */
+    it("offers no way out of repeating in the sheet", async () => {
+      const user = userEvent.setup();
+      renderRule();
+
+      await user.click(
+        screen.getByRole("button", { name: /Every month on the 1st/ }),
+      );
+
+      const repeat = screen.getByRole("dialog", { name: "Repeat" });
+      expect(
+        within(repeat).queryByRole("button", {
+          name: "Don’t repeat this entry",
+        }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("writes a template rather than a single entry", async () => {
@@ -2133,7 +2325,7 @@ describe("recurrence", () => {
     await user.type(screen.getByLabelText("Description"), "Internet");
 
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(screen.getByRole("button", { name: /Every month on the/ }));
     const repeat = sheet("Repeat");
     await user.click(repeat.getByRole("button", { name: /^Ends/ }));
     await user.click(repeat.getByRole("button", { name: "On a date" }));
