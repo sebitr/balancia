@@ -28,6 +28,7 @@ import {
   CATEGORY_GLYPHS,
   FALLBACK_GLYPH,
   hasGlyph,
+  TYPE_GLYPHS,
 } from "@/components/expenses/category-icon";
 import type { EntryMember } from "@/components/entries/pills";
 import type { ExpenseCategory } from "@/modules/categorization";
@@ -623,7 +624,7 @@ export function Transactions({
 
           From `lg` up the chips stand in the table's filter row and the
           link in its trailing slot; this row is not drawn there. */}
-      {(present.length > 1 || repeating) && (
+      {showList && (present.length > 1 || repeating) && (
         <div className="flex flex-wrap items-center gap-2 lg:hidden">
           {present.length > 1 && (
             <div
