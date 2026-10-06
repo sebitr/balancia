@@ -28,7 +28,7 @@
   --popover-foreground: oklch(0.226 0.072 319);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.543 0.168 30);
+  --primary-ink: var(--accent-ink-light, oklch(0.543 0.168 30));
   --secondary: oklch(0.9 0.018 319);
   --secondary-foreground: oklch(0.33 0.088 319);
   --muted: oklch(0.937 0.016 82);
@@ -100,7 +100,7 @@
   --popover-foreground: oklch(0.977 0.007 85);
   --primary: oklch(0.712 0.168 30);
   --primary-foreground: oklch(0.226 0.072 319);
-  --primary-ink: oklch(0.737 0.168 30);
+  --primary-ink: var(--accent-ink-dark, oklch(0.737 0.168 30));
   --secondary: oklch(0.33 0.06 319);
   --secondary-foreground: oklch(0.977 0.007 85);
   --muted: oklch(0.3 0.05 319);
@@ -162,7 +162,7 @@
     --border: oklch(0.62 0.02 82);
     --input: oklch(0.58 0.02 82);
     --sidebar-border: oklch(0.62 0.02 82);
-    --primary-ink: oklch(0.442 0.168 30);
+    --primary-ink: var(--accent-ink-more-light, oklch(0.442 0.168 30));
     --positive-ink: oklch(0.409 0.084 167);
     --negative-ink: oklch(0.429 0.164 32);
     --payer-ink: oklch(0.43 0.093 70);
@@ -175,12 +175,29 @@
     --border: oklch(1 0 0 / 38%);
     --input: oklch(1 0 0 / 42%);
     --sidebar-border: oklch(1 0 0 / 38%);
-    --primary-ink: oklch(0.847 0.084 30);
+    --primary-ink: var(--accent-ink-more-dark, oklch(0.847 0.084 30));
     --positive-ink: oklch(0.83 0.13 167);
     --negative-ink: oklch(0.85 0.082 32);
     --payer-ink: oklch(0.87 0.118 78);
     --neutral-balance-ink: oklch(0.84 0.03 319);
   }
+}
+
+/* ── the accent, painted ──
+   The app paints the reader's accent inline on <html>, over the coral the
+   blocks above draw, and a reader who has never chosen is painted plum. These
+   are the six variables `accentTokens("plum")` writes, so every page here
+   shows the app as most people see it. `html:root` outranks `:root` and
+   `.dark` the way an inline declaration does; the inks reach `--primary-ink`
+   through the `var(--accent-ink-…)` it is declared with above.
+   src/app/design-system-kit.test.ts holds this block to the app's default. */
+html:root {
+  --primary: oklch(0.71 0.048 319);
+  --ring: oklch(0.71 0.048 319);
+  --accent-ink-light: oklch(0.535 0.048 319);
+  --accent-ink-more-light: oklch(0.43 0.048 319);
+  --accent-ink-dark: oklch(0.725 0.048 319);
+  --accent-ink-more-dark: oklch(0.85 0.048 319);
 }
 
 /* ── base ── */
@@ -1446,6 +1463,60 @@ a[aria-current="page"] .nav-icon--primary {
   min-width: 0;
 }
 
+/* Settings from lg up: still a surface, with no rail — the hub as a 20rem pane
+   beside the screen it led to, and the ✕ once along the top of both.
+   `src/app/settings/layout.tsx`. */
+.settings-desk {
+  max-width: 64rem;
+  padding: 2.25rem 1.5rem 3rem;
+}
+.settings-desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.settings-desk-title {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.settings-desk-sub {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+.settings-panes {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+.settings-pane-label {
+  padding: 0 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+/* A row's value sits at its end, as on the phone's hub. */
+.settings-pane .list-row > .list-sub {
+  margin-top: 0;
+}
+/* The row whose screen is on the right: the third wash, a step past hover. */
+.settings-pane a.list-row[aria-current="page"] {
+  background: color-mix(in oklch, var(--foreground) 9%, transparent);
+}
+
 /* ── swatches ── */
 .swatches {
   display: grid;
@@ -1522,7 +1593,8 @@ a[aria-current="page"] .nav-icon--primary {
       <dd>
         1024px and wider. Inside a group, the rail; on the overview, two
         columns. The dashboard and the other screens with nothing to navigate
-        between keep the header along the top.
+        between keep the header along the top. Settings keeps its hub open
+        beside the screen it led to.
       </dd>
     </dl>
   </section>
@@ -1665,6 +1737,136 @@ a[aria-current="page"] .nav-icon--primary {
       and Remove — docks at the foot of the window instead, starting where the
       rail stops.
     </p>
+  </section>
+
+  <section>
+    <h2>Settings, from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Still a surface — no rail, no wordmark, no bell — with the room used for
+      one thing: the hub stays open beside the screen it led to. Its rows down
+      the left, each with its value as a phone shows it; the chosen screen on
+      the right, exactly as it is on a phone; the ✕ once, along the top of both,
+      closing back to wherever settings was opened from.
+    </p>
+    <div class="frame settings-desk">
+      <div class="settings-desk-head">
+        <div>
+          <span class="settings-desk-title">Settings</span>
+          <span class="settings-desk-sub"
+            >Signed in to home.lan as sebastien@home.lan</span
+          >
+        </div>
+        <span class="screen-header-close" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </span>
+      </div>
+      <div class="settings-panes">
+        <div class="settings-pane" aria-hidden="true">
+          <ul class="list" style="background: var(--card)">
+            <li>
+              <a class="list-row"
+                ><span class="list-main"
+                  ><span class="list-title">Sébastien B.</span
+                  ><span class="list-sub">sebastien@home.lan</span></span
+                ></a
+              >
+            </li>
+          </ul>
+          <div>
+            <div class="settings-pane-label">Account</div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <a class="list-row"
+                  ><span class="list-title">Notifications</span
+                  ><span class="list-sub">All on</span></a
+                >
+              </li>
+              <li>
+                <a class="list-row"
+                  ><span class="list-title">Sign-in &amp; security</span
+                  ><span class="list-sub">2 passkeys</span></a
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <div class="settings-pane-label">Preferences</div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <a class="list-row" aria-current="page"
+                  ><span class="list-title">Appearance &amp; language</span
+                  ><span class="list-sub">Light</span></a
+                >
+              </li>
+              <li>
+                <a class="list-row"
+                  ><span class="list-title">Money &amp; formats</span
+                  ><span class="list-sub">EUR · DD/MM/YYYY</span></a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <span class="settings-desk-title">Appearance &amp; language</span>
+          <div class="card" style="margin-top: 1rem">
+            <div class="card-content">
+              <p class="card-desc" style="margin: 0">
+                The screen as it is on a phone: its cards, its controls, its
+                silence when a control flicks back.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>widths</dt>
+      <dd>
+        The surface stops at <code>max-w-280</code> (70rem) and centres, with
+        24px gutters at <code>lg</code> and 40px from <code>xl</code>. The pane
+        is 20rem: it holds the phone's own rows, tile and chevron included,
+        which were drawn for a phone's column. 32px between the panes; the
+        screen takes the rest.
+      </dd>
+      <dt>the pane</dt>
+      <dd>
+        The hub itself, read once and drawn twice — the phone's page below
+        <code>lg</code>, this pane above, each <code>display: none</code> at the
+        other's widths. One <code>navigation</code> landmark named "Settings".
+        The row whose screen is on the right carries
+        <code>aria-current="page"</code> and the wash a step past the hover's;
+        rows swap the screen without the push a phone's rows make, as a tab
+        does.
+      </dd>
+      <dt>the screen</dt>
+      <dd>
+        Unchanged, minus what the surface took over: no arrow back to the hub
+        beside it, so its title leads at <code>text-2xl</code>; no ✕ of its own;
+        no gutter; no sticky header. Nothing sticks at this width — it is a page
+        that scrolls.
+      </dd>
+      <dt>/settings</dt>
+      <dd>
+        Shows the first screen, the account, beside the pane rather than an
+        empty half, and lights the account at the top of the pane.
+      </dd>
+      <dt>keyboard</dt>
+      <dd>
+        A skip link past the ✕ and the pane to the screen, parked above the top
+        edge as the group rail's is.
+      </dd>
+    </dl>
   </section>
 
   <section>

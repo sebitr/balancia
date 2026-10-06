@@ -446,7 +446,9 @@ push uses it — the settings hub and its screens, an entry, a member, the
 statistics, settling up, importing. It takes no size: pass `back` and the title
 is a row label beside the arrow at `text-base`; leave it off and the title is
 the page's own name at `text-2xl`. The arrow always animates as a `pop`,
-because it is the way out whatever it points at.
+because it is the way out whatever it points at. A settings screen's arrow
+says `until: "lg"`: from `lg` up the hub stands beside it as a pane, so the
+arrow goes there and the title leads.
 
 Two things it deliberately does not do. It carries no padding — it sits in the
 column its screen already has, and a surface that sticks or clears a safe area

@@ -15,6 +15,10 @@ import type { DateFormat } from "@/i18n/format";
  * formats" row names the date notation rather than writing a date in it — a
  * sample date in a summary read as the day something had happened.
  *
+ * From `lg` up the hub is the layout's left pane rather than this page, and
+ * the page shows the first screen beside it instead; jsdom has no widths, so
+ * what is pinned there is which of the two each breakpoint hides.
+ *
  * The page is a Server Component, called here and its output mounted. The
  * rows whose summaries are drawn by components of their own are stand-ins.
  */
@@ -98,11 +102,19 @@ vi.mock("@/components/settings/payouts-summary", () => ({
 vi.mock("@/components/settings/sign-out-button", () => ({
   SignOutButton: () => null,
 }));
+// The first screen, which the page shows beside the pane from `lg` up. It is
+// a page of its own with tests of its own; here it only has to be findable.
+vi.mock("./account/page", () => ({
+  default: () => <p>The account screen</p>,
+}));
 
 const { default: SettingsHubPage } = await import("./page");
 
 async function renderHub() {
-  const page = (await SettingsHubPage()) as ReactElement;
+  const page = (await SettingsHubPage({
+    params: Promise.resolve({}),
+    searchParams: Promise.resolve({}),
+  })) as ReactElement;
   return renderWithIntl(page, { locale: state.locale });
 }
 
@@ -147,6 +159,28 @@ describe("the hub's ✕", () => {
     expect(
       screen.getByRole("link", { name: "Close settings" }),
     ).toHaveAttribute("href", "/dashboard");
+  });
+});
+
+describe("from lg up", () => {
+  it("hides the hub, which the surface draws as the pane beside the screen", async () => {
+    await renderHub();
+
+    // The phone's hub — its name, its ✕, its rows — is the page below `lg`
+    // and nothing above it: the layout draws all three there itself.
+    const heading = screen.getByRole("heading", { level: 1, name: "Settings" });
+    expect(heading.closest(".lg\\:hidden")).not.toBeNull();
+    expect(
+      screen.getByText("Money & formats").closest(".lg\\:hidden"),
+    ).not.toBeNull();
+  });
+
+  it("shows the first screen in the right pane rather than an empty half", async () => {
+    await renderHub();
+
+    const first = screen.getByText("The account screen");
+    expect(first.closest(".hidden.lg\\:block")).not.toBeNull();
+    expect(first.closest(".lg\\:hidden")).toBeNull();
   });
 });
 

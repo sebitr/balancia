@@ -768,6 +768,7 @@
     "yourAccount": "Ton compte",
     "close": "Fermer les paramètres",
     "backToSettings": "Retour aux paramètres",
+    "signedInTo": "Connecté à {instance} en tant que {email}",
     "groupAccount": "Compte",
     "groupPreferences": "Préférences",
     "groupData": "Données",

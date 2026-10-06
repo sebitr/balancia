@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { PUSH } from "@/components/motion/transitions";
 import { initialOf } from "@/components/entries/initials";
 import { AccountAvatar } from "./account-avatar";
+import { HubLink } from "./hub-link";
 
 /**
  * Who you are, at the top of the hub.
@@ -24,10 +23,12 @@ export function IdentityCard({
   photoVersion: Date | null;
 }) {
   return (
-    <Link
+    <HubLink
       href="/settings/account"
-      transitionTypes={PUSH}
       className="flex shrink-0 items-center gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      // Lit as the hub's rows are, from `lg` up, when the account is the
+      // screen beside the pane — see `SettingsLinkRow`.
+      currentClassName="bg-wash-3 hover:bg-wash-3"
     >
       <AccountAvatar
         initial={initialOf(name)}
@@ -47,6 +48,6 @@ export function IdentityCard({
         aria-hidden="true"
         className="size-4.5 shrink-0 text-muted-foreground"
       />
-    </Link>
+    </HubLink>
   );
 }

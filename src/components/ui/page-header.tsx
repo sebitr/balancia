@@ -44,8 +44,16 @@ export function PageHeader({
    * it is an echo.
    */
   title?: string;
-  /** The way back. Its label is what a screen reader announces on the arrow. */
-  back?: { href: string; label: string };
+  /**
+   * The way back. Its label is what a screen reader announces on the arrow.
+   *
+   * `until: "lg"` draws the arrow below `lg` only, for a screen whose way back
+   * stands beside it from there up — a settings screen, with the hub as the
+   * pane to its left. Without the arrow the screen is no longer somewhere you
+   * arrived from, so from `lg` its title leads, as it does in a header that
+   * never had an arrow.
+   */
+  back?: { href: string; label: string; until?: "lg" };
   /**
    * A chip that belongs to the title, drawn straight after the words rather
    * than at the far end of the row: it says what the title names, so it reads
@@ -56,6 +64,8 @@ export function PageHeader({
   trailing?: ReactNode;
   className?: string;
 }) {
+  const leadsFromLg = back?.until === "lg";
+
   return (
     <header className={cn("flex items-center gap-2", className)}>
       {back && (
@@ -63,7 +73,10 @@ export function PageHeader({
           href={back.href}
           transitionTypes={POP}
           aria-label={back.label}
-          className="tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-wash-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className={cn(
+            "tap-target flex size-8.5 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-wash-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            leadsFromLg && "lg:hidden",
+          )}
         >
           <ArrowLeft aria-hidden="true" className="size-4.5" />
         </Link>
@@ -82,6 +95,7 @@ export function PageHeader({
             className={cn(
               "min-w-0 truncate font-heading font-semibold",
               back ? "text-base" : "text-2xl tracking-tight",
+              leadsFromLg && "lg:text-2xl lg:tracking-tight",
             )}
           >
             {title}
