@@ -2409,6 +2409,8 @@
     "intro": "Toutes les personnes qui partagent des dépenses dans ce groupe. Touche une personne pour la renommer, gérer son accès ou la retirer.",
     "introMember": "Toutes les personnes qui partagent des dépenses dans ce groupe. Touche ton nom pour changer celui que tu portes ici ou pour quitter le groupe, ou une personne sans compte pour corriger le sien. Le propriétaire du groupe s’occupe des accès.",
     "introReadOnly": "Toutes les personnes qui partagent des dépenses dans ce groupe.",
+    "introDesk": "Toutes les personnes qui partagent des dépenses dans ce groupe. Ouvre une personne pour voir ce qu’il y a entre elle et toi, ou ses options pour la renommer, gérer son accès ou la retirer.",
+    "introMemberDesk": "Toutes les personnes qui partagent des dépenses dans ce groupe. Ouvre une personne pour voir ce qu’il y a entre elle et toi. Tes options permettent de changer le nom que tu portes ici ou de quitter le groupe, et celles d’une personne sans compte de corriger le sien. Le propriétaire du groupe s’occupe des accès.",
     "footnote": "Les dépenses conservent le nom de la personne qui a payé, même après son départ du groupe.",
     "owner": "Propriétaire",
     "guest": "Invité",
@@ -2487,7 +2489,23 @@
     "justAddThemHint": "Tu pourras envoyer l’invitation plus tard",
     "addPerson": "Ajouter la personne",
     "addedNoAccess": "{name} est dans le groupe — pas encore d’accès",
-    "addFailed": "Cette personne n’a pas pu être ajoutée."
+    "addFailed": "Cette personne n’a pas pu être ajoutée.",
+    "table": {
+      "person": "Personne",
+      "role": "Rôle",
+      "paid": "Payé",
+      "share": "Part",
+      "position": "Situation",
+      "actions": "Actions",
+      "you": "toi",
+      "options": "Options pour {name}",
+      "positionGetsBack": "récupère <figure>{amount}</figure>",
+      "positionOwes": "doit <figure>{amount}</figure>",
+      "positionYouGetBack": "tu récupères <figure>{amount}</figure>",
+      "positionYouOwe": "tu dois <figure>{amount}</figure>",
+      "footer": "{people, plural, one {# personne} other {# personnes}}{unclaimed, plural, =0 {} one { · # personne n’a pas encore de compte} other { · # personnes n’ont pas encore de compte}}",
+      "footerCurrencies": "Payé et part en {currency} · {others} sur la page de chaque personne"
+    }
   },
   "memberStats": {
     "badgeYou": "Toi",

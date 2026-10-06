@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="A person's page" subtitle="What is between you, what to do about it, and the entries behind it" -->
+<!-- @dsCard group="Patterns" name="A person's page" subtitle="What is between you, what to do about it, and the entries behind it — and People and this page at width" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -2356,6 +2356,435 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>Several currencies</dt>
       <dd>One card per currency, each with its own buttons. Never a total.</dd>
     </div>
+  </section>
+
+  <section>
+    <h2>People at width — from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      From 1024px the People card is a table over the same people, in the same
+      order: who they are, their role, what they paid and what their share came
+      to, where they stand, and what the reader can do about them. Not a second
+      list — the menu at the end of a row opens the very panel the phone opens
+      under it, and a link made there is revealed there. The name opens the
+      person's page and the row is its link, as in the transactions table.
+    </p>
+    <!-- Read as Sébastien, owner of Lisbon, March: six people, EUR and CHF. -->
+    <div class="frame frame--desk">
+      <div class="desk-screen">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 20rem;
+            gap: 1.125rem 1.5rem;
+            align-items: start;
+          "
+        >
+          <div style="display: flex; flex-direction: column; gap: 1.125rem">
+            <div>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 1.5rem;
+                  font-weight: 600;
+                  letter-spacing: -0.02em;
+                "
+              >
+                People
+              </p>
+              <p class="note" style="margin: 0.5rem 0 0">
+                Everyone who shares expenses in this group. Open a person to see
+                what is between you, or their options to rename them, manage
+                their access, or remove them.
+              </p>
+            </div>
+            <div class="tbl-box">
+              <table class="tbl" style="table-layout: auto">
+                <thead>
+                  <tr>
+                    <th scope="col" style="width: 100%">Person</th>
+                    <th scope="col">Role</th>
+                    <th scope="col" class="num">Paid</th>
+                    <th scope="col" class="num">Share</th>
+                    <th scope="col" class="num">Position</th>
+                    <th scope="col"><span class="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="tbl-row">
+                    <td>
+                      <span class="row" style="gap: 0.625rem"
+                        ><span
+                          class="avatar"
+                          style="
+                            background: var(--primary);
+                            color: var(--primary-foreground);
+                          "
+                          >S</span
+                        ><span
+                          ><a class="tbl-link" href="#">Sébastien B.</a
+                          ><span class="tbl-sub">you</span></span
+                        ></span
+                      >
+                    </td>
+                    <td><span class="badge badge--secondary">Owner</span></td>
+                    <td class="num">€586.60</td>
+                    <td class="num">€338.60</td>
+                    <td
+                      class="num"
+                      style="font-size: 0.75rem; font-weight: 500"
+                    >
+                      <span style="display: block; color: var(--positive-ink)"
+                        ><b style="font-size: 0.875rem; font-weight: 600"
+                          >€248.00</b
+                        >
+                        you get back</span
+                      ><span style="display: block; color: var(--negative-ink)"
+                        ><b style="font-size: 0.875rem; font-weight: 600"
+                          >CHF 62.20</b
+                        >
+                        you owe</span
+                      >
+                    </td>
+                    <td class="num">
+                      <span class="btn btn--ghost btn--sm" aria-hidden="true"
+                        >⋯</span
+                      >
+                    </td>
+                  </tr>
+                  <tr class="tbl-row">
+                    <td>
+                      <span class="row" style="gap: 0.625rem"
+                        ><span class="avatar">R</span
+                        ><span
+                          ><a class="tbl-link" href="#">Ravi</a
+                          ><span class="tbl-sub">ravi@home.lan</span></span
+                        ></span
+                      >
+                    </td>
+                    <td>
+                      <span
+                        style="
+                          font-size: 0.75rem;
+                          color: var(--muted-foreground);
+                        "
+                        >Member</span
+                      >
+                    </td>
+                    <td class="num">€76.40</td>
+                    <td class="num">€175.80</td>
+                    <td
+                      class="num"
+                      style="font-size: 0.75rem; font-weight: 500"
+                    >
+                      <span style="display: block; color: var(--negative-ink)"
+                        ><b style="font-size: 0.875rem; font-weight: 600"
+                          >€99.40</b
+                        >
+                        owes</span
+                      ><span style="display: block; color: var(--positive-ink)"
+                        ><b style="font-size: 0.875rem; font-weight: 600"
+                          >CHF 62.20</b
+                        >
+                        gets back</span
+                      >
+                    </td>
+                    <td class="num" style="white-space: nowrap">
+                      <span class="btn btn--outline btn--sm">Remind</span>
+                      <span class="btn btn--ghost btn--sm" aria-hidden="true"
+                        >⋯</span
+                      >
+                    </td>
+                  </tr>
+                  <tr
+                    class="tbl-row"
+                    style="
+                      background: color-mix(
+                        in oklch,
+                        var(--foreground) 6%,
+                        transparent
+                      );
+                    "
+                  >
+                    <td>
+                      <span class="row" style="gap: 0.625rem"
+                        ><span
+                          class="avatar"
+                          style="border: 1px dashed var(--border)"
+                          >T</span
+                        ><span
+                          ><a class="tbl-link" href="#">Tomás</a
+                          ><span class="tbl-sub"
+                            >No account · joined</span
+                          ></span
+                        ></span
+                      >
+                    </td>
+                    <td><span class="badge badge--outline">Guest</span></td>
+                    <td class="num">€115.00</td>
+                    <td class="num">€230.00</td>
+                    <td
+                      class="num"
+                      style="font-size: 0.75rem; font-weight: 500"
+                    >
+                      <span style="color: var(--negative-ink)"
+                        ><b style="font-size: 0.875rem; font-weight: 600"
+                          >€115.00</b
+                        >
+                        owes</span
+                      >
+                    </td>
+                    <td class="num">
+                      <span class="btn btn--ghost btn--sm" aria-hidden="true"
+                        >⋯</span
+                      >
+                    </td>
+                  </tr>
+                  <tr class="tbl-row">
+                    <td>
+                      <span class="row" style="gap: 0.625rem"
+                        ><span class="avatar">J</span
+                        ><span
+                          ><a class="tbl-link" href="#">Jonas</a
+                          ><span class="tbl-sub">jonas@home.lan</span></span
+                        ></span
+                      >
+                    </td>
+                    <td>
+                      <span
+                        style="
+                          font-size: 0.75rem;
+                          color: var(--muted-foreground);
+                        "
+                        >Member</span
+                      >
+                    </td>
+                    <td class="num">€0.00</td>
+                    <td class="num">€268.60</td>
+                    <td
+                      class="num"
+                      style="font-size: 0.75rem; font-weight: 500"
+                    >
+                      <span style="color: var(--negative-ink)"
+                        ><b style="font-size: 0.875rem; font-weight: 600"
+                          >€148.60</b
+                        >
+                        owes</span
+                      >
+                    </td>
+                    <td class="num" style="white-space: nowrap">
+                      <span
+                        class="btn btn--outline btn--sm"
+                        aria-disabled="true"
+                        >Reminded</span
+                      >
+                      <span class="btn btn--ghost btn--sm" aria-hidden="true"
+                        >⋯</span
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <a
+                class="list-row"
+                href="#"
+                style="
+                  justify-content: flex-start;
+                  gap: 0.625rem;
+                  border-top: 1px solid var(--border);
+                  color: var(--primary-ink);
+                  font-weight: 600;
+                "
+                ><span
+                  class="avatar"
+                  style="
+                    background: transparent;
+                    border: 1px dashed var(--primary);
+                    color: var(--primary-ink);
+                  "
+                  >+</span
+                >Add someone</a
+              >
+              <div class="tbl-foot">
+                <span>6 people · 1 person has no account yet</span>
+                <span>Paid and share in EUR · CHF on each person’s page</span>
+              </div>
+            </div>
+            <p class="note" style="margin: 0; font-size: 0.75rem">
+              Expenses keep the name of whoever paid, even after someone leaves
+              the group.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Group link</div>
+            </div>
+            <div class="card-content">
+              <p class="note" style="margin: 0">
+                The group link card, exactly as on a phone and in settings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>columns</dt>
+      <dd>
+        Laid out to what they hold: every column but the person's is as wide as
+        its widest cell and never wraps, so a figure is never cut short; the
+        person's column takes the rest and is the one that truncates. Under
+        48rem of table — a 1024px window beside an expanded sidebar — Share goes
+        first; the person's page has it.
+      </dd>
+      <dt>position</dt>
+      <dd>
+        One line per currency the person is not square in, the figure and its
+        word in the tone's ink and the figure unsigned — "€99.40 owes", "€248.00
+        you get back" on the reader's own row. "Settled up" in the neutral ink,
+        never a zero. Each line is one message, so French can say "doit 99,40
+        €".
+      </dd>
+      <dt>paid, share</dt>
+      <dd>
+        In one currency, the one the group spends in most often (a converted
+        group's base currency first); the others are named in the footer. Read
+        off the balances the screen already loads. Spending only.
+      </dd>
+      <dt>actions</dt>
+      <dd>
+        Remind, for whoever owes the reader — the settle screen's own button,
+        "Reminded" for a day after. Then ⋯, "Options for Tomás": the phone's
+        open row in a popover — name and address, the personal link, Remove from
+        group, Leave this group — or no button at all when that panel would be
+        empty. A row whose menu is open is washed a step darker than a hovered
+        one, never in the accent: it carries a balance.
+      </dd>
+      <dt>group link</dt>
+      <dd>
+        Beside the table once the screen is 64rem wide, under it until then.
+        Placed by the grid, never moved in the document.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>A person's page at width</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      From 1024px the page stands in two columns: what is between you, what to
+      do about it and the entries behind it on the left, the statistics on the
+      right. The left comes first in the document, as it reads on a phone.
+    </p>
+    <div class="frame frame--desk">
+      <div class="desk-screen">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+          "
+        >
+          <div style="display: flex; flex-direction: column; gap: 0.875rem">
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+                border-radius: 17px;
+                background: var(--card);
+                padding: 0.875rem;
+                box-shadow: 0 0 0 1px var(--border);
+              "
+            >
+              <div class="spec-label" style="margin: 0">Between you two</div>
+              <span
+                class="balance balance--positive"
+                style="font-size: 1.5rem; font-weight: 600"
+                ><span class="tabular-nums">€99.40</span></span
+              >
+              <span style="font-weight: 500">Ravi owes you</span>
+              <div class="row" style="gap: 0.625rem">
+                <span class="btn btn--default" style="flex: 1"
+                  >I was paid back</span
+                >
+                <span class="btn btn--outline">Remind</span>
+              </div>
+            </div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+                border-radius: 17px;
+                background: var(--card);
+                padding: 0.875rem;
+                box-shadow: 0 0 0 1px var(--border);
+              "
+            >
+              <div class="spec-label" style="margin: 0">Between you two</div>
+              <span
+                class="balance balance--negative"
+                style="font-size: 1.5rem; font-weight: 600"
+                ><span class="tabular-nums">CHF 62.20</span></span
+              >
+              <span style="font-weight: 500">You owe Ravi</span>
+              <span class="btn btn--default">I paid Ravi</span>
+            </div>
+            <a
+              href="#"
+              class="list-row"
+              style="
+                border-radius: 1rem;
+                background: var(--card);
+                box-shadow: 0 0 0 1px var(--border);
+              "
+              ><span class="list-main"
+                ><span class="list-title">Entries with Ravi</span
+                ><span class="list-sub"
+                  >Everything Ravi paid for or has a share in</span
+                ></span
+              ></a
+            >
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.875rem">
+            <div class="spec-label" style="margin: 0">Statistics</div>
+            <dl class="list" style="margin: 0">
+              <div class="list-row" style="padding: 0.625rem 0.75rem">
+                <dt class="note" style="margin: 0; font-size: 0.875rem">
+                  Paid
+                </dt>
+                <dd class="tabular-nums" style="margin: 0; font-weight: 600">
+                  €76.40
+                </dd>
+              </div>
+              <div
+                class="list-row"
+                style="
+                  padding: 0.625rem 0.75rem;
+                  border-top: 1px solid var(--border);
+                "
+              >
+                <dt class="note" style="margin: 0; font-size: 0.875rem">
+                  Their share
+                </dt>
+                <dd class="tabular-nums" style="margin: 0; font-weight: 600">
+                  €175.80
+                </dd>
+              </div>
+            </dl>
+            <p class="note" style="margin: 0">
+              The statistics as on a phone — paid against share, where their
+              share went, who they split with — in the column beside.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Below <code>lg</code> the two columns are not boxes at all (<code
+        >display: contents</code
+      >), so the phone's single column is exactly what it was.
+    </p>
   </section>
 
   <section>

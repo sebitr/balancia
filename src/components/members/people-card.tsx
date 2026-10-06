@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -14,11 +14,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useDeskWidth } from "@/components/expenses/transactions-table";
 import {
   removeParticipantAction,
   restoreParticipantAction,
 } from "@/modules/groups/actions";
+import type { RemindRecipient } from "@/modules/reminders/types";
 import { AddPersonRow } from "./add-person-row";
+import type { PeopleLedger } from "./people-ledger";
+import { PeopleTable } from "./people-table";
 import { PersonRow } from "./person-row";
 
 /**
@@ -33,6 +37,14 @@ import { PersonRow } from "./person-row";
  *
  * Removal is owned here too, because its confirmation and its undo both belong
  * to the screen rather than to the row that is about to disappear.
+ *
+ * Two renderers, one card. Below `lg` the people are the accordion above;
+ * from `lg` up they are `PeopleTable`, whose row menu opens the same panel
+ * the accordion opens under a row. Both read the state kept here, so a link
+ * made in one is the link revealed in the other. Both are in the server's
+ * HTML, with CSS showing one, because the server cannot know the width; from
+ * the first render that can, only the one on screen is mounted — two open
+ * panels for one person would be two forms writing the same name.
  */
 
 export interface PersonView {
@@ -64,6 +76,9 @@ export function PeopleCard({
   canInvite,
   canRemove,
   canLeave,
+  ledger = null,
+  recipients = [],
+  senderName = "",
 }: {
   groupId: string;
   /** Named by the confirmation to leave, and by the toast after it. */
@@ -78,6 +93,12 @@ export function PeopleCard({
   canRemove: boolean;
   /** Whether the reader may take themselves out — a member, not the owner. */
   canLeave: boolean;
+  /** What everyone paid and their share, for the table's two columns. */
+  ledger?: PeopleLedger | null;
+  /** Whoever owes the reader, for the table's Remind. */
+  recipients?: readonly RemindRecipient[];
+  /** The reader's own name, which a reminder is signed with. */
+  senderName?: string;
 }) {
   const router = useRouter();
   const t = useTranslations("membersPage");
@@ -89,6 +110,9 @@ export function PeopleCard({
   const [adding, setAdding] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const desk = useDeskWidth();
+  /** Whose menu a removal was asked from, for focus to go back to. */
+  const askedFrom = useRef<string | null>(null);
 
   const open = (id: string | null) => {
     setOpenId(id);
@@ -141,42 +165,82 @@ export function PeopleCard({
 
   return (
     <>
-      <div className="overflow-hidden rounded-[17px] bg-card ring-1 ring-[color-mix(in_oklch,var(--foreground)_10%,transparent)]">
-        {people.map((person) => (
-          <PersonRow
-            key={person.id}
+      {desk !== true && (
+        <div className="overflow-hidden rounded-[17px] bg-card ring-1 ring-[color-mix(in_oklch,var(--foreground)_10%,transparent)] lg:hidden">
+          {people.map((person) => (
+            <PersonRow
+              key={person.id}
+              groupId={groupId}
+              groupName={groupName}
+              archived={archived}
+              person={person}
+              isOpen={openId === person.id}
+              onToggle={() => toggle(person.id)}
+              revealUrl={reveal?.id === person.id ? reveal.url : null}
+              onReveal={(url) => setReveal({ id: person.id, url })}
+              onDismissReveal={() => setReveal(null)}
+              onAskRemove={() => setConfirmId(person.id)}
+              isSelf={person.id === viewerId}
+              canManage={canManage}
+              canInvite={canInvite}
+              canRemove={canRemove}
+              canLeave={canLeave}
+            />
+          ))}
+
+          {canManage && (
+            <AddPersonRow
+              groupId={groupId}
+              open={adding}
+              onOpen={() => {
+                setAdding(true);
+                open(null);
+              }}
+              onClose={() => setAdding(false)}
+              onAdded={openWithLink}
+              canInvite={canInvite}
+            />
+          )}
+        </div>
+      )}
+
+      {desk !== false && (
+        <div className="hidden lg:block">
+          <PeopleTable
             groupId={groupId}
             groupName={groupName}
             archived={archived}
-            person={person}
-            isOpen={openId === person.id}
-            onToggle={() => toggle(person.id)}
-            revealUrl={reveal?.id === person.id ? reveal.url : null}
-            onReveal={(url) => setReveal({ id: person.id, url })}
-            onDismissReveal={() => setReveal(null)}
-            onAskRemove={() => setConfirmId(person.id)}
-            isSelf={person.id === viewerId}
+            people={people}
+            viewerId={viewerId}
             canManage={canManage}
             canInvite={canInvite}
             canRemove={canRemove}
             canLeave={canLeave}
-          />
-        ))}
-
-        {canManage && (
-          <AddPersonRow
-            groupId={groupId}
-            open={adding}
-            onOpen={() => {
+            ledger={ledger}
+            recipients={recipients}
+            senderName={senderName}
+            openId={openId}
+            onOpenChange={open}
+            reveal={reveal}
+            onReveal={(id, url) => setReveal({ id, url })}
+            onDismissReveal={() => setReveal(null)}
+            // The menu closes for the confirmation, which takes the screen;
+            // the person's row and its menu button stay behind it.
+            onAskRemove={(id) => {
+              askedFrom.current = id;
+              open(null);
+              setConfirmId(id);
+            }}
+            adding={adding}
+            onAddOpen={() => {
               setAdding(true);
               open(null);
             }}
-            onClose={() => setAdding(false)}
+            onAddClose={() => setAdding(false)}
             onAdded={openWithLink}
-            canInvite={canInvite}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       <Sheet
         open={confirming !== null}
@@ -184,7 +248,29 @@ export function PeopleCard({
           if (!next) setConfirmId(null);
         }}
       >
-        <SheetContent side="bottom" showCloseButton={false} className="gap-3.5">
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="gap-3.5"
+          onCloseAutoFocus={(event) => {
+            /*
+             * Back to the menu the removal was asked from. On a phone the open
+             * row is still under the sheet and focus returns into it on its
+             * own; at the desk the menu closed for the sheet, so its button is
+             * where the reader was. Kept, the button is still there; removed,
+             * there is no row to go back to and the default stands.
+             */
+            const id = askedFrom.current;
+            askedFrom.current = null;
+            if (id === null) return;
+            const trigger = document.querySelector<HTMLElement>(
+              `[data-person-menu="${id}"]`,
+            );
+            if (!trigger) return;
+            event.preventDefault();
+            trigger.focus();
+          }}
+        >
           <SheetHeader className="gap-1.5 pb-0">
             <SheetTitle className="text-base font-semibold tracking-[-0.015em]">
               {t("removeTitle", { name: confirming?.name ?? "" })}

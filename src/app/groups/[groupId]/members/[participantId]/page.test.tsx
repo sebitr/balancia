@@ -67,7 +67,7 @@ vi.mock("@/modules/groups/service", () => ({
     })),
 }));
 vi.mock("@/components/members/member-statistics", () => ({
-  MemberStatistics: () => null,
+  MemberStatistics: () => <p>Statistics block</p>,
 }));
 
 const { default: MemberStatsPage } = await import("./page");
@@ -275,6 +275,41 @@ describe("the person's page", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/^I paid/)).toBeNull();
     expect(screen.queryByText("I was paid back")).toBeNull();
+  });
+});
+
+/**
+ * The two columns a desktop window gets from `lg` up.
+ *
+ * The grid only places them; the document decides the order a screen reader
+ * and a keyboard take, and a phone shows — so that order is pinned here: what
+ * is between the two of you and the entries behind it, then the statistics.
+ */
+describe("the page's columns", () => {
+  const column = (element: HTMLElement, slot: string) =>
+    element.closest(`[data-slot="${slot}"]`);
+
+  it("put the position and its entries first and the statistics second", async () => {
+    await open("marta");
+
+    const primary = column(screen.getByText("You owe Marta"), "member-primary");
+    const secondary = column(
+      screen.getByText("Statistics block"),
+      "member-secondary",
+    );
+    expect(primary).toContainElement(
+      screen.getByRole("link", { name: /^Entries with Marta/ }),
+    );
+    expect(secondary).not.toBeNull();
+    expect(secondary?.parentElement).toBe(primary?.parentElement);
+    expect(primary?.closest("[data-layout]")).toHaveAttribute(
+      "data-layout",
+      "wide",
+    );
+    expect(
+      primary!.compareDocumentPosition(secondary!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
 

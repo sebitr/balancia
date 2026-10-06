@@ -21,6 +21,11 @@ import { cn } from "@/lib/utils";
  * invitation immediately and hands the one-time reveal back to the card, so
  * adding a guest and giving them access is one pass rather than two visits to
  * the same list.
+ *
+ * From `lg` up it is the row under the People table instead, drawn to the
+ * table's measure — a 52px row, a 32px circle where the avatars are — and its
+ * form lays the name and the address side by side rather than stretching each
+ * across the table's whole width.
  */
 
 const FIELD =
@@ -61,9 +66,9 @@ export function AddPersonRow({
       <button
         type="button"
         onClick={onOpen}
-        className="flex min-h-[58px] w-full items-center gap-2.5 p-3.5 text-left font-semibold text-primary-ink transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none"
+        className="flex min-h-[58px] w-full items-center gap-2.5 p-3.5 text-left font-semibold text-primary-ink transition-colors hover:bg-[color-mix(in_oklch,var(--muted)_45%,transparent)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none lg:min-h-13 lg:py-2 lg:pr-4 lg:pl-4 lg:text-sm lg:hover:bg-wash-1"
       >
-        <span className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border border-dashed border-[color-mix(in_oklch,var(--primary)_45%,transparent)]">
+        <span className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border border-dashed border-[color-mix(in_oklch,var(--primary)_45%,transparent)] lg:size-8">
           <Plus aria-hidden="true" className="size-[17px]" />
         </span>
         {t("addSomeone")}
@@ -116,7 +121,7 @@ export function AddPersonRow({
   };
 
   return (
-    <div className="flex flex-col gap-3 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] p-3.5 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
+    <div className="flex flex-col gap-3 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] p-3.5 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 lg:px-4 lg:pb-4">
       <span className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">{t("addSomeone")}</span>
         <Button
@@ -134,36 +139,39 @@ export function AddPersonRow({
         </Button>
       </span>
 
-      <label htmlFor="add-person-name" className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium">{t("name")}</span>
-        <Input
-          id="add-person-name"
-          value={name}
-          maxLength={120}
-          autoFocus
-          placeholder={t("namePlaceholder")}
-          onChange={(event) => setName(event.target.value)}
-          className={FIELD}
-        />
-      </label>
+      {/* Not a box below `lg`, so the two fields stack exactly as they did. */}
+      <div className="contents lg:grid lg:grid-cols-2 lg:gap-3">
+        <label htmlFor="add-person-name" className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium">{t("name")}</span>
+          <Input
+            id="add-person-name"
+            value={name}
+            maxLength={120}
+            autoFocus
+            placeholder={t("namePlaceholder")}
+            onChange={(event) => setName(event.target.value)}
+            className={FIELD}
+          />
+        </label>
 
-      <label htmlFor="add-person-email" className="flex flex-col gap-1.5">
-        <span className="flex items-baseline gap-1.5 text-xs font-medium">
-          {t("email")}
-          <span className="text-xs font-normal text-muted-foreground">
-            {tCommon("optional")}
+        <label htmlFor="add-person-email" className="flex flex-col gap-1.5">
+          <span className="flex items-baseline gap-1.5 text-xs font-medium">
+            {t("email")}
+            <span className="text-xs font-normal text-muted-foreground">
+              {tCommon("optional")}
+            </span>
           </span>
-        </span>
-        <Input
-          id="add-person-email"
-          type="email"
-          inputMode="email"
-          value={email}
-          placeholder="name@example.com"
-          onChange={(event) => setEmail(event.target.value)}
-          className={FIELD}
-        />
-      </label>
+          <Input
+            id="add-person-email"
+            type="email"
+            inputMode="email"
+            value={email}
+            placeholder="name@example.com"
+            onChange={(event) => setEmail(event.target.value)}
+            className={FIELD}
+          />
+        </label>
+      </div>
 
       {canInvite && (
         <fieldset className="flex flex-col gap-1.5">
@@ -186,7 +194,7 @@ export function AddPersonRow({
       )}
 
       <Button
-        className="h-11 font-semibold"
+        className="h-11 font-semibold lg:h-10 lg:self-start lg:px-5"
         onClick={() => void onSubmit()}
         disabled={pending || name.trim() === ""}
       >
