@@ -265,6 +265,17 @@ export async function loadTransactionPage(
           ],
           foreign: isForeign(expense.currency),
           receipt: expense.attachmentCount > 0,
+          receipts: expense.attachmentCount,
+          payerNames: expense.payers.map((payer) => payer.displayName),
+          // Who carries a share, once each, and by which method — what the
+          // desktop table's Split column says as "6 equally" or "4 of 6".
+          split: {
+            method: expense.splitMethod,
+            sharers: [
+              ...new Set(expense.shares.map((share) => share.participantId)),
+            ],
+          },
+          method: null,
         },
       };
     }),
@@ -312,6 +323,11 @@ export async function loadTransactionPage(
           foreign: isForeign(settlement.currency),
           // A repayment carries no attachments; there is no table for them.
           receipt: false,
+          receipts: 0,
+          payerNames: [settlement.fromName],
+          split: null,
+          // An empty string is nobody saying, as the settle screen reads it.
+          method: settlement.paymentMethod || null,
         },
       };
     }),

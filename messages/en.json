@@ -714,6 +714,22 @@
     "positionYouReceived": "You received {amount}",
     "positionYouPaid": "You paid {amount}",
     "positionEven": "{kind, select, revenue {You received your share} other {You paid your share}}",
+    "table": {
+      "date": "Date",
+      "description": "Description",
+      "category": "Category",
+      "paidBy": "Paid by",
+      "split": "Split",
+      "amount": "Amount",
+      "forYou": "For you",
+      "you": "You",
+      "paidByLine": "{who, select, you {You paid} withYou {{names} paid} other {{count, plural, one {{names} paid} other {{names} paid}}}}",
+      "split_ways": "{scope, select, all {{method, select, equal {{count} equally} shares {{count}, by shares} percentage {{count}, by percentage} other {{count}, exact amounts}}} other {{method, select, equal {{count} of {total}} shares {{count} of {total}, by shares} percentage {{count} of {total}, by percentage} other {{count} of {total}, exact amounts}}}}",
+      "receipts": "{count, plural, one {# receipt} other {# receipts}}",
+      "footer": "Showing {shown} of {total, plural, one {# transaction} other {# transactions}} · {sort, select, oldest {sorted by date, oldest first} largest {sorted by amount, largest first} other {sorted by date, newest first}}",
+      "footerUncounted": "Showing {shown, plural, one {# transaction} other {# transactions}} · {sort, select, oldest {sorted by date, oldest first} largest {sorted by amount, largest first} other {sorted by date, newest first}}",
+      "footerMore": "More load as you scroll"
+    },
     "filters": {
       "title": "Filter and sort",
       "description": "Narrow the list and choose its order. Nothing changes until you apply.",
@@ -760,7 +776,12 @@
       "sort": "Sort",
       "sort_newest": "Newest first",
       "sort_oldest": "Oldest first",
-      "sort_largest": "Largest amount"
+      "sort_largest": "Largest amount",
+      "anyCategory": "Any category",
+      "categoryMenu": "Category: {value}",
+      "whenMenu": "When: {value}",
+      "more": "More filters",
+      "moreWith": "More filters, {count, plural, one {# applied} other {# applied}}"
     }
   },
   "userSettings": {

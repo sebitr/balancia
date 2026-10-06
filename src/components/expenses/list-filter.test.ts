@@ -3,10 +3,18 @@ import {
   clearedFilter,
   filterDimensions,
   filterParams,
+  monthOf,
+  monthsBetween,
   NO_FILTER,
   readFilter,
   selectRows,
   sortableByAmount,
+  toggled,
+  withCategory,
+  withMonth,
+  withoutCategories,
+  withSubcategory,
+  withWhen,
   type ListFilter,
   type RowView,
 } from "./list-filter";
@@ -39,6 +47,10 @@ function row(overrides: Partial<RowView> = {}): RowView {
     people: ["seb"],
     foreign: false,
     receipt: false,
+    receipts: 0,
+    payerNames: ["Seb"],
+    split: { method: "equal", sharers: ["seb"] },
+    method: null,
     ...overrides,
   };
 }
@@ -558,5 +570,87 @@ describe("readFilter and filterParams", () => {
     const params = filterParams(applied);
     expect(params.has("from")).toBe(false);
     expect(params.has("to")).toBe(false);
+  });
+});
+
+/**
+ * The moves the sheet and the desktop's menus both make.
+ *
+ * Lifted out of the sheet so that a choice means the same thing from either;
+ * these pin what each one writes, which is what both places now rely on.
+ */
+describe("the controls' moves", () => {
+  it("switches one value of a multi-select section in and out", () => {
+    const once = toggled(NO_FILTER, "payers", "seb");
+    expect(once.payers).toEqual(["seb"]);
+    expect(toggled(once, "payers", "seb").payers).toEqual([]);
+  });
+
+  it("takes a whole category in place of the parts of it that were picked", () => {
+    const parts = filter({ subcategories: ["home.rent", "food.bakery"] });
+    const whole = withCategory(parts, "home");
+    expect(whole.categories).toEqual(["home"]);
+    expect(whole.subcategories).toEqual(["food.bakery"]);
+    expect(withCategory(whole, "home").categories).toEqual([]);
+  });
+
+  it("lets the whole category go when one part of it is picked", () => {
+    const part = withSubcategory(
+      filter({ categories: ["home"] }),
+      "home",
+      "rent",
+    );
+    expect(part.categories).toEqual([]);
+    expect(part.subcategories).toEqual(["home.rent"]);
+  });
+
+  it("clears every category and every part for Any category", () => {
+    const cleared = withoutCategories(
+      filter({ categories: ["home"], subcategories: ["food.bakery"] }),
+    );
+    expect(cleared.categories).toEqual([]);
+    expect(cleared.subcategories).toEqual([]);
+  });
+
+  it("opens a custom period on the group's whole history", () => {
+    const custom = withWhen(NO_FILTER, "custom", {
+      firstDate: "2019-07-02",
+      today: "2026-08-24",
+    });
+    expect(custom).toMatchObject({
+      when: "custom",
+      from: "2019-07-02",
+      to: "2026-08-24",
+    });
+    expect(
+      withWhen(custom, "month", { firstDate: null, today: "2026-08-24" }),
+    ).toMatchObject({ when: "month", from: "", to: "" });
+  });
+
+  it("writes a month as the range from its first day to its last", () => {
+    expect(withMonth(NO_FILTER, "2024-02")).toMatchObject({
+      when: "custom",
+      from: "2024-02-01",
+      to: "2024-02-29",
+    });
+    expect(withMonth(NO_FILTER, "2026-04").to).toBe("2026-04-30");
+  });
+
+  it("reads a month back only from a range that is exactly one", () => {
+    expect(monthOf(withMonth(NO_FILTER, "2025-12"))).toBe("2025-12");
+    expect(
+      monthOf(filter({ when: "custom", from: "2025-12-01", to: "2025-12-30" })),
+    ).toBeNull();
+    expect(monthOf(filter({ when: "month" }))).toBeNull();
+  });
+
+  it("lists the months from the first transaction's up to today's", () => {
+    expect(monthsBetween("2025-11-20", "2026-02-03")).toEqual([
+      "2026-02",
+      "2026-01",
+      "2025-12",
+      "2025-11",
+    ]);
+    expect(monthsBetween(null, "2026-02-03")).toEqual([]);
   });
 });

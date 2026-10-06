@@ -194,6 +194,15 @@ export default async function ExpensesPage({
     (category: ExpenseCategory) => counts[category] !== undefined,
   );
 
+  /*
+   * How many transactions the group holds — the "of 42" the desktop table's
+   * footer reads while nothing narrows the list. Out of the two scans already
+   * made for the spread and the chips, so it costs no query of its own.
+   */
+  const total =
+    spending.reduce((sum, entry) => sum + entry.count, 0) +
+    repaid.reduce((sum, entry) => sum + entry.count, 0);
+
   return (
     <Transactions
       groupId={groupId}
@@ -213,6 +222,8 @@ export default async function ExpensesPage({
       // The group's own calendar day, not the server's: `This month` has to
       // mean the month the expense dates were written against.
       today={todayIn(access.group.timezone)}
+      self={access.participantId}
+      total={total}
     />
   );
 }

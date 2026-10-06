@@ -131,6 +131,10 @@ function row(overrides: Partial<RowView> = {}): RowView {
     people: ["seb"],
     foreign: false,
     receipt: false,
+    receipts: 0,
+    payerNames: ["Seb"],
+    split: { method: "equal", sharers: ["seb"] },
+    method: null,
     ...overrides,
   };
 }
