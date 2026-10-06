@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
  */
 
 /** Every row in these cards, so nothing sets its own height. */
-const ROW = "flex min-h-[52px] w-full items-center gap-3 px-4";
+export const ROW = "flex min-h-[52px] w-full items-center gap-3 px-4";
 
 export function RowCard({
   className,

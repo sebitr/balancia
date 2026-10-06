@@ -35,6 +35,14 @@ describe("checklistRows", () => {
     );
   });
 
+  it("never calls an address verified that only a password stands behind", () => {
+    // The password is offered where there is no mail server, so nothing has
+    // proved the address it was typed with.
+    const account = row({ ...base, credential: "password" }, "account");
+    expect(account.noteKey).toBe("accountNotePassword");
+    expect(account.noteValues).toBeUndefined();
+  });
+
   it("opens nothing from a completed row", () => {
     expect(row(base, "account").sheet).toBeNull();
   });

@@ -15,6 +15,7 @@ import { settlementTotals } from "@/modules/settlements/service";
 import { moneyForGroup } from "@/modules/currencies/display";
 import { isSpending } from "@/modules/expenses/direction";
 import { todayIn } from "@/modules/recurring/schedule";
+import { countRecurringExpenses } from "@/modules/recurring/service";
 import {
   EXPENSE_CATEGORY_IDS,
   normalizeLegacyCategory,
@@ -22,10 +23,11 @@ import {
 } from "@/modules/categorization";
 import {
   categoryTotals,
-  isCategorised,
+  isDivided,
   spreadBands,
 } from "@/modules/expenses/spread";
 import {
+  RepeatingLink,
   Transactions,
   type BandView,
   type EntryKind,
@@ -75,20 +77,31 @@ export default async function ExpensesPage({
   const { groupId } = await params;
   const access = await requireGroupAccess(groupId);
 
-  const [page, spending, repaid, people, firstDate] = await Promise.all([
+  const [page, spending, repaid, people, firstDate, rules] = await Promise.all([
     loadTransactionPage(access),
     listSpreadEntries(access.groupId),
     settlementTotals(access.groupId),
     listParticipants(access.groupId),
     firstTransactionDate(access.groupId),
+    countRecurringExpenses(access.groupId),
   ]);
 
   const t = await getTranslations("expensesList");
+
+  /*
+   * The way to the recurring expenses, whenever the group has one — even with
+   * nothing recorded yet, which is exactly the state of a group whose first
+   * rent is set for next month. See `RepeatingLink`.
+   */
+  const repeating = rules.total > 0 ? { running: rules.running } : null;
 
   if (page.rows.length === 0) {
     return (
       <div className="space-y-4">
         <PageTitle label={t("eyebrow")} />
+        {repeating && (
+          <RepeatingLink groupId={groupId} running={repeating.running} />
+        )}
         <EmptyState
           icon={Receipt}
           title={t("emptyTitle")}
@@ -119,11 +132,12 @@ export default async function ExpensesPage({
    * appears only when there is one currency to measure in, and simply is not
    * there when there is not.
    *
-   * It also needs something to divide. Until somebody files an expense under a
-   * category the whole total sits in one bucket, and the spine becomes a single
-   * full-height band reading "Uncategorised · 100%" — a chart of one fact, and
-   * a filter whose only setting is the list already on screen. So it stays out
-   * until there is a division to draw, and the list takes the width back.
+   * It also needs something to divide. While the whole total sits in one
+   * category — nobody has filed anything, or everybody filed it all under
+   * Groceries — the spine is a single band reading "Groceries · 100%": a chart
+   * of one fact, and a filter whose only setting is the list already on
+   * screen. So it stays out until there are two categories to draw, and the
+   * list takes the width back.
    */
   const display = {
     mode: access.group.currencyMode,
@@ -132,7 +146,7 @@ export default async function ExpensesPage({
   const spreads = categoryTotals(spending, display);
   const single = spreads.length === 1 ? spreads[0] : null;
   const bands: BandView[] | null =
-    single && isCategorised(single)
+    single && isDivided(single)
       ? spreadBands(single, single.categories.length).map((band) => ({
           key: band.key,
           categories: [...band.categories],
@@ -213,6 +227,7 @@ export default async function ExpensesPage({
       // The group's own calendar day, not the server's: `This month` has to
       // mean the month the expense dates were written against.
       today={todayIn(access.group.timezone)}
+      repeating={repeating}
     />
   );
 }

@@ -132,9 +132,11 @@ export interface ActivityEntry {
   readonly actorLabel: string | null;
   readonly actorType: "user" | "guest" | "system";
   /**
-   * The actor's own row in the group, when they had one. Read for one thing:
-   * a removal whose actor is the person removed is somebody leaving, and is
-   * told that way. Null for the system, and once that row is gone.
+   * The actor's own row in the group, when they had one. Read so a line can
+   * tell when the person it names is the one who did it: a removal whose
+   * actor is the person removed is somebody leaving, and a repayment whose
+   * actor is the payer is "their repayment". Null for the system, and once
+   * that row is gone.
    */
   readonly actorParticipantId: string | null;
   readonly createdAt: Date;
@@ -167,6 +169,54 @@ export async function listGroupActivity(
     ...row,
     metadata: (row.metadata as ActivityMetadata | null) ?? null,
   }));
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The participant ids a repayment's line names: who paid, and who was paid.
+ *
+ * Only `settlement.created` carries them — it is the one repayment event that
+ * has recorded `from` and `to` since it was first written. The others record
+ * an amount alone and keep their shorter line.
+ */
+function peopleNamedBy(entry: ActivityEntry): string[] {
+  if (entry.action !== "settlement.created") return [];
+  const { from, to } = entry.metadata ?? {};
+  // Metadata is free-form JSON; anything that is not an id would make the
+  // uuid comparison below throw rather than simply match nothing.
+  return [from, to].filter(
+    (id): id is string => typeof id === "string" && UUID.test(id),
+  );
+}
+
+/**
+ * The current names of the people `entries` point at, by participant id.
+ *
+ * One query for the page, and none at all when nothing on it names anybody.
+ * Removed people are included: a repayment from somebody who has since left
+ * the group still happened, and still has two ends.
+ *
+ * Scoped to `groupId`, which the caller has already authorized, so an id in
+ * an event's metadata can never resolve to somebody in another group.
+ */
+export async function namesInActivity(
+  groupId: string,
+  entries: readonly ActivityEntry[],
+  options: { db?: Database } = {},
+): Promise<Map<string, string>> {
+  const ids = [...new Set(entries.flatMap(peopleNamedBy))];
+  if (ids.length === 0) return new Map();
+
+  const db = options.db ?? getDb();
+  const rows = await db
+    .select({ id: participants.id, displayName: participants.displayName })
+    .from(participants)
+    .where(
+      and(eq(participants.groupId, groupId), inArray(participants.id, ids)),
+    );
+
+  return new Map(rows.map((row) => [row.id, row.displayName]));
 }
 
 /**

@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  * The last row of the People card: add someone else.
  *
  * It asks for a name and then for the only decision that actually follows —
- * whether this person needs a way in now. Choosing "Create a link" runs the
+ * whether this person needs a way in now. Choosing "Personal link" runs the
  * invitation immediately and hands the one-time reveal back to the card, so
  * adding a guest and giving them access is one pass rather than two visits to
  * the same list.

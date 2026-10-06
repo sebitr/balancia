@@ -32,7 +32,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const { GroupNav, GroupRail } = await import("./group-nav");
+const { GroupNav, GroupTabs } = await import("./group-nav");
+const { GroupHeader } = await import("./group-header");
 
 /**
  * The direction the named tab would carry, standing on `pathname`.
@@ -131,45 +132,41 @@ describe("GroupNav", () => {
 });
 
 /**
- * The rail a desktop window gets from `lg` up, in place of the bar.
+ * The tabs a desktop window gets from `lg` up, in the group's header, in place
+ * of the bar.
  *
- * It is the same navigation drawn down the side, so what is pinned here is
- * that it says the same things: one landmark under the same name, the same
- * five links under the same names, the current one marked the same way, and
- * the same motion on every tap.
+ * They are the same navigation drawn across the top, so what is pinned here
+ * is that they say the same things: one landmark under the same name, the
+ * four places under the same names, the current one marked the same way, and
+ * the same motion on every tap. Add is not among them: from `lg` up it is the
+ * sidebar's filled button.
  */
-describe("GroupRail", () => {
-  function renderRail(pathname: string) {
+describe("GroupTabs", () => {
+  function renderTabs(pathname: string) {
     cleanup();
     nav.pathname = pathname;
-    renderWithIntl(<GroupRail groupId="g1" />);
+    renderWithIntl(<GroupTabs groupId="g1" />);
     return screen.getByRole("navigation", { name: "Group sections" });
   }
 
-  it("is one landmark holding Add and the four places, with where you are marked", () => {
-    const rail = renderRail("/groups/g1/members");
+  it("is one landmark holding the four places, with where you are marked", () => {
+    const tabs = renderTabs("/groups/g1/members");
 
-    const links = within(rail).getAllByRole("link");
-    // Add heads the rail as its one filled button; the places follow in the
-    // bar's own order.
+    const links = within(tabs).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual([
-      "Add",
       "Overview",
       "Transactions",
       "People",
       "Settings",
     ]);
-    expect(within(rail).getByRole("link", { name: "People" })).toHaveAttribute(
+    expect(links.filter((link) => link.hasAttribute("aria-current"))).toEqual([
+      within(tabs).getByRole("link", { name: "People" }),
+    ]);
+    expect(within(tabs).getByRole("link", { name: "People" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(links.filter((link) => link.hasAttribute("aria-current"))).toEqual([
-      within(rail).getByRole("link", { name: "People" }),
-    ]);
-    expect(within(rail).getByRole("link", { name: "Add" })).toHaveAttribute(
-      "href",
-      "/groups/g1/expenses/new",
-    );
+    expect(within(tabs).queryByRole("link", { name: "Add" })).toBeNull();
   });
 
   it("moves the screen exactly as the bar would, from wherever it is", () => {
@@ -179,12 +176,12 @@ describe("GroupRail", () => {
       "/groups/g1/settlements/s1",
       "/groups/g1/settle",
     ]) {
-      for (const tab of ["Overview", "Transactions", "Add", "People"]) {
-        const rail = renderRail(pathname);
-        const fromRail = within(rail)
+      for (const tab of ["Overview", "Transactions", "People", "Settings"]) {
+        const tabs = renderTabs(pathname);
+        const fromTabs = within(tabs)
           .getByRole("link", { name: tab })
           .getAttribute("data-transition");
-        expect(fromRail, `${tab} from ${pathname}`).toBe(
+        expect(fromTabs, `${tab} from ${pathname}`).toBe(
           directionFrom(pathname, tab),
         );
       }
@@ -193,8 +190,8 @@ describe("GroupRail", () => {
 });
 
 /**
- * The bar and the rail are both in the document at every width, and CSS shows
- * one of them: `lg:hidden` on the bar, `hidden lg:flex` on the rail. What
+ * The bar and the tabs are both in the document at every width, and CSS shows
+ * one of them: `lg:hidden` on the bar, `hidden lg:block` on the tabs. What
  * matters is the accessibility tree, where `display: none` is the difference
  * between one navigation and two copies of it.
  *
@@ -202,61 +199,140 @@ describe("GroupRail", () => {
  * for by the rules Tailwind emits there, in the order it emits them — the
  * `lg:` variants after the base utilities they override.
  */
-describe("the bar and the rail together", () => {
+describe("the bar and the tabs together", () => {
+  const PHONE = ".hidden { display: none; }";
+  const DESK =
+    ".hidden { display: none; } .lg\\:flex { display: flex; } .lg\\:block { display: block; } .lg\\:hidden { display: none; }";
   const WIDTHS = [
-    ["a phone", ".hidden { display: none; }", "app-nav"],
-    [
-      "a desktop",
-      ".hidden { display: none; } .lg\\:flex { display: flex; } .lg\\:hidden { display: none; }",
-      "app-rail-nav",
-    ],
+    ["a phone", PHONE, "app-nav"],
+    ["a desktop", DESK, "app-group-tabs"],
   ] as const;
+
+  /** A group's screen as the layout draws it: the header, then the bar. */
+  function renderGroup(pathname: string, css?: string) {
+    cleanup();
+    nav.pathname = pathname;
+    const sheet = document.createElement("style");
+    if (css) {
+      sheet.textContent = css;
+      document.head.append(sheet);
+    }
+    renderWithIntl(
+      <>
+        <GroupHeader groupId="g1">
+          <p>Lisbon, March</p>
+        </GroupHeader>
+        <GroupNav groupId="g1" />
+      </>,
+    );
+    return () => sheet.remove();
+  }
 
   // The control: with no rules at all, both are there to be found. So the
   // single landmark below is the stylesheet's doing, not the markup's.
   it("are both in the document, for CSS to choose between", () => {
-    cleanup();
-    nav.pathname = "/groups/g1";
-    renderWithIntl(
-      <>
-        <GroupRail groupId="g1" />
-        <GroupNav groupId="g1" />
-      </>,
-    );
-    expect(
-      screen.getAllByRole("navigation", { name: "Group sections" }),
-    ).toHaveLength(2);
+    const done = renderGroup("/groups/g1");
+    try {
+      expect(
+        screen.getAllByRole("navigation", { name: "Group sections" }),
+      ).toHaveLength(2);
+    } finally {
+      done();
+    }
   });
 
   it.each(WIDTHS)(
     "expose exactly one group navigation on %s",
     (_width, css, shown) => {
-      cleanup();
-      nav.pathname = "/groups/g1";
-      const sheet = document.createElement("style");
-      sheet.textContent = css;
-      document.head.append(sheet);
-
-      try {
-        renderWithIntl(
-          <>
-            <GroupRail groupId="g1" />
-            <GroupNav groupId="g1" />
-          </>,
-        );
-
-        const exposed = screen.getAllByRole("navigation", {
-          name: "Group sections",
-        });
-        expect(exposed).toHaveLength(1);
-        expect(exposed[0]).toHaveAttribute("data-slot", shown);
-        // And so one link to each place, not two.
-        expect(screen.getAllByRole("link", { name: "Overview" })).toHaveLength(
-          1,
-        );
-      } finally {
-        sheet.remove();
+      for (const pathname of [
+        "/groups/g1",
+        "/groups/g1/expenses",
+        "/groups/g1/members",
+        "/groups/g1/settings",
+      ]) {
+        const done = renderGroup(pathname, css);
+        try {
+          const exposed = screen.getAllByRole("navigation", {
+            name: "Group sections",
+          });
+          expect(exposed, pathname).toHaveLength(1);
+          expect(exposed[0]).toHaveAttribute("data-slot", shown);
+          // And so one link to each place, not two.
+          expect(
+            screen.getAllByRole("link", { name: "Overview" }),
+          ).toHaveLength(1);
+        } finally {
+          done();
+        }
       }
     },
   );
+
+  /**
+   * A screen reached by a push opens on its own way back, as it does on a
+   * phone, so the header and its tabs are not drawn there at all. The bar is
+   * untouched by this: below `lg` it is still on every screen of the group.
+   */
+  it("drops the header and its tabs on a screen reached by a push", () => {
+    for (const pathname of [
+      "/groups/g1/expenses/e1",
+      "/groups/g1/settle",
+      "/groups/g1/members/p1",
+      "/groups/g1/stats",
+    ]) {
+      const done = renderGroup(pathname, DESK);
+      try {
+        expect(
+          document.querySelector("[data-slot=group-header]"),
+          pathname,
+        ).toBeNull();
+        expect(
+          screen.queryAllByRole("navigation", { name: "Group sections" }),
+          pathname,
+        ).toHaveLength(0);
+      } finally {
+        done();
+      }
+
+      const phone = renderGroup(pathname, PHONE);
+      try {
+        expect(
+          screen.getAllByRole("navigation", { name: "Group sections" }),
+          pathname,
+        ).toHaveLength(1);
+      } finally {
+        phone();
+      }
+    }
+  });
+
+  /**
+   * The entry drawer opens over the screen it was opened from, and the
+   * address changes to the drawer's. The screen under it is still the
+   * transactions, so their header — and the tabs that say where the reader
+   * is — stay drawn under the drawer rather than vanishing behind it.
+   */
+  it("keeps the header under the entry drawer opened from a tab", () => {
+    cleanup();
+    nav.pathname = "/groups/g1/expenses";
+    const group = (
+      <GroupHeader groupId="g1">
+        <p>Lisbon, March</p>
+      </GroupHeader>
+    );
+    const { rerender } = renderWithIntl(group);
+    expect(document.querySelector("[data-slot=group-header]")).not.toBeNull();
+
+    nav.pathname = "/groups/g1/expenses/new";
+    rerender(
+      <GroupHeader groupId="g1">
+        <p>Lisbon, March</p>
+      </GroupHeader>,
+    );
+    expect(document.querySelector("[data-slot=group-header]")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Transactions" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
 });

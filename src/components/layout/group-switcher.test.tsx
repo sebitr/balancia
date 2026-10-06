@@ -46,6 +46,7 @@ vi.mock("@/modules/balances/actions", () => ({
         iconColor: null,
         direction: "settled",
         amounts: [],
+        lastActivityAt: "2026-08-12T10:00:00.000Z",
       },
       {
         id: "g2",
@@ -53,7 +54,8 @@ vi.mock("@/modules/balances/actions", () => ({
         icon: null,
         iconColor: null,
         direction: "owes",
-        amounts: [{ minorUnits: "14320", currency: "CHF" }],
+        amounts: [{ minorUnits: "-14320", currency: "CHF" }],
+        lastActivityAt: "2026-08-11T10:00:00.000Z",
       },
       {
         id: "g3",
@@ -62,6 +64,19 @@ vi.mock("@/modules/balances/actions", () => ({
         iconColor: null,
         direction: "settled",
         amounts: [],
+        lastActivityAt: "2026-08-10T10:00:00.000Z",
+      },
+      {
+        id: "g4",
+        name: "Lisbon, March",
+        icon: null,
+        iconColor: null,
+        direction: "owes",
+        amounts: [
+          { minorUnits: "24800", currency: "EUR" },
+          { minorUnits: "-6220", currency: "CHF" },
+        ],
+        lastActivityAt: "2026-08-09T10:00:00.000Z",
       },
     ]),
 }));
@@ -125,6 +140,28 @@ describe("GroupSwitcher", () => {
 
     const square = screen.getByRole("link", { name: /Ski Verbier/ });
     expect(within(square).getByText("settled")).toBeInTheDocument();
+  });
+
+  /**
+   * A group can be owed in one currency and owe in another, with no rate to
+   * net them. Each figure gets its own line and its own verb, in its own
+   * tone's ink: the row used to put one verb — the group's overall direction
+   * — in front of both, and read "you owe €248.00 · CHF 62.20".
+   */
+  it("says each currency's direction on its own line, in its own ink", async () => {
+    renderHeader();
+    await openPanel();
+
+    const mixed = screen.getByRole("link", { name: /Lisbon, March/ });
+    const owed = within(mixed).getByText(/you are owed/);
+    const owe = within(mixed).getByText(/you owe/);
+    expect(owed).toHaveTextContent("€248.00");
+    expect(owed).toHaveClass("text-positive-ink");
+    expect(owe).toHaveTextContent(/CHF\s62\.20/);
+    expect(owe).toHaveClass("text-negative-ink");
+    expect(mixed).toHaveAccessibleName(
+      /^Lisbon, March, you are owed €248\.00, you owe CHF\s62\.20$/,
+    );
   });
 
   it("keeps the way to the dashboard at the end of the list", async () => {

@@ -53,7 +53,7 @@ function renderReady(
     <GroupReady
       groupId="g1"
       groupName="Lisbon, March"
-      people={["Seb", "Ana", "Tom", "Bea"]}
+      others={["Ana", "Tom", "Bea", "Jo"]}
       invite={{ url: URL, expiresAt: IN_A_WEEK }}
       onSkip={onSkip}
       {...overrides}
@@ -83,27 +83,56 @@ describe("GroupReady", () => {
 
     expect(
       screen.getByText(
-        "Share the same link with everyone. Seb, Ana and 2 others can choose their existing name when they open it.",
+        "Share the same link with everyone. Ana, Tom and 2 others can choose their existing names when they open it.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("counts a single other in the singular", () => {
+    renderReady({ others: ["Ana", "Tom", "Bea"] });
+
+    expect(
+      screen.getByText(
+        "Share the same link with everyone. Ana, Tom and 1 other can choose their existing names when they open it.",
       ),
     ).toBeInTheDocument();
   });
 
   it("joins exactly two with an and", () => {
-    renderReady({ people: ["Seb", "Ana"] });
+    renderReady({ others: ["Ana", "Tom"] });
 
     expect(
       screen.getByText(
-        "Share the same link with everyone. Seb and Ana can choose their existing name when they open it.",
+        "Share the same link with everyone. Ana and Tom can choose their existing names when they open it.",
       ),
     ).toBeInTheDocument();
   });
 
-  it("describes the link instead when there is nobody to name", () => {
-    renderReady({ people: ["Seb"] });
+  /**
+   * The organiser used to head this list, so a group of two named the person
+   * reading it as somebody who could pick their name from the link — and named
+   * nobody else.
+   */
+  it("names the one other person, and not the reader", () => {
+    renderReady({ others: ["Ana"] });
 
     expect(
-      screen.getByText(/They can choose their existing name in the group/),
+      screen.getByText(
+        "Share the same link with everyone. Ana can choose their existing name when they open it.",
+      ),
     ).toBeInTheDocument();
+  });
+
+  it("says what the link does when nobody else is in the group yet", () => {
+    renderReady({ others: [] });
+
+    expect(
+      screen.getByText(
+        "Share the same link with everyone. Each person who opens it joins the group under their own name.",
+      ),
+    ).toBeInTheDocument();
+    // Nobody is waiting to claim a name, so the sentence does not promise one.
+    expect(screen.queryByText(/existing name/)).not.toBeInTheDocument();
   });
 
   it("copies the link with its scheme intact", async () => {

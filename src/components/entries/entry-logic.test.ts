@@ -4,6 +4,7 @@ import {
   categoryShortlist,
   confirmationKey,
   directionOf,
+  equalShare,
   hasAmount,
   noteAfterTypeSwitch,
   primaryActionKey,
@@ -314,6 +315,58 @@ describe("summariseSplit", () => {
     expect(
       summariseSplit({ method: "equal", participantCount: 0 }).warning,
     ).toBe(true);
+  });
+
+  /** €100 three ways: two people carry 33.33, so "33.34 each" was untrue. */
+  it("says about when an equal split is a cent apart", () => {
+    expect(
+      summariseSplit({
+        method: "equal",
+        participantCount: 3,
+        eachFormatted: "CHF 33.33",
+        eachExact: false,
+      }),
+    ).toEqual({
+      key: "equalAbout",
+      params: { count: 3, amount: "CHF 33.33" },
+    });
+  });
+});
+
+describe("equalShare", () => {
+  const share = (amount: bigint) => ({
+    amount,
+    formatted: `CHF ${(Number(amount) / 100).toFixed(2)}`,
+  });
+
+  it("is exact when everybody carries the same", () => {
+    expect(equalShare([share(2820n), share(2820n), share(2820n)])).toEqual({
+      formatted: "CHF 28.20",
+      exact: true,
+    });
+  });
+
+  /** The first allocation is the one that took the spare cent. */
+  it("names what most people carry, not the first allocation", () => {
+    expect(equalShare([share(3334n), share(3333n), share(3333n)])).toEqual({
+      formatted: "CHF 33.33",
+      exact: false,
+    });
+    expect(equalShare([share(6667n), share(6667n), share(6666n)])).toEqual({
+      formatted: "CHF 66.67",
+      exact: false,
+    });
+  });
+
+  it("takes the first figure on a tie", () => {
+    expect(equalShare([share(1n), share(0n)])).toEqual({
+      formatted: "CHF 0.01",
+      exact: false,
+    });
+  });
+
+  it("has nothing to say of nobody", () => {
+    expect(equalShare([])).toBeNull();
   });
 });
 

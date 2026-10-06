@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Forms" subtitle="Field, input, select, choice cards, validation" -->
+<!-- @dsCard group="Components" name="Forms" subtitle="Field, input, select, password, choice cards, validation" -->
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Components</div>
@@ -96,6 +96,103 @@
       "Invalid amount" is not an error message. <code>FieldError</code> carries
       <code>role="alert"</code>, so it reaches a screen reader the moment it
       appears.
+    </p>
+  </section>
+
+  <section>
+    <h2>Password</h2>
+    <div class="spec">
+      <div class="field-group" style="max-width: 30rem">
+        <div class="field">
+          <label class="field-label" for="pw-hidden">Password</label>
+          <div class="password-field">
+            <input
+              class="input"
+              id="pw-hidden"
+              type="password"
+              value="analytical engine"
+              autocomplete="new-password"
+              aria-describedby="pw-hidden-hint"
+            />
+            <button
+              class="password-toggle"
+              type="button"
+              aria-label="Show password"
+              aria-pressed="false"
+              aria-controls="pw-hidden"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+                />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+          <p class="field-desc" id="pw-hidden-hint">
+            At least 10 characters, and not your name, your address or one
+            everybody uses.
+          </p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="pw-shown">Password, shown</label>
+          <div class="password-field">
+            <input
+              class="input"
+              id="pw-shown"
+              type="text"
+              value="password123"
+              aria-invalid="true"
+              aria-describedby="pw-shown-err"
+            />
+            <button
+              class="password-toggle"
+              type="button"
+              aria-label="Show password"
+              aria-pressed="true"
+              aria-controls="pw-shown"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path d="m2 2 20 20" />
+              </svg>
+            </button>
+          </div>
+          <div class="field-error" id="pw-shown-err">
+            That password is one of the most commonly used ones. Choose another
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      One field and an eye, never a second "Confirm password" field. A confirm
+      field catches a typo by having somebody type the same thing twice, blind,
+      and then says only that the two differ; the eye lets them read the one
+      they typed. The eye is a toggle button: its name stays "Show password" and
+      <code>aria-pressed</code> says whether it is on. It is drawn at 32px
+      inside the field and hit at 44px, and a pointer press does not take focus,
+      so the keyboard stays up on a phone. The rules go under the field before
+      anything is sent, with the one this attempt broke under them.
     </p>
   </section>
 

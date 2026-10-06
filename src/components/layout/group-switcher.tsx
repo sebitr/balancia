@@ -1,28 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check, ChevronDown, ChevronRight, House } from "lucide-react";
+import { ChevronDown, ChevronRight, House } from "lucide-react";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { GroupIconTile } from "@/components/groups/group-icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { POP, SWITCH_FORWARD } from "@/components/motion/transitions";
-import { useNumberLocale } from "@/i18n/format-context";
-import { formatMoney, money } from "@/modules/currencies/money";
 import {
   loadSwitcherGroups,
   type SwitcherGroup,
 } from "@/modules/balances/actions";
 import { BalanciaMark } from "@/components/brand/wordmark";
-import { cn } from "@/lib/utils";
+import { equivalentPath, GroupRow, useKnownGroups } from "./sidebar-groups";
+
+export { equivalentPath };
 
 /**
  * The left of the header on a group screen: the way out, and the way sideways.
@@ -38,48 +37,13 @@ import { cn } from "@/lib/utils";
  *
  * The name is already loaded by the group layout, so the header costs nothing
  * until the panel is opened. What the panel needs beyond the name — every
- * group and where you stand in each — is fetched then, not now.
- */
-
-/**
- * Sections a switch can land on, so it keeps the screen you were looking at.
+ * group and where you stand in each — is fetched then, not now, unless the
+ * desktop sidebar has already streamed the same list into the page.
  *
- * `import` is deliberately absent: it is the one section that 404s outright
- * where the actor cannot import, so carrying it across would drop an owner
- * into a dead end in the group they are merely a member of. It falls back to
- * that group's overview instead.
+ * A phone's control: the header it sits in is `lg:hidden`, because from `lg`
+ * up the sidebar lists every group all the time and there is nothing left for
+ * a panel to open onto. Its rows are the sidebar's — see `sidebar-groups.tsx`.
  */
-const GROUP_SECTIONS = [
-  "expenses",
-  "members",
-  "settings",
-  "balances",
-  "activity",
-  "recurring",
-] as const;
-
-/**
- * The same screen, in another group.
- *
- * Only the section survives the move: a path any deeper names a row — an
- * expense, a participant — that belongs to the group being left and has no
- * counterpart in the one being entered. Anything unrecognised lands on the
- * overview, which every group has.
- */
-export function equivalentPath(
-  pathname: string,
-  fromGroupId: string,
-  toGroupId: string,
-): string {
-  const destination = `/groups/${toGroupId}`;
-  const base = `/groups/${fromGroupId}`;
-  if (!pathname.startsWith(base)) return destination;
-
-  const [section] = pathname.slice(base.length).split("/").filter(Boolean);
-  return section && (GROUP_SECTIONS as readonly string[]).includes(section)
-    ? `${destination}/${section}`
-    : destination;
-}
 
 export function GroupSwitcher({
   groupId,
@@ -92,8 +56,25 @@ export function GroupSwitcher({
 }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
-  const [groups, setGroups] = useState<SwitcherGroup[] | null>(null);
+  const [fetched, setFetched] = useState<SwitcherGroup[] | null>(null);
   const [failed, setFailed] = useState(false);
+  /*
+   * The desktop sidebar streams the same list into every signed-in page —
+   * hidden below `lg`, but loaded all the same — so the panel opens on it
+   * rather than asking again. It arrives in Home's order; the panel lists the
+   * most recently active first.
+   */
+  const known = useKnownGroups();
+  const groups = useMemo(
+    () =>
+      fetched ??
+      (known
+        ? [...known].sort((a, b) =>
+            b.lastActivityAt.localeCompare(a.lastActivityAt),
+          )
+        : null),
+    [fetched, known],
+  );
 
   /*
    * Openness is remembered as the screen it was opened on, rather than as a
@@ -108,7 +89,7 @@ export function GroupSwitcher({
     if (!open || groups || failed) return;
     let current = true;
     loadSwitcherGroups().then(
-      (loaded) => current && setGroups(loaded),
+      (loaded) => current && setFetched(loaded),
       () => current && setFailed(true),
     );
     return () => {
@@ -148,13 +129,7 @@ export function GroupSwitcher({
   return (
     // `flex-1`, so the name is handed every pixel the icon cluster opposite is
     // not using rather than only the ones it happens to be left with.
-    //
-    // From `lg` up the header is the group's rail and runs down the window, so
-    // growing would mean growing *downwards*: the switcher keeps its own
-    // height at the top of the rail instead. It is also what the panel hangs
-    // from there — positioned, so the anchor below spans this row rather than
-    // the rail, whose bottom edge is the bottom of the window.
-    <div className="flex min-w-0 flex-1 items-center gap-0.5 lg:relative lg:flex-none">
+    <div className="flex min-w-0 flex-1 items-center gap-0.5">
       <Link
         href="/dashboard"
         transitionTypes={POP}
@@ -207,9 +182,7 @@ export function GroupSwitcher({
           sideOffset={2}
           collisionPadding={12}
           aria-label={t("yourGroups")}
-          // A rail is narrower than the rows this lists, so from `lg` up the
-          // panel takes a width of its own and opens out over the screen.
-          className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none lg:w-80"
+          className="w-[calc(var(--radix-popover-trigger-width)-24px)] gap-0 overflow-hidden rounded-[17px] p-0 shadow-[0_12px_28px_-8px_rgb(0_0_0/0.45)] motion-reduce:animate-none"
         >
           <span className="px-3.5 pt-[11px] pb-[7px] text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             {t("yourGroups")}
@@ -334,6 +307,7 @@ function GroupRows({
           iconColor: null,
           direction: "settled" as const,
           amounts: [],
+          lastActivityAt: "",
         },
         ...groups,
       ];
@@ -342,79 +316,12 @@ function GroupRows({
     <GroupRow
       key={group.id}
       group={group}
+      variant="switcher"
       isCurrent={group.id === groupId}
       href={equivalentPath(pathname, groupId, group.id)}
+      // Another group is a peer, not a place inside this one: the screen
+      // moves sideways rather than deeper.
+      transitionTypes={SWITCH_FORWARD}
     />
   ));
-}
-
-function GroupRow({
-  group,
-  isCurrent,
-  href,
-}: {
-  group: SwitcherGroup;
-  isCurrent: boolean;
-  href: string;
-}) {
-  const t = useTranslations("nav");
-  const locale = useNumberLocale();
-
-  const position = isCurrent
-    ? t("youAreHere")
-    : group.amounts.length === 0
-      ? t("switcherSettled")
-      : t(
-          group.direction === "owed" ? "switcherYouAreOwed" : "switcherYouOwe",
-          {
-            amount: group.amounts
-              .map((amount) =>
-                formatMoney(money(BigInt(amount.minorUnits), amount.currency), {
-                  locale,
-                }),
-              )
-              .join(" · "),
-          },
-        );
-
-  return (
-    <Link
-      href={href}
-      // Another group is a peer, not a place inside this one: the screen moves
-      // sideways rather than deeper.
-      transitionTypes={SWITCH_FORWARD}
-      aria-current={isCurrent ? "true" : undefined}
-      className={cn(
-        "flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors hover:bg-wash-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
-        isCurrent && "bg-wash-2",
-      )}
-    >
-      <GroupIconTile
-        icon={group.icon}
-        color={group.iconColor}
-        name={group.name}
-        muted={isCurrent}
-        className={cn(
-          "size-7 rounded-[9px] text-2xs font-semibold",
-          isCurrent
-            ? "bg-primary text-primary-foreground"
-            : "bg-accent text-accent-foreground",
-        )}
-        iconClassName="size-[15px]"
-      />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium">{group.name}</span>
-        <span className="truncate text-2xs text-muted-foreground tabular-nums">
-          {position}
-        </span>
-      </span>
-      {isCurrent && (
-        <Check
-          aria-hidden="true"
-          strokeWidth={2.4}
-          className="size-4 shrink-0 text-primary-ink"
-        />
-      )}
-    </Link>
-  );
 }

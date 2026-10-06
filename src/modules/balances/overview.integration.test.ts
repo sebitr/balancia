@@ -201,6 +201,8 @@ describe("loadHomeOverview", () => {
     expect(overview.buckets.settled.map((p) => p.group.name)).toEqual([
       "Chalet",
     ]);
+    // Square, and square because things were recorded and paid back.
+    expect(overview.buckets.settled[0]?.hasEntries).toBe(true);
     // The footnote can only say "last cleared … in Chalet" if this is here.
     expect(overview.lastCleared?.groupName).toBe("Chalet");
   });
@@ -216,6 +218,9 @@ describe("loadHomeOverview", () => {
     const overview = await loadHomeOverview(actor.userId);
 
     expect(overview.buckets.settled).toHaveLength(1);
+    // Nothing outstanding, and nothing recorded either: the home screen says
+    // "No expenses yet" for this one rather than "Settled".
+    expect(overview.buckets.settled[0]?.hasEntries).toBe(false);
     expect(overview.lastCleared).toBeNull();
   });
 
@@ -314,6 +319,8 @@ describe("loadHomeOverview", () => {
       amounts: [],
       net: null,
       owedTo: null,
+      // Unread, so unknown — never a claim that it is empty.
+      hasEntries: null,
     });
     expect(overview.buckets.needsYou.map((p) => p.group.name)).toEqual([
       "Flatshare",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderNotification } from "./render";
+import { reminderDebtOf, renderNotification } from "./render";
 import type {
   ExpensePayload,
   NotificationEntry,
@@ -134,6 +134,54 @@ describe("a reminder arriving", () => {
     const rendered = renderNotification(entry(legacy), translate, "en");
 
     expect(rendered.title).toContain("€24.00");
+  });
+});
+
+/**
+ * The figure the inbox's card sets apart from `lg`, in the debt's tone. The
+ * same words as the title's, so the two drawings of one reminder agree.
+ */
+describe("what a reminder asks for, on its own", () => {
+  it("names every currency, as the title does", () => {
+    const one = entry(
+      reminder([
+        { amount: "2400", currency: "EUR" },
+        { amount: "700", currency: "JPY" },
+      ]),
+    );
+
+    expect(reminderDebtOf(one, "en")).toBe("€24.00 and ¥700");
+    expect(renderNotification(one, translate, "en").title).toContain(
+      reminderDebtOf(one, "en")!,
+    );
+  });
+
+  it("writes the figure in the reader's own notation", () => {
+    const one = entry(reminder([{ amount: "2400", currency: "EUR" }]));
+
+    expect(
+      reminderDebtOf(one, "en", { numberLocale: "de-CH" })?.replaceAll(
+        " ",
+        " ",
+      ),
+    ).toBe("EUR 24.00");
+  });
+
+  it("is nothing on any other kind, or on a reminder naming no amount", () => {
+    const expense: NotificationEntry = {
+      ...entry(reminder([])),
+      type: "expense.created",
+      payload: {
+        kind: "expense",
+        groupName: "Portugal, March",
+        description: "Dinner",
+        amount: "2400",
+        currency: "EUR",
+      } satisfies ExpensePayload,
+    };
+
+    expect(reminderDebtOf(expense, "en")).toBeNull();
+    expect(reminderDebtOf(entry(reminder([])), "en")).toBeNull();
   });
 });
 

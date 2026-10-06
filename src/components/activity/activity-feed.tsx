@@ -1,13 +1,18 @@
 import { getTranslations } from "next-intl/server";
 import { getDateFormatter, getNumberLocale } from "@/i18n/preferences";
-import { formatMoney, money } from "@/modules/currencies/money";
 import {
   restorableKind,
   type ActivityEntry,
-  type ActivityMetadata,
   type RestorableKind,
 } from "@/modules/activity/service";
-import { actorOf, describeActivity, type ActivityTranslate } from "./describe";
+import {
+  actorOf,
+  amountOf,
+  describeActivity,
+  NOBODY,
+  type ActivityPeople,
+  type ActivityTranslate,
+} from "./describe";
 import { RestoreDeleted } from "./restore-deleted";
 
 /**
@@ -35,6 +40,7 @@ export async function ActivityFeed({
   groupId,
   restorable,
   timeZone,
+  people = NOBODY,
 }: {
   entries: readonly ActivityEntry[];
   groupId: string;
@@ -42,6 +48,8 @@ export async function ActivityFeed({
   restorable: ReadonlySet<string>;
   /** The group's IANA zone, which every time in the feed is told in. */
   timeZone: string;
+  /** The reader, and the names the events point at; see `namesInActivity`. */
+  people?: ActivityPeople;
 }) {
   const t = await getTranslations("activity");
   const dates = await getDateFormatter();
@@ -49,6 +57,7 @@ export async function ActivityFeed({
   // The action id is runtime data, so its key cannot be checked at compile
   // time; `t.has` inside the helper is what makes reading it back safe.
   const translate = t as unknown as ActivityTranslate;
+  const reader = { ...people, locale: numberLocale };
 
   if (entries.length === 0) {
     return (
@@ -80,7 +89,7 @@ export async function ActivityFeed({
                   {actor}{" "}
                 </span>
                 <span className="text-muted-foreground">
-                  {describeActivity(entry, translate)}
+                  {describeActivity(entry, translate, reader)}
                 </span>
               </span>
               <time
@@ -140,23 +149,4 @@ function restoreLabel(
   return t(kind === "expense" ? "restore.expense" : "restore.recurring", {
     description,
   });
-}
-
-/** The amount a deletion recorded, formatted, or null if it cannot be read. */
-function amountOf(metadata: ActivityMetadata, locale: string): string | null {
-  const { amount, currency } = metadata;
-  if (
-    typeof amount !== "string" ||
-    !/^-?\d+$/.test(amount) ||
-    typeof currency !== "string"
-  ) {
-    return null;
-  }
-  try {
-    return formatMoney(money(BigInt(amount), currency), { locale });
-  } catch {
-    // A currency this build no longer knows. The row keeps its button; only
-    // the name loses its figure.
-    return null;
-  }
 }

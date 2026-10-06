@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -546,6 +546,167 @@ describe("the way to pay", () => {
 });
 
 /**
+ * A new wording asked for over words the sender typed. This asked through
+ * `window.confirm` — "OK" and "Cancel", in the browser's language — and now
+ * asks in the app's own dialog, whose buttons say which one keeps the text.
+ */
+describe("replacing what the sender wrote", () => {
+  const MINE = "Hey Jonas, about the flat";
+  const draftBox = () =>
+    screen.getByRole<HTMLTextAreaElement>("textbox", {
+      name: /the message to send/i,
+    });
+
+  async function typeOwnWords() {
+    const user = userEvent.setup();
+    render([recipient()]);
+    await user.clear(draftBox());
+    await user.type(draftBox(), MINE);
+    return user;
+  }
+
+  it("asks in the app's own words, never the browser's", async () => {
+    const confirm = vi.spyOn(window, "confirm");
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Replace the message you wrote?",
+    });
+    expect(
+      within(dialog).getByRole("button", { name: "Replace my message" }),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Keep my message" }),
+    ).toBeVisible();
+    expect(confirm).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it("keeps the sender's words when they say so", async () => {
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Keep my message" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(draftBox().value).toBe(MINE);
+  });
+
+  it("puts a new wording in when they agree", async () => {
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Replace my message" }),
+    );
+
+    await waitFor(() => expect(draftBox().value).not.toBe(MINE));
+    expect(draftBox().value).toContain("€148.00");
+  });
+
+  it("asks the same before a change of tone throws the words away", async () => {
+    const user = await typeOwnWords();
+
+    await user.click(screen.getByRole("button", { name: "Dry" }));
+
+    expect(
+      await screen.findByRole("alertdialog", {
+        name: "Replace the message you wrote?",
+      }),
+    ).toBeVisible();
+    // Nothing has moved while the question is open. The sheet behind the
+    // dialog is hidden from assistive technology meanwhile, hence `hidden`.
+    expect(
+      screen.getByRole("button", { name: "Gentle", hidden: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(
+      screen.getByRole("button", { name: "Replace my message" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Dry" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(draftBox().value).not.toBe(MINE);
+  });
+
+  it("does not ask when there is nothing of the sender's to lose", async () => {
+    const user = userEvent.setup();
+    render([recipient()]);
+    const before = draftBox().value;
+
+    await user.click(screen.getByRole("button", { name: "Another wording" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(draftBox().value).not.toBe(before);
+  });
+});
+
+/**
+ * Whether the group's Activity says a reminder went out. It was a pill that
+ * read like a tag on the message; it is a switch, named for where the line
+ * will appear, and it is a choice about this send rather than a setting.
+ */
+describe("the line in the group's activity", () => {
+  it("is a switch, on unless the sender turns it off", () => {
+    render([recipient()]);
+
+    const toggle = screen.getByRole("switch", {
+      name: "Show in group activity",
+    });
+    expect(toggle).toBeChecked();
+    // The pill it replaced is gone.
+    expect(
+      screen.queryByRole("button", { name: /visible to the group/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("goes with the reminder it was set for, and saves nothing on its own", async () => {
+    vi.mocked(sendReminderAction).mockClear();
+    const user = userEvent.setup();
+    render([recipient()]);
+
+    await user.click(
+      screen.getByRole("switch", { name: "Show in group activity" }),
+    );
+
+    expect(
+      screen.getByRole("switch", { name: "Show in group activity" }),
+    ).not.toBeChecked();
+    // Moving it writes nothing; only sending does.
+    expect(sendReminderAction).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: "Send to Jonas in Balancia" }),
+    );
+
+    await waitFor(() => expect(sendReminderAction).toHaveBeenCalled());
+    const [, input] = vi.mocked(sendReminderAction).mock.calls.at(-1)!;
+    expect(input).toMatchObject({ logToActivity: false });
+  });
+
+  it("can be turned from its label too", async () => {
+    const user = userEvent.setup();
+    render([recipient()]);
+
+    await user.click(screen.getByText("Show in group activity"));
+
+    expect(
+      screen.getByRole("switch", { name: "Show in group activity" }),
+    ).not.toBeChecked();
+  });
+});
+
+/**
  * Somebody added by name, with no account, who opened the group's page from a
  * reminder met a sign-in form asking for a password they never had. Where the
  * server says the sender may hand out the group's invite link, and it still
@@ -574,14 +735,17 @@ describe("the link at the end", () => {
     expect(sentMessage()).toBe(text);
   });
 
-  /** Named for what it does in the hands of whoever opens it. */
-  it("calls it the invite link under the draft", () => {
+  /**
+   * Named for what it does in the hands of whoever opens it, and by the name
+   * the People screen gives it.
+   */
+  it("calls it the group link under the draft", () => {
     render([
       recipient({ channel: "share", link: { kind: "invite", url: INVITE } }),
     ]);
 
-    expect(screen.getByText("Invite link")).toBeInTheDocument();
-    expect(screen.queryByText("Group link")).not.toBeInTheDocument();
+    expect(screen.getByText("Group link")).toBeInTheDocument();
+    expect(screen.queryByText("Group page")).not.toBeInTheDocument();
     expect(
       screen.getByText(INVITE.replace("https://", "")),
     ).toBeInTheDocument();
@@ -592,8 +756,8 @@ describe("the link at the end", () => {
     const share = stubShare();
     render([recipient({ channel: "share" })]);
 
-    expect(screen.getByText("Group link")).toBeInTheDocument();
-    expect(screen.queryByText("Invite link")).not.toBeInTheDocument();
+    expect(screen.getByText("Group page")).toBeInTheDocument();
+    expect(screen.queryByText("Group link")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
 

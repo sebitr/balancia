@@ -131,6 +131,27 @@ describe("PositionWidget", () => {
   });
 
   /**
+   * A group made a minute ago has no balance, which used to read as "Settled
+   * up · Nothing outstanding in 1 group" — the words for everybody having paid
+   * everybody back, about a trip that had not started.
+   */
+  it("says nothing has been recorded when no group has started", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      displayCurrency: null,
+      converted: false,
+      unstarted: { count: 1 },
+    });
+
+    expect(screen.getByText("No expenses yet")).toBeVisible();
+    expect(screen.getByText("Nothing recorded in 1 group yet")).toBeVisible();
+    expect(screen.queryByText("Settled up")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing outstanding/)).not.toBeInTheDocument();
+  });
+
+  /**
    * Four currencies used to arrive as four display-size figures stacked on top
    * of one another, and the list of groups they came from was pushed off the
    * screen. One of them leads now; the rest are rows.

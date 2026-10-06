@@ -233,6 +233,7 @@ is off, which is the default.
 | GET    | `/api/groups/:groupId/participants`                      | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                                                                                                                                               |
 | GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200). Each event carries `actorParticipantId`, the actor's own row in the group (null for the system); a removal whose actor is the person removed is somebody leaving.                                                                                                       |
 | GET    | `/api/groups/:groupId/recurring`                         | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                                                                                                                                                |
+| GET    | `/api/groups/:groupId/recurring/:templateId`             | `{template}`: one template **whole** — payers, `splitMethod`, `splitEntries`, `weekOfMonth`, `count`, rate, notes — in the shape `PUT` takes back, plus `editFrom` and `editEarliest`, the days an edit starts from and may start from. See [Changing a recurring expense](#changing-a-recurring-expense).                        |
 | GET    | `/api/groups/:groupId/reminders`                         | `listRemindRecipients`: who owes the reader, per-currency debts, the channel, the 24-hour lock, `payWith` (the reader's own ways to be paid this debt, `{method, kind, text, code}`, as ranked) and `link`: `{kind: "group"}`, or `{kind: "invite", url}` for an owner, never a key. See `docs/settling-up.md`.                   |
 | GET    | `/api/groups/:groupId/categories`                        | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                                                                                                                                        |
 | POST   | `/api/groups/:groupId/categorize`                        | What a description is about: `classifyTransactionSync` against this group's learned mappings. Body `{description, note?, recurring?}`; answers `{classification}` or `{classification: null}` with nothing to go on.                                                                                                              |
@@ -401,6 +402,7 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 | POST   | `/api/groups/:groupId/join-link`                   | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once, owner only                                                                                                                                                                                                                                      |
 | DELETE | `/api/groups/:groupId/join-link`                   | revoke, owner only                                                                                                                                                                                                                                                                                       |
 | POST   | `/api/groups/:groupId/recurring`                   | `recurringInputSchema` → 201 `{id, added, addedFrom, next}`; a split, payers or rate that would not make a valid entry, or somebody not in the group, is a 422. Dates already due in the group's zone are added at once: `added` of them, from `addedFrom`; `next` is the next date, or null             |
+| PUT    | `/api/groups/:groupId/recurring/:templateId`       | `recurringInputSchema` (full replace, the `POST` body) → `{id, next, paused}`; changes the template for the entries still to come and never the ones it added. Refused as `POST` is, and 422 for an end before its start. See [Changing a recurring expense](#changing-a-recurring-expense)              |
 | PATCH  | `/api/groups/:groupId/recurring/:templateId`       | `{paused: boolean}`; resuming skips what fell due while paused and picks up at the first occurrence still to come                                                                                                                                                                                        |
 | DELETE | `/api/groups/:groupId/recurring/:templateId`       | delete the template; generated expenses stay                                                                                                                                                                                                                                                             |
 | POST   | `/api/groups/:groupId/recurring/:id/restore`       | undo for the delete; the worker picks the schedule up again on its next tick                                                                                                                                                                                                                             |
@@ -420,6 +422,24 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 Every restore refuses a row that is not deleted, so a client may replay one
 safely: a second call answers 404 rather than writing a second event about
 something that never left.
+
+### Changing a recurring expense
+
+`PUT /api/groups/:groupId/recurring/:templateId` is `updateRecurringExpense`,
+the web form's Edit. It starts the rule again from the body's `startDate`, held
+to no earlier than `editEarliest` — the day after the last entry the template
+added, or today in the group's zone if that is later — so an edit never lands
+on a day already over and the worker never back-fills one. `next` in the answer
+is the edited rule's first date from there, or null when it has none left.
+Entries the template already added are never touched, and a paused template
+stays paused.
+
+Send `editFrom` from the `GET` as `startDate` to change only what the template
+holds — an amount, a split — and its next date stays where it was: it is the
+first day of the period the next date falls in (its week, or its month), so an
+every-two-months rule keeps its months, and moving the day of a monthly rule
+moves it within that month rather than adding a second entry to the month just
+paid or skipping the next.
 
 Writes require the group to be active (`requireActive`), matching the actions
 — except the group's own PATCH/DELETE, which must work on an archived group
