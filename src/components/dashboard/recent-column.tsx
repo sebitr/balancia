@@ -16,8 +16,9 @@ import type { RecentRow } from "./recent-rows";
  * "Recent in your groups": Home's right-hand column on a desktop.
  *
  * The latest few notifications, each with whoever did it, what they did, the
- * group and how long ago, and the figure at the right — then the way into the
- * whole inbox. It is the desktop board's answer to a wide Home having nothing
+ * group and how long ago, and the figure at the right — and, beside the
+ * heading, the way into the whole inbox. It is the desktop board's answer to a
+ * wide Home having nothing
  * beside the groups but empty page, and it is a glance, not the inbox: no
  * unread dots, no dismissing, no muting. Opening a row goes where the inbox's
  * row goes and leaves its unread state for the inbox to settle, because the

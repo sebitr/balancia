@@ -6,8 +6,8 @@ import type { RecentRow } from "./recent-rows";
 
 /**
  * Home's right-hand column on a desktop: the head of the inbox, as a glance.
- * Every row opens what the inbox's row opens, and the column ends in the way
- * into the whole inbox.
+ * Every row opens what the inbox's row opens, and the heading has the way into
+ * the whole inbox beside it.
  */
 
 const NOW = "2026-08-12T12:00:00.000Z";
@@ -95,7 +95,7 @@ describe("RecentColumn", () => {
     expect(figure.className).not.toMatch(/positive|negative|primary/);
   });
 
-  it("ends in the way into the whole inbox", () => {
+  it("offers the way into the whole inbox", () => {
     renderWithIntl(<RecentColumn rows={ROWS} now={NOW} />);
 
     expect(

@@ -326,7 +326,7 @@ describe("PositionWidget from lg", () => {
     renderWidget(PAIR);
 
     const region = screen.getByRole("region", { name: "Total balance" });
-    expect(region.firstElementChild).toHaveClass("lg:grid", "lg:grid-cols-2");
+    expect(region.firstElementChild).toHaveClass("lg:flex-row", "lg:flex-wrap");
 
     // The debt still leads, and still opens the reason there are two.
     const lead = screen.getByRole("button", { name: /CHF\s*103\.50/ });
@@ -335,6 +335,24 @@ describe("PositionWidget from lg", () => {
     expect(screen.getByText("€223.70")).toHaveClass(
       "text-base",
       "lg:text-[2.125rem]",
+    );
+  });
+
+  /**
+   * Half the card each, but never less than the figure: two five-figure
+   * amounts in the 1280px column wrap one under the other rather than run
+   * into each other.
+   */
+  it("gives each of the pair half the card, and lets them wrap", () => {
+    renderWidget(PAIR);
+
+    const half = "lg:basis-[calc(50%_-_0.75rem)]";
+    expect(screen.getByRole("button", { name: /CHF\s*103\.50/ })).toHaveClass(
+      half,
+    );
+    expect(screen.getByRole("list")).toHaveClass(half);
+    expect(screen.getByRole("listitem")).toHaveClass(
+      "lg:grid-cols-[26px_auto]",
     );
   });
 
@@ -367,7 +385,7 @@ describe("PositionWidget from lg", () => {
     });
 
     const region = screen.getByRole("region", { name: "Total balance" });
-    expect(region.firstElementChild).not.toHaveClass("lg:grid");
+    expect(region.firstElementChild).not.toHaveClass("lg:flex-row");
     expect(screen.getByText("€632.00")).not.toHaveClass("lg:text-[2.125rem]");
   });
 

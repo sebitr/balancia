@@ -221,6 +221,14 @@ function LeadFigure({
 }
 
 /**
+ * Half the card, less half the gap between the two, for each of a pair from
+ * `lg`. A basis rather than a column: a figure wider than its half keeps its
+ * width, and the pair wraps to one under the other instead of running into
+ * each other.
+ */
+const PAIR_CELL = "lg:grow lg:basis-[calc(50%_-_0.75rem)]";
+
+/**
  * The currencies the header did not lead on, one compact line each.
  *
  * A row says the same three things the headline does — direction as an arrow,
@@ -248,7 +256,7 @@ function CurrencyRows({
     <ul
       className={cn(
         "flex flex-col gap-0.5 border-t pt-3",
-        paired && "lg:border-t-0 lg:pt-0",
+        paired && cn("lg:border-t-0 lg:pt-0", PAIR_CELL),
       )}
     >
       {entries.map((entry) => {
@@ -260,10 +268,12 @@ function CurrencyRows({
             key={entry.currency}
             className={cn(
               "flex items-center justify-between gap-3 py-[7px]",
-              // The row's own ink, for the word to inherit from `lg`.
+              // The row's own ink, for the word to inherit from `lg`. The
+              // figure's track is `auto`, so the row is as wide as its figure
+              // and the pair wraps before the figure is squeezed.
               paired &&
                 cn(
-                  "lg:grid lg:grid-cols-[26px_minmax(0,1fr)] lg:justify-start lg:gap-x-2 lg:gap-y-1 lg:py-0",
+                  "lg:grid lg:grid-cols-[26px_auto] lg:justify-start lg:gap-x-2 lg:gap-y-1 lg:py-0",
                   ink,
                 ),
             )}
@@ -321,16 +331,24 @@ function CurrencyRows({
 function FigureDisclosure({
   label,
   note,
+  className,
   children,
 }: {
   /** What the tap does, for a screen reader; the figures are the visible name. */
   label: string;
   note: string;
+  /** Where the figure sits in the card, when that is the card's to say. */
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
     <Popover>
-      <PopoverTrigger className="self-start rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+      <PopoverTrigger
+        className={cn(
+          "self-start rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          className,
+        )}
+      >
         {children}
         <span className="sr-only">{label}</span>
       </PopoverTrigger>
@@ -426,8 +444,10 @@ export function PositionWidget({
       <div
         className={cn(
           "flex flex-col gap-[18px] px-[18px] pt-5 pb-4",
-          // A pair of figures takes a column each from `lg`, under the label.
-          paired && "lg:grid lg:grid-cols-2 lg:gap-x-6",
+          // A pair of figures takes half the card each from `lg`, under the
+          // label — and wraps to one under the other rather than overflowing
+          // where two five-figure amounts do not fit the 1280px column.
+          paired && "lg:flex-row lg:flex-wrap lg:gap-x-6",
         )}
       >
         {/* The label names the region as well as the figure, and the badge
@@ -439,7 +459,7 @@ export function PositionWidget({
         <div
           className={cn(
             "flex items-center justify-between gap-2.5 lg:justify-start",
-            paired && "lg:col-span-2",
+            paired && "lg:basis-full",
           )}
         >
           <p
@@ -470,6 +490,7 @@ export function PositionWidget({
           <FigureDisclosure
             label={t("perCurrencyDisclosureLabel")}
             note={t("ratesUnavailable")}
+            className={paired ? PAIR_CELL : undefined}
           >
             <LeadFigure entry={lead} paired={paired} />
           </FigureDisclosure>
