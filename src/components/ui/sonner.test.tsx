@@ -173,6 +173,22 @@ describe("a toast", () => {
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the facts it is decided on beside its Undo", () => {
+    renderWithIntl(<Toaster />);
+    raise(() =>
+      toastUndoable(
+        "Repayment recorded",
+        { label: "Undo", onUndo: vi.fn() },
+        { description: "CHF 30.00 · Grace paid you back" },
+      ),
+    );
+
+    // Who paid whom back is what tells the right repayment from the wrong
+    // one, so it is on the card the Undo is on, not behind it.
+    expect(screen.getByText("CHF 30.00 · Grace paid you back")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Undo" })).toBeVisible();
+  });
+
   it("replaces the confirmation it was told to name", () => {
     renderWithIntl(<Toaster />);
     const saved = () =>

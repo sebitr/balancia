@@ -250,6 +250,7 @@ export function PasskeysCard({
             : tPasskeys("removeBody")
         }
         confirmLabel={tCommon("remove")}
+        cancelLabel={tPasskeys("removeCancel")}
         destructive
         onConfirm={() => removing && onDelete(removing)}
       />

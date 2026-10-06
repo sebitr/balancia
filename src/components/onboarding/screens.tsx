@@ -21,11 +21,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/wordmark";
-import { Amount, BalanceAmount } from "@/components/money/amount";
+import { TONE, toneFor } from "@/components/money/balance-tone";
 import {
   ImageDecodeError,
   squareToWebp,
 } from "@/components/settings/square-image";
+import { useNumberLocale } from "@/i18n/format-context";
+import { cn } from "@/lib/utils";
+import { formatMoney, money } from "@/modules/currencies/money";
 import { setDisplayNameAction } from "@/modules/profile/actions";
 import { initialsOf } from "@/components/join/types";
 import type { Arrival, Intent } from "./route";
@@ -160,37 +163,37 @@ function GuestChoice({
   );
 }
 
+/**
+ * The first screen of a personal invitation and of a cold arrival.
+ *
+ * A shared link has no welcome: it opens on the list, which is the only
+ * question it has to ask first — see `WhichOneScreen`.
+ */
 export function WelcomeScreen({
   arrival,
   group,
   inviterName,
-  accountName = null,
   registrationAllowed,
   guestOffered = true,
   onChoose,
-  onFindMyself,
 }: {
-  arrival: Arrival;
+  arrival: Exclude<Arrival, "shared">;
   group: OnboardingGroupView | null;
   inviterName: string | null;
-  /** The account already signed in, when there is one. Shared links only. */
-  accountName?: string | null;
   registrationAllowed: boolean;
   /** False for somebody who is already a guest of this group. */
   guestOffered?: boolean;
   onChoose: (intent: Intent) => void;
-  onFindMyself: () => void;
 }) {
   const t = useTranslations("onboarding.welcome");
 
   /*
-   * Which of the three welcomes this is, decided once, from `arrival` alone.
+   * Which of the two welcomes this is, decided once, from `arrival` alone.
    *
-   * The prototype tested `!isShared` in two places and got two different
+   * The prototype tested the arrival in two places and got two different
    * answers, which is how it ended up painting one tab while rendering
-   * another's buttons. One comparison, read three times.
+   * another's buttons. One comparison, read throughout.
    */
-  const shared = arrival === "shared";
   const cold = arrival === "cold";
 
   return (
@@ -203,152 +206,137 @@ export function WelcomeScreen({
         <Headline>
           {cold
             ? t("coldTitle")
-            : shared
-              ? t("sharedTitle", { group: group?.summary.groupName ?? "" })
-              : inviterName
-                ? t("personalTitle", {
-                    inviter: inviterName,
-                    group: group?.summary.groupName ?? "",
-                  })
-                : t("personalTitleNoInviter", {
-                    group: group?.summary.groupName ?? "",
-                  })}
+            : inviterName
+              ? t("personalTitle", {
+                  inviter: inviterName,
+                  group: group?.summary.groupName ?? "",
+                })
+              : t("personalTitleNoInviter", {
+                  group: group?.summary.groupName ?? "",
+                })}
         </Headline>
-        <Sub>
-          {cold ? t("coldSub") : shared ? t("sharedSub") : t("personalSub")}
-        </Sub>
+        <Sub>{cold ? t("coldSub") : t("personalSub")}</Sub>
       </div>
 
       <Spacer />
 
-      {shared ? (
-        <div className="flex flex-col gap-3">
-          {/*
-            The note under the button promises what comes next, so it has to
-            know whether an account is one of the things still to be asked for.
-            Naming the account is not decoration either: a link opened on a
-            shared laptop is the case where somebody is about to claim a
-            balance as the wrong person.
-          */}
-          <p className="text-center text-xs text-pretty text-muted-foreground">
-            {accountName
-              ? t("sharedNoteSignedIn", { name: accountName })
-              : t("sharedNote")}
-          </p>
-          <Button size="lg" className={PRIMARY} onClick={onFindMyself}>
-            {t("findMyself")}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2.5">
-          {registrationAllowed && (
-            <Button
-              size="lg"
-              className={PRIMARY}
-              onClick={() => onChoose("account")}
-            >
-              {t("createAccount")}
-            </Button>
-          )}
+      <div className="flex flex-col gap-2.5">
+        {registrationAllowed && (
           <Button
             size="lg"
-            variant="outline"
-            className={SECONDARY}
-            onClick={() => onChoose("signin")}
+            className={PRIMARY}
+            onClick={() => onChoose("account")}
           >
-            {t("haveAccount")}
+            {t("createAccount")}
           </Button>
+        )}
+        <Button
+          size="lg"
+          variant="outline"
+          className={SECONDARY}
+          onClick={() => onChoose("signin")}
+        >
+          {t("haveAccount")}
+        </Button>
 
-          {/*
-            The third door. On a linked arrival it is the guest session the
-            invitation minted; on a cold arrival there is no group to be a
-            guest of yet, so the offer is a group of their own — the same
-            guest, arriving through a group they start, on the same terms
-            as registration.
-          */}
-          {((!cold && guestOffered) || (cold && registrationAllowed)) && (
-            <>
-              <div className="flex items-center gap-3 py-1">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-2xs font-semibold tracking-[0.07em] text-muted-foreground uppercase">
-                  {t("or")}
-                </span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              <GuestChoice
-                label={cold ? t("startGroup") : undefined}
-                note={cold ? t("startGroupNote") : undefined}
-                onSelect={() => onChoose("guest")}
-              />
-            </>
-          )}
-        </div>
-      )}
+        {/*
+          The third door. On a personal invitation it is the guest session the
+          invitation minted; on a cold arrival there is no group to be a guest
+          of yet, so the offer is a group of their own — the same guest,
+          arriving through a group they start, on the same terms as
+          registration.
+        */}
+        {((!cold && guestOffered) || (cold && registrationAllowed)) && (
+          <>
+            <Divider label={t("or")} />
+            <GuestChoice
+              label={cold ? t("startGroup") : undefined}
+              note={cold ? t("startGroupNote") : undefined}
+              onSelect={() => onChoose("guest")}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** A rule with a word in it, between the account doors and the guest one. */
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-2xs font-semibold tracking-[0.07em] text-muted-foreground uppercase">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-border" />
     </div>
   );
 }
 
 /**
- * Which of these is you.
+ * Which of these is you — the first and only question a shared link opens on.
  *
- * The unclaimed names the group's creator typed while spending money. Each row
- * carries the position that comes with the name, because that is what makes
- * the choice checkable rather than a guess at spelling.
+ * The link is the same for everybody it was sent to, so it cannot know who
+ * opened it; the subtitle says so, which is the one thing the welcome that
+ * used to stand in front of this list had to say. The group card goes first,
+ * so the reader knows what they were invited to before being asked anything.
+ *
+ * Each row carries what comes with the name — what it owes or gets back, and
+ * how many expenses it has a share in — because that is what makes the choice
+ * checkable rather than a guess at spelling. The word and the amount travel
+ * together in the balance's own tone, so the colour never says it alone.
+ *
+ * Picking a row commits nothing. The next screen names the person, shows the
+ * balance again as theirs, and offers the way back.
  */
 export function WhichOneScreen({
+  group,
+  inviterName,
+  accountName,
   members,
   typedName,
   onPick,
   onNewHere,
 }: {
+  group: OnboardingGroupView;
+  inviterName: string | null;
+  /**
+   * The account already signed in, when there is one.
+   *
+   * Named before anybody picks, not after: a link opened on a borrowed laptop
+   * is the case where somebody is about to take a balance as the wrong person.
+   */
+  accountName: string | null;
   members: readonly JoinMemberView[];
   typedName: string;
   onPick: (member: JoinMemberView) => void;
   onNewHere: () => void;
 }) {
   const t = useTranslations("onboarding.whichOne");
+  const groupName = group.summary.groupName;
 
   return (
     <div className="flex flex-1 flex-col gap-5">
+      <Wordmark />
+
+      <GroupCard group={group} />
+
       <div className="flex flex-col gap-2">
-        <Headline>{t("title")}</Headline>
-        <Sub>{t("sub")}</Sub>
+        <Headline>
+          {inviterName
+            ? t("titleInviter", { inviter: inviterName, group: groupName })
+            : t("title", { group: groupName })}
+        </Headline>
+        <Sub>
+          {accountName ? t("subSignedIn", { name: accountName }) : t("sub")}
+        </Sub>
       </div>
 
       <ul className="flex flex-col gap-2">
         {members.map((member) => (
           <li key={member.id}>
-            <button
-              type="button"
-              onClick={() => onPick(member)}
-              aria-label={`${member.displayName} — ${t("filed", { count: member.expenseCount })}`}
-              className="flex min-h-[4.25rem] w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted"
-            >
-              <Avatar size="lg">
-                <AvatarFallback className="bg-accent text-sm text-accent-foreground">
-                  {initialsOf(member.displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="truncate font-medium">
-                  {member.displayName}
-                </span>
-                {member.balances[0] ? (
-                  <BalanceAmount
-                    minorUnits={member.balances[0].minorUnits}
-                    currency={member.balances[0].currency}
-                    size="small"
-                  />
-                ) : null}
-                <span className="text-2xs text-muted-foreground">
-                  {t("filed", { count: member.expenseCount })}
-                </span>
-              </span>
-              <ChevronRight
-                aria-hidden="true"
-                className="size-4 shrink-0 text-muted-foreground"
-              />
-            </button>
+            <MemberRow member={member} onPick={() => onPick(member)} />
           </li>
         ))}
       </ul>
@@ -366,84 +354,173 @@ export function WhichOneScreen({
   );
 }
 
-/** Is this you — with the balance and the expenses that come with saying yes. */
-export function ConfirmScreen({
+/**
+ * One name on the list: "Alex", then "owes €60.00 · 2 expenses".
+ *
+ * Only the first currency is shown, as before: a row is a line, and the
+ * person picking it needs to recognise a figure, not audit one.
+ */
+function MemberRow({
   member,
-  inviterName,
-  busy = false,
-  error = null,
-  onConfirm,
-  onReject,
+  onPick,
 }: {
   member: JoinMemberView;
-  inviterName: string | null;
-  /**
-   * "Yes" is a commitment on one route and only one: an account that arrived
-   * signed in has no credential screen after this, so tapping it files the
-   * claim then and there. Hence a button that can be in flight, and a refusal
-   * that has to land somewhere.
-   */
+  onPick: () => void;
+}) {
+  const t = useTranslations("onboarding.whichOne");
+  const locale = useNumberLocale();
+  const balance = member.balances[0] ?? null;
+  const tone = balance ? toneFor(balance.minorUnits) : "neutral";
+  const values = {
+    count: member.expenseCount,
+    amount: balance ? magnitudeOf(balance, locale) : "",
+  };
+  const key =
+    tone === "negative"
+      ? "rowOwes"
+      : tone === "positive"
+        ? "rowGetsBack"
+        : "rowSettled";
+
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      // Two stacked lines run together into one word for a screen reader, so
+      // the name and the line under it are said as a pair.
+      aria-label={`${member.displayName} — ${t.markup(key, {
+        ...values,
+        money: (chunks) => chunks,
+      })}`}
+      className="flex min-h-[4.25rem] w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted"
+    >
+      <Avatar size="lg">
+        <AvatarFallback className="bg-accent text-sm text-accent-foreground">
+          {initialsOf(member.displayName)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate font-medium">{member.displayName}</span>
+        <span className="text-sm text-muted-foreground">
+          {t.rich(key, {
+            ...values,
+            money: (chunks) => (
+              <span className={cn("font-medium tabular-nums", TONE[tone].ink)}>
+                {chunks}
+              </span>
+            ),
+          })}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-muted-foreground"
+      />
+    </button>
+  );
+}
+
+/**
+ * How this person comes in — and, for somebody new, what they are called.
+ *
+ * Asked here rather than at the door because only now is there somebody
+ * concrete to keep: a name, and the balance under it, said to them as theirs
+ * ("You owe €60.00"). It is also the screen that replaced "Is this you?": the
+ * name and the balance are on it, nothing is committed until one of its
+ * buttons is pressed, and "Not you?" goes back to the list un-choosing it.
+ *
+ * Three shapes, from two facts:
+ *
+ *  - Signed out: an account, a sign-in, or a guest. The guest option is the
+ *    join itself — there is no screen after it to carry the work — so these
+ *    can be in flight, and a refusal lands here.
+ *  - Signed in: one button, which is the join. The account is named above it
+ *    for the same reason the list names it.
+ *  - Nobody on the list: the name field comes first, and every button waits
+ *    for it, because each of them files the person under it.
+ *
+ * Note the comma after the name in the headline — several member names end in
+ * a full stop, so the name must not be sentence-final.
+ */
+export function KeepItScreen({
+  groupName,
+  member,
+  name,
+  onNameChange,
+  accountName,
+  registrationAllowed,
+  busy = false,
+  error = null,
+  onChoose,
+  onJoin,
+  onBackToList,
+}: {
+  groupName: string;
+  /** The listed name they picked, or null for somebody new. */
+  member: JoinMemberView | null;
+  name: string;
+  onNameChange: (name: string) => void;
+  /** The account already signed in, when there is one. */
+  accountName: string | null;
+  registrationAllowed: boolean;
   busy?: boolean;
   error?: string | null;
-  onConfirm: () => void;
-  onReject: () => void;
+  /** Signed out: which of the three ways in. */
+  onChoose: (intent: Intent) => void;
+  /** Signed in: the join, as that account. */
+  onJoin: () => void;
+  onBackToList: () => void;
 }) {
-  const t = useTranslations("onboarding.confirm");
+  const t = useTranslations("onboarding.keepIt");
+  const signedIn = accountName !== null;
+  const trimmed = name.trim();
+  // Somebody new is filed under what they type, whichever way they come in.
+  const ready = !busy && (member !== null || trimmed.length > 0);
+  const count = member?.expenseCount ?? 0;
 
   return (
     <div className="flex flex-1 flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <Avatar className="size-13">
-          <AvatarFallback className="bg-accent text-lg text-accent-foreground">
-            {initialsOf(member.displayName)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-base font-semibold">
-            {member.displayName}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {inviterName
-              ? t("filedBy", {
-                  count: member.expenseCount,
-                  inviter: inviterName,
+      {member && <YouRow member={member} />}
+
+      <div className="flex flex-col gap-2">
+        <Headline>
+          {member
+            ? signedIn
+              ? t("titleSignedIn", {
+                  name: member.displayName,
+                  group: groupName,
                 })
-              : t("filed", { count: member.expenseCount })}
-          </span>
-        </div>
+              : t("title", { name: member.displayName, group: groupName })
+            : t("titleNew", { group: groupName })}
+        </Headline>
+        <Sub>
+          {member
+            ? signedIn
+              ? t("subSignedIn", { account: accountName, count })
+              : t("sub", { group: groupName, count })
+            : signedIn
+              ? t("subNewSignedIn", { account: accountName })
+              : t("subNew", { group: groupName })}
+        </Sub>
       </div>
 
-      <Headline>{t("title")}</Headline>
-
-      {member.balances[0] && (
-        <div className="flex flex-col gap-1 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-          <span className="text-xs text-muted-foreground">{t("position")}</span>
-          <BalanceAmount
-            minorUnits={member.balances[0].minorUnits}
-            currency={member.balances[0].currency}
-            size="large"
+      {!member && (
+        <div>
+          <Label className="sr-only" htmlFor="onboarding-join-name">
+            {t("nameLabel")}
+          </Label>
+          <Input
+            id="onboarding-join-name"
+            className="h-14 rounded-xl"
+            value={name}
+            onChange={(event) => onNameChange(event.target.value)}
+            placeholder={t("namePlaceholder")}
+            autoComplete="name"
+            autoFocus
+            maxLength={120}
+            disabled={busy}
           />
         </div>
-      )}
-
-      {member.recentExpenses.length > 0 && (
-        <ul className="flex flex-col divide-y divide-border rounded-xl bg-card px-4 ring-1 ring-foreground/10">
-          {member.recentExpenses.map((expense) => (
-            <li
-              key={expense.id}
-              className="flex items-center justify-between gap-3 py-3"
-            >
-              <span className="min-w-0 flex-1 truncate text-sm">
-                {expense.description}
-              </span>
-              <Amount
-                minorUnits={expense.minorUnits}
-                currency={expense.currency}
-                className="text-sm text-muted-foreground"
-              />
-            </li>
-          ))}
-        </ul>
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -451,133 +528,116 @@ export function ConfirmScreen({
       <Spacer />
 
       <div className="flex flex-col gap-2.5">
+        {signedIn ? (
+          <Button
+            size="lg"
+            className={PRIMARY}
+            disabled={!ready}
+            onClick={onJoin}
+          >
+            {busy && (
+              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+            )}
+            {t("join", { group: groupName })}
+          </Button>
+        ) : (
+          <>
+            {registrationAllowed && (
+              <Button
+                size="lg"
+                className={PRIMARY}
+                disabled={!ready}
+                onClick={() => onChoose("account")}
+              >
+                {t("createAccount")}
+              </Button>
+            )}
+            <Button
+              size="lg"
+              variant="outline"
+              className={SECONDARY}
+              disabled={!ready}
+              onClick={() => onChoose("signin")}
+            >
+              {t("haveAccount")}
+            </Button>
+            <GuestChoice
+              busy={!ready}
+              note={t("guestNote")}
+              onSelect={() => onChoose("guest")}
+            />
+          </>
+        )}
+
         <Button
-          size="lg"
-          className={PRIMARY}
+          variant="link"
+          className="self-center"
           disabled={busy}
-          onClick={onConfirm}
+          onClick={onBackToList}
         >
-          {busy && (
-            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          )}
-          {t("yes")}
-        </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          className={SECONDARY}
-          disabled={busy}
-          onClick={onReject}
-        >
-          {t("no")}
+          {member ? t("notYou") : t("backToList")}
         </Button>
       </div>
     </div>
   );
 }
 
-/**
- * How should we keep it.
- *
- * Asked here rather than at the door because only now is there something
- * concrete to keep: a name, a balance, and the expenses already filed under
- * it. Note the em dash in the copy — several member names end in a full stop,
- * so the name must not be sentence-final.
- */
-export function KeepItScreen({
-  name,
-  expenseCount,
-  registrationAllowed,
-  busy = false,
-  error = null,
-  onChoose,
-}: {
-  name: string;
-  expenseCount: number;
-  registrationAllowed: boolean;
-  /**
-   * The guest option is a commitment on a shared link: it is the join itself,
-   * with no credential screen after it to carry the work. So the choices can
-   * be in flight, and a refusal has to land somewhere.
-   */
-  busy?: boolean;
-  error?: string | null;
-  onChoose: (intent: Intent) => void;
-}) {
-  const t = useTranslations("onboarding.keepIt");
-
+/** The person they just said they are, and where they stand — as "you". */
+function YouRow({ member }: { member: JoinMemberView }) {
   return (
-    <div className="flex flex-1 flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Headline>{t("title", { name })}</Headline>
-        <Sub>{t("sub", { count: expenseCount })}</Sub>
-      </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <Spacer />
-
-      <div className="flex flex-col gap-2.5">
-        {registrationAllowed && (
-          <Button
-            size="lg"
-            className={PRIMARY}
-            disabled={busy}
-            onClick={() => onChoose("account")}
-          >
-            {t("createAccount")}
-          </Button>
-        )}
-        <Button
-          size="lg"
-          variant="outline"
-          className={SECONDARY}
-          disabled={busy}
-          onClick={() => onChoose("signin")}
-        >
-          {t("haveAccount")}
-        </Button>
-        <GuestChoice busy={busy} onSelect={() => onChoose("guest")} />
+    <div className="flex items-center gap-3">
+      <Avatar className="size-13">
+        <AvatarFallback className="bg-accent text-lg text-accent-foreground">
+          {initialsOf(member.displayName)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-base font-semibold">
+          {member.displayName}
+        </span>
+        <YourBalance
+          balance={member.balances[0] ?? null}
+          className="text-sm font-medium"
+        />
       </div>
     </div>
   );
+}
+
+/** The figure without its sign: the sentence around it says the direction. */
+function magnitudeOf(
+  balance: { minorUnits: string; currency: string },
+  locale: string,
+): string {
+  const value = BigInt(balance.minorUnits);
+  return formatMoney(money(value < 0n ? -value : value, balance.currency), {
+    locale,
+  });
 }
 
 /**
  * Name, and a photo if they feel like it.
  *
- * Reached from three places and worded differently in each: a new account is
- * being asked its name, a guest is being asked what the group should call
- * them, and somebody who was not on the list is being added to it.
+ * Reached from two places and worded differently in each: a new account is
+ * being asked its name, and a guest is being asked what the group should call
+ * them. Somebody new on a shared link types theirs on "keep it" instead, where
+ * every way in files them under it.
  *
  * The photo only uploads once an account exists to hang it on. For a guest it
  * is not offered at all rather than offered and then refused — there is no
  * per-participant photo to upload to.
  */
 export function ProfileScreen({
-  arrival,
   intent,
-  isNewMember,
   name,
   onNameChange,
   hasAccount,
-  onSubmit,
   onDone,
 }: {
-  arrival: Arrival;
   intent: Intent;
-  isNewMember: boolean;
   name: string;
   onNameChange: (name: string) => void;
   hasAccount: boolean;
-  /**
-   * What the primary does instead of renaming the account, when given.
-   *
-   * Set on one route: a signed-in account adding itself to a group under a
-   * name that is nobody else's business — the *participant's* name, not the
-   * account's. Returns the sentence to show, or null when it worked.
-   */
-  onSubmit?: (name: string) => Promise<string | null>;
   onDone: () => void;
 }) {
   const t = useTranslations("onboarding.profile");
@@ -621,17 +681,6 @@ export function ProfileScreen({
   const submit = async () => {
     if (trimmed.length === 0) return;
     setError(null);
-    if (onSubmit) {
-      setBusy(true);
-      const failed = await onSubmit(trimmed);
-      setBusy(false);
-      if (failed) {
-        setError(failed);
-        return;
-      }
-      onDone();
-      return;
-    }
     if (!hasAccount) {
       // No account yet — the name travels with the signup that follows.
       onDone();
@@ -650,20 +699,8 @@ export function ProfileScreen({
   return (
     <div className="flex flex-1 flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <Headline>
-          {guest
-            ? t("guestTitle")
-            : arrival === "shared" && isNewMember
-              ? t("newMemberTitle")
-              : t("title")}
-        </Headline>
-        <Sub>
-          {guest
-            ? t("guestSub")
-            : arrival === "shared" && isNewMember
-              ? t("newMemberSub")
-              : t("sub")}
-        </Sub>
+        <Headline>{guest ? t("guestTitle") : t("title")}</Headline>
+        <Sub>{guest ? t("guestSub") : t("sub")}</Sub>
       </div>
 
       <div className="flex items-center gap-3">
@@ -755,37 +792,35 @@ export function ProfileScreen({
 }
 
 /**
- * You're in.
+ * You're in — for an account that came in through a personal invitation.
  *
- * The balance is the point of the screen, and it says the same thing three
- * ways at once — the word, the arrow, the colour — because colour alone is
- * never the signal. `BalanceAmount` is what guarantees that.
+ * Nobody else reaches it. A shared link and a personal invitation's guest go
+ * straight to the group and say "you're in" there, in a toast; an account
+ * stops here because it has a checklist whose rows it can actually save, and
+ * because this screen is what gives the page time to hand down the account's
+ * own setup before the checklist is seeded from it.
+ *
+ * Each button says what it does. When there is something left to set up, the
+ * primary opens the checklist and says so, and "Go to the group" sits under
+ * it; when there is nothing, "Go to the group" is the only button. It used to
+ * be one button reading "See the group" that opened the checklist.
  */
 export function ArrivalScreen({
   intent,
-  claimed,
-  joinedWithAccount = false,
   name,
   group,
-  onContinue,
+  onFinishSetup,
+  onLeave,
 }: {
   intent: Intent;
-  claimed: JoinMemberView | null;
-  /**
-   * An account that already existed just joined a group.
-   *
-   * `intent` cannot say this: it records what somebody *chose* to be, and
-   * these people chose nothing — they were signed in before the link was
-   * opened. Without it the screen greets them back from an absence they never
-   * had, and says nothing about the group they came for.
-   */
-  joinedWithAccount?: boolean;
   name: string;
   group: OnboardingGroupView | null;
-  onContinue: () => void;
+  /** Opens the checklist; null when there is nothing left on it. */
+  onFinishSetup: (() => void) | null;
+  onLeave: () => void;
 }) {
   const t = useTranslations("onboarding.arrival");
-  const position = claimed?.balances[0] ?? group?.position ?? null;
+  const position = group?.position ?? null;
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -798,27 +833,11 @@ export function ArrivalScreen({
 
       <div className="flex flex-col gap-2">
         <Headline>
-          {claimed
-            ? t("claimedTitle", { name: claimed.displayName })
-            : intent === "guest"
-              ? t("guestTitle")
-              : intent === "signin" && !joinedWithAccount
-                ? t("welcomeBackTitle", { name })
-                : t("title", { name })}
+          {intent === "signin"
+            ? t("welcomeBackTitle", { name })
+            : t("title", { name })}
         </Headline>
-        <Sub>
-          {claimed
-            ? t("claimedSub", { count: claimed.expenseCount })
-            : intent === "guest"
-              ? t("guestSub")
-              : joinedWithAccount
-                ? t("joinedSub", {
-                    group: group?.summary.groupName ?? "",
-                  })
-                : intent === "signin"
-                  ? t("welcomeBackSub")
-                  : t("sub")}
-        </Sub>
+        <Sub>{intent === "signin" ? t("welcomeBackSub") : t("sub")}</Sub>
       </div>
 
       {position && group && (
@@ -826,33 +845,65 @@ export function ArrivalScreen({
           <span className="text-xs text-muted-foreground">
             {group.summary.groupName}
           </span>
-          <BalanceAmount
-            minorUnits={position.minorUnits}
-            currency={position.currency}
-            size="large"
-            showLabel={false}
-          />
-          <span className="text-xs text-muted-foreground">
-            <BalanceLabel minorUnits={position.minorUnits} />
-          </span>
+          <YourBalance balance={position} className="text-xl font-semibold" />
         </div>
       )}
 
       <Spacer />
 
-      <Button size="lg" className={PRIMARY} onClick={onContinue}>
-        {t("seeGroup")}
-      </Button>
+      <div className="flex flex-col gap-2.5">
+        {onFinishSetup ? (
+          <>
+            <Button size="lg" className={PRIMARY} onClick={onFinishSetup}>
+              {t("finishSetup")}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className={SECONDARY}
+              onClick={onLeave}
+            >
+              {t("goToGroup")}
+            </Button>
+          </>
+        ) : (
+          <Button size="lg" className={PRIMARY} onClick={onLeave}>
+            {t("goToGroup")}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
 
-/** The word under the amount — the third of the three redundant cues. */
-function BalanceLabel({ minorUnits }: { minorUnits: string }) {
-  const t = useTranslations("money");
-  const value = BigInt(minorUnits);
+/**
+ * Where the reader stands, said to them: "You owe €60.00".
+ *
+ * For a balance that is theirs — once they have said who they are, or been
+ * let in as somebody. The word carries the direction, so the figure goes
+ * unsigned, and the phrase takes the balance's own tone from `TONE`, which is
+ * never the only cue.
+ */
+export function YourBalance({
+  balance,
+  className,
+}: {
+  balance: { minorUnits: string; currency: string } | null;
+  className?: string;
+}) {
+  const t = useTranslations("onboarding.yourBalance");
+  const locale = useNumberLocale();
+  const tone = balance ? toneFor(balance.minorUnits) : "neutral";
+  const amount = balance ? magnitudeOf(balance, locale) : "";
+
   return (
-    <>{value > 0n ? t("getsBack") : value < 0n ? t("owes") : t("settledUp")}</>
+    <span className={cn("tabular-nums", TONE[tone].ink, className)}>
+      {tone === "negative"
+        ? t("owe", { amount })
+        : tone === "positive"
+          ? t("getBack", { amount })
+          : t("settled")}
+    </span>
   );
 }
 

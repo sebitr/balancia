@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import en from "../../../messages/en.json";
@@ -132,5 +132,36 @@ describe("the password errors", () => {
       en.register.validation.mismatch,
     );
     expect(registerAction).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Where the caret is after the server says no.
+ *
+ * The button is disabled while the account is being created, which lets go
+ * of focus; a refusal used to leave a keyboard on the page body. The address
+ * is the one thing here the server can refuse that typing can fix, so every
+ * refusal puts the caret back in it, selected, and describes it with why.
+ */
+describe("after the server refuses", () => {
+  it.each([
+    ["a taken address", en.serverErrors.emailTaken],
+    ["closed registration", en.serverErrors.registrationClosed],
+  ])("puts the caret back in the address for %s", async (_case, error) => {
+    registerAction.mockResolvedValue({ ok: false, error });
+    const user = userEvent.setup();
+    renderWithIntl(<RegisterForm />);
+
+    await fillIn(user, "orchid-lantern-42");
+
+    const email = screen.getByLabelText<HTMLInputElement>("Email");
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(screen.getByRole("alert")).toHaveTextContent(error);
+    expect(email).toHaveAccessibleDescription(error);
+    // Kept, every field of it.
+    expect(email).toHaveValue("grace@example.com");
+    expect(screen.getByLabelText("Password", { exact: true })).toHaveValue(
+      "orchid-lantern-42",
+    );
   });
 });

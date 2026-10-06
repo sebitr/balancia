@@ -66,6 +66,7 @@ const {
   upload,
   enqueue,
   success,
+  failure,
   push,
   replace,
   back,
@@ -85,6 +86,7 @@ const {
   upload: vi.fn(),
   enqueue: vi.fn(),
   success: vi.fn(),
+  failure: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
   back: vi.fn(),
@@ -122,7 +124,10 @@ vi.mock("next/navigation", () => ({
 // somewhere above it to render. What matters here is that it was raised, and
 // with what.
 vi.mock("sonner", () => ({
-  toast: { success: (...args: unknown[]) => success(...args), error: vi.fn() },
+  toast: {
+    success: (...args: unknown[]) => success(...args),
+    error: (...args: unknown[]) => failure(...args),
+  },
 }));
 // The classifier reaches for a web worker and WebAssembly; neither exists in
 // jsdom, and none of these tests are about categorisation.
@@ -173,6 +178,7 @@ function renderForm(
     upload,
     enqueue,
     success,
+    failure,
     push,
     replace,
     back,
@@ -892,6 +898,343 @@ describe("the split note", () => {
 
     await user.type(split.getByLabelText("Exact amount for Cyril"), "40");
     expect(split.getByText("CHF 11.80 over the total.")).toBeInTheDocument();
+  });
+
+  /** €100 three ways: one person pays a cent more, and it shows. */
+  it("names who pays the cent that shows", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "100");
+    await openSplit(user);
+
+    expect(
+      sheet("Payment and split").getByText(
+        "You pay CHF 0.01 more so it adds up to CHF 100.00.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * The audit's case: €90 at 33.34 / 33.33 / 33.33 per cent is three people
+   * paying 30.00 each, and the sheet told them two of them paid more.
+   */
+  it("says nothing of rounding nobody can see", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Percent" }));
+    expect(split.getByLabelText("Percentage for Seb")).toHaveValue("33.34");
+    expect(split.getAllByText("CHF 30.00")).toHaveLength(3);
+    expect(split.queryByText(/more so it adds up/)).not.toBeInTheDocument();
+    expect(split.queryByText(/does not divide evenly/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * A split that does not add up can be left — people close the sheet to look at
+ * the total — so the row it closes onto has to keep saying so, in the sheet's
+ * own words, until it is fixed.
+ */
+describe("a split that does not add up", () => {
+  /** €90 between three, exact, with the given people's amounts retyped. */
+  async function exactSplit(
+    user: ReturnType<typeof userEvent.setup>,
+    amounts: Record<string, string>,
+  ) {
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Exact" }));
+    for (const [name, value] of Object.entries(amounts)) {
+      const field = split.getByLabelText(`Exact amount for ${name}`);
+      await user.clear(field);
+      await user.type(field, value);
+    }
+    return split;
+  }
+
+  const row = () => screen.getByRole("button", { name: /^Paid by/ });
+
+  it("says on the row how far over the total it is", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exactSplit(user, { Seb: "50" });
+
+    expect(split.getByText("CHF 20.00 over the total.")).toBeInTheDocument();
+    // Leaving to look at the total is allowed; the row says what is left.
+    const done = split.getByRole("button", { name: "Done" });
+    expect(done).toBeEnabled();
+    await user.click(done);
+
+    expect(row()).toHaveTextContent("Exact amounts · CHF 20.00 over the total");
+    expect(row()).not.toHaveTextContent("3 people");
+  });
+
+  it("says on the row how much is left to assign", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exactSplit(user, { Seb: "25" });
+    await user.click(split.getByRole("button", { name: "Done" }));
+
+    expect(row()).toHaveTextContent("Exact amounts · CHF 5.00 left to assign");
+  });
+
+  it("says it of percentages that do not make 100", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Percent" }));
+    for (const name of ["Seb", "Hervé", "Cyril"]) {
+      const field = split.getByLabelText(`Percentage for ${name}`);
+      await user.clear(field);
+      await user.type(field, "30");
+    }
+    await user.click(split.getByRole("button", { name: "Done" }));
+
+    expect(row()).toHaveTextContent("Percentages · add up to 90%, not 100%");
+  });
+
+  it("says it of shares that are all zero", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Shares" }));
+    for (const name of ["Seb", "Hervé", "Cyril"]) {
+      await user.click(
+        split.getByRole("button", { name: `One share fewer for ${name}` }),
+      );
+    }
+
+    expect(
+      split.getByText("Give at least one person a share."),
+    ).toBeInTheDocument();
+    await user.click(split.getByRole("button", { name: "Done" }));
+    expect(row()).toHaveTextContent("Shares · every share is zero");
+  });
+
+  /**
+   * The refusal used to be "The exact amounts must add up to the total", a
+   * screen above the row that fixes it, and it stayed there after the fix.
+   */
+  it("is refused in the split's own words, and the refusal goes once it is fixed", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    const split = await exactSplit(user, { Seb: "50" });
+    await user.click(split.getByRole("button", { name: "Done" }));
+
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    expect(createExpense).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "CHF 20.00 over the total.",
+    );
+    // The caret goes to the row that opens the fix.
+    expect(row()).toHaveFocus();
+
+    // The alert follows the fields rather than repeating the first sentence.
+    await openSplit(user);
+    const again = sheet("Payment and split");
+    const seb = again.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "25");
+    await user.click(again.getByRole("button", { name: "Done" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "CHF 5.00 still to assign.",
+    );
+
+    await openSplit(user);
+    const fixed = sheet("Payment and split");
+    await user.clear(fixed.getByLabelText("Exact amount for Seb"));
+    await user.type(fixed.getByLabelText("Exact amount for Seb"), "30");
+    await user.click(fixed.getByRole("button", { name: "Done" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(row()).toHaveTextContent("Split by exact amounts · 3 people");
+  });
+
+  it("does not come back on its own after it was fixed", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    const split = await exactSplit(user, { Seb: "50" });
+    await user.click(split.getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+
+    await openSplit(user);
+    const sheetNow = sheet("Payment and split");
+    const seb = sheetNow.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "30");
+    // Broken again before anybody pressed Save: the row says so, the alert
+    // that belonged to the last press does not return.
+    await user.clear(seb);
+    await user.type(seb, "45");
+    await user.click(sheetNow.getByRole("button", { name: "Done" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(row()).toHaveTextContent("Exact amounts · CHF 15.00 over the total");
+  });
+});
+
+/** The payer panel's "give the rest", for the split one section lower. */
+describe("the rest of an exact split", () => {
+  async function exact(user: ReturnType<typeof userEvent.setup>) {
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Exact" }));
+    return split;
+  }
+
+  it("goes to the last person not yet touched, in one tap", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exact(user);
+    const seb = split.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "25");
+
+    // A pattern rather than a string: the amount is spaced from its currency
+    // by a non-breaking space, which an accessible name keeps as it is.
+    await user.click(
+      split.getByRole("button", {
+        name: /^Give the remaining CHF\s5\.00 to Cyril$/,
+      }),
+    );
+
+    expect(split.getByLabelText("Exact amount for Cyril")).toHaveValue("35.00");
+    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("25");
+    expect(split.queryByText(/still to assign/)).not.toBeInTheDocument();
+    expect(
+      split.queryByRole("button", { name: /Give the remaining/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("is not offered for an overage, which has no rest to give", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await exact(user);
+    const seb = split.getByLabelText("Exact amount for Seb");
+    await user.clear(seb);
+    await user.type(seb, "50");
+
+    expect(split.getByText("CHF 20.00 over the total.")).toBeInTheDocument();
+    expect(
+      split.queryByRole("button", { name: /Give the remaining/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("the share steppers", () => {
+  async function shares(user: ReturnType<typeof userEvent.setup>) {
+    await enterAmount(user, "90");
+    await openSplit(user);
+    const split = sheet("Payment and split");
+    await user.click(split.getByRole("button", { name: "Shares" }));
+    return split;
+  }
+
+  it("adds a share and re-divides", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+
+    await user.click(
+      split.getByRole("button", { name: "One more share for Hervé" }),
+    );
+
+    expect(split.getByLabelText("Shares for Hervé")).toHaveValue("2");
+    expect(split.getByText("CHF 45.00")).toBeInTheDocument();
+    expect(split.getAllByText("CHF 22.50")).toHaveLength(2);
+  });
+
+  it("stops at none", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+    const fewer = split.getByRole("button", {
+      name: "One share fewer for Seb",
+    });
+
+    await user.click(fewer);
+    expect(split.getByLabelText("Shares for Seb")).toHaveValue("0");
+    expect(fewer).toBeDisabled();
+  });
+
+  it("keeps the field for a share nobody can step to", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+    const field = split.getByLabelText("Shares for Cyril");
+
+    await user.clear(field);
+    await user.type(field, "1.5");
+    await user.click(
+      split.getByRole("button", { name: "One more share for Cyril" }),
+    );
+    expect(field).toHaveValue("2.5");
+  });
+
+  it("gives each step a finger-sized target", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const split = await shares(user);
+
+    for (const name of ["One more share for Seb", "One share fewer for Seb"]) {
+      expect(split.getByRole("button", { name })).toHaveClass("tap-target");
+    }
+  });
+});
+
+/**
+ * "À parts égales", "Parts", "Exact", "Pourcentage" do not fit four to a row
+ * at 360px, so the tabs show short labels and keep the whole word as their
+ * name.
+ */
+describe("the method tabs in French", () => {
+  it("show short labels and are named in full", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "/groups/g1/expenses/new");
+    renderWithIntl(
+      <AddEntryDrawer
+        dismissTo="back"
+        groupId="g1"
+        members={MEMBERS}
+        selfId="seb"
+        currencyMode="converted"
+        baseCurrency="CHF"
+        defaultCurrency="CHF"
+        timezone="Europe/Zurich"
+        outstanding={OUTSTANDING}
+      />,
+      { locale: "fr" },
+    );
+
+    const amount = document.querySelector<HTMLInputElement>(
+      "input[data-entry-amount]",
+    );
+    if (!amount) throw new Error("no amount field");
+    await user.type(amount, "90");
+    await user.click(screen.getByRole("button", { name: /^Payé par/ }));
+
+    const split = sheet("Paiement et partage");
+    const tabs = [
+      ["À parts égales", "Égal"],
+      ["Parts", "Parts"],
+      ["Exact", "Exact"],
+      ["Pourcentage", "%"],
+    ];
+    for (const [name, shown] of tabs) {
+      expect(split.getByRole("button", { name })).toHaveTextContent(shown);
+    }
   });
 });
 
@@ -2000,6 +2343,158 @@ describe("after saving", () => {
   });
 });
 
+/**
+ * A repayment recorded against the wrong person, taken back from its toast.
+ *
+ * The outstanding rows read alike — "Hervé pays you back", "Cyril pays you
+ * back" — and one arrives already chosen, so the slip is a real debt cleared
+ * in one press. The confirmation names who paid whom back, which is the moment
+ * the slip is noticed, and the Undo beside it removes that repayment the way
+ * Delete would.
+ */
+describe("taking a repayment back", () => {
+  type Confirmation = [
+    string,
+    { description?: unknown; action?: { label: string; onClick: () => void } },
+  ];
+
+  /** Records the outstanding debt as it stands, and hands back its toast. */
+  async function record(
+    user: ReturnType<typeof userEvent.setup>,
+  ): Promise<Confirmation> {
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+    await user.click(screen.getByRole("button", { name: "Record repayment" }));
+    return success.mock.calls.at(-1) as Confirmation;
+  }
+
+  it("offers an undo beside the sentence that says who paid whom", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const [message, options] = await record(user);
+
+    expect(message).toBe("Repayment recorded");
+    expect(String(options.description)).toContain("Hervé paid you back");
+    expect(options.action?.label).toBe("Undo");
+  });
+
+  it("takes it back out through the repayment's own delete, and says so", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const [, options] = await record(user);
+
+    options.action?.onClick();
+
+    // The one way a repayment is removed, so the group is revalidated as a
+    // deletion revalidates it and Activity keeps a Restore on the line.
+    expect(deleteSettlement).toHaveBeenCalledWith("g1", "s1");
+    expect(deleteExpense).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(success).toHaveBeenLastCalledWith("Repayment deleted", {
+        description: "Balances are back as they were.",
+      }),
+    );
+    expect(failure).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The key a repayment is recorded under is spent for good, deletion
+   * included: sent again, it is answered with the repayment just taken back
+   * and nothing new is written. So the next one has to go out under a key of
+   * its own, or recording it again after an Undo would silently do nothing.
+   */
+  it("records it again afresh after an undo", async () => {
+    const user = userEvent.setup();
+    const first = renderForm();
+    const [, firstToast] = await record(user);
+    const firstKey = createSettlement.mock.calls[0]?.[2];
+
+    firstToast.action?.onClick();
+    await vi.waitFor(() =>
+      expect(success).toHaveBeenLastCalledWith(
+        "Repayment deleted",
+        expect.anything(),
+      ),
+    );
+
+    // The drawer closed on saving; recording again is Settle up opening it
+    // anew.
+    first.unmount();
+    renderForm();
+    createSettlement.mockResolvedValueOnce({
+      ok: true,
+      data: { settlementId: "s2" },
+    });
+    const [message, secondToast] = await record(user);
+
+    expect(message).toBe("Repayment recorded");
+    const secondKey = createSettlement.mock.calls[0]?.[2];
+    expect(secondKey).toEqual(CLIENT_KEY);
+    expect(secondKey).not.toBe(firstKey);
+
+    // And its own Undo takes back this one, not the one before it.
+    secondToast.action?.onClick();
+    expect(deleteSettlement).toHaveBeenCalledTimes(1);
+    expect(deleteSettlement).toHaveBeenCalledWith("g1", "s2");
+  });
+
+  /**
+   * The toast that offered the Undo has gone by now, and whoever pressed it
+   * believes the repayment went with it. Being wrong about that is worse than
+   * the slip, so a failure says where the repayment still is.
+   */
+  it("says the repayment is still there when it was not taken back", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    deleteSettlement.mockResolvedValueOnce({ ok: false });
+    const [, options] = await record(user);
+
+    options.action?.onClick();
+
+    await vi.waitFor(() =>
+      expect(failure).toHaveBeenCalledWith(
+        "The repayment is still recorded. Delete it from Transactions.",
+      ),
+    );
+    expect(success).not.toHaveBeenCalledWith(
+      "Repayment deleted",
+      expect.anything(),
+    );
+  });
+
+  it("says the same when the connection dropped on the way", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    deleteSettlement.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const [, options] = await record(user);
+
+    options.action?.onClick();
+
+    await vi.waitFor(() =>
+      expect(failure).toHaveBeenCalledWith(
+        "The repayment is still recorded. Delete it from Transactions.",
+      ),
+    );
+  });
+
+  /**
+   * An expense keeps its plain confirmation. Its toast already links to the
+   * sheet that fixes who paid and how it was split, which is what goes wrong
+   * with an expense; it is a repayment that is wrong as a whole.
+   */
+  it("leaves an expense's confirmation as it was", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "84.60");
+    await user.type(screen.getByLabelText("Description"), "Dinner");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    const [, options] = success.mock.calls.at(-1) as Confirmation;
+    expect(options.action).toBeUndefined();
+  });
+});
+
 describe("the amount field", () => {
   /**
    * The native keyboard will happily offer a fourth character after "1.23";
@@ -2626,6 +3121,43 @@ describe("editing an entry", () => {
     // `pointer-events: none` on the body, and the toaster hangs off the body
     // too — an Undo offered underneath one takes no taps at all.
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  /**
+   * Only a new repayment can be taken back from its toast. Undoing an edit
+   * would mean putting the old fields back, which is not what deleting the
+   * repayment does — an Undo there would destroy the entry it claimed to
+   * restore.
+   */
+  it("confirms an edited repayment without offering to take it back", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: SETTLEMENT });
+
+    await save(user);
+
+    const [message, options] = success.mock.calls.at(-1) as [
+      string,
+      { action?: unknown },
+    ];
+    expect(message).toBe("Changes saved");
+    expect(options.action).toBeUndefined();
+  });
+
+  /** Nor one that was an expense a moment ago: that expense went with it. */
+  it("offers no undo for an expense moved over as a repayment", async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: EXPENSE });
+
+    await user.click(screen.getByRole("tab", { name: "Repayment" }));
+    await user.click(screen.getByRole("radio", { name: "To: Seb" }));
+    await save(user);
+
+    expect(toSettlement).toHaveBeenCalledTimes(1);
+    const [, options] = success.mock.calls.at(-1) as [
+      string,
+      { action?: unknown },
+    ];
+    expect(options.action).toBeUndefined();
   });
 
   it("has no delete and no update when the entry is new", () => {

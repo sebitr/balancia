@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PUSH } from "@/components/motion/transitions";
+import { rememberOrigin } from "@/components/settings/settings-origin";
 import { cn } from "@/lib/utils";
 
 function initialsOf(label: string): string {
@@ -26,6 +27,9 @@ function initialsOf(label: string): string {
  *
  * A guest has no account behind the avatar and never had a menu; they get the
  * same initials and their name, which is all the dropdown ever showed them.
+ *
+ * Pressing it remembers the screen it was pressed on, so that the hub's ✕
+ * comes back here rather than to the dashboard (see `settings-origin.ts`).
  */
 export function UserMenu({
   label,
@@ -34,8 +38,9 @@ export function UserMenu({
   label: string;
   isGuest: boolean;
 }) {
-  // The hub's own name, not the group tab bar's "Settings" — they are
-  // different destinations and French calls them different things.
+  // Named for whose it is, not "Settings": inside a group the tab bar already
+  // has a Settings, for the group's, and a screen reader listing the links on
+  // the page met two of them leading to different places.
   const t = useTranslations("userSettings");
   const tCommon = useTranslations("common");
 
@@ -65,7 +70,8 @@ export function UserMenu({
     <Link
       href="/settings"
       transitionTypes={PUSH}
-      aria-label={t("title")}
+      onClick={rememberOrigin}
+      aria-label={t("yourAccount")}
       className="tap-target flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       {initials}

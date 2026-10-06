@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Fingerprint, Loader2 } from "lucide-react";
@@ -20,12 +20,19 @@ import {
   verifySignupCodeAction,
 } from "@/modules/auth/actions";
 import { useProofOfWork } from "@/components/auth/use-proof-of-work";
+import {
+  describedBy,
+  useRefusalFocus,
+} from "@/components/auth/use-refusal-focus";
 import { CODE_LENGTH } from "@/modules/auth/code-format";
 import { CodeInput } from "./code-input";
 import { OpenMailButton } from "./open-mail-button";
 import { useResendCooldown } from "./use-resend-cooldown";
 import { Headline, PRIMARY, SECONDARY, Spacer, Sub } from "./screens";
 import type { Intent } from "./route";
+
+/** The refusal's id, which the field the caret goes back to is described by. */
+const ERROR_ID = "onboarding-identity-error";
 
 /**
  * Proving who this is, with nothing to invent and nothing to retype.
@@ -98,6 +105,24 @@ export function IdentityScreen({
   // it, so a second tap cannot retire a code that is still in the post.
   const resend = useResendCooldown();
 
+  /*
+   * Where a refused address or code sends the caret back to. Both fields are
+   * disabled while the request is out, which lets go of focus, so without
+   * this a refusal left the keyboard on nothing — and the message, which is
+   * not an alert here, unread. Described by the message once focused, it is
+   * read out with the field.
+   */
+  const emailField = useRef<HTMLInputElement>(null);
+  const codeField = useRef<HTMLInputElement>(null);
+  const [refused, refuse] = useRefusalFocus<"email" | "code">((field) => {
+    if (field === "code") {
+      codeField.current?.focus();
+      return;
+    }
+    emailField.current?.focus();
+    emailField.current?.select();
+  });
+
   const signingIn = intent === "signin";
   const address = email.trim();
   const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address);
@@ -123,6 +148,7 @@ export function IdentityScreen({
 
   const withPasskey = async () => {
     setError(null);
+    refuse(null);
     setBusy(true);
     try {
       if (signingIn) {
@@ -187,6 +213,9 @@ export function IdentityScreen({
 
   const askForCode = async () => {
     setError(null);
+    refuse(null);
+    // A resend: the boxes are on screen and are what is typed into next.
+    const resending = sent;
     setBusy(true);
     const result = signingIn
       ? // Signing in is not account creation and asks for no proof: the
@@ -200,6 +229,7 @@ export function IdentityScreen({
     setBusy(false);
     if (!result.ok) {
       setError(result.error ?? t("codeFailed"));
+      refuse(resending ? "code" : "email");
       return;
     }
     setSent(true);
@@ -208,6 +238,7 @@ export function IdentityScreen({
 
   const submitCode = async (value: string) => {
     setError(null);
+    refuse(null);
     setBusy(true);
     const input = { email: address, code: value, join };
     const result = signingIn
@@ -217,6 +248,7 @@ export function IdentityScreen({
     if (!result.ok || !result.data) {
       setError(result.error ?? t("codeWrong"));
       setCode("");
+      refuse("code");
       return;
     }
     onDone({
@@ -238,9 +270,13 @@ export function IdentityScreen({
           {t("emailLabel")}
         </Label>
         <Input
+          ref={emailField}
           id="onboarding-email"
           type="email"
           className="h-14 rounded-xl"
+          aria-describedby={describedBy(
+            error && refused === "email" && ERROR_ID,
+          )}
           value={email}
           onChange={(event) => {
             onEmailChange(event.target.value);
@@ -261,19 +297,25 @@ export function IdentityScreen({
         {sent && (
           <div className="flex flex-col gap-2 pt-1">
             <CodeInput
+              ref={codeField}
               value={code}
               onChange={setCode}
               onComplete={(value) => void submitCode(value)}
               label={t("codeLabel")}
               disabled={busy}
               autoFocus
+              describedBy={describedBy(error && refused === "code" && ERROR_ID)}
             />
             <p className="text-xs text-muted-foreground">{t("codeHint")}</p>
           </div>
         )}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id={ERROR_ID} className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       <Spacer />
 

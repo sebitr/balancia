@@ -15,6 +15,7 @@ import {
   SUB_PARAM,
   TO_PARAM,
   WHEN_PARAM,
+  WITH_PARAM,
   type ParamSource,
 } from "./list-query";
 
@@ -89,6 +90,14 @@ export interface RowView {
    * A repayment has exactly one: the person who paid it back.
    */
   readonly payers: readonly string[];
+  /**
+   * Everybody the row is about — participant ids, each once.
+   *
+   * On an expense, whoever paid and whoever carries a share of it; on a
+   * repayment, both ends. It is what "Entries with Marta" asks of a row, and
+   * the order means nothing.
+   */
+  readonly people: readonly string[];
   /** Recorded in a currency the group does not keep its books in. */
   readonly foreign: boolean;
   /** At least one attachment that has not been deleted. */
@@ -144,6 +153,8 @@ export interface ListFilter {
   readonly max: string;
   /** Participant ids. Several mean *any of*. */
   readonly payers: readonly string[];
+  /** Participant ids a row must involve. Several mean *any of*. */
+  readonly people: readonly string[];
   readonly positions: readonly PositionChoice[];
   readonly properties: readonly PropertyChoice[];
   readonly sort: SortChoice;
@@ -161,6 +172,7 @@ export const NO_FILTER: ListFilter = {
   min: "",
   max: "",
   payers: [],
+  people: [],
   positions: [],
   properties: [],
   sort: "newest",
@@ -176,10 +188,10 @@ export const NO_FILTER: ListFilter = {
  * custom range are held to the same rule: the date fields can only write a
  * real calendar day, and `from=soon` is not one they could show or clear.
  *
- * Values that name *data* — categories, subcategory pairs, payers — are taken
- * as they come. A category the group has never used is a legitimate filter
- * (the sheet offers all eighteen on purpose), and a participant who has since
- * been removed still paid for the rows they paid for.
+ * Values that name *data* — categories, subcategory pairs, payers, people —
+ * are taken as they come. A category the group has never used is a legitimate
+ * filter (the sheet offers all eighteen on purpose), and a participant who has
+ * since been removed still paid for the rows they paid for.
  */
 export function readFilter(source: ParamSource): ListFilter {
   return {
@@ -193,6 +205,7 @@ export function readFilter(source: ParamSource): ListFilter {
     min: first(source, MIN_PARAM),
     max: first(source, MAX_PARAM),
     payers: valuesOf(source, PAYER_PARAM),
+    people: valuesOf(source, WITH_PARAM),
     positions: only(valuesOf(source, POSITION_PARAM), POSITION_CHOICES),
     properties: only(valuesOf(source, PROPERTY_PARAM), PROPERTY_CHOICES),
     sort: one(first(source, SORT_PARAM), SORT_CHOICES, "newest"),
@@ -230,6 +243,7 @@ export function filterParams(
   if (filter.min !== "") params.set(MIN_PARAM, filter.min);
   if (filter.max !== "") params.set(MAX_PARAM, filter.max);
   for (const payer of filter.payers) params.append(PAYER_PARAM, payer);
+  for (const person of filter.people) params.append(WITH_PARAM, person);
   for (const position of POSITION_CHOICES) {
     if (filter.positions.includes(position)) {
       params.append(POSITION_PARAM, position);
@@ -256,6 +270,7 @@ const OWNED_PARAMS = [
   MIN_PARAM,
   MAX_PARAM,
   PAYER_PARAM,
+  WITH_PARAM,
   POSITION_PARAM,
   PROPERTY_PARAM,
   SORT_PARAM,
@@ -284,6 +299,7 @@ export function filterDimensions(filter: ListFilter): number {
     (filter.kinds.length > 0 ? 1 : 0) +
     (filter.min !== "" || filter.max !== "" ? 1 : 0) +
     (filter.payers.length > 0 ? 1 : 0) +
+    (filter.people.length > 0 ? 1 : 0) +
     (filter.categories.length + filter.subcategories.length > 0 ? 1 : 0) +
     (filter.positions.length > 0 ? 1 : 0) +
     (filter.properties.length > 0 ? 1 : 0) +
@@ -325,6 +341,7 @@ export function selectRows(
   const categories = new Set(filter.categories);
   const pairs = new Set(filter.subcategories);
   const payers = new Set(filter.payers);
+  const people = new Set(filter.people);
   const positions = new Set<string>(filter.positions);
   const properties = new Set<string>(filter.properties);
   const byCategory = categories.size > 0 || pairs.size > 0;
@@ -347,6 +364,10 @@ export function selectRows(
     if (to !== "" && row.date > to) return false;
 
     if (payers.size > 0 && !row.payers.some((payer) => payers.has(payer))) {
+      return false;
+    }
+
+    if (people.size > 0 && !row.people.some((person) => people.has(person))) {
       return false;
     }
 

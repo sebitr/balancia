@@ -75,13 +75,15 @@ describe("AppShell header", () => {
     renderHeaderFor({ label: "Ada", isGuest: false });
     expect(screen.queryByRole("button", { name: "Theme" })).toBeNull();
     expect(screen.getByRole("link", { name: "Notifications" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Settings" })).toBeTruthy();
+    // The avatar, which leads to the hub: named for whose it is, since a
+    // group's tab bar has a "Settings" of its own.
+    expect(screen.getByRole("link", { name: "Your account" })).toBeTruthy();
   });
 
   it("keeps the theme picker for a guest, who has no settings hub", () => {
     renderHeaderFor({ label: "Marta", isGuest: true });
     expect(screen.getByRole("button", { name: "Theme" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Notifications" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Your account" })).toBeNull();
   });
 });

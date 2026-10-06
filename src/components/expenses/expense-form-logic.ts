@@ -42,8 +42,7 @@ export type SplitMessageKey =
   | "percentageSumMismatch"
   | "shareNegative"
   | "sharesAllZero"
-  | "invalid"
-  | "roundingNote";
+  | "invalid";
 
 export interface SplitMessage {
   readonly key: SplitMessageKey;
@@ -86,6 +85,22 @@ export function parseAmountToMinor(
     }
     return { ok: false, error: { key: "amountInvalid" } };
   }
+}
+
+/**
+ * A per-person split value, read the one way everything that reads it does.
+ *
+ * The preview, the note under the rows and the payload all used to read the
+ * field for themselves, and they disagreed: "33,5" was a sum the note accepted
+ * and a value the preview refused, so a split could look right in the sheet
+ * and be turned down on save. A comma is what a French phone offers for the
+ * decimal, and "12." is somebody halfway through "12.50" who already means 12.
+ *
+ * Blank stays blank — what an empty field is worth depends on the method.
+ */
+export function readSplitValue(raw: string | undefined): string {
+  const text = (raw ?? "").trim().replace(/,/g, ".");
+  return text.endsWith(".") ? text.slice(0, -1) : text;
 }
 
 /** Renders stored minor units back into an editable major-unit string. */
@@ -133,12 +148,17 @@ export interface SplitPreviewAllocation {
   readonly formatted: string;
 }
 
+/**
+ * The split as it would be stored, or why it would not be.
+ *
+ * Says nothing about rounding. Whether a moved minor unit is worth a sentence
+ * depends on whether anybody can see it, which is a question about the amounts
+ * side by side — `describeSplit` in `split-notes.ts` answers it.
+ */
 export type SplitPreview =
   | {
       ok: true;
       allocations: readonly SplitPreviewAllocation[];
-      /** Set when the largest-remainder pass had to move minor units around. */
-      roundingNote: SplitMessage | null;
       error?: undefined;
     }
   | {
@@ -146,7 +166,6 @@ export type SplitPreview =
       /** `null` means "stay quiet" — nothing has been typed yet. */
       error: SplitMessage | null;
       allocations?: undefined;
-      roundingNote?: undefined;
     };
 
 /** Domain codes that have a matching key in the catalogue, one for one. */
@@ -165,6 +184,36 @@ const ALLOCATION_MESSAGE_KEYS = {
   sharesAllZero: "sharesAllZero",
   internal: "invalid",
 } as const satisfies Record<AllocationErrorCode, SplitMessageKey>;
+
+/**
+ * The split's entries as `resolveSplit`, and so the server, takes them.
+ *
+ * One function for the preview and for the payload, so that what the sheet
+ * shows and what a save sends cannot read a field two ways — they did, and a
+ * cleared share was nothing to the preview and a missing value to the server.
+ * An empty field is nothing: no amount on an exact split, no weight on the
+ * others. A value that is not a number is passed on and refused by name.
+ */
+export function splitEntriesFor(input: {
+  method: SplitMethod;
+  participantIds: readonly string[];
+  values: Readonly<Record<string, string>>;
+  currency: string;
+}): { participantId: string; value?: string }[] {
+  const { method, participantIds, values, currency } = input;
+  return participantIds.map((participantId) => {
+    if (method === "equal") return { participantId };
+    const text = readSplitValue(values[participantId]);
+    if (method === "exact") {
+      const parsed = parseAmountToMinor(text === "" ? "0" : text, currency);
+      return {
+        participantId,
+        value: parsed.ok ? parsed.value.toString() : "",
+      };
+    }
+    return { participantId, value: text === "" ? "0" : text };
+  });
+}
 
 /**
  * Computes the live allocation preview shown next to each participant.
@@ -191,19 +240,11 @@ export function previewSplit(input: {
     return { ok: false, error: { key: "participantsRequired" } };
   }
 
-  const entries = participantIds.map((participantId) => {
-    if (method === "equal") {
-      return { participantId };
-    }
-    const raw = (values[participantId] ?? "").trim();
-    if (method === "exact") {
-      const parsed = parseAmountToMinor(raw, currency);
-      return {
-        participantId,
-        value: parsed.ok ? parsed.value.toString() : "",
-      };
-    }
-    return { participantId, value: raw === "" ? "0" : raw };
+  const entries = splitEntriesFor({
+    method,
+    participantIds,
+    values,
+    currency,
   });
 
   try {
@@ -214,19 +255,7 @@ export function previewSplit(input: {
       formatted: formatMoney(money(allocation.amount, currency), { locale }),
     }));
 
-    const { adjustedCount, adjustedUnits } = result.rounding;
-    const roundingNote: SplitMessage | null =
-      adjustedUnits > 0n
-        ? {
-            key: "roundingNote",
-            params: {
-              count: adjustedCount,
-              amount: formatMoney(money(adjustedUnits, currency), { locale }),
-            },
-          }
-        : null;
-
-    return { ok: true, allocations, roundingNote };
+    return { ok: true, allocations };
   } catch (error) {
     if (error instanceof AllocationError) {
       return {

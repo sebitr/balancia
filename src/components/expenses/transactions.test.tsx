@@ -128,6 +128,7 @@ function row(overrides: Partial<RowView> = {}): RowView {
     revenue: false,
     recurring: false,
     payers: ["seb"],
+    people: ["seb"],
     foreign: false,
     receipt: false,
     ...overrides,
@@ -1352,6 +1353,43 @@ describe("Transactions filter sheet", () => {
     );
   });
 
+  /**
+   * "Entries with Padi", from Padi's page: every row Padi is on, which is
+   * more than the rows Padi paid for — and the sheet shows the filter on, so
+   * one tap takes it off again.
+   */
+  it("arrives narrowed to a person from their page, and says so", async () => {
+    const user = userEvent.setup();
+    const rows = ROWS.map((entry) =>
+      entry.id === "glace" || entry.id === "s1"
+        ? { ...entry, people: ["seb", "padi"] }
+        : entry,
+    );
+    renderList(rows, "?with=padi");
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(filterButton()).toHaveAccessibleName(
+      "Filter and sort, 1 filter applied",
+    );
+
+    const sheet = await openSheet(user);
+    const padi = within(
+      sheet.getByRole("group", { name: "With — any of" }),
+    ).getByRole("button", { name: /Padi$/ });
+    expect(padi).toHaveAttribute("aria-pressed", "true");
+    // Paid by is the other question, and is not on.
+    expect(
+      within(sheet.getByRole("group", { name: "Paid by — any of" })).getByRole(
+        "button",
+        { name: /Padi$/ },
+      ),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(padi);
+    await user.click(apply(sheet));
+    expect(screen.getAllByRole("listitem")).toHaveLength(rows.length);
+  });
+
   it("leaves the search field to speak for itself", async () => {
     renderList(ROWS, "?q=airbnb");
     expect(filterButton()).toHaveAccessibleName("Filter and sort");
@@ -1362,8 +1400,10 @@ describe("Transactions filter sheet", () => {
     renderList();
     const sheet = await openSheet(user);
 
-    // Category is the tallest section by far, and sits below the four short
+    // Category is the tallest section by far, and sits below the short
     // questions so it never pushes the common cases off the first screenful.
+    // With sits beside Paid by: the two are both about people, and are two
+    // different questions about them.
     expect(
       sheet.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
     ).toEqual([
@@ -1371,6 +1411,7 @@ describe("Transactions filter sheet", () => {
       "Type",
       "Amount",
       "Paid byany of",
+      "Withany of",
       "Categorytap to open a category",
       "Your position",
       "Only show",

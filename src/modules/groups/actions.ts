@@ -27,6 +27,7 @@ import {
   createGroupAsGuest,
   createInvitation,
   deleteGroup,
+  leaveGroup,
   removeParticipant,
   restoreParticipant,
   revokeInvitation,
@@ -316,6 +317,25 @@ export async function removeParticipantAction(
     revalidatePath(`/groups/${groupId}/members`);
     revalidatePath(`/groups/${groupId}`);
   }
+  return result;
+}
+
+/**
+ * The reader taking themselves out of the group.
+ *
+ * Takes no participant: the service removes the row the caller's own access
+ * was verified for, and nothing a request sends can point it anywhere else.
+ * Only the dashboard is revalidated. The screen this is pressed on is one the
+ * reader can no longer open, so re-rendering it would only draw a refusal;
+ * the caller navigates away instead.
+ */
+export async function leaveGroupAction(groupId: string): Promise<ActionResult> {
+  const result = await runAction("participants.leave", async () => {
+    const access = await requireGroupAccess(groupId, { requireActive: true });
+    await leaveGroup(access);
+  });
+
+  if (result.ok) revalidatePath("/dashboard");
   return result;
 }
 

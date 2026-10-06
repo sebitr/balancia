@@ -187,13 +187,60 @@ describe("GroupSettingsForm", () => {
   it("says what the currency mode is, and offers nothing to change it", () => {
     renderForm();
 
-    const title = screen.getByText("Currency mode: Multi currency");
+    // The create sheet's own words for the choice, not a setting's name.
+    const mode = screen.getByText("A balance per currency");
+    expect(mode.nextElementSibling).toHaveTextContent(
+      "This cannot be changed once the group exists, because every amount already entered depends on it.",
+    );
+    expect(screen.queryByText(/Currency mode/)).toBeNull();
+    expect(screen.queryByText("Fixed")).toBeNull();
+  });
 
-    expect(title.nextElementSibling).toHaveTextContent("Fixed");
+  it("names the currency a shared balance is kept in", () => {
+    renderWithIntl(
+      <GroupSettingsForm
+        groupId="g1"
+        name="Lisbon trip"
+        icon={null}
+        color={null}
+        timezone="Europe/Lisbon"
+        currencyMode="converted"
+        baseCurrency="EUR"
+      />,
+    );
+
+    expect(screen.getByText("One shared balance, in EUR")).toBeInTheDocument();
+  });
+
+  it("says in French what it says in English", () => {
+    renderWithIntl(
+      <GroupSettingsForm
+        groupId="g1"
+        name="Voyage à Lisbonne"
+        icon={null}
+        color={null}
+        timezone="Europe/Lisbon"
+        currencyMode="converted"
+        baseCurrency="EUR"
+      />,
+      { locale: "fr" },
+    );
+
+    expect(screen.getByText("Un solde commun, en EUR")).toBeInTheDocument();
     expect(
-      screen.getByText("Each currency keeps its own balance.", {
-        exact: false,
-      }),
+      screen.getByText(/Détermine ce qui compte comme aujourd’hui/),
+    ).toBeInTheDocument();
+  });
+
+  it("says what the timezone decides, today included", () => {
+    renderForm();
+
+    // Since entries have been dated in the group's zone, it decides more than
+    // when a recurring expense is due — and the help used to say only that.
+    expect(
+      screen.getByText(
+        "Decides what counts as today for new entries, when recurring expenses are added, and the times shown in Activity.",
+      ),
     ).toBeInTheDocument();
   });
 });

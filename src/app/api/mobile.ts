@@ -305,10 +305,11 @@ const IN_GROUP_STATUS: Partial<Record<AuthorizationCode, 403 | 409 | 422>> = {
   participantNotInGroup: 422,
   importParticipantUnknown: 422,
   // The group's own state forbids it, whoever asks and however often: the
-  // owner cannot be taken out of their own group, a person who signs in has
-  // no use for a guest link, and an archived group takes no changes until it
-  // is restored.
+  // owner cannot be taken out of their own group, nor leave it while it is
+  // theirs, a person who signs in has no use for a guest link, and an
+  // archived group takes no changes until it is restored.
   ownerNotRemovable: 409,
+  ownerCannotLeave: 409,
   participantHasAccount: 409,
   groupArchived: 409,
   // Somebody may do this, and it is not the caller: an owner-only action asked
@@ -493,6 +494,7 @@ export function serializeActivity(entry: ActivityEntry) {
     metadata: entry.metadata,
     actorLabel: entry.actorLabel,
     actorType: entry.actorType,
+    actorParticipantId: entry.actorParticipantId,
     createdAt: entry.createdAt.toISOString(),
   };
 }

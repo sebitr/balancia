@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { FormatPreferencesProvider } from "@/i18n/format-context";
 import {
   MemberStatistics,
   type CurrencyStatsView,
@@ -31,7 +32,6 @@ function currency(
     sharePercent: 20,
     rank: 2,
     evenPercent: 20,
-    medianPercent: 20,
     members: [
       { participantId: "ines", name: "Inès", percent: 24.5, isSubject: false },
       { participantId: "nora", name: "Nora", percent: 20, isSubject: true },
@@ -270,12 +270,154 @@ describe("the statistics island", () => {
 
     expect(
       screen.getByRole("img", {
-        name: /Paid against share over 3 periods, 1.69 times/,
+        name: /Paid against share over 3 periods: 1.7 times/,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("img", { name: /20.0% of what the group spent/ }),
+      screen.getByRole("img", { name: "20.0% of what the group spent" }),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * The three headline figures used to stand side by side as tiles, a third
+   * of a phone each, and two of them reached the reader as "CHF 3,066.…".
+   * They are rows now, and nothing that holds an amount on this screen may
+   * truncate it.
+   */
+  it("never puts an amount in a box that would cut it short", () => {
+    const { container } = renderWithIntl(
+      <MemberStatistics
+        name="Marta"
+        viewingSelf={false}
+        stats={stats({
+          ranges: [
+            { key: "3m", granularity: "week", months: 3, currencies: [] },
+            {
+              key: "1y",
+              granularity: "month",
+              months: 12,
+              currencies: [
+                currency({
+                  currency: "CHF",
+                  paid: "1234567",
+                  share: "306610",
+                  groupSpent: "9876543",
+                }),
+              ],
+            },
+            { key: "all", granularity: "month", months: 18, currencies: [] },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("CHF 12,345.67")).toBeVisible();
+    expect(screen.getByText("CHF 3,066.10")).toBeVisible();
+    // Label and figure on one row, the label first.
+    const paid = screen.getByText("Paid").closest("div");
+    expect(paid).toHaveTextContent("PaidCHF 12,345.67");
+
+    const amounts = [...container.querySelectorAll("span.tabular-nums")];
+    expect(amounts.length).toBeGreaterThan(3);
+    for (const amount of amounts) {
+      expect(amount.closest(".truncate"), amount.textContent ?? "").toBeNull();
+    }
+  });
+
+  describe("in plain words", () => {
+    it("says how many times their share somebody paid, to one decimal", () => {
+      const { unmount } = renderWithIntl(
+        <MemberStatistics name="Marta" viewingSelf={false} stats={stats()} />,
+      );
+      expect(
+        screen.getByText("Marta paid 1.7 times their share in this period."),
+      ).toBeInTheDocument();
+      expect(screen.getByText("1.7×")).toBeInTheDocument();
+      expect(screen.queryByText(/window/)).not.toBeInTheDocument();
+      unmount();
+
+      renderWithIntl(
+        <MemberStatistics name="Nora" viewingSelf stats={stats()} />,
+      );
+      expect(
+        screen.getByText("You paid 1.7 times your share in this period."),
+      ).toBeInTheDocument();
+      // The flourish about carrying the group was false whenever the ratio
+      // was under one, and is gone either way.
+      expect(
+        screen.queryByText(/carried by your card/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("names a place in the group instead of a rank and a median", () => {
+      const { unmount } = renderWithIntl(
+        <MemberStatistics name="Nora" viewingSelf stats={stats()} />,
+      );
+      expect(
+        screen.getByText(
+          "2nd largest share of 3 people · an even split is 20.0% each",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/median/)).not.toBeInTheDocument();
+      unmount();
+
+      const ranked = (rank: number) =>
+        stats({
+          ranges: [
+            { key: "3m", granularity: "week", months: 3, currencies: [] },
+            {
+              key: "1y",
+              granularity: "month",
+              months: 12,
+              currencies: [currency({ rank })],
+            },
+            { key: "all", granularity: "month", months: 18, currencies: [] },
+          ],
+        });
+
+      const first = renderWithIntl(
+        <MemberStatistics name="Nora" viewingSelf stats={ranked(1)} />,
+      );
+      expect(
+        screen.getByText(/^Largest share of 3 people/),
+      ).toBeInTheDocument();
+      first.unmount();
+
+      renderWithIntl(
+        <MemberStatistics name="Nora" viewingSelf stats={ranked(3)} />,
+      );
+      expect(
+        screen.getByText(/^Smallest share of 3 people/),
+      ).toBeInTheDocument();
+    });
+
+    it("writes the same in French, in the reader's own notation", () => {
+      renderWithIntl(
+        <FormatPreferencesProvider
+          value={{
+            dateFormat: "auto",
+            numberFormat: "auto",
+            formatLocale: "fr",
+            timeZone: "UTC",
+          }}
+        >
+          <MemberStatistics name="Marta" viewingSelf={false} stats={stats()} />
+        </FormatPreferencesProvider>,
+        { locale: "fr" },
+      );
+      // A decimal comma: the bare `{index}` used to print "1.69" here.
+      expect(
+        screen.getByText("Marta a payé 1,7 fois sa part sur cette période."),
+      ).toBeInTheDocument();
+      expect(screen.getByText("1,7×")).toBeInTheDocument();
+      // The matcher reads the page with its spaces collapsed, so the
+      // non-breaking space before the percent sign is a plain one here.
+      expect(
+        screen.getByText(
+          "2e plus grosse part sur 3 personnes · à parts égales, ce serait 20,0 % par personne",
+        ),
+      ).toBeInTheDocument();
+    });
   });
 
   it("folds a long tail of categories into one row", () => {

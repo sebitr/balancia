@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toastUndoable } from "@/components/ui/sonner";
 import { PUSH } from "@/components/motion/transitions";
+import { rememberOrigin } from "@/components/settings/settings-origin";
 import { cn } from "@/lib/utils";
 import {
   markReadAction,
@@ -288,9 +289,12 @@ export function NotificationList({
               <CheckCheck aria-hidden="true" className="size-[18px]" />
             </button>
           )}
+          {/* A way into settings, like the avatar, so closing settings
+              afterwards comes back to this list. */}
           <Link
             href="/settings/notifications"
             transitionTypes={PUSH}
+            onClick={rememberOrigin}
             aria-label={t("settingsLink")}
             className={cn(ICON_BUTTON, "text-muted-foreground")}
           >

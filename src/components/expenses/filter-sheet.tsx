@@ -120,7 +120,9 @@ export function FilterSheet({
     onDraftChange({ ...draft, ...patch });
 
   /** A multi-select section: the value goes in if it is out, and out if it is in. */
-  const toggle = <K extends "kinds" | "payers" | "positions" | "properties">(
+  const toggle = <
+    K extends "kinds" | "payers" | "people" | "positions" | "properties",
+  >(
     field: K,
     value: ListFilter[K][number],
   ) => {
@@ -273,6 +275,36 @@ export function FilterSheet({
                       key={member.id}
                       selected={on}
                       onClick={() => toggle("payers", member.id)}
+                      leading={
+                        <MemberAvatar
+                          name={member.displayName}
+                          selected={on}
+                          className="-ml-1.5 size-5"
+                        />
+                      }
+                    >
+                      {member.displayName}
+                    </FilterChip>
+                  );
+                })}
+              </Chips>
+            </Section>
+          )}
+
+          {/* Anybody on the entry, not only whoever paid: the question a
+              person's page asks when it opens this list on "Entries with
+              Marta", and the section that shows that filter on and can take
+              it off again. */}
+          {members.length > 1 && (
+            <Section label={tf("with")} hint={tf("anyOf")}>
+              <Chips>
+                {members.map((member) => {
+                  const on = draft.people.includes(member.id);
+                  return (
+                    <FilterChip
+                      key={member.id}
+                      selected={on}
+                      onClick={() => toggle("people", member.id)}
                       leading={
                         <MemberAvatar
                           name={member.displayName}

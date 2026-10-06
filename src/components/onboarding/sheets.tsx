@@ -131,10 +131,8 @@ function SheetShell({
  * Multi-select, and the first one picked is the default the dashboard totals
  * in — which is why the order is kept rather than sorted. Both halves are
  * already columns on the account: the set is `favorite_currencies`, the first
- * is `preferred_currency`.
- *
- * A guest has no account to write either to, so their choice lives as long as
- * the visit does — the same bargain everything else a guest does makes.
+ * is `preferred_currency`. Only an account reaches the checklist, so there is
+ * always somewhere to write them.
  */
 export function CurrenciesSheet({
   open,
@@ -142,7 +140,6 @@ export function CurrenciesSheet({
   chosen,
   onChange,
   suggested,
-  persist,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -150,7 +147,6 @@ export function CurrenciesSheet({
   onChange: (codes: readonly string[]) => void;
   /** The group's own currencies, and whatever the phone's locale suggests. */
   suggested: readonly string[];
-  persist: boolean;
 }) {
   const t = useTranslations("onboarding.sheets.currencies");
   const locale = useLocale();
@@ -172,7 +168,6 @@ export function CurrenciesSheet({
       ? chosen.filter((candidate) => candidate !== code)
       : [...chosen, code];
     onChange(next);
-    if (!persist) return;
     // Fire and forget, exactly as the star in the picker does: the tick has
     // already landed on screen, and the worst case is a favourite that does
     // not follow the reader to their next device.
@@ -316,7 +311,6 @@ export function PayoutsSheet({
   onOpenChange,
   entries,
   onChange,
-  persist,
   title,
   description,
   doneLabel,
@@ -325,8 +319,6 @@ export function PayoutsSheet({
   onOpenChange: (open: boolean) => void;
   entries: readonly PayoutEntry[];
   onChange: (entries: readonly PayoutEntry[]) => void;
-  /** False for a guest: there is no account to store a bank account on. */
-  persist: boolean;
   title?: string;
   description?: string;
   doneLabel?: string;
@@ -350,7 +342,7 @@ export function PayoutsSheet({
         <PayoutMethodsForm
           initial={entries}
           onChange={onChange}
-          persist={persist}
+          persist
           confirmations="silent"
         />
       </div>
@@ -373,14 +365,12 @@ export function SettleUpSheet({
   request,
   entries,
   onChange,
-  persist,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   request: SettleRequestView;
   entries: readonly PayoutEntry[];
   onChange: (entries: readonly PayoutEntry[]) => void;
-  persist: boolean;
 }) {
   const t = useTranslations("onboarding.sheets.settleUp");
 
@@ -412,7 +402,7 @@ export function SettleUpSheet({
           <PayoutMethodsForm
             initial={entries}
             onChange={onChange}
-            persist={persist}
+            persist
             confirmations="silent"
           />
         </div>
