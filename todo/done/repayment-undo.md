@@ -1,3 +1,3 @@
 # A repayment recorded by mistake can be undone from its toast
 
-Branch: `fix/repayment-undo`
+Merged: 2026-10-05 in #432

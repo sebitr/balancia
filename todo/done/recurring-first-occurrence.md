@@ -1,6 +1,6 @@
 # A recurring expense that starts today is there the moment it is saved
 
-Branch: `fix/recurring-first-occurrence`
+Merged: 2026-10-05 in #426
 
 Saving a series used to leave its first entry to the worker's hourly tick, so
 "Recurring entry saved" came with no expense and no change to any balance —
