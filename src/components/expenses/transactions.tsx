@@ -557,7 +557,9 @@ export function Transactions({
   const countedApplied = useCount(
     groupId,
     filterParams(applied).toString(),
-    showTable && filtering && !paging.complete,
+    // Known to be a table, not merely possibly one while hydrating: a phone
+    // must not send a count it has nowhere to show.
+    desk === true && filtering && !paging.complete,
   );
   const listTotal = paging.complete
     ? shown.length

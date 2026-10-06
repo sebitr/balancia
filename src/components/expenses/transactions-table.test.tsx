@@ -475,6 +475,94 @@ describe("Transactions at width", () => {
   });
 });
 
+describe("Transactions at width, beyond the first page", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks the server how many a filter leaves when the rows in hand cannot say", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      const params = new URL(url, "http://test").searchParams;
+      return {
+        ok: true,
+        json: async () =>
+          params.has("count")
+            ? { count: 97 }
+            : { rows: [ROWS[0]], cursor: "more" },
+      } as Response;
+    });
+    window.history.replaceState(null, "", "/groups/g1/expenses?q=dinner");
+    renderWithIntl(
+      <Transactions
+        groupId="g1"
+        eyebrow={<h1>Transactions</h1>}
+        bands={null}
+        kinds={kindsOf(ROWS)}
+        rows={ROWS}
+        cursor="next"
+        members={MEMBERS}
+        used={["home", "restaurants", "transport"]}
+        counts={{ home: 1, restaurants: 1, transport: 1 }}
+        byAmount
+        firstDate="2025-07-02"
+        today="2026-08-14"
+        self="seb"
+        total={420}
+      />,
+      { area: "group" },
+    );
+
+    expect(
+      await screen.findByText(
+        "Showing 1 of 97 transactions · sorted by date, newest first",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("asks nothing of the kind on a phone, which has no footer to say it in", async () => {
+    atDesk(false);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ rows: [ROWS[0]], cursor: null }),
+    } as Response);
+    window.history.replaceState(null, "", "/groups/g1/expenses?q=dinner");
+    renderWithIntl(
+      <Transactions
+        groupId="g1"
+        eyebrow={<h1>Transactions</h1>}
+        bands={null}
+        kinds={kindsOf(ROWS)}
+        rows={ROWS}
+        cursor="next"
+        members={MEMBERS}
+        used={["home", "restaurants", "transport"]}
+        counts={{ home: 1, restaurants: 1, transport: 1 }}
+        byAmount
+        firstDate="2025-07-02"
+        today="2026-08-14"
+        self="seb"
+        total={420}
+      />,
+      { area: "group" },
+    );
+
+    expect(
+      await screen.findByText("Dinner at Trattoria Il Ponte"),
+    ).toBeInTheDocument();
+    const counts = fetchMock.mock.calls.filter(([url]) =>
+      new URL(url as string, "http://test").searchParams.has("count"),
+    );
+    expect(counts).toEqual([]);
+  });
+});
+
 describe("Transactions below lg", () => {
   it("mounts the phone's list and no table", () => {
     atDesk(false);
