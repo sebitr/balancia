@@ -190,7 +190,7 @@ describe("PeopleCard", () => {
     expect(screen.getByText("seb@trosset.net")).toBeVisible();
     expect(screen.getByText("No access")).toBeVisible();
     expect(screen.getAllByText("Guest")).toHaveLength(2);
-    expect(screen.getByText(/No account · not invited yet/)).toBeVisible();
+    expect(screen.getByText(/No account · link not sent yet/)).toBeVisible();
     expect(screen.getByText(/No account · link not used yet/)).toBeVisible();
     expect(screen.getByText(/No account · joined/)).toBeVisible();
   });
@@ -222,10 +222,11 @@ describe("PeopleCard", () => {
     const user = userEvent.setup();
     render([OWNER, person()]);
 
-    await user.click(screen.getByRole("button", { name: /Cyril/ }));
+    await user.click(screen.getByRole("button", { name: /^Cyril/ }));
     await user.click(
-      screen.getByRole("button", { name: "Create invite link" }),
+      screen.getByRole("button", { name: "Personal link for Cyril" }),
     );
+    await user.click(screen.getByRole("button", { name: "Create the link" }));
 
     expect(screen.getByText("Copy this link now")).toBeVisible();
     expect(
@@ -240,27 +241,163 @@ describe("PeopleCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  /**
+   * The group link is the one to send nearly every time, so the personal one
+   * is offered as a quiet button under one sentence, and how long it lasts is
+   * only asked once somebody has pressed it.
+   */
+  it("offers a personal link quietly, and asks how long it lasts only once pressed", async () => {
+    const user = userEvent.setup();
+    render([person()]);
+
+    await user.click(screen.getByRole("button", { name: /^Cyril/ }));
+    expect(
+      screen.getByText(
+        "A personal link lets Cyril take part without an account. Whoever opens it acts as Cyril.",
+      ),
+    ).toBeVisible();
+
+    const offer = screen.getByRole("button", {
+      name: "Personal link for Cyril",
+    });
+    expect(offer).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("group", { name: "Expires" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Create the link" }),
+    ).toBeNull();
+
+    await user.click(offer);
+    expect(offer).toHaveAttribute("aria-expanded", "true");
+    const expiry = screen.getByRole("group", { name: "Expires" });
+    // The three lengths as chips, the one already chosen pressed.
+    expect(
+      within(expiry)
+        .getAllByRole("button")
+        .map((chip) => chip.textContent),
+    ).toEqual(["Never", "In 7 days", "In 24 hours"]);
+    expect(
+      within(expiry).getByRole("button", { name: "Never" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    // Pressing it asks; it does not make a link yet.
+    expect(createInvitationAction).not.toHaveBeenCalled();
+
+    // And it folds away again.
+    await user.click(offer);
+    expect(screen.queryByRole("group", { name: "Expires" })).toBeNull();
+  });
+
   it("sends the chosen expiry with the link request", async () => {
     const user = userEvent.setup();
     render([person()]);
 
-    await user.click(screen.getByRole("button", { name: /Cyril/ }));
-    expect(
-      screen.getByText(
-        "Cyril has no account. With a one-time link, they can take part without signing up.",
-      ),
-    ).toBeVisible();
-    await user.selectOptions(
-      screen.getByLabelText("Expires"),
-      screen.getByRole("option", { name: "In 24 hours" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Cyril/ }));
     await user.click(
-      screen.getByRole("button", { name: "Create invite link" }),
+      screen.getByRole("button", { name: "Personal link for Cyril" }),
     );
+    const expiry = screen.getByRole("group", { name: "Expires" });
+    await user.click(
+      within(expiry).getByRole("button", { name: "In 24 hours" }),
+    );
+    expect(
+      within(expiry).getByRole("button", { name: "In 24 hours" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(expiry).getByRole("button", { name: "Never" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    await user.click(screen.getByRole("button", { name: "Create the link" }));
 
+    expect(createInvitationAction.mock.calls[0][1].get("participantId")).toBe(
+      "p1",
+    );
     expect(createInvitationAction.mock.calls[0][1].get("expiresInDays")).toBe(
       "1",
     );
+  });
+
+  it("names a live personal link for whom it is, and says so when it is revoked", async () => {
+    const user = userEvent.setup();
+    render([
+      person({
+        id: "herve",
+        name: "Hervé",
+        access: "link",
+        link: {
+          createdAt: "2026-08-12T09:00:00.000Z",
+          expiresAt: null,
+          lastUsedAt: null,
+        },
+      }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: /^Hervé/ }));
+    expect(
+      screen.getByText("The personal link for Hervé is live"),
+    ).toBeVisible();
+    // Already made, so nothing offers to make one.
+    expect(
+      screen.queryByRole("button", { name: "Personal link for Hervé" }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Revoke" }));
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith(
+        "The personal link for Hervé was revoked",
+      ),
+    );
+  });
+
+  it("calls the two links by different names in French", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <PeopleCard
+        groupId="g1"
+        groupName="Coloc"
+        archived={false}
+        people={[
+          person({ id: "alex", name: "Alex" }),
+          person({
+            id: "herve",
+            name: "Hervé",
+            access: "link",
+            link: {
+              createdAt: "2026-08-12T09:00:00.000Z",
+              expiresAt: null,
+              lastUsedAt: null,
+            },
+          }),
+        ]}
+        viewerId="seb"
+        canManage
+        canInvite
+        canRemove
+        canLeave={false}
+      />,
+      { locale: "fr" },
+    );
+
+    // "invité" is the guest's badge alone; the row with no link says what has
+    // not happened yet without the word.
+    expect(
+      screen.getByText("Pas de compte · lien pas encore envoyé"),
+    ).toBeVisible();
+    expect(screen.queryByText(/pas encore invité/)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /^Alex/ }));
+    // "pour Alex", never "de Alex", which French would have to elide.
+    expect(
+      screen.getByRole("button", { name: "Lien personnel pour Alex" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Un lien personnel permet à Alex de participer sans compte. Toute personne qui l’ouvre devient Alex dans ce groupe.",
+      ),
+    ).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", { name: "Lien personnel pour Alex" }),
+    );
+    expect(screen.getByRole("group", { name: "Expire" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Créer le lien" })).toBeVisible();
   });
 
   it("blocks removal while someone still owes, and says how much", async () => {
@@ -454,10 +591,10 @@ describe("PeopleCard", () => {
     await user.click(screen.getByRole("button", { name: /Cyril/ }));
     expect(screen.getByLabelText("Name")).toBeVisible();
     expect(screen.getByLabelText(/Email/)).toBeVisible();
-    // ...but the invite link and the door are the owner's.
+    // ...but their personal link and the door are the owner's.
     expect(screen.queryByText("Access")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Create invite link" }),
+      screen.queryByRole("button", { name: "Personal link for Cyril" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Remove from group/ }),
