@@ -2158,7 +2158,7 @@
     "balanceCurrencyLabel": "Ce solde est en",
     "balanceCurrency": "Devise du solde",
     "modeFixedShort": "Figé dès que le groupe existe.",
-    "timezoneFootnote": "Les journées se terminent à l’heure de {city}, d’après cet appareil. À changer dans les paramètres du groupe.",
+    "timezoneFootnote": "L’heure de {city}, d’après cet appareil, détermine ce qui compte comme aujourd’hui pour les nouvelles transactions, quand les dépenses récurrentes sont ajoutées et les heures affichées dans Activité. À changer dans les paramètres du groupe.",
     "iconTitle": "Icône du groupe",
     "chooseIcon": "Choisir une icône",
     "iconColorLabel": "Couleur",

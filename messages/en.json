@@ -2158,7 +2158,7 @@
     "balanceCurrencyLabel": "That balance is in",
     "balanceCurrency": "Balance currency",
     "modeFixedShort": "Fixed once the group exists.",
-    "timezoneFootnote": "Days end at {city} time, from this device. Change it in the group’s settings.",
+    "timezoneFootnote": "{city} time, from this device, decides what counts as today for new entries, when recurring expenses are added and the times shown in Activity. Change it in the group’s settings.",
     "iconTitle": "Group icon",
     "chooseIcon": "Choose an icon",
     "iconColorLabel": "Colour",
