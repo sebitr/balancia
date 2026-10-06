@@ -17,7 +17,8 @@
     "undo": "Undo",
     "dismiss": "Dismiss",
     "close": "Close",
-    "toastRegion": "Status messages"
+    "toastRegion": "Status messages",
+    "showPassword": "Show password"
   },
   "nav": {
     "language": "Language",
@@ -1863,7 +1864,7 @@
       "personalTitle": "{inviter} added you to {group}",
       "personalTitleNoInviter": "You have been added to {group}",
       "personalSub": "See where you stand, add what you paid for, and settle up when the trip ends.",
-      "coldTitle": "Keep your accounts within reach",
+      "coldTitle": "Keep track of who owes what",
       "coldSub": "Create an account to get back to your groups, keep track of what you spend, and see at a glance what is left to settle.",
       "createAccount": "Create an account",
       "haveAccount": "Sign in",
@@ -1939,7 +1940,20 @@
       "codeWrong": "That code is wrong or has expired. Ask for a new one.",
       "noCredentialRoute": "This browser cannot use a passkey, and this instance cannot send email. Use a password to sign up instead.",
       "usePassword": "Sign in with a password",
-      "usePasswordSignUp": "Sign up with a password"
+      "usePasswordSignUp": "Sign up with a password",
+      "passwordTitle": "Your email, and a password",
+      "passwordSub": "Type it once. The eye shows you what you typed.",
+      "nameLabel": "Your name",
+      "passwordLabel": "Password",
+      "passwordHint": "At least 10 characters, and not your name, your address or one everybody uses.",
+      "passwordMin": "Use at least 10 characters",
+      "passwordMax": "That password is too long",
+      "passwordCommon": "That password is one of the most commonly used ones. Choose another",
+      "passwordPersonal": "Leave your name and your email address out of it",
+      "createAccount": "Create my account",
+      "createFailed": "That account could not be created.",
+      "checkEmail": "Open the link we sent to {email} to finish creating your account.",
+      "usePasskeyInstead": "Use a passkey instead"
     },
     "profile": {
       "title": "Last thing — your name",
@@ -2327,10 +2341,12 @@
     "runSummary": "{imported} imported, {skipped} skipped",
     "runFailed": ", {failed} failed",
     "status": {
-      "completed": "completed",
-      "pending": "pending",
-      "failed": "failed",
-      "staged": "staged"
+      "uploaded": "Uploaded",
+      "parsed": "Read",
+      "ready": "Ready to review",
+      "importing": "Importing",
+      "completed": "Done",
+      "failed": "Failed"
     }
   },
   "membersPage": {

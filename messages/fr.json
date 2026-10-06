@@ -17,7 +17,8 @@
     "undo": "Annuler",
     "dismiss": "Fermer",
     "close": "Fermer",
-    "toastRegion": "Messages d’état"
+    "toastRegion": "Messages d’état",
+    "showPassword": "Afficher le mot de passe"
   },
   "nav": {
     "language": "Langue",
@@ -1863,7 +1864,7 @@
       "personalTitle": "{inviter} t’ajoute à {group}",
       "personalTitleNoInviter": "Te voilà dans {group}",
       "personalSub": "Vois où tu en es, ajoute ce que tu as payé, et solde les comptes à la fin.",
-      "coldTitle": "Garde tes comptes à portée de main",
+      "coldTitle": "Garde le fil de qui doit quoi",
       "coldSub": "Crée un compte pour retrouver tes groupes, suivre tes dépenses et voir facilement ce qu’il reste à régler.",
       "createAccount": "Créer un compte",
       "haveAccount": "Se connecter",
@@ -1929,7 +1930,20 @@
       "codeWrong": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
       "noCredentialRoute": "Ce navigateur ne gère pas les clés d’accès, et cette instance ne peut pas envoyer d’e-mails. Utilise un mot de passe pour créer ton compte.",
       "usePassword": "Se connecter avec un mot de passe",
-      "usePasswordSignUp": "Créer un compte avec un mot de passe"
+      "usePasswordSignUp": "Créer un compte avec un mot de passe",
+      "passwordTitle": "Ton e-mail, et un mot de passe",
+      "passwordSub": "Tape-le une fois. L’œil te montre ce que tu as tapé.",
+      "nameLabel": "Ton nom",
+      "passwordLabel": "Mot de passe",
+      "passwordHint": "Au moins 10 caractères, et ni ton nom, ni ton adresse, ni un mot de passe que tout le monde utilise.",
+      "passwordMin": "Utilise au moins 10 caractères",
+      "passwordMax": "Ce mot de passe est trop long",
+      "passwordCommon": "Ce mot de passe est l’un des plus utilisés. Choisis-en un autre",
+      "passwordPersonal": "Laisse ton nom et ton adresse e-mail en dehors",
+      "createAccount": "Créer mon compte",
+      "createFailed": "Ce compte n’a pas pu être créé.",
+      "checkEmail": "Ouvre le lien envoyé à {email} pour finir de créer ton compte.",
+      "usePasskeyInstead": "Utiliser plutôt une clé d’accès"
     },
     "profile": {
       "title": "Dernière chose — ton nom",
@@ -2327,10 +2341,12 @@
     "runSummary": "{imported} importées, {skipped} ignorées",
     "runFailed": ", {failed} en échec",
     "status": {
-      "completed": "terminé",
-      "pending": "en attente",
-      "failed": "en échec",
-      "staged": "préparé"
+      "uploaded": "Envoyé",
+      "parsed": "Lu",
+      "ready": "Prêt à relire",
+      "importing": "Import en cours",
+      "completed": "Terminé",
+      "failed": "Échoué"
     }
   },
   "membersPage": {
