@@ -19,28 +19,30 @@ import {
 } from "@/components/motion/transitions";
 import { useOfflineEntry } from "@/components/offline/offline-entry";
 import { useOnline } from "@/components/offline/use-online";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
  * A group's navigation, drawn twice: as a bar along the bottom of a phone
- * (`GroupNav`) and as a rail down the left of a desktop window (`GroupRail`).
+ * (`GroupNav`) and as tabs in the group's header on a desktop window
+ * (`GroupTabs`).
  *
  * The two are one navigation, and only ever one of them is on screen. The bar
- * is `lg:hidden` and the rail is `hidden lg:flex`, and `display: none` takes
+ * is `lg:hidden` and the tabs are `hidden lg:block`, and `display: none` takes
  * an element out of the accessibility tree as well as off the screen — so at
- * any width a screen reader finds exactly one landmark called "Group
- * sections", never a second copy of the same five links. Everything the two
- * share — the destinations, which one is lit, the direction a tap moves the
- * screen, Add's way round a dropped network — is worked out once, below, and
- * only the drawing differs.
+ * any width a screen reader finds at most one landmark called "Group
+ * sections", never a second copy of the same links. Everything the two share
+ * — the destinations, which one is lit, the direction a tap moves the screen,
+ * Add's way round a dropped network — is worked out once, below, and only the
+ * drawing differs.
  *
  * On the bar, "Add" is centred and breaks the bar's own line — a raised disc
  * punched through the top border by a ring in the page colour. Recording an
  * expense is the thing people open a group to do, and it is the only action
  * here that creates something, so it is the only one drawn as a button rather
- * than as a destination. The rail says the same thing in its own terms: Add is
- * the filled button at its head, above the four places.
+ * than as a destination. The tabs leave it out: from `lg` up Add is the filled
+ * button at the head of the sidebar, on every screen, and it adds to the group
+ * being read — see `sidebar-group-add.tsx`, which shares
+ * `useOfflineAddFallback` below.
  */
 interface NavItem {
   readonly href: string;
@@ -157,28 +159,43 @@ interface Tab {
 }
 
 /**
+ * What a press on Add does when the network has gone.
+ *
+ * Adding an entry is a route, and a route is a request. With no network
+ * there is nothing to answer it, and the reader would get the offline shell
+ * where they expected a form — so the press is intercepted and the same form
+ * is opened from the copy on the device instead.
+ *
+ * Only Add. The other places are for reading the group, and a place that
+ * cannot be loaded should say so rather than pretend. Shared with the
+ * sidebar's Add, which is the same link at the desk.
+ */
+export function useOfflineAddFallback(): (
+  event: MouseEvent<HTMLAnchorElement>,
+) => void {
+  const online = useOnline();
+  const offlineEntry = useOfflineEntry();
+  return (event) => {
+    if (!online && offlineEntry) {
+      event.preventDefault();
+      offlineEntry.open();
+    }
+  };
+}
+
+/**
  * The five destinations, resolved against where the reader is now.
  *
- * Shared by the bar and the rail, so the two cannot disagree about which tab
- * is lit or which way a tap moves the screen — the rail lists its places in
- * the bar's own order, top to bottom, so "forward" still means further along.
+ * Shared by the bar and the tabs, so the two cannot disagree about which tab
+ * is lit or which way a tap moves the screen — the tabs list their places in
+ * the bar's own order, left to right, so "forward" still means further along.
  */
 function useTabs(groupId: string): { tabs: Tab[]; name: string } {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const base = `/groups/${groupId}`;
   const activeIndex = activeIndexOf(pathname, base);
-  /*
-   * Adding an entry is a route, and a route is a request. With no network
-   * there is nothing to answer it, and the reader would get the offline shell
-   * where they expected a form — so the tap is intercepted and the same form
-   * is opened from the copy on the device instead.
-   *
-   * Only the Add tab. The other four are places to read the group, and a
-   * place that cannot be loaded should say so rather than pretend.
-   */
-  const online = useOnline();
-  const offlineEntry = useOfflineEntry();
+  const offlineAdd = useOfflineAddFallback();
 
   const tabs = ITEMS.map((item, index) => ({
     item,
@@ -189,10 +206,7 @@ function useTabs(groupId: string): { tabs: Tab[]; name: string } {
     isActive: claimOf(item, pathname, base) !== null,
     transitionTypes: directionFor(item, index, activeIndex),
     onClick: (event: MouseEvent<HTMLAnchorElement>) => {
-      if (item.primary && !online && offlineEntry) {
-        event.preventDefault();
-        offlineEntry.open();
-      }
+      if (item.primary) offlineAdd(event);
     },
   }));
 
@@ -201,7 +215,7 @@ function useTabs(groupId: string): { tabs: Tab[]; name: string } {
   return { tabs, name: t("groupSections") };
 }
 
-/** The bar along the bottom of a phone. Gone from `lg` up — see `GroupRail`. */
+/** The bar along the bottom of a phone. Gone from `lg` up — see `GroupTabs`. */
 export function GroupNav({ groupId }: { groupId: string }) {
   const { tabs, name } = useTabs(groupId);
 
@@ -259,54 +273,34 @@ export function GroupNav({ groupId }: { groupId: string }) {
 }
 
 /**
- * The rail down the left of a desktop window, from `lg` up.
+ * The group's places as tabs, in the group's header on a desktop window.
  *
- * Rendered inside the shell's header, between the group switcher and the
- * account, because from `lg` up the header *is* the rail: it stands up the
- * left edge and these sit in the middle of it. That is also what puts them in
- * the right place for a keyboard — the switcher, then Add and the four places,
- * then the bell and the account, then the screen, which is the order they are
- * drawn in. Below `lg` the header lies back down along the top and this is
- * `display: none`, which the bar's twin needs it to be.
+ * Four, not five: Add is not a place, and from `lg` up it is the filled
+ * button at the head of the sidebar, which every screen has. The tabs are the
+ * bar's own links in the bar's own order, so a tab moves the screen exactly
+ * as the bar would — sideways, nudged the way the row runs — and the one that
+ * is lit is lit for the same reason.
  *
- * Denser than the bar, because a pointer is not a thumb: 40px rows rather than
- * 74px tabs. The current place keeps the bar's two cues — the label in the
- * primary ink and the accent disc behind its icon — so the same section is lit
- * the same way at either width.
+ * Drawn as a segmented row — the current place raised onto the card surface,
+ * the others muted on the track — and marked `aria-current="page"`, so where
+ * the reader is is said twice and never by colour alone. 34px tall at the
+ * desk, with the 44px hit area every target in the app keeps.
+ *
+ * Rendered by `GroupHeader`, which only draws on the four places themselves:
+ * a screen reached by a push — an expense, a person, Settle up — opens on its
+ * own way back instead, as it does on a phone.
  */
-export function GroupRail({ groupId }: { groupId: string }) {
+export function GroupTabs({ groupId }: { groupId: string }) {
   const { tabs, name } = useTabs(groupId);
-  const add = tabs.find((tab) => tab.item.primary);
   const places = tabs.filter((tab) => !tab.item.primary);
 
   return (
     <nav
-      data-slot="app-rail-nav"
+      data-slot="app-group-tabs"
       aria-label={name}
-      className="hidden flex-col gap-3.5 lg:mt-5 lg:flex"
+      className="hidden lg:block"
     >
-      {add && (
-        <Button
-          asChild
-          size="lg"
-          className="w-full rounded-xl font-semibold md:h-10"
-        >
-          <Link
-            href={add.href}
-            aria-current={add.isActive ? "page" : undefined}
-            transitionTypes={add.transitionTypes}
-            onClick={add.onClick}
-          >
-            <add.item.icon
-              aria-hidden="true"
-              className="size-4.5"
-              strokeWidth={2.2}
-            />
-            {add.label}
-          </Link>
-        </Button>
-      )}
-      <ul className="flex flex-col gap-0.5">
+      <ul className="flex w-fit items-center gap-0.5 rounded-xl bg-muted p-[3px]">
         {places.map(
           ({ item, href, label, isActive, transitionTypes, onClick }) => (
             <li key={item.labelKey}>
@@ -315,23 +309,13 @@ export function GroupRail({ groupId }: { groupId: string }) {
                 aria-current={isActive ? "page" : undefined}
                 transitionTypes={transitionTypes}
                 onClick={onClick}
-                // The height is `lg:` because the rail is: below `lg` none of
-                // this is drawn, and a phone's 44px floor never meets it.
                 className={cn(
-                  "flex items-center gap-2.5 rounded-xl px-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none lg:h-10",
+                  "tap-target flex h-[34px] items-center rounded-[9px] px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   isActive
-                    ? "text-primary-ink"
-                    : "text-muted-foreground hover:bg-wash-2 hover:text-foreground",
+                    ? "bg-card text-foreground shadow-card ring-1 ring-border"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                    isActive ? "bg-accent" : "bg-transparent",
-                  )}
-                >
-                  <item.icon aria-hidden="true" className="size-4.5" />
-                </span>
                 {label}
               </Link>
             </li>

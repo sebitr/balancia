@@ -39,24 +39,55 @@ const DIRECTIONS = {
   default: "none",
 };
 
+/**
+ * Which screen is showing, as `<Screen>` keys it: the pathname, except while a
+ * layer is open over a screen, when it is the screen underneath.
+ *
+ * Adjusted during render rather than from an effect: an effect runs after the
+ * commit, so the screen would remount for a frame before being told not to —
+ * which is the remount this exists to prevent. React re-runs the component
+ * immediately on a set during its own render, before anything is painted, so
+ * the key is right on the first commit.
+ *
+ * Exported for what sits above the screen and has to agree with it about
+ * where the reader is — the group header, which stays drawn under the entry
+ * drawer because the screen under the drawer is still one of the group's tabs.
+ */
+export function useScreenPath(): string {
+  const pathname = usePathname();
+  const [shown, setShown] = useState(() => ({
+    path: pathname,
+    key: screenPath(pathname, null),
+  }));
+  if (shown.path !== pathname) {
+    setShown({ path: pathname, key: screenPath(pathname, shown.key) });
+  }
+  return shown.key;
+}
+
 export function Screen({
   children,
   inset,
-  rail,
+  sidebar,
   className,
 }: {
   children: ReactNode;
   /** Clears the bottom bar, on the screens that have one. */
   inset?: boolean;
   /**
-   * The screen sits beside a group's rail from `lg` up, where the bottom bar
-   * has gone: the inset that cleared it goes too, the gutters open up, and a
-   * screen that holds a wide layout — the overview's two columns, marked
-   * `data-layout="wide"` — gets the room for it. Every other screen keeps the
-   * one readable column it has on a phone, centred in the space beside the
-   * rail rather than stretched across it.
+   * The screen sits beside the sidebar from `lg` up, where the bottom bar has
+   * gone: the inset that cleared it goes too, the gutters open up — 24px at
+   * `lg`, where the sidebar leaves 784px, and 40px from `xl` — and a screen
+   * that holds a wide layout, the overview's two columns marked
+   * `data-layout="wide"`, gets the room for it, up to `--app-content-max`.
+   * Every other screen keeps the one readable column it has on a phone,
+   * centred in the space beside the sidebar rather than stretched across it.
+   *
+   * Under a group's header — the tile, the name and the tabs, drawn above
+   * this column on the group's four places — the column starts closer, since
+   * the header has already given the screen its top margin.
    */
-  rail?: boolean;
+  sidebar?: boolean;
   /**
    * For a surface whose column is not the app's. The settings screens draw
    * their own header inside the snapshot and carry it to the top edge, so they
@@ -65,22 +96,8 @@ export function Screen({
    */
   className?: string;
 }) {
-  const pathname = usePathname();
-
   // The screen last shown, so a path that opens over one knows which.
-  //
-  // Adjusted during render rather than from an effect: an effect runs after
-  // the commit, so the screen would remount for a frame before being told not
-  // to — which is the remount this exists to prevent. React re-runs the
-  // component immediately on a set during its own render, before anything is
-  // painted, so the key is right on the first commit.
-  const [shown, setShown] = useState(() => ({
-    path: pathname,
-    key: screenPath(pathname, null),
-  }));
-  if (shown.path !== pathname) {
-    setShown({ path: pathname, key: screenPath(pathname, shown.key) });
-  }
+  const shownKey = useScreenPath();
 
   // The column carries its own padding rather than inheriting it from <main>,
   // so the snapshot taken of it covers the whole screen. Padding left outside
@@ -95,8 +112,8 @@ export function Screen({
         // iOS PWA home-indicator area. Pages without a bottom bar keep the
         // regular `py-6` inset above.
         inset && "pb-[calc(8rem+env(safe-area-inset-bottom))]",
-        rail &&
-          "lg:px-6 lg:pt-8 lg:pb-12 lg:has-data-[layout=wide]:max-w-5xl xl:px-8",
+        sidebar &&
+          "lg:px-6 lg:pt-8 lg:pb-12 lg:peer-data-[slot=group-header]:pt-6 lg:has-data-[layout=wide]:max-w-(--app-content-max) xl:px-10",
         className,
       )}
     >
@@ -110,7 +127,7 @@ export function Screen({
 
   return (
     <ViewTransition
-      key={shown.key}
+      key={shownKey}
       enter={DIRECTIONS}
       exit={DIRECTIONS}
       default="none"
