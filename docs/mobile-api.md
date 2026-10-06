@@ -377,6 +377,14 @@ from: a cursor fed back under another `sort` restarts the list from the top.
 ignoring `cursor`, `limit` and `sort`. It is what the web's filter sheet shows
 on its apply button, and it costs two `COUNT`s rather than a list.
 
+Besides what the phone's row draws, each row carries what the web's desktop
+table spreads into columns: `receipts`, how many files are attached (the
+`receipt` flag is `receipts > 0`, kept for the clients that read it);
+`payerNames`, in the order of `payers`, a removed person's included; `split`,
+`{ method, sharers }` for an expense and null for a repayment; and `method`, how
+a repayment was paid as recorded — a payment-method code or free text — and
+null when nobody said, or on an expense.
+
 ## Writes
 
 | Method | Path                                               | Body                                                                                                                                                                                                                                                                                                     |

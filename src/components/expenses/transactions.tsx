@@ -787,14 +787,16 @@ export function Transactions({
               today={today}
               nameOf={nameOf}
               // What the sheet holds that the row cannot show: the kinds, the
-              // category and the period are on the row already, and a badge
-              // counting them again would say the list is narrower than it is.
+              // category and the period are on the row already, and the order
+              // is on the table's header. A badge counting them again would
+              // say the list is narrower than it is.
               moreCount={filterDimensions({
                 ...applied,
                 kinds: [],
                 categories: [],
                 subcategories: [],
                 when: "any",
+                sort: "newest",
               })}
               onMore={openSheet}
               groupId={groupId}

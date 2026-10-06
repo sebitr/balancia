@@ -229,6 +229,19 @@ export async function loadTransactionPage(
   const keyed: Keyed[] = [
     ...expenses.map((expense): Keyed => {
       const money = moneyForGroup(expense, display);
+      /*
+       * Who paid, by name and then by id. `listExpenses` reads payers and
+       * shares in no particular order, so two reads of one expense could name
+       * its two payers either way round; the table prints them, and a row
+       * that swapped "Amélie and Jonas" for "Jonas and Amélie" between pages
+       * would be a row that changed for no reason. Names first, because that
+       * is the order a reader can see.
+       */
+      const payers = [...expense.payers].sort(
+        (a, b) =>
+          a.displayName.localeCompare(b.displayName) ||
+          compareIds(a.participantId, b.participantId),
+      );
       return {
         key: keyOf(
           expense.expenseDate,
@@ -254,7 +267,7 @@ export async function loadTransactionPage(
           // what says which way it went.
           revenue: !isSpending(expense.direction),
           recurring: expense.recurringExpenseId !== null,
-          payers: expense.payers.map((payer) => payer.participantId),
+          payers: payers.map((payer) => payer.participantId),
           // Everybody the entry moved, once each: who paid and who shares.
           people: [
             ...new Set(
@@ -266,14 +279,15 @@ export async function loadTransactionPage(
           foreign: isForeign(expense.currency),
           receipt: expense.attachmentCount > 0,
           receipts: expense.attachmentCount,
-          payerNames: expense.payers.map((payer) => payer.displayName),
+          payerNames: payers.map((payer) => payer.displayName),
           // Who carries a share, once each, and by which method — what the
           // desktop table's Split column says as "6 equally" or "4 of 6".
+          // Sorted for the reason the payers are: two reads, one answer.
           split: {
             method: expense.splitMethod,
             sharers: [
               ...new Set(expense.shares.map((share) => share.participantId)),
-            ],
+            ].sort(compareIds),
           },
           method: null,
         },
@@ -533,6 +547,11 @@ function compareIn(sort: SortChoice, a: ListCursor, b: ListCursor): number {
     if (left !== right) return left > right ? -1 : 1;
   }
   return compareKeysDesc(a, b);
+}
+
+/** Two ids in a fixed order that does not depend on anybody's locale. */
+function compareIds(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /**
