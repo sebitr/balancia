@@ -45,6 +45,7 @@ const FACES = 3;
 
 export function SplitSummaryRow({
   payerName,
+  payerIsYou = false,
   included,
   memberCount,
   summary,
@@ -52,6 +53,8 @@ export function SplitSummaryRow({
   onOpen,
 }: {
   payerName: string;
+  /** The reader paid, and the row says "You" as the split sheet does. */
+  payerIsYou?: boolean;
   /** Everybody the entry is split between, in roster order. */
   included: readonly EntryMember[];
   /** How many people are in the group, for "3 of 5". */
@@ -97,7 +100,7 @@ export function SplitSummaryRow({
             />
           </span>
           <span className="min-w-0 truncate text-sm font-semibold">
-            {payerName}
+            {payerIsYou ? t("you") : payerName}
           </span>
         </Side>
 

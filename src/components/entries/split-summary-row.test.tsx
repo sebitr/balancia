@@ -76,4 +76,32 @@ describe("the split summary row", () => {
     expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument();
     expect(screen.getByText("2 of 6")).toBeInTheDocument();
   });
+
+  /** The reader is "You" here, as on the sheet the row opens. */
+  it("says You when the reader paid", () => {
+    renderRow({ payerName: "Robin Audit", payerIsYou: true });
+
+    expect(screen.getByRole("button")).toHaveTextContent(/Paid byR?You/);
+    expect(screen.queryByText("Robin Audit")).not.toBeInTheDocument();
+  });
+
+  it("says Toi in French", () => {
+    renderWithIntl(
+      <SplitSummaryRow
+        payerName="Robin Audit"
+        payerIsYou
+        included={GROUP}
+        memberCount={GROUP.length}
+        summary={{
+          key: "equalEach",
+          params: { count: GROUP.length, amount: "CHF 10.00" },
+        }}
+        onOpen={vi.fn()}
+      />,
+      { locale: "fr" },
+    );
+
+    expect(screen.getByText("Toi")).toBeInTheDocument();
+    expect(screen.getByText("Tout le monde")).toBeInTheDocument();
+  });
 });

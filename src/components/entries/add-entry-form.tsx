@@ -2646,6 +2646,7 @@ export function AddEntryForm({
         {!isSettle && (
           <SplitSummaryRow
             payerName={payerName}
+            payerIsYou={payerId === selfId}
             included={includedMembers}
             memberCount={members.length}
             summary={summary}
@@ -2931,6 +2932,7 @@ export function AddEntryForm({
           {sheet === "split" && (
             <SplitSheet
               members={members}
+              selfId={selfId}
               title={isIncome ? t("split.titleIncome") : t("split.title")}
               totalFormatted={amountFormatted}
               currency={currency}

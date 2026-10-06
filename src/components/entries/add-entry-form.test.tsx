@@ -745,9 +745,9 @@ describe("the split sheet", () => {
     await openSplit(user);
 
     const split = sheet("Payment and split");
-    expect(split.queryByLabelText("Shares for Seb")).not.toBeInTheDocument();
+    expect(split.queryByLabelText("Your shares")).not.toBeInTheDocument();
     await user.click(split.getByRole("button", { name: "Shares" }));
-    expect(split.getByLabelText("Shares for Seb")).toBeInTheDocument();
+    expect(split.getByLabelText("Your shares")).toBeInTheDocument();
   });
 
   it("prints an exact amount once, in the field it was typed into", async () => {
@@ -767,12 +767,12 @@ describe("the split sheet", () => {
 
     // A weight is not an amount, so that row has to say what it came to.
     await user.click(split.getByRole("button", { name: "Shares" }));
-    expect(rowFor("Seb").getByText("CHF 28.20")).toBeInTheDocument();
+    expect(rowFor("You").getByText("CHF 28.20")).toBeInTheDocument();
 
     // An exact amount is the number in the field already.
     await user.click(split.getByRole("button", { name: "Exact" }));
-    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("28.20");
-    expect(rowFor("Seb").queryByText(/CHF/)).not.toBeInTheDocument();
+    expect(split.getByLabelText("Your exact amount")).toHaveValue("28.20");
+    expect(rowFor("You").queryByText(/CHF/)).not.toBeInTheDocument();
   });
 
   it("keeps split rows the same height in every method", async () => {
@@ -838,12 +838,12 @@ describe("an empty split", () => {
     await enterAmount(user, "84.60");
     await openSplit(user);
     const split = sheet("Payment and split");
-    for (const member of MEMBERS) {
-      await user.click(
-        split.getByRole("button", {
-          name: `Include ${member.displayName} in the split`,
-        }),
-      );
+    for (const name of [
+      "Include yourself in the split",
+      "Include Hervé in the split",
+      "Include Cyril in the split",
+    ]) {
+      await user.click(split.getByRole("button", { name }));
     }
     return split;
   }
@@ -921,7 +921,7 @@ describe("the split note", () => {
 
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Percent" }));
-    expect(split.getByLabelText("Percentage for Seb")).toHaveValue("33.34");
+    expect(split.getByLabelText("Your percentage")).toHaveValue("33.34");
     expect(split.getAllByText("CHF 30.00")).toHaveLength(3);
     expect(split.queryByText(/more so it adds up/)).not.toBeInTheDocument();
     expect(split.queryByText(/does not divide evenly/)).not.toBeInTheDocument();
@@ -944,7 +944,9 @@ describe("a split that does not add up", () => {
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Exact" }));
     for (const [name, value] of Object.entries(amounts)) {
-      const field = split.getByLabelText(`Exact amount for ${name}`);
+      const field = split.getByLabelText(
+        name === "You" ? "Your exact amount" : `Exact amount for ${name}`,
+      );
       await user.clear(field);
       await user.type(field, value);
     }
@@ -956,7 +958,7 @@ describe("a split that does not add up", () => {
   it("says on the row how far over the total it is", async () => {
     const user = userEvent.setup();
     renderForm();
-    const split = await exactSplit(user, { Seb: "50" });
+    const split = await exactSplit(user, { You: "50" });
 
     expect(split.getByText("CHF 20.00 over the total.")).toBeInTheDocument();
     // Leaving to look at the total is allowed; the row says what is left.
@@ -971,7 +973,7 @@ describe("a split that does not add up", () => {
   it("says on the row how much is left to assign", async () => {
     const user = userEvent.setup();
     renderForm();
-    const split = await exactSplit(user, { Seb: "25" });
+    const split = await exactSplit(user, { You: "25" });
     await user.click(split.getByRole("button", { name: "Done" }));
 
     expect(row()).toHaveTextContent("Exact amounts · CHF 5.00 left to assign");
@@ -984,8 +986,12 @@ describe("a split that does not add up", () => {
     await openSplit(user);
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Percent" }));
-    for (const name of ["Seb", "Hervé", "Cyril"]) {
-      const field = split.getByLabelText(`Percentage for ${name}`);
+    for (const label of [
+      "Your percentage",
+      "Percentage for Hervé",
+      "Percentage for Cyril",
+    ]) {
+      const field = split.getByLabelText(label);
       await user.clear(field);
       await user.type(field, "30");
     }
@@ -1001,10 +1007,12 @@ describe("a split that does not add up", () => {
     await openSplit(user);
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Shares" }));
-    for (const name of ["Seb", "Hervé", "Cyril"]) {
-      await user.click(
-        split.getByRole("button", { name: `One share fewer for ${name}` }),
-      );
+    for (const name of [
+      "One share fewer for you",
+      "One share fewer for Hervé",
+      "One share fewer for Cyril",
+    ]) {
+      await user.click(split.getByRole("button", { name }));
     }
 
     expect(
@@ -1022,7 +1030,7 @@ describe("a split that does not add up", () => {
     const user = userEvent.setup();
     renderForm();
     await user.type(screen.getByLabelText("Description"), "Dinner");
-    const split = await exactSplit(user, { Seb: "50" });
+    const split = await exactSplit(user, { You: "50" });
     await user.click(split.getByRole("button", { name: "Done" }));
 
     await user.click(screen.getByRole("button", { name: "Add expense" }));
@@ -1036,7 +1044,7 @@ describe("a split that does not add up", () => {
     // The alert follows the fields rather than repeating the first sentence.
     await openSplit(user);
     const again = sheet("Payment and split");
-    const seb = again.getByLabelText("Exact amount for Seb");
+    const seb = again.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "25");
     await user.click(again.getByRole("button", { name: "Done" }));
@@ -1046,8 +1054,8 @@ describe("a split that does not add up", () => {
 
     await openSplit(user);
     const fixed = sheet("Payment and split");
-    await user.clear(fixed.getByLabelText("Exact amount for Seb"));
-    await user.type(fixed.getByLabelText("Exact amount for Seb"), "30");
+    await user.clear(fixed.getByLabelText("Your exact amount"));
+    await user.type(fixed.getByLabelText("Your exact amount"), "30");
     await user.click(fixed.getByRole("button", { name: "Done" }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -1058,14 +1066,14 @@ describe("a split that does not add up", () => {
     const user = userEvent.setup();
     renderForm();
     await user.type(screen.getByLabelText("Description"), "Dinner");
-    const split = await exactSplit(user, { Seb: "50" });
+    const split = await exactSplit(user, { You: "50" });
     await user.click(split.getByRole("button", { name: "Done" }));
     await user.click(screen.getByRole("button", { name: "Add expense" }));
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     await openSplit(user);
     const sheetNow = sheet("Payment and split");
-    const seb = sheetNow.getByLabelText("Exact amount for Seb");
+    const seb = sheetNow.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "30");
     // Broken again before anybody pressed Save: the row says so, the alert
@@ -1093,7 +1101,7 @@ describe("the rest of an exact split", () => {
     const user = userEvent.setup();
     renderForm();
     const split = await exact(user);
-    const seb = split.getByLabelText("Exact amount for Seb");
+    const seb = split.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "25");
 
@@ -1106,7 +1114,7 @@ describe("the rest of an exact split", () => {
     );
 
     expect(split.getByLabelText("Exact amount for Cyril")).toHaveValue("35.00");
-    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("25");
+    expect(split.getByLabelText("Your exact amount")).toHaveValue("25");
     expect(split.queryByText(/still to assign/)).not.toBeInTheDocument();
     expect(
       split.queryByRole("button", { name: /Give the remaining/ }),
@@ -1117,7 +1125,7 @@ describe("the rest of an exact split", () => {
     const user = userEvent.setup();
     renderForm();
     const split = await exact(user);
-    const seb = split.getByLabelText("Exact amount for Seb");
+    const seb = split.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "50");
 
@@ -1156,11 +1164,11 @@ describe("the share steppers", () => {
     renderForm();
     const split = await shares(user);
     const fewer = split.getByRole("button", {
-      name: "One share fewer for Seb",
+      name: "One share fewer for you",
     });
 
     await user.click(fewer);
-    expect(split.getByLabelText("Shares for Seb")).toHaveValue("0");
+    expect(split.getByLabelText("Your shares")).toHaveValue("0");
     expect(fewer).toBeDisabled();
   });
 
@@ -1183,7 +1191,7 @@ describe("the share steppers", () => {
     renderForm();
     const split = await shares(user);
 
-    for (const name of ["One more share for Seb", "One share fewer for Seb"]) {
+    for (const name of ["One more share for you", "One share fewer for you"]) {
       expect(split.getByRole("button", { name })).toHaveClass("tap-target");
     }
   });
@@ -3852,7 +3860,7 @@ describe("what a dictated sentence says about people", () => {
     ).toBeInTheDocument();
     // And the row itself has not moved: a chip is an offer, not a write.
     const row = screen.getByRole("button", { name: /^Paid by/ });
-    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("You");
     expect(row).toHaveTextContent("Everyone");
   });
 
@@ -3912,7 +3920,7 @@ describe("what a dictated sentence says about people", () => {
 
     expect(screen.queryByText("Also heard")).toBeNull();
     const row = screen.getByRole("button", { name: /^Paid by/ });
-    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("You");
     expect(row).toHaveTextContent("Everyone");
   });
 
